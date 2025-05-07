@@ -85,13 +85,6 @@ bun install
   - 前端：http://localhost:5573/
   - 后端：http://localhost:3233/
 
-## 参考资料
-
-- `z参考/SillyTavern`：用于参考提示词结构
-- `z参考/ComfyUI_frontend`：ComfyUI 的前端项目，用于参考风格
-- `z参考/ComfyUI`：ComfyUI 的主项目，用于参考 API
-- `z参考/comfy分支litegraph.js`：LiteGraph.js 的项目
-
 ## 技术栈
 
 - 前端：Vue 3 + TypeScript + Vite
