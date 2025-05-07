@@ -1,0 +1,9 @@
+{
+  "id": "default",
+  "name": "Default Project",
+  "description": "The default project for development.",
+  "version": "1.0.0",
+  "createdAt": "2025-04-05T11:30:00.000Z",
+  "updatedAt": "2025-04-05T11:30:00.000Z",
+  "schemaVersion": "1.0.0"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "@comfytavern/utils",
+  "version": "0.0.5",
+  "private": true,
+  "exports": "./src/index.ts"
+}

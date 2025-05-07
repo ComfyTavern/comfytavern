@@ -1,0 +1,13 @@
+{
+  "server": {
+    "backend": {
+      "port": 3233
+    },
+    "frontend": {
+      "port": 5573
+    }
+  },
+  "execution": {
+    "max_concurrent_workflows": 5
+  }
+}

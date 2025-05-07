@@ -1,0 +1,46 @@
+{
+  "name": "新工作流",
+  "description": "一个全新的工作流!",
+  "nodes": [
+    {
+      "id": "default-group-input",
+      "type": "core:GroupInput",
+      "position": {
+        "x": 96,
+        "y": 150
+      }
+    },
+    {
+      "id": "default-group-output",
+      "type": "core:GroupOutput",
+      "position": {
+        "x": 768,
+        "y": 150
+      }
+    }
+  ],
+  "edges": [],
+  "viewport": {
+    "x": 0,
+    "y": 70,
+    "zoom": 1.1
+  },
+  "interfaceInputs": {
+    "input_0": {
+      "key": "input_0",
+      "displayName": "*",
+      "type": "CONVERTIBLE_ANY",
+      "allowDynamicType": true
+    }
+  },
+  "interfaceOutputs": {
+    "output_0": {
+      "key": "output_0",
+      "displayName": "*",
+      "type": "CONVERTIBLE_ANY",
+      "allowDynamicType": true
+    }
+  },
+  "version": "0.0.5",
+  "referencedWorkflows": []
+}

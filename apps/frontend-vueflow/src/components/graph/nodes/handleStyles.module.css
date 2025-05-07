@@ -1,0 +1,148 @@
+:root {
+  /* Light Mode Colors */
+  --handle-color-string-light: #1890ff;
+  --handle-color-int-light: #52c41a;
+  --handle-color-float-light: #13c2c2;
+  --handle-color-boolean-light: #fa8c16;
+  --handle-color-combo-light: #722ed1;
+  --handle-color-code-light: #8c8c8c;
+  --handle-color-any-border-light: #1890ff;
+  --handle-color-default-light: #9CA3AF; /* 默认灰色 */
+
+  /* Dark Mode Colors */
+  --handle-color-string-dark: #63b3ed;
+  --handle-color-int-dark: #a0d911;
+  --handle-color-float-dark: #36cfc9;
+  --handle-color-boolean-dark: #ffa940;
+  --handle-color-combo-dark: #b37feb;
+  --handle-color-code-dark: #bfbfbf;
+  --handle-color-any-border-dark: #63b3ed;
+  --handle-color-default-dark: #6B7280; /* 默认灰色 */
+
+  /* Other shared variables */
+  --handle-border-light: white;
+  --handle-border-dark: #4a5568; /* gray-700 */
+  --handle-any-bg-light: rgba(249, 250, 251, 1); /* gray-50 */
+  --handle-any-bg-dark: rgba(31, 41, 55, 1); /* gray-800 */
+  --handle-hover-border-light: #faad14;
+  --handle-hover-border-dark: #f6e05e; /* yellow-400 */
+  --handle-any-hover-bg-light: rgba(24, 144, 255, 0.1);
+  --handle-any-hover-bg-dark: rgba(99, 179, 237, 0.1);
+}
+
+/* 插槽 Handle 样式 */
+.handle {
+  width: 12px !important;
+  height: 12px !important;
+  border: 2px solid var(--handle-border-light) !important;
+  /* 提高层级，确保在拖拽手柄之上 */
+  z-index: 20;
+  position: absolute !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  /* 默认使用 STRING 颜色，因为它是最常见的？或者用一个通用默认色？ */
+  /* 暂时保留 STRING 蓝色作为基础背景，具体类型会覆盖 */
+  background-color: var(--handle-color-string-light) !important;
+  border-radius: 50%; /* 确保是圆形 */
+  box-sizing: border-box; /* 包含边框 */
+}
+
+/* 暗色模式基础边框 */
+:global(.dark) .handle {
+  border-color: var(--handle-border-dark) !important;
+  background-color: var(--handle-color-string-dark) !important; /* 暗色模式基础背景 */
+}
+
+
+/* 'WILDCARD' 或 'CONVERTIBLE_ANY' 类型插槽样式 */
+.handleAny {
+  background-color: var(--handle-any-bg-light) !important;
+  border-width: 2px !important;
+  border-style: dashed !important;
+  border-color: var(--handle-color-any-border-light) !important;
+}
+
+:global(.dark) .handleAny {
+  background-color: var(--handle-any-bg-dark) !important;
+  border-color: var(--handle-color-any-border-dark) !important;
+}
+
+.handleAny:hover {
+  background-color: var(--handle-any-hover-bg-light) !important;
+  border-color: var(--handle-hover-border-light) !important;
+}
+
+:global(.dark) .handleAny:hover {
+  background-color: var(--handle-any-hover-bg-dark) !important;
+  border-color: var(--handle-hover-border-dark) !important;
+}
+
+/* Handle 位置 */
+.handleLeft {
+  left: -6px !important;
+  cursor: w-resize !important;
+}
+
+.handleRight {
+  right: -6px !important;
+  cursor: e-resize !important;
+}
+
+/* Handle 悬停效果 */
+.handle:hover {
+  /* 移除 handle-any 的悬停背景覆盖 (通过特异性) */
+  border-color: var(--handle-hover-border-light) !important;
+  transform: translateY(-50%) scale(1.2) !important;
+}
+
+:global(.dark) .handle:hover {
+  border-color: var(--handle-hover-border-dark) !important;
+}
+
+/* --- 按类型定义样式 --- */
+
+/* STRING (蓝色) */
+.handleTypeSTRING { background-color: var(--handle-color-string-light) !important; }
+:global(.dark) .handleTypeSTRING { background-color: var(--handle-color-string-dark) !important; }
+.handleTypeSTRING.handleAny { border-color: var(--handle-color-string-light) !important; }
+:global(.dark) .handleTypeSTRING.handleAny { border-color: var(--handle-color-string-dark) !important; }
+
+/* INT (绿色) */
+.handleTypeINT { background-color: var(--handle-color-int-light) !important; }
+:global(.dark) .handleTypeINT { background-color: var(--handle-color-int-dark) !important; }
+.handleTypeINT.handleAny { border-color: var(--handle-color-int-light) !important; }
+:global(.dark) .handleTypeINT.handleAny { border-color: var(--handle-color-int-dark) !important; }
+
+/* COMBO (紫色) */
+.handleTypeCOMBO { background-color: var(--handle-color-combo-light) !important; }
+:global(.dark) .handleTypeCOMBO { background-color: var(--handle-color-combo-dark) !important; }
+.handleTypeCOMBO.handleAny { border-color: var(--handle-color-combo-light) !important; }
+:global(.dark) .handleTypeCOMBO.handleAny { border-color: var(--handle-color-combo-dark) !important; }
+
+/* FLOAT (青色) */
+.handleTypeFLOAT { background-color: var(--handle-color-float-light) !important; }
+:global(.dark) .handleTypeFLOAT { background-color: var(--handle-color-float-dark) !important; }
+.handleTypeFLOAT.handleAny { border-color: var(--handle-color-float-light) !important; }
+:global(.dark) .handleTypeFLOAT.handleAny { border-color: var(--handle-color-float-dark) !important; }
+
+/* BOOLEAN (橙色) */
+.handleTypeBOOLEAN { background-color: var(--handle-color-boolean-light) !important; }
+:global(.dark) .handleTypeBOOLEAN { background-color: var(--handle-color-boolean-dark) !important; }
+.handleTypeBOOLEAN.handleAny { border-color: var(--handle-color-boolean-light) !important; }
+:global(.dark) .handleTypeBOOLEAN.handleAny { border-color: var(--handle-color-boolean-dark) !important; }
+
+/* CODE (灰色) */
+.handleTypeCODE { background-color: var(--handle-color-code-light) !important; }
+:global(.dark) .handleTypeCODE { background-color: var(--handle-color-code-dark) !important; }
+.handleTypeCODE.handleAny { border-color: var(--handle-color-code-light) !important; }
+:global(.dark) .handleTypeCODE.handleAny { border-color: var(--handle-color-code-dark) !important; }
+
+
+/* 支持多个连接的输入插槽 (方形) */
+.handleMulti {
+  border-radius: 0 !important; /* 方形 */
+}
+
+/* BUTTON: 不显示 Handle，无需样式 */
+/* WILDCARD: 使用 .handleAny 样式 */
+/* CONVERTIBLE_ANY: 使用 .handleAny 样式 */

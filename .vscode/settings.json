@@ -1,0 +1,11 @@
+{
+  "css.customData": [".vscode/unocss.json"],
+  "vitest.exclude": ["**/z参考/**"],
+  "css.validate": false,
+  "less.validate": false,
+  "scss.validate": false,
+  "editor.codeActionsOnSave": {},
+  "files.associations": {
+    "*.css": "tailwindcss"
+  }
+}

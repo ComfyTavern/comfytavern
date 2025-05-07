@@ -1,0 +1,33 @@
+{
+  "name": "comfytavern",
+  "version": "0.0.5",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run server.ts",
+    "dev:backend": "bun run --cwd apps/backend dev",
+    "build": "bun run build:frontend && bun run build:backend",
+    "build:backend": "bun run --cwd apps/backend build",
+    "start": "bun run --cwd apps/backend start",
+    "start:backend": "bun run --cwd apps/backend start"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@codemirror/lang-javascript": "^6.2.3",
+    "@codemirror/lang-json": "^6.0.1",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "@types/lodash": "^4.17.16",
+    "codemirror": "^6.0.1",
+    "lodash": "^4.17.21",
+    "sanitize-filename": "^1.6.3",
+    "vue-codemirror": "^6.1.1",
+    "zod": "^3.24.2"
+  }
+}
