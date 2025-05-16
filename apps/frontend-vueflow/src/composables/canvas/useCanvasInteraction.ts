@@ -223,9 +223,14 @@ export function useCanvasInteraction(
             'node', // objectType
             summary, // summary
             { // details
-              nodeIds: movedNodeIds,
-              // Add position information
-              positions: nodeUpdates.map(update => ({ nodeId: update.nodeId, newPosition: update.position }))
+              movedNodes: event.nodes.map(node => ({
+                nodeId: node.id,
+                nodeName: node.data?.label || node.data?.defaultLabel || node.id,
+                nodeType: node.type,
+                newPosition: node.position, // The position in event.nodes should be the final position
+              })),
+              // Optionally, keep the old positions if needed for more detailed diffs,
+              // but for display, newPosition per node is likely sufficient.
             }
           );
 

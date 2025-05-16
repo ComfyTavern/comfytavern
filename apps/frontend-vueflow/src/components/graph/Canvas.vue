@@ -69,6 +69,7 @@ import { useCanvasConnections } from '../../composables/canvas/useCanvasConnecti
 // import { useWorkflowGrouping, areTypesCompatible } from '../../composables/useWorkflowGrouping'; // 不再需要导入
 import { useNodeGroupConnectionValidation } from '../../composables/node/useNodeGroupConnectionValidation'; // 导入新的 Composable
 import { useWorkflowGrouping } from '@/composables/group/useWorkflowGrouping';
+import { createHistoryEntry } from '@comfytavern/utils'; // <-- 导入 createHistoryEntry
 // 定义props和emits
 const props = defineProps({
   modelValue: { type: Array as PropType<Array<Node | Edge>>, required: true },
@@ -143,7 +144,6 @@ const {
   removeEdges,
   addEdges,
   getEdges,
-  removeNodes,
   // instance, // The instance is directly available in vueFlowInstance
   onMoveEnd,
   // onNodeDragStop, // REMOVED: No longer used in Canvas.vue
@@ -364,18 +364,47 @@ const disconnectNode = (nodeId: string) => {
   removeNodeConnections(nodeId);
 };
 
-const deleteNode = (nodeId: string) => {
-  // 先删除与该节点相关的所有边
-  removeNodeConnections(nodeId);
+const deleteNode = async (nodeId: string) => { // 标记为 async
+  const nodeToRemove = getNodes.value.find(n => n.id === nodeId);
+  if (!nodeToRemove) {
+    console.warn(`[Canvas] Node with id ${nodeId} not found for deletion.`);
+    return;
+  }
 
-  // 再删除节点本身 (这里仍然需要操作 internalElements 或使用 removeNodes)
-  // 推荐使用 removeNodes
-  removeNodes([nodeId]); // 使用顶层获取的 removeNodes 删除节点
+  const activeTab = activeTabId.value;
+  if (!activeTab) {
+    console.warn("[Canvas] Cannot delete node: No active tab ID found.");
+    return;
+  }
 
-  // 如果不使用 removeNodes，则回退到操作 internalElements
-  // internalElements.value = internalElements.value.filter(el =>
-  //   !('id' in el) || el.id !== nodeId
-  // );
+  // 查找并准备删除与该节点相关的边
+  const edgesToRemove = getEdges.value.filter(edge => edge.source === nodeId || edge.target === nodeId);
+  const elementsToRemove: (Node | Edge)[] = [nodeToRemove, ...edgesToRemove];
+
+  const nodeDisplayName = nodeToRemove.data?.label || nodeToRemove.data?.defaultLabel || nodeToRemove.id;
+  const entry = createHistoryEntry(
+    'delete',
+    'node', // 更具体的操作对象类型
+    `删除节点 ${nodeDisplayName}`, // 使用显示名称
+    {
+      deletedNodes: [{ // 保持数组结构，即使只有一个节点
+        nodeId: nodeToRemove.id,
+        nodeName: nodeDisplayName,
+        nodeType: nodeToRemove.type, // type 已经是 namespace:type 格式
+      }],
+      // 确保边信息包含句柄
+      deletedEdges: edgesToRemove.map(e => ({
+        edgeId: e.id,
+        sourceNodeId: e.source,
+        sourceHandle: e.sourceHandle,
+        targetNodeId: e.target,
+        targetHandle: e.targetHandle,
+      })),
+    }
+  );
+
+  await workflowStore.removeElementsAndRecord(activeTab, elementsToRemove, entry);
+  console.log(`[Canvas] Dispatched deletion of node ${nodeId} and its connections.`);
 };
 
 // 节点点击事件

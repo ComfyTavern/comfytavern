@@ -45,9 +45,25 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
   const nodeDefinitionsMap = new Map<string, NodeDefinition>(
     nodeStore.nodeDefinitions?.map((def) => [`${def.namespace}:${def.type}`, def]) ?? []
   );
+  let firstNodeLoggedForInputsDebug = false; // <--- 添加这个标志
 
   const nodes = flow.nodes.map((vueNode: VueFlowNode): WorkflowStorageNode => {
     const nodeType = vueNode.type; // Store type for safe access
+
+    // +++ 添加调试日志 +++
+    if (
+      !firstNodeLoggedForInputsDebug &&
+      nodeType &&
+      nodeType !== "core:GroupInput" &&
+      nodeType !== "core:GroupOutput"
+    ) {
+      console.log(
+        `[Roo Debug transformVueFlowToCoreWorkflow] Inputs for node ${vueNode.id} (${vueNode.type}):`,
+        JSON.parse(JSON.stringify(vueNode.data?.inputs)) // 使用 JSON.parse(JSON.stringify(...)) 来深拷贝并避免响应式代理问题
+      );
+      firstNodeLoggedForInputsDebug = true;
+    }
+    // +++ 结束调试日志 +++
     if (!nodeType) {
       console.error(
         `[transformVueFlowToCoreWorkflow] Node with ID ${vueNode.id} has no type defined. Skipping.`
@@ -69,8 +85,8 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
     if (
       nodeDef.inputs &&
       vueNode.data?.inputs &&
-      nodeType !== 'core:GroupInput' &&
-      nodeType !== 'core:GroupOutput'
+      nodeType !== "core:GroupInput" &&
+      nodeType !== "core:GroupOutput"
     ) {
       Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
         // inputData is now an object { value: ..., description: ..., ... }
@@ -89,26 +105,37 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
 
           // --- Roo: Attempt type coercion for comparison and saving ---
           try {
-            if (inputDef.type === 'INT') {
+            if (inputDef.type === "INT") {
               const parsedInt = parseInt(String(currentValue), 10);
               if (!isNaN(parsedInt)) {
                 valueToCompare = parsedInt;
                 valueToSave = parsedInt; // Save as number
-              } else if (currentValue !== '' && currentValue !== null) { // Don't warn for empty strings/null converting to NaN
-                 console.warn(`[transformVueFlowToCoreWorkflow] Node ${vueNode.id} (${vueNode.type}): Input '${inputName}' (type INT) could not be parsed as integer:`, currentValue);
+              } else if (currentValue !== "" && currentValue !== null) {
+                // Don't warn for empty strings/null converting to NaN
+                console.warn(
+                  `[transformVueFlowToCoreWorkflow] Node ${vueNode.id} (${vueNode.type}): Input '${inputName}' (type INT) could not be parsed as integer:`,
+                  currentValue
+                );
               }
-            } else if (inputDef.type === 'FLOAT') {
+            } else if (inputDef.type === "FLOAT") {
               const parsedFloat = parseFloat(String(currentValue));
               if (!isNaN(parsedFloat)) {
                 valueToCompare = parsedFloat;
                 valueToSave = parsedFloat; // Save as number
-              } else if (currentValue !== '' && currentValue !== null) { // Don't warn for empty strings/null converting to NaN
-                 console.warn(`[transformVueFlowToCoreWorkflow] Node ${vueNode.id} (${vueNode.type}): Input '${inputName}' (type FLOAT) could not be parsed as float:`, currentValue);
+              } else if (currentValue !== "" && currentValue !== null) {
+                // Don't warn for empty strings/null converting to NaN
+                console.warn(
+                  `[transformVueFlowToCoreWorkflow] Node ${vueNode.id} (${vueNode.type}): Input '${inputName}' (type FLOAT) could not be parsed as float:`,
+                  currentValue
+                );
               }
             }
             // Add cases for BOOLEAN or other types if needed, though isEqual often handles boolean strings okay.
           } catch (e) {
-             console.error(`[transformVueFlowToCoreWorkflow] Error during type coercion for input '${inputName}' on node ${vueNode.id}:`, e);
+            console.error(
+              `[transformVueFlowToCoreWorkflow] Error during type coercion for input '${inputName}' on node ${vueNode.id}:`,
+              e
+            );
           }
           // --- End Roo: Type Coercion ---
 
@@ -132,12 +159,11 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
 
     // --- Roo: Add logging AFTER the loop ---
     console.log(
-        `[Debug Save Final] Node: ${vueNode.id} (${vueNode.type})`,
-        `| Final inputValues Object: ${JSON.stringify(inputValues)}`,
-        `| Object.keys(inputValues).length > 0: ${Object.keys(inputValues).length > 0}`
+      `[Debug Save Final] Node: ${vueNode.id} (${vueNode.type})`,
+      `| Final inputValues Object: ${JSON.stringify(inputValues)}`,
+      `| Object.keys(inputValues).length > 0: ${Object.keys(inputValues).length > 0}`
     );
     // --- End Roo: Logging ---
-
 
     // Prepare custom slot descriptions
     const customSlotDescriptions: {
@@ -310,7 +336,7 @@ export function transformWorkflowToVueFlow(
 
       // NodeGroup 的接口处理：NodeGroup 组件自身会处理接口加载和同步
       // 我们只需要确保 configValues 中的 referencedWorkflowId 被传递
-      if (vueFlowData.type === 'core:NodeGroup') {
+      if (vueFlowData.type === "core:NodeGroup") {
         const referencedWorkflowId = vueFlowData.configValues?.referencedWorkflowId;
         if (referencedWorkflowId) {
           console.debug(
@@ -340,7 +366,7 @@ export function transformWorkflowToVueFlow(
 
       // NodeGroup 的接口处理：NodeGroup 组件自身会处理接口加载和同步
       // 我们只需要确保 configValues 中的 referencedWorkflowId 被传递
-      if (vueFlowData.type === 'core:NodeGroup') {
+      if (vueFlowData.type === "core:NodeGroup") {
         const referencedWorkflowId = vueFlowData.configValues?.referencedWorkflowId;
         if (referencedWorkflowId) {
           console.debug(
@@ -388,12 +414,12 @@ export function transformWorkflowToVueFlow(
       // 确定源类型
       if (sourceNode && storageEdge.sourceHandle) {
         // 检查是否为 GroupInput (其输出定义在 workflow.interfaceInputs)
-        if (sourceNode.type === 'core:GroupInput') {
+        if (sourceNode.type === "core:GroupInput") {
           const interfaceInputDef = workflow.interfaceInputs?.[storageEdge.sourceHandle];
           if (interfaceInputDef) sourceType = interfaceInputDef.type || "any";
         }
         // 检查是否为 NodeGroup (其输出定义在 data.groupInterface.outputs)
-        else if (sourceNode.type === 'core:NodeGroup' && sourceNode.data?.groupInterface?.outputs) {
+        else if (sourceNode.type === "core:NodeGroup" && sourceNode.data?.groupInterface?.outputs) {
           const outputDef = sourceNode.data.groupInterface.outputs[storageEdge.sourceHandle];
           if (outputDef) sourceType = outputDef.type || "any";
         }
@@ -416,12 +442,12 @@ export function transformWorkflowToVueFlow(
       // 确定目标类型
       if (targetNode && storageEdge.targetHandle) {
         // 检查是否为 GroupOutput (其输入定义在 workflow.interfaceOutputs)
-        if (targetNode.type === 'core:GroupOutput') {
+        if (targetNode.type === "core:GroupOutput") {
           const interfaceOutputDef = workflow.interfaceOutputs?.[storageEdge.targetHandle];
           if (interfaceOutputDef) targetType = interfaceOutputDef.type || "any";
         }
         // 检查是否为 NodeGroup (其输入定义在 data.groupInterface.inputs)
-        else if (targetNode.type === 'core:NodeGroup' && targetNode.data?.groupInterface?.inputs) {
+        else if (targetNode.type === "core:NodeGroup" && targetNode.data?.groupInterface?.inputs) {
           const inputDef = targetNode.data.groupInterface.inputs[storageEdge.targetHandle];
           if (inputDef) targetType = inputDef.type || "any";
         }
@@ -557,7 +583,7 @@ export function transformVueFlowToExecutionPayload(
 
     const inputValues: Record<string, any> = {};
     // 检查 vueNode.data 和 vueNode.data.inputs 是否存在，并且不是 GroupOutput 节点
-    if (nodeDef.inputs && vueNode.data?.inputs && nodeType !== 'core:GroupOutput') {
+    if (nodeDef.inputs && vueNode.data?.inputs && nodeType !== "core:GroupOutput") {
       Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
         // For execution payload, we expect inputData to be the value itself or an object containing value
         const currentValue =

@@ -5,6 +5,7 @@ import { useTabStore } from "@/stores/tabStore"; // <-- 导入 TabStore
 import { v4 as uuidv4 } from "uuid"; // 导入 uuid
 import { deepClone } from "@/utils/deepClone"; // 用于深拷贝的辅助函数
 import { useWorkflowGrouping } from "../group/useWorkflowGrouping"; // <-- 导入分组 composable
+import { createHistoryEntry } from "@comfytavern/utils"; // <-- 导入 createHistoryEntry
 // import { useWorkflowManager } from "./useWorkflowManager"; // <-- 移除工作流管理器导入
 /**
  * 用于处理 VueFlow 画布上键盘快捷键的 Composable。
@@ -16,8 +17,8 @@ export function useCanvasKeyboardShortcuts() {
   const {
     getNodes,
     getEdges,
-    removeNodes,
-    removeEdges,
+    // removeNodes, // 不再直接使用
+    // removeEdges, // 不再直接使用
     addSelectedNodes,
     addSelectedEdges,
     addNodes: vueFlowAddNodes,
@@ -134,7 +135,7 @@ export function useCanvasKeyboardShortcuts() {
   };
 
   // 删除选中元素的处理函数
-  const deleteSelectedElements = () => {
+  const deleteSelectedElements = async () => { // 标记为 async
     const selectedNodes = getNodes.value.filter((n) => n.selected);
     const selectedEdges = getEdges.value.filter((e) => e.selected);
 
@@ -143,25 +144,51 @@ export function useCanvasKeyboardShortcuts() {
       return;
     }
 
-    const nodeIdsToRemove = selectedNodes.map((n) => n.id);
-    const edgeIdsToRemove = selectedEdges.map((e) => e.id);
-
-    // 优先删除边，再删除节点
-    if (edgeIdsToRemove.length > 0) {
-      removeEdges(edgeIdsToRemove);
-    }
-    if (nodeIdsToRemove.length > 0) {
-      // removeNodes 会自动处理连接到这些节点的边，但先删除选中的边更清晰
-      removeNodes(nodeIdsToRemove);
-    }
-
-    console.log(`Deleted ${nodeIdsToRemove.length} nodes and ${edgeIdsToRemove.length} edges.`);
+    const elementsToRemove = [...selectedNodes, ...selectedEdges];
     const activeTabId = tabStore.activeTabId;
-    if (activeTabId) {
-      workflowStore.markAsDirty(activeTabId); // 标记为已修改，传递 ID
-    } else {
-      console.warn("Cannot mark workflow as dirty: No active tab ID found.");
+
+    if (!activeTabId) {
+      console.warn("Cannot delete elements: No active tab ID found.");
+      return;
     }
+
+    // 创建历史记录条目
+    let summary = "";
+    if (selectedNodes.length > 0 && selectedEdges.length > 0) {
+      summary = `删除 ${selectedNodes.length} 个节点和 ${selectedEdges.length} 条边`;
+    } else if (selectedNodes.length > 0) {
+      summary = `删除 ${selectedNodes.length} 个节点`;
+    } else if (selectedEdges.length > 0) {
+      summary = `删除 ${selectedEdges.length} 条边`;
+    } else {
+      summary = "删除元素"; // Fallback, should not happen if checks above are correct
+    }
+
+    const entry = createHistoryEntry(
+      'delete',
+      'elements', // or 'groupDelete' if it's a common pattern for multiple elements
+      summary,
+      {
+        deletedNodes: selectedNodes.map(n => ({
+          nodeId: n.id,
+          nodeName: n.data?.label || n.data?.defaultLabel || n.id,
+          nodeType: n.type, // type is already namespace:type
+        })),
+        deletedEdges: selectedEdges.map(e => ({
+          edgeId: e.id,
+          sourceNodeId: e.source,
+          sourceHandle: e.sourceHandle,
+          targetNodeId: e.target,
+          targetHandle: e.targetHandle,
+        })),
+      }
+    );
+
+    // 调用协调器函数
+    await workflowStore.removeElementsAndRecord(activeTabId, elementsToRemove, entry);
+
+    console.log(`Dispatched deletion of ${selectedNodes.length} nodes and ${selectedEdges.length} edges.`);
+    // markAsDirty 和其他副作用应该由 removeElementsAndRecord 内部处理
   };
 
   // 复制选中元素的处理函数

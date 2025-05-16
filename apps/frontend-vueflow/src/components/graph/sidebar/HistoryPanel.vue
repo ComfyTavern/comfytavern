@@ -3,7 +3,7 @@
     <!-- Use flex column -->
     <div class="flex justify-between items-center mb-4">
       <!-- Flex container for title and count -->
-      <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200">操作历史</h3>
+      <h3 class="text-lg font-semibold text-gray-ID_MAX_LEN00 dark:text-gray-200">操作历史</h3>
       <span v-if="currentHistory" class="text-sm text-gray-500 dark:text-gray-400">
         {{ currentHistory.items.length }} / {{ MAX_HISTORY_LENGTH }}
       </span>
@@ -24,7 +24,7 @@
         <Tooltip v-for="item in reversedHistoryItems" :key="item.originalIndex" :content="generateTooltipContent(item)"
           placement="left" :showDelay="100" :offsetValue="10" width="auto" :showCopyButton="true" :interactive="true">
           <li class="history-item p-2 rounded cursor-pointer transition-colors duration-150" :class="{
-            'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 font-medium':
+            'bg-blue-100 dark:bg-blue-900 text-blue-ID_MAX_LEN00 dark:text-blue-200 font-medium':
               item.originalIndex === currentHistory.currentIndex,
             'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300':
               item.originalIndex !== currentHistory.currentIndex,
@@ -94,72 +94,109 @@ const reversedHistoryItems = computed(() => {
 });
 
 // Helper function to format detail values for tooltip
-const formatDetailValue = (value: any): string => {
-  // <-- Remove key parameter
-  if (value === null || value === undefined) {
-    return String(value);
-  }
-  if (typeof value === "string") {
-    const MAX_LEN = 50;
-    return value.length > MAX_LEN ? `"${value.substring(0, MAX_LEN)}..."` : `"${value}"`;
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  if (Array.isArray(value)) {
-    // --- 通用数组格式化 (生成嵌套 Markdown 列表) ---
-    const MAX_ARRAY_LINES = 5; // 最多显示多少行（项）
-    const MAX_ITEM_LENGTH = 160; // 每项字符串最大长度
-    const formattedItems = value
-      .slice(0, MAX_ARRAY_LINES)
-      .map((item) => {
-        try {
-          let strRep: string;
-          if (typeof item === "object" && item !== null) {
-            // 尝试更智能地显示对象
-            if ("id" in item && "source" in item && "target" in item) {
-              // 看起来像边
-              strRep = `Edge(id: ${String(item.id).substring(0, 8)}..., S: ${item.source}(${item.sourceHandle
-                }), T: ${item.target}(${item.targetHandle}))`;
-            } else if ("id" in item) {
-              strRep = `id: ${item.id}`;
-            } else if ("name" in item) {
-              strRep = `name: ${item.name}`;
-            } else {
-              strRep = JSON.stringify(item); // 回退到 JSON
-            }
-          } else {
-            strRep = String(item);
-          }
-          // 截断过长的字符串表示
-          return strRep.length > MAX_ITEM_LENGTH
-            ? strRep.substring(0, MAX_ITEM_LENGTH) + "..."
-            : strRep;
-        } catch (e) {
-          return "[...]"; // Stringify 失败或复杂对象
-        }
-      })
-      .map((line) => `    - ${line}`) // 使用 4 个空格缩进，创建嵌套列表项
-      .join("\n"); // 用换行符连接
+const MAX_RECURSION_DEPTH = 5; // 最大递归深度
+const STRING_MAX_LEN = 160; // 字符串最大显示长度
+const ID_MAX_LEN = 16; // ID 最大显示长度
+const ARRAY_MAX_ITEMS_SHALLOW = 15; // 浅层数组最大显示项数
+const OBJECT_MAX_PROPS_SHALLOW = 15; // 浅层对象最大显示属性数
 
-    // 添加省略号（如果需要）和总长度
-    const ellipsis = value.length > MAX_ARRAY_LINES ? "\n    - ..." : "";
-    // 返回包含嵌套列表的 Markdown 字符串，以换行符开头，以便正确嵌套
-    return ` ( ${value.length} )\n${formattedItems}${ellipsis}`;
-    // --- 结束通用数组格式化 ---
+const formatDetailValue = (
+  value: any,
+  currentDepth: number = 0,
+  isInsideArray: boolean = false,
+): string => {
+  const indent = "  ".repeat(currentDepth + (isInsideArray ? 1 : 0)); // 数组内元素额外缩进
+  const nestedIndent = "  ".repeat(currentDepth + 1 + (isInsideArray ? 1 : 0));
+
+  if (currentDepth > MAX_RECURSION_DEPTH) {
+    return `${indent}[深度超限]`;
   }
+
+  if (value === null) return `${indent}null`;
+  if (value === undefined) return `${indent}undefined`;
+  if (typeof value === "boolean") return `${indent}${String(value)}`;
+  if (typeof value === "number") return `${indent}${String(value)}`;
+  if (typeof value === "string") {
+    return value.length > STRING_MAX_LEN
+      ? `${indent}"${value.substring(0, STRING_MAX_LEN)}..."`
+      : `${indent}"${value}"`;
+  }
+
+  // 特定对象类型的优先处理
   if (typeof value === "object" && value !== null) {
-    // 添加 null 检查
-    // Basic object formatting (could be expanded)
-    try {
-      const str = JSON.stringify(value);
-      const MAX_OBJ_LEN = 50;
-      return str.length > MAX_OBJ_LEN ? `${str.substring(0, MAX_OBJ_LEN)}...}` : str;
-    } catch (e) {
-      return "[Object]"; // Fallback if stringify fails
+    // 节点对象
+    if (
+      "nodeId" in value &&
+      "nodeName" in value &&
+      "nodeType" in value &&
+      Object.keys(value).length <= 5 // 避免过于复杂的对象被错误识别
+    ) {
+      const nodeIdStr = String(value.nodeId);
+      const displayNodeId = nodeIdStr.length > ID_MAX_LEN ? nodeIdStr.substring(0, ID_MAX_LEN) + "..." : nodeIdStr;
+      let nodeStr = `${indent}节点: ${value.nodeName} (类型: ${value.nodeType}, ID: ${displayNodeId})`;
+      return nodeStr;
+    }
+    // 边对象
+    if (
+      "edgeId" in value &&
+      "sourceNodeId" in value &&
+      "targetNodeId" in value &&
+      Object.keys(value).length <= 6 // 类似节点的考虑
+    ) {
+      const edgeIdStr = String(value.edgeId);
+      const displayEdgeId = edgeIdStr.length > ID_MAX_LEN ? edgeIdStr.substring(0, ID_MAX_LEN) + "..." : edgeIdStr;
+      const sourceNodeIdStr = String(value.sourceNodeId);
+      const displaySourceNodeId = sourceNodeIdStr.length > ID_MAX_LEN ? sourceNodeIdStr.substring(0, ID_MAX_LEN) + "..." : sourceNodeIdStr;
+      const targetNodeIdStr = String(value.targetNodeId);
+      const displayTargetNodeId = targetNodeIdStr.length > ID_MAX_LEN ? targetNodeIdStr.substring(0, ID_MAX_LEN) + "..." : targetNodeIdStr;
+
+      return `${indent}边: ${displayEdgeId} (源: ${displaySourceNodeId}(${value.sourceHandle || ""}) -> 目标: ${displayTargetNodeId}(${value.targetHandle || ""}))`;
     }
   }
-  return String(value); // Fallback
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) return `${indent}[] (0)`;
+    let arrStr = `${indent}( ${value.length} )`;
+    const itemsToShow = currentDepth === 0 ? value : value.slice(0, ARRAY_MAX_ITEMS_SHALLOW); // 顶层数组完整显示，嵌套数组部分显示
+    for (let i = 0; i < itemsToShow.length; i++) {
+      arrStr += `\n${nestedIndent}- ${formatDetailValue(itemsToShow[i], currentDepth + 1, true).trimStart()}`;
+    }
+    if (currentDepth > 0 && value.length > ARRAY_MAX_ITEMS_SHALLOW) {
+      arrStr += `\n${nestedIndent}- ... (${value.length - ARRAY_MAX_ITEMS_SHALLOW} more)`;
+    }
+    return arrStr;
+  }
+
+  if (typeof value === "object" && value !== null) {
+    const objValue = value as Record<string, any>;
+    const keys = Object.keys(objValue);
+    if (keys.length === 0) return `${indent}{}`;
+    let objStr = `${indent}{`;
+    const propsToShow = currentDepth === 0 ? keys : keys.slice(0, OBJECT_MAX_PROPS_SHALLOW);
+    for (let i = 0; i < propsToShow.length; i++) {
+      const key = propsToShow[i];
+      objStr += `\n${nestedIndent}"${key}": ${formatDetailValue(
+        // @ts-ignore
+        objValue[key],
+        currentDepth + 1,
+        false,
+      ).trimStart()}`;
+    }
+    if (currentDepth > 0 && keys.length > OBJECT_MAX_PROPS_SHALLOW) {
+      objStr += `\n${nestedIndent}... (${keys.length - OBJECT_MAX_PROPS_SHALLOW} more properties)`;
+    }
+    objStr += `\n${indent}}`;
+    return objStr;
+  }
+
+  try {
+    const str = JSON.stringify(value);
+    return str.length > STRING_MAX_LEN
+      ? `${indent}${str.substring(0, STRING_MAX_LEN)}...`
+      : `${indent}${str}`;
+  } catch (e) {
+    return `${indent}[序列化失败]`;
+  }
 };
 
 // Function to generate tooltip content dynamically
@@ -179,13 +216,20 @@ const generateTooltipContent = (item: HistoryItem & { originalIndex: number }): 
   if (entry.details && Object.keys(entry.details).length > 0) {
     detailsString += Object.entries(entry.details)
       .map(([key, value]) => {
-        const formattedValue = formatDetailValue(value); // 获取可能包含嵌套列表的值
-        // 如果值以换行符开头（表示是嵌套列表），则直接附加
-        if (formattedValue.startsWith("\n")) {
-          return `\n  - \`${key}\`:${formattedValue}`;
+        if (key === 'movedNodes' && Array.isArray(value)) {
+          const header = `\`${key}\`(${value.length}):`;
+          let itemsContent = "";
+          if (value.length > 0) {
+            itemsContent = value.map((nodeItem: any) => {
+              const formattedNode = formatDetailValue(nodeItem, 0, false).trimStart();
+              return `    - ${formattedNode}`; // Indent by 4 spaces, add bullet
+            }).join("\n");
+          }
+          return `\n  - ${header}${itemsContent ? `\n${itemsContent}` : ''}`;
         } else {
-          // 否则，作为普通行项目
-          return `\n  - \`${key}\`: ${formattedValue}`;
+          // 初始调用 formatDetailValue，深度为0
+          const formattedValue = formatDetailValue(value, 0).trimStart();
+          return `\n  - \`${key}\`:\n${formattedValue.replace(/^/gm, "    ")}`; // 为整个值块增加缩进
         }
       })
       .join("");
@@ -196,7 +240,7 @@ const generateTooltipContent = (item: HistoryItem & { originalIndex: number }): 
   return `**操作:** ${entry.summary || "未命名操作"}
 **索引:** ${originalIndex}
 **状态:** ${status}${savedStatus}${detailsString}
-\n\n*点击跳转到此状态*`;
+`;
 };
 
 // 处理历史记录项点击事件 - 使用原始索引
