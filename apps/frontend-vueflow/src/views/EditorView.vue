@@ -36,7 +36,7 @@
             <!-- 传递 nodeTypes, 添加 key 绑定, 添加 nodes-drag-stop 和 elements-remove 监听 -->
           </div>
           <!-- 可停靠编辑器 -->
-          <DockedEditorWrapper v-if="isDockedEditorVisible" class="docked-editor-wrapper" />
+          <DockedEditorWrapper v-if="isDockedEditorVisible" ref="dockedEditorWrapperRef" class="docked-editor-wrapper" />
         </div>
       </div>
       <div v-else class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, markRaw } from "vue"; // Roo: Removed unused watch, shallowRef, nextTick
+import { ref, onMounted, onUnmounted, computed, markRaw, watch, nextTick } from "vue"; // Roo: Removed unused shallowRef. Added watch, nextTick
 // import { useRoute, useRouter } from "vue-router"; // Roo: Moved to useRouteHandler - REMOVING IMPORT
 // import { useDefaultWorkflowLoader } from "../composables/useDefaultWorkflowLoader"; // Roo: 移除默认工作流加载器
 // import { useVueFlow } from '@vue-flow/core'; // Roo: Removed unused import
@@ -96,6 +96,7 @@ import { useEditorState } from "../composables/editor/useEditorState"; // Roo: I
 
 // Roo: Editor state management moved to useEditorState.ts
 const canvasRef = ref<InstanceType<typeof Canvas> | null>(null); // Restore ref definition for component instance
+const dockedEditorWrapperRef = ref<InstanceType<typeof DockedEditorWrapper> | null>(null); // 咕咕：新增 ref
 // const { screenToFlowCoordinate } = useVueFlow(); // Roo: Removed unused screenToFlowCoordinate
 // const { instance } = useVueFlow(); // 实例现在按标签页管理
 
@@ -123,9 +124,25 @@ const {
   isSidebarReady,
   sidebarManagerRef,
   isDockedEditorVisible, // <-- 咕咕：解构新状态
+  requestedContextToOpen, // 咕咕：解构新状态
+  clearRequestedContext,  // 咕咕：解构新方法
   handleNodeSelected,
   handleError,
 } = useEditorState();
+
+watch(requestedContextToOpen, (newContext) => {
+  if (newContext && isDockedEditorVisible.value) {
+    // 使用 nextTick 确保 DOM 更新完毕，dockedEditorWrapperRef 可用
+    nextTick(() => {
+      if (dockedEditorWrapperRef.value) {
+        dockedEditorWrapperRef.value.openEditor(newContext);
+        clearRequestedContext(); // 处理完后清除，避免重复触发
+      } else {
+        console.warn("[EditorView] Watch requestedContextToOpen: dockedEditorWrapperRef is null even after nextTick.");
+      }
+    });
+  }
+}, { deep: true }); // deep: true 以监视对象内部变化
 
 // --- Active Tab ---
 const activeTabId = computed(() => tabStore.activeTabId);

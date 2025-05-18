@@ -982,7 +982,7 @@ export function useWorkflowInteractionCoordinator() {
     activeTabId: string,
     nodeId: string,
     inputKey: string,
-    currentValue: string,
+    currentValue: any, // 咕咕：currentValue 可以是任何类型
     inputDefinition: InputDefinition, // InputDefinition 是 GroupSlotInfo
     editorTitle?: string
   ) => {
@@ -998,9 +998,6 @@ export function useWorkflowInteractionCoordinator() {
           editorType = 'json';
           break;
         case DataFlowType.STRING: // 用于 MARKDOWN_LIKE 或普通文本
-          // 咕咕：如果将来 InputDefinition 包含更丰富的元数据（如 uiHint: 'markdown'），可以在这里判断
-          // 目前，如果 dataFlowType 是 STRING 且没有 languageHint，默认为 'text'
-          // 如果希望默认为 markdown，可以在这里修改或依赖 inputDefinition.config.uiWidget === 'TextAreaInput' 等前端组件类型
           editorType = 'text'; // 或者 'markdown' 如果有其他提示
           break;
         default:
@@ -1008,18 +1005,29 @@ export function useWorkflowInteractionCoordinator() {
           break;
       }
     }
-    // 进一步根据 inputDefinition.config.uiWidget (如果存在) 来细化
-    // 例如，如果 uiWidget 是 'CodeInput' 且没有 languageHint，可以默认为 'plaintext' 或其他
     if (inputDefinition.config?.uiWidget === 'CodeInput' && !inputDefinition.config?.languageHint) {
       editorType = (inputDefinition.config?.language as string) || 'plaintext';
     } else if (inputDefinition.config?.uiWidget === 'TextAreaInput' && !inputDefinition.config?.languageHint) {
-      // TextAreaInput 通常是纯文本，但如果将来支持 markdown 等，可以在这里扩展
-      // 也可以检查 inputDefinition.matchCategories 是否包含 BuiltInSocketMatchCategory.MARKDOWN
-      if (inputDefinition.matchCategories?.includes('Markdown')) { // 假设 'Markdown' 是 BuiltInSocketMatchCategory 中的一个值
+      if (inputDefinition.matchCategories?.includes('Markdown')) {
         editorType = 'markdown';
       } else {
         editorType = 'text';
       }
+    }
+
+    // 咕咕：准备 initialContent，确保 JSON 对象被字符串化
+    let finalInitialContent: string;
+    if (editorType === 'json' && typeof currentValue === 'object' && currentValue !== null) {
+      try {
+        finalInitialContent = JSON.stringify(currentValue, null, 2); // 美化 JSON 字符串
+      } catch (e) {
+        console.error(`Error stringifying JSON for editor ${nodeId}.${inputKey}:`, e);
+        finalInitialContent = String(currentValue); // 回退到普通字符串转换
+      }
+    } else if (currentValue === null || currentValue === undefined) {
+      finalInitialContent = ''; // 对于 null 或 undefined，使用空字符串
+    } else {
+      finalInitialContent = String(currentValue); // 其他类型转换为字符串
     }
 
     const finalTitle = editorTitle || `编辑 ${nodeId} - ${inputKey}`;
@@ -1027,13 +1035,21 @@ export function useWorkflowInteractionCoordinator() {
     const context: EditorOpeningContext = {
       nodeId,
       inputPath: `inputs.${inputKey}`, // 假设我们总是编辑 'inputs' 下的属性
-      initialContent: currentValue,
+      initialContent: finalInitialContent, // 使用处理过的 initialContent
       languageHint: editorType,
       title: finalTitle, // 使用 editorTitle 或生成的默认标题
-      // breadcrumbData 和 config 可以根据需要从 inputDefinition 或其他地方填充
-      // breadcrumbData: [{ text: `Node: ${nodeId}`, key: nodeId }, { text: `Input: ${inputKey}`, key: inputKey }],
-      // config: { ...inputDefinition.config }, // 可以传递 inputDefinition 的 config
-      onSave: (newContent) => {
+      onSave: (newContent: string) => { // newContent 从编辑器出来总是字符串
+        let valueToSave: any = newContent;
+        if (editorType === 'json') {
+          try {
+            valueToSave = JSON.parse(newContent);
+          } catch (e) {
+            console.error(`Error parsing JSON from editor for ${nodeId}.${inputKey}:`, e);
+            // 决定如何处理解析错误：是保存原始字符串还是报错？
+            // 暂时保存原始字符串，但可能需要用户提示或更复杂的错误处理
+          }
+        }
+
         const historyEntry: HistoryEntry = {
           actionType: "modify", // 使用 actionType
           objectType: "nodeInput", // 使用 objectType
@@ -1043,12 +1059,12 @@ export function useWorkflowInteractionCoordinator() {
             nodeId,
             inputKey,
             propertyName: inputKey, // 对应 HistoryEntryDetails
-            oldValue: currentValue,
-            newValue: newContent,
+            oldValue: currentValue, // oldValue 仍然是原始的 currentValue
+            newValue: valueToSave,  // newValue 是处理过的 (可能是对象或字符串)
           },
         };
-        updateNodeInputValueAndRecord(activeTabId, nodeId, inputKey, newContent, historyEntry);
-        console.log(`[InteractionCoordinator] Docked editor content saved for ${nodeId}.${inputKey}:`, newContent);
+        updateNodeInputValueAndRecord(activeTabId, nodeId, inputKey, valueToSave, historyEntry);
+        console.log(`[InteractionCoordinator] Docked editor content saved for ${nodeId}.${inputKey}:`, valueToSave);
       },
     };
 

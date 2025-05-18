@@ -386,31 +386,44 @@ const getLanguageHintForInput = (input: InputDefinition): string | undefined => 
   return undefined;
 };
 
-// 辅助函数，用于生成 Tooltip 内容的截断版本
-const getPreviewTooltipContent = (value: any, inputDef: InputDefinition): string => {
+// 辅助函数，用于生成 Tooltip 内容的字符串版本 (不含 Markdown 代码块包装，不截断)
+const getFormattedPreviewString = (value: any, inputDef: InputDefinition): string => {
   const langHint = getLanguageHintForInput(inputDef);
+
   if (value === undefined || value === null) return "无内容";
+
   let strValue = "";
-  if (typeof value === 'object') {
+  let processedValue = value;
+
+  // 尝试解析和格式化 JSON (如果值是字符串且提示是json)
+  if (langHint === 'json' && typeof value === 'string') {
     try {
-      strValue = JSON.stringify(value, null, 2); // JSON 美化输出
+      const parsed = JSON.parse(value);
+      if (typeof parsed === 'object' && parsed !== null) {
+        processedValue = parsed;
+      }
+    } catch (e) { /* 解析失败，使用原始字符串 */ }
+  }
+
+  // 将处理后的值转为字符串
+  if (typeof processedValue === 'object' && processedValue !== null) {
+    try {
+      strValue = JSON.stringify(processedValue, null, 2); // JSON 美化
     } catch {
       strValue = "[无法序列化的对象]";
     }
   } else {
-    strValue = String(value);
+    strValue = String(processedValue);
   }
 
-  if (langHint === 'json' || (inputDef.dataFlowType === DataFlowType.STRING && inputDef.matchCategories?.includes(BuiltInSocketMatchCategory.CODE))) {
-    const lines = strValue.split('\n');
-    return lines.slice(0, 30).join('\n') + (lines.length > 30 ? "\n..." : "");
+  // 处理完全空的内容
+  if (strValue.trim() === "") {
+    if (langHint === 'json') return "空JSON内容";
+    if (langHint === 'markdown') return "空Markdown内容";
+    if (langHint) return `空 ${langHint} 内容`; // 例如 "空 javascript 内容"
+    return "无内容";
   }
-  // 对于 Markdown 和普通多行文本，Tooltip 的 MarkdownRenderer 会处理，这里可以返回原始值或截断的纯文本
-  // 如果是 Markdown，直接返回，让 MarkdownRenderer 处理
-  if (langHint === 'markdown') return strValue;
-
-  // 普通文本截断
-  return strValue.length > 300 ? strValue.substring(0, 297) + "..." : strValue;
+  return strValue; // 返回原始或格式化后的字符串，不截断，不加额外前缀
 };
 
 
@@ -428,7 +441,42 @@ const openEditorForInput = (input: InputDefinition) => {
   // 使用 (input as any).key 来临时解决 TypeScript 可能的类型推断问题
   const inputKeyString = String((input as any).key);
   const editorTitle = `${nodeDisplayName} > ${input.displayName || inputKeyString}`;
-  const currentValue = getInputValue(inputKeyString);
+  let currentValue = getInputValue(inputKeyString); // 获取原始值
+
+  // 对 currentValue 进行格式化，确保传递给编辑器的是美化后的 JSON 字符串
+  const langHint = getLanguageHintForInput(input);
+  if (currentValue !== undefined && currentValue !== null) {
+    if (langHint === 'json') {
+      if (typeof currentValue === 'string') {
+        try {
+          const parsed = JSON.parse(currentValue);
+          if (typeof parsed === 'object' && parsed !== null) {
+            currentValue = JSON.stringify(parsed, null, 2); // 字符串转对象再转格式化字符串
+          } else {
+            // 如果解析出来不是对象（比如数字、布尔值），或者解析失败，
+            // 并且原始字符串不像一个已格式化的JSON (没有换行或只有一行)
+            // 尝试将其视为一个简单的值，不需要特别的JSON格式化。
+            // 如果原始字符串包含换行，则可能已经是格式化好的，保留原样。
+            if (!currentValue.includes('\n') && currentValue.split('\n').length <=1) {
+                 // no-op, currentValue is already a simple string or unformattable
+            }
+          }
+        } catch (e) {
+          // 解析失败，如果原始字符串不像一个已格式化的JSON，则保留原样
+          // 如果原始字符串包含换行，则可能已经是格式化好的，保留原样。
+           if (!currentValue.includes('\n') && currentValue.split('\n').length <=1) {
+                // no-op, currentValue is already a simple string or unformattable
+           }
+        }
+      } else if (typeof currentValue === 'object') {
+        currentValue = JSON.stringify(currentValue, null, 2); // 对象直接转格式化字符串
+      }
+    }
+    // 对于其他类型 (如 code, markdown, plain text)，currentValue 通常已经是字符串，
+    // 或者 DockedEditorWrapper/RichCodeEditor 会处理其显示。
+    // 这里主要确保 JSON 是格式化好的。
+  }
+
 
   interactionCoordinator.openDockedEditorForNodeInput(
     activeTabId.value,
@@ -867,7 +915,7 @@ const openEditorForInput = (input: InputDefinition) => {
                   @update:modelValue="updateInputValue(String((input as any).key), $event)"
                   @blur="handleComponentBlur(String((input as any).key), $event)"
                   class="w-full max-w-full"
-                 />
+                />
               </template>
               <!-- 情况2: 显示动作按钮 (预览/编辑) -->
               <template v-else-if="showActionButtonsForInput(input)">
@@ -882,9 +930,14 @@ const openEditorForInput = (input: InputDefinition) => {
                     :allowHtml="getLanguageHintForInput(input) === 'markdown'"
                   >
                     <template #content>
-                      <div class="max-h-96 overflow-auto p-1 text-xs bg-gray-800 text-gray-100 rounded font-mono">
-                        <MarkdownRenderer v-if="getLanguageHintForInput(input) === 'markdown'" :markdownContent="String(getInputValue(String((input as any).key)) || '无内容')" />
-                        <pre v-else class="whitespace-pre-wrap break-all">{{ getPreviewTooltipContent(getInputValue(String((input as any).key)), input) }}</pre>
+                      <div class="max-h-96 overflow-auto text-xs text-gray-100 font-mono">
+                        <template v-if="getLanguageHintForInput(input) === 'markdown'">
+                          <MarkdownRenderer :markdownContent="getFormattedPreviewString(getInputValue(String(input.key)), input)" />
+                        </template>
+                        <template v-else-if="getLanguageHintForInput(input) === 'json' || (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE))">
+                          <MarkdownRenderer :markdownContent="'**' + input.displayName + '**' + '\n' + '```' + (getLanguageHintForInput(input) || 'text') + '\n' + getFormattedPreviewString(getInputValue(String(input.key)), input) + '\n' + '```'" />
+                        </template>
+                        <pre v-else class="whitespace-pre-wrap break-all">{{ getFormattedPreviewString(getInputValue(String(input.key)), input) }}</pre>
                       </div>
                     </template>
                     <button class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none">

@@ -252,7 +252,8 @@ function openEditor(context: EditorOpeningContext) {
       const tabId = `${context.nodeId}_${context.inputPath}`;
       const newTab: TabData = {
         tabId,
-        title: context.breadcrumbData?.inputName || context.breadcrumbData?.nodeName || context.inputPath || '新文件',
+        // 咕咕：优先使用 context.title，然后回退
+        title: context.title || context.breadcrumbData?.inputName || context.breadcrumbData?.nodeName || context.inputPath || '新文件',
         editorId: `editor_${tabId}`,
         initialContent: context.initialContent || '',
         languageHint: context.languageHint,

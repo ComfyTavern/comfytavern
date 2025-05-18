@@ -109,4 +109,9 @@ const renderedHtml = computed(() => {
 
   /* 这些样式现在由全局 base.css 处理 */
 }
+
+/* 覆盖 highlight.js 的默认内边距 */
+:deep(pre code.hljs) {
+  padding: 0.1em;
+}
 </style>

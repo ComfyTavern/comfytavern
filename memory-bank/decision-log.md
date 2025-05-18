@@ -4,33 +4,6 @@
 
 ---
 
-**决策日期:** 2025/05/17
-
-**决策点:** 关于UI Hint字段 (`uiHint`) 的引入
-
-**背景:**
-在初步的类型系统设计中，曾考虑引入一个顶层的 `uiHint: string` 字段到 `InputDefinition.config` 中，用于明确建议前端应渲染的UI组件。
-
-**讨论与考虑:**
-- 用户反馈现有系统已通过 `type` 结合 `config` 中的特定属性（如 `multiline: true`）来间接影响UI。
-- 对于 `CODE` 等类型的UI表现，用户倾向于继续使用 `config` 内的配置（如 `languageHint`）来触发特定渲染。
-- 考虑到 [`DesignDocs/architecture/floating-text-preview-plan.md`](../DesignDocs/architecture/floating-text-preview-plan.md) 的计划（可能将多行编辑统一到浮动窗口），对节点本身UI组件的“暗示”需求降低。
-
-**最终决策:**
-**不引入顶层的 `uiHint` 字段。**
-前端UI组件的选择和渲染方式，将主要依据 `DataFlowType`、`SocketMatchCategory` (可选) 以及 `InputDefinition.config` 对象内部的具体配置项（如 `multiline`, `languageHint`, `suggestions`, 以及未来可能新增的 `preferFloatingEditor` 等）。
-
-**理由:**
-- 保持与现有设计思路的延续性。
-- 避免引入过多的新顶层概念，保持 `InputDefinition` 结构的相对简洁。
-- 更好地与“统一多行/复杂内容浮动编辑窗口”的未来规划相契合。
-- 允许通过 `config` 进行更细粒度的UI行为控制。
-
-**参考文档:**
-- [`DesignDocs/architecture/new-slot-type-system-design.md`](../DesignDocs/architecture/new-slot-type-system-design.md) (已更新以反映此决策)
-
----
-
 **决策日期:** 2025/05/18
 
 **决策点:** 关于代码编辑器组件的实现策略 (针对底部编辑面板)
@@ -172,4 +145,33 @@
 
 **参考任务:**
 - 任务 4.5 (底部可停靠编辑器面板空状态提示) 的调试过程，记录在对应的 `active-context.md` 中。
+---
+
+**决策日期:** 2025/05/18
+
+**决策点:** 可停靠编辑器标签页内容加载、JSON 处理及标题显示机制
+
+**背景:**
+用户报告在点击节点输入控件的“编辑”按钮后，可停靠编辑器面板 (`DockedEditorWrapper.vue`) 虽然被唤起，但面板内的标签页是空的，内容未加载，编辑JSON时报错，且标签页标题不友好。
+
+**最终决策与理由:**
+
+1.  **标签页内容加载机制**:
+    *   **决策**: 确保编辑器打开请求发生时，包含 `initialContent`、`languageHint` 和 `title` 的完整上下文能够被正确传递到负责渲染标签页的组件。
+    *   **理由**: 解决之前编辑器无法直接响应状态中标签数据变化的问题，确保内容正确加载。
+
+2.  **处理 JSON 内容在编辑器中的显示与保存**:
+    *   **决策**: 在为 JSON 类型的输入构造编辑器上下文时，需将对象转换为格式化的字符串 (`JSON.stringify`) 供编辑器使用。在保存时，需将编辑器返回的字符串内容转换回对象 (`JSON.parse`)。
+    *   **理由**: 确保编辑器能正确接收和显示 JSON 内容，并在保存时安全地转换回原始数据结构，避免类型不匹配错误。
+
+3.  **优化可停靠编辑器标签页标题显示**:
+    *   **决策**: 优先使用从编辑器打开上下文中传入的预设标题作为标签页的显示名称。
+    *   **理由**: 确保用户友好的、预设的标题能够被最终用作标签页的显示名称，提高界面的可读性和易用性。
+
+**影响:**
+- 这些决策共同解决了可停靠编辑器面板在打开标签页、加载内容、处理特定数据类型（JSON）以及显示标签标题方面存在的问题。
+- 相关文件已按此决策修改：[`apps/frontend-vueflow/src/composables/editor/useEditorState.ts`](../apps/frontend-vueflow/src/composables/editor/useEditorState.ts), [`apps/frontend-vueflow/src/views/EditorView.vue`](../apps/frontend-vueflow/src/views/EditorView.vue), [`apps/frontend-vueflow/src/composables/workflow/useWorkflowInteractionCoordinator.ts`](../apps/frontend-vueflow/src/composables/workflow/useWorkflowInteractionCoordinator.ts), [`apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue`](../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue)。
+
+**参考任务:**
+- 子任务 NEXUSCORE_SUBTASK_DOCKED_EDITOR_FIX_AND_ENHANCE_V1 的详细修复过程，记录在 [`memory-bank/active-context.md`](./active-context.md) (现已归档)。
 ---

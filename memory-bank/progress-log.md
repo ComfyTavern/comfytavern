@@ -252,7 +252,7 @@
     - **分配给: 💻 Code 模式 (任务ID: NEXUSCORE_SUBTASK_EDITOR_EMPTY_STATE_PROMPT_V1)**
     - **开始日期: 2025/05/18**
     - **完成日期: 2025/05/18**
-    - **备注: 成功在底部可停靠编辑器面板中实现了空状态提示。当面板内无活动编辑标签页时，会显示“没有活动的编辑标签页。请从节点输入处打开编辑器。”的提示。关键解决步骤包括更新了 [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue:0) 和 [`DockedEditorWrapper.vue`](../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue:0)，并通过为 [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue:0) 内部类名添加 `ct-` 前缀解决了CSS类名冲突问题。**
+    - **备注: 成功在底部可停靠编辑器面板中实现了空状态提示。当面板内无活动编辑标签页时，会显示“没有活动的编辑标签页。请从节点输入处打开编辑器。”的提示。关键解决步骤包括更新了 [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue) 和 [`DockedEditorWrapper.vue`](../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue)，并通过为 [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue) 内部类名添加 `ct-` 前缀解决了CSS类名冲突问题。**
 
 - **任务 4.6 (UI重构与增强)**: 节点内组件深化改造与相关功能完善。
     - **状态: ✅ 完成**
@@ -262,7 +262,7 @@
     - **备注: 此阶段完成了对节点内部输入控件UI/UX的重大改进，包括为不同数据类型提供定制化的预览和编辑触发方式，并确保了与可停靠编辑器面板的顺畅集成。**
     - **子任务 4.6.1**: 修订节点内部输入控件设计方案。
         - **状态: ✅ 完成**
-        - **分配给: 🧠 NexusCore & 用户协作
+        - **分配给: 🧠 NexusCore & 用户协作**
         - **完成日期: 2025/05/18**
         - **备注**: 最终方案确定为：改造 [`CodeInput.vue`](../apps/frontend-vueflow/src/components/graph/inputs/CodeInput.vue) (按钮模式，用于代码类型，渲染于参数名同行的右侧)；改造 [`TextAreaInput.vue`](../apps/frontend-vueflow/src/components/graph/inputs/TextAreaInput.vue) (受限高度+预览/编辑按钮，移除拖拽调整大小，用于多行文本/Markdown，渲染于参数名下方内容区)；新建 [`JsonInlineViewer.vue`](../apps/frontend-vueflow/src/components/graph/inputs/JsonInlineViewer.vue) (只读JSON预览+编辑按钮，渲染于参数名下方内容区)。相关UI控制参数（如高度、行数限制）暂时硬编码，未来考虑用户全局配置。设计文档 [`DesignDocs/architecture/floating-preview-editor-design.md`](../DesignDocs/architecture/floating-preview-editor-design.md) 已更新以反映这些变更。
     - **子任务 4.6.2**: 更新后端测试节点 [`apps/backend/src/nodes/TestWidgetsNode.ts`](../apps/backend/src/nodes/TestWidgetsNode.ts)。
@@ -301,7 +301,18 @@
         - **完成日期: 2025/05/18**
         - **备注**: 通过集成 `marked-highlight` 扩展和 `highlight.js` (使用 `atom-one-dark.css` 主题) 实现Markdown中代码块的语法高亮。
 
-- **任务 4.7 (UI优化)**: 面板部分深化改造。
+- **任务 4.7 (UI优化与修复)**: 可停靠编辑器功能修复与增强。
+    - **状态: ✅ 完成**
+    - **分配给: 💻 Code 模式 (任务ID: NEXUSCORE_SUBTASK_DOCKED_EDITOR_FIX_AND_ENHANCE_V1)**
+    - **开始日期: 2025/05/18**
+    - **完成日期: 2025/05/18**
+    - **备注: 修复了可停靠编辑器面板在打开后标签页为空或内容未正确加载的问题，同时解决了编辑JSON内容时编辑器报错以及优化了标签页标题的显示。**
+        - **关键修复点1 (标签页内容加载)**: 在 [`useEditorState.ts`](../apps/frontend-vueflow/src/composables/editor/useEditorState.ts) 中引入 `requestedContextToOpen` ref，并在 [`EditorView.vue`](../apps/frontend-vueflow/src/views/EditorView.vue) 中 `watch` 此状态，确保上下文正确传递给 `DockedEditorWrapper.vue` 的 `openEditor` 方法。
+        - **关键修复点2 (JSON编辑报错)**: 在 [`useWorkflowInteractionCoordinator.ts`](../apps/frontend-vueflow/src/composables/workflow/useWorkflowInteractionCoordinator.ts) 的 `openDockedEditorForNodeInput` 方法中，对JSON对象进行 `JSON.stringify` (传递给编辑器前) 和 `JSON.parse` (保存时) 处理。
+        - **关键修复点3 (标签页标题)**: 在 [`DockedEditorWrapper.vue`](../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue) 的 `openEditor` 方法中，优先使用从 `EditorOpeningContext` 传入的 `context.title` 作为标签页标题。
+        - 详细诊断和修复过程记录在 [`memory-bank/active-context.md`](./active-context.md) 中 (现已归档)。
+
+- **任务 4.8 (UI优化)**: 面板部分深化改造。
     - **状态: ⏳ 待开始**
     - **分配给: (待定)**
     - **开始日期: (待定)**
