@@ -90,15 +90,44 @@
     -   **样式**: 此 CSS 类在 [`apps/frontend-vueflow/src/components/graph/nodes/handleStyles.module.css`](../../apps/frontend-vueflow/src/components/graph/nodes/handleStyles.module.css) 中定义，可以表现为光晕、边框高亮或其他醒目的视觉效果。
 -   右侧预览面板 ([`RightPreviewPanel.vue`](DesignDocs/architecture/floating-preview-editor-design.md:19)) 始终反映 `previewTarget` 的内容。
 
-### 2.4. 节点内部输入控件 (`BaseNode.vue` / 特定节点类型组件中)
+### 2.4. 节点内部输入控件 (`BaseNode.vue` / 各输入组件中)
 
 #### 2.4.1. 职责与调整
--   **简单输入**: 继续在节点内部直接渲染对应的输入控件（单行文本、数字、布尔开关、下拉选择等），如现状所示。
--   **复杂输入 (需要可停靠编辑器)**:
-    -   当 `inputDefinition.config.editorMode` (或类似配置项，具体参考增强设计文档) 指示使用可停靠编辑器时。
-    -   节点内部**不直接渲染**该输入的完整编辑控件 (如大的 `textarea` 或嵌入式 CodeMirror)。
-    -   而是渲染一个**触发器**：可以是一个“编辑”按钮（例如，标有“编辑代码”、“编辑Markdown”），或者一个显示当前值摘要、点击后可展开编辑的区域。
-    -   此触发器负责激活可停靠编辑器面板 (`DockedEditorWrapper.vue`)，并传递必要的上下文给它，包括 `nodeId`, `inputKey`, `currentValue` 以及该输入插槽的完整 `InputDefinition` (或其关键部分如 `dataFlowType`, `matchCategories`, `config`, `editorMode`)。
+
+节点内部输入控件将根据输入的数据类型 (`dataFlowType` 和 `matchCategories`) 以及少量 `InputDefinition.config` (如 `languageHint`, `readOnly`) 进行差异化渲染，旨在平衡节点内的快速查看/编辑与功能完善的外部编辑器体验。
+
+-   **简单单行输入**:
+    -   例如：`STRING` (非多行), `NUMBER`, `BOOLEAN`, `SELECT` (COMBO)。
+    -   **行为**: 继续在节点内部参数名旁边直接渲染紧凑的内联输入控件，如现状所示。
+
+-   **多行文本 / Markdown (改造 [`TextAreaInput.vue`](../../apps/frontend-vueflow/src/components/graph/inputs/TextAreaInput.vue))**:
+    -   **渲染位置**: 在节点内部，位于参数名下方的多行内容区域。
+    -   **UI**:
+        -   一个**高度受限**的文本区域，用于节点内直接编辑 (例如，默认3-5行，具体高度可硬编码或未来通过用户配置设定)。**不再支持拖拽调整大小**。
+        -   文本区域旁边或下方集成两个小图标按钮：
+            -   **预览按钮 (👁️)**: 鼠标悬停或点击时，触发 [`Tooltip.vue`](../../apps/frontend-vueflow/src/components/common/Tooltip.vue) 显示内容预览（Markdown应渲染，纯文本直接显示，内容按预设行数截断）。
+            -   **编辑按钮 (✏️)**: 点击时，激活“可停靠编辑器面板” ([`DockedEditorWrapper.vue`](../../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue)) 进行完整编辑。
+    -   **交互**: 用户可以在节点内进行简单编辑，或选择通过按钮进行预览或跳转到功能更全的编辑器。
+
+-   **代码 (改造 [`CodeInput.vue`](../../apps/frontend-vueflow/src/components/graph/inputs/CodeInput.vue))**:
+    -   **渲染位置**: 在节点内部，与参数名在同一行，位于通常放置单行输入控件的区域。
+    -   **UI**:
+        -   节点内部**不渲染**任何形式的编辑器。
+        -   只显示两个水平排列的小图标按钮：
+            -   **预览按钮 (👁️)**: 触发 [`Tooltip.vue`](../../apps/frontend-vueflow/src/components/common/Tooltip.vue) 显示代码片段预览（例如前30行，带语法高亮，依赖 `inputDefinition.config.languageHint` 和增强后的Tooltip）。
+            -   **编辑按钮 (✏️ 或 </>)**: 点击时，激活“可停靠编辑器面板” ([`DockedEditorWrapper.vue`](../../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue))。
+    -   **交互**: 只能通过按钮进行预览或跳转到外部编辑器。
+
+-   **JSON (新建 `JsonInlineViewer.vue`)**:
+    -   **渲染位置**: 在节点内部，位于参数名下方的多行内容区域。
+    -   **UI**:
+        -   一个**高度受限的、只读的** JSON 树状预览或美化后的文本预览。
+        -   旁边或下方集成一个**编辑按钮 (✏️)**，点击激活“可停靠编辑器面板” ([`DockedEditorWrapper.vue`](../../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue))，使用 [`RichCodeEditor.vue`](../../apps/frontend-vueflow/src/components/common/RichCodeEditor.vue) 的 JSON 模式进行完整编辑。
+        -   (可选) 一个**预览按钮 (👁️)**，如果内联预览信息不足，可使用 [`Tooltip.vue`](../../apps/frontend-vueflow/src/components/common/Tooltip.vue) 显示更多格式化的JSON片段。
+    -   **交互**: 节点内主要用于查看，编辑需跳转。
+
+#### 2.4.2. 激活可停靠编辑器
+所有类型的“编辑按钮”在点击后，都会负责收集必要的上下文信息（`nodeId`, `inputKey`, `currentValue`, `inputDefinition` 等），并触发相应的事件或调用协调器函数，以激活“可停靠编辑器面板” ([`DockedEditorWrapper.vue`](../../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue))，并将上下文传递给它。
 
 ### 2.5. 左侧面板 (现状说明)
 根据用户反馈，左侧面板目前主要包含如节点库 ([`NodePanel.vue`](apps/frontend-vueflow/src/components/graph/sidebar/NodePanel.vue))、历史记录 ([`HistoryPanel.vue`](apps/frontend-vueflow/src/components/graph/sidebar/HistoryPanel.vue))、工作流管理 ([`WorkflowPanel.vue`](apps/frontend-vueflow/src/components/graph/sidebar/WorkflowPanel.vue))、组IO编辑 ([`GroupIOEdit.vue`](apps/frontend-vueflow/src/components/graph/sidebar/GroupIOEdit.vue)) 等功能。它**不是**一个统一的节点所有属性的编辑中心。节点属性的编辑主要发生在节点自身内部（对于简单属性）或通过可停靠编辑器面板（对于复杂属性）。
@@ -127,8 +156,8 @@
 ## 4. 编辑机制 (基于可停靠编辑器面板)
 
 ### 4.1. 核心流程 (概述)
-1.  用户在画布节点的某个输入字段（配置为使用可停靠编辑器）上点击触发器（如“编辑”按钮）。
-2.  `DockedEditorWrapper.vue` 被激活，根据该输入的配置 (`InputDefinition.config.editorMode`)，加载单页编辑器 (`RichCodeEditor.vue`) 或多标签编辑器 (`TabbedEditorHost.vue` 内含多个 `RichCodeEditor.vue` 实例)。
+1.  用户在画布节点的某个输入字段上点击对应的“编辑”按钮（该按钮是节点内部UI的一部分，例如在改造后的 `TextAreaInput.vue`, `CodeInput.vue` 或新建的 `JsonInlineViewer.vue` 中）。
+2.  `DockedEditorWrapper.vue` 被激活。它会根据传递的上下文（特别是 `inputDefinition` 中的 `dataFlowType`, `config.languageHint` 等）来决定如何配置内部的 `RichCodeEditor.vue` (例如，设置对应的语言模式：Markdown, JavaScript, JSON 等)。
 3.  编辑器加载该字段的当前值和相关 `InputDefinition`。如果使用多标签模式且已存在对应标签，则激活该标签。
 4.  用户在编辑器中修改内容。编辑器顶部可能包含面包屑导航，指示当前编辑上下文。
 5.  用户通过编辑器界面请求保存（例如点击“保存”按钮，或标签页的保存操作）。
@@ -193,9 +222,12 @@ Markdown 渲染效果，代码/JSON 高亮格式化（JSON 应支持折叠），
     *   实现基于节点输入配置 (`config.editorMode`) 的编辑器模式调度逻辑（加载 `RichCodeEditor.vue` 或 `TabbedEditorHost.vue`）。
     *   实现与 `WorkflowManager` 的数据保存对接。
     *   完成面包屑导航数据的收集与传递。
-4.  **节点内部触发器改造 (`BaseNode.vue` / 特定节点)**:
-    *   根据输入配置 (`config.editorMode` 及相关参数)，渲染“编辑”按钮或触发区域。
-    *   实现点击触发器激活 `DockedEditorWrapper.vue` 并传递完整上下文。
+4.  **节点内部输入控件改造 (`BaseNode.vue` / 各输入组件)**:
+    *   **改造 `CodeInput.vue`**: 移除编辑器，改为预览和编辑按钮组，放置于参数名同行的右侧。
+    *   **改造 `TextAreaInput.vue`**: 限制高度，移除拖拽调整大小，集成预览和编辑按钮，放置于参数名下方的多行内容区。
+    *   **新建 `JsonInlineViewer.vue`**: 实现只读JSON预览和编辑按钮，放置于参数名下方的多行内容区。
+    *   **更新 `BaseNode.vue`**: 调整模板以正确渲染这些改造后/新建的输入控件，并处理其发出的 `open-docked-editor` 事件。
+    *   **更新 `inputs/index.ts`**: 修改 `getInputComponent` 逻辑以根据 `dataFlowType` 和 `matchCategories` 返回正确的输入控件。
 5.  **核心类型与状态管理更新 (预览部分)**:
     *   (此部分与预览相关，基本保留原状) 在工作流核心数据结构 ([`packages/types/src/workflow.ts`](packages/types/src/workflow.ts:0), [`packages/types/src/schemas.ts`](packages/types/src/schemas.ts:0)) 中添加 `previewTarget` 字段。
     *   在状态管理模块 ([`workflowStore.ts`](apps/frontend-vueflow/src/stores/workflowStore.ts:0) 或相关 composables) 中实现更新和读取 `previewTarget` 的逻辑，并确保纳入历史记录。

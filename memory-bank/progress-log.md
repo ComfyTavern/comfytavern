@@ -240,8 +240,6 @@
     - **完成日期: 2025/05/18**
     - **备注: 成功创建并实现了 [`DockedEditorWrapper.vue`](../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue)，用于管理可停靠编辑器面板的 UI 状态、调度加载子编辑器并处理数据保存。相关类型已更新在 [`apps/frontend-vueflow/src/types/editorTypes.ts`](../apps/frontend-vueflow/src/types/editorTypes.ts)。详细日志已归档。**
 
----
-
 - **任务 4.4.4 (UI实现 - 集成 `DockedEditorWrapper.vue` 到主视图)**
     - **状态: ✅ 完成**
     - **分配给: 💻 Code 模式 (任务ID: NEXUSCORE_SUBTASK_DOCKED_EDITOR_INTEGRATION_V1)**
@@ -249,27 +247,63 @@
     - **完成日期: 2025/05/18**
     - **备注: 成功将 `<DockedEditorWrapper />` 集成到主编辑器视图 [`EditorView.vue`](../apps/frontend-vueflow/src/views/EditorView.vue)，并在状态栏 [`StatusBar.vue`](../apps/frontend-vueflow/src/components/graph/StatusBar.vue) 添加了控制按钮。通过将 [`useEditorState.ts`](../apps/frontend-vueflow/src/composables/editor/useEditorState.ts) 修改为单例模式解决了跨组件状态共享问题。详细调试过程已归档。**
 
----
-
-## 阶段四：前端UI组件渲染逻辑更新与UI/UX增强 (续)
-
-- **任务 4.5 (新需求)**: 实现编辑器画布空状态提示。
+- **任务 4.5 (UI优化)**: 实现编辑器画布空状态提示。
     - **状态: ✅ 完成**
     - **分配给: 💻 Code 模式 (任务ID: NEXUSCORE_SUBTASK_EDITOR_EMPTY_STATE_PROMPT_V1)**
     - **开始日期: 2025/05/18**
     - **完成日期: 2025/05/18**
     - **备注: 成功在底部可停靠编辑器面板中实现了空状态提示。当面板内无活动编辑标签页时，会显示“没有活动的编辑标签页。请从节点输入处打开编辑器。”的提示。关键解决步骤包括更新了 [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue:0) 和 [`DockedEditorWrapper.vue`](../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue:0)，并通过为 [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue:0) 内部类名添加 `ct-` 前缀解决了CSS类名冲突问题。**
 
-- **任务 4.6 (来自 active-context.md 的后续任务)**: 面板部分深化改造。
+- **任务 4.6 (UI重构与增强)**: 节点内组件深化改造与相关功能完善。
+    - **状态: ✅ 完成**
+    - **分配给: 🧠 NexusCore (协调), 🏗️ Architect (设计), 💻 Code (实现)**
+    - **开始日期: 2025/05/18**
+    - **完成日期: 2025/05/18**
+    - **备注: 此阶段完成了对节点内部输入控件UI/UX的重大改进，包括为不同数据类型提供定制化的预览和编辑触发方式，并确保了与可停靠编辑器面板的顺畅集成。**
+    - **子任务 4.6.1**: 修订节点内部输入控件设计方案。
+        - **状态: ✅ 完成**
+        - **分配给: 🧠 NexusCore & 用户协作
+        - **完成日期: 2025/05/18**
+        - **备注**: 最终方案确定为：改造 [`CodeInput.vue`](../apps/frontend-vueflow/src/components/graph/inputs/CodeInput.vue) (按钮模式，用于代码类型，渲染于参数名同行的右侧)；改造 [`TextAreaInput.vue`](../apps/frontend-vueflow/src/components/graph/inputs/TextAreaInput.vue) (受限高度+预览/编辑按钮，移除拖拽调整大小，用于多行文本/Markdown，渲染于参数名下方内容区)；新建 [`JsonInlineViewer.vue`](../apps/frontend-vueflow/src/components/graph/inputs/JsonInlineViewer.vue) (只读JSON预览+编辑按钮，渲染于参数名下方内容区)。相关UI控制参数（如高度、行数限制）暂时硬编码，未来考虑用户全局配置。设计文档 [`DesignDocs/architecture/floating-preview-editor-design.md`](../DesignDocs/architecture/floating-preview-editor-design.md) 已更新以反映这些变更。
+    - **子任务 4.6.2**: 更新后端测试节点 [`apps/backend/src/nodes/TestWidgetsNode.ts`](../apps/backend/src/nodes/TestWidgetsNode.ts)。
+        - **状态: ✅ 完成**
+        - **分配给: 💻 Code 模式 (任务ID: NEXUSCORE_SUBTASK_UPDATE_TESTWIDGETSNODE_V1)**
+        - **完成日期: 2025/05/18**
+        - **备注**: 添加了 `markdown_input` (`STRING` + `Markdown` category), `javascript_code_input` (`STRING` + `Code`/`JavaScript` categories)，修改了 `json_input` (使用 `dataFlowType: 'OBJECT'` + `Json` category) 以便测试新的前端UI。
+    - **子任务 4.6.3**: 改造 [`CodeInput.vue`](../apps/frontend-vueflow/src/components/graph/inputs/CodeInput.vue)。
+        - **状态: ✅ 完成**
+        - **分配给: 💻 Code 模式 (任务ID: NEXUSCORE_SUBTASK_REFACTOR_CODEINPUT_V1)**
+        - **完成日期: 2025/05/18**
+        - **备注**: 移除了内部Codemirror编辑器，改为包含“预览 (Tooltip)”按钮和“编辑 (打开可停靠编辑器)”按钮的轻量级控件。
+    - **子任务 4.6.4**: 改造 [`TextAreaInput.vue`](../apps/frontend-vueflow/src/components/graph/inputs/TextAreaInput.vue)。
+        - **状态: ✅ 完成**
+        - **分配给: 💻 Code 模式 (任务ID: NEXUSCORE_SUBTASK_REFACTOR_TEXTAREAINPUT_V1)**
+        - **完成日期: 2025/05/18**
+        - **备注**: 限制了文本区域高度，移除了拖拽调整大小功能，并集成了“预览 (Tooltip)”按钮和“编辑 (打开可停靠编辑器)”按钮。
+    - **子任务 4.6.5**: 新建 [`JsonInlineViewer.vue`](../apps/frontend-vueflow/src/components/graph/inputs/JsonInlineViewer.vue) 并更新 [`inputs/index.ts`](../apps/frontend-vueflow/src/components/graph/inputs/index.ts)。
+        - **状态: ✅ 完成**
+        - **分配给: 💻 Code 模式 (任务ID: NEXUSCORE_SUBTASK_CREATE_JSONINLINEVIEWER_V1)**
+        - **完成日期: 2025/05/18**
+        - **备注**: 实现了只读JSON预览及编辑按钮。[`inputs/index.ts`](../apps/frontend-vueflow/src/components/graph/inputs/index.ts) 中的 `getInputComponent` 逻辑已更新，以正确返回此新组件以及改造后的 `CodeInput.vue` 和 `TextAreaInput.vue`。
+    - **子任务 4.6.6**: 更新 [`BaseNode.vue`](../apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue) 以集成新输入控件。
+        - **状态: ✅ 完成**
+        - **分配给: 💻 Code 模式 (任务ID: NEXUSCORE_SUBTASK_INTEGRATE_INPUTS_BASENODE_V1)**
+        - **完成日期: 2025/05/18**
+        - **备注**: 调整了模板布局（`.param-header` 和 `.param-content`）以正确渲染新的输入控件，并添加了对 `open-docked-editor` 事件的处理。
+    - **子任务 4.6.7**: 实现 `openDockedEditorForNodeInput` 方法。
+        - **状态: ✅ 完成**
+        - **分配给: 💻 Code 模式 (任务ID: NEXUSCORE_SUBTASK_IMPL_OPENDOCKEDEDITOR_V1)**
+        - **完成日期: 2025/05/18**
+        - **备注**: 在 [`useWorkflowInteractionCoordinator.ts`](../apps/frontend-vueflow/src/composables/workflow/useWorkflowInteractionCoordinator.ts) 中实现，用于处理打开可停靠编辑器的逻辑，并对 [`useEditorState.ts`](../apps/frontend-vueflow/src/composables/editor/useEditorState.ts) 和相关类型进行了必要的扩展。
+    - **子任务 4.6.8**: 为 [`MarkdownRenderer.vue`](../apps/frontend-vueflow/src/components/common/MarkdownRenderer.vue) 添加代码高亮功能。
+        - **状态: ✅ 完成**
+        - **分配给: 💻 Code 模式 (任务ID: NEXUSCORE_SUBTASK_MARKDOWN_CODE_HIGHLIGHT_V1)**
+        - **完成日期: 2025/05/18**
+        - **备注**: 通过集成 `marked-highlight` 扩展和 `highlight.js` (使用 `atom-one-dark.css` 主题) 实现Markdown中代码块的语法高亮。
+
+- **任务 4.7 (UI优化)**: 面板部分深化改造。
     - **状态: ⏳ 待开始**
     - **分配给: (待定)**
     - **开始日期: (待定)**
     - **完成日期: (待定)**
     - **备注: 进一步完善或扩展现有面板（如 [`RightPreviewPanel.vue`](../apps/frontend-vueflow/src/components/graph/sidebar/RightPreviewPanel.vue), [`DockedEditorWrapper.vue`](../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue)）的功能。审视并优化面板的交互和用户体验。具体需求待明确。**
-
-- **任务 4.7 (来自 active-context.md 的后续任务)**: 节点内组件深化改造。
-    - **状态: ⏳ 待开始**
-    - **分配给: (待定)**
-    - **开始日期: (待定)**
-    - **完成日期: (待定)**
-    - **备注: 进一步完善或扩展节点内部UI组件（如各种输入组件 [`StringInput.vue`](../apps/frontend-vueflow/src/components/graph/inputs/StringInput.vue), [`CodeInput.vue`](../apps/frontend-vueflow/src/components/graph/inputs/CodeInput.vue) 等）的功能或显示逻辑，以更好地适配新的类型系统和配置选项。审视并优化节点本身（如 [`BaseNode.vue`](../apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue)）的UI/UX，确保与新类型系统和增强的编辑/预览功能协调一致。**

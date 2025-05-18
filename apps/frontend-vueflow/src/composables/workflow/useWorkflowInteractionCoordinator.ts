@@ -2,7 +2,7 @@
 import { nextTick } from "vue";
 import { klona } from "klona/full";
 import type { Node as VueFlowNode, Edge } from "@vue-flow/core";
-import { type GroupSlotInfo, type HistoryEntry, DataFlowType } from "@comfytavern/types"; // 导入 DataFlowType
+import { type GroupSlotInfo, type HistoryEntry, DataFlowType, type InputDefinition } from "@comfytavern/types"; // 导入 DataFlowType 和 InputDefinition
 import { useWorkflowManager } from "./useWorkflowManager";
 import { useWorkflowHistory } from "./useWorkflowHistory";
 import { useWorkflowViewManagement } from "./useWorkflowViewManagement";
@@ -12,6 +12,8 @@ import type { WorkflowStateSnapshot } from "@/types/workflowTypes";
 import { getNodeType } from "@/utils/nodeUtils"; // 用于在配置更新中检查 NodeGroup
 import { useWorkflowGrouping } from "../group/useWorkflowGrouping";
 import { useWorkflowPreview } from './useWorkflowPreview'; // 导入新的预览 composable
+import { useEditorState } from '@/composables/editor/useEditorState'; // 导入 useEditorState
+import type { EditorOpeningContext } from '@/types/editorTypes'; // 导入 EditorOpeningContext
 
 /**
  * @module composables/workflow/useWorkflowInteractionCoordinator
@@ -967,6 +969,105 @@ export function useWorkflowInteractionCoordinator() {
     console.debug(`[InteractionCoordinator] 已为标签页 ${internalId} 设置预览目标并记录历史: ${newTargetJson}`);
   }
 
+  /**
+   * 打开可停靠编辑器以编辑节点输入。
+   * @param activeTabId - 当前活动工作流的 ID。
+   * @param nodeId - 目标节点的 ID。
+   * @param inputKey - 目标输入的键。
+   * @param currentValue - 当前输入值。
+   * @param inputDefinition - 目标输入的定义。
+   * @param editorTitle - 可选的编辑器标题。
+   */
+  const openDockedEditorForNodeInput = (
+    activeTabId: string,
+    nodeId: string,
+    inputKey: string,
+    currentValue: string,
+    inputDefinition: InputDefinition, // InputDefinition 是 GroupSlotInfo
+    editorTitle?: string
+  ) => {
+    const editorState = useEditorState();
+
+    // 确定 editorType
+    let editorType = 'text'; // 默认类型
+    if (inputDefinition.config?.languageHint) {
+      editorType = inputDefinition.config.languageHint as string;
+    } else {
+      switch (inputDefinition.dataFlowType) {
+        case DataFlowType.OBJECT: // 用于 JSON_LIKE
+          editorType = 'json';
+          break;
+        case DataFlowType.STRING: // 用于 MARKDOWN_LIKE 或普通文本
+          // 咕咕：如果将来 InputDefinition 包含更丰富的元数据（如 uiHint: 'markdown'），可以在这里判断
+          // 目前，如果 dataFlowType 是 STRING 且没有 languageHint，默认为 'text'
+          // 如果希望默认为 markdown，可以在这里修改或依赖 inputDefinition.config.uiWidget === 'TextAreaInput' 等前端组件类型
+          editorType = 'text'; // 或者 'markdown' 如果有其他提示
+          break;
+        default:
+          editorType = 'text';
+          break;
+      }
+    }
+    // 进一步根据 inputDefinition.config.uiWidget (如果存在) 来细化
+    // 例如，如果 uiWidget 是 'CodeInput' 且没有 languageHint，可以默认为 'plaintext' 或其他
+    if (inputDefinition.config?.uiWidget === 'CodeInput' && !inputDefinition.config?.languageHint) {
+      editorType = (inputDefinition.config?.language as string) || 'plaintext';
+    } else if (inputDefinition.config?.uiWidget === 'TextAreaInput' && !inputDefinition.config?.languageHint) {
+      // TextAreaInput 通常是纯文本，但如果将来支持 markdown 等，可以在这里扩展
+      // 也可以检查 inputDefinition.matchCategories 是否包含 BuiltInSocketMatchCategory.MARKDOWN
+      if (inputDefinition.matchCategories?.includes('Markdown')) { // 假设 'Markdown' 是 BuiltInSocketMatchCategory 中的一个值
+        editorType = 'markdown';
+      } else {
+        editorType = 'text';
+      }
+    }
+
+    const finalTitle = editorTitle || `编辑 ${nodeId} - ${inputKey}`;
+
+    const context: EditorOpeningContext = {
+      nodeId,
+      inputPath: `inputs.${inputKey}`, // 假设我们总是编辑 'inputs' 下的属性
+      initialContent: currentValue,
+      languageHint: editorType,
+      title: finalTitle, // 使用 editorTitle 或生成的默认标题
+      // breadcrumbData 和 config 可以根据需要从 inputDefinition 或其他地方填充
+      // breadcrumbData: [{ text: `Node: ${nodeId}`, key: nodeId }, { text: `Input: ${inputKey}`, key: inputKey }],
+      // config: { ...inputDefinition.config }, // 可以传递 inputDefinition 的 config
+      onSave: (newContent) => {
+        const historyEntry: HistoryEntry = {
+          actionType: "modify", // 使用 actionType
+          objectType: "nodeInput", // 使用 objectType
+          summary: `更新节点 ${nodeId} 输入 ${inputKey}`,
+          timestamp: Date.now(),
+          details: {
+            nodeId,
+            inputKey,
+            propertyName: inputKey, // 对应 HistoryEntryDetails
+            oldValue: currentValue,
+            newValue: newContent,
+          },
+        };
+        updateNodeInputValueAndRecord(activeTabId, nodeId, inputKey, newContent, historyEntry);
+        console.log(`[InteractionCoordinator] Docked editor content saved for ${nodeId}.${inputKey}:`, newContent);
+      },
+    };
+
+    // 确保编辑器面板可见
+    if (!editorState.isDockedEditorVisible.value) {
+      editorState.toggleDockedEditor();
+    }
+
+    // 调用 editorState 中的方法来打开/激活编辑器标签页
+    // 假设 editorState 有一个名为 openEditor 的方法
+    // editorState.openEditor(context);
+    // 咕咕：根据 useEditorState.ts 的当前实现，它还没有 openEditor 方法。
+    // 我们需要先在 useEditorState.ts 中实现类似的功能。
+    // 暂时，我们只打印日志，表示意图。
+    console.log('[InteractionCoordinator] Requesting to open docked editor with context:', context);
+    // 咕咕：这里需要调用 useEditorState 提供的实际方法。
+    // openOrFocusEditorTab 应该总是存在于 useEditorState 的返回中
+    editorState.openOrFocusEditorTab(context);
+  };
 
   // 导出公共接口
   return {
@@ -985,6 +1086,7 @@ export function useWorkflowInteractionCoordinator() {
     updateWorkflowNameAndRecord,          // 更新工作流名称
     updateWorkflowDescriptionAndRecord,   // 更新工作流描述
     setPreviewTargetAndRecord,            // 新增：设置/清除预览目标并记录历史
+    openDockedEditorForNodeInput,         // 新增：打开可停靠编辑器
 
     // --- 预览相关 (来自 useWorkflowPreview) ---
     isPreviewEnabled, // 导出从 useWorkflowPreview 获取的预览状态

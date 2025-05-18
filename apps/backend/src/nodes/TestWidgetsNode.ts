@@ -7,15 +7,17 @@ export class TestWidgetsNodeImpl {
     return {
       string_output: inputs.string_input,
       text_output: inputs.text_input,
+      markdown_output: inputs.markdown_input, // 新增 Markdown 输出
       int_output: inputs.int_input,
       float_output: inputs.float_input,
       boolean_output: inputs.boolean_toggle,
       combo_output: inputs.combo_select,
-      json_output: inputs.json_input,
+      json_output: inputs.json_input,         // json_input 的类型将改变
+      javascript_code_output: inputs.javascript_code_input, // 新增 JS 代码输出
       // BUTTON 类型没有直接的输出值，它触发事件
-      string_with_suggestions_output: inputs.string_with_suggestions, // Pass through new inputs
-      int_with_suggestions_output: inputs.int_with_suggestions,     // Pass through new inputs
-      float_with_suggestions_output: inputs.float_with_suggestions  // Pass through new inputs
+      string_with_suggestions_output: inputs.string_with_suggestions,
+      int_with_suggestions_output: inputs.int_with_suggestions,
+      float_with_suggestions_output: inputs.float_with_suggestions
     }
   }
 }
@@ -49,6 +51,18 @@ export const definition: NodeDefinition = {
         default: '这是默认的\n多行文本',
         multiline: true,
         placeholder: '请输入多行文本'
+      }
+    },
+    markdown_input: { // 新增 Markdown 输入
+      dataFlowType: 'STRING', // 类型系统中无 'MARKDOWN', 使用 'STRING'
+      displayName: 'Markdown文本',
+      description: 'Markdown 内容输入测试',
+      required: false,
+      matchCategories: ['Markdown'], // 明确是 Markdown
+      config: {
+        default: '# 标题\n\n这是一段*Markdown*文本，包含一个[链接](https://example.com)。\n\n```python\nprint("Hello")\n```',
+        multiline: true, // 确保前端识别为多行处理
+        languageHint: 'markdown' // 辅助前端编辑器
       }
     },
     int_input: {
@@ -96,16 +110,27 @@ export const definition: NodeDefinition = {
       },
     },
     json_input: {
-      dataFlowType: 'STRING',
-      displayName: 'JSON',
-      description: 'JSON输入测试 (代码编辑器)',
+      dataFlowType: 'OBJECT', // 类型系统中无 'JSON' DataFlowType, 使用 'OBJECT' 以便 JsonInlineViewer 处理
+      // TODO: 将 dataFlowType 改为 'JSON' 一旦类型系统支持
+      displayName: 'JSON对象',
+      description: 'JSON对象输入测试 (内联查看器)',
       required: false,
-      matchCategories: ['Code', 'Json'],
+      matchCategories: ['Json'], // 确保前端能识别
       config: {
-        default: JSON.stringify({ "key": "value" }, null, 2),
-        language: 'json',
-        placeholder: '请输入JSON格式数据'
+        default: { "name": "咕咕", "type": "猫头鹰娘", "skill": "卖萌" }, // 对象形式
+        placeholder: '请输入或编辑JSON对象'
       },
+    },
+    javascript_code_input: { // 新增 JavaScript 代码输入
+      dataFlowType: 'STRING',
+      displayName: 'JS代码片段',
+      description: 'JavaScript代码片段输入测试 (按钮触发编辑器)。\n\n例如：\n```javascript\nfunction greet(name) {\n  console.log(`Hello, ${name}!`);\n}\ngreet("Test Node");\n```',
+      required: false,
+      matchCategories: ['Code', 'JavaScript'], // 明确是代码和JS
+      config: {
+        default: 'function greet(name) {\n  console.log(`Hello, ${name}!`);\n}\ngreet("World");',
+        languageHint: 'javascript' // 辅助前端编辑器和Tooltip高亮
+      }
     },
     // --- 新增带建议的输入 ---
     string_with_suggestions: {
@@ -170,6 +195,12 @@ export const definition: NodeDefinition = {
       displayName: '多行文本',
       description: '多行文本输出'
     },
+    markdown_output: { // 新增 Markdown 输出
+      dataFlowType: 'STRING',
+      displayName: 'Markdown文本',
+      description: 'Markdown 内容输出',
+      matchCategories: ['Markdown']
+    },
     int_output: {
       dataFlowType: 'INTEGER',
       displayName: '整数',
@@ -191,12 +222,18 @@ export const definition: NodeDefinition = {
       description: '选择项输出'
     },
     json_output: {
-      dataFlowType: 'STRING',
-      displayName: 'JSON',
-      description: 'JSON输出',
-      matchCategories: ['Json']
+      dataFlowType: 'OBJECT', // 对应修改 dataFlowType
+      // TODO: 将 dataFlowType 改为 'JSON' 一旦类型系统支持
+      displayName: 'JSON对象',
+      description: 'JSON对象输出',
+      matchCategories: ['Json'] // 保持一致性
     },
-
+    javascript_code_output: { // 新增 JS 代码输出
+      dataFlowType: 'STRING',
+      displayName: 'JS代码片段',
+      description: 'JavaScript代码片段输出。',
+      matchCategories: ['Code', 'JavaScript']
+    },
     // --- 新增对应输出 ---
     string_with_suggestions_output: {
       dataFlowType: 'STRING',

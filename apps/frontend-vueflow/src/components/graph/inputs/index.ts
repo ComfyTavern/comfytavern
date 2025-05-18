@@ -8,6 +8,7 @@ import CodeInput from './CodeInput.vue'
 import TextDisplay from './TextDisplay.vue'
 import ButtonInput from './ButtonInput.vue' // 新增 ButtonInput 导入
 import ResourceSelectorInput from './ResourceSelectorInput.vue' // 导入资源选择器
+import JsonInlineViewer from './JsonInlineViewer.vue' // 导入 JSON 内联查看器
 import { DataFlowType, BuiltInSocketMatchCategory } from '@comfytavern/types'; // 新增导入
 
 // 导出组件
@@ -20,7 +21,8 @@ export {
   CodeInput,
   TextDisplay, // Removed EmbeddedGroupSelectorInput from exports
   ButtonInput, // 新增 ButtonInput 导出
-  ResourceSelectorInput // 导出资源选择器
+  ResourceSelectorInput, // 导出资源选择器
+  JsonInlineViewer, // 导出 JSON 内联查看器
 }
 
 // 导出类型定义
@@ -51,7 +53,7 @@ export interface SelectInputProps extends InputProps {
 }
 
 // 定义输入类型枚举
-export type InputType = 'STRING' | 'INTEGER' | 'FLOAT' | 'BOOLEAN' | 'COMBO' | 'HISTORY' | 'CODE' | 'BUTTON' | 'RESOURCE_SELECTOR' // Removed: EMBEDDED_GROUP_SELECTOR
+export type InputType = 'STRING' | 'INTEGER' | 'FLOAT' | 'BOOLEAN' | 'COMBO' | 'HISTORY' | 'CODE' | 'BUTTON' | 'RESOURCE_SELECTOR' | 'OBJECT' | 'JSON' // Removed: EMBEDDED_GROUP_SELECTOR
 
 // 定义组件获取器类型
 // 使用更通用的类型以避免复杂的联合类型问题
@@ -68,6 +70,8 @@ export let inputComponentMap: Record<string, ComponentGetter> = { // 改为 let,
   'CODE': () => CodeInput, // 新增 CODE 类型映射
   'BUTTON': () => ButtonInput, // 新增 BUTTON 类型映射
   'RESOURCE_SELECTOR': () => ResourceSelectorInput, // 移除 as any
+  'OBJECT': () => JsonInlineViewer, // 新增 OBJECT 类型映射
+  'JSON': () => JsonInlineViewer, // 新增 JSON 类型映射 (未来可能使用)
   // 'EMBEDDED_GROUP_SELECTOR': () => EmbeddedGroupSelectorInput // Removed: Obsolete mapping
 }
 
@@ -99,6 +103,15 @@ export const getInputComponent = (type: string, config?: any, matchCategories?: 
     return getter ? getter(config) : null; // 调用 getter 并处理可能为 null 的情况
   }
 
+  // 特殊处理 OBJECT 类型，确保它们能被正确映射
+  // JSON 字符串通常作为 STRING 类型处理，但如果直接有 JSON 类型，也应映射到 JsonInlineViewer
+  if (type === DataFlowType.OBJECT || type === 'JSON') { // 'JSON' 是 inputComponentMap 中的键
+    const getter = inputComponentMap[type];
+    if (getter) {
+      return getter(config);
+    }
+  }
+
   // 对于未知类型或any类型，不返回任何组件
   if (!type || type === 'any' || type.toLowerCase() === 'any') {
     return null;
@@ -117,6 +130,7 @@ export default {
     app.component('TextDisplay', TextDisplay)
     app.component('ButtonInput', ButtonInput) // 新增 ButtonInput 注册
     app.component('ResourceSelectorInput', ResourceSelectorInput) // 新增 ResourceSelectorInput 注册
+    app.component('JsonInlineViewer', JsonInlineViewer) // 新增 JsonInlineViewer 注册
     // app.component('EmbeddedGroupSelectorInput', EmbeddedGroupSelectorInput) // Removed: Obsolete component registration
   }
 }

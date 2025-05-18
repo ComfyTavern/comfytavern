@@ -4,7 +4,7 @@ import { getInputComponent } from "../inputs";
 import { computed, ref, watch, nextTick } from "vue";
 import { useVueFlow } from "@vue-flow/core";
 import { useThemeStore } from "../../../stores/theme";
-import { useTabStore } from "@/stores/tabStore";
+import { useTabStore } from "../../../stores/tabStore";
 import { storeToRefs } from "pinia";
 import {
   DataFlowType,
@@ -12,18 +12,21 @@ import {
   type InputDefinition,
   BuiltInSocketMatchCategory,
 } from "@comfytavern/types"; // <-- Import HistoryEntry
+// 导入 EditorOpeningContext 代替 OpenDockedEditorPayload
+// import type { EditorOpeningContext } from '../../../types/editorTypes'; // EditorOpeningContext 不再直接在此文件使用
 import { ExecutionStatus } from "@comfytavern/types";
 import { createHistoryEntry } from "@comfytavern/utils"; // <-- Import createHistoryEntry
-import { useExecutionStore } from "@/stores/executionStore"; // 导入执行状态 Store
+import { useExecutionStore } from "../../../stores/executionStore"; // 导入执行状态 Store
 import { useNodeResize } from "../../../composables/node/useNodeResize";
-import { useGroupIOSlots } from "@/composables/group/useGroupIOSlots"; // 导入 Group IO 插槽 Composable
-import { useNodeState } from "@/composables/node/useNodeState"; // 导入节点状态 Composable
-import { useNodeProps as useNodePropsComposable } from "@/composables/node/useNodeProps"; // 导入节点 Props Composable 并重命名
-import { useNodeActions } from "@/composables/node/useNodeActions"; // 导入节点操作 Composable
-import { useWorkflowInteractionCoordinator } from "@/composables/workflow/useWorkflowInteractionCoordinator"; // 导入工作流交互协调器
-import { useNodeClientScript } from "@/composables/node/useNodeClientScript"; // 导入客户端脚本 Composable
+import { useGroupIOSlots } from "../../../composables/group/useGroupIOSlots"; // 导入 Group IO 插槽 Composable
+import { useNodeState } from "../../../composables/node/useNodeState"; // 导入节点状态 Composable
+import { useNodeProps as useNodePropsComposable } from "../../../composables/node/useNodeProps"; // 导入节点 Props Composable 并重命名
+import { useNodeActions } from "../../../composables/node/useNodeActions"; // 导入节点操作 Composable
+import { useWorkflowInteractionCoordinator } from "../../../composables/workflow/useWorkflowInteractionCoordinator"; // 导入工作流交互协调器
+import { useNodeClientScript } from "../../../composables/node/useNodeClientScript"; // 导入客户端脚本 Composable
 import Tooltip from "../../common/Tooltip.vue"; // 导入提示框组件
-import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager"; // 导入工作流管理器
+import MarkdownRenderer from "../../common/MarkdownRenderer.vue"; // 导入 Markdown 渲染器
+import { useWorkflowManager } from "../../../composables/workflow/useWorkflowManager"; // 导入工作流管理器
 import styles from "./handleStyles.module.css";
 
 const props = defineProps<NodeProps>();
@@ -339,6 +342,104 @@ const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // output
 };
 // --- 结束新增处理函数 ---
 
+// --- 辅助函数：判断输入类型以便在模板中使用 ---
+const isSimpleInlineInput = (input: InputDefinition): boolean => {
+  // 简单单行输入: Number, Boolean, Select(Combo), 普通单行String
+  // 排除多行文本、Markdown、JSON、Code、Button、History
+  if (input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)) return false;
+  if (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)) return false;
+  if (input.dataFlowType === DataFlowType.STRING && input.config?.multiline) return false;
+  if (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.MARKDOWN)) return false;
+  if (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON)) return false;
+  if (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.CHAT_HISTORY)) return false;
+
+  return (
+    input.dataFlowType === DataFlowType.INTEGER ||
+    input.dataFlowType === DataFlowType.FLOAT ||
+    input.dataFlowType === DataFlowType.BOOLEAN ||
+    (input.dataFlowType === DataFlowType.STRING && !!input.config?.suggestions) || // COMBO
+    (input.dataFlowType === DataFlowType.STRING && !input.config?.multiline && !input.matchCategories?.some(cat => (cat === BuiltInSocketMatchCategory.CODE || cat === BuiltInSocketMatchCategory.MARKDOWN)))
+  );
+};
+
+const showActionButtonsForInput = (input: InputDefinition): boolean => {
+  // 需要显示预览/编辑按钮的类型: 多行文本, Markdown, JSON, Code
+  return (
+    (input.dataFlowType === DataFlowType.STRING && input.config?.multiline) ||
+    (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.MARKDOWN)) ||
+    (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON)) ||
+    (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE))
+  );
+};
+
+const getLanguageHintForInput = (input: InputDefinition): string | undefined => {
+  if (input.config?.languageHint) return input.config.languageHint;
+  if (input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON)) return 'json';
+  if (input.matchCategories?.includes(BuiltInSocketMatchCategory.MARKDOWN)) return 'markdown';
+  if (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)) {
+    // 检查更具体的代码语言分类，例如 "Code:javascript" (注意大小写可能需要灵活处理)
+    if (input.matchCategories?.find(cat => cat.toLowerCase() === 'code:javascript')) return 'javascript';
+    if (input.matchCategories?.find(cat => cat.toLowerCase() === 'code:python')) return 'python';
+    // 可以根据需要添加更多语言的判断
+    return 'plaintext'; // 对于通用的 CODE 类型，默认为纯文本
+  }
+  return undefined;
+};
+
+// 辅助函数，用于生成 Tooltip 内容的截断版本
+const getPreviewTooltipContent = (value: any, inputDef: InputDefinition): string => {
+  const langHint = getLanguageHintForInput(inputDef);
+  if (value === undefined || value === null) return "无内容";
+  let strValue = "";
+  if (typeof value === 'object') {
+    try {
+      strValue = JSON.stringify(value, null, 2); // JSON 美化输出
+    } catch {
+      strValue = "[无法序列化的对象]";
+    }
+  } else {
+    strValue = String(value);
+  }
+
+  if (langHint === 'json' || (inputDef.dataFlowType === DataFlowType.STRING && inputDef.matchCategories?.includes(BuiltInSocketMatchCategory.CODE))) {
+    const lines = strValue.split('\n');
+    return lines.slice(0, 30).join('\n') + (lines.length > 30 ? "\n..." : "");
+  }
+  // 对于 Markdown 和普通多行文本，Tooltip 的 MarkdownRenderer 会处理，这里可以返回原始值或截断的纯文本
+  // 如果是 Markdown，直接返回，让 MarkdownRenderer 处理
+  if (langHint === 'markdown') return strValue;
+
+  // 普通文本截断
+  return strValue.length > 300 ? strValue.substring(0, 297) + "..." : strValue;
+};
+
+
+const openEditorForInput = (input: InputDefinition) => {
+  if (!activeTabId.value) {
+    console.warn(`[BaseNode ${props.id}] 无法打开编辑器：无活动标签页 ID。`);
+    return;
+  }
+  if (!interactionCoordinator.openDockedEditorForNodeInput) {
+    console.warn(`[BaseNode ${props.id}] openDockedEditorForNodeInput 方法未找到。`);
+    return;
+  }
+
+  const nodeDisplayName = typeof props.data.label === 'string' ? props.data.label : (typeof props.data.displayName === 'string' ? props.data.displayName : props.id);
+  // 使用 (input as any).key 来临时解决 TypeScript 可能的类型推断问题
+  const inputKeyString = String((input as any).key);
+  const editorTitle = `${nodeDisplayName} > ${input.displayName || inputKeyString}`;
+  const currentValue = getInputValue(inputKeyString);
+
+  interactionCoordinator.openDockedEditorForNodeInput(
+    activeTabId.value,
+    props.id,
+    inputKeyString,
+    currentValue,
+    input, // input 本身就是 InputDefinition (或 DisplaySlotInfo)
+    editorTitle
+  );
+};
+// --- 结束辅助函数 ---
 </script>
 
 <template>
@@ -574,9 +675,11 @@ const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // output
 
     <!-- 节点组信息区域 (仅节点组显示) -->
     <div v-if="isNodeGroup && nodeGroupInfo" class="node-group-info">
-      <span class="info-item">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
+      <!-- 添加 v-if="nodeGroupInfo" 来确保在访问属性前 nodeGroupInfo 不是 null -->
+      <template v-if="nodeGroupInfo">
+        <span class="info-item">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
           stroke-width="1.5"
@@ -589,11 +692,11 @@ const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // output
             d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125Z"
           />
         </svg>
-        {{ nodeGroupInfo.nodeCount }} 节点
-      </span>
-      <span class="info-item">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
+          {{ nodeGroupInfo.nodeCount }} 节点
+        </span>
+        <span class="info-item">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
           stroke-width="1.5"
@@ -606,11 +709,11 @@ const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // output
             d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5"
           />
         </svg>
-        {{ nodeGroupInfo.inputCount }} 输入
-      </span>
-      <span class="info-item">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
+          {{ nodeGroupInfo.inputCount }} 输入
+        </span>
+        <span class="info-item">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
           stroke-width="1.5"
@@ -623,8 +726,9 @@ const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // output
             d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5"
           />
         </svg>
-        {{ nodeGroupInfo.outputCount }} 输出
-      </span>
+          {{ nodeGroupInfo.outputCount }} 输出
+        </span>
+      </template>
     </div>
 
     <!-- 节点输入区域 -->
@@ -688,83 +792,122 @@ const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // output
 
           <!-- 参数名称和内联输入组件容器 (固定比例布局) -->
           <div class="grid grid-cols-5 gap-2 ml-2.5 w-full items-center">
-            <!-- 改为 Grid 布局，5列，保持垂直居中 -->
-            <!-- 参数名称容器 (占 40% 宽度) -->
-            <!-- 条件：如果不是按钮类型，则显示参数名称 -->
+            <!-- 参数名称容器 -->
             <div
               v-if="
                 !(
                   input.dataFlowType === DataFlowType.WILDCARD &&
                   input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)
-                )
+                ) && // 非按钮类型
+                !(
+                  input.dataFlowType === DataFlowType.STRING &&
+                  input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)
+                ) // 非 CodeInput 类型
               "
               class="col-span-2 text-left flex items-center h-4"
             >
-              <!-- 占据 2 列 -->
-              <!-- 使用 formatDescription 处理 Tooltip 内容 -->
               <Tooltip
                 :content="
-                  // Use final description from input object
-                  formatDescription(input.description) || input.displayName || String(input.key)
+                  formatDescription(input.description) || input.displayName || String((input as any).key)
                 "
                 placement="top"
                 :maxWidth="400"
               >
                 <div class="param-name truncate text-left">
-                  <!-- 确保文本左对齐 -->
-                  <!-- 显示时也优先显示格式化后的 description -->
                   {{
-                    // Use final description from input object
-                    input.displayName || formatDescription(input.description) || String(input.key)
+                    input.displayName || formatDescription(input.description) || String((input as any).key)
+                  }}
+                </div>
+              </Tooltip>
+            </div>
+            <!-- CodeInput 参数名称特殊处理，可能需要更多空间 -->
+            <div
+              v-else-if="
+                input.dataFlowType === DataFlowType.STRING &&
+                input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)
+              "
+              class="col-span-2 text-left flex items-center h-4"
+            >
+              <Tooltip
+                :content="
+                  formatDescription(input.description) || input.displayName || String((input as any).key)
+                "
+                placement="top"
+                :maxWidth="400"
+              >
+                <div class="param-name truncate text-left">
+                  {{
+                    input.displayName || formatDescription(input.description) || String((input as any).key)
                   }}
                 </div>
               </Tooltip>
             </div>
 
-            <!-- 内联输入组件容器 -->
-            <!-- 修改 v-if 条件以包含按钮，并调整 col-span -->
+            <!-- 内联输入组件 或 动作按钮容器 -->
             <div
               v-if="
-                // 条件：非按钮类型的内联输入
                 props.type !== 'core:GroupInput' &&
                 props.type !== 'core:GroupOutput' &&
-                !(
-                  input.dataFlowType === DataFlowType.WILDCARD &&
-                  input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)
-                ) && // 排除按钮
-                (!isInputConnected(String(input.key)) || isMultiInput(input)) &&
-                getInputComponent(input.dataFlowType, input.config, input.matchCategories) &&
-                (input.dataFlowType === DataFlowType.INTEGER ||
-                  input.dataFlowType === DataFlowType.FLOAT ||
-                  input.dataFlowType === DataFlowType.BOOLEAN ||
-                  (input.dataFlowType === DataFlowType.STRING && !!input.config?.suggestions) || // Logic for COMBO
-                  (input.dataFlowType === DataFlowType.STRING && !input.config?.multiline))
+                !(input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)) && // 不是按钮类型
+                (!isInputConnected(String(input.key)) || isMultiInput(input)) // 未连接或允许多重连接
               "
-              class="inline-input flex items-center h-4 col-span-3 pr-2 justify-end"
+              class="flex items-center h-full col-span-3 pr-2 justify-end"
+              :class="{ 'h-auto py-0.5': showActionButtonsForInput(input) }"
               @mousedown.stop
             >
-              <!-- 阻止 mousedown 冒泡 -->
-              <component
-                :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
-                :model-value="getInputValue(String(input.key))"
-                v-bind="inputPropsMap[String(input.key)]?.props"
-                @update:modelValue="updateInputValue(String(input.key), $event)"
-              />
+              <!-- 情况1: 简单内联输入 -->
+              <template v-if="isSimpleInlineInput(input) && getInputComponent(input.dataFlowType, input.config, input.matchCategories)">
+                <component
+                  :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
+                  :model-value="getInputValue(String((input as any).key))"
+                  v-bind="inputPropsMap[String((input as any).key)]?.props"
+                  :node-id="props.id"
+                  :input-key="String((input as any).key)"
+                  :input-definition="input"
+                  @update:modelValue="updateInputValue(String((input as any).key), $event)"
+                  @blur="handleComponentBlur(String((input as any).key), $event)"
+                  class="w-full max-w-full"
+                 />
+              </template>
+              <!-- 情况2: 显示动作按钮 (预览/编辑) -->
+              <template v-else-if="showActionButtonsForInput(input)">
+                <div class="flex items-center space-x-1">
+                  <!-- 预览按钮 (Tooltip) -->
+                  <Tooltip
+                    v-if="!(input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON) && input.config?.preferFloatingEditor)"
+                    placement="top"
+                    :maxWidth="600"
+                    :showDelay="300"
+                    :interactive="true"
+                    :allowHtml="getLanguageHintForInput(input) === 'markdown'"
+                  >
+                    <template #content>
+                      <div class="max-h-96 overflow-auto p-1 text-xs bg-gray-800 text-gray-100 rounded font-mono">
+                        <MarkdownRenderer v-if="getLanguageHintForInput(input) === 'markdown'" :markdownContent="String(getInputValue(String((input as any).key)) || '无内容')" />
+                        <pre v-else class="whitespace-pre-wrap break-all">{{ getPreviewTooltipContent(getInputValue(String((input as any).key)), input) }}</pre>
+                      </div>
+                    </template>
+                    <button class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-gray-500 dark:text-gray-400">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                      </svg>
+                    </button>
+                  </Tooltip>
+                  <!-- 编辑按钮 -->
+                  <button @click="openEditorForInput(input)" class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-gray-500 dark:text-gray-400">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                    </svg>
+                  </button>
+                </div>
+              </template>
+              <!-- 其他情况，例如已连接且非多输入，则不显示控件 -->
+              <div v-else class="h-4"></div>
             </div>
-            <!-- 如果没有内联组件（且不是按钮），保留空间以对齐 -->
-            <div
-              v-else-if="
-                !(
-                  input.dataFlowType === DataFlowType.WILDCARD &&
-                  input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)
-                )
-              "
-              class="col-span-3 h-4"
-            ></div>
-            <!-- 占据 3 列 -->
             <!-- 按钮组件容器 (占满整行) -->
             <div
-              v-if="
+              v-else-if="
                 input.dataFlowType === DataFlowType.WILDCARD &&
                 input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)
               "
@@ -773,54 +916,52 @@ const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // output
             >
               <component
                 :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
-                :model-value="getInputValue(String(input.key))"
-                v-bind="inputPropsMap[String(input.key)]?.props"
-                @click="() => handleButtonClick(String(input.key))"
+                :model-value="getInputValue(String((input as any).key))"
+                v-bind="inputPropsMap[String((input as any).key)]?.props"
+                :node-id="props.id"
+                :input-key="String((input as any).key)"
+                :input-definition="input"
+                @click="() => handleButtonClick(String((input as any).key))"
               />
             </div>
-
-            <!-- 按钮组件容器 (占满整行) - 此部分将被合并到上面的内联输入组件逻辑中，故移除 -->
-            <!--
-            <div v-if="input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)" class="col-span-5 w-full py-1 pr-2" @mousedown.stop>
-              <component :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
-                :model-value="getInputValue(String(input.key))" v-bind="inputPropsMap[String(input.key)]" @change="
-                  updateInputValue(String(input.key), ($event.target as HTMLInputElement).value)
-                  " @click="() => handleButtonClick(String(input.key))" />
-            </div>
-            -->
           </div>
         </div>
 
-        <!-- 多行文本/代码/历史记录等特殊输入组件 (根据条件显示) -->
+        <!-- 多行文本/JSON查看器等特殊输入组件 (根据条件显示) -->
+        <!-- 注意：CodeInput 不会在这里渲染，它只在 param-header 中显示按钮 -->
         <div
           v-if="
-            props.type !== 'core:GroupInput' && // Roo: 使用带命名空间的类型
-            props.type !== 'core:GroupOutput' && // Roo: 使用带命名空间的类型
-            getInputComponent(input.dataFlowType, input.config, input.matchCategories) && // 传递 matchCategories
-            // 条件1: 类型是 HISTORY, CODE, 多行 STRING, 或 display_only STRING
-            // 移除 BUTTON 类型，因为它已在 param-header 中处理
-            ((input.dataFlowType === DataFlowType.OBJECT &&
-              input.matchCategories?.includes(BuiltInSocketMatchCategory.CHAT_HISTORY)) || // Logic for HISTORY
-              (input.dataFlowType === DataFlowType.STRING &&
-                input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)) || // Logic for CODE
-              (input.dataFlowType === DataFlowType.STRING &&
-                (input.config?.multiline || input.config?.display_only))) &&
-            // 条件2: 连接状态判断 (display_only 始终显示，其他类型根据连接和 showReceivedValue 判断)
-            ((input.dataFlowType === DataFlowType.STRING && input.config?.display_only) || // display_only 始终显示
-              !isInputConnected(String(input.key)) || // 或者未连接
-              (isInputConnected(String(input.key)) && input.config?.showReceivedValue)) // 或者已连接且配置了 showReceivedValue
+            props.type !== 'core:GroupInput' &&
+            props.type !== 'core:GroupOutput' &&
+            getInputComponent(input.dataFlowType, input.config, input.matchCategories) &&
+            // 条件1: 类型是 HISTORY, 多行 STRING/MARKDOWN, 或 JSON
+            (
+              (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.CHAT_HISTORY)) || // HISTORY
+              (input.dataFlowType === DataFlowType.STRING && input.config?.multiline) || // 多行 STRING (TextAreaInput)
+              (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.MARKDOWN)) || // MARKDOWN (TextAreaInput)
+              (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON)) // JSON (JsonInlineViewer)
+            ) &&
+            // 条件2: 连接状态判断
+            (
+              (input.dataFlowType === DataFlowType.STRING && input.config?.display_only) ||
+              !isInputConnected(String(input.key)) ||
+              (isInputConnected(String(input.key)) && input.config?.showReceivedValue)
+            )
           "
           class="param-content"
           @mousedown.stop
         >
-          <!-- 阻止 mousedown 冒泡 -->
           <component
             :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
-            :model-value="getInputValue(String(input.key))"
-            v-bind="inputPropsMap[String(input.key)]"
-            :height="props.data.componentStates?.[String(input.key)]?.height"
-            @blur="handleComponentBlur(String(input.key), $event)"
-            @resize-interaction-end="handleComponentResizeEnd(String(input.key), $event)"
+            :model-value="getInputValue(String((input as any).key))"
+            v-bind="inputPropsMap[String((input as any).key)]?.props"
+            :node-id="props.id"
+            :input-key="String((input as any).key)"
+            :input-definition="input"
+            :height="props.data.componentStates?.[String((input as any).key)]?.height"
+            @blur="handleComponentBlur(String((input as any).key), $event)"
+            @resize-interaction-end="handleComponentResizeEnd(String((input as any).key), $event)"
+            @open-docked-editor="openEditorForInput(input)"
           />
         </div>
       </div>
