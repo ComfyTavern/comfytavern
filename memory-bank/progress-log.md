@@ -187,6 +187,13 @@
     - **完成日期: 2025/05/18**
     - **备注: 成功在 [`apps/frontend-vueflow/src/composables/canvas/useCanvasKeyboardShortcuts.ts`](../apps/frontend-vueflow/src/composables/canvas/useCanvasKeyboardShortcuts.ts) 中实现了通过 Alt/Option + 点击节点或输出插槽来标记或取消标记预览目标的功能。集成了 `useWorkflowManager`、`useWorkflowInteractionCoordinator` 和 `useNodeStore`，并调用了 `interactionCoordinator.setPreviewTargetAndRecord()`。详细日志见 [`memory-bank/active-context.md`](./active-context.md) (现已归档至此)。**
 
+- **任务 4.3.5 (UI实现 - 设计文档步骤3.c)**: 插槽预览交互实现 - 视觉反馈。
+    - **状态: ✅ 完成**
+    - **分配给: 💻 Code 模式 (任务ID: SLOT_TYPE_REFACTOR_UI_4_3_5)**
+    - **开始日期: 2025/05/18**
+    - **完成日期: 2025/05/18**
+    - **备注: 用户确认此任务已通过新子任务完成并修复。最终方案为：在 [`BaseNode.vue`](../apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue) 中，当输出插槽为预览目标时，通过动态 CSS 类 (`styles.handleAsPreviewIcon`) 修改 Handle 样式，使用内联 SVG 作为背景图像显示眼睛图标，并调整了相关 Handle 样式及修复了附带的bug。详细日志见 [`memory-bank/active-context.md`](./active-context.md) (现已归档至此)。**
+
 ---
 
 ## 阶段五：文档与测试

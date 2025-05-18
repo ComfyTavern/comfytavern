@@ -47,6 +47,9 @@
           @add-node="handleAddNodeFromPanel"
         />
       </template>
+
+      <!-- 右侧专用预览面板 -->
+      <RightPreviewPanel />
     </div>
 
     <!-- 底部状态栏 -->
@@ -65,6 +68,7 @@ import BaseNode from "../components/graph/nodes/BaseNode.vue"; // 导入 BaseNod
 // 移除了 GroupEditor 导入
 import SidebarManager from "../components/graph/sidebar/SidebarManager.vue";
 import NodePreviewPanel from "../components/graph/sidebar/NodePreviewPanel.vue";
+import RightPreviewPanel from "../components/graph/sidebar/RightPreviewPanel.vue"; // <-- 咕咕：导入新组件
 import StatusBar from "../components/graph/StatusBar.vue";
 import { type Node, type Edge } from "@vue-flow/core"; // Roo: Removed unused isNode, Connection, NodeDragEvent
 import {

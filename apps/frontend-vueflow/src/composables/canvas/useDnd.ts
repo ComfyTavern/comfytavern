@@ -140,18 +140,31 @@ export default function useDragAndDrop() {
    */
   function onDragOver(event: DragEvent) {
     try {
+      // 检查是否是有效的节点拖拽操作
+      // 如果 dataTransfer 不存在，或者不包含我们期望的类型，则不认为是有效的拖放目标
+      if (!event.dataTransfer || !event.dataTransfer.types.includes("application/vueflow")) {
+        // 如果不是从节点面板拖拽过来的（没有设置特定数据类型），
+        // 则不阻止默认行为，这样它就不会成为一个有效的放置目标。
+        // 这有助于避免与非节点拖拽操作（如面板调整大小）冲突。
+        return;
+      }
+
       event.preventDefault();
 
-      // 即使没有从dataTransfer获取到数据，也检查全局状态中是否有拖拽的节点
-      if (draggedNodeData.value || state.draggedNodeData.value) {
+      // 只有在确认是有效的节点拖拽时，才设置 dropEffect 和 isDragOver
+      // draggedNodeData.value 应该在 onDragStart 中被设置
+      if (draggedNodeData.value || state.draggedNodeData.value) { // 保留对全局状态的检查作为后备
         isDragOver.value = true;
-
-        if (event.dataTransfer) {
-          event.dataTransfer.dropEffect = "move";
-        }
+        event.dataTransfer.dropEffect = "move";
+      } else {
+        // 如果到这里 draggedNodeData 还是 null，可能意味着拖拽状态不一致
+        // 或者拖拽的不是我们期望的节点数据。
+        // 为安全起见，可以不设置 isDragOver 或 dropEffect。
+        isDragOver.value = false; // 明确设置为 false
       }
     } catch (error) {
       console.warn("拖拽悬停处理失败:", error);
+      isDragOver.value = false; // 出错时也重置状态
     }
   }
 
