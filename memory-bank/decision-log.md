@@ -105,3 +105,42 @@
 - [`apps/frontend-vueflow/src/components/graph/nodes/handleStyles.module.css`](../apps/frontend-vueflow/src/components/graph/nodes/handleStyles.module.css) (将添加新样式)
 
 ---
+
+**决策日期:** 2025/05/18
+
+**决策点:** 可停靠编辑器面板的常驻行为、控制方式及布局
+
+**背景:**
+在确认了 [`DesignDocs/architecture/enhanced-editor-panel-design.md`](../DesignDocs/architecture/enhanced-editor-panel-design.md) 的详细设计后，需要明确可停靠编辑器面板（原“底部弹出式编辑面板”）的具体用户交互偏好。
+
+**用户确认的偏好:**
+1.  **面板常驻行为**: 非永久常驻。当没有活动编辑内容或用户主动关闭时，面板应完全隐藏。
+2.  **展开/收起按钮位置**: 通过底栏 ([`apps/frontend-vueflow/src/components/graph/StatusBar.vue`](../apps/frontend-vueflow/src/components/graph/StatusBar.vue:0)) 中的一个专用按钮来控制面板的显示与隐藏。
+3.  **与画布和侧边栏的交互**: 编辑器面板（例如停靠在底部时）应与画布区域视为同一主内容区，两者都会受到左侧边栏宽度变化的影响（即左侧边栏展开时，画布和底部编辑器面板的可用宽度都会相应减少）。
+
+**最终决策:**
+采纳用户确认的上述偏好。
+
+**理由:**
+- 用户直接指定了这些交互偏好，以确保符合其使用习惯和期望。
+- 非永久常驻并通过专用按钮控制，可以最大化画布可视区域，仅在需要时显示编辑器。
+- 与画布同级并受侧边栏影响，符合主流IDE和工具的布局逻辑。
+
+**影响:**
+- `DockedEditorWrapper.vue` (来自 [`enhanced-editor-panel-design.md`](../DesignDocs/architecture/enhanced-editor-panel-design.md)) 需要实现：
+    -   管理其自身的可见性状态。
+    -   响应来自外部（如状态栏按钮）的控制信号以切换可见性。
+    -   其布局需要能适应父容器的宽度变化（受左侧边栏影响）。
+- [`apps/frontend-vueflow/src/components/graph/StatusBar.vue`](../apps/frontend-vueflow/src/components/graph/StatusBar.vue:0) 需要：
+    -   新增一个“文本编辑器”或类似功能的切换按钮。
+    -   该按钮的逻辑需要能控制 `DockedEditorWrapper.vue` 的显示/隐藏状态（可能通过全局状态管理或事件总线）。
+- 主视图组件 (可能是 [`apps/frontend-vueflow/src/views/EditorView.vue`](../apps/frontend-vueflow/src/views/EditorView.vue:0) 或其布局父级) 需要：
+    -   正确集成和定位 `DockedEditorWrapper.vue`。
+    -   确保其布局能正确响应左侧边栏的挤压效果。
+
+**参考文档:**
+- [`DesignDocs/architecture/enhanced-editor-panel-design.md`](../DesignDocs/architecture/enhanced-editor-panel-design.md)
+- [`DesignDocs/architecture/floating-preview-editor-design.md`](../DesignDocs/architecture/floating-preview-editor-design.md) (关于整体UI布局的上下文)
+- [`apps/frontend-vueflow/src/components/graph/StatusBar.vue`](../apps/frontend-vueflow/src/components/graph/StatusBar.vue:0) (将被修改)
+- [`apps/frontend-vueflow/src/views/EditorView.vue`](../apps/frontend-vueflow/src/views/EditorView.vue:0) (可能被修改以集成和布局编辑器面板)
+---
