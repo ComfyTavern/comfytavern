@@ -70,7 +70,7 @@ export const definition: NodeDefinition = {
   inputs: {},
   outputs: {
     regexRules: {
-      type: 'array', // 输出规则数组
+      dataFlowType: 'ARRAY', // 输出规则数组
       displayName: '正则规则',
       description: '加载的正则表达式规则数组'
     }
@@ -79,10 +79,11 @@ export const definition: NodeDefinition = {
 
   configSchema: {
     ruleResource: {
-      type: 'RESOURCE_SELECTOR',
+      dataFlowType: 'STRING', // RESOURCE_SELECTOR value is a string (path/ID)
       displayName: '规则文件',
       description: '选择一个正则表达式规则文件 (JSON/YAML)',
       required: true,
+      matchCategories: ['ResourceId', 'FilePath'],
       config: {
         // 需要确认系统中实际的资源类型标识
         acceptedTypes: [

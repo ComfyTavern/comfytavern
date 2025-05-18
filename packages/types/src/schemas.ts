@@ -1,29 +1,58 @@
 import { z } from 'zod';
 
+// New type definitions as per task SLOT_TYPE_REFACTOR_1_1
+// Inserted after 'import { z } from "zod";'
+
+export const DataFlowType = {
+  STRING: "STRING",
+  INTEGER: "INTEGER",
+  FLOAT: "FLOAT",
+  BOOLEAN: "BOOLEAN",
+  OBJECT: "OBJECT",
+  ARRAY: "ARRAY",
+  BINARY: "BINARY",
+  WILDCARD: "WILDCARD",
+  CONVERTIBLE_ANY: "CONVERTIBLE_ANY",
+} as const;
+
+export type DataFlowTypeName = (typeof DataFlowType)[keyof typeof DataFlowType];
+
+// 来自: memory-bank/schema-design-notes.md
+export const BuiltInSocketMatchCategory = {
+  // 语义化/内容特征标签 (V3 精简命名)
+  CODE: "Code",
+  JSON: "Json",
+  MARKDOWN: "Markdown",
+  URL: "Url",
+  FILE_PATH: "FilePath",
+  PROMPT: "Prompt",
+  CHAT_MESSAGE: "ChatMessage",
+  CHAT_HISTORY: "ChatHistory",
+  LLM_CONFIG: "LlmConfig",
+  LLM_OUTPUT: "LlmOutput",
+  VECTOR_EMBEDDING: "VectorEmbedding",
+  CHARACTER_PROFILE: "CharacterProfile",
+  IMAGE_DATA: "ImageData",
+  AUDIO_DATA: "AudioData",
+  VIDEO_DATA: "VideoData",
+  RESOURCE_ID: "ResourceId",
+  TRIGGER: "Trigger",
+  STREAM_CHUNK: "StreamChunk",
+  COMBO_OPTION: "ComboOption",
+
+  // 行为标签
+  BEHAVIOR_WILDCARD: "BehaviorWildcard",
+  BEHAVIOR_CONVERTIBLE: "BehaviorConvertible",
+} as const;
+
+export type BuiltInSocketMatchCategoryName = (typeof BuiltInSocketMatchCategory)[keyof typeof BuiltInSocketMatchCategory];
+
 /**
  * 定义节点插槽（Socket）的类型。
  * 使用常量对象模拟枚举，以便在 Zod Schema 中使用。
  */
-export const SocketType = {
-  /** 整数类型 */
-  INT: 'INT',
-  /** 浮点数类型 */
-  FLOAT: 'FLOAT',
-  /** 字符串类型 */
-  STRING: 'STRING',
-  /** 布尔类型 */
-  BOOLEAN: 'BOOLEAN',
-  /** 下拉框组合类型 */
-  COMBO: 'COMBO',
-  /** 代码类型 */
-  CODE: 'CODE',
-  /** 按钮类型（通常用于触发操作） */
-  BUTTON: 'BUTTON',
-  /** 通配符类型，接受所有类型，不进行转换 */
-  WILDCARD: 'WILDCARD',
-  /** 可转换的任意类型，连接时会尝试转换为目标插槽的具体类型 */
-  CONVERTIBLE_ANY: 'CONVERTIBLE_ANY'
-} as const;
+// Removed SocketType as per task SLOT_TYPE_REFACTOR_1_1.
+// The old SocketType definition was from line 7 to 26.
 
 /**
  * Schema 定义：节点组插槽（输入/输出）的详细信息。
@@ -34,7 +63,8 @@ export const GroupSlotInfoSchema = z.object({
   /** 插槽在界面上显示的名称 */
   displayName: z.string(),
   /** 插槽的数据类型，使用 SocketType 中的值 */
-  type: z.enum(Object.values(SocketType) as [string, ...string[]]),
+  dataFlowType: z.enum(Object.values(DataFlowType) as [DataFlowTypeName, ...DataFlowTypeName[]]).describe('插槽的数据流类型 (例如：input, output)'),
+  matchCategories: z.array(z.string()).optional().describe('用于连接验证的匹配类别数组'),
   /** 自定义描述信息 */
   customDescription: z.string().optional(),
   /** 是否为必需插槽 */
@@ -43,8 +73,6 @@ export const GroupSlotInfoSchema = z.object({
   defaultValue: z.any().optional(),
   /** 插槽的配置选项（例如，下拉框的选项列表） */
   config: z.record(z.any()).optional(),
-  /** 允许接受的插槽类型列表（用于连接验证） */
-  acceptTypes: z.array(z.string()).optional(),
   /** 是否允许多个连接（仅用于输入插槽） */
   multi: z.boolean().optional(),
   /** 是否允许动态类型（例如 CONVERTIBLE_ANY） */

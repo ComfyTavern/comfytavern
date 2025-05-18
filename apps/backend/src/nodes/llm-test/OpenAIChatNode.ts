@@ -151,13 +151,14 @@ export const definition: NodeDefinition = {
 
   inputs: {
     api_settings: {
-      type: 'API_SETTINGS',
+      dataFlowType: 'OBJECT', // API_SETTINGS maps to OBJECT
       displayName: 'API配置',
       description: 'OpenAI API 的相关配置',
-      required: true
+      required: true,
+      matchCategories: ['LlmConfig']
     },
     model: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '模型名称',
       description: '用于生成对话的模型名称',
       required: true,
@@ -167,7 +168,7 @@ export const definition: NodeDefinition = {
       }
     },
     temperature: {
-      type: 'FLOAT',
+      dataFlowType: 'FLOAT',
       displayName: '温度参数',
       description: '控制生成文本的随机性，值越高越随机',
       required: true,
@@ -179,7 +180,7 @@ export const definition: NodeDefinition = {
       }
     },
     max_tokens: {
-      type: 'INT',
+      dataFlowType: 'INTEGER',
       displayName: '最大令牌数',
       description: '限制模型生成文本的最大长度',
       required: true,
@@ -190,16 +191,17 @@ export const definition: NodeDefinition = {
       }
     },
     system_prompt: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '系统提示',
       description: '用于指导模型行为的初始提示',
       required: true,
+      matchCategories: ['Prompt'],
       config: {
         multiline: true
       }
     },
     clear_history: {
-      type: 'BOOLEAN',
+      dataFlowType: 'BOOLEAN',
       displayName: '清除历史记录',
       description: '是否在每次运行时清除对话历史',
       required: true,
@@ -208,43 +210,49 @@ export const definition: NodeDefinition = {
       }
     },
     user_input: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '用户输入',
       description: '用户发送给模型的文本',
       required: true,
+      matchCategories: ['Prompt'],
       config: {
         multiline: true
       }
     },
     external_history: {
-      type: 'HISTORY',
+      dataFlowType: 'STRING', // HISTORY input is a JSON string
       displayName: '外部历史记录',
-      description: '从外部传入的历史对话记录',
-      required: false
+      description: '从外部传入的历史对话记录 (JSON字符串)',
+      required: false,
+      matchCategories: ['ChatHistory', 'Json']
     },
     image: {
-      type: 'IMAGE',
+      dataFlowType: 'STRING', // IMAGE input is URL/Base64 string
       displayName: '图像输入',
-      description: '用户上传的图像',
-      required: false
+      description: '用户上传的图像 (URL/Base64)',
+      required: false,
+      matchCategories: ['ImageData', 'Url']
     }
   },
 
   outputs: {
     full_conversation: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '完整对话历史',
-      description: '包含系统提示、用户输入和模型回复的完整对话记录'
+      description: '包含系统提示、用户输入和模型回复的完整对话记录',
+      matchCategories: ['ChatHistory']
     },
     current_output: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '当前输出',
-      description: '模型生成的当前回复'
+      description: '模型生成的当前回复',
+      matchCategories: ['LlmOutput']
     },
     history: {
-      type: 'HISTORY',
+      dataFlowType: 'STRING', // HISTORY output is a JSON string
       displayName: '更新后的历史记录',
-      description: '包含所有对话轮次的历史记录，用于后续对话'
+      description: '包含所有对话轮次的历史记录，用于后续对话 (JSON字符串)',
+      matchCategories: ['ChatHistory', 'Json']
     }
   },
 

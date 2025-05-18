@@ -16,8 +16,10 @@ import type {
   GroupInterfaceInfo,
   GroupSlotInfo,
   HistoryEntry, // <-- Import HistoryEntry
+  DataFlowTypeName, // New import
 } from "@comfytavern/types";
-import { SocketType } from "@comfytavern/types";
+import { DataFlowType, BuiltInSocketMatchCategory } from "@comfytavern/types"; // Import as values
+// Removed: import { SocketType } from "@comfytavern/types";
 import { createHistoryEntry } from "@comfytavern/utils"; // <-- Import createHistoryEntry
 import { v4 as uuidv4 } from "uuid"; // 导入 uuid 用于生成唯一 ID
 import { useWorkflowData } from "../workflow/useWorkflowData"; // 导入 useWorkflowData
@@ -28,17 +30,94 @@ import { getNodeType } from "@/utils/nodeUtils"; // 导入节点类型辅助函�
 import { useWorkflowViewManagement } from "../workflow/useWorkflowViewManagement"; // ADDED: Import view management
 import { nextTick, type Ref } from "vue"; // 导入 Ref 类型
 
-// 移到顶层并导出
-export function areTypesCompatible(sourceType: string, targetType: string): boolean {
-  if (sourceType === "any" || targetType === "any") return true;
-  if (sourceType === targetType) return true;
-  // 添加其他兼容规则
-  if (sourceType === "INT" && targetType === "FLOAT") return true;
-  if (sourceType === "INT" && targetType === "STRING") return true;
-  if (sourceType === "FLOAT" && targetType === "STRING") return true;
-  if (sourceType === "BOOLEAN" && targetType === "STRING") return true;
-  if (sourceType === "STRING" && targetType === "CODE") return true;
-  if (sourceType === "STRING" && targetType === "COMBO") return true;
+// New isTypeCompatible function, logic copied from useCanvasConnections.ts
+export function isTypeCompatible(sourceSlot: GroupSlotInfo, targetSlot: GroupSlotInfo): boolean { // Added export
+  const sourceDft = sourceSlot.dataFlowType;
+  const sourceCats = sourceSlot.matchCategories || [];
+  const targetDft = targetSlot.dataFlowType;
+  const targetCats = targetSlot.matchCategories || [];
+
+  // Helper to check for BEHAVIOR_CONVERTIBLE or CONVERTIBLE_ANY DataFlowType
+  const isSlotConvertibleAny = (dft: DataFlowTypeName, cats: string[]) =>
+    dft === DataFlowType.CONVERTIBLE_ANY ||
+    cats.includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
+
+  // Helper to check for BEHAVIOR_WILDCARD or WILDCARD DataFlowType
+  const isSlotWildcard = (dft: DataFlowTypeName, cats: string[]) =>
+    dft === DataFlowType.WILDCARD || // WILDCARD is a DataFlowType
+    cats.includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD);
+
+  const isSourceConvertibleAny = isSlotConvertibleAny(sourceDft, sourceCats);
+  const isTargetConvertibleAny = isSlotConvertibleAny(targetDft, targetCats);
+  const isSourceWildcard = isSlotWildcard(sourceDft, sourceCats);
+  const isTargetWildcard = isSlotWildcard(targetDft, targetCats);
+
+  // Priority 1: Special Behavior Tags
+  // 1.1 BEHAVIOR_WILDCARD / WILDCARD DataFlowType
+  // Source WILDCARD connects to non-CONVERTIBLE_ANY Target.
+  if (isSourceWildcard && !isTargetConvertibleAny) return true;
+  // Target WILDCARD connects to non-CONVERTIBLE_ANY Source.
+  if (isTargetWildcard && !isSourceConvertibleAny) return true;
+
+  // 1.2 BEHAVIOR_CONVERTIBLE / CONVERTIBLE_ANY DataFlowType
+  // Source CONVERTIBLE_ANY connects to non-WILDCARD AND non-CONVERTIBLE_ANY Target.
+  if (isSourceConvertibleAny) {
+    return !isTargetWildcard && !isTargetConvertibleAny;
+  }
+  // Target CONVERTIBLE_ANY connects to non-WILDCARD AND non-CONVERTIBLE_ANY Source.
+  if (isTargetConvertibleAny) {
+    return !isSourceWildcard && !isSourceConvertibleAny;
+  }
+
+  // Priority 2: SocketMatchCategory Matching (if both have non-behavioral categories)
+  const behaviorCategoryNames = [
+    BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE,
+    BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD,
+  ];
+  const actualSourceCats = sourceCats.filter((cat) => !behaviorCategoryNames.some(bhCat => bhCat === cat));
+  const actualTargetCats = targetCats.filter((cat) => !behaviorCategoryNames.some(bhCat => bhCat === cat));
+
+  if (actualSourceCats.length > 0 && actualTargetCats.length > 0) {
+    for (const sCat of actualSourceCats) {
+      if (actualTargetCats.includes(sCat)) {
+        return true; // Direct match of non-behavioral categories
+      }
+    }
+    // If categories are defined but no match, proceed to DataFlowType (as per design)
+  }
+
+  // Priority 3: DataFlowType Fallback Matching
+  if (sourceDft === targetDft) return true;
+
+  if (sourceDft === DataFlowType.INTEGER && targetDft === DataFlowType.FLOAT) return true;
+
+  const stringCompatibleSourceDfts: DataFlowTypeName[] = [
+    DataFlowType.INTEGER,
+    DataFlowType.FLOAT,
+    DataFlowType.BOOLEAN,
+  ];
+  if (stringCompatibleSourceDfts.includes(sourceDft) && targetDft === DataFlowType.STRING) {
+    return true;
+  }
+
+  // Compatibility based on SocketMatchCategory if DataFlowTypes differ but one is STRING
+  // Example: Source is STRING, Target has matchCategory CODE
+  if (sourceDft === DataFlowType.STRING && targetCats.includes(BuiltInSocketMatchCategory.CODE)) {
+      return true;
+  }
+  // Example: Source has matchCategory CODE, Target is STRING
+  if (sourceCats.includes(BuiltInSocketMatchCategory.CODE) && targetDft === DataFlowType.STRING) {
+      return true;
+  }
+  // Example: Source is STRING, Target has matchCategory COMBO_OPTION
+  if (sourceDft === DataFlowType.STRING && targetCats.includes(BuiltInSocketMatchCategory.COMBO_OPTION)) {
+      return true;
+  }
+   // Example: Source has matchCategory COMBO_OPTION, Target is STRING
+  if (sourceCats.includes(BuiltInSocketMatchCategory.COMBO_OPTION) && targetDft === DataFlowType.STRING) {
+      return true;
+  }
+
   return false;
 }
 
@@ -182,11 +261,32 @@ async function updateNodeGroupWorkflowReferenceLogic(
         const targetHandleId = edge.targetHandle || "default";
         const targetNodeType = getNodeType(targetNode);
         const targetNodeDef = nodeDefinitions.value.find((def: any) => def.type === targetNodeType);
-        const targetType = targetNodeDef?.inputs?.[targetHandleId]?.type || "any";
+        
+        const targetInputDefinition = targetNodeDef?.inputs?.[targetHandleId];
 
-        if (!areTypesCompatible(outputSlot.type, targetType)) {
+        if (targetInputDefinition && outputSlot) {
+          const targetSlotForCompatibility: GroupSlotInfo = {
+            key: targetHandleId,
+            displayName: targetInputDefinition.name || targetHandleId,
+            // Removed: type: targetInputDefinition.type, // For GroupSlotInfo structure
+            dataFlowType: targetInputDefinition.dataFlowType,
+            matchCategories: targetInputDefinition.matchCategories || [],
+            // customDescription, multi, allowDynamicType, config are not strictly needed by isTypeCompatible
+          };
+          if (!isTypeCompatible(outputSlot, targetSlotForCompatibility)) {
+            console.warn(
+              `[updateNodeGroupWorkflowReferenceLogic] Output slot ${outputSlot.key} (DFT: ${outputSlot.dataFlowType}, Cats: ${outputSlot.matchCategories?.join(',')}) not compatible with target slot ${targetSlotForCompatibility.key} (DFT: ${targetSlotForCompatibility.dataFlowType}, Cats: ${targetSlotForCompatibility.matchCategories?.join(',')})`
+            );
+            incompatibleEdges.push(edge);
+            edgesToRemove.push(edge.id);
+          }
+        } else if (!outputSlot) { // Should be caught earlier by `if (!outputSlot)`
+             console.warn(`[updateNodeGroupWorkflowReferenceLogic] Output slot ${slotKey} is missing. Edge ${edge.id} considered incompatible.`);
+             incompatibleEdges.push(edge);
+             edgesToRemove.push(edge.id);
+        } else { // targetInputDefinition is missing
           console.warn(
-            `[updateNodeGroupWorkflowReferenceLogic] Output type ${outputSlot.type} not compatible with target type ${targetType}`
+            `[updateNodeGroupWorkflowReferenceLogic] Target input definition ${targetHandleId} on node ${targetNode.id} not found. Edge ${edge.id} from output ${outputSlot.key} considered incompatible.`
           );
           incompatibleEdges.push(edge);
           edgesToRemove.push(edge.id);
@@ -222,11 +322,31 @@ async function updateNodeGroupWorkflowReferenceLogic(
         const sourceHandleId = edge.sourceHandle || "default";
         const sourceNodeType = getNodeType(sourceNode);
         const sourceNodeDef = nodeDefinitions.value.find((def: any) => def.type === sourceNodeType);
-        const sourceType = sourceNodeDef?.outputs?.[sourceHandleId]?.type || "any";
 
-        if (!areTypesCompatible(sourceType, inputSlot.type)) {
+        const sourceOutputDefinition = sourceNodeDef?.outputs?.[sourceHandleId];
+
+        if (sourceOutputDefinition && inputSlot) {
+          const sourceSlotForCompatibility: GroupSlotInfo = {
+            key: sourceHandleId,
+            displayName: sourceOutputDefinition.name || sourceHandleId,
+            // Removed: type: sourceOutputDefinition.type, // For GroupSlotInfo structure
+            dataFlowType: sourceOutputDefinition.dataFlowType,
+            matchCategories: sourceOutputDefinition.matchCategories || [],
+          };
+          if (!isTypeCompatible(sourceSlotForCompatibility, inputSlot)) {
+            console.warn(
+              `[updateNodeGroupWorkflowReferenceLogic] Source slot ${sourceSlotForCompatibility.key} (DFT: ${sourceSlotForCompatibility.dataFlowType}, Cats: ${sourceSlotForCompatibility.matchCategories?.join(',')}) not compatible with input slot ${inputSlot.key} (DFT: ${inputSlot.dataFlowType}, Cats: ${inputSlot.matchCategories?.join(',')})`
+            );
+            incompatibleEdges.push(edge);
+            edgesToRemove.push(edge.id);
+          }
+        } else if (!inputSlot) { // Should be caught earlier by `if (!inputSlot)`
+            console.warn(`[updateNodeGroupWorkflowReferenceLogic] Input slot ${slotKey} is missing. Edge ${edge.id} considered incompatible.`);
+            incompatibleEdges.push(edge);
+            edgesToRemove.push(edge.id);
+        } else { // sourceOutputDefinition is missing
           console.warn(
-            `[updateNodeGroupWorkflowReferenceLogic] Source type ${sourceType} not compatible with input type ${inputSlot.type}`
+            `[updateNodeGroupWorkflowReferenceLogic] Source output definition ${sourceHandleId} on node ${sourceNode.id} not found. Edge ${edge.id} to input ${inputSlot.key} considered incompatible.`
           );
           incompatibleEdges.push(edge);
           edgesToRemove.push(edge.id);
@@ -309,7 +429,7 @@ async function createGroupFromSelectionLogic(
     {
       originalTargetNodeId: string;
       originalTargetHandle: string;
-      type: string;
+      dataFlowType: DataFlowTypeName; // Changed from type: string
       name: string;
       description?: string;
     }
@@ -319,7 +439,7 @@ async function createGroupFromSelectionLogic(
     {
       originalSourceNodeId: string;
       originalSourceHandle: string;
-      type: string;
+      dataFlowType: DataFlowTypeName; // Changed from type: string
       name: string;
       description?: string;
     }
@@ -373,7 +493,7 @@ async function createGroupFromSelectionLogic(
         groupInputsMap.set(groupSlotKey, {
           originalTargetNodeId: edge.target,
           originalTargetHandle: targetHandleId,
-          type: internalInputDef?.type || SocketType.CONVERTIBLE_ANY,
+          dataFlowType: internalInputDef?.dataFlowType || DataFlowType.CONVERTIBLE_ANY, // Use dataFlowType
           name: internalInputDef?.displayName || targetHandleId,
           description: internalInputDef?.description || externalOutputDef?.description,
         });
@@ -401,7 +521,7 @@ async function createGroupFromSelectionLogic(
         groupOutputsMap.set(groupSlotKey, {
           originalSourceNodeId: edge.source,
           originalSourceHandle: sourceHandleId,
-          type: internalOutputDef?.type || SocketType.CONVERTIBLE_ANY,
+          dataFlowType: internalOutputDef?.dataFlowType || DataFlowType.CONVERTIBLE_ANY, // Use dataFlowType
           name: internalOutputDef?.displayName || sourceHandleId,
           description: internalOutputDef?.description,
         });
@@ -528,9 +648,9 @@ async function createGroupFromSelectionLogic(
       const inputSlotInfo = groupInputsMap.get(groupSlotKey);
       if (inputSlotInfo) {
         // Determine types for styling. GroupInput acts as the source.
-        // Use the slot's type as both source and target for styling consistency within the group.
-        const edgeSourceType = inputSlotInfo.type || SocketType.CONVERTIBLE_ANY;
-        const edgeTargetType = inputSlotInfo.type || SocketType.CONVERTIBLE_ANY;
+        // Use the slot's dataFlowType as both source and target for styling consistency within the group.
+        const edgeSourceType = inputSlotInfo.dataFlowType || DataFlowType.CONVERTIBLE_ANY; // type here is actually dataFlowType from map
+        const edgeTargetType = inputSlotInfo.dataFlowType || DataFlowType.CONVERTIBLE_ANY; // type here is actually dataFlowType from map
         const styleProps = getEdgeStyleProps(edgeSourceType, edgeTargetType, isDark.value);
 
         newWorkflowEdges.push({
@@ -556,9 +676,9 @@ async function createGroupFromSelectionLogic(
       const outputSlotInfo = groupOutputsMap.get(groupSlotKey);
       if (outputSlotInfo) {
         // Determine types for styling. Internal node is the source.
-        // Use the slot's type as both source and target for styling consistency within the group.
-        const edgeSourceType = outputSlotInfo.type || SocketType.CONVERTIBLE_ANY;
-        const edgeTargetType = outputSlotInfo.type || SocketType.CONVERTIBLE_ANY;
+        // Use the slot's dataFlowType as both source and target for styling consistency within the group.
+        const edgeSourceType = outputSlotInfo.dataFlowType || DataFlowType.CONVERTIBLE_ANY; // type here is actually dataFlowType from map
+        const edgeTargetType = outputSlotInfo.dataFlowType || DataFlowType.CONVERTIBLE_ANY; // type here is actually dataFlowType from map
         const styleProps = getEdgeStyleProps(edgeSourceType, edgeTargetType, isDark.value);
 
         newWorkflowEdges.push({
@@ -584,7 +704,7 @@ async function createGroupFromSelectionLogic(
     newWorkflowInterfaceInputs[key] = {
       key,
       displayName: info.name,
-      type: info.type.toUpperCase(),
+      dataFlowType: info.dataFlowType as DataFlowTypeName, // Changed info.type to info.dataFlowType
       customDescription: info.description, // Assign original description to customDescription
     };
   });
@@ -594,7 +714,7 @@ async function createGroupFromSelectionLogic(
     newWorkflowInterfaceOutputs[key] = {
       key,
       displayName: info.name,
-      type: info.type.toUpperCase(),
+      dataFlowType: info.dataFlowType as DataFlowTypeName, // Changed info.type to info.dataFlowType
       customDescription: info.description, // Assign original description to customDescription
     };
   });
@@ -725,8 +845,10 @@ async function createGroupFromSelectionLogic(
       );
       return;
     }
-    const sourceType = isInput ? "any" : groupSlot.type;
-    const targetType = isInput ? groupSlot.type : "any";
+    const slotDft = groupSlot.dataFlowType || DataFlowType.CONVERTIBLE_ANY;
+    const sourceType = isInput ? DataFlowType.CONVERTIBLE_ANY : slotDft;
+    const targetType = isInput ? slotDft : DataFlowType.CONVERTIBLE_ANY;
+
 
     const styleProps = getEdgeStyleProps(sourceType, targetType, isDark.value); // 使用 getEdgeStyleProps 和 isDark 实例
 

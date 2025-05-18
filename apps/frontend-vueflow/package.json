@@ -12,6 +12,12 @@
     "type-check": "vue-tsc --build"
   },
   "dependencies": {
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/lang-html": "^6.4.9",
+    "@codemirror/lang-markdown": "^6.3.2",
+    "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/language-data": "^6.5.1",
+    "@codemirror/search": "^6.5.11",
     "@floating-ui/vue": "^1.1.6",
     "@heroicons/vue": "^2.2.0",
     "@types/dompurify": "^3.2.0",

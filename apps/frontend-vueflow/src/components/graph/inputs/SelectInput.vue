@@ -1,18 +1,26 @@
 <template>
-  <div ref="rootRef" class="select-input relative w-full"> <!-- Added ref and relative -->
+  <div ref="rootRef" class="select-input relative w-full">
     <!-- Display Area / Trigger -->
-    <button type="button" :disabled="disabled" @click.stop="toggleDropdown" class="w-full px-2 py-1 text-xs rounded border transition-colors duration-200 h-6 flex items-center justify-between text-left
+    <button
+      type="button"
+      :disabled="props.disabled || props.readonly"
+      @click.stop="toggleDropdown"
+      class="w-full px-2 py-1 text-xs rounded border transition-colors duration-200 h-6 flex items-center justify-between text-left
              bg-white dark:bg-gray-700
              border-gray-300 dark:border-gray-600
              text-gray-900 dark:text-gray-100
-             disabled:bg-gray-100 dark:disabled:bg-gray-800
-             disabled:text-gray-500 dark:disabled:text-gray-400
              focus:ring-1 focus:ring-inset focus:ring-blue-300 dark:focus:ring-blue-700 focus:border-transparent
              hover:border-gray-400 dark:hover:border-gray-500"
-      :class="{ 'border-red-500 dark:border-red-700': hasError }" aria-haspopup="listbox"
-      :aria-expanded="isDropdownVisible">
+      :class="{
+        'border-red-500 dark:border-red-700': props.hasError,
+        'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default focus:ring-0 focus:border-gray-300 dark:focus:border-gray-600': props.readonly && !props.disabled,
+        'disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed': props.disabled
+      }"
+      aria-haspopup="listbox"
+      :aria-expanded="isDropdownVisible"
+    >
       <span :class="{ 'text-gray-500 dark:text-gray-400': !selectedOptionLabel }">
-        {{ selectedOptionLabel || placeholder || '请选择' }}
+        {{ selectedOptionLabel || props.placeholder || '请选择' }}
       </span>
       <!-- Dropdown Arrow -->
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
@@ -24,13 +32,20 @@
     </button>
 
     <!-- Suggestion Dropdown -->
-    <SuggestionDropdown :suggestions="suggestionLabels" :show="isDropdownVisible" :position="dropdownPosition"
-      :target-element="rootRef" :trigger-width="dropdownWidth" :canvas-scale="currentCanvasScale"
-      @select="handleSuggestionSelect" @close="closeDropdown" />
+    <SuggestionDropdown
+      :suggestions="suggestionLabels"
+      :show="isDropdownVisible"
+      :position="dropdownPosition"
+      :target-element="rootRef"
+      :trigger-width="dropdownWidth"
+      :canvas-scale="currentCanvasScale"
+      @select="handleSuggestionSelect"
+      @close="closeDropdown"
+    />
 
     <!-- Error Message -->
-    <div v-if="hasError" class="absolute top-full left-0 w-full text-xs text-red-500 dark:text-red-400 mt-1">
-      {{ errorMessage }}
+    <div v-if="props.hasError" class="absolute top-full left-0 w-full text-xs text-red-500 dark:text-red-400 mt-1">
+      {{ props.errorMessage }}
     </div>
   </div>
 </template>
@@ -53,6 +68,7 @@ interface Props {
   disabled?: boolean
   hasError?: boolean
   errorMessage?: string
+  readonly?: boolean
 }
 
 // 定义 Props 默认值
@@ -62,7 +78,8 @@ const props = withDefaults(defineProps<Props>(), {
   placeholder: '',
   disabled: false,
   hasError: false,
-  errorMessage: ''
+  errorMessage: '',
+  readonly: false,
 })
 
 // Define emits

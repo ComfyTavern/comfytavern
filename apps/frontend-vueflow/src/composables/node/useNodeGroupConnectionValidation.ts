@@ -1,8 +1,8 @@
 import { computed } from 'vue';
 import type { Ref, ComputedRef } from 'vue';
 import type { Node, Edge } from '@vue-flow/core';
-import type { NodeDefinition, GroupInterfaceInfo } from '@comfytavern/types';
-import { areTypesCompatible } from '../group/useWorkflowGrouping'; // 直接导入
+import type { NodeDefinition, GroupInterfaceInfo, GroupSlotInfo, DataFlowTypeName } from '@comfytavern/types'; // Removed unused InputDefinition, OutputDefinition
+import { isTypeCompatible } from '../group/useWorkflowGrouping'; // Changed areTypesCompatible to isTypeCompatible
 
 // 定义 Composable 函数的选项接口
 interface UseNodeGroupConnectionValidationOptions {
@@ -34,7 +34,6 @@ export function useNodeGroupConnectionValidation({
     for (const nodeGroup of nodeGroups) {
       const groupInterface = nodeGroup.data?.groupInterface as GroupInterfaceInfo | undefined;
       if (!groupInterface) {
-        console.warn(`[Connection Validation] NodeGroup ${nodeGroup.id} is missing groupInterface data. Skipping check.`);
         continue;
       }
 
@@ -60,11 +59,22 @@ export function useNodeGroupConnectionValidation({
               const sourceHandleId = edge.sourceHandle || 'default'; // 假设默认句柄 ID
               const sourceNodeDef = nodeDefinitions.value.find(def => def.type === sourceNode?.data?.nodeType);
               // 处理源节点或定义不存在的情况，以及句柄不存在的情况
-              const sourceType = sourceNodeDef?.outputs?.[sourceHandleId]?.type || 'any'; // 默认为 'any'
-
-              if (!areTypesCompatible(sourceType, inputSlot.type)) {
+              const sourceOutputDef = sourceNodeDef?.outputs?.[sourceHandleId];
+              if (!sourceOutputDef) {
                 isCompatible = false;
-                reason = `Type mismatch: Source (${sourceType}) -> NodeGroup Input '${slotKey}' (${inputSlot.type})`;
+                reason = `Source output definition '${sourceHandleId}' not found on node ${sourceNode?.id}`;
+              } else {
+                const sourceSlotInfo: GroupSlotInfo = {
+                  key: sourceHandleId,
+                  displayName: sourceOutputDef.displayName || sourceHandleId,
+                  dataFlowType: sourceOutputDef.dataFlowType as DataFlowTypeName, // Cast as it comes from NodeDefinition
+                  matchCategories: sourceOutputDef.matchCategories,
+                  // other fields from GroupSlotInfo can be undefined or default
+                };
+                if (!isTypeCompatible(sourceSlotInfo, inputSlot)) {
+                  isCompatible = false;
+                  reason = `Type mismatch: Source (${sourceSlotInfo.dataFlowType}) -> NodeGroup Input '${slotKey}' (${inputSlot.dataFlowType})`;
+                }
               }
             }
           }
@@ -83,19 +93,29 @@ export function useNodeGroupConnectionValidation({
               const targetNode = currentNodes.find(n => n.id === edge.target);
               const targetHandleId = edge.targetHandle || 'default'; // 假设默认句柄 ID
               const targetNodeDef = nodeDefinitions.value.find(def => def.type === targetNode?.data?.nodeType);
-              // 处理目标节点或定义不存在的情况，以及句柄不存在的情况
-              const targetType = targetNodeDef?.inputs?.[targetHandleId]?.type || 'any'; // 默认为 'any'
+              const targetInputDef = targetNodeDef?.inputs?.[targetHandleId];
 
-              if (!areTypesCompatible(outputSlot.type, targetType)) {
+              if (!targetInputDef) {
                 isCompatible = false;
-                reason = `Type mismatch: NodeGroup Output '${slotKey}' (${outputSlot.type}) -> Target (${targetType})`;
+                reason = `Target input definition '${targetHandleId}' not found on node ${targetNode?.id}`;
+              } else {
+                const targetSlotInfo: GroupSlotInfo = {
+                  key: targetHandleId,
+                  displayName: targetInputDef.displayName || targetHandleId,
+                  dataFlowType: targetInputDef.dataFlowType as DataFlowTypeName, // Cast as it comes from NodeDefinition
+                  matchCategories: targetInputDef.matchCategories,
+                  // other fields from GroupSlotInfo can be undefined or default
+                };
+                if (!isTypeCompatible(outputSlot, targetSlotInfo)) {
+                  isCompatible = false;
+                  reason = `Type mismatch: NodeGroup Output '${slotKey}' (${outputSlot.dataFlowType}) -> Target (${targetSlotInfo.dataFlowType})`;
+                }
               }
             }
           }
         }
 
         if (!isCompatible) {
-          console.warn(`[Connection Validation] Found incompatible edge ${edge.id}: ${reason}`);
           edgesToRemove.push(edge.id);
         }
       }

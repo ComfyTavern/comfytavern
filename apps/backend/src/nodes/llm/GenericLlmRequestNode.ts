@@ -121,30 +121,34 @@ export const definition: NodeDefinition = {
 
   inputs: {
     messages: {
-      type: 'array', // Expecting CustomMessage[]
+      dataFlowType: 'ARRAY',
       displayName: '消息列表',
-      description: '要发送给 LLM 的消息数组 (CustomMessage[])'
+      description: '要发送给 LLM 的消息数组 (CustomMessage[])',
+      matchCategories: ['ChatHistory']
     },
     parameters: {
-      type: 'object',
+      dataFlowType: 'OBJECT',
       displayName: '参数',
       description: '传递给 LLM API 的参数 (e.g., temperature, max_tokens)',
       required: false,
-      config: { // 将 default 移入 config
-        default: {} // Default to empty object
+      matchCategories: ['LlmConfig'],
+      config: {
+        default: {}
       }
     }
   },
   outputs: {
     response: {
-      type: 'object', // Outputting StandardResponse structure
+      dataFlowType: 'OBJECT',
       displayName: '完整响应',
-      description: 'LLM 返回的完整标准化响应对象'
+      description: 'LLM 返回的完整标准化响应对象',
+      matchCategories: ['LlmOutput']
     },
     responseText: {
-      type: 'string',
+      dataFlowType: 'STRING',
       displayName: '响应文本',
-      description: 'LLM 返回的主要文本内容'
+      description: 'LLM 返回的主要文本内容',
+      matchCategories: ['LlmOutput']
     }
     // No error output port, throws on error
   },
@@ -152,13 +156,12 @@ export const definition: NodeDefinition = {
   configSchema: {
     required_capabilities: {
       // TODO: Use a more appropriate widget if available (e.g., multi-select tags)
-      type: 'TEXTAREA', // Using TEXTAREA as a placeholder for array input
+      dataFlowType: 'STRING', // TEXTAREA value is a string
       displayName: '所需能力',
       description: '模型必须具备的能力列表 (逗号分隔, e.g., llm,chat or llm,vision)',
       required: true,
-      // defaultValue: 'llm,chat', // Removed from here
       config: {
-        default: 'llm,chat', // Moved default here
+        default: 'llm,chat',
         rows: 2,
         placeholder: 'e.g., llm,chat'
       }

@@ -10,7 +10,7 @@
         <span class="icon">✂️</span> 断开连接 ({{ handleType === "target" ? "输入" : "输出" }}:
         {{ handleId }})
       </div>
-      <!-- 删除插槽选项 -->
+      <!-- 删除插槽选项（可能仅对 GroupInput/Output 节点或类似有增减插槽功能的节点有效） -->
       <div
         v-if="canDeleteSlot"
         class="context-menu-item context-menu-item-danger"
@@ -29,7 +29,7 @@ import { useWorkflowStore } from "@/stores/workflowStore";
 import { useTabStore } from "@/stores/tabStore";
 import { getNodeType } from "@/utils/nodeUtils"; // 导入用于获取节点类型的辅助函数
 import { createHistoryEntry } from "@comfytavern/utils"; // 导入用于创建历史记录条目的函数
-import { SocketType, type GroupSlotInfo, type HistoryEntry } from "@comfytavern/types"; // 导入项目共享的类型定义，包括 SocketType 枚举
+import { DataFlowType, type GroupSlotInfo, type HistoryEntry } from "@comfytavern/types"; // 导入项目共享的类型定义
 
 const props = defineProps<{
   visible: boolean;
@@ -75,7 +75,7 @@ const canDeleteSlot = computed(() => {
 
   // 2. 获取节点类型
   const nodeType = getNodeType(node);
-  if (nodeType ?.endsWith(':GroupInput') === false && nodeType ?.endsWith(':GroupOutput') === false) {
+  if (nodeType?.endsWith(":GroupInput") === false && nodeType?.endsWith(":GroupOutput") === false) {
     console.debug(`[SlotContextMenu] Node ${props.nodeId} is not GroupInput or GroupOutput.`);
     // 必须是 GroupInput 或 GroupOutput 节点才能删除其接口插槽
     return false;
@@ -83,10 +83,10 @@ const canDeleteSlot = computed(() => {
 
   // 3. 根据节点类型和句柄类型，确定要检查的是输入接口还是输出接口的定义
   let interfaceToCheck: "interfaceInputs" | "interfaceOutputs" | null = null;
-  if (nodeType ?.endsWith(':GroupInput') && props.handleType === "source") {
+  if (nodeType?.endsWith(":GroupInput") && props.handleType === "source") {
     // GroupInput 节点的输出句柄（source）对应组的输入接口（interfaceInputs）
     interfaceToCheck = "interfaceInputs";
-  } else if (nodeType ?.endsWith(':GroupOutput') && props.handleType === "target") {
+  } else if (nodeType?.endsWith(":GroupOutput") && props.handleType === "target") {
     // GroupOutput 节点的输入句柄（target）对应组的输出接口（interfaceOutputs）
     interfaceToCheck = "interfaceOutputs";
   } else {
@@ -134,7 +134,8 @@ const canDeleteSlot = computed(() => {
   }
 
   // 7. 检查插槽类型是否为 CONVERTIBLE_ANY ('*')
-  if (slotInfo.type === SocketType.CONVERTIBLE_ANY) {
+  if (slotInfo.dataFlowType === DataFlowType.CONVERTIBLE_ANY) {
+    // Changed slotInfo.type to slotInfo.dataFlowType and SocketType to DataFlowType
     console.debug(
       `[SlotContextMenu] Slot ${props.handleId} type is CONVERTIBLE_ANY, deletion disallowed.`
     );
@@ -143,7 +144,7 @@ const canDeleteSlot = computed(() => {
   }
 
   console.debug(
-    `[SlotContextMenu] Slot ${props.handleId} type is ${slotInfo.type}, deletion allowed.`
+    `[SlotContextMenu] Slot ${props.handleId} type is ${slotInfo.dataFlowType}, deletion allowed.` // Changed slotInfo.type to slotInfo.dataFlowType
   );
   // 所有检查通过，允许删除
   return true;
@@ -224,10 +225,11 @@ const onDeleteSlot = () => {
   const nodeType = getNodeType(node);
 
   // 2. 根据节点类型确定接口类型 ('interfaceInput'/'interfaceOutput') 和 IO 方向 ('input'/'output')
-  const interfaceType: "interfaceInput" | "interfaceOutput" =
-    nodeType ?.endsWith(':GroupInput') ? "interfaceInput" : "interfaceOutput";
+  const interfaceType: "interfaceInput" | "interfaceOutput" = nodeType?.endsWith(":GroupInput")
+    ? "interfaceInput"
+    : "interfaceOutput";
   // ioType 用于生成历史记录的摘要信息
-  const ioType: "input" | "output" = nodeType ?.endsWith(':GroupInput') ? "input" : "output";
+  const ioType: "input" | "output" = nodeType?.endsWith(":GroupInput") ? "input" : "output";
 
   // 3. 获取待删除插槽的显示名称，用于历史记录摘要
   const groupWorkflowData = workflowStore.getWorkflowData(groupWorkflowId);
@@ -258,7 +260,7 @@ const onDeleteSlot = () => {
     currentOutputs: Record<string, GroupSlotInfo>
   ): { inputs: Record<string, GroupSlotInfo>; outputs: Record<string, GroupSlotInfo> } => {
     // 根据节点类型，决定是修改输入接口还是输出接口
-    if (nodeType ?.endsWith(':GroupInput')) {
+    if (nodeType?.endsWith(":GroupInput")) {
       // 如果是 GroupInput 节点，则从 interfaceInputs 中删除对应 Key
       const updatedInputs = { ...currentInputs };
       if (updatedInputs[keyToRemove]) {

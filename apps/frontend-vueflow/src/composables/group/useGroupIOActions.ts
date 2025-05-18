@@ -2,7 +2,7 @@ import { computed, nextTick, type Ref, type ComputedRef } from "vue";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import type { GroupSlotInfo, HistoryEntry } from "@comfytavern/types"; // <-- Import HistoryEntry
 import { createHistoryEntry } from "@comfytavern/utils"; // <-- Import createHistoryEntry
-import { SocketType } from "@comfytavern/types";
+import { DataFlowType, type DataFlowTypeName } from "@comfytavern/types";
 import type { TabWorkflowState } from "@/types/workflowTypes";
 
 // 辅助函数：生成唯一 Key (保持私有或按需导出)
@@ -21,11 +21,11 @@ function generateUniqueKey(
 }
 
 // 辅助函数：排序插槽 (保持私有或按需导出)
-const CONVERTIBLE_ANY_KEY = SocketType.CONVERTIBLE_ANY;
+const CONVERTIBLE_ANY_KEY = DataFlowType.CONVERTIBLE_ANY;
 function sortSlots(slots: Record<string, GroupSlotInfo>): Record<string, GroupSlotInfo> {
   // 过滤掉 CONVERTIBLE_ANY
   const filteredEntries = Object.entries(slots).filter(
-    ([, slotInfo]) => slotInfo && slotInfo.type !== CONVERTIBLE_ANY_KEY
+    ([, slotInfo]) => slotInfo && slotInfo.dataFlowType !== CONVERTIBLE_ANY_KEY
   );
 
   // 排序 (优先 displayName, 其次 key)
@@ -43,7 +43,7 @@ function sortSlots(slots: Record<string, GroupSlotInfo>): Record<string, GroupSl
 
   // 检查原始 slots 中是否有 CONVERTIBLE_ANY，并添加到末尾
   const convertibleAnyEntry = Object.entries(slots).find(
-    ([, slotInfo]) => slotInfo && slotInfo.type === CONVERTIBLE_ANY_KEY
+    ([, slotInfo]) => slotInfo && slotInfo.dataFlowType === CONVERTIBLE_ANY_KEY
   );
   if (convertibleAnyEntry) {
     const [key, slot] = convertibleAnyEntry;
@@ -62,7 +62,7 @@ function getFilteredSlotEntries(
 ): [string, GroupSlotInfo][] {
   if (!slots) return [];
   return Object.entries(slots).filter(
-    ([, slotInfo]) => slotInfo && slotInfo.type !== CONVERTIBLE_ANY_KEY
+    ([, slotInfo]) => slotInfo && slotInfo.dataFlowType !== CONVERTIBLE_ANY_KEY
   );
 }
 
@@ -90,7 +90,7 @@ export function useGroupIOActions(
   const workflowStore = useWorkflowStore();
 
   // --- 添加/移除逻辑 ---
-  function addInput(type: string) {
+  function addInput(type: DataFlowTypeName) {
     console.log(`[useGroupIOActions] addInput called with type: ${type}`);
     if (!activeTabId.value) return;
 
@@ -108,7 +108,7 @@ export function useGroupIOActions(
       const newSlotData: GroupSlotInfo = {
         key: newKey,
         displayName: newKey,
-        type: type,
+        dataFlowType: type, // Changed 'type' to 'dataFlowType'
         customDescription: "",
       };
 
@@ -119,7 +119,7 @@ export function useGroupIOActions(
       for (const key in currentInputs) {
         const slot = currentInputs[key];
         if (slot) {
-          if (slot.type === CONVERTIBLE_ANY_KEY) {
+          if (slot.dataFlowType === CONVERTIBLE_ANY_KEY) { // Changed 'slot.type' to 'slot.dataFlowType'
             convertibleAnySlot = slot;
             convertibleAnyKey = key;
           } else {
@@ -194,7 +194,7 @@ export function useGroupIOActions(
     }
   }
 
-  function addOutput(type: string) {
+  function addOutput(type: DataFlowTypeName) {
     console.log(`[useGroupIOActions] addOutput called with type: ${type}`);
     if (!activeTabId.value) return;
 
@@ -212,7 +212,7 @@ export function useGroupIOActions(
       const newSlotData: GroupSlotInfo = {
         key: newKey,
         displayName: newKey,
-        type: type,
+        dataFlowType: type, // Changed 'type' to 'dataFlowType'
         customDescription: "",
       };
 
@@ -223,7 +223,7 @@ export function useGroupIOActions(
       for (const key in currentOutputs) {
         const slot = currentOutputs[key];
         if (slot) {
-          if (slot.type === CONVERTIBLE_ANY_KEY) {
+          if (slot.dataFlowType === CONVERTIBLE_ANY_KEY) { // Changed 'slot.type' to 'slot.dataFlowType'
             convertibleAnySlot = slot;
             convertibleAnyKey = key;
           } else {
@@ -448,8 +448,8 @@ export function useGroupIOActions(
         ([, slotInfo]) =>
           slotInfo &&
           typeof slotInfo === "object" &&
-          "type" in slotInfo &&
-          slotInfo.type === CONVERTIBLE_ANY_KEY
+          "dataFlowType" in slotInfo && // Changed 'type' to 'dataFlowType'
+          slotInfo.dataFlowType === CONVERTIBLE_ANY_KEY // Changed 'slotInfo.type' to 'slotInfo.dataFlowType'
       );
       if (convertibleAnyEntry) {
         const [convKey, convSlot] = convertibleAnyEntry;

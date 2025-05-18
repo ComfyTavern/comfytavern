@@ -1,5 +1,7 @@
 import { z } from 'zod'
 // Removed unused import: import type { WorkflowNode, WorkflowEdge } from '.'
+import type { DataFlowTypeName } from './schemas';
+import { BuiltInSocketMatchCategory, DataFlowType } from './schemas';
 
 // 基础输入选项
 export const zBaseInputOptions = z.object({
@@ -55,25 +57,26 @@ export const zButtonInputOptions = zBaseInputOptions.extend({
 export const zCustomInputOptions = zBaseInputOptions
 // 输入定义
 export interface InputDefinition {
-  type: string // e.g., 'INT', 'FLOAT', 'STRING', 'BOOLEAN', 'COMBO', 'CODE', 'BUTTON', 'ANY', etc.
   // name?: string // 内部标识符 - 使用 key 代替
   displayName?: string // UI 显示名称 (优先用于前端展示)
   description?: string // 插槽详细描述 (用于tooltip等)
   required?: boolean | ((configValues: Record<string, any>) => boolean); // Allow boolean or function for conditional requirement
   config?: Record<string, any>
   multi?: boolean // 标记是否支持多输入
-  acceptTypes?: string[] // 定义可接受的输入类型列表
   allowDynamicType?: boolean // 标记该插槽是否支持从 'ANY' 动态变为具体类型
   default?: any; // 新增：定义输入的默认值
+  dataFlowType: DataFlowTypeName;
+  matchCategories?: string[];
 } // Removed redundant defaultValue, min, max here. They are handled by config via Zod schemas.
 
 // 输出定义
 export interface OutputDefinition {
-  type: string // e.g., 'INT', 'FLOAT', 'STRING', 'BOOLEAN', 'COMBO', 'CODE', 'BUTTON', 'ANY', etc.
   // name?: string // 内部标识符 - 使用 key 代替
   displayName?: string // UI 显示名称 (优先用于前端展示)
   description?: string // 插槽详细描述 (用于tooltip等)
   allowDynamicType?: boolean // 标记该插槽是否支持从 'ANY' 动态变为具体类型
+  dataFlowType: DataFlowTypeName;
+  matchCategories?: string[];
 }
 
 // 节点定义
@@ -123,37 +126,50 @@ export type CustomInputOptions = z.infer<typeof zCustomInputOptions>
 
 // 验证函数
 export function validateInputOptions(
-  type: string,
-  options: any
+  dataFlowType: DataFlowTypeName,
+  options: any,
+  matchCategories?: string[]
 ): BaseInputOptions | null {
   let schema
-  switch (type) {
-    case 'INT':
-    case 'FLOAT':
+  switch (dataFlowType) {
+    case DataFlowType.INTEGER:
+    case DataFlowType.FLOAT:
       schema = zNumericInputOptions
       break
-    case 'STRING':
-      schema = zStringInputOptions
-      break
-    case 'BOOLEAN':
+    case DataFlowType.BOOLEAN:
       schema = zBooleanInputOptions
       break
-    case 'COMBO':
-      schema = zComboInputOptions
-      break
-    case 'CODE': // 新增 CODE 类型处理
-      schema = zCodeInputOptions
-      break
-    case 'BUTTON': // 新增 BUTTON 类型处理
-      schema = zButtonInputOptions
-      break
-    default: // 其他未知类型使用基础或自定义
+    case DataFlowType.STRING:
+      if (matchCategories?.includes(BuiltInSocketMatchCategory.CODE)) {
+        schema = zCodeInputOptions;
+      } else if (options?.suggestions && Array.isArray(options.suggestions)) {
+        schema = zComboInputOptions;
+      } else {
+        schema = zStringInputOptions;
+      }
+      break;
+    case DataFlowType.WILDCARD:
+      if (matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)) {
+        schema = zButtonInputOptions;
+      } else {
+        schema = zCustomInputOptions; // Default for WILDCARD if not a TRIGGER
+      }
+      break;
+    case DataFlowType.OBJECT:
+    case DataFlowType.ARRAY:
+    case DataFlowType.BINARY:
+    case DataFlowType.CONVERTIBLE_ANY:
+      schema = zCustomInputOptions; // These types currently use custom/base options
+      break;
+    default:
+      // console.warn(`Unknown dataFlowType "${dataFlowType}" in validateInputOptions, using zCustomInputOptions.`);
       schema = zCustomInputOptions
   }
 
   const result = schema.safeParse(options)
   if (!result.success) {
-    console.warn(`Invalid input options for type ${type}:`, result.error)
+    // 使用 result.error.format() 以获得更清晰的错误输出
+    console.warn(`Invalid input options for dataFlowType ${dataFlowType}:`, result.error.format())
     return null
   }
   return result.data
@@ -299,13 +315,13 @@ export interface WorkflowStorageEdge {
 export interface GroupSlotInfo {
   key: string;
   displayName: string;
-  type: string; // Use string type matching SocketType values
+  dataFlowType: DataFlowTypeName; // Specifies the data flow type (e.g., 'DATA_FLOW_STRING', 'DATA_FLOW_IMAGE')
   // description?: string; // REMOVED: Default description should be derived from the internal node's slot definition
   customDescription?: string; // Optional user-defined description for this specific group interface slot
   required?: boolean;
   defaultValue?: any;
   config?: Record<string, any>;
-  acceptTypes?: string[];
+  matchCategories?: string[]; // Optional. For input slots, specifies compatible categories of data types. For outputs, declares its categories.
   multi?: boolean;
   allowDynamicType?: boolean;
   min?: number;

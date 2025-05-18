@@ -57,19 +57,21 @@ export const definition: NodeDefinition = {
   inputs: {},
   outputs: {
     characterData: {
-      type: 'object',
+      dataFlowType: 'OBJECT',
       displayName: '角色数据',
-      description: '解析后的角色卡数据对象'
+      description: '解析后的角色卡数据对象',
+      matchCategories: ['CharacterProfile']
     }
     // Removed error output port
   },
 
   configSchema: {
     cardResource: {
-      type: 'RESOURCE_SELECTOR',
+      dataFlowType: 'STRING', // RESOURCE_SELECTOR value is a string (path/ID)
       displayName: '角色卡文件',
       description: '选择一个角色卡文件 (JSON 或 PNG)',
       required: true,
+      matchCategories: ['ResourceId', 'FilePath'],
       config: {
         // 需要确认系统中实际的资源类型标识
         acceptedTypes: [

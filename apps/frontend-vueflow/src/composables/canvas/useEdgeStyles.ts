@@ -1,5 +1,5 @@
 import { MarkerType } from "@vue-flow/core";
-import { SocketType } from "@comfytavern/types"; // 导入 SocketType
+import { DataFlowType } from "@comfytavern/types"; // 替换 SocketType 为 DataFlowType
 import type { EdgeStyleProps } from "../../types/workflowTypes";
 
 // 辅助函数：从 CSS 变量获取颜色值
@@ -39,15 +39,15 @@ export function getEdgeStyleProps(
 
   // 优先使用 sourceType 来决定颜色，除非它是 Any 类型
   const primaryType =
-    sourceType !== SocketType.WILDCARD && sourceType !== SocketType.CONVERTIBLE_ANY
+    sourceType !== DataFlowType.WILDCARD && sourceType !== DataFlowType.CONVERTIBLE_ANY
       ? sourceType
-      : targetType !== SocketType.WILDCARD && targetType !== SocketType.CONVERTIBLE_ANY
+      : targetType !== DataFlowType.WILDCARD && targetType !== DataFlowType.CONVERTIBLE_ANY
       ? targetType
       : null;
 
   if (primaryType) {
     // 特殊处理 STRING 类型 (蓝色虚线)
-    if (primaryType === SocketType.STRING) {
+    if (primaryType === DataFlowType.STRING) {
       edgeAnimated = true;
       const varName = `--handle-color-string-${themeSuffix}`;
       colorSet = getCssVariableValue(varName, isDark ? '#63b3ed' : '#1890ff'); // 提供回退色

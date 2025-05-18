@@ -2,7 +2,14 @@ import type { Ref, ComputedRef } from "vue";
 import type { Connection, Edge, Node, VueFlowStore } from "@vue-flow/core";
 import { getEdgeStyleProps } from "./useEdgeStyles";
 import { useGroupInterfaceSync } from "../group/useGroupInterfaceSync";
-import type { GroupSlotInfo, HistoryEntry } from "@comfytavern/types";
+import {
+  type GroupSlotInfo,
+  type HistoryEntry,
+  type DataFlowTypeName,
+  DataFlowType, // Enum-like object
+  BuiltInSocketMatchCategory, // Enum-like object
+  // InputDefinition and OutputDefinition removed as they are unused
+} from "@comfytavern/types";
 import { createHistoryEntry } from "@comfytavern/utils";
 import { useTabStore } from "@/stores/tabStore";
 import { useWorkflowStore } from "@/stores/workflowStore";
@@ -37,51 +44,98 @@ export function useCanvasConnections({
   const workflowStore = useWorkflowStore();
 
   /**
-   * 检查类型是否兼容
-   * @param sourceType 源类型
-   * @param targetType 目标类型
-   * @returns 类型是否兼容
+   * Checks if two slot types are compatible for connection based on DataFlowType and SocketMatchCategory.
+   * Follows rules defined in the new slot type system design.
+   * @param sourceSlot The source slot information (GroupSlotInfo).
+   * @param targetSlot The target slot information (GroupSlotInfo).
    */
-  const isTypeCompatible = (sourceType: string, targetType: string): boolean => {
-    // WILDCARD（通配符）与任何类型兼容
-    if (sourceType === "WILDCARD" || targetType === "WILDCARD") {
-      return true;
+  const isTypeCompatible = (sourceSlot: GroupSlotInfo, targetSlot: GroupSlotInfo): boolean => {
+    const sourceDft = sourceSlot.dataFlowType;
+    const sourceCats = sourceSlot.matchCategories || [];
+    const targetDft = targetSlot.dataFlowType;
+    const targetCats = targetSlot.matchCategories || [];
+
+    // Helper to check for BEHAVIOR_CONVERTIBLE or CONVERTIBLE_ANY DataFlowType
+    const isSlotConvertibleAny = (dft: DataFlowTypeName, cats: string[]) =>
+      dft === DataFlowType.CONVERTIBLE_ANY ||
+      cats.includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
+
+    // Helper to check for BEHAVIOR_WILDCARD or WILDCARD DataFlowType
+    const isSlotWildcard = (dft: DataFlowTypeName, cats: string[]) =>
+      dft === DataFlowType.WILDCARD || // WILDCARD is a DataFlowType
+      cats.includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD);
+
+    const isSourceConvertibleAny = isSlotConvertibleAny(sourceDft, sourceCats);
+    const isTargetConvertibleAny = isSlotConvertibleAny(targetDft, targetCats);
+    const isSourceWildcard = isSlotWildcard(sourceDft, sourceCats);
+    const isTargetWildcard = isSlotWildcard(targetDft, targetCats);
+
+    // Priority 1: Special Behavior Tags
+    // 1.1 BEHAVIOR_WILDCARD / WILDCARD DataFlowType
+    // Source WILDCARD connects to non-CONVERTIBLE_ANY Target.
+    if (isSourceWildcard && !isTargetConvertibleAny) return true;
+    // Target WILDCARD connects to non-CONVERTIBLE_ANY Source.
+    if (isTargetWildcard && !isSourceConvertibleAny) return true;
+
+    // 1.2 BEHAVIOR_CONVERTIBLE / CONVERTIBLE_ANY DataFlowType
+    // Source CONVERTIBLE_ANY connects to non-WILDCARD AND non-CONVERTIBLE_ANY Target.
+    if (isSourceConvertibleAny) {
+      return !isTargetWildcard && !isTargetConvertibleAny;
     }
-    // CONVERTIBLE_ANY 作为目标接受任何源类型
-    if (targetType === "CONVERTIBLE_ANY") {
-      return true;
-    }
-    // CONVERTIBLE_ANY 作为源可以连接到任何非动态目标
-    if (sourceType === "CONVERTIBLE_ANY") {
-      // 避免 CONVERTIBLE_ANY -> CONVERTIBLE_ANY 或 CONVERTIBLE_ANY -> WILDCARD
-      return targetType !== "CONVERTIBLE_ANY" && targetType !== "WILDCARD";
+    // Target CONVERTIBLE_ANY connects to non-WILDCARD AND non-CONVERTIBLE_ANY Source.
+    if (isTargetConvertibleAny) {
+      return !isSourceWildcard && !isSourceConvertibleAny;
     }
 
-    // 首先检查类型是否相等
-    if (sourceType === targetType) {
-      return true;
+    // Priority 2: SocketMatchCategory Matching (if both have non-behavioral categories)
+    const behaviorCategoryNames = [
+      BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE,
+      BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD,
+    ];
+    const actualSourceCats = sourceCats.filter((cat) => !behaviorCategoryNames.some(bhCat => bhCat === cat));
+    const actualTargetCats = targetCats.filter((cat) => !behaviorCategoryNames.some(bhCat => bhCat === cat));
+
+    if (actualSourceCats.length > 0 && actualTargetCats.length > 0) {
+      for (const sCat of actualSourceCats) {
+        if (actualTargetCats.includes(sCat)) {
+          return true; // Direct match of non-behavioral categories
+        }
+      }
+      // If categories are defined but no match, proceed to DataFlowType (as per design)
     }
-    // INT -> FLOAT
-    if (targetType === "FLOAT" && sourceType === "INT") {
-      return true;
-    }
-    // INT/FLOAT/BOOLEAN -> STRING
-    if (
-      targetType === "STRING" &&
-      (sourceType === "INT" || sourceType === "FLOAT" || sourceType === "BOOLEAN")
-    ) {
-      return true;
-    }
-    // STRING -> CODE
-    if (targetType === "CODE" && sourceType === "STRING") {
-      return true;
-    }
-    // STRING -> COMBO
-    if (targetType === "COMBO" && sourceType === "STRING") {
+
+    // Priority 3: DataFlowType Fallback Matching
+    if (sourceDft === targetDft) return true;
+
+    if (sourceDft === DataFlowType.INTEGER && targetDft === DataFlowType.FLOAT) return true;
+
+    const stringCompatibleSourceDfts: DataFlowTypeName[] = [
+      DataFlowType.INTEGER,
+      DataFlowType.FLOAT,
+      DataFlowType.BOOLEAN,
+    ];
+    if (stringCompatibleSourceDfts.includes(sourceDft) && targetDft === DataFlowType.STRING) {
       return true;
     }
 
-    // 默认：不兼容
+    // Compatibility based on SocketMatchCategory if DataFlowTypes differ but one is STRING
+    // Example: Source is STRING, Target has matchCategory CODE
+    if (sourceDft === DataFlowType.STRING && targetCats.includes(BuiltInSocketMatchCategory.CODE)) {
+        return true;
+    }
+    // Example: Source has matchCategory CODE, Target is STRING
+    if (sourceCats.includes(BuiltInSocketMatchCategory.CODE) && targetDft === DataFlowType.STRING) {
+        return true;
+    }
+    // Example: Source is STRING, Target has matchCategory COMBO_OPTION
+    if (sourceDft === DataFlowType.STRING && targetCats.includes(BuiltInSocketMatchCategory.COMBO_OPTION)) {
+        return true;
+    }
+     // Example: Source has matchCategory COMBO_OPTION, Target is STRING
+    if (sourceCats.includes(BuiltInSocketMatchCategory.COMBO_OPTION) && targetDft === DataFlowType.STRING) {
+        return true;
+    }
+
     return false;
   };
 
@@ -145,33 +199,13 @@ export function useCanvasConnections({
       return false;
     }
 
-    const sourceType = sourceOutput.type || "any";
-    const targetType = targetInput.type || "any";
-
-    // --- 类型兼容性检查 ---
-    // 特殊处理 CONVERTIBLE_ANY 作为源的情况
-    if (sourceType === "CONVERTIBLE_ANY") {
-      // 不允许连接到动态类型
-      if (targetType === "CONVERTIBLE_ANY" || targetType === "WILDCARD") {
-        console.warn(`类型不兼容: CONVERTIBLE_ANY 不能连接到 ${targetType}`);
-        return false;
-      }
-      // 允许连接到任何非动态类型，跳过后续检查
-      return true;
-    }
-
-    // 常规检查：
-    // 1. 检查目标是否指定了 acceptTypes
-    if (targetInput.acceptTypes && targetInput.acceptTypes.length > 0) {
-      if (!targetInput.acceptTypes.includes(sourceType)) {
-        console.warn(`源类型 ${sourceType} 不在目标接受类型列表中:`, targetInput.acceptTypes);
-        return false;
-      }
-      // 如果在 acceptTypes 中，则认为兼容 (不需要再调用 isTypeCompatible)
-    }
-    // 2. 如果没有 acceptTypes，使用通用的 isTypeCompatible 检查
-    else if (!isTypeCompatible(sourceType, targetType)) {
-      console.warn(`类型不兼容: ${sourceType} -> ${targetType}`);
+    // Use the new isTypeCompatible function
+    if (!isTypeCompatible(sourceOutput, targetInput)) {
+      // console.warn(
+      //   `类型不兼容: ${sourceOutput.dataFlowType} (${sourceOutput.matchCategories?.join(',')}) -> ${
+      //     targetInput.dataFlowType
+      //   } (${targetInput.matchCategories?.join(',')})`
+      // );
       return false;
     }
 
@@ -214,15 +248,15 @@ export function useCanvasConnections({
       targetInputDef = (targetNode.data as any)?.inputs?.[params.targetHandle!];
     }
 
-    const sourceType = sourceOutputDef?.type || "any";
-    const targetType = targetInputDef?.type || "any";
+    const sourceDft = sourceOutputDef?.dataFlowType || DataFlowType.WILDCARD;
+    const targetDft = targetInputDef?.dataFlowType || DataFlowType.WILDCARD;
 
     // 获取边的样式和标记
     const {
       animated: edgeAnimated,
       style: edgeStyle,
       markerEnd: edgeMarkerEnd,
-    } = getEdgeStyleProps(sourceType, targetType, isDark.value);
+    } = getEdgeStyleProps(sourceDft, targetDft, isDark.value);
 
     // 创建新边对象
     const edge: Edge = {
@@ -236,8 +270,8 @@ export function useCanvasConnections({
       style: edgeStyle,
       markerEnd: edgeMarkerEnd,
       data: {
-        sourceType: sourceType,
-        targetType: targetType,
+        sourceType: sourceDft, // Store DataFlowTypeName
+        targetType: targetDft, // Store DataFlowTypeName
       },
     };
 
@@ -318,151 +352,123 @@ export function useCanvasConnections({
       return null;
     }
 
-    const originalSourceType = sourceOutputDef.type;
-    const originalTargetType = targetInputDef.type;
-    let finalSourceType = originalSourceType;
-    let finalTargetType = originalTargetType;
+    const originalSourceDft = sourceOutputDef.dataFlowType;
+    const originalSourceCats = sourceOutputDef.matchCategories || [];
+    const originalTargetDft = targetInputDef.dataFlowType;
+    const originalTargetCats = targetInputDef.matchCategories || [];
+
+    let finalSourceDft = originalSourceDft;
+    let finalSourceCats = [...originalSourceCats];
+    let finalTargetDft = originalTargetDft;
+    let finalTargetCats = [...originalTargetCats];
 
     let interfaceUpdateResult: {
       inputs: Record<string, GroupSlotInfo>;
       outputs: Record<string, GroupSlotInfo>;
     } | null = null;
     let requiresInterfaceUpdate = false;
-    console.debug(`[handleConnect] Initial types: Source=${originalSourceType}, Target=${originalTargetType}`);
+    // console.debug(`[handleConnect] Initial DFTs: Source=${originalSourceDft}, Target=${originalTargetDft}`);
 
-    // 处理 CONVERTIBLE_ANY 源
-    if (originalSourceType === "CONVERTIBLE_ANY") {
-      console.debug(`[handleConnect] Handling CONVERTIBLE_ANY source (${sourceHandle}@${source}) connecting to ${originalTargetType} target (${targetHandle}@${target})`);
-      // 将源插槽类型转换为目标类型
-      const targetDisplayName = targetInputDef.displayName || targetHandle!;
-      const targetDescription = targetInputDef.customDescription || "";
-      const targetConfig = targetInputDef.config || {};
-      const targetDefaultValue = targetConfig.default;
-      const targetMin = targetConfig.min;
-      const targetMax = targetConfig.max;
-      sourceOutputDef.type = originalTargetType;
-      sourceOutputDef.displayName = targetDisplayName;
-      sourceOutputDef.customDescription = targetDescription;
-      finalSourceType = originalTargetType;
+    const isSourceNodeConvertible =
+      originalSourceDft === DataFlowType.CONVERTIBLE_ANY ||
+      originalSourceCats.includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
+    const isTargetNodeConvertible =
+      originalTargetDft === DataFlowType.CONVERTIBLE_ANY ||
+      originalTargetCats.includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
+    
+    const isSourceNodeWildcard =
+      originalSourceDft === DataFlowType.WILDCARD ||
+      originalSourceCats.includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD);
+    const isTargetNodeWildcard =
+      originalTargetDft === DataFlowType.WILDCARD ||
+      originalTargetCats.includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD);
 
-      // 如果源节点是 GroupInput，则同步接口
+
+    // Helper to create newSlotInfo for syncInterfaceSlotFromConnection
+    const createSyncSlotInfo = (
+        baseSlot: GroupSlotInfo,
+        newDft: DataFlowTypeName,
+        newCats: string[],
+        connectedSlot: GroupSlotInfo,
+        connectedNode: Node,
+        connectedHandleKey: string
+      ): GroupSlotInfo => {
+        const connectedCurrentValue = connectedNode.data?.values?.[connectedHandleKey];
+        return {
+          ...baseSlot, // Keep original key, multi, allowDynamicType, config etc.
+          dataFlowType: newDft,
+          matchCategories: newCats,
+          // Update display name and description from the connected slot
+          displayName: connectedSlot.displayName || connectedHandleKey,
+          customDescription: connectedSlot.customDescription || "",
+          // Use connected slot's current value if available, else its default, else base default
+          defaultValue: connectedCurrentValue !== undefined ? connectedCurrentValue : (connectedSlot.config?.default !== undefined ? connectedSlot.config.default : baseSlot.config?.default),
+          // Potentially update min/max from connected slot if applicable and defined
+          min: connectedSlot.config?.min !== undefined ? connectedSlot.config.min : baseSlot.config?.min,
+          max: connectedSlot.config?.max !== undefined ? connectedSlot.config.max : baseSlot.config?.max,
+          // type: newDft, // Keep the old 'type' field consistent for now if syncInterfaceSlotFromConnection relies on it
+        };
+    };
+
+
+    if (isSourceNodeConvertible && !isTargetNodeConvertible && !isTargetNodeWildcard) {
+      // Source is CONVERTIBLE_ANY, converts to Target's type
+      finalSourceDft = originalTargetDft;
+      finalSourceCats = originalTargetCats.filter(
+        (cat) => cat !== BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE
+      );
+      // Update sourceOutputDef for syncInterfaceSlotFromConnection
+      sourceOutputDef.dataFlowType = finalSourceDft;
+      sourceOutputDef.matchCategories = finalSourceCats;
+      // sourceOutputDef.type = finalSourceDft; // Keep old 'type' consistent for sync function if needed
+
       const sourceNodeType = getNodeType(sourceNode);
-      console.debug(`[handleConnect] Source node type for CONVERTIBLE_ANY source: ${sourceNodeType}`);
-      // Check if the fullType ends with ':GroupInput'
       if (sourceNodeType === 'core:GroupInput') {
-        console.debug(`[handleConnect] Source is GroupInput (${sourceNodeType}), attempting interface sync for slot ${sourceHandle}`);
-        const direction: "inputs" | "outputs" = "inputs";
-        const slotKey = sourceHandle!;
-        // 获取目标节点的当前值
-        const targetCurrentValue = targetNode.data?.values?.[targetHandle!];
-        const newSlotInfo: GroupSlotInfo = {
-          key: slotKey,
-          type: sourceOutputDef.type,
-          displayName: targetDisplayName,
-          customDescription: targetDescription,
-          // 使用目标节点的当前值，如果不存在则回退到定义中的默认值
-          defaultValue: targetCurrentValue !== undefined ? targetCurrentValue : targetDefaultValue,
-          min: targetMin,
-          max: targetMax,
-          allowDynamicType: sourceOutputDef.allowDynamicType,
-          multi: sourceOutputDef.multi,
-          acceptTypes: sourceOutputDef.acceptTypes,
-          config: sourceOutputDef.config,
-        };
-
+        const newSlotInfo = createSyncSlotInfo(sourceOutputDef, finalSourceDft, finalSourceCats, targetInputDef, targetNode, targetHandle!);
         const currentTabId = tabStore.activeTabId;
-        if (!currentTabId) {
-          console.error("无法同步接口：找不到当前活动的标签页 ID。");
-        } else {
-          const sourceSyncResult = syncInterfaceSlotFromConnection(
-            currentTabId,
-            sourceNode.id,
-            slotKey,
-            newSlotInfo,
-            direction
-          );
-          console.debug(`[handleConnect] Interface sync result for CONVERTIBLE_ANY source:`, sourceSyncResult);
-          if (sourceSyncResult) {
-            interfaceUpdateResult = sourceSyncResult; // Assign if successful
-            requiresInterfaceUpdate = true;       // Set flag ONLY if successful
-          }
-          console.debug(`[handleConnect] requiresInterfaceUpdate after source sync attempt: ${requiresInterfaceUpdate}`);
+        if (currentTabId) {
+          const syncResult = syncInterfaceSlotFromConnection(currentTabId, sourceNode.id, sourceHandle!, newSlotInfo, "inputs");
+          if (syncResult) { interfaceUpdateResult = syncResult; requiresInterfaceUpdate = true; }
         }
-      } else if (sourceNodeType === 'core:GroupOutput') {
-        // GroupOutput 不应有 CONVERTIBLE_ANY 输出
-        console.warn(
-          `源节点是 GroupOutput 但源插槽是 CONVERTIBLE_ANY (${sourceHandle})，这不符合预期。仅转换本地类型。`
-        );
       }
-    }
+    } else if (isTargetNodeConvertible && !isSourceNodeConvertible && !isSourceNodeWildcard) {
+      // Target is CONVERTIBLE_ANY, converts to Source's type
+      finalTargetDft = originalSourceDft;
+      finalTargetCats = originalSourceCats.filter(
+        (cat) => cat !== BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE
+      );
+      // Update targetInputDef for syncInterfaceSlotFromConnection
+      targetInputDef.dataFlowType = finalTargetDft;
+      targetInputDef.matchCategories = finalTargetCats;
+      // targetInputDef.type = finalTargetDft; // Keep old 'type' consistent for sync function
 
-    // 处理 CONVERTIBLE_ANY 目标
-    if (originalTargetType === "CONVERTIBLE_ANY") {
-      console.debug(`[handleConnect] Handling CONVERTIBLE_ANY target (${targetHandle}@${target}) connected by ${finalSourceType} source (${sourceHandle}@${source})`);
-      // 将目标插槽类型转换为最终的源类型
-      const sourceDisplayName = sourceOutputDef.displayName || sourceHandle!;
-      const sourceDescription = sourceOutputDef.customDescription || "";
-      const sourceConfig = sourceOutputDef.config || {};
-      const sourceDefaultValue = sourceConfig.default;
-      const sourceMin = sourceConfig.min;
-      const sourceMax = sourceConfig.max;
-      targetInputDef.type = finalSourceType;
-      targetInputDef.displayName = sourceDisplayName;
-      targetInputDef.customDescription = sourceDescription;
-      finalTargetType = finalSourceType;
-
-      // 如果目标节点是 GroupInput 或 GroupOutput，则同步接口
       const targetNodeType = getNodeType(targetNode);
-      console.debug(`[handleConnect] Target node type for CONVERTIBLE_ANY target: ${targetNodeType}`);
-      // Check if the fullType ends with ':GroupInput' or ':GroupOutput'
       if (targetNodeType === 'core:GroupInput' || targetNodeType === 'core:GroupOutput') {
-        console.debug(`[handleConnect] Target is GroupInput/Output (${targetNodeType}), attempting interface sync for slot ${targetHandle}`);
-        const centralDirection: "inputs" | "outputs" =
-          targetNodeType.endsWith(':GroupOutput') ? "outputs" : "inputs"; // Check ending here too
-        const slotKey = targetHandle!;
-        // 获取源节点的当前值
-        const sourceCurrentValue = sourceNode.data?.values?.[sourceHandle!];
-        const newSlotInfo: GroupSlotInfo = {
-          key: slotKey,
-          type: targetInputDef.type,
-          displayName: sourceDisplayName,
-          customDescription: sourceDescription,
-          // 使用源节点的当前值，如果不存在则回退到定义中的默认值
-          defaultValue: sourceCurrentValue !== undefined ? sourceCurrentValue : sourceDefaultValue,
-          min: sourceMin,
-          max: sourceMax,
-          allowDynamicType: targetInputDef.allowDynamicType,
-          multi: targetInputDef.multi,
-          acceptTypes: targetInputDef.acceptTypes,
-          config: targetInputDef.config,
-        };
-
+        const newSlotInfo = createSyncSlotInfo(targetInputDef, finalTargetDft, finalTargetCats, sourceOutputDef, sourceNode, sourceHandle!);
+        const centralDirection = targetNodeType.endsWith(':GroupOutput') ? "outputs" : "inputs";
         const currentTabId = tabStore.activeTabId;
-        if (!currentTabId) {
-          console.error("无法同步接口：找不到当前活动的标签页 ID。");
-        } else {
-          const targetSyncResult = syncInterfaceSlotFromConnection(
-            currentTabId,
-            targetNode.id,
-            slotKey,
-            newSlotInfo,
-            centralDirection
-          );
-          console.debug(`[handleConnect] Interface sync result for CONVERTIBLE_ANY target:`, targetSyncResult);
-          if (targetSyncResult) {
-            // Only assign if source sync didn't already provide a result
-            if (!interfaceUpdateResult) {
-              interfaceUpdateResult = targetSyncResult;
-            }
-            requiresInterfaceUpdate = true; // Set flag ONLY if target sync succeeded
+        if (currentTabId) {
+          const syncResult = syncInterfaceSlotFromConnection(currentTabId, targetNode.id, targetHandle!, newSlotInfo, centralDirection);
+          if (syncResult) {
+            if (!interfaceUpdateResult) interfaceUpdateResult = syncResult;
+            requiresInterfaceUpdate = true;
           }
-          console.debug(`[handleConnect] requiresInterfaceUpdate after target sync attempt: ${requiresInterfaceUpdate}`);
         }
       }
-    } else if (originalTargetType === "WILDCARD") {
-      // WILDCARD 目标采用最终的源类型
-      finalTargetType = finalSourceType;
+    } else if (isTargetNodeWildcard && !isSourceNodeConvertible) {
+        // Target is WILDCARD, adopts Source's type (if source is not CONVERTIBLE_ANY)
+        finalTargetDft = originalSourceDft;
+        finalTargetCats = [...originalSourceCats]; // Copy source categories
+        // Potentially update targetInputDef if WILDCARD type needs to be "materialized" in the definition
+        // For now, style props will use finalTargetDft. No interface sync needed for WILDCARD target type change.
+    } else if (isSourceNodeWildcard && !isTargetNodeConvertible) {
+        // Source is WILDCARD, adopts Target's type (if target is not CONVERTIBLE_ANY)
+        // This case is less common for styling as output usually dictates.
+        // finalSourceDft = originalTargetDft;
+        // finalSourceCats = [...originalTargetCats];
+        // No interface sync needed for WILDCARD source type change.
     }
+
 
     // 4. 处理多输入逻辑
     const isMultiInput = targetInputDef.multi === true;
@@ -481,7 +487,7 @@ export function useCanvasConnections({
       animated: edgeAnimated,
       style: edgeStyle,
       markerEnd: edgeMarkerEnd,
-    } = getEdgeStyleProps(finalSourceType, finalTargetType, isDark.value);
+    } = getEdgeStyleProps(finalSourceDft, finalTargetDft, isDark.value);
 
     const newEdge: Edge = {
       id: nanoid(10), // <-- 使用 nanoid 生成 ID
@@ -494,8 +500,13 @@ export function useCanvasConnections({
       style: edgeStyle,
       markerEnd: edgeMarkerEnd,
       data: {
-        sourceType: finalSourceType,
-        targetType: finalTargetType,
+        sourceType: finalSourceDft, // Store final DataFlowTypeName
+        targetType: finalTargetDft, // Store final DataFlowTypeName
+        // Optional: store original types/cats if needed for history or debugging
+        originalSourceDft,
+        originalSourceCats,
+        originalTargetDft,
+        originalTargetCats,
       },
     };
 

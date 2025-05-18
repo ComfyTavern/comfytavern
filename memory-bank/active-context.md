@@ -1,14 +1,9 @@
-# 活动上下文与子任务日志 (Active Context & Subtask Log)
+# 活动上下文：节点插槽类型系统重构 - UI 实现
 
-本文档用于记录当前正在执行的子任务的详细工作流程、遇到的问题、中间步骤、数据分析以及最终的实现细节。
+本文件用于记录当前正在进行的 UI 实现任务的详细工作过程、思考、遇到的问题和解决方案。
 
-**NexusCore 管理说明:**
-- 在委派新的子任务（特别是复杂任务）之前，NexusCore 可能会清空或归档此文件的先前内容。
-- 子任务执行者（例如 "💻 Code" 模式）应在此文件中详尽记录其工作过程。
-- 子任务完成后，NexusCore 将阅读并解析此文件，以提取关键信息并整合到项目的长期记忆库中（如 `progress-log.md`, `decision-log.md`）。
+**背景:**
+UI 设计方案已由 Architect 模式完成，并记录在 [`DesignDocs/architecture/floating-preview-editor-design.md`](./DesignDocs/architecture/floating-preview-editor-design.md)。该方案基于“右侧专用预览面板”和“底部弹出式编辑面板”。
 
----
-
-**当前无活动子任务。**
-
-*(当 NexusCore 委派第一个子任务时，将在此处添加该任务的上下文和指示。)*
+**当前任务:**
+将根据上述设计文档，分解并执行具体的UI实现任务。

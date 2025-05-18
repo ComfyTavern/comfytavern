@@ -10,7 +10,8 @@ import { useTabStore } from '@/stores/tabStore';
 import { useWorkflowInteractionCoordinator } from '../workflow/useWorkflowInteractionCoordinator';
 // Roo: Import useWorkflowManager
 import { useWorkflowManager } from '../workflow/useWorkflowManager';
-import type { HistoryEntry } from '@comfytavern/types'; // <-- Import HistoryEntry
+import type { HistoryEntry, InputDefinition, DataFlowTypeName } from '@comfytavern/types'; // <-- Import HistoryEntry
+import { DataFlowType, BuiltInSocketMatchCategory } from '@comfytavern/types'; // Roo: Import new types
 import { createHistoryEntry } from '@comfytavern/utils'; // <-- Import createHistoryEntry
 
 // --- 常量定义 ---
@@ -180,7 +181,7 @@ export function useNodeResize(props: Readonly<UseNodeStateProps>) {
   const calculateMinWidth = (
     title: string,
     description: string | undefined,
-    inputs: Record<string, any>, // 待办: 使用更精确的类型 InputDefinition
+    inputs: Record<string, InputDefinition>, // Roo: Updated type to InputDefinition
     outputs: Record<string, any> // 待办: 使用更精确的类型 OutputDefinition
   ): number => {
     // 从允许的自动计算最小宽度开始
@@ -208,6 +209,8 @@ export function useNodeResize(props: Readonly<UseNodeStateProps>) {
     if (inputs && Object.keys(inputs).length > 0) {
       for (const key in inputs) {
         const input = inputs[key];
+        if (!input) continue; // Roo: Add check for undefined input
+
         const paramName = input.displayName || input.description || key; // 获取参数显示名称
         const paramNameWidth = measureTextWidth(paramName, NODE_PARAM_FONT);
         maxSlotNameWidth = Math.max(maxSlotNameWidth, paramNameWidth); // 更新最宽插槽名称宽度
@@ -215,11 +218,20 @@ export function useNodeResize(props: Readonly<UseNodeStateProps>) {
         // --- 计算当前输入行所需的宽度 ---
         let inputLineWidth = 0
         // 判断是否为多行输入类型
-        const isMultiline = input.type === 'HISTORY' || input.type === 'CODE' || (input.type === 'STRING' && input.config?.multiline);
+        // Roo: Updated isMultiline logic
+        const isMultiline = input.config?.multiline === true ||
+                            (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)) ||
+                            (input.dataFlowType === DataFlowType.ARRAY && input.matchCategories?.includes(BuiltInSocketMatchCategory.CHAT_HISTORY));
         // 判断是否为按钮类型
-        const isButton = input.type === 'BUTTON';
+        // Roo: Updated isButton logic
+        const isButton = input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER);
         // 判断是否有内联输入组件 (排除多行、按钮、CONVERTIBLE_ANY、WILDCARD类型、动态类型，且类型为基础可内联类型)
-        const hasInlineInput = !isMultiline && !isButton && input.type !== 'CONVERTIBLE_ANY' && input.type !== 'WILDCARD' && !input.allowDynamicType && ['INT', 'FLOAT', 'BOOLEAN', 'COMBO', 'STRING'].includes(input.type);
+        // Roo: Updated hasInlineInput logic
+        const isConvertible = input.dataFlowType === DataFlowType.CONVERTIBLE_ANY || input.matchCategories?.includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
+        const isWildcardType = input.dataFlowType === DataFlowType.WILDCARD;
+        const basicInlineDataFlowTypes: DataFlowTypeName[] = [DataFlowType.INTEGER, DataFlowType.FLOAT, DataFlowType.BOOLEAN, DataFlowType.STRING];
+        const hasInlineInput = !isMultiline && !isButton && !isConvertible && !isWildcardType && !input.allowDynamicType && basicInlineDataFlowTypes.includes(input.dataFlowType as DataFlowTypeName);
+
 
         if (hasInlineInput) {
           // 内联布局 (grid grid-cols-5):

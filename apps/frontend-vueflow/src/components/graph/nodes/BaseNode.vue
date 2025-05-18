@@ -6,7 +6,12 @@ import { useVueFlow } from "@vue-flow/core";
 import { useThemeStore } from "../../../stores/theme";
 import { useTabStore } from "@/stores/tabStore";
 import { storeToRefs } from "pinia";
-import { SocketType, type HistoryEntry } from "@comfytavern/types"; // <-- Import HistoryEntry
+import {
+  DataFlowType,
+  type HistoryEntry,
+  type InputDefinition,
+  BuiltInSocketMatchCategory,
+} from "@comfytavern/types"; // <-- Import HistoryEntry
 import { ExecutionStatus } from "@comfytavern/types";
 import { createHistoryEntry } from "@comfytavern/utils"; // <-- Import createHistoryEntry
 import { useExecutionStore } from "@/stores/executionStore"; // 导入执行状态 Store
@@ -120,7 +125,7 @@ const configPropsMap = computed(() => {
   if (props.data.configSchema) {
     for (const [key, configDef] of Object.entries(props.data.configSchema)) {
       // 调用原始的计算逻辑
-      map[key] = calculateConfigProps(configDef, key);
+      map[key] = calculateConfigProps(configDef as InputDefinition, key);
     }
   }
   return map;
@@ -141,7 +146,7 @@ const getHandleTypeClass = (type: string | undefined): string | null => {
 };
 
 const isAnyType = (type: string | undefined): boolean => {
-  return type === SocketType.WILDCARD || type === SocketType.CONVERTIBLE_ANY;
+  return type === DataFlowType.WILDCARD || type === DataFlowType.CONVERTIBLE_ANY;
 };
 // --- End Handle 样式辅助函数 ---
 
@@ -157,20 +162,19 @@ const formatOutputValueForTooltip = (value: any): string => {
   if (value === undefined || value === null) {
     return "无";
   }
-  if (typeof value === 'string') {
-    return value.length > 100 ? value.substring(0, 97) + '...' : value;
+  if (typeof value === "string") {
+    return value.length > 100 ? value.substring(0, 97) + "..." : value;
   }
-  if (typeof value === 'object') {
+  if (typeof value === "object") {
     try {
       const jsonString = JSON.stringify(value);
-      return jsonString.length > 100 ? jsonString.substring(0, 97) + '...' : jsonString;
+      return jsonString.length > 100 ? jsonString.substring(0, 97) + "..." : jsonString;
     } catch (e) {
-      return '[无法序列化的对象]';
+      return "[无法序列化的对象]";
     }
   }
   return String(value);
 };
-
 
 // 处理组件失焦事件 (例如 CodeInput)
 const handleComponentBlur = (inputKey: string, currentValue: string) => {
@@ -191,8 +195,8 @@ const handleComponentBlur = (inputKey: string, currentValue: string) => {
 
   // 创建 HistoryEntry 对象
   const entry: HistoryEntry = createHistoryEntry(
-    'update', // actionType (假设是更新操作)
-    'nodeInputValue', // objectType
+    "update", // actionType (假设是更新操作)
+    "nodeInputValue", // objectType
     summary, // summary
     { inputKey: inputKey, value: truncatedValue } // details
   );
@@ -227,8 +231,8 @@ const handleComponentResizeEnd = (inputKey: string, payload: { newHeight: number
   // 使用正确的协调器函数更新组件状态并记录交互
   // 创建 HistoryEntry 对象
   const entry: HistoryEntry = createHistoryEntry(
-    'update', // actionType (假设是更新操作)
-    'nodeComponentState', // objectType
+    "update", // actionType (假设是更新操作)
+    "nodeComponentState", // objectType
     summary, // summary
     { inputKey: inputKey, state: stateUpdate } // details
   );
@@ -282,18 +286,23 @@ const tooltipContentForNodeTitle = computed(() => {
 </script>
 
 <template>
-  <div ref="nodeRootRef" class="custom-node" :class="{
-    selected,
-    'pointer-events-none': isResizing,
-    'cursor-move': !isResizing,
-    dark: isDark, // 暗色模式类
-    // 执行状态相关的类
-    'node-running': nodeExecutionStatus === ExecutionStatus.RUNNING,
-    'node-completed': nodeExecutionStatus === ExecutionStatus.COMPLETE, // Use COMPLETE
-    'node-error': nodeExecutionStatus === ExecutionStatus.ERROR,
-    'node-skipped': nodeExecutionStatus === ExecutionStatus.SKIPPED, // SKIPPED should be correct now
-    'has-client-script-error': !!clientScriptError, // 保留错误状态类
-  }" :style="{ width: `${width}px` }">
+  <div
+    ref="nodeRootRef"
+    class="custom-node"
+    :class="{
+      selected,
+      'pointer-events-none': isResizing,
+      'cursor-move': !isResizing,
+      dark: isDark, // 暗色模式类
+      // 执行状态相关的类
+      'node-running': nodeExecutionStatus === ExecutionStatus.RUNNING,
+      'node-completed': nodeExecutionStatus === ExecutionStatus.COMPLETE, // Use COMPLETE
+      'node-error': nodeExecutionStatus === ExecutionStatus.ERROR,
+      'node-skipped': nodeExecutionStatus === ExecutionStatus.SKIPPED, // SKIPPED should be correct now
+      'has-client-script-error': !!clientScriptError, // 保留错误状态类
+    }"
+    :style="{ width: `${width}px` }"
+  >
     <!-- 节点宽度拖拽调整区域 -->
     <!-- 拖拽响应区域 (父元素，透明，宽度比手柄大) -->
     <div class="resize-area resize-area-left" @mousedown="startResize">
@@ -310,24 +319,47 @@ const tooltipContentForNodeTitle = computed(() => {
         <span v-if="nodeIdNumber" class="node-id-badge mr-0.5">{{ nodeIdNumber }}</span>
         <!-- 节点 ID 徽章 -->
         <!-- 客户端脚本错误图标 -->
-        <svg v-if="clientScriptError" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-          stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-red-500 mr-1 flex-shrink-0"
-          :title="`客户端脚本错误: ${clientScriptError}`">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+        <svg
+          v-if="clientScriptError"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-4 h-4 text-red-500 mr-1 flex-shrink-0"
+          :title="`客户端脚本错误: ${clientScriptError}`"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+          />
         </svg>
         <!-- 优先显示错误 Tooltip -->
-        <Tooltip v-if="nodeExecutionStatus === ExecutionStatus.ERROR && nodeExecutionError"
-          :content="`执行错误: ${nodeExecutionError}`" placement="top" :maxWidth="400" type="error" :showCopyButton="true"
-          :interactive="true">
+        <Tooltip
+          v-if="nodeExecutionStatus === ExecutionStatus.ERROR && nodeExecutionError"
+          :content="`执行错误: ${nodeExecutionError}`"
+          placement="top"
+          :maxWidth="400"
+          type="error"
+          :showCopyButton="true"
+          :interactive="true"
+        >
           <!-- 错误时标题也显示红色 -->
           <span class="node-title truncate text-red-600 dark:text-red-400">{{
             label || "未命名节点"
           }}</span>
         </Tooltip>
         <!-- 其次，如果需要显示 Tooltip (有描述 或 自定义标签与默认不同)，使用 content prop -->
-        <Tooltip v-else-if="tooltipContentForNodeTitle" :content="tooltipContentForNodeTitle" placement="top"
-          :maxWidth="400" :showDelay="300" :showCopyButton="true" :interactive="true">
+        <Tooltip
+          v-else-if="tooltipContentForNodeTitle"
+          :content="tooltipContentForNodeTitle"
+          placement="top"
+          :maxWidth="400"
+          :showDelay="300"
+          :showCopyButton="true"
+          :interactive="true"
+        >
           <!-- Tooltip 触发器：节点标题 -->
           <span class="node-title truncate">{{ label || "未命名节点" }}</span>
         </Tooltip>
@@ -338,12 +370,23 @@ const tooltipContentForNodeTitle = computed(() => {
       <div class="flex items-center gap-1">
         <Tooltip v-if="isNodeGroup" content="编辑节点组定义" placement="top" :maxWidth="400">
           <!-- 编辑节点组按钮 -->
-          <button @click.stop="editNodeGroup"
-            class="edit-group-button p-0.5 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-              stroke="currentColor" class="w-3.5 h-3.5">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+          <button
+            @click.stop="editNodeGroup"
+            class="edit-group-button p-0.5 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-3.5 h-3.5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+              />
             </svg>
           </button>
         </Tooltip>
@@ -362,9 +405,15 @@ const tooltipContentForNodeTitle = computed(() => {
           <div class="param-header">
             <div class="flex items-center justify-end gap-2 mr-2 flex-grow min-w-0">
               <!-- 使用 formatDescription 处理 Tooltip 内容 -->
-              <Tooltip :content=" // Use final description from output object
-                formatDescription(output.description) || output.displayName || String(output.key)
-                " placement="top" :maxWidth="400" :showDelay="300">
+              <Tooltip
+                :content="
+                  // Use final description from output object
+                  formatDescription(output.description) || output.displayName || String(output.key)
+                "
+                placement="top"
+                :maxWidth="400"
+                :showDelay="300"
+              >
                 <div class="param-name truncate text-right">
                   <!-- 显示时也优先显示格式化后的 description -->
                   {{
@@ -376,33 +425,55 @@ const tooltipContentForNodeTitle = computed(() => {
               </Tooltip>
             </div>
             <!-- 使用 Tooltip 包裹 Handle 以显示类型、输出值，并添加右键菜单事件 -->
-            <div class="relative flex-shrink-0"
-              @contextmenu.prevent.stop="emitSlotContextMenu($event, String(output.key), 'source')">
+            <div
+              class="relative flex-shrink-0"
+              @contextmenu.prevent.stop="emitSlotContextMenu($event, String(output.key), 'source')"
+            >
               <!-- Handle 的容器 -->
               <Tooltip placement="right" :maxWidth="400" :showDelay="300">
                 <template #content>
-                  <div>类型: {{ output.type || '未知' }}</div>
+                  <div>类型: {{ output.dataFlowType || "未知" }}</div>
                   <!-- 直接调用 store getter 获取最终输出 -->
-                  <div v-if="executionStore.getNodeOutput(activeTabId!, props.id, String(output.key)) !== undefined"
-                    class="mt-1">
-                    最终: {{ formatOutputValueForTooltip(executionStore.getNodeOutput(activeTabId!, props.id,
-                      String(output.key))) }}
+                  <div
+                    v-if="executionStore.getNodeOutput(activeTabId!, props.id, String(output.key)) !== undefined"
+                    class="mt-1"
+                  >
+                    最终:
+                    {{
+                      formatOutputValueForTooltip(
+                        executionStore.getNodeOutput(activeTabId!, props.id, String(output.key))
+                      )
+                    }}
                   </div>
                   <!-- 直接调用 store getter 获取预览输出 -->
                   <div
                     v-else-if="executionStore.getNodePreviewOutput(activeTabId!, props.id, String(output.key)) !== undefined"
-                    class="mt-1 text-yellow-400">
-                    预览: {{ formatOutputValueForTooltip(executionStore.getNodePreviewOutput(activeTabId!, props.id,
-                      String(output.key))) }}
+                    class="mt-1 text-yellow-400"
+                  >
+                    预览:
+                    {{
+                      formatOutputValueForTooltip(
+                        executionStore.getNodePreviewOutput(
+                          activeTabId!,
+                          props.id,
+                          String(output.key)
+                        )
+                      )
+                    }}
                   </div>
                 </template>
                 <!-- Tooltip 的触发器是 Handle -->
-                <Handle :id="String(output.key)" type="source" :position="Position.Right" :class="[
-                  styles.handle,
-                  styles.handleRight,
-                  getHandleTypeClass(output.type),
-                  isAnyType(output.type) && styles.handleAny, // 条件性添加类名
-                ]" />
+                <Handle
+                  :id="String(output.key)"
+                  type="source"
+                  :position="Position.Right"
+                  :class="[
+                    styles.handle,
+                    styles.handleRight,
+                    getHandleTypeClass(output.dataFlowType),
+                    isAnyType(output.dataFlowType) && styles.handleAny, // 条件性添加类名
+                  ]"
+                />
               </Tooltip>
             </div>
           </div>
@@ -410,20 +481,27 @@ const tooltipContentForNodeTitle = computed(() => {
       </div>
 
       <!-- 节点配置项区域 -->
-      <div v-if="data.configSchema && Object.keys(data.configSchema).length > 0" class="node-configs">
-        <div v-for="(configDef, key) in data.configSchema" :key="`config-${key}`" class="node-config-item">
-          <!-- 移除基于 groupMode 的条件渲染 -->
-          <!-- <div v-if="
-            (String(key) === 'referencedWorkflowId' && getConfigValue('groupMode') !== 'referenced') ||
-            (String(key) === 'embeddedWorkflowId' && getConfigValue('groupMode') !== 'embedded')
-          " class="hidden">
-          </div> -->
-          <!-- 直接渲染配置项输入组件 -->
-          <div v-if="getInputComponent(configDef.type, configDef.config)" class="config-content" @mousedown.stop>
+      <div
+        v-if="data.configSchema && Object.keys(data.configSchema).length > 0"
+        class="node-configs"
+      >
+        <div
+          v-for="configKeyName in Object.keys(data.configSchema)"
+          :key="`config-${configKeyName}`"
+          class="node-config-item"
+        >
+          <div
+            v-if="configPropsMap[String(configKeyName)]?.component"
+            class="config-content"
+            @mousedown.stop
+          >
             <!-- 阻止 mousedown 冒泡 -->
-            <component :is="getInputComponent(configDef.type, configDef.config)"
-              :model-value="getConfigValue(String(key))" v-bind="configPropsMap[String(key)]"
-              @update:modelValue="updateConfigValue(String(key), $event)" />
+            <component
+              :is="configPropsMap[String(configKeyName)]?.component"
+              :model-value="getConfigValue(String(configKeyName))"
+              v-bind="configPropsMap[String(configKeyName)]?.props"
+              @update:modelValue="updateConfigValue(String(configKeyName), $event)"
+            />
           </div>
         </div>
       </div>
@@ -432,26 +510,53 @@ const tooltipContentForNodeTitle = computed(() => {
     <!-- 节点组信息区域 (仅节点组显示) -->
     <div v-if="isNodeGroup && nodeGroupInfo" class="node-group-info">
       <span class="info-item">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-          class="w-3 h-3 inline-block mr-0.5">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125Z" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-3 h-3 inline-block mr-0.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125Z"
+          />
         </svg>
         {{ nodeGroupInfo.nodeCount }} 节点
       </span>
       <span class="info-item">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-          class="w-3 h-3 inline-block mr-0.5 transform rotate-180">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-3 h-3 inline-block mr-0.5 transform rotate-180"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5"
+          />
         </svg>
         {{ nodeGroupInfo.inputCount }} 输入
       </span>
       <span class="info-item">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-          class="w-3 h-3 inline-block mr-0.5">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-3 h-3 inline-block mr-0.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5"
+          />
         </svg>
         {{ nodeGroupInfo.outputCount }} 输出
       </span>
@@ -465,110 +570,193 @@ const tooltipContentForNodeTitle = computed(() => {
         <div class="param-header">
           <!-- 输入连接点 Handle -->
           <!-- 输入连接点 Handle，并添加右键菜单事件 -->
-          <div v-if="input.type !== 'BUTTON'" class="relative flex-shrink-0"
-            @contextmenu.prevent.stop="emitSlotContextMenu($event, String(input.key), 'target')">
-            <!-- Handle 的容器, 按钮类型不显示 -->
+          <!-- 条件：如果不是按钮类型，则显示 Handle -->
+          <div
+            v-if="
+              !(
+                input.dataFlowType === DataFlowType.WILDCARD &&
+                input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)
+              )
+            "
+            class="relative flex-shrink-0"
+            @contextmenu.prevent.stop="emitSlotContextMenu($event, String(input.key), 'target')"
+          >
+            <!-- Handle 的容器 -->
             <!-- 使用 Tooltip 包裹 Handle 以显示类型和连接数 -->
-            <Tooltip v-if="input.type" placement="left" :maxWidth="400">
+            <Tooltip v-if="input.dataFlowType" placement="left" :maxWidth="400">
               <template #content>
-                <span>{{ input.type }}</span>
-                <span v-if="isMultiInput(input) && getInputConnectionCount(String(input.key)) > 0" class="ml-1">
+                <span>{{ input.dataFlowType }}</span>
+                <span
+                  v-if="isMultiInput(input) && getInputConnectionCount(String(input.key)) > 0"
+                  class="ml-1"
+                >
                   ({{ getInputConnectionCount(String(input.key)) }})
                 </span>
               </template>
-              <Handle :id="String(input.key)" type="target" :position="Position.Left" :class="[
+              <Handle
+                :id="String(input.key)"
+                type="target"
+                :position="Position.Left"
+                :class="[
+                  styles.handle,
+                  styles.handleLeft,
+                  getHandleTypeClass(input.dataFlowType),
+                  isAnyType(input.dataFlowType) && styles.handleAny, // 条件性添加类名
+                  input.multi && styles.handleMulti, // 如果支持多连接，添加方形样式
+                ]"
+              />
+            </Tooltip>
+            <Handle
+              v-else
+              :id="String(input.key)"
+              type="target"
+              :position="Position.Left"
+              :class="[
                 styles.handle,
                 styles.handleLeft,
-                getHandleTypeClass(input.type),
-                isAnyType(input.type) && styles.handleAny, // 条件性添加类名
+                getHandleTypeClass(input.dataFlowType), // 即使没有类型也尝试应用，可能为 null
+                isAnyType(input.dataFlowType) && styles.handleAny, // 条件性添加类名
                 input.multi && styles.handleMulti, // 如果支持多连接，添加方形样式
-              ]" />
-            </Tooltip>
-            <Handle v-else :id="String(input.key)" type="target" :position="Position.Left" :class="[
-              styles.handle,
-              styles.handleLeft,
-              getHandleTypeClass(input.type), // 即使没有类型也尝试应用，可能为 null
-              isAnyType(input.type) && styles.handleAny, // 条件性添加类名
-              input.multi && styles.handleMulti, // 如果支持多连接，添加方形样式
-            ]" />
+              ]"
+            />
           </div>
 
           <!-- 参数名称和内联输入组件容器 (固定比例布局) -->
           <div class="grid grid-cols-5 gap-2 ml-2.5 w-full items-center">
             <!-- 改为 Grid 布局，5列，保持垂直居中 -->
-            <!-- 参数名称容器 (占 40% 宽度) - 按钮类型不显示 -->
-            <div v-if="input.type !== 'BUTTON'" class="col-span-2 text-left flex items-center h-4">
+            <!-- 参数名称容器 (占 40% 宽度) -->
+            <!-- 条件：如果不是按钮类型，则显示参数名称 -->
+            <div
+              v-if="
+                !(
+                  input.dataFlowType === DataFlowType.WILDCARD &&
+                  input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)
+                )
+              "
+              class="col-span-2 text-left flex items-center h-4"
+            >
               <!-- 占据 2 列 -->
               <!-- 使用 formatDescription 处理 Tooltip 内容 -->
-              <Tooltip :content=" // Use final description from input object
-                formatDescription(input.description) || input.displayName || String(input.key)
-                " placement="top" :maxWidth="400">
+              <Tooltip
+                :content="
+                  // Use final description from input object
+                  formatDescription(input.description) || input.displayName || String(input.key)
+                "
+                placement="top"
+                :maxWidth="400"
+              >
                 <div class="param-name truncate text-left">
                   <!-- 确保文本左对齐 -->
                   <!-- 显示时也优先显示格式化后的 description -->
-                  {{ // Use final description from input object
+                  {{
+                    // Use final description from input object
                     input.displayName || formatDescription(input.description) || String(input.key)
                   }}
                 </div>
               </Tooltip>
             </div>
 
-            <!-- 内联输入组件容器 (占 60% 宽度) - 按钮类型不显示 -->
-            <div v-if="
-              props.type !== 'core:GroupInput' && // Roo: 使用带命名空间的类型
-              props.type !== 'core:GroupOutput' && // Roo: 使用带命名空间的类型
-              input.type !== 'BUTTON' &&
-              (!isInputConnected(String(input.key)) || isMultiInput(input)) &&
-              getInputComponent(input.type, input.config) &&
-              (input.type === 'INT' ||
-                input.type === 'FLOAT' ||
-                input.type === 'BOOLEAN' ||
-                input.type === 'COMBO' ||
-                (input.type === 'STRING' && !input.config?.multiline))
-            " class="col-span-3 inline-input flex items-center justify-end pr-2 h-4" @mousedown.stop>
+            <!-- 内联输入组件容器 -->
+            <!-- 修改 v-if 条件以包含按钮，并调整 col-span -->
+            <div
+              v-if="
+                // 条件：非按钮类型的内联输入
+                props.type !== 'core:GroupInput' &&
+                props.type !== 'core:GroupOutput' &&
+                !(
+                  input.dataFlowType === DataFlowType.WILDCARD &&
+                  input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)
+                ) && // 排除按钮
+                (!isInputConnected(String(input.key)) || isMultiInput(input)) &&
+                getInputComponent(input.dataFlowType, input.config, input.matchCategories) &&
+                (input.dataFlowType === DataFlowType.INTEGER ||
+                  input.dataFlowType === DataFlowType.FLOAT ||
+                  input.dataFlowType === DataFlowType.BOOLEAN ||
+                  (input.dataFlowType === DataFlowType.STRING && !!input.config?.suggestions) || // Logic for COMBO
+                  (input.dataFlowType === DataFlowType.STRING && !input.config?.multiline))
+              "
+              class="inline-input flex items-center h-4 col-span-3 pr-2 justify-end"
+              @mousedown.stop
+            >
               <!-- 阻止 mousedown 冒泡 -->
-              <component :is="getInputComponent(input.type, input.config)"
-                :model-value="getInputValue(String(input.key))" v-bind="inputPropsMap[String(input.key)]"
-                @update:modelValue="updateInputValue(String(input.key), $event)" />
+              <component
+                :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
+                :model-value="getInputValue(String(input.key))"
+                v-bind="inputPropsMap[String(input.key)]?.props"
+                @update:modelValue="updateInputValue(String(input.key), $event)"
+              />
             </div>
-            <!-- 如果没有内联组件，保留空间以对齐 - 按钮类型不显示 -->
-            <div v-else-if="input.type !== 'BUTTON'" class="col-span-3 h-4"></div>
+            <!-- 如果没有内联组件（且不是按钮），保留空间以对齐 -->
+            <div
+              v-else-if="
+                !(
+                  input.dataFlowType === DataFlowType.WILDCARD &&
+                  input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)
+                )
+              "
+              class="col-span-3 h-4"
+            ></div>
             <!-- 占据 3 列 -->
+            <!-- 按钮组件容器 (占满整行) -->
+            <div
+              v-if="
+                input.dataFlowType === DataFlowType.WILDCARD &&
+                input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)
+              "
+              class="col-span-5 w-full py-1 pr-2 flex justify-center items-center"
+              @mousedown.stop
+            >
+              <component
+                :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
+                :model-value="getInputValue(String(input.key))"
+                v-bind="inputPropsMap[String(input.key)]?.props"
+                @click="() => handleButtonClick(String(input.key))"
+              />
+            </div>
 
-            <!-- 按钮组件容器 (占满整行) - 仅按钮类型显示 -->
-            <div v-if="input.type === 'BUTTON'" class="col-span-5 w-full py-1 pr-2" @mousedown.stop>
-              <!-- 阻止 mousedown 冒泡 -->
-              <!-- 添加垂直内边距 py-1 和右侧内边距 pr-2 -->
-              <component :is="getInputComponent(input.type, input.config)"
+            <!-- 按钮组件容器 (占满整行) - 此部分将被合并到上面的内联输入组件逻辑中，故移除 -->
+            <!--
+            <div v-if="input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)" class="col-span-5 w-full py-1 pr-2" @mousedown.stop>
+              <component :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
                 :model-value="getInputValue(String(input.key))" v-bind="inputPropsMap[String(input.key)]" @change="
                   updateInputValue(String(input.key), ($event.target as HTMLInputElement).value)
                   " @click="() => handleButtonClick(String(input.key))" />
-              <!-- 添加 click 事件处理器 -->
             </div>
+            -->
           </div>
         </div>
 
         <!-- 多行文本/代码/历史记录等特殊输入组件 (根据条件显示) -->
-        <div v-if="
-          props.type !== 'core:GroupInput' && // Roo: 使用带命名空间的类型
-          props.type !== 'core:GroupOutput' && // Roo: 使用带命名空间的类型
-          getInputComponent(input.type, input.config) &&
-          // 条件1: 类型是 HISTORY, CODE, 多行 STRING, 或 display_only STRING
-          // 移除 BUTTON 类型，因为它已在 param-header 中处理
-          (input.type === 'HISTORY' ||
-            input.type === 'CODE' ||
-            (input.type === 'STRING' &&
-              (input.config?.multiline || input.config?.display_only))) &&
-          // 条件2: 连接状态判断 (display_only 始终显示，其他类型根据连接和 showReceivedValue 判断)
-          ((input.type === 'STRING' && input.config?.display_only) || // display_only 始终显示
-            !isInputConnected(String(input.key)) || // 或者未连接
-            (isInputConnected(String(input.key)) && input.config?.showReceivedValue)) // 或者已连接且配置了 showReceivedValue
-        " class="param-content" @mousedown.stop>
+        <div
+          v-if="
+            props.type !== 'core:GroupInput' && // Roo: 使用带命名空间的类型
+            props.type !== 'core:GroupOutput' && // Roo: 使用带命名空间的类型
+            getInputComponent(input.dataFlowType, input.config, input.matchCategories) && // 传递 matchCategories
+            // 条件1: 类型是 HISTORY, CODE, 多行 STRING, 或 display_only STRING
+            // 移除 BUTTON 类型，因为它已在 param-header 中处理
+            ((input.dataFlowType === DataFlowType.OBJECT &&
+              input.matchCategories?.includes(BuiltInSocketMatchCategory.CHAT_HISTORY)) || // Logic for HISTORY
+              (input.dataFlowType === DataFlowType.STRING &&
+                input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)) || // Logic for CODE
+              (input.dataFlowType === DataFlowType.STRING &&
+                (input.config?.multiline || input.config?.display_only))) &&
+            // 条件2: 连接状态判断 (display_only 始终显示，其他类型根据连接和 showReceivedValue 判断)
+            ((input.dataFlowType === DataFlowType.STRING && input.config?.display_only) || // display_only 始终显示
+              !isInputConnected(String(input.key)) || // 或者未连接
+              (isInputConnected(String(input.key)) && input.config?.showReceivedValue)) // 或者已连接且配置了 showReceivedValue
+          "
+          class="param-content"
+          @mousedown.stop
+        >
           <!-- 阻止 mousedown 冒泡 -->
-          <component :is="getInputComponent(input.type, input.config)" :model-value="getInputValue(String(input.key))"
-            v-bind="inputPropsMap[String(input.key)]" :height="props.data.componentStates?.[String(input.key)]?.height"
+          <component
+            :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
+            :model-value="getInputValue(String(input.key))"
+            v-bind="inputPropsMap[String(input.key)]"
+            :height="props.data.componentStates?.[String(input.key)]?.height"
             @blur="handleComponentBlur(String(input.key), $event)"
-            @resize-interaction-end="handleComponentResizeEnd(String(input.key), $event)" />
+            @resize-interaction-end="handleComponentResizeEnd(String(input.key), $event)"
+          />
         </div>
       </div>
     </div>

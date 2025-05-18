@@ -24,12 +24,12 @@ export const definition: NodeDefinition = {
 
   inputs: {
     text_inputs: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '文本输入',
       description: '要合并的文本输入',
       required: true,
       multi: true,
-      acceptTypes: ['STRING'], // 显式指定只接受STRING类型输入
+      // acceptTypes is handled by dataFlowType and matchCategories
       config: {
         multiline: true,
         placeholder: '文本内容将在这里显示',
@@ -39,11 +39,11 @@ export const definition: NodeDefinition = {
       }
     },
     separator: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '分隔符',
       description: '用于分隔文本的字符串',
       required: false,
-      acceptTypes: ['STRING'], // 分隔符也只接受STRING类型
+      // acceptTypes is handled by dataFlowType and matchCategories
       config: {
         default: '\n',
         multiline: false,
@@ -55,7 +55,7 @@ export const definition: NodeDefinition = {
 
   outputs: {
     merged_text: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '合并文本',
       description: '合并后的文本输出'
     }

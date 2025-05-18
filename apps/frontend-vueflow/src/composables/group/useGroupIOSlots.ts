@@ -1,7 +1,7 @@
 import { computed } from 'vue';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import type { NodeProps } from '@vue-flow/core'; // 从 VueFlow 导入 NodeProps
-import { SocketType, type GroupSlotInfo } from '@comfytavern/types'; // <-- Import SocketType
+import { DataFlowType, type GroupSlotInfo, type DataFlowTypeName } from '@comfytavern/types'; // <-- Import DataFlowType
 
 const CONVERTIBLE_ANY_DESCRIPTION = '这是一个**可转换**的插槽，初始类型为 `CONVERTIBLE_ANY`。\n\n- 连接后，其类型和名称将根据连接自动更新。\n- 会生成一个新的**空心插槽**。\n- 可在**侧边栏**编辑接口属性。';
 // Define a type for the objects returned by the computed properties, ensuring 'description' exists
@@ -9,7 +9,7 @@ interface DisplaySlotInfo extends Omit<GroupSlotInfo, 'customDescription' | 'des
   key: string;
   description: string;
   displayName: string; // DisplayName must also be a string
-  type: string; // Type must be a string, not optional
+  dataFlowType: DataFlowTypeName; // Type must be a string, not optional
   [key: string]: any; // Allow other properties from spreading
 }
 
@@ -35,7 +35,7 @@ export function useGroupIOSlots(props: NodeProps) {
         const typedSlot = slot as GroupSlotInfo;
         // 优先使用 customDescription，然后检查是否为 CONVERTIBLE_ANY，再回退
         const description = typedSlot.customDescription ||
-                            (typedSlot.type === SocketType.CONVERTIBLE_ANY ? CONVERTIBLE_ANY_DESCRIPTION : null) || // Use frontend description for CONVERTIBLE_ANY if no custom one
+                            (typedSlot.dataFlowType === DataFlowType.CONVERTIBLE_ANY ? CONVERTIBLE_ANY_DESCRIPTION : null) || // Use frontend description for CONVERTIBLE_ANY if no custom one
                             typedSlot.displayName ||
                             typedSlot.key;
         return {
@@ -58,7 +58,7 @@ export function useGroupIOSlots(props: NodeProps) {
         } as DisplaySlotInfo;
       });
       // Filter out CONVERTIBLE_ANY slots for NodeGroup inputs
-      return groupInputs.filter(slot => slot.type !== SocketType.CONVERTIBLE_ANY);
+      return groupInputs.filter(slot => slot.dataFlowType !== DataFlowType.CONVERTIBLE_ANY);
     }
 
     // 3. 普通节点: 使用节点数据中的 inputs
@@ -88,7 +88,7 @@ export function useGroupIOSlots(props: NodeProps) {
         const typedSlot = slot as GroupSlotInfo;
         // 优先使用 customDescription，然后检查是否为 CONVERTIBLE_ANY，再回退
         const description = typedSlot.customDescription ||
-                            (typedSlot.type === SocketType.CONVERTIBLE_ANY ? CONVERTIBLE_ANY_DESCRIPTION : null) || // Use frontend description for CONVERTIBLE_ANY if no custom one
+                            (typedSlot.dataFlowType === DataFlowType.CONVERTIBLE_ANY ? CONVERTIBLE_ANY_DESCRIPTION : null) || // Use frontend description for CONVERTIBLE_ANY if no custom one
                             typedSlot.displayName ||
                             typedSlot.key;
         return {
@@ -111,7 +111,7 @@ export function useGroupIOSlots(props: NodeProps) {
         } as DisplaySlotInfo;
       });
       // Filter out CONVERTIBLE_ANY slots for NodeGroup outputs
-      return groupOutputs.filter(slot => slot.type !== SocketType.CONVERTIBLE_ANY);
+      return groupOutputs.filter(slot => slot.dataFlowType !== DataFlowType.CONVERTIBLE_ANY);
     }
 
     // 3. 普通节点: 使用节点数据中的 outputs

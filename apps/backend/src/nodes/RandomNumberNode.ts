@@ -14,16 +14,17 @@ export const definition: NodeDefinition = {
   width: 260, // 设置默认宽度
   inputs: {
     mode: {
-      type: 'COMBO',
+      dataFlowType: 'STRING', // COMBO options are strings
       displayName: '模式',
       description: '控制数字如何变化',
+      matchCategories: ['ComboOption'],
       config: {
-        options: ['固定', '增加', '减少', '随机'],
+        suggestions: ['固定', '增加', '减少', '随机'], // Renamed from options
         default: '固定'
       }
     } as InputDefinition,
     value: {
-      type: 'INT',
+      dataFlowType: 'INTEGER',
       displayName: '当前值',
       description: '当前内部存储的数值',
       config: {
@@ -35,9 +36,10 @@ export const definition: NodeDefinition = {
       }
     } as InputDefinition,
     reroll: {
-      type: 'BUTTON',
+      dataFlowType: 'WILDCARD',
       displayName: '重新随机',
       description: '点击以生成一个新的随机数',
+      matchCategories: ['Trigger'],
       config: {
         label: '重新随机'
       }
@@ -45,7 +47,7 @@ export const definition: NodeDefinition = {
   },
   outputs: {
     number: {
-      type: 'INT',
+      dataFlowType: 'INTEGER',
       displayName: '数值',
       description: '生成的随机数'
     } as OutputDefinition

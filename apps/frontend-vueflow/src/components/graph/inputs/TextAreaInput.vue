@@ -1,20 +1,46 @@
 <template>
   <div class="textarea-input">
-    <textarea ref="textareaRef" :value="modelValue" :placeholder="placeholder" :disabled="disabled" :rows="rows"
-      @input="handleInput" @mousedown="handleMouseDown" @focus="handleFocus" @blur="handleBlur" class="w-full p-1 text-sm rounded border transition-colors duration-200
-             bg-white dark:bg-gray-700
-             border-gray-300 dark:border-gray-600
-             text-gray-900 dark:text-gray-100
-             placeholder-gray-500 dark:placeholder-gray-400
-             disabled:bg-gray-100 dark:disabled:bg-gray-800
-             disabled:text-gray-500 dark:disabled:text-gray-400
-             focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-700 focus:border-transparent
-             hover:border-gray-400 dark:hover:border-gray-500
-             resize-y min-h-[60px]" :style="textareaStyle" :class="{
-              'border-red-500 dark:border-red-700': hasError
-            }" />
-    <div v-if="hasError" class="text-xs text-red-500 dark:text-red-400 mt-1">
-      {{ errorMessage }}
+    <template v-if="!props.preferFloatingEditor">
+      <textarea
+        ref="textareaRef"
+        :value="props.modelValue"
+        :placeholder="props.placeholder"
+        :disabled="props.disabled"
+        :readonly="props.readonly"
+        :rows="props.rows"
+        @input="handleInput"
+        @mousedown="handleMouseDown"
+        @focus="handleFocus"
+        @blur="handleBlur"
+        class="w-full p-1 text-sm rounded border transition-colors duration-200
+               bg-white dark:bg-gray-700
+               border-gray-300 dark:border-gray-600
+               text-gray-900 dark:text-gray-100
+               placeholder-gray-500 dark:placeholder-gray-400
+               focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-700 focus:border-transparent
+               hover:border-gray-400 dark:hover:border-gray-500
+               resize-y min-h-[60px]"
+        :style="textareaStyle"
+        :class="{
+          'border-red-500 dark:border-red-700': props.hasError,
+          'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default focus:ring-0 focus:border-gray-300 dark:focus:border-gray-600': props.readonly && !props.disabled,
+          'disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed': props.disabled
+        }"
+      />
+    </template>
+    <template v-else>
+      <button
+        type="button"
+        @click="triggerFloatingEditor"
+        :disabled="props.disabled"
+        class="w-full p-2 text-left border rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-700 min-h-[60px] flex flex-col justify-center"
+      >
+        <span class="block font-medium text-gray-700 dark:text-gray-200">编辑文本</span>
+        <span class="block text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{{ props.modelValue || props.placeholder }}</span>
+      </button>
+    </template>
+    <div v-if="props.hasError && !props.preferFloatingEditor" class="text-xs text-red-500 dark:text-red-400 mt-1">
+      {{ props.errorMessage }}
     </div>
   </div>
 </template>
@@ -34,27 +60,34 @@ interface Props {
   hasError?: boolean
   errorMessage?: string
   rows?: number
-  height?: number // Roo: Add height prop
+  height?: number
+  readonly?: boolean
+  preferFloatingEditor?: boolean
 }
 
-// Roo: Removed duplicate withDefaults call
-
-const props = withDefaults(defineProps<Props>(), { // Roo: Assign props result to a variable
+const props = withDefaults(defineProps<Props>(), {
   modelValue: '',
   placeholder: '',
   disabled: false,
   hasError: false,
   errorMessage: '',
   rows: 3,
-  height: undefined // Roo: Default height to undefined
+  height: undefined,
+  readonly: false,
+  preferFloatingEditor: false,
 })
 
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const emit = defineEmits<{
   'update:modelValue': [value: string]
-  'resize-interaction-end': [payload: { newHeight: number }] // Roo: Event now carries new height
-  'blur': [value: string] // 添加 blur 事件定义，携带文本值
+  'resize-interaction-end': [payload: { newHeight: number }]
+  'blur': [value: string]
+  'request-floating-editor': [payload: { value: string }]
 }>()
+
+const triggerFloatingEditor = () => {
+  emit('request-floating-editor', { value: props.modelValue });
+};
 
 const handleInput = (event: Event) => {
   const target = event.target as HTMLTextAreaElement

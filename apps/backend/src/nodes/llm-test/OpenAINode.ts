@@ -91,13 +91,14 @@ export const definition: NodeDefinition = {
 
   inputs: {
     api_settings: {
-      type: 'API_SETTINGS',
+      dataFlowType: 'OBJECT', // API_SETTINGS maps to OBJECT
       displayName: 'API 设置',
       description: '来自 APISettings 节点的 API 设置',
-      required: true
+      required: true,
+      matchCategories: ['LlmConfig']
     },
     model: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '模型',
       description: '要使用的 OpenAI 模型',
       required: true,
@@ -108,7 +109,7 @@ export const definition: NodeDefinition = {
       }
     },
     temperature: {
-      type: 'FLOAT',
+      dataFlowType: 'FLOAT',
       displayName: '温度',
       description: '采样温度',
       required: true,
@@ -120,7 +121,7 @@ export const definition: NodeDefinition = {
       }
     },
     max_tokens: {
-      type: 'INT',
+      dataFlowType: 'INTEGER',
       displayName: '最大令牌数',
       description: '要生成的最大令牌数',
       required: true,
@@ -131,42 +132,47 @@ export const definition: NodeDefinition = {
       }
     },
     system_prompt: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '系统提示',
       description: '系统提示',
       required: true,
+      matchCategories: ['Prompt'],
       config: {
         multiline: true
       }
     },
     prompt: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '用户提示',
       description: '用户提示',
       required: true,
+      matchCategories: ['Prompt'],
       config: {
         multiline: true
       }
     },
     history: {
-      type: 'HISTORY',
+      dataFlowType: 'STRING', // HISTORY input is a JSON string
       displayName: '聊天记录',
-      description: '聊天记录',
-      required: false
+      description: '聊天记录 (JSON字符串)',
+      required: false,
+      matchCategories: ['ChatHistory', 'Json']
     },
     image: {
-      type: 'IMAGE',
+      dataFlowType: 'STRING', // IMAGE input is URL/Base64 string
       displayName: '图像',
-      description: '视觉模型的图像',
-      required: false
+      description: '视觉模型的图像 (URL/Base64)',
+      required: false,
+      matchCategories: ['ImageData', 'Url']
     }
   },
 
   outputs: {
     response: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '生成回复',
-      description: '生成的回复'
+      description: '生成的回复',
+      matchCategories: ['LlmOutput']
     }
   },
 

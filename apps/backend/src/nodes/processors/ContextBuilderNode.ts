@@ -81,36 +81,39 @@ export const definition: NodeDefinition = {
 
   inputs: {
     presetData: {
-      type: 'object',
+      dataFlowType: 'OBJECT',
       displayName: '预设数据',
       description: '来自 PresetLoader 的数据',
-      required: false // Make inputs optional initially
+      required: false
     },
     worldBookData: {
-      type: 'object',
+      dataFlowType: 'OBJECT',
       displayName: '世界书数据',
       description: '来自 WorldBookLoader 的数据',
       required: false
     },
     characterData: {
-      type: 'object',
+      dataFlowType: 'OBJECT',
       displayName: '角色数据',
       description: '来自 CharacterCardLoader 的数据',
-      required: false
+      required: false,
+      matchCategories: ['CharacterProfile']
     },
     historyMessages: {
-      type: 'array', // Expecting CustomMessage[]
+      dataFlowType: 'ARRAY',
       displayName: '历史消息',
       description: '来自 HistoryLoader 的数据',
-      required: false
+      required: false,
+      matchCategories: ['ChatHistory']
     }
     // Add other potential inputs like processed text if needed
   },
   outputs: {
     finalMessages: {
-      type: 'array', // Outputting CustomMessage[]
+      dataFlowType: 'ARRAY',
       displayName: '最终消息',
-      description: '组合后的最终消息列表 (CustomMessage[])'
+      description: '组合后的最终消息列表 (CustomMessage[])',
+      matchCategories: ['ChatHistory']
     }
     // No error output port, throws on error
   },

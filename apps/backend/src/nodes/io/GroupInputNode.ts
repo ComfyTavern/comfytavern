@@ -25,9 +25,10 @@ export const definition: NodeDefinition = {
   // 初始包含一个动态类型的输出插槽
   outputs: {
     output_0: { // 使用带索引的 key
-      type: 'CONVERTIBLE_ANY', // 初始类型为 'CONVERTIBLE_ANY'
+      dataFlowType: 'CONVERTIBLE_ANY', // 初始类型为 'CONVERTIBLE_ANY'
       displayName: '*',
       description: '这是一个**可转换**的插槽，初始类型为 `CONVERTIBLE_ANY`。\n\n- 连接后，其类型和名称将根据连接自动更新。\n- 会生成一个新的**空心插槽**。\n- 可在**侧边栏**编辑接口属性。',
+      matchCategories: ['BehaviorConvertible'],
       allowDynamicType: true // 允许类型动态改变
     }
   },

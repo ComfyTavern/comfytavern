@@ -7,7 +7,7 @@ import type {
   GroupInterfaceInfo,
   WorkflowViewport as SharedViewport,
   NodeDefinition, // <-- 导入 NodeDefinition
-  // InputDefinition, // Removed unused import
+  // InputDefinition, // “InputDefinition”已声明，但从未使用过。
 } from "@comfytavern/types";
 import type {
   WorkflowExecutionPayload, // <-- 新增：执行载荷类型
@@ -105,7 +105,7 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
 
           // --- Roo: Attempt type coercion for comparison and saving ---
           try {
-            if (inputDef.type === "INT") {
+            if (inputDef.dataFlowType === 'INTEGER') {
               const parsedInt = parseInt(String(currentValue), 10);
               if (!isNaN(parsedInt)) {
                 valueToCompare = parsedInt;
@@ -113,11 +113,11 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
               } else if (currentValue !== "" && currentValue !== null) {
                 // Don't warn for empty strings/null converting to NaN
                 console.warn(
-                  `[transformVueFlowToCoreWorkflow] Node ${vueNode.id} (${vueNode.type}): Input '${inputName}' (type INT) could not be parsed as integer:`,
+                  `[transformVueFlowToCoreWorkflow] Node ${vueNode.id} (${vueNode.type}): Input '${inputName}' (dataFlowType INTEGER) could not be parsed as integer:`,
                   currentValue
                 );
               }
-            } else if (inputDef.type === "FLOAT") {
+            } else if (inputDef.dataFlowType === 'FLOAT') {
               const parsedFloat = parseFloat(String(currentValue));
               if (!isNaN(parsedFloat)) {
                 valueToCompare = parsedFloat;
@@ -125,7 +125,7 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
               } else if (currentValue !== "" && currentValue !== null) {
                 // Don't warn for empty strings/null converting to NaN
                 console.warn(
-                  `[transformVueFlowToCoreWorkflow] Node ${vueNode.id} (${vueNode.type}): Input '${inputName}' (type FLOAT) could not be parsed as float:`,
+                  `[transformVueFlowToCoreWorkflow] Node ${vueNode.id} (${vueNode.type}): Input '${inputName}' (dataFlowType FLOAT) could not be parsed as float:`,
                   currentValue
                 );
               }
@@ -416,7 +416,7 @@ export function transformWorkflowToVueFlow(
         // 检查是否为 GroupInput (其输出定义在 workflow.interfaceInputs)
         if (sourceNode.type === "core:GroupInput") {
           const interfaceInputDef = workflow.interfaceInputs?.[storageEdge.sourceHandle];
-          if (interfaceInputDef) sourceType = interfaceInputDef.type || "any";
+          if (interfaceInputDef) sourceType = interfaceInputDef.dataFlowType || "any";
         }
         // 检查是否为 NodeGroup (其输出定义在 data.groupInterface.outputs)
         else if (sourceNode.type === "core:NodeGroup" && sourceNode.data?.groupInterface?.outputs) {
@@ -444,7 +444,7 @@ export function transformWorkflowToVueFlow(
         // 检查是否为 GroupOutput (其输入定义在 workflow.interfaceOutputs)
         if (targetNode.type === "core:GroupOutput") {
           const interfaceOutputDef = workflow.interfaceOutputs?.[storageEdge.targetHandle];
-          if (interfaceOutputDef) targetType = interfaceOutputDef.type || "any";
+          if (interfaceOutputDef) targetType = interfaceOutputDef.dataFlowType || "any";
         }
         // 检查是否为 NodeGroup (其输入定义在 data.groupInterface.inputs)
         else if (targetNode.type === "core:NodeGroup" && targetNode.data?.groupInterface?.inputs) {

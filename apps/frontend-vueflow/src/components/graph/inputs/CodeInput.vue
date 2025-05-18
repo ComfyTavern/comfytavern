@@ -1,20 +1,43 @@
 <template>
-  <div ref="codeInputRef" class="code-input" :class="{ 'has-error': hasError }"> <!-- Roo: Removed @mousedown.stop -->
-    <!-- 移除 @wheel.stop -->
-    <Codemirror v-model="code" :placeholder="placeholder"
-      :style="{ height: 'auto', minHeight: '100px', maxHeight: '400px' }" :autofocus="false" :indent-with-tab="true"
-      :tab-size="2" :extensions="extensions" :disabled="disabled" @update:modelValue="handleInput" @blur="handleBlur"
-      class="w-full text-sm rounded border transition-colors duration-200
-             bg-white dark:bg-gray-700
-             border-gray-300 dark:border-gray-600
-             text-gray-900 dark:text-gray-100
-             focus-within:ring-2 focus-within:ring-blue-300 dark:focus-within:ring-blue-700 focus-within:border-transparent
-             hover:border-gray-400 dark:hover:border-gray-500" :class="{
-              'border-red-500 dark:border-red-700': hasError,
-              'cursor-not-allowed opacity-70': disabled
-            }" />
-    <div v-if="hasError" class="text-xs text-red-500 dark:text-red-400 mt-1">
-      {{ errorMessage }}
+  <div ref="codeInputRef" class="code-input" :class="{ 'has-error': props.hasError }">
+    <template v-if="!props.preferFloatingEditor">
+      <Codemirror
+        v-model="code"
+        :placeholder="props.placeholder"
+        :style="{ height: 'auto', minHeight: '100px', maxHeight: '400px' }"
+        :autofocus="false"
+        :indent-with-tab="true"
+        :tab-size="2"
+        :extensions="extensions"
+        :disabled="props.disabled"
+        @update:modelValue="handleInput"
+        @blur="handleBlur"
+        class="w-full text-sm rounded border transition-colors duration-200
+               bg-white dark:bg-gray-700
+               border-gray-300 dark:border-gray-600
+               text-gray-900 dark:text-gray-100
+               focus-within:ring-2 focus-within:ring-blue-300 dark:focus-within:ring-blue-700 focus-within:border-transparent
+               hover:border-gray-400 dark:hover:border-gray-500"
+        :class="{
+          'border-red-500 dark:border-red-700': props.hasError,
+          'cursor-not-allowed opacity-70': props.disabled || props.readonly, // Updated class for readonly
+          'opacity-70': props.readonly && !props.disabled // Slightly different style for readonly if not fully disabled
+        }"
+      />
+    </template>
+    <template v-else>
+      <button
+        type="button"
+        @click="triggerFloatingEditor"
+        :disabled="props.disabled"
+        class="w-full p-2 text-left border rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-700"
+      >
+        <span class="block font-medium text-gray-700 dark:text-gray-200">编辑 {{ props.languageHint !== 'text' ? props.languageHint : '代码' }}</span>
+        <span class="block text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{{ code || props.placeholder }}</span>
+      </button>
+    </template>
+    <div v-if="props.hasError && !props.preferFloatingEditor" class="text-xs text-red-500 dark:text-red-400 mt-1">
+      {{ props.errorMessage }}
     </div>
   </div>
 </template>
@@ -24,8 +47,13 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Codemirror } from 'vue-codemirror'
 import { javascript } from '@codemirror/lang-javascript'
 import { json } from '@codemirror/lang-json'
+import { python } from '@codemirror/lang-python'
+import { html } from '@codemirror/lang-html'
+import { css } from '@codemirror/lang-css'
+import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
+import { languages } from '@codemirror/language-data'
 import { oneDark } from '@codemirror/theme-one-dark'
-import { EditorView, ViewUpdate } from '@codemirror/view' // Roo: Import ViewUpdate
+import { EditorView, ViewUpdate } from '@codemirror/view'
 import { useThemeStore } from '@/stores/theme'
 
 interface Props {
@@ -34,7 +62,9 @@ interface Props {
   disabled?: boolean
   hasError?: boolean
   errorMessage?: string
-  language?: 'javascript' | 'json' | 'text'
+  languageHint?: string // Replaces 'language', e.g., 'javascript', 'python', 'json', 'html', 'css', 'markdown', 'text'
+  readonly?: boolean
+  preferFloatingEditor?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -43,13 +73,15 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   hasError: false,
   errorMessage: '',
-  language: 'text'
+  languageHint: 'text',
+  readonly: false,
+  preferFloatingEditor: false,
 })
 
-// Roo: Define emits for model value and blur event
 const emit = defineEmits<{
   'update:modelValue': [value: string]
-  'blur': [value: string] // Roo: Emit blur event with current value
+  'blur': [value: string]
+  'request-floating-editor': [payload: { value: string; languageHint?: string }]
 }>()
 
 const themeStore = useThemeStore()
@@ -83,45 +115,51 @@ const handleBlur = () => {
   initialValueOnFocus.value = null;
 };
 
-// Roo: Removed handleChange and handleReady
+const triggerFloatingEditor = () => {
+  // Emitting an event that a parent component (likely via getInputProps in BaseNode)
+  // will handle to open a modal or a dedicated floating editor view.
+  emit('request-floating-editor', { value: code.value, languageHint: props.languageHint });
+  // console.log('Request floating editor for:', code.value, 'Language:', props.languageHint);
+};
 
 const languageExtension = computed(() => {
-  switch (props.language) {
+  switch (props.languageHint?.toLowerCase()) {
     case 'javascript':
       return javascript()
     case 'json':
       return json()
+    case 'python':
+      return python()
+    case 'html':
+      return html()
+    case 'css':
+      return css()
+    case 'markdown':
+      return markdown({ base: markdownLanguage, codeLanguages: languages })
     default:
-      return [] // No specific language extension for plain text
+      return [] // Plain text
   }
 })
 
 const themeExtension = computed(() =>
-  themeStore.isDark ? oneDark : EditorView.theme({}) // Use default light theme or oneDark
+  themeStore.isDark ? oneDark : EditorView.theme({})
 )
 
 const extensions = computed(() => {
   const baseExtensions = [
-    EditorView.lineWrapping, // Enable line wrapping
+    EditorView.lineWrapping,
     themeExtension.value,
-    // Add listener to track focus changes and record initial value
+    EditorView.editable.of(!props.readonly), // props.disabled handled by :disabled on Codemirror
     EditorView.updateListener.of((update: ViewUpdate) => {
       if (update.focusChanged) {
         if (update.view.hasFocus) {
-          // Gained focus: record the current modelValue
           initialValueOnFocus.value = props.modelValue;
-          // console.log(`CodeInput gained focus, initial value recorded: "${initialValueOnFocus.value?.substring(0,20)}..."`);
-        } else {
-          // Lost focus: handleBlur will be called by the component's @blur event
-          // We could potentially reset initialValueOnFocus here too, but handleBlur is safer
-          // console.log('CodeInput lost focus (detected by updateListener)');
         }
       }
     })
-  ]
-  const langExt = languageExtension.value
-  // Ensure langExt is always an array before spreading
-  return Array.isArray(langExt) ? [...baseExtensions, ...langExt] : [...baseExtensions, langExt]
+  ];
+  const langExt = languageExtension.value;
+  return Array.isArray(langExt) ? [...baseExtensions, ...langExt] : [...baseExtensions, langExt];
 })
 
 const stopWheelPropagation = (event: WheelEvent) => {

@@ -38,7 +38,7 @@ export const definition: NodeDefinition = {
 
   inputs: {
     use_env_vars: {
-      type: 'BOOLEAN',
+      dataFlowType: 'BOOLEAN',
       displayName: '使用环境变量',
       description: '是否使用环境变量获取 API 密钥和基础 URL',
       required: true,
@@ -47,17 +47,18 @@ export const definition: NodeDefinition = {
       }
     },
     base_url: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: 'API 基础 URL',
       description: 'OpenAI API 的基础 URL',
       required: true,
+      matchCategories: ['Url'],
       config: {
         default: 'https://api.openai.com/v1',
         multiline: false
       }
     },
     api_key: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: 'API 密钥',
       description: '用于身份验证的 OpenAI API 密钥',
       required: true,
@@ -70,9 +71,10 @@ export const definition: NodeDefinition = {
 
   outputs: {
     api_settings: {
-      type: 'API_SETTINGS',
+      dataFlowType: 'OBJECT', // API_SETTINGS maps to OBJECT
       displayName: 'API 配置',
-      description: '包含 API 密钥和基础 URL 的配置信息'
+      description: '包含 API 密钥和基础 URL 的配置信息',
+      matchCategories: ['LlmConfig']
     }
   },
 

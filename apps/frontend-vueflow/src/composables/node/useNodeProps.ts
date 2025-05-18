@@ -1,94 +1,242 @@
 import { useTabStore } from '@/stores/tabStore';
-import { useProjectStore } from '@/stores/projectStore'; // 导入 projectStore
-import type { InputType } from '@/components/graph/inputs'; // 假设 InputType 在这里定义
-import type { UseNodeStateProps } from './useNodeState'; // 导入修正后的 Props 类型
-import { useNodeState } from './useNodeState'; // 导入 useNodeState
+import { useProjectStore } from '@/stores/projectStore';
+import type { UseNodeStateProps } from './useNodeState';
+import { useNodeState } from './useNodeState';
+import {
+  type InputDefinition,
+  DataFlowType,
+  BuiltInSocketMatchCategory,
+  type DataFlowTypeName,
+} from '@comfytavern/types';
+// import { getEffectiveDefaultValue } from '@comfytavern/utils'; // Removed as default value logic is handled by useNodeState or consuming components
+
+// Component Imports
+import StringInput from '@/components/graph/inputs/StringInput.vue';
+import NumberInput from '@/components/graph/inputs/NumberInput.vue';
+import CodeInput from '@/components/graph/inputs/CodeInput.vue';
+import SelectInput from '@/components/graph/inputs/SelectInput.vue';
+import BooleanToggle from '@/components/graph/inputs/BooleanToggle.vue';
+import ButtonInput from '@/components/graph/inputs/ButtonInput.vue';
+import ResourceSelectorInput from '@/components/graph/inputs/ResourceSelectorInput.vue';
+import TextAreaInput from '@/components/graph/inputs/TextAreaInput.vue';
 
 export function useNodeProps(props: Readonly<UseNodeStateProps>) {
   const tabStore = useTabStore();
-  const projectStore = useProjectStore(); // 获取 projectStore
-  const { isInputConnected } = useNodeState(props); // 获取状态检查函数
+  const projectStore = useProjectStore();
 
-  // 获取输入组件的 props
-  const getInputProps = (input: any, inputKey: string) => {
+  const { isInputConnected, getConfigValue } = useNodeState(props);
+
+  const getInputProps = (input: InputDefinition, inputKey: string) => {
     const connected = isInputConnected(inputKey);
-    const showReceivedValue = input.config?.showReceivedValue === true;
-    const configDisabled = input.config?.disabled ?? false;
+    const config = input.config || {}; // Ensure config exists
 
-    // 禁用条件：已连接 或 配置了禁用
-    const isDisabled = connected || configDisabled;
-    // 只读条件：已连接 且 配置了显示接收值
-    const isReadOnly = connected && showReceivedValue;
+    const isExplicitlyReadOnly = config.readOnly === true;
+    const showReceivedValue = config.showReceivedValue === true;
+    const isEffectivelyReadOnly = isExplicitlyReadOnly || (connected && showReceivedValue);
+
+    const configDisabled = config.disabled ?? false;
+    const isDisabled = connected || configDisabled || isExplicitlyReadOnly;
 
     const componentProps: Record<string, any> = {
-      placeholder: input.config?.placeholder,
-      // 最终禁用状态：基础禁用 或 只读状态（只读通常意味着禁用编辑）
-      disabled: isDisabled || isReadOnly,
-      // 传递 readonly 给支持它的组件 (如 CodeInput)
-      ...(isReadOnly && { readonly: true, readOnly: true }), // 传递两种可能的属性名
-      // 默认传递 suggestions (如果存在)
-      suggestions: input.config?.suggestions,
+      placeholder: config.placeholder,
+      disabled: isDisabled,
+      readonly: isEffectivelyReadOnly, // Simplified readonly prop
+      suggestions: config.suggestions,
+      inputConfig: config, // Pass original input.config
+      name: inputKey, // Use inputKey for name
+      label: input.displayName || input.description || inputKey, // Prioritize displayName
+      // modelValue is typically handled by the component using these props via useNodeState's getInputValue/setInputNodeValue
+      preferFloatingEditor: config.preferFloatingEditor === true, // Handle preferFloatingEditor
     };
 
-    switch (input.type as InputType) {
-      case 'INT':
-      case 'FLOAT':
-        componentProps.type = input.type;
-        componentProps.min = input.config?.min;
-        componentProps.max = input.config?.max;
-        componentProps.step = input.config?.step;
-        // suggestions 已经在上面默认传递了
-        break;
-      case 'COMBO':
-        // 不再需要特殊处理 options，因为 suggestions 会被默认传递 (见第 30 行)
-        // componentProps.options = input.config?.suggestions || []; // 移除此行
-        break;
-      case 'CODE':
-        componentProps.language = input.config?.language || 'text';
-        // readOnly/readonly 已经在上面根据 isReadOnly 设置了
-        break;
-      case 'BUTTON':
-        componentProps.label = input.config?.label || input.displayName || String(inputKey);
-        // 按钮的禁用逻辑：已连接 或 配置了禁用。不受 showReceivedValue 影响。
-        componentProps.disabled = connected || configDisabled;
-        // 移除只读属性，按钮没有只读概念
-        delete componentProps.readonly;
-        delete componentProps.readonly;
-        delete componentProps.readOnly;
-        break;
-      // STRING 类型不需要特殊处理 suggestions，因为它已在上面默认传递
-    }
-    // 传递节点和工作流上下文给特定输入，例如 EmbeddedGroupSelector
-    componentProps.nodeId = props.id; // 传递当前节点的 ID
-    componentProps.workflowId = tabStore.activeTabId; // 传递活动工作流的 ID
+    let component: any = StringInput; // Default component
 
-    return componentProps;
+    // Handle displayAs first, as it might override default component selection
+    if (config.displayAs) {
+      switch (config.displayAs) {
+        // case 'slider': // Example: if SliderInput component exists
+        //   if (input.dataFlowType === DataFlowType.INTEGER || input.dataFlowType === DataFlowType.FLOAT) {
+        //     component = SliderInput;
+        //     componentProps.min = config.min;
+        //     componentProps.max = config.max;
+        //     componentProps.step = config.step;
+        //   }
+        //   break;
+        // case 'color-picker': // Example: if ColorPickerInput component exists
+        //   if (input.dataFlowType === DataFlowType.STRING) {
+        //     component = ColorPickerInput;
+        //   }
+        //   break;
+        // Add more 'displayAs' cases here as needed
+      }
+    }
+
+    // If component not set by displayAs, proceed with dataFlowType and matchCategories logic
+    if (component === StringInput) { // Check if component is still the default
+      switch (input.dataFlowType as DataFlowTypeName) {
+        case DataFlowType.INTEGER:
+          component = NumberInput;
+          componentProps.step = config.step ?? 1;
+          componentProps.min = config.min;
+          componentProps.max = config.max;
+          if (config.suggestions && config.suggestions.length > 0) {
+            component = SelectInput;
+          }
+          break;
+        case DataFlowType.FLOAT:
+          component = NumberInput;
+          componentProps.step = config.step ?? 0.01;
+          componentProps.min = config.min;
+          componentProps.max = config.max;
+          if (config.suggestions && config.suggestions.length > 0) {
+            component = SelectInput;
+          }
+          break;
+        case DataFlowType.BOOLEAN:
+          component = BooleanToggle;
+          break;
+        case DataFlowType.STRING:
+          if (input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE) || config.languageHint) {
+            component = CodeInput;
+            componentProps.languageHint = config.languageHint || 'text'; // Use languageHint
+            componentProps.preferFloatingEditor = componentProps.preferFloatingEditor || true; // Default to floating for code
+          } else if (config.suggestions && config.suggestions.length > 0) {
+            component = SelectInput;
+          } else if (input.matchCategories?.includes(BuiltInSocketMatchCategory.RESOURCE_ID)) {
+            // Potentially ResourceSelectorInput or similar, for now, stick to text/textarea
+            if (config.multiline) {
+              component = TextAreaInput;
+              componentProps.preferFloatingEditor = componentProps.preferFloatingEditor || true; // Default to floating for multiline
+            } else {
+              component = StringInput;
+            }
+          } else if (config.multiline) {
+            component = TextAreaInput;
+            componentProps.preferFloatingEditor = componentProps.preferFloatingEditor || true; // Default to floating for multiline
+          } else {
+            component = StringInput;
+          }
+          break;
+        case DataFlowType.OBJECT:
+        case DataFlowType.ARRAY:
+          // These types often benefit from a more structured editor
+          component = CodeInput; // Default to CodeInput for JSON-like data
+          componentProps.languageHint = config.languageHint || 'json';
+          componentProps.preferFloatingEditor = componentProps.preferFloatingEditor || true; // Default to floating
+          if (config.suggestions && config.suggestions.length > 0) {
+            component = SelectInput; // If suggestions are provided, override to SelectInput
+          }
+          break;
+        case DataFlowType.WILDCARD:
+          if (input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)) {
+            component = ButtonInput;
+            componentProps.label = config.label || input.displayName || inputKey;
+            componentProps.disabled = connected || configDisabled; // Button specific disabled logic
+            delete componentProps.readonly; // Buttons don't have readonly state in the same way
+            delete componentProps.preferFloatingEditor; // Not applicable for buttons
+          } else if (config.multiline) {
+            component = TextAreaInput;
+            componentProps.preferFloatingEditor = componentProps.preferFloatingEditor || true;
+          } else {
+            component = StringInput;
+          }
+          break;
+        default:
+          // Fallback for unhandled DataFlowType, consider if specific handling is needed
+          if (config.multiline) {
+            component = TextAreaInput;
+            componentProps.preferFloatingEditor = componentProps.preferFloatingEditor || true;
+          } else {
+            component = StringInput;
+          }
+      }
+    }
+
+    // Ensure nodeId and workflowId are always passed
+    componentProps.nodeId = props.id;
+    componentProps.workflowId = tabStore.activeTabId;
+
+    return { component, props: componentProps };
   };
 
-  // 获取配置项组件的 props
-  const getConfigProps = (configDef: any, configKey: string) => {
-    const { getConfigValue } = useNodeState(props); // 在这里获取 getConfigValue
-    const projectId = projectStore.currentProjectId; // 获取当前项目 ID
-    // 从 configSchema 的 config 中提取 props
-    const configProps = configDef.config || {};
-    const isDisabled = props.data.configValues?._disabled?.[configKey] ?? false; // 假设有禁用状态
-    const isReadOnly = props.data.configValues?._readonly?.[configKey] ?? false; // 假设有只读状态
+  const getConfigProps = (configDef: InputDefinition, configKey: string) => {
+    const projectId = projectStore.currentProjectId;
+    const baseConfigProps = configDef.config || {};
+    const isDisabled = props.data.configValues?._disabled?.[configKey] ?? baseConfigProps.disabled ?? false;
+    const isReadOnly = props.data.configValues?._readonly?.[configKey] ?? baseConfigProps.readonly ?? false;
 
-    return {
-      ...configProps, // 传递来自后端定义的 config
-      disabled: isDisabled || isReadOnly || configProps.disabled, // 合并禁用状态
-      readonly: isReadOnly || configProps.readonly, // 合并只读状态
-      // 其他可能需要的通用 props
-      placeholder: configProps.placeholder || configDef.description,
-      // 传递节点和工作流上下文，类似于 getInputProps
-      nodeId: props.id, // 传递当前节点的 ID
-      workflowId: tabStore.activeTabId, // 传递活动工作流的 ID
-      projectId: projectId, // 传递当前项目 ID
-      // 如果这是 embeddedWorkflowId 或 referencedWorkflowId 选择器，则传递当前的 groupMode
-      ...( (configKey === 'embeddedWorkflowId' || configKey === 'referencedWorkflowId') && { groupMode: getConfigValue('groupMode') } ),
-      // 为 RESOURCE_SELECTOR 传递 acceptedTypes
-      ...( configDef.type === 'RESOURCE_SELECTOR' && { acceptedTypes: configDef.config?.acceptedTypes } )
+    const componentProps: Record<string, any> = {
+      ...baseConfigProps,
+      disabled: isDisabled || isReadOnly,
+      readonly: isReadOnly,
+      placeholder: baseConfigProps.placeholder || configDef.description || configKey, // Corrected placeholder
+      name: configKey, // Use configKey for name
+      label: configDef.description || configKey, // Use configDef.description or configKey for label
+      suggestions: configDef.config?.suggestions,
+      inputConfig: configDef.config,
     };
+
+    let component: any = StringInput;
+
+    if (
+      configDef.dataFlowType === DataFlowType.STRING &&
+      configDef.matchCategories?.includes(BuiltInSocketMatchCategory.RESOURCE_ID)
+    ) {
+      component = ResourceSelectorInput;
+      componentProps.acceptedTypes = configDef.config?.acceptedTypes;
+    } else {
+      switch (configDef.dataFlowType as DataFlowTypeName) {
+        case DataFlowType.INTEGER:
+          component = NumberInput;
+          componentProps.step = configDef.config?.step ?? 1;
+          componentProps.min = configDef.config?.min;
+          componentProps.max = configDef.config?.max;
+          if (configDef.matchCategories?.includes(BuiltInSocketMatchCategory.COMBO_OPTION)) {
+            component = SelectInput;
+          }
+          break;
+        case DataFlowType.FLOAT:
+          component = NumberInput;
+          componentProps.step = configDef.config?.step ?? 0.01;
+          componentProps.min = configDef.config?.min;
+          componentProps.max = configDef.config?.max;
+          if (configDef.matchCategories?.includes(BuiltInSocketMatchCategory.COMBO_OPTION)) {
+            component = SelectInput;
+          }
+          break;
+        case DataFlowType.BOOLEAN:
+          component = BooleanToggle;
+          break;
+        case DataFlowType.STRING:
+          if (configDef.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)) {
+            component = CodeInput;
+            componentProps.language = configDef.config?.language || 'text';
+          } else if (configDef.matchCategories?.includes(BuiltInSocketMatchCategory.COMBO_OPTION)) {
+            component = SelectInput;
+          } else if (configDef.config?.multiline) {
+            component = TextAreaInput;
+          } else {
+            component = StringInput;
+          }
+          break;
+        default:
+          if (configDef.config?.multiline) {
+            component = TextAreaInput;
+          } else {
+            component = StringInput;
+          }
+      }
+    }
+
+    componentProps.nodeId = props.id;
+    componentProps.workflowId = tabStore.activeTabId;
+    componentProps.projectId = projectId;
+
+    if (configKey === 'embeddedWorkflowId' || configKey === 'referencedWorkflowId') {
+      componentProps.groupMode = getConfigValue('groupMode');
+    }
+
+    return { component, props: componentProps };
   };
 
   return {

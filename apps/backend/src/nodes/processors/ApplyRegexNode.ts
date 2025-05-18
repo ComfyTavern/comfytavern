@@ -73,19 +73,19 @@ export const definition: NodeDefinition = {
 
   inputs: {
     inputText: {
-      type: 'string',
+      dataFlowType: 'STRING',
       displayName: '输入文本',
       description: '需要应用正则表达式的文本'
     },
     regexRules: {
-      type: 'array',
+      dataFlowType: 'ARRAY',
       displayName: '正则规则',
       description: '从 RegexRuleLoader 加载的规则数组'
     }
   },
   outputs: {
     outputText: {
-      type: 'string',
+      dataFlowType: 'STRING',
       displayName: '输出文本',
       description: '应用正则表达式后的文本'
     }

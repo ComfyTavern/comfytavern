@@ -3,7 +3,7 @@ import { ref, computed, watch, onUnmounted, nextTick } from "vue";
 import { storeToRefs } from "pinia";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useTabStore } from "@/stores/tabStore";
-import { SocketType, type GroupSlotInfo, type HistoryEntry } from "@comfytavern/types"; // <-- Import HistoryEntry
+import { DataFlowType, type DataFlowTypeName, type GroupSlotInfo, type HistoryEntry } from "@comfytavern/types"; // <-- Import HistoryEntry
 import { createHistoryEntry } from "@comfytavern/utils"; // <-- Import createHistoryEntry
 import { useGroupIOState } from "@/composables/group/useGroupIOState";
 import { useGroupIOActions } from "@/composables/group/useGroupIOActions";
@@ -92,7 +92,7 @@ const {
 
 // 从下拉菜单的可用类型中过滤掉 CONVERTIBLE_ANY
 const availableTypes = ref(
-  Object.values(SocketType).filter((type) => type !== SocketType.CONVERTIBLE_ANY)
+  Object.values(DataFlowType).filter((type) => type !== DataFlowType.CONVERTIBLE_ANY) as DataFlowTypeName[]
 );
 
 // --- 选择逻辑 ---
@@ -107,11 +107,11 @@ const availableTypes = ref(
 // function saveChanges() { ... }
 
 // 包装函数，用于模板点击事件 (保留，因为它们直接被模板使用)
-function handleAddInput(type: string) {
+function handleAddInput(type: DataFlowTypeName) {
   addInput(type); // 调用 composable 中的函数
 }
 
-function handleAddOutput(type: string) {
+function handleAddOutput(type: DataFlowTypeName) {
   addOutput(type); // 调用 composable 中的函数
 }
 
@@ -169,7 +169,7 @@ onUnmounted(() => {
 
 // selectedInputData 和 selectedOutputData 的计算属性已移至 useGroupIOState
 // 过滤掉 CONVERTIBLE_ANY 的计算属性 - 直接从 activeState 读取
-const CONVERTIBLE_ANY_KEY = SocketType.CONVERTIBLE_ANY; // 使用导入的枚举值
+const CONVERTIBLE_ANY_KEY = DataFlowType.CONVERTIBLE_ANY; // 使用导入的枚举值
 
 // --- 辅助函数：获取过滤后的插槽条目 ---
 // getFilteredSlotEntries 函数已移至 useGroupIOActions
@@ -183,7 +183,7 @@ const filteredInputs = computed(() => {
   if (!inputs) return {};
   return Object.fromEntries(
     Object.entries(inputs).filter(
-      ([, slotInfo]) => slotInfo && slotInfo.type !== CONVERTIBLE_ANY_KEY // 添加 slotInfo 检查
+      ([, slotInfo]) => slotInfo && slotInfo.dataFlowType !== CONVERTIBLE_ANY_KEY // 添加 slotInfo 检查
     )
   );
 });
@@ -193,7 +193,7 @@ const filteredOutputs = computed(() => {
   if (!outputs) return {};
   return Object.fromEntries(
     Object.entries(outputs).filter(
-      ([, slotInfo]) => slotInfo && slotInfo.type !== CONVERTIBLE_ANY_KEY // 添加 slotInfo 检查
+      ([, slotInfo]) => slotInfo && slotInfo.dataFlowType !== CONVERTIBLE_ANY_KEY // 添加 slotInfo 检查
     )
   );
 });
@@ -248,8 +248,8 @@ function handleInputNameBlur() {
 function handleInputTypeChange(event: Event) {
   if (activeTabId.value && selectedInputKey.value) {
     const keyToUpdate = selectedInputKey.value;
-    const newType = (event.target as HTMLSelectElement).value;
-    const oldType = selectedInputData.value?.type; // Get old type
+    const newType = (event.target as HTMLSelectElement).value as DataFlowTypeName;
+    const oldType = selectedInputData.value?.dataFlowType; // Get old type
     // const label = `修改 - 接口 (更改类型 ${keyToUpdate}: ${newType})`; // Removed label
 
     const updateFn = (
@@ -258,10 +258,10 @@ function handleInputTypeChange(event: Event) {
     ): { inputs: Record<string, GroupSlotInfo>; outputs: Record<string, GroupSlotInfo> } => {
       const updatedInputs = { ...currentInputs };
       if (updatedInputs[keyToUpdate]) {
-        updatedInputs[keyToUpdate] = { ...updatedInputs[keyToUpdate], type: newType };
+        updatedInputs[keyToUpdate] = { ...updatedInputs[keyToUpdate], dataFlowType: newType };
       } else {
         console.warn(
-          `[GroupIOEdit @change type updateFn] Input key ${keyToUpdate} not found in current state.`
+          `[GroupIOEdit @change dataFlowType updateFn] Input key ${keyToUpdate} not found in current state.`
         );
       }
       return { inputs: updatedInputs, outputs: currentOutputs };
@@ -272,7 +272,7 @@ function handleInputTypeChange(event: Event) {
     const summary = `修改输入 ${inputName} 类型: '${oldType}' -> '${newType}'`;
     const entry: HistoryEntry = createHistoryEntry("modify", "interfaceInput", summary, {
       key: keyToUpdate,
-      propertyName: "type",
+      propertyName: "dataFlowType",
       oldValue: oldType,
       newValue: newType,
     });
@@ -506,8 +506,8 @@ function handleOutputNameBlur() {
 function handleOutputTypeChange(event: Event) {
   if (activeTabId.value && selectedOutputKey.value) {
     const keyToUpdate = selectedOutputKey.value;
-    const newType = (event.target as HTMLSelectElement).value;
-    const oldType = selectedOutputData.value?.type; // Get old type
+    const newType = (event.target as HTMLSelectElement).value as DataFlowTypeName;
+    const oldType = selectedOutputData.value?.dataFlowType; // Get old type
     // const label = `修改 - 接口 (更改类型 ${keyToUpdate}: ${newType})`; // Removed label
 
     const updateFn = (
@@ -516,10 +516,10 @@ function handleOutputTypeChange(event: Event) {
     ): { inputs: Record<string, GroupSlotInfo>; outputs: Record<string, GroupSlotInfo> } => {
       const updatedOutputs = { ...currentOutputs };
       if (updatedOutputs[keyToUpdate]) {
-        updatedOutputs[keyToUpdate] = { ...updatedOutputs[keyToUpdate], type: newType };
+        updatedOutputs[keyToUpdate] = { ...updatedOutputs[keyToUpdate], dataFlowType: newType };
       } else {
         console.warn(
-          `[GroupIOEdit @change type updateFn] Output key ${keyToUpdate} not found in current state.`
+          `[GroupIOEdit @change dataFlowType updateFn] Output key ${keyToUpdate} not found in current state.`
         );
       }
       return { inputs: currentInputs, outputs: updatedOutputs };
@@ -530,7 +530,7 @@ function handleOutputTypeChange(event: Event) {
     const summary = `修改输出 ${outputName} 类型: '${oldType}' -> '${newType}'`;
     const entry: HistoryEntry = createHistoryEntry("modify", "interfaceOutput", summary, {
       key: keyToUpdate,
-      propertyName: "type",
+      propertyName: "dataFlowType",
       oldValue: oldType,
       newValue: newType,
     });
@@ -591,7 +591,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
   }
 
   // 添加类型特定的类
-  const typeClassKey = `handleType${slot.type}` as keyof typeof styles;
+  const typeClassKey = `handleType${slot.dataFlowType}` as keyof typeof styles;
   const typeClass = styles[typeClassKey];
   if (typeClass) {
     classes.push(typeClass);
@@ -602,7 +602,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
 
   // 添加 handleAny 类（如果适用，并确保它存在且未重复添加）
   if (
-    (slot.type === SocketType.WILDCARD || slot.type === SocketType.CONVERTIBLE_ANY) &&
+    (slot.dataFlowType === DataFlowType.WILDCARD || slot.dataFlowType === DataFlowType.CONVERTIBLE_ANY) &&
     styles.handleAny
   ) {
     if (!classes.includes(styles.handleAny)) {
@@ -671,7 +671,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
                     <span class="truncate">{{ input.displayName || key }}</span>
                   </Tooltip>
                   <div class="flex items-center space-x-1.5 flex-shrink-0">
-                    <span class="text-xs text-gray-500">{{ input.type }}</span>
+                    <span class="text-xs text-gray-500">{{ input.dataFlowType }}</span>
                     <span :class="getHandleClasses(input, true)" style="
                         width: 8px !important;
                         height: 8px !important;
@@ -745,7 +745,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
                     <span class="truncate">{{ output.displayName || key }}</span>
                   </Tooltip>
                   <div class="flex items-center space-x-1.5 flex-shrink-0">
-                    <span class="text-xs text-gray-500">{{ output.type }}</span>
+                    <span class="text-xs text-gray-500">{{ output.dataFlowType }}</span>
                     <span :class="getHandleClasses(output, false)" style="
                         width: 8px !important;
                         height: 8px !important;
@@ -835,7 +835,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
               @focus="oldInputDisplayName = editingDisplayName" @blur="handleInputNameBlur" />
 
             <label class="col-span-1 text-right">类型:</label>
-            <select :value="selectedInputData?.type" class="col-span-2 input-xs" @change="handleInputTypeChange">
+            <select :value="selectedInputData?.dataFlowType" class="col-span-2 input-xs" @change="handleInputTypeChange">
               <option v-for="t in availableTypes" :key="t" :value="t">{{ t }}</option>
             </select>
 
@@ -848,14 +848,14 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
             <div class="col-span-2">
               <!-- 根据类型渲染不同输入 -->
               <input v-if="
-                selectedInputData.type === SocketType.INT ||
-                selectedInputData.type === SocketType.FLOAT
+                selectedInputData.dataFlowType === DataFlowType.INTEGER ||
+                selectedInputData.dataFlowType === DataFlowType.FLOAT
               " v-model.number="editingDefaultValue" type="number" class="input-xs" placeholder="默认数值"
                 @change="handleInputDefaultValueChange" />
-              <textarea v-else-if="selectedInputData.type === SocketType.STRING" v-model="editingDefaultValue"
+              <textarea v-else-if="selectedInputData.dataFlowType === DataFlowType.STRING" v-model="editingDefaultValue"
                 class="input-xs textarea-xs" placeholder="默认字符串 (支持多行)" rows="3"
                 @change="handleInputDefaultValueChange"></textarea>
-              <input v-else-if="selectedInputData.type === SocketType.BOOLEAN" v-model="editingDefaultValue"
+              <input v-else-if="selectedInputData.dataFlowType === DataFlowType.BOOLEAN" v-model="editingDefaultValue"
                 type="checkbox"
                 class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:focus:ring-indigo-600 dark:ring-offset-gray-800"
                 @change="handleInputDefaultValueChange" />
@@ -865,8 +865,8 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
 
             <!-- 最小值输入 (仅数值类型) -->
             <template v-if="
-              selectedInputData.type === SocketType.INT ||
-              selectedInputData.type === SocketType.FLOAT
+              selectedInputData.dataFlowType === DataFlowType.INTEGER ||
+              selectedInputData.dataFlowType === DataFlowType.FLOAT
             ">
               <label class="col-span-1 text-right">最小值:</label>
               <input v-model.number="editingMin" type="number" class="col-span-2 input-xs" placeholder="最小值 (可选)"
@@ -875,8 +875,8 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
 
             <!-- 最大值输入 (仅数值类型) -->
             <template v-if="
-              selectedInputData.type === SocketType.INT ||
-              selectedInputData.type === SocketType.FLOAT
+              selectedInputData.dataFlowType === DataFlowType.INTEGER ||
+              selectedInputData.dataFlowType === DataFlowType.FLOAT
             ">
               <label class="col-span-1 text-right">最大值:</label>
               <input v-model.number="editingMax" type="number" class="col-span-2 input-xs" placeholder="最大值 (可选)"
@@ -930,7 +930,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
               @focus="oldOutputDisplayName = editingDisplayName" @blur="handleOutputNameBlur" />
 
             <label class="col-span-1 text-right">类型:</label>
-            <select :value="selectedOutputData?.type" class="col-span-2 input-xs" @change="handleOutputTypeChange">
+            <select :value="selectedOutputData?.dataFlowType" class="col-span-2 input-xs" @change="handleOutputTypeChange">
               <option v-for="t in availableTypes" :key="t" :value="t">{{ t }}</option>
             </select>
 

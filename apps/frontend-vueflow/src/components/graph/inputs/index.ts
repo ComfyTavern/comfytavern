@@ -8,6 +8,7 @@ import CodeInput from './CodeInput.vue'
 import TextDisplay from './TextDisplay.vue'
 import ButtonInput from './ButtonInput.vue' // 新增 ButtonInput 导入
 import ResourceSelectorInput from './ResourceSelectorInput.vue' // 导入资源选择器
+import { DataFlowType, BuiltInSocketMatchCategory } from '@comfytavern/types'; // 新增导入
 
 // 导出组件
 export {
@@ -33,7 +34,7 @@ export interface InputProps {
 
 export interface NumberInputProps extends InputProps {
   modelValue: number
-  type?: 'INT' | 'FLOAT'
+  type?: 'INTEGER' | 'FLOAT'
   min?: number
   max?: number
   step?: number
@@ -50,7 +51,7 @@ export interface SelectInputProps extends InputProps {
 }
 
 // 定义输入类型枚举
-export type InputType = 'STRING' | 'INT' | 'FLOAT' | 'BOOLEAN' | 'COMBO' | 'HISTORY' | 'CODE' | 'BUTTON' | 'RESOURCE_SELECTOR' // Removed: EMBEDDED_GROUP_SELECTOR
+export type InputType = 'STRING' | 'INTEGER' | 'FLOAT' | 'BOOLEAN' | 'COMBO' | 'HISTORY' | 'CODE' | 'BUTTON' | 'RESOURCE_SELECTOR' // Removed: EMBEDDED_GROUP_SELECTOR
 
 // 定义组件获取器类型
 // 使用更通用的类型以避免复杂的联合类型问题
@@ -59,7 +60,7 @@ type ComponentGetter = (config?: any) => any // typeof StringInput | ... | typeo
 // 组件注册表 (改为 let 以便扩展)
 export let inputComponentMap: Record<string, ComponentGetter> = { // 改为 let, 类型改为 string
   'STRING': (config?: any) => config?.multiline ? TextAreaInput : StringInput,
-  'INT': () => NumberInput,
+  'INTEGER': () => NumberInput,
   'FLOAT': () => NumberInput,
   'BOOLEAN': () => BooleanToggle,
   'COMBO': () => SelectInput,
@@ -79,10 +80,17 @@ export const registerInputComponent = (type: string, componentGetter: ComponentG
 }
 
 // 获取适合指定类型的组件
-export const getInputComponent = (type: string, config?: any) => {
+export const getInputComponent = (type: string, config?: any, matchCategories?: string[]) => { // 增加 matchCategories 参数
   // 优先处理 display_only
   if (config?.display_only) {
-    return TextDisplay
+    return TextDisplay;
+  }
+
+  // 新增：专门处理按钮的逻辑
+  // 确保 DataFlowType 和 BuiltInSocketMatchCategory 已导入
+  if (type === DataFlowType.WILDCARD && matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)) {
+    const getter = inputComponentMap['BUTTON']; // 直接使用 'BUTTON' 键
+    return getter ? getter(config) : null;
   }
 
   // 使用修改后的 inputComponentMap
@@ -93,9 +101,9 @@ export const getInputComponent = (type: string, config?: any) => {
 
   // 对于未知类型或any类型，不返回任何组件
   if (!type || type === 'any' || type.toLowerCase() === 'any') {
-    return null
+    return null;
   }
-  return null // 不默认使用任何输入组件
+  return null; // 不默认使用任何输入组件
 }
 
 export default {

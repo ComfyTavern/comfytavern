@@ -59,19 +59,21 @@ export const definition: NodeDefinition = {
     historyMessages: {
       // Ideally, the type system would support 'CustomMessage[]' or similar
       // Using 'array' or 'object' as a fallback
-      type: 'array',
+      dataFlowType: 'ARRAY',
       displayName: '历史消息',
-      description: '加载的对话历史消息数组 (CustomMessage[])'
+      description: '加载的对话历史消息数组 (CustomMessage[])',
+      matchCategories: ['ChatHistory']
     }
     // Removed error output port
   },
 
   configSchema: {
     historyResource: {
-      type: 'RESOURCE_SELECTOR',
+      dataFlowType: 'STRING', // RESOURCE_SELECTOR value is a string (path/ID)
       displayName: '历史文件',
       description: '选择一个对话历史文件 (JSON)',
       required: true,
+      matchCategories: ['ResourceId', 'FilePath'],
       config: {
         // 需要确认系统中实际的资源类型标识
         acceptedTypes: [

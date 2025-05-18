@@ -39,36 +39,41 @@ export const definition: NodeDefinition = {
 
   inputs: {
     history1: {
-      type: 'HISTORY',
+      dataFlowType: 'STRING', // HISTORY input is a JSON string
       displayName: '历史记录 1',
-      description: '第一个历史记录',
-      required: false
+      description: '第一个历史记录 (JSON字符串)',
+      required: false,
+      matchCategories: ['ChatHistory', 'Json']
     },
     history2: {
-      type: 'HISTORY',
+      dataFlowType: 'STRING', // HISTORY input is a JSON string
       displayName: '历史记录 2',
-      description: '第二个历史记录',
-      required: false
+      description: '第二个历史记录 (JSON字符串)',
+      required: false,
+      matchCategories: ['ChatHistory', 'Json']
     },
     history3: {
-      type: 'HISTORY',
+      dataFlowType: 'STRING', // HISTORY input is a JSON string
       displayName: '历史记录 3',
-      description: '第三个历史记录',
-      required: false
+      description: '第三个历史记录 (JSON字符串)',
+      required: false,
+      matchCategories: ['ChatHistory', 'Json']
     },
     history4: {
-      type: 'HISTORY',
+      dataFlowType: 'STRING', // HISTORY input is a JSON string
       displayName: '历史记录 4',
-      description: '第四个历史记录',
-      required: false
+      description: '第四个历史记录 (JSON字符串)',
+      required: false,
+      matchCategories: ['ChatHistory', 'Json']
     }
   },
 
   outputs: {
     history: {
-      type: 'HISTORY',
+      dataFlowType: 'STRING', // HISTORY output is a JSON string
       displayName: '合并历史记录',
-      description: '合并后的聊天历史记录'
+      description: '合并后的聊天历史记录 (JSON字符串)',
+      matchCategories: ['ChatHistory', 'Json']
     }
   },
 

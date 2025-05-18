@@ -1,6 +1,6 @@
 import { reactive, computed } from "vue";
 import { klona } from "klona";
-import { SocketType, type GroupSlotInfo, type WorkflowNode as StorageNode, type WorkflowEdge as StorageEdge } from "@comfytavern/types"; // Import StorageNode/Edge aliases
+import { DataFlowType, type GroupSlotInfo, type WorkflowNode as StorageNode, type WorkflowEdge as StorageEdge } from "@comfytavern/types"; // Import StorageNode/Edge aliases
 import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core";
 import type {
   WorkflowData,
@@ -14,7 +14,8 @@ import { storeToRefs } from "pinia";
 import { useEdgeStyles } from "../canvas/useEdgeStyles";
 // import { useWorkflowData } from "./useWorkflowData"; // 不再需要
 import { useNodeStore } from "../../stores/nodeStore";
-import defaultWorkflowTemplate from '@/data/DefaultWorkflow.json'; // <-- 导入默认模板
+import defaultWorkflowTemplateUntyped from '@/data/DefaultWorkflow.json'; // <-- 导入默认模板
+import type { DataFlowTypeName } from '@comfytavern/types'; // 确保导入 DataFlowTypeName
 
 // --- 辅助函数 (来自 useWorkflowCoreLogic) ---
 function findNextSlotIndex(
@@ -136,7 +137,7 @@ function createWorkflowManager() {
         const newInputKey = `input_${nextInputIndex}`;
         inputSlots[newInputKey] = {
           key: newInputKey,
-          type: SocketType.CONVERTIBLE_ANY,
+          dataFlowType: DataFlowType.CONVERTIBLE_ANY,
           displayName: "*",
           customDescription:
             "这是一个**可转换**的动态输入接口，初始类型为 `CONVERTIBLE_ANY`。\n\n- 连接后，其类型和名称将根据连接自动更新。\n- 会生成一个新的**空心插槽**。\n- 可在**侧边栏**编辑接口属性。",
@@ -152,7 +153,7 @@ function createWorkflowManager() {
         const newOutputKey = `output_${nextOutputIndex}`;
         outputSlots[newOutputKey] = {
           key: newOutputKey,
-          type: SocketType.CONVERTIBLE_ANY,
+          dataFlowType: DataFlowType.CONVERTIBLE_ANY,
           displayName: "*",
           customDescription:
             "这是一个**可转换**的动态输出接口，初始类型为 `CONVERTIBLE_ANY`。\n\n- 连接后，其类型和名称将根据连接自动更新。\n- 会生成一个新的**空心插槽**。\n- 可在**侧边栏**编辑接口属性。",
@@ -229,7 +230,7 @@ function createWorkflowManager() {
   ): Promise<WorkflowStateSnapshot | null> {
     const tabInfo = tabStore.tabs.find((t) => t.internalId === internalId);
     const associatedId = tabInfo?.associatedId || `temp-${internalId}`;
-    const labelToUse = tabInfo?.label || defaultWorkflowTemplate.name || "*新工作流*"; // 使用模板名称或默认值
+    const labelToUse = tabInfo?.label || defaultWorkflowTemplateUntyped.name || "*新工作流*"; // 使用模板名称或默认值
 
     console.debug(
       `[useWorkflowManager/applyDefaultWorkflowToTab] 正在将默认模板应用于 ${internalId} (ID: ${associatedId})`
@@ -240,7 +241,37 @@ function createWorkflowManager() {
       await nodeStore.ensureDefinitionsLoaded();
 
       // 深拷贝模板以避免修改原始导入对象
-      const templateData = klona(defaultWorkflowTemplate); // 移除 'as WorkflowData' 类型断言
+      const defaultWorkflowTemplate = defaultWorkflowTemplateUntyped as unknown as WorkflowData; // Add type assertion
+      const templateData = klona(defaultWorkflowTemplate);
+
+      // 显式处理 interfaceInputs 和 interfaceOutputs 的类型
+      const typedInterfaceInputs: Record<string, GroupSlotInfo> = {};
+      if (templateData.interfaceInputs) {
+        for (const key in templateData.interfaceInputs) {
+          const slot = templateData.interfaceInputs[key];
+          if (slot) { // Add null check for slot
+            typedInterfaceInputs[key] = {
+              ...slot,
+              key: slot.key, // Explicitly assign key
+              dataFlowType: slot.dataFlowType as DataFlowTypeName // 确保类型正确
+            };
+          }
+        }
+      }
+
+      const typedInterfaceOutputs: Record<string, GroupSlotInfo> = {};
+      if (templateData.interfaceOutputs) {
+        for (const key in templateData.interfaceOutputs) {
+          const slot = templateData.interfaceOutputs[key];
+          if (slot) { // Add null check for slot
+            typedInterfaceOutputs[key] = {
+              ...slot,
+              key: slot.key, // Explicitly assign key
+              dataFlowType: slot.dataFlowType as DataFlowTypeName // 确保类型正确
+            };
+          }
+        }
+      }
 
       // 准备 VueFlow elements
       const elements: Array<VueFlowNode | VueFlowEdge> = [];
@@ -273,6 +304,8 @@ function createWorkflowManager() {
         name: labelToUse,
         nodes: templateData.nodes, // 引用原始模板节点
         edges: templateData.edges, // 引用原始模板边
+        interfaceInputs: typedInterfaceInputs, // 使用类型处理过的版本
+        interfaceOutputs: typedInterfaceOutputs, // 使用类型处理过的版本
       };
 
       // 使用 _applyWorkflowToTab 应用状态，它会处理边的样式
@@ -371,6 +404,12 @@ function createWorkflowManager() {
 
     // 深拷贝节点
     const newNode = klona(nodeToAdd);
+
+    // 如果是 NodeGroup 并且没有 groupInterface，则初始化一个空的
+    if (newNode.type === 'core:NodeGroup' && newNode.data && newNode.data.groupInterface === undefined) {
+      newNode.data.groupInterface = { inputs: {}, outputs: {} };
+      console.debug(`[addNode] Initialized empty groupInterface for new NodeGroup ${newNode.id}`);
+    }
 
     // 添加到 elements 数组
     state.elements.push(newNode);
@@ -650,7 +689,7 @@ function createWorkflowManager() {
             const newInputKey = `input_${nextInputIndex}`;
             inputSlots[newInputKey] = {
               key: newInputKey,
-              type: SocketType.CONVERTIBLE_ANY,
+              dataFlowType: DataFlowType.CONVERTIBLE_ANY,
               displayName: "*",
               customDescription: "动态输入接口...",
               allowDynamicType: true,
@@ -664,7 +703,7 @@ function createWorkflowManager() {
             const newOutputKey = `output_${nextOutputIndex}`;
             outputSlots[newOutputKey] = {
               key: newOutputKey,
-              type: SocketType.CONVERTIBLE_ANY,
+              dataFlowType: DataFlowType.CONVERTIBLE_ANY,
               displayName: "*",
               customDescription: "动态输出接口...",
               allowDynamicType: true,

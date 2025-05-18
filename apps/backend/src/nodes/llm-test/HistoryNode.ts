@@ -44,16 +44,17 @@ export const definition: NodeDefinition = {
 
   inputs: {
     role1: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '角色 1',
       description: '第一个消息的角色',
       required: false,
+      matchCategories: ['ComboOption'],
       config: {
-        options: ['user', 'assistant', 'system']
+        suggestions: ['user', 'assistant', 'system'] // Renamed from options
       }
     },
     content1: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '内容 1',
       description: '第一个消息的内容',
       required: false,
@@ -62,16 +63,17 @@ export const definition: NodeDefinition = {
       }
     },
     role2: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '角色 2',
       description: '第二个消息的角色',
       required: false,
+      matchCategories: ['ComboOption'],
       config: {
-        options: ['user', 'assistant', 'system']
+        suggestions: ['user', 'assistant', 'system'] // Renamed from options
       }
     },
     content2: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '内容 2',
       description: '第二个消息的内容',
       required: false,
@@ -80,16 +82,17 @@ export const definition: NodeDefinition = {
       }
     },
     role3: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '角色 3',
       description: '第三个消息的角色',
       required: false,
+      matchCategories: ['ComboOption'],
       config: {
-        options: ['user', 'assistant', 'system']
+        suggestions: ['user', 'assistant', 'system'] // Renamed from options
       }
     },
     content3: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '内容 3',
       description: '第三个消息的内容',
       required: false,
@@ -98,16 +101,17 @@ export const definition: NodeDefinition = {
       }
     },
     role4: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '角色 4',
       description: '第四个消息的角色',
       required: false,
+      matchCategories: ['ComboOption'],
       config: {
-        options: ['user', 'assistant', 'system']
+        suggestions: ['user', 'assistant', 'system'] // Renamed from options
       }
     },
     content4: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '内容 4',
       description: '第四个消息的内容',
       required: false,
@@ -119,9 +123,10 @@ export const definition: NodeDefinition = {
 
   outputs: {
     history: {
-      type: 'HISTORY',
+      dataFlowType: 'STRING', // Output is JSON.stringify(history)
       displayName: '历史记录',
-      description: '生成的聊天历史记录'
+      description: '生成的聊天历史记录 (JSON字符串)',
+      matchCategories: ['ChatHistory', 'Json']
     }
   },
 

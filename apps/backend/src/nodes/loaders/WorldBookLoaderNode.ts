@@ -48,7 +48,7 @@ export const definition: NodeDefinition = {
   inputs: {},
   outputs: {
     worldBookData: {
-      type: 'object',
+      dataFlowType: 'OBJECT',
       displayName: '世界书数据',
       description: '解析后的世界书配置对象'
     }
@@ -57,10 +57,11 @@ export const definition: NodeDefinition = {
 
   configSchema: {
     worldBookResource: {
-      type: 'RESOURCE_SELECTOR',
+      dataFlowType: 'STRING', // RESOURCE_SELECTOR value is a string (path/ID)
       displayName: '世界书文件',
       description: '选择一个世界书配置文件 (JSON/YAML)',
       required: true,
+      matchCategories: ['ResourceId', 'FilePath'],
       config: {
         // 需要确认系统中实际的资源类型标识
         acceptedTypes: [

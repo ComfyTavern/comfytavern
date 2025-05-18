@@ -29,7 +29,7 @@
     "input_0": {
       "key": "input_0",
       "displayName": "*",
-      "type": "CONVERTIBLE_ANY",
+      "dataFlowType": "CONVERTIBLE_ANY",
       "allowDynamicType": true
     }
   },
@@ -37,7 +37,7 @@
     "output_0": {
       "key": "output_0",
       "displayName": "*",
-      "type": "CONVERTIBLE_ANY",
+      "dataFlowType": "CONVERTIBLE_ANY",
       "allowDynamicType": true
     }
   },

@@ -84,12 +84,13 @@ export const definition: NodeDefinition = {
   // 使用 RESOURCE_SELECTOR 来选择引用的 Group 定义
   configSchema: {
     referencedWorkflowId: {
-      type: 'RESOURCE_SELECTOR', // 选择外部工作流
+      dataFlowType: 'STRING', // RESOURCE_SELECTOR value is a string (ID)
       displayName: '引用的工作流',
       description: '选择一个保存的工作流作为节点组定义',
-      required: true, // 现在总是必填
+      required: true,
+      matchCategories: ['ResourceId'],
       config: {
-        acceptedTypes: [{ value: 'workflow', label: '工作流' }], // 筛选工作流资源
+        acceptedTypes: [{ value: 'workflow', label: '工作流' }],
         placeholder: '选择一个工作流...',
       }
     }

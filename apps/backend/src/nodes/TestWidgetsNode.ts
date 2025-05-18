@@ -30,7 +30,7 @@ export const definition: NodeDefinition = {
 
   inputs: {
     string_input: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '单行文本',
       description: '单行文本输入测试',
       required: true,
@@ -41,7 +41,7 @@ export const definition: NodeDefinition = {
       },
     },
     text_input: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '多行文本',
       description: '多行文本输入测试',
       required: true,
@@ -52,7 +52,7 @@ export const definition: NodeDefinition = {
       }
     },
     int_input: {
-      type: 'INT',
+      dataFlowType: 'INTEGER',
       displayName: '整数',
       description: '整数输入测试',
       required: true,
@@ -64,7 +64,7 @@ export const definition: NodeDefinition = {
       },
     },
     float_input: {
-      type: 'FLOAT',
+      dataFlowType: 'FLOAT',
       displayName: '浮点数',
       description: '浮点数输入测试',
       required: true,
@@ -76,7 +76,7 @@ export const definition: NodeDefinition = {
       },
     },
     boolean_toggle: {
-      type: 'BOOLEAN',
+      dataFlowType: 'BOOLEAN',
       displayName: '布尔值',
       description: '布尔值开关测试',
       required: true,
@@ -85,30 +85,31 @@ export const definition: NodeDefinition = {
       },
     },
     combo_select: {
-      type: 'COMBO',
+      dataFlowType: 'STRING', // COMBO suggestions are strings
       displayName: '下拉选择',
       description: '下拉选择测试',
       required: true,
+      matchCategories: ['ComboOption'],
       config: {
         default: '选项A',
-        suggestions: ['选项A', '选项B', '选项C'] // Renamed from options
+        suggestions: ['选项A', '选项B', '选项C']
       },
     },
     json_input: {
-      type: 'CODE', // 修改类型为 CODE
+      dataFlowType: 'STRING',
       displayName: 'JSON',
-      description: 'JSON输入测试 (代码编辑器)', // 更新描述
+      description: 'JSON输入测试 (代码编辑器)',
       required: false,
+      matchCategories: ['Code', 'Json'],
       config: {
         default: JSON.stringify({ "key": "value" }, null, 2),
-        language: 'json', // 指定语言为 json
+        language: 'json',
         placeholder: '请输入JSON格式数据'
-        // multiline 不再需要，CodeInput 自带滚动和调整大小
       },
     },
     // --- 新增带建议的输入 ---
     string_with_suggestions: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '带建议的文本',
       description: '测试带建议列表的文本输入',
       required: false,
@@ -119,7 +120,7 @@ export const definition: NodeDefinition = {
       }
     },
     int_with_suggestions: {
-      type: 'INT',
+      dataFlowType: 'INTEGER',
       displayName: '带建议的整数',
       description: '测试带建议列表的整数输入',
       required: false,
@@ -132,7 +133,7 @@ export const definition: NodeDefinition = {
       }
     },
     float_with_suggestions: {
-      type: 'FLOAT',
+      dataFlowType: 'FLOAT',
       displayName: '带建议的浮点数',
       description: '测试带建议列表的浮点数输入',
       required: false,
@@ -146,12 +147,13 @@ export const definition: NodeDefinition = {
     },
     // --- 新增按钮 ---
     button_trigger: {
-      type: 'BUTTON',
+      dataFlowType: 'WILDCARD',
       displayName: '触发按钮',
       description: '测试按钮组件',
-      required: false, // 按钮通常不是必须的输入数据
+      required: false,
+      matchCategories: ['Trigger'],
       config: {
-        label: '点我执行操作' // 按钮上显示的文本
+        label: '点我执行操作'
       }
     },
 
@@ -159,54 +161,55 @@ export const definition: NodeDefinition = {
 
   outputs: {
     string_output: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '单行文本',
       description: '单行文本输出'
     },
     text_output: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '多行文本',
       description: '多行文本输出'
     },
     int_output: {
-      type: 'INT',
+      dataFlowType: 'INTEGER',
       displayName: '整数',
       description: '整数输出'
     },
     float_output: {
-      type: 'FLOAT',
+      dataFlowType: 'FLOAT',
       displayName: '浮点数',
       description: '浮点数输出'
     },
     boolean_output: {
-      type: 'BOOLEAN',
+      dataFlowType: 'BOOLEAN',
       displayName: '布尔值',
       description: '布尔值输出'
     },
     combo_output: {
-      type: 'STRING',
+      dataFlowType: 'STRING', // Output of a combo is its value
       displayName: '选择项',
       description: '选择项输出'
     },
     json_output: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: 'JSON',
-      description: 'JSON输出'
+      description: 'JSON输出',
+      matchCategories: ['Json']
     },
 
     // --- 新增对应输出 ---
     string_with_suggestions_output: {
-      type: 'STRING',
+      dataFlowType: 'STRING',
       displayName: '带建议文本输出',
       description: '带建议文本的输出值'
     },
     int_with_suggestions_output: {
-      type: 'INT',
+      dataFlowType: 'INTEGER',
       displayName: '带建议整数输出',
       description: '带建议整数的输出值'
     },
     float_with_suggestions_output: {
-      type: 'FLOAT',
+      dataFlowType: 'FLOAT',
       displayName: '带建议浮点数输出',
       description: '带建议浮点数的输出值'
     } // 这里是 outputs 对象的结束，不需要逗号

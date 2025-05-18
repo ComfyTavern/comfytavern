@@ -52,7 +52,7 @@ export const definition: NodeDefinition = {
   },
   outputs: {
     presetData: {
-      type: 'object', // 输出解析后的对象
+      dataFlowType: 'OBJECT', // 输出解析后的对象
       displayName: '预设数据',
       description: '解析后的预设配置对象'
     }
@@ -61,10 +61,11 @@ export const definition: NodeDefinition = {
 
   configSchema: {
     presetResource: {
-      type: 'RESOURCE_SELECTOR', // 使用资源选择器
+      dataFlowType: 'STRING', // RESOURCE_SELECTOR value is a string (path/ID)
       displayName: '预设文件',
       description: '选择一个预设配置文件 (JSON)',
       required: true,
+      matchCategories: ['ResourceId', 'FilePath'],
       config: {
         // 假设预设文件以 .json 结尾，或者有特定的 'preset' 资源类型
         // 需要确认系统中实际的资源类型标识
