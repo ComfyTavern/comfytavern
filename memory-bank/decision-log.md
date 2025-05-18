@@ -144,3 +144,32 @@
 - [`apps/frontend-vueflow/src/components/graph/StatusBar.vue`](../apps/frontend-vueflow/src/components/graph/StatusBar.vue:0) (将被修改)
 - [`apps/frontend-vueflow/src/views/EditorView.vue`](../apps/frontend-vueflow/src/views/EditorView.vue:0) (可能被修改以集成和布局编辑器面板)
 ---
+
+**决策日期:** 2025/05/18
+
+**决策点:** 关于组件内部CSS类名的命名规范，以避免样式冲突
+
+**背景:**
+在实现任务 4.5（底部可停靠编辑器面板空状态提示）的过程中，发现 [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue:0) 内部使用的通用CSS类名（如 `.tab-content`）与项目中其他地方（可能是全局样式或第三方库如daisyUI）的同名类发生冲突，导致预期的空状态提示无法正确显示和布局。
+
+**讨论与考虑:**
+- 直接使用通用类名（如 `tab-content`, `header`, `footer` 等）虽然简单，但在大型项目或引入第三方UI库时，极易发生样式冲突，导致难以调试的布局问题。
+- 为组件内部特定的、非意图暴露给外部覆写的CSS类名添加项目级或组件级的前缀（如 `ct-` 代表 ComfyTavern，或更具体的组件名前缀），可以有效隔离样式作用域，减少冲突可能性。
+
+**最终决策:**
+**推荐并采纳在Vue组件（尤其是使用 `<style scoped>` 的组件）内部，为其主要的、可能与外部冲突的CSS类名添加项目特定的前缀（例如 `ct-`）作为一种开发实践。**
+例如，在 [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue:0) 中，将 `.tab-content` 修改为 `.ct-tab-content`。
+
+**理由:**
+- **减少样式冲突**: 显著降低因类名重复导致的样式覆盖和布局问题。
+- **提高可维护性**: 使组件样式更加独立和可预测，便于长期维护和团队协作。
+- **增强封装性**: 更好地封装组件内部实现细节，减少对全局样式的意外依赖或影响。
+
+**影响:**
+- 未来新组件开发或现有组件重构时，应考虑此命名规范。
+- 对于已存在大量通用类名的复杂组件，可逐步进行改造。
+- 此实践主要针对组件内部结构性或功能性的类名，对于直接应用UI框架（如Tailwind CSS）的工具类，则按框架自身用法即可。
+
+**参考任务:**
+- 任务 4.5 (底部可停靠编辑器面板空状态提示) 的调试过程，记录在对应的 `active-context.md` 中。
+---

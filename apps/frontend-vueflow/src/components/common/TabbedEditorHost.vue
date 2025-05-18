@@ -1,20 +1,20 @@
 <template>
-  <div class="tabbed-editor-host">
-    <div class="tab-bar">
+  <div class="ct-tabbed-editor-host">
+    <div class="ct-tab-bar">
       <div
         v-for="tab in openTabs"
         :key="tab.tabId"
-        class="tab-item"
+        class="ct-tab-item"
         :class="{ active: tab.tabId === activeTabIdInternal }"
         @click="activateTab(tab.tabId)"
       >
-        <span class="tab-title">{{ tab.title }}</span>
-        <button class="close-tab-btn" @click.stop="handleCloseTab(tab.tabId)">×</button>
+        <span class="ct-tab-title">{{ tab.title }}</span>
+        <button class="ct-close-tab-btn" @click.stop="handleCloseTab(tab.tabId)">×</button>
       </div>
     </div>
-    <div class="tab-content">
+    <div class="ct-tab-content">
       <template v-for="tab in openTabs" :key="tab.tabId">
-        <div v-show="tab.tabId === activeTabIdInternal" class="editor-instance-wrapper">
+        <div v-show="tab.tabId === activeTabIdInternal" class="ct-editor-instance-wrapper">
           <RichCodeEditor
             :ref="(el) => { if (el) editorRefs[tab.editorId] = el as InstanceType<typeof RichCodeEditor>; else delete editorRefs[tab.editorId]; }"
             :editor-id="tab.editorId"
@@ -27,8 +27,8 @@
           />
         </div>
       </template>
-      <div v-if="openTabs.length === 0" class="no-tabs-placeholder">
-        没有打开的编辑器标签页。
+      <div v-if="openTabs.length === 0" class="ct-no-tabs-placeholder">
+        没有活动的编辑标签页。请从节点输入处打开编辑器。
       </div>
     </div>
   </div>
@@ -191,85 +191,83 @@ defineExpose({
 </script>
 
 <style scoped>
-.tabbed-editor-host {
+.ct-tabbed-editor-host {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #f0f0f0; /* 临时背景色 */
-  border: 1px solid #ccc; /* 临时边框 */
+  background-color: var(--color-background-soft, #f0f0f0);
+  border: 1px solid var(--color-border, #ccc);
 }
 
-.tab-bar {
+.ct-tab-bar {
   display: flex;
   flex-shrink: 0;
-  background-color: #e0e0e0; /* 标签栏背景色 */
-  border-bottom: 1px solid #ccc;
-  overflow-x: auto; /* 如果标签过多，允许滚动 */
+  background-color: var(--color-background-mute, #e0e0e0);
+  border-bottom: 1px solid var(--color-border, #ccc);
+  overflow-x: auto;
 }
 
-.tab-item {
+.ct-tab-item {
   padding: 8px 12px;
   cursor: pointer;
-  border-right: 1px solid #ccc;
+  border-right: 1px solid var(--color-border, #ccc);
   display: flex;
   align-items: center;
-  white-space: nowrap; /* 防止标题换行 */
+  white-space: nowrap;
   user-select: none;
 }
 
-.tab-item:hover {
-  background-color: #d0d0d0;
+.ct-tab-item:hover {
+  background-color: var(--color-background-hover, #d0d0d0);
 }
 
-.tab-item.active {
-  background-color: #ffffff; /* 活动标签页背景色 */
-  border-bottom-color: #ffffff; /* 隐藏活动标签页的下边框，使其与内容区域融合 */
+.ct-tab-item.active {
+  background-color: var(--color-background, #ffffff);
+  border-bottom-color: var(--color-background, #ffffff);
   position: relative;
-  /* top: 1px; */ /* 轻微上移，增强融合感 */
 }
 
-.tab-title {
+.ct-tab-title {
   margin-right: 8px;
   font-size: 0.9em;
 }
 
-.close-tab-btn {
+.ct-close-tab-btn {
   background: none;
   border: none;
   cursor: pointer;
   font-size: 1.1em;
   padding: 0 4px;
   margin-left: auto;
-  color: #666;
+  color: var(--color-text-secondary, #666);
   border-radius: 3px;
 }
 
-.close-tab-btn:hover {
-  background-color: #c0c0c0;
-  color: #333;
+.ct-close-tab-btn:hover {
+  background-color: var(--color-background-hover, #c0c0c0);
+  color: var(--color-text, #333);
 }
 
-.tab-content {
+.ct-tab-content {
   flex-grow: 1;
-  position: relative; /* 用于 v-show 的子元素定位 */
-  background-color: #ffffff; /* 内容区域背景色 */
-  overflow: hidden; /* 防止内部编辑器溢出 */
+  position: relative;
+  background-color: var(--color-background, #ffffff);
+  overflow: hidden; /* 确保内容超出时隐藏 */
 }
 
-.editor-instance-wrapper {
+.ct-editor-instance-wrapper {
   height: 100%;
   width: 100%;
-  /* position: absolute;
-  top: 0;
-  left: 0; */
 }
 
-.no-tabs-placeholder {
+.ct-no-tabs-placeholder {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100%;
-  color: #888;
+  color: var(--color-text-muted, #888);
   font-style: italic;
+  padding: 20px; /* 添加一些内边距使其更美观 */
+  text-align: center; /* 确保文字居中 */
 }
 </style>

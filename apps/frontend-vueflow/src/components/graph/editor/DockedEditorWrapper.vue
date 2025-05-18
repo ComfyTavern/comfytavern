@@ -348,21 +348,28 @@ onMounted(() => {
       </div>
     </div>
     <div class="editor-content">
-      <component
-        :is="activeEditorComponent"
-        v-if="activeEditorComponent"
-        ref="richCodeEditorRef"
-        v-show="currentEditorMode === 'single'"
-        :editor-id="currentEditorContext ? `${currentEditorContext.nodeId}_${currentEditorContext.inputPath}_single` : 'single_editor'"
-        :initial-content="currentEditorContext?.initialContent || ''"
-        :language-hint="currentEditorContext?.languageHint"
-        :breadcrumb-data="currentEditorContext?.breadcrumbData"
-        :config="currentEditorContext?.config"
-        @save-requested="handleRichCodeEditorSaveRequested"
-      />
+      <!-- Single Mode: Show RichCodeEditor if context exists, otherwise show placeholder -->
+      <template v-if="currentEditorMode === 'single'">
+        <component
+          :is="activeEditorComponent"
+          v-if="activeEditorComponent && currentEditorContext"
+          ref="richCodeEditorRef"
+          :editor-id="`${currentEditorContext.nodeId}_${currentEditorContext.inputPath}_single`"
+          :initial-content="currentEditorContext.initialContent || ''"
+          :language-hint="currentEditorContext.languageHint"
+          :breadcrumb-data="currentEditorContext.breadcrumbData"
+          :config="currentEditorContext.config"
+          @save-requested="handleRichCodeEditorSaveRequested"
+        />
+        <div v-else class="editor-placeholder">
+          没有活动的编辑对象。请从节点输入处打开编辑器。
+        </div>
+      </template>
+
+      <!-- Multi-Tab Mode: TabbedEditorHost handles its own empty state -->
       <TabbedEditorHost
-        ref="tabbedEditorHostRef"
         v-show="currentEditorMode === 'fullMultiTab'"
+        ref="tabbedEditorHostRef"
         @tab-saved="handleTabSavedEvent"
         @tab-closed="handleTabClosedEvent"
         @all-tabs-closed="() => { if (shouldCloseOnAllTabsClosed) closeEditorPanel(); }"
@@ -472,5 +479,16 @@ onMounted(() => {
 .editor-content > :deep(*) {
   width: 100%;
   height: 100%;
+}
+
+.editor-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: var(--color-text-muted, #888); /* 使用 CSS 变量或默认值 */
+  font-style: italic;
+  padding: 20px;
+  text-align: center;
 }
 </style>

@@ -1,42 +1,35 @@
-# 活动上下文：节点插槽类型系统重构 - 阶段四后期
+# 任务 4.5: 底部可停靠文本编辑器面板空状态提示
 
-本文件用于记录项目后续阶段的工作过程、思考、遇到的问题和解决方案。
+**目标:** 当底部可停靠的文本编辑器面板（主要由 `TabbedEditorHost.vue` 管理）内部没有任何已打开的编辑对象时，显示一个默认的欢迎或提示页面。
 
-**背景:**
-节点插槽类型系统的核心功能重构，包括类型定义、核心工具函数更新、后端节点定义更新、前端核心逻辑更新以及前端UI组件的渲染逻辑更新和UI/UX增强（包括右侧预览面板和可停靠编辑器面板的实现与集成）均已完成。
+**需求:**
 
-**已完成阶段:**
-*   阶段一：核心类型定义
-*   阶段二：核心工具函数与后端节点定义更新
-*   阶段三：前端核心逻辑更新
-*   阶段四：前端UI组件渲染逻辑更新与UI/UX增强
-    *   子任务 4.1: 更新动态输入组件渲染逻辑 (完成)
-    *   子任务 4.2: 更新具体输入UI组件 (完成)
-    *   子任务 4.3: UI重新规划与设计 (完成)
-        *   子任务 4.3.1: 代码编辑器组件增强 (完成)
-        *   子任务 4.3.2: 核心类型与状态管理更新 - 添加 `previewTarget` (完成)
-        *   子任务 4.3.3: 插槽预览交互实现 - 右键菜单 (完成)
-        *   子任务 4.3.4: 插槽预览交互实现 - 快捷键交互 (完成)
-        *   子任务 4.3.5: 插槽预览交互实现 - 视觉反馈 (完成)
-        *   子任务 4.3.6: 实现右侧专用预览面板 `RightPreviewPanel.vue` (完成)
-    *   子任务 4.4: 实现可停靠编辑器面板
-        *   子任务 4.4.1: 实现核心单页编辑器组件 `RichCodeEditor.vue` (完成)
-        *   子任务 4.4.2: 实现标签页宿主组件 `TabbedEditorHost.vue` (完成)
-        *   子任务 4.4.3: 实现编辑器场景包装器 `DockedEditorWrapper.vue` (完成)
-        *   子任务 4.4.4: 集成 `DockedEditorWrapper.vue` 到主视图 (完成)
+*   提示文本示例：“没有活动的编辑标签页。请从节点输入处打开编辑器。”
+*   主要目标组件: [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue:0) (当标签页列表为空时)。
+*   次要考虑: [`DockedEditorWrapper.vue`](../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue:0) (在 `'lightweightSingle'` / `'single'` 模式下无内容打开的情况)。
+*   提示信息居中显示。
+*   样式与整体应用风格一致。
+*   提示只在编辑器面板内部为空状态时显示。
 
-详细的各阶段和子任务完成情况记录在 [`memory-bank/progress-log.md`](../memory-bank/progress-log.md)。
-关键决策记录在 [`memory-bank/decision-log.md`](../memory-bank/decision-log.md)。
+**计划步骤:**
 
-## 后续待处理任务 (根据用户反馈 2025/05/18)
+1.  ... (先前步骤) ...
+2.  在 [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue:0) 的 `.no-tabs-placeholder` 添加临时调试样式 (红色背景)。 (已完成)
+3.  用户反馈仍然看不到提示，但提供了 DOM 结构，显示占位符存在于 DOM 中。怀疑是 `.tab-content` 的 `overflow: hidden` 或其高度计算问题。 (已完成)
+4.  临时移除了 [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue:0) 中 `.tab-content` 的 `overflow: hidden` 样式进行调试。 (已完成)
+5.  用户反馈仍然完全空白。用户提到之前编辑器面板本身也有类似显示问题，是通过将某些东西移出函数变成全局后才解决的。这提示可能是响应式系统或组件状态的问题，但目前的 DOM 结构显示组件已挂载。更可能是深层 CSS 布局导致高度为0。
+6.  计划在 [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue:0) 的 `.tab-bar` 和 `.tab-content` 添加临时边框和最小高度，以观察它们是否获得渲染空间。保持 `.tab-content` 的 `overflow: hidden` 被注释掉的状态。
+7.  完成后，使用 `ask_followup_question` 向用户确认。
 
-根据用户最新指示，在已完成的核心功能重构之外，还存在以下待处理的改造任务：
+---
+## 任务进展
 
--   **面板部分深化改造**:
-    -   [ ] 进一步完善或扩展现有面板（如 [`RightPreviewPanel.vue`](../apps/frontend-vueflow/src/components/graph/sidebar/RightPreviewPanel.vue), [`DockedEditorWrapper.vue`](../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue)）的功能。具体需求待明确。
-    -   [ ] 审视并优化面板的交互和用户体验。
--   **节点内组件深化改造**:
-    -   [ ] 进一步完善或扩展节点内部UI组件（如各种输入组件 [`StringInput.vue`](../apps/frontend-vueflow/src/components/graph/inputs/StringInput.vue), [`CodeInput.vue`](../apps/frontend-vueflow/src/components/graph/inputs/CodeInput.vue) 等）的功能或显示逻辑，以更好地适配新的类型系统和配置选项。
-    -   [ ] 审视并优化节点本身（如 [`BaseNode.vue`](../apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue)）的UI/UX，确保与新类型系统和增强的编辑/预览功能协调一致。
+### ... (先前步骤) ...
 
-这些任务将作为后续迭代的重点。
+### 2025/5/18 下午6:48
+
+*   临时移除了 [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue:0) 中 `.tab-content` 的 `overflow: hidden`。
+*   用户反馈面板仍然完全空白。
+*   用户提供了重要线索：之前编辑器面板的显示问题与状态作用域有关。
+*   当前分析：虽然 DOM 元素存在，但视觉上完全空白，极有可能是 `TabbedEditorHost` 或其内部关键 Flex 子项（`.tab-bar`, `.tab-content`）的高度被计算为0。
+*   下一步：为 `.tab-bar` 和 `.tab-content` 添加 `min-height` 和 `border` 进行调试。

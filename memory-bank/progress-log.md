@@ -250,8 +250,26 @@
     - **备注: 成功将 `<DockedEditorWrapper />` 集成到主编辑器视图 [`EditorView.vue`](../apps/frontend-vueflow/src/views/EditorView.vue)，并在状态栏 [`StatusBar.vue`](../apps/frontend-vueflow/src/components/graph/StatusBar.vue) 添加了控制按钮。通过将 [`useEditorState.ts`](../apps/frontend-vueflow/src/composables/editor/useEditorState.ts) 修改为单例模式解决了跨组件状态共享问题。详细调试过程已归档。**
 
 ---
-## 阶段五：文档与测试
 
-*(待开始)*
+## 阶段四：前端UI组件渲染逻辑更新与UI/UX增强 (续)
 
----
+- **任务 4.5 (新需求)**: 实现编辑器画布空状态提示。
+    - **状态: ✅ 完成**
+    - **分配给: 💻 Code 模式 (任务ID: NEXUSCORE_SUBTASK_EDITOR_EMPTY_STATE_PROMPT_V1)**
+    - **开始日期: 2025/05/18**
+    - **完成日期: 2025/05/18**
+    - **备注: 成功在底部可停靠编辑器面板中实现了空状态提示。当面板内无活动编辑标签页时，会显示“没有活动的编辑标签页。请从节点输入处打开编辑器。”的提示。关键解决步骤包括更新了 [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue:0) 和 [`DockedEditorWrapper.vue`](../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue:0)，并通过为 [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue:0) 内部类名添加 `ct-` 前缀解决了CSS类名冲突问题。**
+
+- **任务 4.6 (来自 active-context.md 的后续任务)**: 面板部分深化改造。
+    - **状态: ⏳ 待开始**
+    - **分配给: (待定)**
+    - **开始日期: (待定)**
+    - **完成日期: (待定)**
+    - **备注: 进一步完善或扩展现有面板（如 [`RightPreviewPanel.vue`](../apps/frontend-vueflow/src/components/graph/sidebar/RightPreviewPanel.vue), [`DockedEditorWrapper.vue`](../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue)）的功能。审视并优化面板的交互和用户体验。具体需求待明确。**
+
+- **任务 4.7 (来自 active-context.md 的后续任务)**: 节点内组件深化改造。
+    - **状态: ⏳ 待开始**
+    - **分配给: (待定)**
+    - **开始日期: (待定)**
+    - **完成日期: (待定)**
+    - **备注: 进一步完善或扩展节点内部UI组件（如各种输入组件 [`StringInput.vue`](../apps/frontend-vueflow/src/components/graph/inputs/StringInput.vue), [`CodeInput.vue`](../apps/frontend-vueflow/src/components/graph/inputs/CodeInput.vue) 等）的功能或显示逻辑，以更好地适配新的类型系统和配置选项。审视并优化节点本身（如 [`BaseNode.vue`](../apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue)）的UI/UX，确保与新类型系统和增强的编辑/预览功能协调一致。**
