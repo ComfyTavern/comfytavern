@@ -23,6 +23,20 @@
     </div>
 
     <div class="flex items-center space-x-4"> <!-- 增加间距 -->
+      <!-- 可停靠编辑器切换按钮 -->
+      <button @click="toggleDockedEditor" :title="isDockedEditorVisible ? '隐藏编辑器面板' : '显示编辑器面板'"
+        class="px-2 py-1 rounded border border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none transition-all duration-150"
+        :class="{
+          'text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/50': isDockedEditorVisible,
+          'text-gray-500 dark:text-gray-500': !isDockedEditorVisible
+        }">
+        <svg v-if="isDockedEditorVisible" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0V9m0 8l-8-8m8 8H5m0 0v8m0-8l8 8M5 9V5m0 4h8" />
+        </svg>
+        <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 0h-4m4 0l-5-5" />
+        </svg>
+      </button>
       <!-- 实时预览开关 -->
       <!-- 实时预览切换按钮 -->
       <button @click="togglePreview" :title="isPreviewEnabled ? '禁用实时预览' : '启用实时预览'"
@@ -75,6 +89,7 @@ import { onClickOutside } from '@vueuse/core';
 import { useWorkflowStore } from '@/stores/workflowStore'; // Import workflow store
 import { useTabStore } from '@/stores/tabStore'; // Import tab store
 import { useExecutionStore } from '@/stores/executionStore'; // 导入执行状态存储
+import { useEditorState } from '@/composables/editor/useEditorState'; // <-- 咕咕：导入 editor state
 import { storeToRefs } from 'pinia';
 import WorkflowMenu from '@/components/graph/menus/WorkflowMenu.vue';
 import TabBar from '@/components/graph/TabBar.vue'; // Import TabBar
@@ -92,6 +107,7 @@ const { activeTabId } = storeToRefs(tabStore); // Get reactive activeTabId
 const executionStore = useExecutionStore(); // 获取执行状态存储实例
 const { isPreviewEnabled } = storeToRefs(executionStore); // 获取预览状态
 const { togglePreview } = executionStore; // 获取切换 Action
+const { isDockedEditorVisible, toggleDockedEditor } = useEditorState(); // <-- 咕咕：获取编辑器状态和切换函数
 // const { workflowStatus } = storeToRefs(executionStore); // 不再直接解构全局状态
 const showWorkflowMenu = ref(false);
 const workflowButtonRef = ref<HTMLButtonElement | null>(null);
@@ -134,6 +150,7 @@ const workflowStatusText = computed(() => {
     default: return '';
   }
 });
+
 const toggleWorkflowMenu = () => {
   showWorkflowMenu.value = !showWorkflowMenu.value;
   // showEditMenu.value = false; // 关闭其他菜单

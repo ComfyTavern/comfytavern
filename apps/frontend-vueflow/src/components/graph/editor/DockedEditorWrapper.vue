@@ -2,6 +2,7 @@
 import { ref, shallowRef, computed, watch, onMounted, nextTick } from 'vue';
 import type { Component } from 'vue';
 import { useStorage } from '@vueuse/core';
+import { useEditorState } from '@/composables/editor/useEditorState'; // <-- 咕咕：导入 useEditorState
 import RichCodeEditor from '@/components/common/RichCodeEditor.vue';
 import TabbedEditorHost from '@/components/common/TabbedEditorHost.vue';
 import type { EditorOpeningContext, TabData } from '@/types/editorTypes';
@@ -27,9 +28,10 @@ const workflowManager = useWorkflowManager();
 const interactionCoordinator = useWorkflowInteractionCoordinator();
 
 // == UI State Management ==
-const isVisible = useStorage('docked-editor-isVisible', false);
+// const isVisible = useStorage('docked-editor-isVisible', false); // <-- 咕咕：移除内部 isVisible，由外部控制
 const editorHeight = useStorage('docked-editor-height', 300); // 默认高度 300px
 const isResident = useStorage('docked-editor-isResident', false); // 是否常驻，默认为 false
+const { toggleDockedEditor, isDockedEditorVisible } = useEditorState(); // <-- 咕咕：使用全局状态
 
 const panelStyle = computed(() => ({
   height: `${editorHeight.value}px`,
@@ -60,21 +62,23 @@ function stopResize() {
   document.removeEventListener('mouseup', stopResize);
 }
 
-function toggleVisibility() {
-  isVisible.value = !isVisible.value;
-  if (isVisible.value) {
-    emit('editorOpened');
-  } else {
-    emit('editorClosed');
-  }
-}
+// function toggleVisibility() { // <-- 咕咕：移除，由 useEditorState.toggleDockedEditor 控制
+//   isVisible.value = !isVisible.value;
+//   if (isVisible.value) {
+//     emit('editorOpened');
+//   } else {
+//     emit('editorClosed');
+//   }
+// }
 
 function closeEditorPanel() {
-  if (!isResident.value) {
-    isVisible.value = false;
+  // if (!isResident.value) { // 即使常驻，关闭按钮也应该关闭它，除非有最小化逻辑
+    if (isDockedEditorVisible.value) { // 只有在当前全局可见状态为 true 时才切换
+      toggleDockedEditor(); // 调用全局切换函数
+    }
     currentEditorContext.value = null; // 关闭时清除上下文
     emit('editorClosed');
-  }
+  // }
 }
 
 // == Editor Mode Dispatching ==
@@ -233,7 +237,10 @@ function openEditor(context: EditorOpeningContext) {
   currentEditorMode.value = context.bottomEditorMode || 'fullMultiTab';
   // breadcrumbData 将从 currentEditorContext.value.breadcrumbData 获取
 
-  isVisible.value = true;
+  if (!isDockedEditorVisible.value) { // 如果全局状态是不可见，则通过切换使其可见
+    toggleDockedEditor();
+  }
+  // isVisible.value = true; // <-- 咕咕：移除，依赖全局状态
   emit('editorOpened');
 
   nextTick(() => {
@@ -294,22 +301,27 @@ const shouldCloseOnAllTabsClosed = computed(() => {
 
 defineExpose({
   openEditor,
-  toggleVisibility,
-  isVisible,
+  // toggleVisibility, // <-- 咕咕：移除
+  // isVisible, // <-- 咕咕：移除
   isResident,
 });
 
 onMounted(() => {
-  // 初始化时，如果可见且是多标签模式，确保 TabbedEditorHost 存在
-  if (isVisible.value && currentEditorMode.value === 'fullMultiTab') {
-    activeEditorComponent.value = TabbedEditorHost;
+  // 组件挂载时，如果全局状态要求其可见，则触发 opened 事件
+  if (isDockedEditorVisible.value) {
+    emit('editorOpened');
+     // 初始化时，如果可见且是多标签模式，确保 TabbedEditorHost 存在
+    if (currentEditorMode.value === 'fullMultiTab') { // 默认是 fullMultiTab
+      activeEditorComponent.value = TabbedEditorHost;
+    }
   }
 });
 
 </script>
 
 <template>
-  <div v-if="isVisible" class="docked-editor-wrapper" :style="panelStyle">
+  <!-- v-if="isVisible" 已被移除，因为父组件 EditorView.vue 会通过 v-if="isDockedEditorVisible" 控制此组件的挂载 -->
+  <div class="docked-editor-wrapper-root" :style="panelStyle">
     <div class="editor-resizer" @mousedown="startResize"></div>
     <div class="editor-header">
       <span class="editor-title">
@@ -377,9 +389,30 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.docked-editor-wrapper {
-  position: fixed;
-  bottom: 0;
+/* .docked-editor-wrapper 已被移除，根元素现在是 .docked-editor-wrapper-root */
+.docked-editor-wrapper-root {
+  /* position: fixed; */ /* 不再是 fixed，因为它现在是 EditorView flex 布局的一部分 */
+  /* bottom: 0; */
+  /* left: 0; */
+  /* right: 0; */
+  width: 100%; /* 占据其在 flex 容器中的分配宽度 */
+  /* height 由 panelStyle 动态设置 */
+  background-color: var(--color-background-soft); /* 使用 CSS 变量适应主题 */
+  border-top: 1px solid var(--color-border); /* 这个边框可能需要根据在画布下方还是右侧调整 */
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1); /* 这个阴影可能也需要调整 */
+  display: flex;
+  flex-direction: column;
+  /* z-index: 1000; */ /* z-index 通常在 fixed/absolute 定位时更关键 */
+  overflow: hidden; /* 防止内容溢出根元素，由内部 editor-content 处理滚动 */
+}
+
+/* 如果 DockedEditorWrapper 是直接放在 EditorView 的 .right-pane.flex-col 内部，
+   那么它的高度由 panelStyle 控制，宽度是 100% of .right-pane。
+   边框和阴影可能需要根据实际视觉效果调整。
+   例如，如果它在画布下方，可能只需要一个 border-top。
+*/
+
+.editor-resizer {
   left: 0;
   right: 0;
   background-color: var(--color-background-soft); /* 使用 CSS 变量适应主题 */

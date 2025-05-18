@@ -16,22 +16,27 @@
           @node-selected="handleNodeSelected"
         />
 
-        <!-- 画布 -->
-        <div class="flex-1 relative">
-          <!-- 添加相对定位，用于可能的绝对定位子元素 -->
-          <!-- 根据活动标签页类型条件渲染 Canvas 或 GroupEditor -->
-          <Canvas
-            ref="canvasRef"
-            :model-value="currentElements"
-            @update:model-value="updateElements"
-            @node-click="handleNodeClick"
-            @pane-ready="handlePaneReady"
-            @connect="handleConnect"
-            @node-drag-stop="handleNodesDragStop"
-            @elements-remove="handleElementsRemove"
-            :node-types="nodeTypes"
-          />
-          <!-- 传递 nodeTypes, 添加 key 绑定, 添加 nodes-drag-stop 和 elements-remove 监听 -->
+        <!-- 右侧主内容区域 (画布和可停靠编辑器) -->
+        <div class="right-pane flex flex-col flex-1 overflow-hidden">
+          <!-- 画布容器 -->
+          <div class="canvas-container flex-1 relative">
+            <!-- 添加相对定位，用于可能的绝对定位子元素 -->
+            <!-- 根据活动标签页类型条件渲染 Canvas 或 GroupEditor -->
+            <Canvas
+              ref="canvasRef"
+              :model-value="currentElements"
+              @update:model-value="updateElements"
+              @node-click="handleNodeClick"
+              @pane-ready="handlePaneReady"
+              @connect="handleConnect"
+              @node-drag-stop="handleNodesDragStop"
+              @elements-remove="handleElementsRemove"
+              :node-types="nodeTypes"
+            />
+            <!-- 传递 nodeTypes, 添加 key 绑定, 添加 nodes-drag-stop 和 elements-remove 监听 -->
+          </div>
+          <!-- 可停靠编辑器 -->
+          <DockedEditorWrapper v-if="isDockedEditorVisible" class="docked-editor-wrapper" />
         </div>
       </div>
       <div v-else class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
@@ -69,6 +74,7 @@ import BaseNode from "../components/graph/nodes/BaseNode.vue"; // 导入 BaseNod
 import SidebarManager from "../components/graph/sidebar/SidebarManager.vue";
 import NodePreviewPanel from "../components/graph/sidebar/NodePreviewPanel.vue";
 import RightPreviewPanel from "../components/graph/sidebar/RightPreviewPanel.vue"; // <-- 咕咕：导入新组件
+import DockedEditorWrapper from "../components/graph/editor/DockedEditorWrapper.vue"; // <-- 咕咕：导入新组件
 import StatusBar from "../components/graph/StatusBar.vue";
 import { type Node, type Edge } from "@vue-flow/core"; // Roo: Removed unused isNode, Connection, NodeDragEvent
 import {
@@ -116,6 +122,7 @@ const {
   selectedNodeForPreview,
   isSidebarReady,
   sidebarManagerRef,
+  isDockedEditorVisible, // <-- 咕咕：解构新状态
   handleNodeSelected,
   handleError,
 } = useEditorState();
@@ -327,6 +334,30 @@ onUnmounted(() => {
   height: 100%;
   position: relative;
 }
+
+.right-pane {
+  /* 用于包含画布和下方编辑器的容器 */
+}
+
+.canvas-container {
+  /* 画布容器，确保它可以正确地 flex grow */
+  min-height: 0; /* 允许在 flex 容器中正确缩小 */
+}
+.docked-editor-wrapper {
+  /* 现在它在画布下方 */
+  flex-shrink: 0; /* 防止在空间不足时被压缩到0高度 */
+  /* 高度由 DockedEditorWrapper 组件内部的 panelStyle (editorHeight) 控制 */
+  /* min-height 和 max-height 也是由 DockedEditorWrapper 内部逻辑控制拖拽范围 */
+  overflow-y: auto; /* 如果内容超出则滚动, 但 DockedEditorWrapper 内部的 editor-content 也有 overflow */
+  border-top: 1px solid theme('colors.gray.300'); /* 与画布分隔 */
+  /* background-color: theme('colors.gray.50'); */ /* 可选背景色 */
+}
+
+.dark .docked-editor-wrapper {
+  border-top-color: theme('colors.gray.600');
+  /* background-color: theme('colors.gray.800'); */
+}
+
 
 /* 状态栏样式 */
 .editor-statusbar {
