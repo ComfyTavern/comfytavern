@@ -46,15 +46,17 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Codemirror } from 'vue-codemirror'
 import { javascript } from '@codemirror/lang-javascript'
-import { json } from '@codemirror/lang-json'
+import { json, jsonParseLinter } from '@codemirror/lang-json' // jsonParseLinter might be here or in @codemirror/lint
 import { python } from '@codemirror/lang-python'
 import { html } from '@codemirror/lang-html'
 import { css } from '@codemirror/lang-css'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
 import { oneDark } from '@codemirror/theme-one-dark'
-import { EditorView, ViewUpdate } from '@codemirror/view'
+import { EditorView, ViewUpdate, keymap } from '@codemirror/view' // Added keymap
 import { useThemeStore } from '@/stores/theme'
+import { search, searchKeymap } from '@codemirror/search'
+import { linter, lintGutter } from '@codemirror/lint'
 
 interface Props {
   modelValue: string
@@ -127,7 +129,11 @@ const languageExtension = computed(() => {
     case 'javascript':
       return javascript()
     case 'json':
-      return json()
+      return [
+        json(),
+        linter(jsonParseLinter()),
+        lintGutter(),
+      ]
     case 'python':
       return python()
     case 'html':
@@ -149,6 +155,8 @@ const extensions = computed(() => {
   const baseExtensions = [
     EditorView.lineWrapping,
     themeExtension.value,
+    search({ top: true }),
+    keymap.of(searchKeymap), // Add search keymap (removed spread operator)
     EditorView.editable.of(!props.readonly), // props.disabled handled by :disabled on Codemirror
     EditorView.updateListener.of((update: ViewUpdate) => {
       if (update.focusChanged) {

@@ -18,6 +18,23 @@
       >
         <span class="icon">🗑️</span> 删除插槽 ({{ handleId }})
       </div>
+      <!-- 预览相关菜单项 -->
+      <template v-if="isOutputSlot">
+        <div
+          v-if="!isCurrentSlotPreviewTarget"
+          class="context-menu-item"
+          @click="setAsPreview"
+        >
+          <span class="icon">👁️</span> 设为预览
+        </div>
+        <div
+          v-if="isCurrentSlotPreviewTarget"
+          class="context-menu-item"
+          @click="clearPreview"
+        >
+          <span class="icon">🚫</span> 取消预览
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -25,11 +42,17 @@
 <script setup lang="ts">
 import type { XYPosition, Node as VueFlowNode } from "@vue-flow/core";
 import { computed } from "vue";
-import { useWorkflowStore } from "@/stores/workflowStore";
+import { useWorkflowStore } from "@/stores/workflowStore"; // 保持，因为 onDisconnect 和 onDeleteSlot 仍在使用
 import { useTabStore } from "@/stores/tabStore";
-import { getNodeType } from "@/utils/nodeUtils"; // 导入用于获取节点类型的辅助函数
-import { createHistoryEntry } from "@comfytavern/utils"; // 导入用于创建历史记录条目的函数
-import { DataFlowType, type GroupSlotInfo, type HistoryEntry } from "@comfytavern/types"; // 导入项目共享的类型定义
+import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager";
+import { useWorkflowInteractionCoordinator } from "@/composables/workflow/useWorkflowInteractionCoordinator"; // 新增导入
+import { getNodeType } from "@/utils/nodeUtils";
+import { createHistoryEntry } from "@comfytavern/utils";
+import { DataFlowType, type GroupSlotInfo, type HistoryEntry } from "@comfytavern/types"; // 移除了 PreviewTarget
+import { klona } from 'klona/full'; // 新增导入 klona
+
+// 定义 PreviewTarget 类型，因为它没有从 @comfytavern/types 中导出
+type PreviewTarget = { nodeId: string; slotKey: string } | null;
 
 const props = defineProps<{
   visible: boolean;
@@ -51,8 +74,26 @@ const emit = defineEmits<{
   (e: "close"): void; // 关闭菜单事件
 }>();
 
-const workflowStore = useWorkflowStore();
+const workflowStore = useWorkflowStore(); // 保留
 const tabStore = useTabStore();
+const workflowManager = useWorkflowManager();
+const interactionCoordinator = useWorkflowInteractionCoordinator(); // 新增
+
+// 计算属性：判断当前是否为输出插槽
+const isOutputSlot = computed(() => props.handleType === 'source');
+
+// 计算属性：获取当前活动工作流的预览目标 (直接使用 workflowManager 的计算属性)
+const activePreviewTarget = computed(() => workflowManager.activePreviewTarget.value);
+
+// 计算属性：判断当前插槽是否为预览目标
+const isCurrentSlotPreviewTarget = computed(() => {
+  const currentTarget = activePreviewTarget.value; // 使用上面已获取的计算属性
+  if (!currentTarget) return false;
+  return (
+    currentTarget.nodeId === props.nodeId &&
+    currentTarget.slotKey === props.handleId
+  );
+});
 
 // 计算属性：判断当前选中的插槽是否允许删除
 const canDeleteSlot = computed(() => {
@@ -302,6 +343,62 @@ const onDeleteSlot = () => {
   workflowStore.updateWorkflowInterface(groupWorkflowId, updateFn, entry);
 
   // 8. 操作完成，关闭上下文菜单
+  emit("close");
+};
+
+// 修改后的处理函数：设为预览
+const setAsPreview = async () => {
+  const activeTabId = tabStore.activeTabId;
+  if (!activeTabId) {
+    console.error("[SlotContextMenu] Cannot set preview: No active tab ID found.");
+    emit("close");
+    return;
+  }
+
+  const target: PreviewTarget = { nodeId: props.nodeId, slotKey: props.handleId };
+  const node = workflowManager.getElements(activeTabId).find(el => el.id === props.nodeId);
+  const nodeLabel = node?.label || props.nodeId;
+  const slotLabel = props.handleId; // 可以考虑从节点定义中获取更友好的插槽名称
+
+  const entry: HistoryEntry = createHistoryEntry(
+    "update",
+    "workflow", // 对象类型: 'workflow' (因为预览目标是工作流级别的属性)
+    `将节点 ${nodeLabel} 的输出 ${slotLabel} 设为预览目标`,
+    {
+      targetNodeId: props.nodeId,
+      targetSlotKey: props.handleId,
+      previousTarget: klona(activePreviewTarget.value || null), // 记录旧目标以便撤销
+    }
+  );
+
+  await interactionCoordinator.setPreviewTargetAndRecord(activeTabId, target, entry);
+  emit("close");
+};
+
+// 修改后的处理函数：取消预览
+const clearPreview = async () => {
+  const activeTabId = tabStore.activeTabId;
+  if (!activeTabId) {
+    console.error("[SlotContextMenu] Cannot clear preview: No active tab ID found.");
+    emit("close");
+    return;
+  }
+
+  const oldTarget = klona(activePreviewTarget.value);
+  const nodeLabel = oldTarget?.nodeId || '未知节点';
+  const slotLabel = oldTarget?.slotKey || '未知插槽';
+
+
+  const entry: HistoryEntry = createHistoryEntry(
+    "update",
+    "workflow",
+    `取消节点 ${nodeLabel} 输出 ${slotLabel} 的预览目标`,
+    {
+      previousTarget: oldTarget, // 记录旧目标以便撤销
+    }
+  );
+
+  await interactionCoordinator.setPreviewTargetAndRecord(activeTabId, null, entry);
   emit("close");
 };
 </script>

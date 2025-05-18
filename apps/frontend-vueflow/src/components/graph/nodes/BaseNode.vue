@@ -23,6 +23,7 @@ import { useNodeActions } from "@/composables/node/useNodeActions"; // 导入节
 import { useWorkflowInteractionCoordinator } from "@/composables/workflow/useWorkflowInteractionCoordinator"; // 导入工作流交互协调器
 import { useNodeClientScript } from "@/composables/node/useNodeClientScript"; // 导入客户端脚本 Composable
 import Tooltip from "../../common/Tooltip.vue"; // 导入提示框组件
+import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager"; // 导入工作流管理器
 import styles from "./handleStyles.module.css";
 
 const props = defineProps<NodeProps>();
@@ -36,6 +37,7 @@ const executionStore = useExecutionStore(); // 获取执行状态 Store 实例
 const tabStore = useTabStore();
 const { activeTabId } = storeToRefs(tabStore);
 const interactionCoordinator = useWorkflowInteractionCoordinator(); // 获取工作流交互协调器实例
+const workflowManager = useWorkflowManager(); // 获取工作流管理器实例
 
 // 使用节点状态、属性和操作相关的 Composables
 const {
@@ -283,6 +285,60 @@ const tooltipContentForNodeTitle = computed(() => {
   return content || undefined;
 });
 // --- 结束 Tooltip 内容计算 ---
+
+// --- 新增：处理输出 Handle 的 Alt+Click 事件 ---
+const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // outputSlot 类型应为 DisplaySlotInfo，但 DisplaySlotInfo 未导出
+  if (!event.altKey) return; // 只处理 Alt+Click
+
+  event.preventDefault();
+  event.stopPropagation(); // 阻止事件冒泡到 onNodeClick
+
+  const internalId = activeTabId.value;
+  if (!internalId) {
+    console.warn("[BaseNode] 无法处理输出 Alt+Click：没有活动的标签页。");
+    return;
+  }
+
+  // 检查插槽类型，如果是 WILDCARD 或 CONVERTIBLE_ANY，则不允许设置为预览目标
+  if (outputSlot.dataFlowType === DataFlowType.WILDCARD || outputSlot.dataFlowType === DataFlowType.CONVERTIBLE_ANY) {
+    console.warn(`[BaseNode] Alt+Click: 类型为 ${outputSlot.dataFlowType} 的插槽 ${props.id}::${outputSlot.key} 不可被设置为预览目标。`);
+    return;
+  }
+
+  const currentPreviewTarget = workflowManager.activePreviewTarget.value;
+  let newTarget: { nodeId: string; slotKey: string } | null = null;
+  let historySummary = "";
+  const slotKeyStr = String(outputSlot.key);
+
+  if (
+    currentPreviewTarget &&
+    currentPreviewTarget.nodeId === props.id &&
+    currentPreviewTarget.slotKey === slotKeyStr
+  ) {
+    newTarget = null; // 清除预览
+    historySummary = `清除了节点 ${props.label || props.id} 插槽 ${outputSlot.displayName || slotKeyStr} 的预览`;
+  } else {
+    newTarget = { nodeId: props.id, slotKey: slotKeyStr }; // 设置新预览
+    historySummary = `设置节点 ${props.label || props.id} 插槽 ${outputSlot.displayName || slotKeyStr} 为预览目标`;
+  }
+
+  const entry: HistoryEntry = createHistoryEntry(
+    newTarget ? 'set' : 'clear',
+    'previewTarget',
+    historySummary,
+    {
+      previousTarget: currentPreviewTarget ? { ...currentPreviewTarget } : null,
+      newTarget: newTarget ? { ...newTarget } : null,
+      nodeId: props.id,
+      slotKey: slotKeyStr,
+    }
+  );
+
+  interactionCoordinator.setPreviewTargetAndRecord(internalId, newTarget, entry);
+  console.log(`[BaseNode] Alt+Click on Handle: ${historySummary}`);
+};
+// --- 结束新增处理函数 ---
+
 </script>
 
 <template>
@@ -426,7 +482,7 @@ const tooltipContentForNodeTitle = computed(() => {
             </div>
             <!-- 使用 Tooltip 包裹 Handle 以显示类型、输出值，并添加右键菜单事件 -->
             <div
-              class="relative flex-shrink-0"
+              class="relative flex-shrink-0 flex items-center"
               @contextmenu.prevent.stop="emitSlotContextMenu($event, String(output.key), 'source')"
             >
               <!-- Handle 的容器 -->
@@ -472,7 +528,16 @@ const tooltipContentForNodeTitle = computed(() => {
                     styles.handleRight,
                     getHandleTypeClass(output.dataFlowType),
                     isAnyType(output.dataFlowType) && styles.handleAny, // 条件性添加类名
+                    (
+                      workflowManager.activePreviewTarget.value?.nodeId === props.id &&
+                      workflowManager.activePreviewTarget.value?.slotKey === String(output.key) &&
+                      output.dataFlowType !== DataFlowType.WILDCARD && // 新增条件：非 WILDCARD
+                      output.dataFlowType !== DataFlowType.CONVERTIBLE_ANY // 新增条件：非 CONVERTIBLE_ANY
+                    )
+                      ? styles.handleAsPreviewIcon // 应用眼睛图标样式
+                      : {}
                   ]"
+                  @click="handleOutputAltClick(output, $event)"
                 />
               </Tooltip>
             </div>

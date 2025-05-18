@@ -2,7 +2,7 @@
 import { nextTick } from "vue";
 import { klona } from "klona/full";
 import type { Node as VueFlowNode, Edge } from "@vue-flow/core";
-import { type GroupSlotInfo, type HistoryEntry } from "@comfytavern/types";
+import { type GroupSlotInfo, type HistoryEntry, DataFlowType } from "@comfytavern/types"; // 导入 DataFlowType
 import { useWorkflowManager } from "./useWorkflowManager";
 import { useWorkflowHistory } from "./useWorkflowHistory";
 import { useWorkflowViewManagement } from "./useWorkflowViewManagement";
@@ -871,6 +871,102 @@ export function useWorkflowInteractionCoordinator() {
     }
   }
 
+  /**
+   * 设置或清除工作流的预览目标，并记录历史。
+   * @param internalId - 标签页的内部 ID。
+   * @param target - 预览目标对象 { nodeId: string, slotKey: string } 或 null 来清除。
+   * @param entry - 描述此操作的历史记录条目。
+   */
+  async function setPreviewTargetAndRecord(
+    internalId: string,
+    target: { nodeId: string; slotKey: string } | null,
+    entry: HistoryEntry
+  ) {
+    if (!internalId) {
+      console.warn("[InteractionCoordinator:setPreviewTargetAndRecord] 无效的 internalId。");
+      return;
+    }
+
+    // 如果正在尝试设置目标 (而不是清除)
+    if (target) {
+      const currentWorkflowState = workflowManager.getCurrentSnapshot(internalId); // 修正：使用 getCurrentSnapshot
+      if (currentWorkflowState?.elements) {
+        const targetNode = currentWorkflowState.elements.find((el: VueFlowNode | Edge) => el.id === target.nodeId && !("source" in el)) as VueFlowNode | undefined; // 修正：添加 el 类型
+        if (targetNode) {
+          let slotType: string | undefined;
+          // 检查是否为 GroupInput 或 GroupOutput 节点，它们从 workflowData 获取接口定义
+          // 注意：GroupInput 节点的输出 Handle 代表其在 workflowData.interfaceInputs 中的定义
+          // GroupOutput 节点的输出 Handle 代表其在 workflowData.interfaceOutputs 中的定义
+          if (targetNode.type === 'core:GroupInput') {
+            const workflowData = currentWorkflowState.workflowData;
+            // GroupInput 节点的输出 Handle (source handle) 对应于 interfaceInputs
+            if (workflowData?.interfaceInputs) { // 确保 interfaceInputs 存在
+              slotType = workflowData.interfaceInputs[target.slotKey]?.dataFlowType; // 使用可选链
+            }
+          } else if (targetNode.type === 'core:GroupOutput') {
+             // GroupOutput 节点没有输出 Handle (source handle) 可供预览，预览目标通常是普通节点的输出或 GroupInput 的输出
+             // 此处逻辑可能需要审阅，因为 GroupOutput 的输出是连接到其 target Handle 的
+             // 但如果确实要支持预览 GroupOutput 的“概念性”输出，则需要从 interfaceOutputs 查找
+             // 假设这里的 target.slotKey 指的是 GroupOutput 节点上代表其最终输出的那个 Handle ID
+             // 这通常是其在 workflowData.interfaceOutputs 中的 key
+            const workflowData = currentWorkflowState.workflowData;
+            if (workflowData?.interfaceOutputs) { // 确保 interfaceOutputs 存在
+              slotType = workflowData.interfaceOutputs[target.slotKey]?.dataFlowType; // 使用可选链
+            }
+          } else {
+            // 普通节点的输出插槽
+            const outputDefinition = targetNode.data?.outputSchema?.[target.slotKey] || targetNode.data?.outputs?.[target.slotKey];
+            slotType = outputDefinition?.dataFlowType;
+          }
+
+          if (slotType === DataFlowType.WILDCARD || slotType === DataFlowType.CONVERTIBLE_ANY) {
+            console.warn(`[InteractionCoordinator:setPreviewTargetAndRecord] 尝试将类型为 ${slotType} 的插槽 ${target.nodeId}::${target.slotKey} 设置为预览目标，已阻止。`);
+            return; // 阻止设置
+          }
+        } else {
+          console.warn(`[InteractionCoordinator:setPreviewTargetAndRecord] 尝试设置预览目标时未找到节点 ${target.nodeId}。`);
+        }
+      }
+    }
+
+    // 1. 获取当前快照
+    const currentSnapshot = _getCurrentSnapshot(internalId);
+    if (!currentSnapshot || !currentSnapshot.workflowData) {
+      console.error(`[setPreviewTargetAndRecord] 无法获取标签页 ${internalId} 的当前快照或 workflowData。`);
+      return;
+    }
+
+    // 检查预览目标是否真的发生了变化
+    const oldTargetJson = JSON.stringify(currentSnapshot.workflowData.previewTarget ?? null);
+    const newTargetJson = JSON.stringify(target ?? null);
+
+    if (oldTargetJson === newTargetJson) {
+      console.debug(`[setPreviewTargetAndRecord] 标签页 ${internalId} 的预览目标未改变。跳过。`);
+      return;
+    }
+
+    // 2. 准备下一个状态快照
+    const nextSnapshot = klona(currentSnapshot);
+    if (nextSnapshot.workflowData) { // Type guard
+        nextSnapshot.workflowData.previewTarget = target ? klona(target) : null;
+    }
+
+
+    // 3. 应用状态更新 (通过 workflowManager)
+    // workflowManager.setPreviewTarget 内部会处理脏状态标记
+    await workflowManager.setPreviewTarget(internalId, target);
+
+    // 4. 记录历史
+    _recordHistory(internalId, entry, nextSnapshot);
+
+    // 5. 触发预览 (可选，根据需求)
+    // 当前设计是设置目标时不触发，而是后续节点值变化时触发
+    // if (isPreviewEnabled.value && target) {
+    //   requestPreviewExecution(internalId, target.nodeId, target.slotKey, /* 获取当前值? */);
+    // }
+    console.debug(`[InteractionCoordinator] 已为标签页 ${internalId} 设置预览目标并记录历史: ${newTargetJson}`);
+  }
+
 
   // 导出公共接口
   return {
@@ -888,6 +984,7 @@ export function useWorkflowInteractionCoordinator() {
     removeEdgesByHandleAndRecord,         // 按句柄删除边
     updateWorkflowNameAndRecord,          // 更新工作流名称
     updateWorkflowDescriptionAndRecord,   // 更新工作流描述
+    setPreviewTargetAndRecord,            // 新增：设置/清除预览目标并记录历史
 
     // --- 预览相关 (来自 useWorkflowPreview) ---
     isPreviewEnabled, // 导出从 useWorkflowPreview 获取的预览状态

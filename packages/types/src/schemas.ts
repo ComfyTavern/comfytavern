@@ -313,6 +313,14 @@ const BaseWorkflowObjectSchema = z.object({
    * 用于处理 NodeGroup 类型的节点。
    */
   referencedWorkflows: z.array(z.string()).optional(),
+  /**
+   * 标记用于预览的输出插槽。
+   * 对象包含 nodeId 和 slotKey，或者为 null 表示没有预览目标。
+   */
+  previewTarget: z.object({
+    nodeId: z.string(),
+    slotKey: z.string(),
+  }).nullable().optional(), // nullable() 允许值为 null, optional() 允许字段不存在
 });
 
 /**

@@ -59,6 +59,12 @@ function createWorkflowManager() {
   const activeTabId = computed(() => tabStore.activeTabId);
   const getAllTabStates = computed(() => tabStates);
 
+  const activePreviewTarget = computed(() => {
+    const state = getActiveTabState();
+    // Make sure to access previewTarget from workflowData
+    return state?.workflowData?.previewTarget ?? null;
+  });
+
   // --- 内部转换辅助函数 ---
   /**
    * 将存储格式的节点转换为 VueFlow 节点格式。
@@ -875,6 +881,52 @@ function createWorkflowManager() {
   }
   // --- 结束新增 ---
 
+  // --- 新增：管理预览目标 ---
+  /**
+   * 设置或清除当前活动工作流的预览目标。
+   * @param internalId 目标标签页的内部 ID。
+   * @param target 预览目标对象 { nodeId: string, slotKey: string } 或 null 来清除。
+   */
+  async function setPreviewTarget(
+    internalId: string,
+    target: { nodeId: string; slotKey: string } | null
+  ) {
+    const state = await ensureTabState(internalId, false); // 确保状态存在
+    if (!state || !state.workflowData) {
+      console.warn(
+        `[setPreviewTarget] 无法设置预览目标，未找到标签页 ${internalId} 的状态或 workflowData`
+      );
+      return;
+    }
+
+    // 比较新旧值，只有在发生变化时才更新并标记为脏
+    const oldTargetJson = JSON.stringify(state.workflowData.previewTarget ?? null);
+    const newTargetJson = JSON.stringify(target ?? null);
+
+    if (oldTargetJson !== newTargetJson) {
+      // console.debug(
+      //   `[setPreviewTarget] 正在更新标签页 ${internalId} 的预览目标从 ${oldTargetJson} 到 ${newTargetJson}`
+      // );
+      state.workflowData.previewTarget = target ? klona(target) : null; // 深拷贝或设为 null
+      markAsDirty(internalId);
+      // 注意：历史记录应由调用此函数的协调器或交互处理器来管理
+    } else {
+      // console.debug(
+      //   `[setPreviewTarget] 标签页 ${internalId} 的预览目标未更改 (${newTargetJson})。跳过更新。`
+      // );
+    }
+  }
+
+  /**
+   * 清除当前活动工作流的预览目标。
+   * @param internalId 目标标签页的内部 ID。
+   */
+  async function clearPreviewTarget(internalId: string) {
+    // console.debug(`[clearPreviewTarget] 正在清除标签页 ${internalId} 的预览目标。`);
+    await setPreviewTarget(internalId, null);
+  }
+  // --- 结束新增预览目标管理 ---
+
   // --- 返回公共 API ---
   return {
     // Getters / 计算属性
@@ -886,6 +938,7 @@ function createWorkflowManager() {
     isTabLoaded,
     getAllTabStates, // 指向响应式 Map 的计算属性引用
     getCurrentSnapshot, // <-- 添加新方法
+    activePreviewTarget, // <-- 添加新的计算属性
     // 移除了 getHistoryState 和 historyActionCounter
 
     // 状态操作
@@ -903,6 +956,8 @@ function createWorkflowManager() {
     updateWorkflowName,
     updateWorkflowDescription,
     updateNodeDimensions, // <-- 导出新方法
+    setPreviewTarget, // <-- 导出新方法
+    clearPreviewTarget, // <-- 导出新方法
 
     // 移除了 undo 和 redo
 

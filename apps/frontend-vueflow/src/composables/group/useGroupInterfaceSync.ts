@@ -1,5 +1,5 @@
 import { useWorkflowStore } from '@/stores/workflowStore';
-import type { GroupSlotInfo } from '@comfytavern/types';
+import { type GroupSlotInfo, DataFlowType } from '@comfytavern/types'; // 导入 DataFlowType
 
 /**
  * 用于同步 GroupInput/Output 节点插槽更改（由于 CONVERTIBLE_ANY 连接）
@@ -27,7 +27,7 @@ export function useGroupInterfaceSync() {
   ): { inputs: Record<string, GroupSlotInfo>, outputs: Record<string, GroupSlotInfo> } | null => {
   // // console.debug(`[SyncInterface] syncInterfaceSlotFromConnection called. tabId: ${tabId}, nodeId: ${nodeId}, slotKey: ${slotKey}, direction: ${direction}, newSlotInfo:`, JSON.parse(JSON.stringify(newSlotInfo)));
   console.log(
-    `[SyncInterface] Attempting sync for ${direction} slot '${slotKey}' on node '${nodeId}' in tab '${tabId}' with new type: ${newSlotInfo.type}` // 保留为日志以确保清晰
+    `[SyncInterface] Attempting sync for ${direction} slot '${slotKey}' on node '${nodeId}' in tab '${tabId}' with new dataflowtype: ${newSlotInfo.dataFlowType}` // 保留为日志以确保清晰
   );
 
     // 使用 store 的方法获取当前选项卡状态
@@ -68,10 +68,10 @@ export function useGroupInterfaceSync() {
         newDynamicSlotKey = nextSlotKey;
         currentInputs[newDynamicSlotKey] = {
           key: newDynamicSlotKey,
-          type: 'CONVERTIBLE_ANY',
+          dataFlowType: DataFlowType.CONVERTIBLE_ANY, // 修正：使用 dataFlowType
           displayName: '*',
           customDescription: '这是一个**可转换**的插槽，初始类型为 `CONVERTIBLE_ANY`。\n\n- 连接后，其类型和名称将根据连接自动更新。\n- 会生成一个新的**空心插槽**。\n- 可在**侧边栏**编辑接口属性。',
-          allowDynamicType: true, // <-- 添加缺失的属性
+          allowDynamicType: true,
         };
         // // console.debug(`[SyncInterface] Added new dynamic input slot '${newDynamicSlotKey}' to central inputs.`);
         // // console.debug(`[SyncInterface] Added new dynamic input slot '${newDynamicSlotKey}'. Current inputs:`, JSON.parse(JSON.stringify(currentInputs)));
@@ -92,10 +92,10 @@ export function useGroupInterfaceSync() {
         newDynamicSlotKey = nextSlotKey;
         currentOutputs[newDynamicSlotKey] = {
           key: newDynamicSlotKey,
-          type: 'CONVERTIBLE_ANY',
+          dataFlowType: DataFlowType.CONVERTIBLE_ANY, // 修正：使用 dataFlowType
           displayName: '*',
           customDescription: '这是一个**可转换**的插槽，初始类型为 `CONVERTIBLE_ANY`。\n\n- 连接后，其类型和名称将根据连接自动更新。\n- 会生成一个新的**空心插槽**。\n- 可在**侧边栏**编辑接口属性。',
-          allowDynamicType: true, // <-- 添加缺失的属性
+          allowDynamicType: true,
         };
         // // console.debug(`[SyncInterface] Added new dynamic output slot '${newDynamicSlotKey}' to central outputs.`);
         // // console.debug(`[SyncInterface] Added new dynamic output slot '${newDynamicSlotKey}'. Current outputs:`, JSON.parse(JSON.stringify(currentOutputs)));

@@ -88,6 +88,15 @@
   cursor: e-resize !important;
 }
 
+/* 新增：预览图标状态下的位置调整 */
+.handleAsPreviewIcon.handleLeft {
+  left: -9px !important; /* 18px width / 2 = 9px */
+}
+.handleAsPreviewIcon.handleRight {
+  right: -9px !important; /* 18px width / 2 = 9px */
+}
+
+
 /* Handle 悬停效果 */
 .handle:hover {
   /* 移除 handle-any 的悬停背景覆盖 (通过特异性) */
@@ -146,3 +155,36 @@
 /* BUTTON: 不显示 Handle，无需样式 */
 /* WILDCARD: 使用 .handleAny 样式 */
 /* CONVERTIBLE_ANY: 使用 .handleAny 样式 */
+
+/* 新增：当 Handle 作为预览图标时的样式 */
+.handleAsPreviewIcon {
+  width: 18px !important; /* 增大图标尺寸 */
+  height: 18px !important; /* 增大图标尺寸 */
+  background-color: transparent !important; /* 强制背景透明 */
+  border-color: transparent !important; /* 强制边框透明 */
+  border-width: 0 !important; /* 强制无边框宽度 */
+  border-style: none !important; /* 强制无边框样式 */
+  box-shadow: none !important; /* 移除可能的阴影 */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%233B82F6' class='w-6 h-6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z' /%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z' /%3E%3C/svg%3E%0A") !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: contain !important; /* 确保图标完整显示 */
+  border-radius: 0 !important; /* 图标通常不需要圆角 */
+  /* cursor: default !important; */ /* 移除这个，让 Handle 自身的 cursor 生效以允许拖拽 */
+  /* 确保覆盖所有可能的 ::before 和 ::after 伪元素样式 */
+  /* 通常不需要，但以防万一 */
+}
+.handleAsPreviewIcon::before,
+.handleAsPreviewIcon::after {
+  display: none !important;
+}
+
+
+:global(.dark) .handleAsPreviewIcon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%2360A5FA' class='w-6 h-6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z' /%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z' /%3E%3C/svg%3E%0A") !important;
+  background-color: transparent !important; /* 再次确保暗色模式背景透明 */
+  border-color: transparent !important; /* 再次确保暗色模式边框透明 */
+}
+
+/* 移除旧的隐藏样式 */
+/* .handleHiddenWhenPreviewing { ... } */

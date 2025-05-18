@@ -87,7 +87,9 @@
 -   此状态随工作流一同保存和加载。
 
 #### 2.3.4. UI 表现
--   当一个输出插槽被标记为预览目标时，应在其旁边或外部显示一个清晰的视觉指示器（例如，“眼睛”图标）。
+-   当一个输出插槽被标记为预览目标（即其 `nodeId` 和 `slotKey` 与 `workflowManager.activePreviewTarget` 的值匹配）时，该插槽的 Handle 在画布上应有清晰的视觉指示器。
+    -   **实现方式**: 在 [`BaseNode.vue`](../../apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue) 中，通过比较当前输出插槽的 `nodeId` (来自 `props.id`) 和 `slotKey` 与 `workflowManager.activePreviewTarget.value` 的对应值，动态添加一个特定的 CSS 类 (例如 `styles.handlePreviewing`) 到 Handle 组件上。
+    -   **样式**: 此 CSS 类在 [`apps/frontend-vueflow/src/components/graph/nodes/handleStyles.module.css`](../../apps/frontend-vueflow/src/components/graph/nodes/handleStyles.module.css) 中定义，可以表现为光晕、边框高亮或其他醒目的视觉效果。
 -   右侧预览面板 ([`RightPreviewPanel.vue`](DesignDocs/architecture/floating-preview-editor-design.md:19)) 始终反映 `previewTarget` 的内容。
 
 ### 2.4. 节点内部输入控件 (`BaseNode.vue` / 特定节点类型组件中)
@@ -177,7 +179,10 @@ Markdown 渲染效果，代码/JSON 高亮格式化（JSON 应支持折叠），
 3.  **插槽预览交互实现**:
     *   在输出插槽的右键菜单 ([`SlotContextMenu.vue`](apps/frontend-vueflow/src/components/graph/menus/SlotContextMenu.vue:0)) 中添加“设为预览”/“取消预览”功能。
     *   在 ([`useCanvasKeyboardShortcuts.ts`](apps/frontend-vueflow/src/composables/canvas/useCanvasKeyboardShortcuts.ts:0) 或新 composable) 中实现快捷键标记预览的逻辑。
-    *   在节点组件 ([`BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue:0) 或插槽子组件) 中实现预览标记的视觉反馈（例如“眼睛”图标）。
+    *   **预览标记视觉反馈**:
+        *   在 [`BaseNode.vue`](../../apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue) 中，使其能够响应 `workflowManager.activePreviewTarget` 的变化。
+        *   当某个输出插槽的 `nodeId` 和 `slotKey` 与 `activePreviewTarget.value` 匹配时，为其 Handle 组件动态添加一个特定的 CSS 类 (例如 `styles.handlePreviewing`)。
+        *   在 [`apps/frontend-vueflow/src/components/graph/nodes/handleStyles.module.css`](../../apps/frontend-vueflow/src/components/graph/nodes/handleStyles.module.css) 中定义 `styles.handlePreviewing` 样式，以提供清晰的视觉指示（如光晕或边框高亮）。
 4.  **实现右侧专用预览面板 (`RightPreviewPanel.vue`)**:
     *   基础布局、使其能响应 `previewTarget` 状态变化。
     *   实现从 `previewTarget` 获取数据并进行内容渲染（多类型支持，包括图片）。

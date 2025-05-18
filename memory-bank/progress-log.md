@@ -159,6 +159,34 @@
     - **完成日期: 2025/05/18**
     - **备注: Architect 模式已完成UI/UX的重新规划。新的设计方案基于“右侧专用预览面板”和“底部弹出式编辑面板”，详细设计文档位于 [`DesignDocs/architecture/floating-preview-editor-design.md`](../DesignDocs/architecture/floating-preview-editor-design.md)。此方案整合了原 [`DesignDocs/architecture/floating-text-preview-plan.md`](../DesignDocs/architecture/floating-text-preview-plan.md) 的核心思想并结合了用户进一步的设想。详细思考和决策过程记录在 [`memory-bank/active-context.md`](./memory-bank/active-context.md) 中 (现已清空，关键信息待NexusCore归档)。**
 
+- **任务 4.3.1 (UI实现 - 设计文档步骤1)**: 代码编辑器组件增强。
+    - **状态: ✅ 完成**
+    - **分配给: 💻 Code 模式 (任务ID: SLOT_TYPE_REFACTOR_UI_4_3_1)**
+    - **开始日期: 2025/05/18**
+    - **完成日期: 2025/05/18**
+    - **备注: 成功在 [`apps/frontend-vueflow/src/components/graph/inputs/CodeInput.vue`](../apps/frontend-vueflow/src/components/graph/inputs/CodeInput.vue) 中集成了 `@codemirror/search` (顶部搜索框) 和针对 JSON 的语法高亮及基础校验 (通过 `@codemirror/lint` 和 `@codemirror/lang-json`)。依赖已添加到 `package.json`。用户反馈指出，更优方案可能是创建新组件或将此增强逻辑主要用于未来的 `BottomEditorPanel.vue`，以避免影响 `CodeInput.vue` 的简单用途。此反馈已记录，将在后续决策中考虑。详细日志见 [`memory-bank/active-context.md`](./active-context.md) (现已归档至此)。**
+
+- **任务 4.3.2 (UI实现 - 设计文档步骤2)**: 核心类型与状态管理更新 - 添加 `previewTarget`。
+    - **状态: ✅ 完成**
+    - **分配给: 💻 Code 模式 (任务ID: SLOT_TYPE_REFACTOR_UI_4_3_2)**
+    - **开始日期: 2025/05/18**
+    - **完成日期: 2025/05/18**
+    - **备注: 成功在 [`packages/types/src/schemas.ts`](../packages/types/src/schemas.ts) 的 `BaseWorkflowObjectSchema` 中添加了 `previewTarget: z.object({ nodeId: z.string(), slotKey: z.string() }).nullable().optional()` 字段。同时，在 [`apps/frontend-vueflow/src/composables/workflow/useWorkflowManager.ts`](../apps/frontend-vueflow/src/composables/workflow/useWorkflowManager.ts) 中添加了 `setPreviewTarget`、`clearPreviewTarget` 函数以及 `activePreviewTarget` 计算属性，用于管理和读取预览目标状态。历史记录集成通过现有快照机制间接支持。详细日志见 [`memory-bank/active-context.md`](./active-context.md) (现已归档至此)。**
+
+- **任务 4.3.3 (UI实现 - 设计文档步骤3.a)**: 插槽预览交互实现 - 右键菜单。
+    - **状态: ✅ 完成**
+    - **分配给: 💻 Code 模式 (任务ID: SLOT_TYPE_REFACTOR_UI_4_3_3)**
+    - **开始日期: 2025/05/18**
+    - **完成日期: 2025/05/18**
+    - **备注: 用户确认此任务已通过新子任务完成并修复。主要涉及修改 [`apps/frontend-vueflow/src/components/graph/menus/SlotContextMenu.vue`](../apps/frontend-vueflow/src/components/graph/menus/SlotContextMenu.vue) 以支持输出插槽的“设为预览”/“取消预览”功能，并与 [`apps/frontend-vueflow/src/composables/workflow/useWorkflowInteractionCoordinator.ts`](../apps/frontend-vueflow/src/composables/workflow/useWorkflowInteractionCoordinator.ts) 中的 `setPreviewTargetAndRecord` 方法集成以处理状态更新和历史记录。**
+
+- **任务 4.3.4 (UI实现 - 设计文档步骤3.b)**: 插槽预览交互实现 - 快捷键交互。
+    - **状态: ✅ 完成**
+    - **分配给: 💻 Code 模式 (任务ID: SLOT_TYPE_REFACTOR_UI_4_3_4)**
+    - **开始日期: 2025/05/18**
+    - **完成日期: 2025/05/18**
+    - **备注: 成功在 [`apps/frontend-vueflow/src/composables/canvas/useCanvasKeyboardShortcuts.ts`](../apps/frontend-vueflow/src/composables/canvas/useCanvasKeyboardShortcuts.ts) 中实现了通过 Alt/Option + 点击节点或输出插槽来标记或取消标记预览目标的功能。集成了 `useWorkflowManager`、`useWorkflowInteractionCoordinator` 和 `useNodeStore`，并调用了 `interactionCoordinator.setPreviewTargetAndRecord()`。详细日志见 [`memory-bank/active-context.md`](./active-context.md) (现已归档至此)。**
+
 ---
 
 ## 阶段五：文档与测试

@@ -1,12 +1,15 @@
 import { onMounted, onUnmounted } from "vue";
-import { useVueFlow, type Node, type Edge } from "@vue-flow/core"; // 保留 useVueFlow，添加类型
+import { useVueFlow, type Node, type Edge, type NodeMouseEvent } from "@vue-flow/core"; // 保留 useVueFlow，添加类型
 import { useWorkflowStore } from "@/stores/workflowStore"; // <-- 导入 WorkflowStore
 import { useTabStore } from "@/stores/tabStore"; // <-- 导入 TabStore
 import { v4 as uuidv4 } from "uuid"; // 导入 uuid
 import { deepClone } from "@/utils/deepClone"; // 用于深拷贝的辅助函数
 import { useWorkflowGrouping } from "../group/useWorkflowGrouping"; // <-- 导入分组 composable
 import { createHistoryEntry } from "@comfytavern/utils"; // <-- 导入 createHistoryEntry
-// import { useWorkflowManager } from "./useWorkflowManager"; // <-- 移除工作流管理器导入
+import { type DataFlowTypeName, type HistoryEntry, type OutputDefinition as OriginalOutputDefinition, DataFlowType, type GroupSlotInfo } from "@comfytavern/types"; // <-- 从 types 导入 HistoryEntry, OutputDefinition, DataFlowType 和 GroupSlotInfo
+import { useWorkflowManager } from "../workflow/useWorkflowManager";
+import { useWorkflowInteractionCoordinator } from "../workflow/useWorkflowInteractionCoordinator";
+import { useNodeStore } from "@/stores/nodeStore";
 /**
  * 用于处理 VueFlow 画布上键盘快捷键的 Composable。
  */
@@ -24,11 +27,14 @@ export function useCanvasKeyboardShortcuts() {
     addNodes: vueFlowAddNodes,
     addEdges: vueFlowAddEdges,
     project,
+    onNodeClick, // 添加 onNodeClick
   } = useVueFlow(); // 移除了 getViewport，因为它没有被直接使用
   const tabStore = useTabStore(); // <-- 获取 TabStore 实例
   const workflowStore = useWorkflowStore(); // <-- 获取 WorkflowStore 实例
   const { groupSelectedNodes: performGrouping } = useWorkflowGrouping(); // <-- 获取分组函数
-  // const workflowManager = useWorkflowManager(); // <-- 移除工作流管理器实例
+  const workflowManager = useWorkflowManager();
+  const interactionCoordinator = useWorkflowInteractionCoordinator();
+  const nodeStore = useNodeStore();
 
   // 本地剪贴板，用于存储复制的节点和边
   let clipboardData: { nodes: Node[]; edges: Edge[] } | null = null;
@@ -389,15 +395,122 @@ export function useCanvasKeyboardShortcuts() {
     // 此处无需检查返回值或标记为脏
   };
 
+  // 处理 Alt + 点击节点或插槽的逻辑
+  const handleNodeAltClick = async ({ event, node }: NodeMouseEvent) => {
+    if (!event.altKey) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const internalId = tabStore.activeTabId;
+    if (!internalId) {
+      console.warn("无法处理 Alt+点击：没有活动的标签页。");
+      return;
+    }
+
+    const currentPreviewTarget = workflowManager.activePreviewTarget.value;
+    let newTarget: { nodeId: string; slotKey: string } | null = null;
+    let historySummary = "";
+
+    // 假设 BaseNode.vue 中的 handleOutputAltClick 已经处理了精确的 Handle 点击并停止了事件传播。
+    // 因此，如果事件到达这里且 event.altKey 为真，我们执行节点级别的循环预览逻辑。
+    // console.log(`[CanvasKeyboardShortcuts] handleNodeAltClick for node ${node.id}. BaseNode should have handled precise alt-clicks on handles.`);
+
+    const nodeDef = nodeStore.getNodeDefinitionByFullType(node.type as string);
+    
+    // 检查节点类型是否为 GroupOutput，如果是，则不进行循环预览，因为 GroupOutput 通常没有可直接点击预览的“输出”Handle
+    // 它们的“输出”是通过连接到其输入Handle (target handle) 来定义的。
+    if (node.type === 'core:GroupOutput') {
+        console.log(`[CanvasKeyboardShortcuts] Alt+Click on GroupOutput node ${node.id}. No cycle preview for GroupOutput.`);
+        return;
+    }
+
+    // 确保 nodeDef 和 outputs 存在 (对于 GroupInput，其 "outputs" 来自 interfaceInputs)
+    let rawOutputSlots: Record<string, OriginalOutputDefinition | GroupSlotInfo> | undefined;
+    if (node.type === 'core:GroupInput') {
+        const workflowData = workflowManager.getWorkflowData(internalId);
+        rawOutputSlots = workflowData?.interfaceInputs;
+    } else {
+        rawOutputSlots = nodeDef?.outputs;
+    }
+
+    if (!nodeDef || !rawOutputSlots || Object.keys(rawOutputSlots).length === 0) {
+      console.log(`[CanvasKeyboardShortcuts] 节点 ${node.label || node.id} (${node.type}) 没有有效的输出插槽定义，无法循环设置预览。`);
+      return;
+    }
+
+    interface ProcessedOutputDefinition extends OriginalOutputDefinition {
+      key: string;
+      dataFlowType: DataFlowTypeName; // 确保 dataFlowType 存在且为正确类型
+    }
+
+    const outputSlots: ProcessedOutputDefinition[] = Object.entries(
+      rawOutputSlots
+    )
+    .map(([key, def]) => ({
+        ...def,
+        key,
+        // 确保 dataFlowType 存在，对于 GroupSlotInfo 它直接存在，对于 OriginalOutputDefinition 它也应该存在
+        // 假设 def.dataFlowType 总是根据类型定义存在
+        dataFlowType: def.dataFlowType
+    } as ProcessedOutputDefinition))
+    .filter(slot => slot.dataFlowType && slot.dataFlowType !== DataFlowType.WILDCARD && slot.dataFlowType !== DataFlowType.CONVERTIBLE_ANY); // 确保 slot.dataFlowType 存在再比较
+
+
+    if (outputSlots.length === 0) {
+      console.log(`[CanvasKeyboardShortcuts] 节点 ${node.label || node.id} (${node.type}) 处理后没有可供循环预览的输出插槽。`);
+      return;
+    }
+
+    if (currentPreviewTarget && currentPreviewTarget.nodeId === node.id) {
+      const currentIndex = outputSlots.findIndex(
+        (slot) => slot.key === currentPreviewTarget.slotKey
+      );
+      if (currentIndex === -1) {
+        newTarget = { nodeId: node.id, slotKey: outputSlots[0]!.key };
+        historySummary = `设置节点 ${node.label || node.id} 插槽 ${outputSlots[0]!.displayName || outputSlots[0]!.key} 为预览目标 (前目标无效或不可预览)`;
+      } else if (currentIndex < outputSlots.length - 1) {
+        newTarget = { nodeId: node.id, slotKey: outputSlots[currentIndex + 1]!.key };
+        historySummary = `切换预览到节点 ${node.label || node.id} 插槽 ${outputSlots[currentIndex + 1]!.displayName || outputSlots[currentIndex + 1]!.key}`;
+      } else {
+        newTarget = null;
+        historySummary = `清除了节点 ${node.label || node.id} 的预览 (已到末尾)`;
+      }
+    } else {
+      newTarget = { nodeId: node.id, slotKey: outputSlots[0]!.key };
+      historySummary = `设置节点 ${node.label || node.id} 插槽 ${outputSlots[0]!.displayName || outputSlots[0]!.key} 为预览目标`;
+    }
+
+    const entry: HistoryEntry = createHistoryEntry(
+      newTarget ? 'set' : 'clear',
+      'previewTarget',
+      historySummary,
+      {
+        previousTarget: currentPreviewTarget ? { ...currentPreviewTarget } : null,
+        newTarget: newTarget ? { ...newTarget } : null,
+        nodeId: node.id,
+        ...(newTarget && { slotKey: newTarget.slotKey }),
+      }
+    );
+    await interactionCoordinator.setPreviewTargetAndRecord(internalId, newTarget, entry);
+    console.log(`Alt+Click (Node Cycle on ${node.label || node.id}): ${historySummary}`);
+  };
+
+
   // 在组件挂载时添加监听器
   onMounted(() => {
     // 将监听器添加到 document 上，确保全局捕获
     document.addEventListener("keydown", handleKeyDown);
+    // 监听节点点击事件以处理 Alt+Click
+    onNodeClick(handleNodeAltClick);
   });
 
   // 在组件卸载时移除监听器
   onUnmounted(() => {
     document.removeEventListener("keydown", handleKeyDown);
+    // 注意：VueFlow 的 onNodeClick 返回的函数用于取消监听，但这里我们没有存储它。
+    // 如果需要精确移除，应该存储 onNodeClick 的返回值并在 unmounted 时调用。
+    // 但通常 VueFlow 实例销毁时会自动清理。
   });
 
   // 返回需要在组件中使用的方法
