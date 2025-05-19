@@ -18,7 +18,11 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "typescript": "^5.0.0"
+    "typescript": "~5.8.0",
+    "npm-run-all2": "^7.0.2",
+    "vite": "^6.2.1",
+    "vue-tsc": "^2.2.8",
+    "vitest": "^3.0.8"
   },
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.3",
