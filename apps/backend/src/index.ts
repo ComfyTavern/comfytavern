@@ -46,9 +46,16 @@ import { executionApiRoutes } from './routes/executionRoutes';
 // 加载节点
 // 获取当前文件的目录 (ES Module)
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = dirname(__filename); // This will be apps/backend/src when running src/index.ts
 
-await NodeLoader.loadNodes(join(__dirname, 'nodes'));
+// Since we'll run src/index.ts directly, __dirname is already the correct base for src/nodes
+const nodesPath = join(__dirname, 'nodes');
+
+// 保留一些日志以供确认，但可以简化
+console.log(`[ComfyTavern Backend] NODE_ENV (for informational purposes): ${process.env.NODE_ENV}`);
+console.log(`[ComfyTavern Backend] Running from __dirname: ${__dirname}`);
+console.log(`[ComfyTavern Backend] Path for NodeLoader.loadNodes: ${nodesPath}`);
+await NodeLoader.loadNodes(nodesPath);
 // 工作流和项目目录从 config.ts 导入
 // const workflowsDir = WORKFLOWS_DIR; // 使用导入的常量
 // const projectsBaseDir = PROJECTS_BASE_DIR; // 使用导入的常量

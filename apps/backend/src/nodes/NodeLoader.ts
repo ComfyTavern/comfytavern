@@ -44,6 +44,7 @@ export class NodeLoader {
         } else if (
           entry.isFile() &&
           entry.name.endsWith('.ts') &&
+          !entry.name.endsWith('.d.ts') && // 显式排除 .d.ts 文件
           !['NodeLoader.ts', 'NodeManager.ts', 'index.ts'].includes(entry.name)
         ) {
           // 加载并注册独立的节点文件

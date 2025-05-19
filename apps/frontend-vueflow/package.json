@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "bun exec run-p type-check \"build-only {@}\" --",
-    "preview": "vite preview",
+    "dev": "bunx vite",
+    "build": "echo \"Frontend build orchestrated by root package.json\"",
+    "preview": "bunx vite preview",
     "test:unit": "vitest",
-    "build-only": "vite build",
-    "type-check": "vue-tsc --build"
+    "build-only": "bunx vite build",
+    "type-check": "bunx vue-tsc --build"
   },
   "dependencies": {
     "@babel/runtime": "^7.27.1",
@@ -67,6 +67,7 @@
     "@vue/tsconfig": "^0.7.0",
     "daisyui": "^5.0.12",
     "jsdom": "^26.0.0",
-    "vite-plugin-vue-devtools": "^7.7.2"
+    "vite-plugin-vue-devtools": "^7.7.2",
+    "vite-plugin-node-polyfills": "^0.22.0"
   }
 }
