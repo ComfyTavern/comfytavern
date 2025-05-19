@@ -1,5 +1,5 @@
 <template>
-  <div class="ct-tabbed-editor-host">
+  <div class="ct-tabbed-editor-host" :class="{ dark: themeStore.isDark }">
     <div class="ct-tab-bar">
       <div
         v-for="tab in openTabs"
@@ -38,6 +38,8 @@
 import { ref, watch, nextTick, onMounted, reactive } from 'vue';
 import RichCodeEditor from './RichCodeEditor.vue';
 import type { TabData } from '@/types/editorTypes';
+import { useThemeStore } from '@/stores/theme'; // 咕咕：导入主题存储
+// import { storeToRefs } from 'pinia'; // 咕咕：移除未使用的导入
 
 // Props
 const props = defineProps<{
@@ -57,6 +59,8 @@ const emit = defineEmits<{
 const openTabs = ref<TabData[]>([]);
 const activeTabIdInternal = ref<string | undefined>(undefined);
 const editorRefs = reactive<Record<string, InstanceType<typeof RichCodeEditor> | null>>({});
+const themeStore = useThemeStore(); // 咕咕：获取主题存储实例
+// const { isDark } = storeToRefs(themeStore); // 咕咕：如果需要在模板外使用 isDark，可以解构
 
 // 初始化
 onMounted(() => {
@@ -182,11 +186,30 @@ const getActiveTabId = (): string | undefined => {
   return activeTabIdInternal.value;
 };
 
+const getTabContent = (tabId: string): string | undefined => {
+  const tab = openTabs.value.find(t => t.tabId === tabId);
+  if (tab && editorRefs[tab.editorId]) {
+    return editorRefs[tab.editorId]?.getContent();
+  }
+  return undefined;
+};
+
+const updateTabContent = (tabId: string, newContent: string): void => {
+  const tab = openTabs.value.find(t => t.tabId === tabId);
+  if (tab && editorRefs[tab.editorId]) {
+    editorRefs[tab.editorId]?.setContent(newContent);
+    // 考虑是否需要将 tab.isDirty 设置为 false，取决于同步逻辑是否算作“干净”状态
+    // 暂时不修改 isDirty，因为这通常由用户编辑触发
+  }
+};
+
 defineExpose({
   openEditorTab,
   closeEditorTab,
   saveEditorTab,
   getActiveTabId,
+  getTabContent, // 咕咕：暴露新方法
+  updateTabContent, // 咕咕：暴露新方法
 });
 </script>
 
@@ -195,37 +218,60 @@ defineExpose({
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--color-background-soft, #f0f0f0);
-  border: 1px solid var(--color-border, #ccc);
+  @apply bg-white border border-gray-200;
+}
+.ct-tabbed-editor-host.dark {
+  @apply bg-gray-800 border-gray-700;
 }
 
 .ct-tab-bar {
   display: flex;
   flex-shrink: 0;
-  background-color: var(--color-background-mute, #e0e0e0);
-  border-bottom: 1px solid var(--color-border, #ccc);
   overflow-x: auto;
+  @apply bg-gray-100 border-b border-gray-200;
+}
+.ct-tabbed-editor-host.dark .ct-tab-bar {
+  @apply bg-gray-700 border-gray-600;
 }
 
 .ct-tab-item {
   padding: 8px 12px;
   cursor: pointer;
-  border-right: 1px solid var(--color-border, #ccc);
   display: flex;
   align-items: center;
   white-space: nowrap;
   user-select: none;
+  @apply border-r border-gray-200 text-gray-700;
+}
+.ct-tabbed-editor-host.dark .ct-tab-item {
+  @apply border-gray-600 text-gray-300;
 }
 
 .ct-tab-item:hover {
-  background-color: var(--color-background-hover, #d0d0d0);
+  @apply bg-gray-200;
+}
+.ct-tabbed-editor-host.dark .ct-tab-item:hover {
+  @apply bg-gray-600 text-white;
 }
 
 .ct-tab-item.active {
-  background-color: var(--color-background, #ffffff);
-  border-bottom-color: var(--color-background, #ffffff);
   position: relative;
+  @apply bg-white border-b-transparent text-blue-600; /* 亮色激活时文字用主题色 */
 }
+.ct-tabbed-editor-host.dark .ct-tab-item.active {
+  @apply bg-gray-800 border-b-transparent text-blue-400; /* 暗色激活时文字用亮蓝色 */
+}
+/* 确保激活的tab底部边框与内容区域背景融合 */
+.ct-tab-item.active {
+  border-bottom-color: var(--active-tab-border-color, transparent);
+}
+.ct-tabbed-editor-host:not(.dark) .ct-tab-item.active {
+  --active-tab-border-color: theme('colors.white');
+}
+.ct-tabbed-editor-host.dark .ct-tab-item.active {
+  --active-tab-border-color: theme('colors.gray.800');
+}
+
 
 .ct-tab-title {
   margin-right: 8px;
@@ -239,21 +285,31 @@ defineExpose({
   font-size: 1.1em;
   padding: 0 4px;
   margin-left: auto;
-  color: var(--color-text-secondary, #666);
   border-radius: 3px;
+  @apply text-gray-500;
+}
+.ct-tabbed-editor-host.dark .ct-close-tab-btn {
+  @apply text-gray-400;
 }
 
 .ct-close-tab-btn:hover {
-  background-color: var(--color-background-hover, #c0c0c0);
-  color: var(--color-text, #333);
+  @apply bg-gray-300 text-gray-700;
+}
+.ct-tabbed-editor-host.dark .ct-close-tab-btn:hover {
+  @apply bg-gray-600 text-white;
 }
 
 .ct-tab-content {
   flex-grow: 1;
   position: relative;
-  background-color: var(--color-background, #ffffff);
-  overflow: hidden; /* 确保内容超出时隐藏 */
+  overflow: hidden;
+  /* 背景由内部 RichCodeEditor 主题控制 */
+  @apply bg-white;
 }
+.ct-tabbed-editor-host.dark .ct-tab-content {
+   @apply bg-gray-800; /* 与激活tab背景一致 */
+}
+
 
 .ct-editor-instance-wrapper {
   height: 100%;
@@ -265,9 +321,12 @@ defineExpose({
   justify-content: center;
   align-items: center;
   height: 100%;
-  color: var(--color-text-muted, #888);
   font-style: italic;
-  padding: 20px; /* 添加一些内边距使其更美观 */
-  text-align: center; /* 确保文字居中 */
+  padding: 20px;
+  text-align: center;
+  @apply text-gray-500;
+}
+.ct-tabbed-editor-host.dark .ct-no-tabs-placeholder {
+  @apply text-gray-400;
 }
 </style>

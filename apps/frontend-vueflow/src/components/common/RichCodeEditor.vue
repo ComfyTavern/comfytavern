@@ -1,5 +1,5 @@
 <template>
-  <div class="rich-code-editor-wrapper">
+  <div class="rich-code-editor-wrapper" ref="wrapperRef" :class="{ dark: themeStore.isDark }">
     <div v-if="breadcrumbData" class="breadcrumb-bar">
       <span v-if="breadcrumbData.workflowName" class="breadcrumb-item">{{ breadcrumbData.workflowName }}</span>
       <span v-if="breadcrumbData.workflowName && (breadcrumbData.nodeName || breadcrumbData.inputName)" class="breadcrumb-separator">></span>
@@ -23,21 +23,10 @@ import { lintKeymap } from '@codemirror/lint';
 import { javascript } from '@codemirror/lang-javascript';
 import { json } from '@codemirror/lang-json';
 import { markdown } from '@codemirror/lang-markdown';
-// 以后可以根据 languageHint 动态导入其他语言包
+import { vscodeDark, vscodeLight } from '@uiw/codemirror-theme-vscode';
+import type { BreadcrumbData, EditorInstanceConfig } from '@/types/editorTypes'; // 咕咕：从 editorTypes.ts 导入类型
+import { useThemeStore } from '@/stores/theme'; // 咕咕：导入全局主题存储
 
-// 类型定义
-export interface BreadcrumbData {
-  workflowName?: string;
-  nodeName?: string;
-  inputName?: string;
-  [key: string]: any;
-}
-
-export interface EditorInstanceConfig {
-  readOnly?: boolean;
-  theme?: 'light' | 'dark'; // 后续可以扩展更复杂的主题系统
-  // 其他 CodeMirror 配置项
-}
 
 const props = defineProps<{
   editorId: string;
@@ -55,15 +44,18 @@ const emit = defineEmits<{
 const editorContainerRef = ref<HTMLDivElement | null>(null);
 const editorView = shallowRef<EditorView | null>(null);
 const internalDirtyState = ref(false);
-
-// CodeMirror 实例的创建和管理
+const themeCompartment = new Compartment();
 const editableCompartment = new Compartment();
+const themeStore = useThemeStore(); // 咕咕：获取全局主题存储实例
+const wrapperRef = ref<HTMLDivElement | null>(null); // 咕咕：恢复 wrapperRef 的声明
 
 onMounted(() => {
   if (!editorContainerRef.value) return;
 
   const extensions = [
-    editableCompartment.of(EditorView.editable.of(!(props.config?.readOnly ?? false))), // 初始化可编辑状态
+    // 咕咕：初始主题根据全局 themeStore 设置
+    themeCompartment.of(themeStore.isDark ? vscodeDark : vscodeLight),
+    editableCompartment.of(EditorView.editable.of(!(props.config?.readOnly ?? false))),
     lineNumbers(),
     highlightActiveLineGutter(),
     highlightSpecialChars(),
@@ -97,6 +89,19 @@ onMounted(() => {
         });
       }
     }),
+    // 咕咕：添加 DOM 事件处理器以处理焦点
+    EditorView.domEventHandlers({
+      focus(_event, _view) { // 咕咕：标记未使用参数
+        wrapperRef.value?.classList.add('is-focused');
+      },
+      blur(_event, _view) { // 咕咕：标记未使用参数
+        wrapperRef.value?.classList.remove('is-focused');
+        // 咕咕：在这里可以添加失焦自动保存逻辑 (阶段二)
+        if (internalDirtyState.value) { // 咕咕：启用失焦自动保存
+          triggerSave();
+        }
+      },
+    }),
   ];
 
   // 根据 languageHint 添加对应的语言支持
@@ -104,7 +109,7 @@ onMounted(() => {
     switch (props.languageHint.toLowerCase()) {
       case 'javascript':
       case 'js':
-        extensions.push(javascript());
+        extensions.push(javascript({ jsx: true }));
         break;
       case 'json':
         extensions.push(json());
@@ -119,12 +124,10 @@ onMounted(() => {
         break;
     }
   }
-  
-  // TODO: 根据 props.config.theme 设置主题
 
   const startState = EditorState.create({
     doc: props.initialContent,
-    extensions: extensions,
+    extensions,
   });
 
   const view = new EditorView({
@@ -132,38 +135,47 @@ onMounted(() => {
     parent: editorContainerRef.value,
   });
   editorView.value = view;
-
-  // 初始的 readOnly 状态已在 editableCompartment.of 中设置
-  // if (props.config?.readOnly) {
-  //   view.dispatch({
-  //     effects: EditorView.editable.reconfigure(EditorView.editable.of(false)) //  <-- 这里可能需要调整为 Compartment 的 reconfigure
-  //   });
-  // }
 });
 
 onUnmounted(() => {
   editorView.value?.destroy();
 });
 
-// Props 监听
 watch(() => props.initialContent, (newVal) => {
   if (editorView.value && newVal !== editorView.value.state.doc.toString()) {
     editorView.value.dispatch({
       changes: { from: 0, to: editorView.value.state.doc.length, insert: newVal },
     });
-    internalDirtyState.value = false; // 重置内容后，标记为未修改
-     emit('contentChanged', {
-        editorId: props.editorId,
-        newContent: newVal,
-        isDirty: false,
-      });
+    internalDirtyState.value = false;
+    emit('contentChanged', {
+      editorId: props.editorId,
+      newContent: newVal,
+      isDirty: false,
+    });
   }
 });
 
 watch(() => props.config?.readOnly, (isReadOnly) => {
   if (editorView.value) {
     editorView.value.dispatch({
-      effects: editableCompartment.reconfigure(EditorView.editable.of(!isReadOnly))
+      effects: editableCompartment.reconfigure(EditorView.editable.of(!isReadOnly)),
+    });
+  }
+});
+
+// watch(() => props.config?.theme, (newTheme) => { // 咕咕：移除对 props.config.theme 的监听
+//   if (editorView.value) {
+//     editorView.value.dispatch({
+//       effects: themeCompartment.reconfigure(newTheme === 'light' ? vscodeLight : vscodeDark),
+//     });
+//   }
+// });
+
+// 咕咕：监听全局 themeStore.isDark 的变化来切换 CodeMirror 主题
+watch(() => themeStore.isDark, (isDark) => {
+  if (editorView.value) {
+    editorView.value.dispatch({
+      effects: themeCompartment.reconfigure(isDark ? vscodeDark : vscodeLight),
     });
   }
 });
@@ -181,7 +193,7 @@ const setContent = (newContent: string): void => {
     internalDirtyState.value = false; // 外部设置内容后，标记为未修改
     emit('contentChanged', {
       editorId: props.editorId,
-      newContent: newContent,
+      newContent,
       isDirty: false,
     });
   }
@@ -209,7 +221,6 @@ defineExpose({
   focusEditor,
   triggerSave,
 });
-
 </script>
 
 <style scoped>
@@ -217,18 +228,39 @@ defineExpose({
   display: flex;
   flex-direction: column;
   height: 100%;
-  border: 1px solid #ccc; /* 临时边框，便于查看 */
+  /* 基础边框颜色，暗色模式下由 .dark 类覆盖 */
+  @apply border border-gray-300; /* 默认亮色边框 */
+  transition: border-color 0.2s ease-in-out; /* 添加过渡效果 */
 }
+.rich-code-editor-wrapper.dark {
+  @apply border-gray-600; /* 暗色模式下的边框 */
+}
+.rich-code-editor-wrapper.is-focused {
+  /* 亮色模式焦点 */
+  @apply border-2 border-blue-500; /* 增加边框宽度以示强调 */
+  /* padding: -1px; */ /* 如果边框增加导致布局移动，可能需要调整内边距或使用 outline */
+}
+.rich-code-editor-wrapper.dark.is-focused {
+  /* 暗色模式焦点 */
+  @apply border-2 border-blue-400; /* 增加边框宽度以示强调 */
+}
+
+
+/* 背景色由 CodeMirror 主题控制，这里不再设置背景色 */
+/* .rich-code-editor-wrapper {
+  background-color: #1e1e1e;
+} */
 
 .breadcrumb-bar {
   padding: 8px 12px;
-  background-color: #f0f0f0; /* 临时背景色 */
-  border-bottom: 1px solid #ccc; /* 临时边框 */
+  background-color: #252526;
+  /* VSCode 侧边栏风格 */
+  border-bottom: 1px solid #3c3c3c;
   font-size: 0.9em;
-  color: #333;
+  color: #d4d4d4;
   display: flex;
   align-items: center;
-  flex-wrap: wrap; /* 允许换行 */
+  flex-wrap: wrap;
 }
 
 .breadcrumb-item {
@@ -237,18 +269,41 @@ defineExpose({
 
 .breadcrumb-separator {
   margin: 0 4px;
-  color: #888;
+  color: #858585;
 }
 
 .editor-container {
   flex-grow: 1;
-  overflow: auto; /* 确保编辑器内容溢出时可滚动 */
-  position: relative; /* CodeMirror 可能需要 */
+  overflow: auto;
+  position: relative;
 }
 
-/* 确保 CodeMirror 填满容器 */
+/* CodeMirror 样式 */
 :deep(.cm-editor) {
   height: 100%;
   width: 100%;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 14px;
+}
+
+:deep(.cm-content) {
+  padding: 8px;
+}
+
+:deep(.cm-scroller) {
+  touch-action: auto;
+  /* 优化移动端触摸 */
+}
+
+/* 移动端适配 */
+@media (max-width: 600px) {
+  :deep(.cm-editor) {
+    font-size: 12px;
+  }
+
+  .breadcrumb-bar {
+    font-size: 0.8em;
+    padding: 6px 10px;
+  }
 }
 </style>

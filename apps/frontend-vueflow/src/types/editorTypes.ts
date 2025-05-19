@@ -1,6 +1,19 @@
 // apps/frontend-vueflow/src/types/editorTypes.ts
 
-import type { EditorInstanceConfig, BreadcrumbData } from '@/components/common/RichCodeEditor.vue'; // 假设 RichCodeEditor.vue 会导出这些类型
+// 咕咕：直接在此处定义共享的编辑器相关类型
+
+export interface BreadcrumbData {
+  workflowName?: string;
+  nodeName?: string;
+  inputName?: string;
+  [key: string]: any;
+}
+
+export interface EditorInstanceConfig {
+  readOnly?: boolean;
+  theme?: 'light' | 'dark';
+  // 其他 CodeMirror 配置项
+}
 
 /**
  * 表示编辑器标签页的数据结构。
