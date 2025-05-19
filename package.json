@@ -24,7 +24,8 @@
     "vite": "^6.2.1",
     "vue-tsc": "^2.2.8",
     "vitest": "^3.0.8",
-    "esbuild": "0.25.1"
+    "esbuild": "0.25.1",
+    "estree-walker": "2.0.2"
   },
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.3",
