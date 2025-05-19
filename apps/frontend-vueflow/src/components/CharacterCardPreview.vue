@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue';
 import CharacterCard from './CharacterCard.vue'; // 复用现有的卡片组件
 import { sillyTavernService } from '../services/SillyTavernService';
-import type { CharacterCardUI } from '../types/SillyTavern';
+import type { CharacterCardUI } from '../../../../packages/types/SillyTavern';
 
 // 角色列表
 const characters = ref<CharacterCardUI[]>([]);

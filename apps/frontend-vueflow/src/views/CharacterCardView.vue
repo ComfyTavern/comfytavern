@@ -4,7 +4,7 @@ import SideBar from './SideBar.vue';
 import { useThemeStore } from '../stores/theme'; // 导入 theme store
 import CharacterCard from '../components/CharacterCard.vue';
 import { sillyTavernService } from '../services/SillyTavernService';
-import type { CharacterCardUI } from '../types/SillyTavern';
+import type { CharacterCardUI } from '../../../../packages/types/SillyTavern';
 
 // 角色列表
 const characters = ref<CharacterCardUI[]>([]);

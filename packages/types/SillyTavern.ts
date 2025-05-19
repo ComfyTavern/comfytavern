@@ -79,3 +79,21 @@ export interface CharacterCardUI {
   creator?: string;
   favorite?: boolean;
 }
+
+// 后端 /api/characters 返回的列表中，每个角色对象的结构
+export interface ApiCharacterEntry {
+  id: string;
+  name: string;
+  description?: string;
+  imageName: string | null; // 用于前端构造图片URL
+  tags: string[];
+  creator?: string;
+  creatorComment?: string; // 驼峰式
+  createDate?: string;     // 驼峰式
+  characterVersion?: string;
+  talkativeness?: string;
+  favorite?: boolean;
+  avatar?: string;         // 通常是文件名或 'none'
+  chat?: string;           // 通常是聊天记录文件名
+  // 如果后端还返回其他处理过的字段，也应在此定义
+}
