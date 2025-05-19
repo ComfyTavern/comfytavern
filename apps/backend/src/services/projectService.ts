@@ -120,6 +120,104 @@ export async function syncReferencingNodeGroups(
 import { ProjectMetadataSchema, type ProjectMetadata } from "@comfytavern/types"; // 导入 ProjectMetadata 类型和 Schema
 import { z } from "zod"; // 导入 zod
 
+// 内部辅助函数：读取并验证 JSON 文件
+interface ReadAndValidateJsonOptions<T> {
+  filePath: string;
+  schema: z.ZodType<T, z.ZodTypeDef, any>; // 允许输入类型与输出类型 T 不同
+  notFoundErrorClass: new (message: string) => Error;
+  loadErrorClass: new (message: string) => Error;
+  entityName?: string;
+  entityId?: string; // 用于更详细的日志/错误消息
+}
+
+async function _readAndValidateJsonFile<T>({
+  filePath,
+  schema,
+  notFoundErrorClass,
+  loadErrorClass,
+  entityName = "data",
+  entityId = "",
+}: ReadAndValidateJsonOptions<T>): Promise<T> {
+  const logPrefix = `[Service:_readAndValidateJsonFile]`;
+  // 构造一个更具描述性的实体名称，用于日志和错误消息
+  const descriptiveEntityName = entityId ? `${entityName} '${entityId}'` : entityName;
+  // 首字母大写，用于错误消息
+  const capitalizedEntityName = descriptiveEntityName.charAt(0).toUpperCase() + descriptiveEntityName.slice(1);
+
+  let fileContent: string;
+  try {
+    fileContent = await fs.readFile(filePath, "utf-8");
+  } catch (error: any) {
+    if (error.code === "ENOENT") {
+      const message = `${capitalizedEntityName} file not found. Path: ${filePath}`;
+      console.warn(`${logPrefix} ${message}`);
+      throw new notFoundErrorClass(message);
+    }
+    const message = `Failed to read ${descriptiveEntityName} file. Path: ${filePath}. Error: ${error.message}`;
+    console.error(`${logPrefix} ${message}`);
+    throw new loadErrorClass(message);
+  }
+
+  let jsonData: any;
+  try {
+    jsonData = JSON.parse(fileContent);
+  } catch (error: any) {
+    const message = `Failed to parse JSON for ${descriptiveEntityName}. Path: ${filePath}. Error: ${error.message}`;
+    console.error(`${logPrefix} ${message}`);
+    throw new loadErrorClass(message);
+  }
+
+  const validationResult = schema.safeParse(jsonData);
+  if (!validationResult.success) {
+    const errorDetails = validationResult.error.flatten().fieldErrors;
+    const message = `${capitalizedEntityName} validation failed. Path: ${filePath}. Details: ${JSON.stringify(errorDetails)}`;
+    console.error(`${logPrefix} ${message}`);
+    throw new loadErrorClass(message);
+  }
+  return validationResult.data;
+}
+
+// 内部辅助函数：确保目录存在
+async function _ensureDirectoryExists(
+  dirPath: string,
+  creationErrorClass: new (message: string) => Error, // 例如 ProjectCreationError, WorkflowCreationError
+  errorContextMessage: string // 例如 "project directories", "workflows directory for project X"
+): Promise<void> {
+  const logPrefix = `[Service:_ensureDirectoryExists]`;
+  try {
+    await fs.mkdir(dirPath, { recursive: true });
+    // console.log(`${logPrefix} Successfully ensured directory exists or was created: ${dirPath}`);
+  } catch (mkdirError: any) {
+    const message = `Failed to create ${errorContextMessage}. Path: ${dirPath}. Error: ${mkdirError.message}`;
+    console.error(`${logPrefix} ${message}`);
+    throw new creationErrorClass(message);
+  }
+}
+
+// 内部辅助函数：检查文件是否存在，如果存在则视为冲突 (用于创建或重命名检查)
+async function _checkFileConflict(
+  filePath: string,
+  conflictErrorClass: new (message: string) => Error, // 例如 ProjectConflictError, WorkflowConflictError
+  baseErrorClass: new (message: string) => Error, // 例如 ProjectCreationError, WorkflowUpdateError
+  conflictContextMessage: string // 例如 "Project with ID X already exists."
+): Promise<void> {
+  const logPrefix = `[Service:_checkFileConflict]`;
+  try {
+    await fs.access(filePath);
+    // 如果 fs.access 成功，说明文件/目录已存在，这是一个冲突
+    console.warn(`${logPrefix} Conflict: ${conflictContextMessage}`);
+    throw new conflictErrorClass(conflictContextMessage);
+  } catch (accessError: any) {
+    if (accessError.code !== "ENOENT") {
+      // 如果不是“文件/目录不存在”错误，则是其他访问错误，这通常指示更深层次的问题
+      const message = `Error checking file/directory existence at ${filePath}: ${accessError.message}`;
+      console.error(`${logPrefix} ${message}`);
+      throw new baseErrorClass(message); // 抛出基础错误类型，表明检查过程本身出错了
+    }
+    // ENOENT (文件/目录不存在) 是期望的场景，意味着没有冲突，可以继续。
+  }
+}
+
 // 定义可更新的元数据字段的 Schema
 // 允许部分更新，但排除 id 和 createdAt
 const ProjectMetadataUpdateSchema = ProjectMetadataSchema.partial().omit({
@@ -257,30 +355,33 @@ export async function listProjects(): Promise<ProjectMetadata[]> {
       const metadataPath = path.join(projectPath, "project.json");
 
       try {
-        const metadataContent = await fs.readFile(metadataPath, "utf-8");
-        const metadata = JSON.parse(metadataContent);
-        // 使用 Zod Schema 验证元数据结构
-        const validationResult = ProjectMetadataSchema.safeParse(metadata);
-        if (!validationResult.success) {
-          const errorDetails = validationResult.error.flatten().fieldErrors;
-          console.warn(
-            `[Service:listProjects] Invalid metadata for project ${safeReadProjectId} (path: ${metadataPath}). Details: ${JSON.stringify(errorDetails)}. Skipping this project.`
-          );
-          return null; // 如果元数据无效，则跳过此项目
-        }
+        // 使用辅助函数读取并验证元数据文件
+        const validatedMetadata = await _readAndValidateJsonFile<ProjectMetadata>({
+          filePath: metadataPath,
+          schema: ProjectMetadataSchema,
+          // 对于 listProjects，如果单个文件有问题，我们不希望整个操作失败，
+          // 而是跳过这个项目。所以这里传入的错误类不会被直接抛出到顶层，
+          // 而是在下面的 catch 块中被捕获并处理。
+          notFoundErrorClass: ProjectNotFoundError, // 或自定义一个更内部的错误类型
+          loadErrorClass: ProjectMetadataError,     // 或自定义一个更内部的错误类型
+          entityName: "project metadata",
+          entityId: safeReadProjectId,
+        });
+
         // 确保返回的 id 与目录名一致
-        if (validationResult.data.id !== safeReadProjectId) {
+        if (validatedMetadata.id !== safeReadProjectId) {
           console.warn(
-            `[Service:listProjects] Metadata ID '${validationResult.data.id}' for project in directory '${safeReadProjectId}' does not match directory name. Using directory name as ID.`
+            `[Service:listProjects] Metadata ID '${validatedMetadata.id}' for project in directory '${safeReadProjectId}' does not match directory name. Using directory name as ID.`
           );
-          // 可以选择覆盖 ID 或跳过，这里选择覆盖以保持一致性
-          // validationResult.data.id = safeReadProjectId; // Zod 返回的是不可变对象，需要创建新对象或确保 schema 允许
+          // Zod 返回的是不可变对象，所以我们通过扩展运算符创建一个新对象来覆盖 id
         }
         // 返回经过验证的元数据，并确保 id 是目录名
-        return { ...validationResult.data, id: safeReadProjectId };
-      } catch (readError: any) {
+        return { ...validatedMetadata, id: safeReadProjectId };
+      } catch (error: any) {
+        // _readAndValidateJsonFile 会抛出 ProjectNotFoundError 或 ProjectMetadataError
+        // 我们在这里捕获它们，记录警告，然后返回 null 以跳过此项目，符合 listProjects 的原有逻辑。
         console.warn(
-          `[Service:listProjects] Error reading or parsing metadata for project ${safeReadProjectId} (path: ${metadataPath}): ${readError.message}. Skipping this project.`
+          `[Service:listProjects] Error processing metadata for project ${safeReadProjectId} (path: ${metadataPath}): ${error.message}. Skipping this project.`
         );
         return null;
       }
@@ -341,9 +442,8 @@ export class ProjectMetadataError extends Error {
  * @throws 如果项目目录或元数据文件不存在 (ProjectNotFoundError)，或发生读写/解析错误 (ProjectMetadataError)。
  */
 export async function getProjectMetadata(projectId: string): Promise<ProjectMetadata> {
-  console.log(
-    `[Service:getProjectMetadata] Attempting to get metadata for project ID '${projectId}'`
-  );
+  const logPrefix = `[Service:getProjectMetadata]`;
+  console.log(`${logPrefix} Attempting to get metadata for project ID '${projectId}'`);
   const projectPath = path.join(PROJECTS_BASE_DIR, projectId);
   const metadataPath = path.join(projectPath, "project.json");
 
@@ -353,46 +453,28 @@ export async function getProjectMetadata(projectId: string): Promise<ProjectMeta
   } catch (accessError: any) {
     if (accessError.code === "ENOENT") {
       const message = `Project directory not found for ID '${projectId}'. Path: ${projectPath}`;
-      console.warn(`[Service:getProjectMetadata] ${message}`);
+      console.warn(`${logPrefix} ${message}`);
       throw new ProjectNotFoundError(message);
     }
-    // 其他访问目录的错误
     const message = `Failed to access project directory for ID '${projectId}'. Path: ${projectPath}. Error: ${accessError.message}`;
-    console.error(`[Service:getProjectMetadata] ${message}`);
-    throw new ProjectMetadataError(message);
+    console.error(`${logPrefix} ${message}`);
+    throw new ProjectMetadataError(message); // 或者更通用的 ProjectAccessError
   }
 
-  // 读取并解析元数据文件
-  try {
-    const fileContent = await fs.readFile(metadataPath, "utf-8");
-    const metadata = JSON.parse(fileContent);
+  // 使用辅助函数读取并验证元数据文件
+  const metadata = await _readAndValidateJsonFile<ProjectMetadata>({
+    filePath: metadataPath,
+    schema: ProjectMetadataSchema,
+    notFoundErrorClass: ProjectNotFoundError, // 特指元数据文件未找到
+    loadErrorClass: ProjectMetadataError,     // 包括读取、解析、验证错误
+    entityName: "project metadata",
+    entityId: projectId,
+  });
 
-    // 使用 Zod Schema 验证元数据结构
-    const validationResult = ProjectMetadataSchema.safeParse(metadata);
-    if (!validationResult.success) {
-      const errorDetails = validationResult.error.flatten().fieldErrors;
-      const message = `Project metadata for ID '${projectId}' is invalid. Path: ${metadataPath}. Details: ${JSON.stringify(
-        errorDetails
-      )}`;
-      console.error(`[Service:getProjectMetadata] ${message}`);
-      throw new ProjectMetadataError(message);
-    }
-
-    console.log(
-      `[Service:getProjectMetadata] Successfully retrieved and validated metadata for project ID '${projectId}'.`
-    );
-    return validationResult.data;
-  } catch (error: any) {
-    if (error.code === "ENOENT") {
-      const message = `Project metadata file not found for ID '${projectId}'. Path: ${metadataPath}`;
-      console.warn(`[Service:getProjectMetadata] ${message}`);
-      throw new ProjectNotFoundError(message);
-    }
-    // 包括 JSON 解析错误等
-    const message = `Failed to read or parse project metadata for ID '${projectId}'. Path: ${metadataPath}. Error: ${error.message}`;
-    console.error(`[Service:getProjectMetadata] ${message}`);
-    throw new ProjectMetadataError(message);
-  }
+  console.log(
+    `${logPrefix} Successfully retrieved and validated metadata for project ID '${projectId}'.`
+  );
+  return metadata;
 }
 
 /**
@@ -417,36 +499,21 @@ export async function createProject(
 
   try {
     // 1. 检查项目是否已存在
-    try {
-      await fs.access(projectPath);
-      // 如果 access 成功，说明项目已存在
-      const errorMessage = `Project with ID '${projectId}' (derived from name '${projectName}') already exists.`;
-      console.warn(`[Service:createProject] ${errorMessage}`);
-      throw new ProjectConflictError(errorMessage);
-    } catch (accessError: any) {
-      if (accessError.code !== "ENOENT") {
-        // 如果不是“文件不存在”错误，则是其他访问错误
-        console.error(
-          `[Service:createProject] Error checking project existence for ID '${projectId}':`,
-          accessError
-        );
-        throw new ProjectCreationError(`Failed to check project existence: ${accessError.message}`);
-      }
-      // ENOENT 意味着项目不存在，可以继续创建
-    }
+    await _checkFileConflict(
+      projectPath,
+      ProjectConflictError,
+      ProjectCreationError,
+      `Project with ID '${projectId}' (derived from name '${projectName}') already exists.`
+    );
 
     // 2. 创建项目目录和 workflows 子目录
-    try {
-      await fs.mkdir(projectWorkflowsDir, { recursive: true });
-      console.log(`[Service:createProject] Created project directory: ${projectPath}`);
-      console.log(`[Service:createProject] Created workflows directory: ${projectWorkflowsDir}`);
-    } catch (mkdirError: any) {
-      console.error(
-        `[Service:createProject] Error creating project directories for ID '${projectId}':`,
-        mkdirError
-      );
-      throw new ProjectCreationError(`Failed to create project directories: ${mkdirError.message}`);
-    }
+    await _ensureDirectoryExists(
+      projectWorkflowsDir,
+      ProjectCreationError,
+      `project directories for ID '${projectId}'`
+    );
+    console.log(`[Service:createProject] Created project directory: ${projectPath}`);
+    console.log(`[Service:createProject] Created workflows directory: ${projectWorkflowsDir}`);
 
     // 3. 创建 project.json 元数据文件
     const now = new Date().toISOString();
@@ -674,30 +741,19 @@ export async function createWorkflow(
 
   try {
     // 1. 确保工作流目录存在
-    try {
-      await fs.mkdir(projectWorkflowsDir, { recursive: true });
-    } catch (mkdirError: any) {
-      const message = `Failed to create workflows directory for project ${projectId}. Path: ${projectWorkflowsDir}. Error: ${mkdirError.message}`;
-      console.error(`[Service:createWorkflow] ${message}`);
-      throw new WorkflowCreationError(message);
-    }
+    await _ensureDirectoryExists(
+      projectWorkflowsDir,
+      WorkflowCreationError,
+      `workflows directory for project ${projectId}`
+    );
 
     // 2. 检查工作流文件是否已存在
-    try {
-      await fs.access(filePath);
-      // 如果 access 成功，说明文件已存在
-      const message = `Workflow with name '${name}' (filename: ${workflowId}.json) already exists in project '${projectId}'.`;
-      console.warn(`[Service:createWorkflow] ${message}`);
-      throw new WorkflowConflictError(message);
-    } catch (accessError: any) {
-      if (accessError.code !== "ENOENT") {
-        // 如果不是“文件不存在”错误，则是其他访问错误
-        const message = `Error checking workflow existence for '${name}' (ID: ${workflowId}) in project '${projectId}'. Error: ${accessError.message}`;
-        console.error(`[Service:createWorkflow] ${message}`);
-        throw new WorkflowCreationError(message);
-      }
-      // ENOENT 意味着文件不存在，可以继续创建
-    }
+    await _checkFileConflict(
+      filePath,
+      WorkflowConflictError,
+      WorkflowCreationError,
+      `Workflow with name '${name}' (filename: ${workflowId}.json) already exists in project '${projectId}'.`
+    );
 
     // 3. 准备要保存的数据
     const now = new Date().toISOString();
@@ -804,74 +860,40 @@ export class WorkflowLoadError extends Error {
  * @throws 如果工作流文件不存在 (WorkflowNotFoundError)，或读取/解析/验证失败 (WorkflowLoadError)。
  */
 export async function getWorkflow(projectId: string, workflowId: string): Promise<WorkflowObject> {
+  const logPrefix = `[Service:getWorkflow]`;
   console.log(
-    `[Service:getWorkflow] Attempting to get workflow ID '${workflowId}' from project '${projectId}'`
+    `${logPrefix} Attempting to get workflow ID '${workflowId}' from project '${projectId}'`
   );
   const projectWorkflowsDir = getProjectWorkflowsDir(projectId);
   const filePath = path.join(projectWorkflowsDir, `${workflowId}.json`);
 
-  try {
-    const fileContent = await fs.readFile(filePath, "utf-8");
-    const jsonData = JSON.parse(fileContent); // 首先尝试解析 JSON
+  // 使用辅助函数读取并验证工作流文件
+  // WorkflowObjectSchema 的 id 字段是可选的。
+  // _readAndValidateJsonFile 返回的是 schema.parse 的结果，所以 id 可能为 undefined。
+  const validatedData = await _readAndValidateJsonFile<WorkflowObject>({
+    filePath,
+    schema: WorkflowObjectSchema,
+    notFoundErrorClass: WorkflowNotFoundError,
+    loadErrorClass: WorkflowLoadError,
+    entityName: "workflow",
+    entityId: workflowId,
+  });
 
-    // 使用 WorkflowObjectSchema 进行严格验证
-    // 注意：WorkflowObjectSchema 中的 id 是可选的，但服务层返回时应确保 id 存在且与请求的 workflowId 一致
-    // 或者，我们可以修改 WorkflowObjectSchema 使 id 成为必需，并在加载时填充它。
-    // 当前 WorkflowObjectSchema (BaseWorkflowObjectSchema) 的 id 是 z.string().optional()
-    // 但通常我们期望加载后对象有 id。
+  // 确保返回的 workflow 对象包含正确的 id (与文件名一致)
+  // 这是服务层的责任，以确保返回的数据符合期望的接口（即使存储或 schema 略有不同）
+  const workflowWithEnsuredId = { ...validatedData, id: workflowId };
 
-    // 为了确保返回的对象包含与文件名一致的 id，我们先解析，然后合并 id
-    const parsedData = WorkflowObjectSchema.safeParse(jsonData);
-
-    if (!parsedData.success) {
-      const errorDetails = parsedData.error.flatten().fieldErrors;
-      const message = `Workflow data validation failed for '${workflowId}' in project '${projectId}'. Path: ${filePath}. Details: ${JSON.stringify(
-        errorDetails
-      )}`;
-      console.error(`[Service:getWorkflow] ${message}`);
-      throw new WorkflowLoadError(message);
-    }
-
-    // 确保返回的 workflow 对象包含正确的 id (与文件名一致)
-    // 如果 schema 中的 id 是可选的，而 jsonData 中没有 id，则需要手动添加
-    // 如果 schema 中的 id 是必须的，则 jsonData 中必须有 id，且应与 workflowId 匹配 (或我们覆盖它)
-    const validatedData = parsedData.data;
-
-    // 如果 validatedData.id 存在且与 workflowId 不符，这是一个潜在问题，但通常我们信任文件名作为权威 ID
-    // 如果 validatedData.id 不存在 (因为 schema 中 id 是可选的)，我们必须设置它
-    if (!validatedData.id || validatedData.id !== workflowId) {
-      // console.warn(`[Service:getWorkflow] Workflow ID in file ('${validatedData.id}') differs from filename ID ('${workflowId}'). Using filename ID.`);
-      // (validatedData as any).id = workflowId; // 不推荐直接修改，最好在返回时构造新对象或确保 schema 强制 id
-    }
-
-    console.log(
-      `[Service:getWorkflow] Successfully retrieved and validated workflow '${workflowId}' from project '${projectId}'.`
+  // 如果原始数据中的 id 存在且与文件名不符，可以记录一个警告
+  if (validatedData.id && validatedData.id !== workflowId) {
+    console.warn(
+      `${logPrefix} Workflow ID in file ('${validatedData.id}') differs from filename-derived ID ('${workflowId}') for project '${projectId}'. Using filename-derived ID.`
     );
-    // 返回时确保 id 字段是 workflowId (来自文件名)
-    // WorkflowObject 类型定义中 id 是 string | undefined
-    // 但我们作为服务，应该返回一个带有确定 id 的对象
-    return { ...validatedData, id: workflowId };
-  } catch (error: any) {
-    if (error.code === "ENOENT") {
-      const message = `Workflow file not found for ID '${workflowId}' in project '${projectId}'. Path: ${filePath}`;
-      console.warn(`[Service:getWorkflow] ${message}`);
-      throw new WorkflowNotFoundError(message);
-    }
-    if (error instanceof SyntaxError) {
-      // JSON 解析错误
-      const message = `Failed to parse JSON for workflow '${workflowId}' in project '${projectId}'. Path: ${filePath}. Error: ${error.message}`;
-      console.error(`[Service:getWorkflow] ${message}`);
-      throw new WorkflowLoadError(message);
-    }
-    if (error instanceof WorkflowLoadError || error instanceof WorkflowNotFoundError) {
-      // 重抛已知错误
-      throw error;
-    }
-    // 其他未知错误
-    const message = `Failed to load workflow '${workflowId}' from project '${projectId}'. Path: ${filePath}. Error: ${error.message}`;
-    console.error(`[Service:getWorkflow] ${message}`);
-    throw new WorkflowLoadError(message);
   }
+
+  console.log(
+    `${logPrefix} Successfully retrieved and validated workflow '${workflowId}' from project '${projectId}'.`
+  );
+  return workflowWithEnsuredId;
 }
 
 /**
@@ -930,21 +952,12 @@ export async function updateWorkflow(
 
     // 2. 如果文件名需要改变 (因为 name 改变了)，检查新文件名是否冲突
     if (newSafeWorkflowId !== workflowId) {
-      try {
-        await fs.access(newFilePath);
-        // 如果新文件已存在，并且不是自身 (理论上 newSafeWorkflowId !== workflowId 已经保证了这点)
-        const message = `Cannot rename workflow. A workflow with the name '${newName}' (filename: ${newSafeWorkflowId}.json) already exists in project '${projectId}'.`;
-        console.warn(`[Service:updateWorkflow] ${message}`);
-        throw new WorkflowConflictError(message);
-      } catch (accessError: any) {
-        if (accessError.code !== "ENOENT") {
-          // 其他访问错误
-          throw new WorkflowUpdateError(
-            `Error checking for new workflow file conflict: ${accessError.message}`
-          );
-        }
-        // ENOENT 意味着新文件名不冲突，可以继续
-      }
+      await _checkFileConflict(
+        newFilePath,
+        WorkflowConflictError,
+        WorkflowUpdateError,
+        `Cannot rename workflow. A workflow with the name '${newName}' (filename: ${newSafeWorkflowId}.json) already exists in project '${projectId}'.`
+      );
     }
 
     // 3. 读取现有数据以保留 createdAt 等元数据
@@ -1127,13 +1140,11 @@ export async function deleteWorkflowToRecycleBin(
     }
 
     // 2. 确保回收站目录存在
-    try {
-      await fs.mkdir(recycleBinWorkflowsDir, { recursive: true });
-    } catch (mkdirError: any) {
-      const message = `Failed to create recycle bin directory for project '${projectId}'. Path: ${recycleBinWorkflowsDir}. Error: ${mkdirError.message}`;
-      console.error(`[Service:deleteWorkflowToRecycleBin] ${message}`);
-      throw new WorkflowDeletionError(message);
-    }
+    await _ensureDirectoryExists(
+      recycleBinWorkflowsDir,
+      WorkflowDeletionError,
+      `recycle bin directory for project '${projectId}'`
+    );
 
     // 3. 将文件移动到回收站
     try {
