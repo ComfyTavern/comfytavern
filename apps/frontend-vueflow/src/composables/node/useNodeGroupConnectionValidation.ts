@@ -41,18 +41,16 @@ export function useNodeGroupConnectionValidation({
 
       for (const edge of connectedEdges) {
         let isCompatible = true;
-        let reason = '';
-
         if (edge.target === nodeGroup.id) { // 输入边
           const slotKey = edge.targetHandle;
           if (typeof slotKey !== 'string' || !slotKey) {
             isCompatible = false;
-            reason = `Invalid target handle on edge ${edge.id}`;
+            // reason = `Invalid target handle on edge ${edge.id}`;
           } else {
             const inputSlot = groupInterface.inputs?.[slotKey];
             if (!inputSlot) {
               isCompatible = false;
-              reason = `Input slot '${slotKey}' not found in NodeGroup ${nodeGroup.id}`;
+              // reason = `Input slot '${slotKey}' not found in NodeGroup ${nodeGroup.id}`;
             } else {
               // 检查类型
               const sourceNode = currentNodes.find(n => n.id === edge.source);
@@ -62,7 +60,7 @@ export function useNodeGroupConnectionValidation({
               const sourceOutputDef = sourceNodeDef?.outputs?.[sourceHandleId];
               if (!sourceOutputDef) {
                 isCompatible = false;
-                reason = `Source output definition '${sourceHandleId}' not found on node ${sourceNode?.id}`;
+                // reason = `Source output definition '${sourceHandleId}' not found on node ${sourceNode?.id}`;
               } else {
                 const sourceSlotInfo: GroupSlotInfo = {
                   key: sourceHandleId,
@@ -73,7 +71,7 @@ export function useNodeGroupConnectionValidation({
                 };
                 if (!isTypeCompatible(sourceSlotInfo, inputSlot)) {
                   isCompatible = false;
-                  reason = `Type mismatch: Source (${sourceSlotInfo.dataFlowType}) -> NodeGroup Input '${slotKey}' (${inputSlot.dataFlowType})`;
+                  // reason = `Type mismatch: Source (${sourceSlotInfo.dataFlowType}) -> NodeGroup Input '${slotKey}' (${inputSlot.dataFlowType})`;
                 }
               }
             }
@@ -82,12 +80,12 @@ export function useNodeGroupConnectionValidation({
           const slotKey = edge.sourceHandle;
           if (typeof slotKey !== 'string' || !slotKey) {
             isCompatible = false;
-            reason = `Invalid source handle on edge ${edge.id}`;
+            // reason = `Invalid source handle on edge ${edge.id}`;
           } else {
             const outputSlot = groupInterface.outputs?.[slotKey];
             if (!outputSlot) {
               isCompatible = false;
-              reason = `Output slot '${slotKey}' not found in NodeGroup ${nodeGroup.id}`;
+              // reason = `Output slot '${slotKey}' not found in NodeGroup ${nodeGroup.id}`;
             } else {
               // 检查类型
               const targetNode = currentNodes.find(n => n.id === edge.target);
@@ -97,7 +95,7 @@ export function useNodeGroupConnectionValidation({
 
               if (!targetInputDef) {
                 isCompatible = false;
-                reason = `Target input definition '${targetHandleId}' not found on node ${targetNode?.id}`;
+                // reason = `Target input definition '${targetHandleId}' not found on node ${targetNode?.id}`;
               } else {
                 const targetSlotInfo: GroupSlotInfo = {
                   key: targetHandleId,
@@ -108,7 +106,7 @@ export function useNodeGroupConnectionValidation({
                 };
                 if (!isTypeCompatible(outputSlot, targetSlotInfo)) {
                   isCompatible = false;
-                  reason = `Type mismatch: NodeGroup Output '${slotKey}' (${outputSlot.dataFlowType}) -> Target (${targetSlotInfo.dataFlowType})`;
+                  // reason = `Type mismatch: NodeGroup Output '${slotKey}' (${outputSlot.dataFlowType}) -> Target (${targetSlotInfo.dataFlowType})`;
                 }
               }
             }

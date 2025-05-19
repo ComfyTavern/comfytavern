@@ -28,7 +28,7 @@
           <div class="param-header">
             <!-- 优先使用 displayName，然后是 key -->
             <div class="param-name">{{ input.displayName || key }}</div>
-            <div class="param-type">{{ input.type }}</div>
+            <div class="param-type">{{ input.dataFlowType }}</div>
           </div>
           <!-- 如果 description 存在，则显示 -->
           <div v-if="input.description" class="param-description">
@@ -43,7 +43,7 @@
           <div class="param-header">
             <!-- 优先使用 displayName，然后是 key -->
             <div class="param-name">{{ output.displayName || key }}</div>
-            <div class="param-type">{{ output.type }}</div>
+            <div class="param-type">{{ output.dataFlowType }}</div>
           </div>
           <!-- 如果 description 存在，则显示 -->
           <div v-if="output.description" class="param-description">
