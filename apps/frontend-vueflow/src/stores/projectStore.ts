@@ -80,13 +80,12 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   // 新增：创建新项目
-  async function createProject(projectName?: string): Promise<ProjectMetadata | null> {
+  async function createProject(projectData: { name: string }): Promise<ProjectMetadata | null> {
     isLoading.value = true;
     error.value = null;
     try {
-      // 假设 POST /api/projects 接受一个可选的 name 字段
-      const payload = projectName ? { name: projectName } : {};
-      const newProject = await post<ProjectMetadata>('/projects', payload); // 调用 POST /api/projects
+      // POST /api/projects 接受一个包含 name 字段的对象
+      const newProject = await post<ProjectMetadata>('/projects', projectData); // 调用 POST /api/projects
 
       // 使用 Zod 验证返回的数据
       const validationResult = ProjectMetadataSchema.safeParse(newProject);

@@ -1,4 +1,5 @@
-import { Elysia, t, type Static } from 'elysia';
+import { Elysia, t } from 'elysia';
+import { z } from 'zod'; // 导入 z 以使用 Zod
 import { promises as fs } from 'node:fs';
 import path, { join, basename, extname } from 'node:path';
 import {
@@ -10,6 +11,7 @@ import {
   type WorkflowObject, // Type including metadata
   type GroupInterfaceInfo,
   ProjectMetadataSchema, // Import ProjectMetadataSchema
+  type ProjectMetadata, // 导入 Zod 推断的类型
 } from '@comfytavern/types';
 import {
   sanitizeProjectId,
@@ -30,6 +32,11 @@ interface ProjectRoutesDependencies {
 
 // Define the schema for updating project metadata (partial, excluding id and createdAt)
 const ProjectMetadataUpdateSchema = ProjectMetadataSchema.partial().omit({ id: true, createdAt: true });
+
+// 定义创建项目的请求体 Zod Schema
+const CreateProjectBodySchema = z.object({
+  name: z.string().min(1, { message: "Project name cannot be empty." }),
+});
 
 // 导出挂载项目路由的函数
 export const addProjectRoutes = (
@@ -95,19 +102,162 @@ export const addProjectRoutes = (
       } // End of GET /
     })
 
+    // POST /api/projects - 创建新项目
+    .post('/', async ({ body, set }) => {
+      // 使用 Zod Schema 验证请求体
+      const validationResult = CreateProjectBodySchema.safeParse(body);
+      if (!validationResult.success) {
+        set.status = 400; // Bad Request，因为请求体不符合预期
+        // Elysia 的 t.Object 验证失败时，status 可能是 422 Unprocessable Entity
+        // 但由于我们现在手动用 Zod 验证，400 更合适表示请求格式错误
+        const errors = validationResult.error.flatten().fieldErrors;
+        console.error('[POST /api/projects] Project creation body validation failed:', errors);
+        return { error: 'Invalid project creation data', details: errors };
+      }
+
+      const { name: projectName } = validationResult.data; // data 来自 Zod 的 safeParse
+      const projectId = sanitizeProjectId(projectName); // 使用 projectName 生成 ID
+      if (!projectId) {
+        set.status = 400;
+        console.error(`[POST /api/projects] Invalid project name after sanitization: ${projectName}`);
+        return { error: 'Invalid project name, results in empty ID after sanitization.' };
+      }
+
+      const projectPath = path.join(PROJECTS_BASE_DIR, projectId);
+      const projectWorkflowsDir = getProjectWorkflowsDir(projectId); // 使用已有的服务函数
+      const metadataPath = path.join(projectPath, 'project.json');
+
+      try {
+        // 检查项目是否已存在
+        try {
+          await fs.access(projectPath);
+          set.status = 409; // Conflict
+          console.warn(`[POST /api/projects] Project with ID '${projectId}' (name: '${projectName}') already exists.`);
+          return { error: `Project with ID '${projectId}' (derived from name '${projectName}') already exists.` };
+        } catch (accessError: any) {
+          if (accessError.code !== 'ENOENT') throw accessError; // 如果不是“文件不存在”错误，则抛出
+          // ENOENT 意味着项目不存在，可以继续创建
+        }
+
+        // 创建项目目录和 workflows 子目录
+        await fs.mkdir(projectWorkflowsDir, { recursive: true }); // recursive 会同时创建 projectPath
+        console.log(`[POST /api/projects] Created project directory: ${projectPath}`);
+        console.log(`[POST /api/projects] Created workflows directory: ${projectWorkflowsDir}`);
+
+        // 创建 project.json 元数据文件
+        const now = new Date().toISOString();
+        // 使用 z.infer 从 Zod Schema 推断类型
+        const projectMetadata: ProjectMetadata = {
+          id: projectId,
+          name: projectName,
+          createdAt: now,
+          updatedAt: now,
+          version: appVersion, // 使用依赖注入的 appVersion
+          description: `Project created on ${now}`, // 可选的描述
+          preferredView: 'editor', // 添加默认 preferredView
+          schemaVersion: appVersion, // 这个后续不会被更新，所以直接使用 appVersion 即可
+          // 其他元数据字段可以根据需要添加
+        };
+
+        // 验证元数据是否符合 Schema
+        const metadataValidation = ProjectMetadataSchema.safeParse(projectMetadata);
+        if (!metadataValidation.success) {
+            set.status = 500; // 内部服务器错误，因为这是我们自己生成的数据
+            console.error('[POST /api/projects] Generated project metadata validation failed:', metadataValidation.error.flatten().fieldErrors);
+            // 尝试清理创建的目录
+            try {
+                await fs.rm(projectPath, { recursive: true, force: true });
+            } catch (cleanupError) {
+                console.error(`[POST /api/projects] Failed to cleanup partially created project directory ${projectPath}:`, cleanupError);
+            }
+            return { error: 'Failed to create project due to internal metadata validation error.' };
+        }
+
+        await fs.writeFile(metadataPath, JSON.stringify(metadataValidation.data, null, 2));
+        console.log(`[POST /api/projects] Attempted to create project metadata file: ${metadataPath}`);
+
+        // 验证文件是否真的创建成功
+        try {
+          await fs.access(metadataPath);
+          console.log(`[POST /api/projects] Successfully verified metadata file existence: ${metadataPath}`);
+        } catch (accessErr: any) {
+          console.error(`[POST /api/projects] Failed to verify metadata file existence after write: ${metadataPath}`, accessErr);
+          // 如果文件未创建，这本身就是一个大问题，可能需要更复杂的错误处理
+          // 但为了让前端能收到创建的项目对象（即使后续加载可能失败），我们暂时不在这里抛出错误并回滚
+          // 理想情况下，这里应该回滚目录创建等操作
+          set.status = 500; // 指示服务器内部错误，因为文件操作未按预期执行
+          return { error: 'Failed to create project metadata file on server despite no initial error.' };
+        }
+
+        set.status = 201; // Created
+        return metadataValidation.data; // 返回创建的项目元数据
+
+      } catch (error) {
+        console.error(`[POST /api/projects] Error creating project '${projectName}' (ID: ${projectId}):`, error);
+        set.status = 500;
+        // 尝试清理可能已创建的目录
+        try {
+            await fs.rm(projectPath, { recursive: true, force: true });
+        } catch (cleanupError) {
+            console.error(`[POST /api/projects] Failed to cleanup partially created project directory ${projectPath} after error:`, cleanupError);
+        }
+        return { error: 'Failed to create project' };
+      }
+    }, {
+      // 注意：由于我们在 handler 内部使用 Zod 进行了验证，
+      // 这里的 body schema 定义 (使用 Elysia 的 t) 实际上是可选的。
+      // 如果保留，Elysia 会先进行一次验证，如果失败会返回 422。
+      // 如果移除，则完全依赖 Zod 的验证。
+      // 为了保持一致性和明确性，可以移除这里的 t.Object 定义，
+      // 或者确保它与 Zod schema 兼容（但 Zod 提供了更丰富的错误信息）。
+      // 暂时移除，依赖 Zod 的验证。
+      // body: t.Object({
+      //   name: t.String({
+      //     minLength: 1,
+      //     error: "Project name cannot be empty."
+      //   })
+      // })
+    }) // End of POST /api/projects
+
     // GET /api/projects/:projectId/metadata - 获取项目元数据
-    .get('/:projectId/metadata', async ({ params: { projectId }, set }) => {
-      const safeProjectId = sanitizeProjectId(projectId);
+    .get('/:projectId/metadata', async ({ params: { projectId: rawProjectId }, set }) => { // 重命名 projectId 为 rawProjectId
+      let decodedProjectId = '';
+      try {
+        decodedProjectId = decodeURIComponent(rawProjectId);
+      } catch (e) {
+        console.error(`[GET /${rawProjectId}/metadata] Error decoding project ID:`, e);
+        set.status = 400;
+        return { error: 'Invalid project ID encoding' };
+      }
+
+      const safeProjectId = sanitizeProjectId(decodedProjectId); // 使用解码后的 ID
       if (!safeProjectId) {
         set.status = 400;
-        return { error: 'Invalid project ID' };
+        return { error: 'Invalid project ID after sanitization' };
       }
 
       // 构建项目元数据文件路径 (使用导入的 PROJECTS_BASE_DIR)
-      const projectMetadataPath = path.join(PROJECTS_BASE_DIR, safeProjectId, 'project.json');
-      console.log(`尝试读取项目元数据文件: ${projectMetadataPath}`);
+      const projectDir = path.join(PROJECTS_BASE_DIR, safeProjectId); // 定义 projectDir
+      const projectMetadataPath = path.join(projectDir, 'project.json'); // 使用 projectDir
+      console.log(`[GET /${rawProjectId} (decoded: ${safeProjectId})/metadata] Project directory: ${projectDir}`);
+      console.log(`[GET /${rawProjectId} (decoded: ${safeProjectId})/metadata] Attempting to read metadata file: ${projectMetadataPath}`);
 
       try {
+        // 调试：列出项目目录中的文件
+        try {
+          const filesInDir = await fs.readdir(projectDir);
+          console.log(`[GET /${rawProjectId} (decoded: ${safeProjectId})/metadata] Files in project directory '${projectDir}':`, filesInDir);
+        } catch (readdirError: any) {
+          console.error(`[GET /${rawProjectId} (decoded: ${safeProjectId})/metadata] Error reading project directory '${projectDir}':`, readdirError);
+          // 如果连目录都读不了，那问题更严重
+          if (readdirError.code === 'ENOENT') {
+            set.status = 404;
+            return { error: `Project directory for ID '${safeProjectId}' (from '${rawProjectId}') not found.` };
+          }
+          set.status = 500;
+          return { error: `Failed to access project directory for ID '${safeProjectId}' (from '${rawProjectId}').` };
+        }
+
         const fileContent = await fs.readFile(projectMetadataPath, 'utf-8');
         const metadata = JSON.parse(fileContent);
         // TODO: Add Zod validation for metadata if a schema exists
@@ -116,9 +266,9 @@ export const addProjectRoutes = (
         if (error.code === 'ENOENT') {
           set.status = 404;
           console.warn(`Project metadata not found: ${projectMetadataPath}`);
-          return { error: `Project metadata for ID '${safeProjectId}' not found.` };
+          return { error: `Project metadata for ID '${safeProjectId}' (from '${rawProjectId}') not found.` };
         }
-        console.error(`Error loading project metadata for ${safeProjectId}:`, error);
+        console.error(`Error loading project metadata for ${safeProjectId} (from '${rawProjectId}'):`, error);
         set.status = 500;
         return { error: 'Failed to load project metadata.' };
       }
@@ -127,11 +277,19 @@ export const addProjectRoutes = (
     }) // End of GET /:projectId/metadata
 
     // PUT /api/projects/:projectId/metadata - 更新项目元数据
-    .put('/:projectId/metadata', async ({ params: { projectId }, body, set }) => {
-      const safeProjectId = sanitizeProjectId(projectId);
+    .put('/:projectId/metadata', async ({ params: { projectId: rawProjectId }, body, set }) => { // 重命名 projectId 为 rawProjectId
+      let decodedProjectId = '';
+      try {
+        decodedProjectId = decodeURIComponent(rawProjectId);
+      } catch (e) {
+        console.error(`[PUT /${rawProjectId}/metadata] Error decoding project ID:`, e);
+        set.status = 400;
+        return { error: 'Invalid project ID encoding' };
+      }
+      const safeProjectId = sanitizeProjectId(decodedProjectId); // 使用解码后的 ID
       if (!safeProjectId) {
         set.status = 400;
-        return { error: 'Invalid project ID' };
+        return { error: 'Invalid project ID after sanitization' };
       }
 
       // Manually validate the request body inside the handler
@@ -168,11 +326,19 @@ export const addProjectRoutes = (
     }) // End of PUT /:projectId/metadata
 
     // GET /api/projects/:projectId/workflows - 列出项目内的工作流
-    .get('/:projectId/workflows', async ({ params: { projectId }, set }) => {
-      const safeProjectId = sanitizeProjectId(projectId);
+    .get('/:projectId/workflows', async ({ params: { projectId: rawProjectId }, set }) => { // 重命名 projectId 为 rawProjectId
+      let decodedProjectId = '';
+      try {
+        decodedProjectId = decodeURIComponent(rawProjectId);
+      } catch (e) {
+        console.error(`[GET /${rawProjectId}/workflows] Error decoding project ID:`, e);
+        set.status = 400;
+        return { error: 'Invalid project ID encoding' };
+      }
+      const safeProjectId = sanitizeProjectId(decodedProjectId); // 使用解码后的 ID
       if (!safeProjectId) {
         set.status = 400;
-        return { error: 'Invalid project ID' };
+        return { error: 'Invalid project ID after sanitization' };
       }
       const projectWorkflowsDir = getProjectWorkflowsDir(safeProjectId);
 
@@ -181,7 +347,7 @@ export const addProjectRoutes = (
           await fs.access(projectWorkflowsDir);
         } catch (accessError: any) {
           if (accessError.code === 'ENOENT') {
-            console.log(`Workflows directory not found for project ${safeProjectId}, returning empty list.`);
+            console.log(`Workflows directory not found for project ${safeProjectId} (from '${rawProjectId}'), returning empty list.`);
             return [];
           }
           throw accessError;
@@ -206,14 +372,14 @@ export const addProjectRoutes = (
             creationMethod = workflowData.creationMethod; // Roo: 读取 creationMethod
             referencedWorkflows = workflowData.referencedWorkflows; // Roo: 读取 referencedWorkflows
           } catch (readError) {
-            console.error(`Error reading workflow file ${file} in project ${safeProjectId} for listing:`, readError);
+            console.error(`Error reading workflow file ${file} in project ${safeProjectId} (from '${rawProjectId}') for listing:`, readError);
           }
           // Roo: 返回包含所有需要字段的对象
           return { id, name, description, creationMethod, referencedWorkflows };
         }));
         return workflows;
       } catch (error) {
-        console.error(`Error listing workflows for project ${safeProjectId}:`, error);
+        console.error(`Error listing workflows for project ${safeProjectId} (from '${rawProjectId}'):`, error);
         set.status = 500;
         return { error: 'Failed to list project workflows' };
       }
@@ -222,11 +388,19 @@ export const addProjectRoutes = (
     }) // End of GET /:projectId/workflows
 
     // POST /api/projects/:projectId/workflows - 创建项目内的新工作流
-    .post('/:projectId/workflows', async ({ params: { projectId }, body, set }) => {
-        const safeProjectId = sanitizeProjectId(projectId);
+    .post('/:projectId/workflows', async ({ params: { projectId: rawProjectId }, body, set }) => { // 重命名 projectId 为 rawProjectId
+        let decodedProjectId = '';
+        try {
+          decodedProjectId = decodeURIComponent(rawProjectId);
+        } catch (e) {
+          console.error(`[POST /${rawProjectId}/workflows] Error decoding project ID:`, e);
+          set.status = 400;
+          return { error: 'Invalid project ID encoding' };
+        }
+        const safeProjectId = sanitizeProjectId(decodedProjectId); // 使用解码后的 ID
         if (!safeProjectId) {
           set.status = 400;
-          return { error: 'Invalid project ID' };
+          return { error: 'Invalid project ID after sanitization' };
         }
 
         // Use the correct CreateWorkflowObjectSchema for validation
@@ -309,10 +483,18 @@ export const addProjectRoutes = (
 
 
     // GET /api/projects/:projectId/workflows/:workflowId - 加载项目内指定工作流
-    .get('/:projectId/workflows/:workflowId', async ({ params: { projectId, workflowId }, set }) => {
-      const safeProjectId = sanitizeProjectId(projectId);
+    .get('/:projectId/workflows/:workflowId', async ({ params: { projectId: rawProjectId, workflowId }, set }) => { // 重命名 projectId
+      let decodedProjectId = '';
+      try {
+        decodedProjectId = decodeURIComponent(rawProjectId);
+      } catch (e) {
+        console.error(`[GET /${rawProjectId}/workflows/${workflowId}] Error decoding project ID:`, e);
+        set.status = 400;
+        return { error: 'Invalid project ID encoding' };
+      }
+      const safeProjectId = sanitizeProjectId(decodedProjectId); // 使用解码后的 ID
       if (!safeProjectId) {
-        set.status = 400; return { error: 'Invalid project ID' };
+        set.status = 400; return { error: 'Invalid project ID after sanitization' };
       }
       const safeWorkflowId = sanitizeWorkflowIdFromParam(workflowId);
       if (!safeWorkflowId) {
@@ -350,9 +532,9 @@ export const addProjectRoutes = (
       } catch (error: any) {
         if (error.code === 'ENOENT') {
           set.status = 404;
-          return { error: `Workflow with ID '${safeWorkflowId}' not found in project '${safeProjectId}'.` };
+          return { error: `Workflow with ID '${safeWorkflowId}' not found in project '${safeProjectId}' (from '${rawProjectId}').` };
         }
-        console.error(`Error loading workflow ${safeWorkflowId} from project ${safeProjectId}:`, error);
+        console.error(`Error loading workflow ${safeWorkflowId} from project ${safeProjectId} (from '${rawProjectId}'):`, error);
         set.status = 500;
         return { error: 'Failed to load project workflow.' };
       }
@@ -361,10 +543,18 @@ export const addProjectRoutes = (
     }) // End of GET /:projectId/workflows/:workflowId
 
     // PUT /api/projects/:projectId/workflows/:workflowId - 更新项目内的工作流
-    .put('/:projectId/workflows/:workflowId', async ({ params: { projectId, workflowId }, body, set }) => {
-      const safeProjectId = sanitizeProjectId(projectId);
+    .put('/:projectId/workflows/:workflowId', async ({ params: { projectId: rawProjectId, workflowId }, body, set }) => { // 重命名 projectId
+      let decodedProjectId = '';
+      try {
+        decodedProjectId = decodeURIComponent(rawProjectId);
+      } catch (e) {
+        console.error(`[PUT /${rawProjectId}/workflows/${workflowId}] Error decoding project ID:`, e);
+        set.status = 400;
+        return { error: 'Invalid project ID encoding' };
+      }
+      const safeProjectId = sanitizeProjectId(decodedProjectId); // 使用解码后的 ID
       if (!safeProjectId) {
-        set.status = 400; return { error: 'Invalid project ID' };
+        set.status = 400; return { error: 'Invalid project ID after sanitization' };
       }
       const safeWorkflowId = sanitizeWorkflowIdFromParam(workflowId);
       if (!safeWorkflowId) {
@@ -518,10 +708,18 @@ export const addProjectRoutes = (
 
 
     // DELETE /api/projects/:projectId/workflows/:workflowId - 删除项目内的工作流
-    .delete('/:projectId/workflows/:workflowId', async ({ params: { projectId, workflowId }, set }) => {
-      const safeProjectId = sanitizeProjectId(projectId);
+    .delete('/:projectId/workflows/:workflowId', async ({ params: { projectId: rawProjectId, workflowId }, set }) => { // 重命名 projectId
+      let decodedProjectId = '';
+      try {
+        decodedProjectId = decodeURIComponent(rawProjectId);
+      } catch (e) {
+        console.error(`[DELETE /${rawProjectId}/workflows/${workflowId}] Error decoding project ID:`, e);
+        set.status = 400;
+        return { error: 'Invalid project ID encoding' };
+      }
+      const safeProjectId = sanitizeProjectId(decodedProjectId); // 使用解码后的 ID
       if (!safeProjectId) {
-        set.status = 400; return { error: 'Invalid project ID' };
+        set.status = 400; return { error: 'Invalid project ID after sanitization' };
       }
       const safeWorkflowId = sanitizeWorkflowIdFromParam(workflowId);
       if (!safeWorkflowId) {

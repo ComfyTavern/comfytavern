@@ -6,6 +6,16 @@ import { useThemeStore } from '../stores/theme'; // 导入 theme store
 // 使用 Composable 获取项目数据和方法
 const { projects, isLoading, error, createNewProject, openProject } = useProjectManagement();
 const themeStore = useThemeStore(); // 获取 theme store 实例
+
+const promptAndCreateProject = async () => {
+  const projectName = window.prompt('请输入新项目的名称：');
+  if (projectName && projectName.trim() !== '') {
+    await createNewProject(projectName.trim());
+  } else if (projectName !== null) { // 用户点击了确定但输入为空
+    alert('项目名称不能为空！');
+  }
+  // 如果 projectName 为 null，表示用户点击了取消，不执行任何操作
+};
 </script>
 
 <template>
@@ -21,7 +31,7 @@ const themeStore = useThemeStore(); // 获取 theme store 实例
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-gray-800 dark:text-white">我的项目</h1>
         <button
-          @click="createNewProject"
+          @click="promptAndCreateProject"
           :disabled="isLoading"
           class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >

@@ -27,11 +27,18 @@ export function useProjectManagement() {
   };
 
   // 创建新项目并导航
-  const createNewProject = async () => {
+  const createNewProject = async (projectName: string) => {
+    if (!projectName || projectName.trim() === '') {
+      console.error('项目名称不能为空');
+      error.value = '项目名称不能为空。';
+      alert(error.value); // 临时用 alert 提示
+      return; // 提前返回，不执行后续操作
+    }
     isLoading.value = true; // 可以添加一个全局加载状态或按钮加载状态
     error.value = null;
     try {
-      const newProject = await projectStore.createProject();
+      // 将项目名称传递给 store action
+      const newProject = await projectStore.createProject({ name: projectName });
       if (newProject) {
         // 导航到新项目的编辑器页面
         router.push({ name: 'Editor', params: { projectId: newProject.id } });
