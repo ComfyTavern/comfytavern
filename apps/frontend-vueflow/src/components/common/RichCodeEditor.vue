@@ -1,11 +1,23 @@
 <template>
   <div class="rich-code-editor-wrapper" ref="wrapperRef" :class="{ dark: themeStore.isDark }">
     <div v-if="breadcrumbData" class="breadcrumb-bar">
-      <span v-if="breadcrumbData.workflowName" class="breadcrumb-item">{{ breadcrumbData.workflowName }}</span>
-      <span v-if="breadcrumbData.workflowName && (breadcrumbData.nodeName || breadcrumbData.inputName)" class="breadcrumb-separator">></span>
-      <span v-if="breadcrumbData.nodeName" class="breadcrumb-item">{{ breadcrumbData.nodeName }}</span>
-      <span v-if="breadcrumbData.nodeName && breadcrumbData.inputName" class="breadcrumb-separator">></span>
-      <span v-if="breadcrumbData.inputName" class="breadcrumb-item">{{ breadcrumbData.inputName }}</span>
+      <span v-if="breadcrumbData.workflowName" class="breadcrumb-item">{{
+        breadcrumbData.workflowName
+      }}</span>
+      <span
+        v-if="breadcrumbData.workflowName && (breadcrumbData.nodeName || breadcrumbData.inputName)"
+        class="breadcrumb-separator"
+        >></span
+      >
+      <span v-if="breadcrumbData.nodeName" class="breadcrumb-item">{{
+        breadcrumbData.nodeName
+      }}</span>
+      <span v-if="breadcrumbData.nodeName && breadcrumbData.inputName" class="breadcrumb-separator"
+        >></span
+      >
+      <span v-if="breadcrumbData.inputName" class="breadcrumb-item">{{
+        breadcrumbData.inputName
+      }}</span>
     </div>
     <div ref="editorContainerRef" class="editor-container"></div>
   </div>
@@ -18,36 +30,49 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, shallowRef, reactive } from 'vue';
-import { EditorState, Compartment } from '@codemirror/state';
+import { ref, onMounted, onUnmounted, watch, shallowRef, reactive } from "vue";
+import { EditorState, Compartment } from "@codemirror/state"; // Transaction removed as it's no longer used
 import {
-  EditorView, lineNumbers, keymap, highlightSpecialChars, drawSelection, dropCursor,
-  rectangularSelection, crosshairCursor, highlightActiveLine, highlightActiveLineGutter
-} from '@codemirror/view';
-import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
-import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
-import { lintKeymap } from '@codemirror/lint';
-import { javascript } from '@codemirror/lang-javascript';
-import { json } from '@codemirror/lang-json';
-import { markdown } from '@codemirror/lang-markdown';
-import { foldGutter, foldKeymap } from '@codemirror/language'; // 导入 foldGutter 和 foldKeymap
-import { vscodeDark, vscodeLight } from '@uiw/codemirror-theme-vscode';
-import type { BreadcrumbData, EditorInstanceConfig } from '@/types/editorTypes';
-import { useThemeStore } from '@/stores/theme';
-import EditorContextMenu from './EditorContextMenu.vue'; // 导入右键菜单组件
+  EditorView,
+  lineNumbers,
+  keymap,
+  highlightSpecialChars,
+  drawSelection,
+  dropCursor,
+  rectangularSelection,
+  crosshairCursor,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+} from "@codemirror/view";
+import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
+import {
+  autocompletion,
+  completionKeymap,
+  closeBrackets,
+  closeBracketsKeymap,
+} from "@codemirror/autocomplete";
+import { lintKeymap } from "@codemirror/lint";
+import { javascript } from "@codemirror/lang-javascript";
+import { json } from "@codemirror/lang-json";
+import { markdown } from "@codemirror/lang-markdown";
+import { foldGutter, foldKeymap } from "@codemirror/language"; // 导入 foldGutter 和 foldKeymap
+import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
+import type { BreadcrumbData, EditorInstanceConfig } from "@/types/editorTypes";
+import { useThemeStore } from "@/stores/theme";
+import EditorContextMenu from "./EditorContextMenu.vue"; // 导入右键菜单组件
 
 const props = defineProps<{
   editorId: string;
   initialContent: string;
-  languageHint?: 'json' | 'markdown' | 'javascript' | 'python' | 'text' | string;
+  languageHint?: "json" | "markdown" | "javascript" | "python" | "text" | string;
   breadcrumbData?: BreadcrumbData;
   config?: EditorInstanceConfig;
 }>();
 
 const emit = defineEmits<{
-  (e: 'contentChanged', payload: { editorId: string; newContent: string; isDirty: boolean }): void;
-  (e: 'saveRequested', payload: { editorId: string; content: string }): void;
+  (e: "contentChanged", payload: { editorId: string; newContent: string; isDirty: boolean }): void;
+  (e: "saveRequested", payload: { editorId: string; content: string }): void;
 }>();
 
 const editorContainerRef = ref<HTMLDivElement | null>(null);
@@ -74,7 +99,6 @@ const handleContextMenu = (event: MouseEvent) => {
 const closeContextMenu = () => {
   showContextMenu.value = false;
 };
-
 
 onMounted(() => {
   if (!editorContainerRef.value) return;
@@ -109,27 +133,44 @@ onMounted(() => {
     closeBrackets(),
     autocompletion(),
     EditorView.lineWrapping,
-    EditorView.updateListener.of(update => {
+    EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         internalDirtyState.value = true;
-        emit('contentChanged', {
+        const emittedContent = update.state.doc.toString();
+        let finalEmittedContent = emittedContent;
+
+        if (props.languageHint === "json") {
+          try {
+            const parsedJson = JSON.parse(emittedContent);
+            finalEmittedContent = JSON.stringify(parsedJson, null, 2);
+          } catch (e) {
+            console.warn(
+              `[RichCodeEditor updateListener editorId: ${props.editorId}] JSON mode: emittedContent is not valid JSON for re-formatting, emitting as-is. Error:`,
+              e,
+              "Value (stringified):",
+              JSON.stringify(emittedContent)
+            );
+          }
+        }
+
+        emit("contentChanged", {
           editorId: props.editorId,
-          newContent: update.state.doc.toString(),
+          newContent: finalEmittedContent,
           isDirty: true,
         });
       }
     }),
     EditorView.domEventHandlers({
       focus(_event, _view) {
-        wrapperRef.value?.classList.add('is-focused');
+        wrapperRef.value?.classList.add("is-focused");
       },
       blur(_event, _view) {
-        wrapperRef.value?.classList.remove('is-focused');
+        wrapperRef.value?.classList.remove("is-focused");
         if (internalDirtyState.value) {
           triggerSave();
         }
       },
-      contextmenu: (event, _view) => { // 将未使用的 view 重命名为 _view
+      contextmenu: (event, _view) => {
         handleContextMenu(event);
         return true; // 表示已处理该事件
       },
@@ -138,15 +179,15 @@ onMounted(() => {
 
   if (props.languageHint) {
     switch (props.languageHint.toLowerCase()) {
-      case 'javascript':
-      case 'js':
+      case "javascript":
+      case "js":
         extensions.push(javascript({ jsx: true }));
         break;
-      case 'json':
+      case "json":
         extensions.push(json());
         break;
-      case 'markdown':
-      case 'md':
+      case "markdown":
+      case "md":
         extensions.push(markdown());
         break;
       default:
@@ -154,8 +195,22 @@ onMounted(() => {
     }
   }
 
+  let docContent = props.initialContent;
+  if (props.languageHint === "json" && typeof props.initialContent !== "string") {
+    try {
+      docContent = JSON.stringify(props.initialContent, null, 2);
+    } catch (e) {
+      console.error(
+        `[RichCodeEditor editorId: ${props.editorId}] Failed to stringify initialContent:`,
+        e
+      );
+      docContent =
+        '{\n  "error": "Invalid initial content for JSON editor, failed to stringify."\n}';
+    }
+  }
+
   const startState = EditorState.create({
-    doc: props.initialContent,
+    doc: docContent,
     extensions,
   });
 
@@ -170,54 +225,99 @@ onUnmounted(() => {
   editorView.value?.destroy();
 });
 
-watch(() => props.initialContent, (newVal) => {
-  if (editorView.value && newVal !== editorView.value.state.doc.toString()) {
-    editorView.value.dispatch({
-      changes: { from: 0, to: editorView.value.state.doc.length, insert: newVal },
-    });
-    internalDirtyState.value = false;
-    emit('contentChanged', {
+watch(
+  () => props.initialContent,
+  (newVal) => {
+    let newContentForEditor = newVal; // Declare at the top of the watch callback
+
+    if (props.languageHint === "json" && typeof newVal !== "string") {
+      console.warn(
+        // 保留这个警告，因为它指示了一个潜在的 props 类型问题
+        `[RichCodeEditor editorId: ${
+          props.editorId
+        }] Watched initialContent for JSON languageHint is not a string. Type: ${typeof newVal}. Value:`,
+        newVal,
+        "Attempting to stringify."
+      );
+      try {
+        newContentForEditor = JSON.stringify(newVal, null, 2);
+      } catch (e) {
+        console.error(
+          // 保留这个错误
+          `[RichCodeEditor editorId: ${props.editorId}] Failed to stringify watched initialContent:`,
+          e
+        );
+        newContentForEditor =
+          '{\n  "error": "Invalid watched content for JSON editor, failed to stringify."\n}';
+      }
+    }
+
+    if (editorView.value) {
+      if (newContentForEditor !== editorView.value.state.doc.toString()) {
+        editorView.value.dispatch({
+          changes: { from: 0, to: editorView.value.state.doc.length, insert: newContentForEditor },
+        });
+        internalDirtyState.value = false;
+      }
+    } else {
+      if (newVal !== props.initialContent) {
+      }
+    }
+
+    emit("contentChanged", {
       editorId: props.editorId,
-      newContent: newVal,
+      newContent: newContentForEditor,
       isDirty: false,
     });
   }
-});
+);
 
-watch(() => props.config?.readOnly, (isReadOnly) => {
-  if (editorView.value) {
-    editorView.value.dispatch({
-      effects: editableCompartment.reconfigure(EditorView.editable.of(!(isReadOnly ?? false))),
-    });
+watch(
+  () => props.config?.readOnly,
+  (_isReadOnly) => {
+    if (editorView.value) {
+      editorView.value.dispatch({
+        effects: editableCompartment.reconfigure(EditorView.editable.of(!(_isReadOnly ?? false))),
+      });
+    }
   }
-});
+);
 
-watch(() => props.config?.lineNumbers, (show) => {
-  if (editorView.value) {
-    editorView.value.dispatch({
-      effects: lineNumbersCompartment.reconfigure(show ?? true ? lineNumbers() : []),
-    });
+watch(
+  () => props.config?.lineNumbers,
+  (show) => {
+    if (editorView.value) {
+      editorView.value.dispatch({
+        effects: lineNumbersCompartment.reconfigure(show ?? true ? lineNumbers() : []),
+      });
+    }
   }
-});
+);
 
-watch(() => props.config?.foldGutter, (show) => {
-  if (editorView.value) {
-    editorView.value.dispatch({
-      effects: foldGutterCompartment.reconfigure(show ?? true ? foldGutter() : []),
-    });
+watch(
+  () => props.config?.foldGutter,
+  (show) => {
+    if (editorView.value) {
+      editorView.value.dispatch({
+        effects: foldGutterCompartment.reconfigure(show ?? true ? foldGutter() : []),
+      });
+    }
   }
-});
+);
 
-watch(() => themeStore.isDark, (isDark) => {
-  if (editorView.value) {
-    editorView.value.dispatch({
-      effects: themeCompartment.reconfigure(isDark ? vscodeDark : vscodeLight),
-    });
+watch(
+  () => themeStore.isDark,
+  (isDark) => {
+    if (editorView.value) {
+      editorView.value.dispatch({
+        effects: themeCompartment.reconfigure(isDark ? vscodeDark : vscodeLight),
+      });
+    }
   }
-});
+);
 
 const getContent = (): string => {
-  return editorView.value?.state.doc.toString() || '';
+  return editorView.value?.state.doc.toString() || "";
 };
 
 const setContent = (newContent: string): void => {
@@ -226,7 +326,7 @@ const setContent = (newContent: string): void => {
       changes: { from: 0, to: editorView.value.state.doc.length, insert: newContent },
     });
     internalDirtyState.value = false;
-    emit('contentChanged', {
+    emit("contentChanged", {
       editorId: props.editorId,
       newContent,
       isDirty: false,
@@ -244,7 +344,7 @@ const focusEditor = (): void => {
 
 const triggerSave = (): void => {
   const currentContent = getContent();
-  emit('saveRequested', { editorId: props.editorId, content: currentContent });
+  emit("saveRequested", { editorId: props.editorId, content: currentContent });
   internalDirtyState.value = false;
 };
 
@@ -254,7 +354,7 @@ defineExpose({
   isDirty,
   focusEditor,
   triggerSave,
-  editorView, // 暴露 editorView 实例
+  editorView,
 });
 </script>
 
@@ -305,7 +405,7 @@ defineExpose({
 :deep(.cm-editor) {
   height: 100%;
   width: 100%;
-  font-family: 'Consolas', 'Monaco', monospace;
+  font-family: "Consolas", "Monaco", monospace;
   font-size: 14px;
 }
 

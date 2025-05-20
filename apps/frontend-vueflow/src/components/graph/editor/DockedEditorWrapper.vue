@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import { ref, shallowRef, computed, watch, onMounted, nextTick, toRaw } from "vue"; // 咕咕：导入 toRaw
+import { ref, shallowRef, computed, watch, onMounted, nextTick, toRaw } from "vue";
 import type { Component } from "vue";
 import { useStorage } from "@vueuse/core";
-import { useEditorState } from "@/composables/editor/useEditorState"; // <-- 咕咕：导入 useEditorState
+import { useEditorState } from "@/composables/editor/useEditorState";
 import RichCodeEditor from "@/components/common/RichCodeEditor.vue";
 import TabbedEditorHost from "@/components/common/TabbedEditorHost.vue";
-import type { EditorOpeningContext, TabData, EditorInstanceConfig } from "@/types/editorTypes"; // 咕咕：确保 EditorInstanceConfig 已导入
-// BreadcrumbData and EditorInstanceConfig are now part of EditorOpeningContext or TabData, imported from editorTypes.ts
+import type { EditorOpeningContext, TabData, EditorInstanceConfig } from "@/types/editorTypes";
 import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager";
-import { useThemeStore } from "@/stores/theme"; // 咕咕：导入全局主题存储
+import { useThemeStore } from "@/stores/theme";
 import { useWorkflowInteractionCoordinator } from "@/composables/workflow/useWorkflowInteractionCoordinator";
 import type { HistoryEntry, HistoryEntryDetails } from "@comfytavern/types";
 
@@ -30,10 +29,10 @@ const interactionCoordinator = useWorkflowInteractionCoordinator();
 const themeStore = useThemeStore(); // 咕咕：获取主题存储实例
 
 // == UI State Management ==
-// const isVisible = useStorage('docked-editor-isVisible', false); // <-- 咕咕：移除内部 isVisible，由外部控制
 const editorHeight = useStorage("docked-editor-height", 300); // 默认高度 300px
-// const isResident = useStorage('docked-editor-isResident', false); // 是否常驻，默认为 false // 咕咕：移除常驻按钮相关逻辑
 const { toggleDockedEditor, isDockedEditorVisible } = useEditorState(); // <-- 咕咕：使用全局状态
+const isMaximized = ref(false);
+const previousHeightBeforeMaximize = ref(editorHeight.value);
 
 const panelStyle = computed(() => ({
   height: `${editorHeight.value}px`,
@@ -44,9 +43,14 @@ let initialHeight = 0;
 const isResizing = ref(false);
 
 function startResize(event: MouseEvent) {
+  if (isMaximized.value) {
+    isMaximized.value = false; // 如果是最大化状态，拖拽时取消最大化
+    // editorHeight.value 已经是最大化高度，initialHeight 会正确获取
+  }
   isResizing.value = true;
   dragStartY = event.clientY;
   initialHeight = editorHeight.value;
+  document.body.style.cursor = "ns-resize"; // 设置 body 光标
   document.addEventListener("mousemove", doResize);
   document.addEventListener("mouseup", stopResize);
 }
@@ -55,11 +59,12 @@ function doResize(event: MouseEvent) {
   if (!isResizing.value) return;
   const deltaY = event.clientY - dragStartY;
   const newHeight = initialHeight - deltaY; // 向上拖动增加高度，向下拖动减少高度
-  editorHeight.value = Math.max(100, Math.min(newHeight, window.innerHeight * 0.8)); // 最小100px，最大80%视窗高度
+  editorHeight.value = Math.max(100, Math.min(newHeight, window.innerHeight * 0.98)); // 最小100px，最大98%视窗高度
 }
 
 function stopResize() {
   isResizing.value = false;
+  document.body.style.cursor = ""; // 恢复 body 光标
   document.removeEventListener("mousemove", doResize);
   document.removeEventListener("mouseup", stopResize);
 }
@@ -75,6 +80,17 @@ function closeEditorPanel() {
   // }
 }
 
+function toggleMaximizeEditor() {
+  if (!isMaximized.value) {
+    previousHeightBeforeMaximize.value = editorHeight.value;
+    editorHeight.value = window.innerHeight * 0.95; // 最大化到视窗高度的98%
+    isMaximized.value = true;
+  } else {
+    editorHeight.value = previousHeightBeforeMaximize.value;
+    isMaximized.value = false;
+  }
+}
+
 // == Editor Mode Dispatching ==
 type EditorMode = "single" | "fullMultiTab";
 const currentEditorMode = ref<EditorMode>("fullMultiTab");
@@ -84,6 +100,17 @@ const currentEditorContext = ref<EditorOpeningContext | null>(null); // 这个�
 const richCodeEditorRef = ref<InstanceType<typeof RichCodeEditor> | null>(null);
 const tabbedEditorHostRef = ref<InstanceType<typeof TabbedEditorHost> | null>(null);
 const openTabsMap = ref(new Map<string, TabData>()); // 用于存储 DockedEditorWrapper 打开的标签页信息
+
+const activeTabTitleInMultiMode = computed(() => {
+  if (currentEditorMode.value === "fullMultiTab" && tabbedEditorHostRef.value) {
+    const activeHostTabId = tabbedEditorHostRef.value.getActiveTabId();
+    if (activeHostTabId) {
+      const tabData = openTabsMap.value.get(activeHostTabId);
+      return tabData?.title; // 返回标签页标题，如果找不到则返回 undefined
+    }
+  }
+  return undefined; // 非 fullMultiTab 模式或无激活标签页
+});
 
 watch(
   currentEditorMode,
@@ -195,10 +222,6 @@ async function handleSave(content: string) {
       contextOnSave(content);
     }
 
-    // 如果是单页模式且非驻留，则保存后关闭
-    // if (currentEditorMode.value === 'single' && !isResident.value) { // 咕咕：移除常驻按钮相关逻辑
-    //   closeEditorPanel();
-    // }
     // 咕咕：单页模式下，保存后总是关闭，除非未来有更复杂的逻辑
     if (currentEditorMode.value === "single") {
       closeEditorPanel();
@@ -211,7 +234,6 @@ async function handleSave(content: string) {
 function handleTabbedEditorSave(tab: TabData, newContent: string) {
   // TabbedEditorHost 保存时，我们需要从 tabData 中获取原始的 nodeId 和 inputPath
   // 这些信息应该在创建 TabData 时从 EditorOpeningContext 传入并存储
-  // 假设 TabData 中已包含 nodeId 和 inputPath
   const {
     nodeId,
     inputPath,
@@ -303,8 +325,6 @@ function handleTabbedEditorSave(tab: TabData, newContent: string) {
       );
     }
     console.log(`标签页 ${tab.title} 的内容已保存到节点 ${nodeId} 的 ${inputPath}`);
-    // emit('contentSaved', nodeId, inputPath, newContent); // 这个 emit 应该由 handleSave 内部处理，或者这里也发一次？
-    // 暂时由各自的保存逻辑触发
   } else {
     console.warn("TabbedEditorHost 保存失败：TabData 中缺少 nodeId 或 inputPath", tab);
   }
@@ -336,9 +356,6 @@ function openEditor(context: EditorOpeningContext) {
         ...context,
         config: editorConfigWithTheme,
       };
-      // 确保 RichCodeEditor 的 props 更新，Vue 的响应式系统应该会自动处理
-      // 如果 RichCodeEditor 内部不直接 watch props.config 来更新主题，则可能需要手动调用其方法
-      // 但根据 Grok 的修改，RichCodeEditor 应该会 watch props.config.theme
       richCodeEditorRef.value.setContent(context.initialContent || "");
       // richCodeEditorRef.value.focus(); // 考虑是否自动聚焦
     } else if (currentEditorMode.value === "fullMultiTab" && tabbedEditorHostRef.value) {
@@ -386,19 +403,12 @@ function handleTabSavedEvent(payload: { tabId: string; editorId: string; content
 
 function handleTabClosedEvent(payload: { tabId: string; editorId: string }) {
   openTabsMap.value.delete(payload.tabId);
-  // if (openTabsMap.value.size === 0 && !isResident.value) { // 咕咕：移除常驻按钮相关逻辑
-  //   closeEditorPanel();
-  // }
   // 咕咕：所有标签关闭后总是关闭编辑器
   if (openTabsMap.value.size === 0) {
     closeEditorPanel();
   }
 }
 
-// Computed property for the condition in @all-tabs-closed
-// const shouldCloseOnAllTabsClosed = computed(() => { // 咕咕：移除常驻按钮相关逻辑
-//   return !isResident.value && openTabsMap.value.size === 0;
-// });
 // 咕咕：现在总是应该在所有标签关闭时关闭
 const shouldCloseOnAllTabsClosed = computed(() => openTabsMap.value.size === 0);
 
@@ -430,7 +440,21 @@ async function handleFocusIn() {
             inputValueObject !== null &&
             "value" in inputValueObject
           ) {
-            actualStringValue = String(inputValueObject.value); // 确保是字符串
+            // 咕咕：如果 inputValueObject.value 是对象，尝试 JSON.stringify
+            if (typeof inputValueObject.value === "object" && inputValueObject.value !== null) {
+              try {
+                actualStringValue = JSON.stringify(inputValueObject.value, null, 2);
+              } catch (e) {
+                console.warn(
+                  `[DockedEditorWrapper handleFocusIn] Failed to stringify input value for ${nodeId}/${inputPath}, falling back to String():`,
+                  inputValueObject.value,
+                  e
+                );
+                actualStringValue = String(inputValueObject.value);
+              }
+            } else {
+              actualStringValue = String(inputValueObject.value); // 确保是字符串
+            }
           } else if (typeof inputValueObject === "string") {
             // 也可能是直接的字符串
             actualStringValue = inputValueObject;
@@ -438,9 +462,37 @@ async function handleFocusIn() {
         } else if (inputPath.startsWith("config.")) {
           const configKey = inputPath.substring("config.".length);
           // 咕咕：配置值通常直接是字符串或其他原始类型
-          actualStringValue = rawNodeData.config?.[configKey];
+          const configVal = rawNodeData.config?.[configKey];
+          if (typeof configVal === "object" && configVal !== null) {
+            try {
+              actualStringValue = JSON.stringify(configVal, null, 2);
+            } catch (e) {
+              console.warn(
+                `[DockedEditorWrapper handleFocusIn] Failed to stringify config value for ${nodeId}/${inputPath}, falling back to String():`,
+                configVal,
+                e
+              );
+              actualStringValue = String(configVal);
+            }
+          } else if (configVal !== undefined) {
+            actualStringValue = String(configVal);
+          }
         } else {
-          actualStringValue = rawNodeData[inputPath];
+          const otherVal = rawNodeData[inputPath];
+          if (typeof otherVal === "object" && otherVal !== null) {
+            try {
+              actualStringValue = JSON.stringify(otherVal, null, 2);
+            } catch (e) {
+              console.warn(
+                `[DockedEditorWrapper handleFocusIn] Failed to stringify other value for ${nodeId}/${inputPath}, falling back to String():`,
+                otherVal,
+                e
+              );
+              actualStringValue = String(otherVal);
+            }
+          } else if (otherVal !== undefined) {
+            actualStringValue = String(otherVal);
+          }
         }
 
         if (actualStringValue !== undefined) {
@@ -472,18 +524,56 @@ async function handleFocusIn() {
                 inputValueObject !== null &&
                 "value" in inputValueObject
               ) {
-                actualStringValue = String(inputValueObject.value);
+                if (typeof inputValueObject.value === "object" && inputValueObject.value !== null) {
+                  try {
+                    actualStringValue = JSON.stringify(inputValueObject.value, null, 2);
+                  } catch (e) {
+                    console.warn(
+                      `[DockedEditorWrapper handleFocusIn Tabbed] Failed to stringify input value for ${nodeId}/${inputPath}, falling back to String():`,
+                      inputValueObject.value,
+                      e
+                    );
+                    actualStringValue = String(inputValueObject.value);
+                  }
+                } else {
+                  actualStringValue = String(inputValueObject.value);
+                }
               } else if (typeof inputValueObject === "string") {
                 actualStringValue = inputValueObject;
               }
-              // latestValue = inputValueObject; // 咕咕：移除未使用的 latestValue 赋值
             } else if (inputPath.startsWith("config.")) {
               const configKey = inputPath.substring("config.".length);
-              actualStringValue = rawNodeData.config?.[configKey];
-              // latestValue = actualStringValue; // 咕咕：移除未使用的 latestValue 赋值
+              const configVal = rawNodeData.config?.[configKey];
+              if (typeof configVal === "object" && configVal !== null) {
+                try {
+                  actualStringValue = JSON.stringify(configVal, null, 2);
+                } catch (e) {
+                  console.warn(
+                    `[DockedEditorWrapper handleFocusIn Tabbed] Failed to stringify config value for ${nodeId}/${inputPath}, falling back to String():`,
+                    configVal,
+                    e
+                  );
+                  actualStringValue = String(configVal);
+                }
+              } else if (configVal !== undefined) {
+                actualStringValue = String(configVal);
+              }
             } else {
-              actualStringValue = rawNodeData[inputPath];
-              // latestValue = actualStringValue; // 咕咕：移除未使用的 latestValue 赋值
+              const otherVal = rawNodeData[inputPath];
+              if (typeof otherVal === "object" && otherVal !== null) {
+                try {
+                  actualStringValue = JSON.stringify(otherVal, null, 2);
+                } catch (e) {
+                  console.warn(
+                    `[DockedEditorWrapper handleFocusIn Tabbed] Failed to stringify other value for ${nodeId}/${inputPath}, falling back to String():`,
+                    otherVal,
+                    e
+                  );
+                  actualStringValue = String(otherVal);
+                }
+              } else if (otherVal !== undefined) {
+                actualStringValue = String(otherVal);
+              }
             }
 
             if (actualStringValue !== undefined) {
@@ -521,93 +611,68 @@ onMounted(() => {
 
 <template>
   <!-- v-if="isVisible" 已被移除，因为父组件 EditorView.vue 会通过 v-if="isDockedEditorVisible" 控制此组件的挂载 -->
-  <div
-    class="docked-editor-wrapper-root"
-    :style="panelStyle"
-    :class="{ dark: themeStore.isDark }"
-    @focusin="handleFocusIn"
-  >
-    <div class="editor-resizer" @mousedown="startResize"></div>
+  <div class="docked-editor-wrapper-root" :style="panelStyle" :class="{ dark: themeStore.isDark }"
+    @focusin="handleFocusIn">
+    <!-- 咕咕：resizer 覆盖在顶部，并添加拖拽图标 -->
+    <div class="editor-resizer" @mousedown="startResize">
+      <div class="drag-handle-icon">
+        <span class="drag-dot"></span>
+        <span class="drag-dot"></span>
+        <span class="drag-dot"></span>
+      </div>
+    </div>
     <div class="editor-header">
       <span class="editor-title">
         <!-- 根据模式显示不同标题 -->
         <template v-if="currentEditorMode === 'single' && currentEditorContext?.breadcrumbData">
           编辑:
-          <span v-if="currentEditorContext.breadcrumbData.workflowName"
-            >{{ currentEditorContext.breadcrumbData.workflowName }} &gt;
+          <span v-if="currentEditorContext.breadcrumbData.workflowName">{{
+            currentEditorContext.breadcrumbData.workflowName }} &gt;
           </span>
-          <span v-if="currentEditorContext.breadcrumbData.nodeName"
-            >{{ currentEditorContext.breadcrumbData.nodeName }} &gt;
+          <span v-if="currentEditorContext.breadcrumbData.nodeName">{{ currentEditorContext.breadcrumbData.nodeName }}
+            &gt;
           </span>
           <span v-if="currentEditorContext.breadcrumbData.inputName">{{
             currentEditorContext.breadcrumbData.inputName
           }}</span>
-          <span
-            v-if="
-              !currentEditorContext.breadcrumbData.inputName &&
-              !currentEditorContext.breadcrumbData.nodeName
-            "
-            >{{ currentEditorContext.inputPath }}</span
-          >
+          <span v-if="
+            !currentEditorContext.breadcrumbData.inputName &&
+            !currentEditorContext.breadcrumbData.nodeName
+          ">{{ currentEditorContext.inputPath }}</span>
         </template>
         <template v-else-if="currentEditorMode === 'single' && currentEditorContext">
           编辑: {{ currentEditorContext.inputPath }}
         </template>
-        <template v-else-if="currentEditorMode === 'fullMultiTab'"> 编辑器 </template>
+        <template v-else-if="currentEditorMode === 'fullMultiTab'">
+          文本编辑器
+          <span v-if="activeTabTitleInMultiMode"> - {{ activeTabTitleInMultiMode }}</span>
+        </template>
       </span>
       <div class="editor-actions">
-        <!-- <button @click="isResident = !isResident" :title="isResident ? '取消常驻' : '设为常驻'"> // 咕咕：移除常驻按钮
-          {{ isResident ? '📌' : '📍' }}
-        </button> -->
+        <button @click="toggleMaximizeEditor" :title="isMaximized ? '恢复大小' : '最大化面板'">
+          {{ isMaximized ? "▼" : "▲" }}
+        </button>
         <button @click="closeEditorPanel" title="关闭面板">✕</button>
       </div>
     </div>
     <div class="editor-content">
       <!-- Single Mode: Show RichCodeEditor if context exists, otherwise show placeholder -->
       <template v-if="currentEditorMode === 'single'">
-        <component
-          :is="activeEditorComponent"
-          v-if="activeEditorComponent && currentEditorContext"
-          ref="richCodeEditorRef"
-          :editor-id="`${currentEditorContext.nodeId}_${currentEditorContext.inputPath}_single`"
+        <component :is="activeEditorComponent" v-if="activeEditorComponent && currentEditorContext"
+          ref="richCodeEditorRef" :editor-id="`${currentEditorContext.nodeId}_${currentEditorContext.inputPath}_single`"
           :initial-content="currentEditorContext.initialContent || ''"
-          :language-hint="currentEditorContext.languageHint"
-          :breadcrumb-data="currentEditorContext.breadcrumbData"
-          :config="currentEditorContext.config"
-          @save-requested="handleRichCodeEditorSaveRequested"
-        />
+          :language-hint="currentEditorContext.languageHint" :breadcrumb-data="currentEditorContext.breadcrumbData"
+          :config="currentEditorContext.config" @save-requested="handleRichCodeEditorSaveRequested" />
         <div v-else class="editor-placeholder">没有活动的编辑对象。请从节点输入处打开编辑器。</div>
       </template>
 
       <!-- Multi-Tab Mode: TabbedEditorHost handles its own empty state -->
-      <TabbedEditorHost
-        v-show="currentEditorMode === 'fullMultiTab'"
-        ref="tabbedEditorHostRef"
-        @tab-saved="handleTabSavedEvent"
-        @tab-closed="handleTabClosedEvent"
-        @all-tabs-closed="
+      <TabbedEditorHost v-show="currentEditorMode === 'fullMultiTab'" ref="tabbedEditorHostRef"
+        @tab-saved="handleTabSavedEvent" @tab-closed="handleTabClosedEvent" @all-tabs-closed="
           () => {
             if (shouldCloseOnAllTabsClosed) closeEditorPanel();
           }
-        "
-      />
-      <!--
-        注意: RichCodeEditor 和 TabbedEditorHost 的 ref 赋值方式需要调整。
-        当使用动态组件 :is 时，ref 会指向动态组件本身。
-        如果需要分别引用 RichCodeEditor 和 TabbedEditorHost 的实例，
-        不能同时给 <component> 和 <TabbedEditorHost> 相同的 ref (richCodeEditorRef)。
-        这里暂时将 RichCodeEditor 的 ref 赋给动态组件，TabbedEditorHost 单独引用。
-        如果 RichCodeEditor 也是通过 v-if/v-else 切换，则可以分别给 ref。
-        当前实现中，v-show 用于切换，所以 ref 应该是指向各自的组件实例。
-        已将 RichCodeEditor 的 ref 赋给动态组件，TabbedEditorHost 单独引用。
-        在 openEditor 中，根据 currentEditorMode 来访问对应的 ref。
-        更新：调整为 v-show，这样 ref 可以正确指向。
-        再更新：RichCodeEditor 通过动态组件加载，TabbedEditorHost 始终在模板中但用 v-show 控制。
-                 因此，richCodeEditorRef 会指向动态加载的 RichCodeEditor 实例（如果是它的话）。
-                 tabbedEditorHostRef 正常指向 TabbedEditorHost。
-                 在 handleSave 中，如果是 single 模式，则 currentEditorContext 已经有了。
-                 在 openEditor 中，根据模式操作对应的 ref。
-      -->
+        " />
     </div>
   </div>
 </template>
@@ -619,8 +684,12 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* 保持 hidden 以便高度调整生效 */
+  position: relative;
+  /* 确保 resizer 相对于此元素定位 */
   @apply bg-white border-t border-gray-200 text-gray-800;
 }
+
 .docked-editor-wrapper-root.dark {
   @apply bg-gray-800 border-t border-gray-700 text-gray-200;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.25);
@@ -629,29 +698,75 @@ onMounted(() => {
 .editor-resizer {
   width: 100%;
   height: 8px;
+  /* 保持一点高度以便拖拽图标显示 */
   cursor: ns-resize;
   position: absolute;
-  top: -4px;
+  /* 覆盖在顶部 */
+  top: 0;
   left: 0;
   z-index: 1001;
-  @apply bg-gray-300;
+  /* 确保在 header 之上 */
+  background-color: transparent;
+  /* 平时透明 */
+  transition: background-color 0.2s ease-in-out;
+  display: flex;
+  /* 用于居中内部图标 */
+  align-items: center;
+  justify-content: center;
 }
-.docked-editor-wrapper-root.dark .editor-resizer {
-  @apply bg-gray-600;
+
+.editor-resizer:hover {
+  @apply bg-gray-300 bg-opacity-50;
+  /* 悬停时半透明背景 */
+}
+
+.docked-editor-wrapper-root.dark .editor-resizer:hover {
+  @apply bg-gray-500 bg-opacity-50;
+  /* 暗色模式下悬停时半透明背景 */
+}
+
+.drag-handle-icon {
+  display: flex;
+  gap: 3px;
+  /* 点之间的间距 */
+  opacity: 0.5;
+  /* 图标平时半透明 */
+  transition: opacity 0.2s ease-in-out;
+}
+
+.editor-resizer:hover .drag-handle-icon {
+  opacity: 1;
+  /* 悬停时图标完全不透明 */
+}
+
+.drag-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  @apply bg-gray-500;
+}
+
+.docked-editor-wrapper-root.dark .drag-dot {
+  @apply bg-gray-400;
 }
 
 .editor-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 8px;
+  padding: 2px 12px;
+  /* 保持原有 padding */
   user-select: none;
-  position: relative; /* 确保在 resizer 之上，如果 resizer 不是 absolute */
-  z-index: 1000; /* 低于 resizer */
+  position: relative;
+  /* 确保 header 内容在 resizer 之下（如果 resizer 有背景）或同级 */
+  z-index: 1000;
+  /* 低于 resizer */
   @apply bg-gray-100 border-b border-gray-200;
 }
+
 .docked-editor-wrapper-root.dark .editor-header {
-  @apply bg-gray-700 border-gray-600; /* 使用 700 替代 750 */
+  @apply bg-gray-700 border-gray-600;
+  /* 使用 700 替代 750 */
 }
 
 .editor-title {
@@ -668,6 +783,7 @@ onMounted(() => {
   font-size: 1.1em;
   @apply text-gray-600 hover:bg-gray-200;
 }
+
 .docked-editor-wrapper-root.dark .editor-actions button {
   @apply text-gray-300 hover:bg-gray-600;
 }
@@ -679,7 +795,7 @@ onMounted(() => {
   /* 背景由内部 RichCodeEditor 主题控制 */
 }
 
-.editor-content > :deep(*) {
+.editor-content> :deep(*) {
   width: 100%;
   height: 100%;
 }
@@ -694,6 +810,7 @@ onMounted(() => {
   text-align: center;
   @apply text-gray-400;
 }
+
 .docked-editor-wrapper-root.dark .editor-placeholder {
   @apply text-gray-500;
 }
