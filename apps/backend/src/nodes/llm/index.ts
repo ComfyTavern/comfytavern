@@ -1,21 +1,15 @@
 // apps/backend/src/nodes/llm/index.ts
-import { createNodeRegisterer } from '../../utils/nodeRegistration';
-import { nodeManager } from '../NodeManager';
+// import { createNodeRegisterer } from '../../utils/nodeRegistration'; // 移除
+// import { nodeManager } from '../NodeManager'; // 移除
+import type { NodeDefinition } from '@comfytavern/types';
 
 // 导入 LLM 节点的定义
 import { definition as GenericLlmRequestNodeDefinition } from './GenericLlmRequestNode';
 
-// 创建一个注册器实例，设置默认命名空间为 'core'
-const registerLlmNodes = createNodeRegisterer('core');
+// 定义并导出节点定义数组
+export const definitions: NodeDefinition[] = [
+  { ...GenericLlmRequestNodeDefinition, namespace: 'core' },
+  // Add other LLM nodes here in the future
+];
 
-// 使用注册器批量注册导入的节点定义
-registerLlmNodes.register(
-  nodeManager,
-  [
-    GenericLlmRequestNodeDefinition,
-    // Add other LLM nodes here in the future
-  ],
-  __filename // 传递当前文件的路径
-);
-
-// console.log('LLM nodes registered with default namespace \'core\''); // 保持注释掉
+// console.log('LLM node definitions prepared for export.');

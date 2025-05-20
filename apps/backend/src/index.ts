@@ -119,6 +119,7 @@ addProjectRoutes(app, {
 // WebSocketManager 需要 HTTP 服务器，在 listen 回调中附加
 const wsManager = new WebSocketManager(); // 初始时不传入 server
 export const scheduler = new ConcurrencyScheduler(wsManager); // 将 wsManager 注入 scheduler 并导出
+export { wsManager }; // 导出 wsManager 实例
 
 // --- 挂载 WebSocket 路由 ---
 // 使用工厂函数创建 handler，并注入依赖

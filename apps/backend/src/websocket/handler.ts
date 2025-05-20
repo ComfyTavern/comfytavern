@@ -28,20 +28,40 @@ export function createWebsocketHandler(
 ) {
   return {
     open(ws: any) { // 使用 any 避免复杂的 Elysia 上下文类型
-      // Elysia v1.x 中，id 通常在 ws.data.id 或 ws.id
-      // WebSocketManager 现在处理连接和 clientId 分配
-      // 这里可以保留日志或移除
-      // console.log('[Handler] WebSocket connection opened:', ws.id);
+      // WebSocketManager 处理连接和 clientId 分配
+      const clientId = wsManager.addClient(ws);
+      // 将 clientId 存储在 ws.data 中，以便在 message/close/error 中使用
+      // Elysia 的 ws 对象允许通过 data 附加自定义上下文
+      if (!ws.data) {
+        ws.data = {};
+      }
+      ws.data.clientId = clientId;
+      console.log(`[Handler] WebSocket connection opened. Client ID: ${clientId} assigned to ws.data. Total clients: ${wsManager.getAllClientIds().length}`);
     },
 
-    close(ws: any) {
-      // WebSocketManager 现在处理断开连接
-      // console.log('[Handler] WebSocket connection closed:', ws.id);
+    close(ws: any, code: number, message: ArrayBuffer | undefined) {
+      const clientId = ws.data?.clientId; // 从 ws.data 获取 clientId
+      // WebSocketManager 处理断开连接
+      wsManager.removeClient(ws);
+      console.log(`[Handler] WebSocket connection closed. Client ID: ${clientId || 'unknown'}. Code: ${code}. Total clients: ${wsManager.getAllClientIds().length}`);
+    },
+
+    error(ws: any, error: Error) {
+      const clientId = ws.data?.clientId; // 从 ws.data 获取 clientId
+      console.error(`[Handler] WebSocket error for client ${clientId || 'unknown'}:`, error);
+      // WebSocketManager 应该也处理错误时的客户端移除
+      wsManager.handleError(ws, error); // 确保 wsManager 也知道错误并可能移除客户端
+      console.log(`[Handler] WebSocket error processed. Total clients after error: ${wsManager.getAllClientIds().length}`);
     },
 
     async message(ws: any, message: WebSocketMessage<any>) {
-      // 尝试获取 clientId (需要与 WebSocketManager 中的逻辑一致)
-      const clientId = ws.data?.clientId || ws.id || ws.request?.headers?.['sec-websocket-key'] || 'unknown'; // 多种方式尝试获取
+      const clientId = ws.data?.clientId; // 从 ws.data 获取 clientId
+      if (!clientId) {
+        console.error('[Handler] Received message from WebSocket without a clientId in ws.data. Ignoring message.', message);
+        // 可以选择关闭这个无法识别的连接
+        // ws.close(1008, "Client ID not found in context");
+        return;
+      }
       console.log(`[Handler] Message received from client ${clientId}:`, message.type);
 
       try {

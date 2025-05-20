@@ -11,10 +11,12 @@ import {
   type NodeProgressPayload, // 新增 (假设类型)
   type NodeCompletePayload, // 新增
   type NodeErrorPayload, // 新增
+  type NodesReloadedPayload, // 新增：节点重载通知的载荷
 } from "@comfytavern/types"; // 引入共享类型和枚举
 import { useExecutionStore } from "@/stores/executionStore"; // 导入执行状态存储
 import { useTabStore } from "@/stores/tabStore"; // 导入 TabStore
 import { useWorkflowStore } from "@/stores/workflowStore"; // <-- 1. 导入 workflowStore
+import { useNodeStore } from "@/stores/nodeStore"; // 新增：导入 nodeStore
 import { getWebSocketUrl } from "@/utils/urlUtils"; // 导入新的工具函数
 
 // 使用工具函数获取 WebSocket URL
@@ -25,9 +27,15 @@ const ws = ref<WebSocket | null>(null);
 const isConnected = ref(false);
 const error = ref<string | null>(null);
 const messageQueue = ref<WebSocketMessage[]>([]); // 消息队列，用于连接成功后发送
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_DELAY = 5000; // 5 seconds
+let reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
 let executionStore: ReturnType<typeof useExecutionStore> | null = null; // 延迟初始化
 let tabStore: ReturnType<typeof useTabStore> | null = null; // 延迟初始化
 let workflowStore: ReturnType<typeof useWorkflowStore> | null = null; // <-- 声明 workflowStore
+let nodeStore: ReturnType<typeof useNodeStore> | null = null; // 新增：声明 nodeStore
 let activeTabId: import("vue").ComputedRef<string | null> | null = null; // 延迟初始化，显式类型
 
 // --- 私有函数 ---
@@ -55,16 +63,33 @@ const ensureStoresInitialized = () => {
       console.error("[WebSocket] Failed to initialize workflowStore in ensureStoresInitialized.");
     }
   }
+  if (!nodeStore) { // 新增：初始化 nodeStore
+    nodeStore = useNodeStore();
+    if (!nodeStore) {
+      console.error("[WebSocket] Failed to initialize nodeStore in ensureStoresInitialized.");
+    }
+  }
 };
 
-const connect = () => {
+const connect = (isRetry = false) => {
   if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-    console.debug("WebSocket is already connected.");
+    console.debug("[WebSocket] connect: Already connected.");
     return;
   }
   if (ws.value && ws.value.readyState === WebSocket.CONNECTING) {
-    console.debug("WebSocket is already connecting.");
+    console.debug("[WebSocket] connect: Already connecting.");
     return;
+  }
+
+  if (reconnectTimeoutId) {
+    clearTimeout(reconnectTimeoutId);
+    reconnectTimeoutId = null;
+  }
+
+  if (isRetry) {
+    console.info(`[WebSocket] Attempting to reconnect... (Attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})`);
+  } else {
+    reconnectAttempts = 0; // Reset attempts if it's a fresh connect call
   }
 
   ensureStoresInitialized(); // 确保在连接前存储已准备就绪
@@ -76,6 +101,8 @@ const connect = () => {
     console.info("WebSocket connection established.");
     isConnected.value = true;
     error.value = null;
+    reconnectAttempts = 0; // Reset on successful connection
+    console.info("[WebSocket] Connection established successfully.");
     // 发送队列中的消息
     while (messageQueue.value.length > 0) {
       const msg = messageQueue.value.shift();
@@ -92,10 +119,11 @@ const connect = () => {
       !executionStore ||
       !tabStore ||
       !workflowStore ||
+      !nodeStore || // 新增：检查 nodeStore
       !activeTabId ||
       activeTabId.value === undefined // Check for undefined specifically
     ) {
-      console.error("[WebSocket] Stores or activeTabId not properly initialized during onmessage.");
+      console.error("[WebSocket] Stores (execution, tab, workflow, node) or activeTabId not properly initialized during onmessage.");
       return;
     }
 
@@ -270,6 +298,17 @@ const connect = () => {
           }
           break;
         }
+        case WebSocketMessageType.NODES_RELOADED: { // 新增：处理节点重载通知
+          console.info("[WebSocket] Received NODES_RELOADED message from server. Payload:", payload); // 增强日志
+          if (nodeStore) {
+            const typedPayload = payload as NodesReloadedPayload;
+            console.log("[WebSocket] Calling nodeStore.handleNodesReloadedNotification with payload:", typedPayload); // 增强日志
+            nodeStore.handleNodesReloadedNotification(typedPayload);
+          } else {
+            console.error("[WebSocket] nodeStore is null, cannot handle NODES_RELOADED notification.");
+          }
+          break;
+        }
         default:
           // Check if the message type might be a custom node message
           if (message.type.startsWith('custom/')) {
@@ -302,18 +341,36 @@ const connect = () => {
   // 添加 ws.value 的 null 检查
   if (ws.value) {
     ws.value.onclose = (event) => {
-      console.info("WebSocket connection closed:", event.code, event.reason);
+      console.info(`[WebSocket] Connection closed. Code: ${event.code}, Reason: "${event.reason}", Was Clean: ${event.wasClean}`);
       isConnected.value = false;
+      // const oldWs = ws.value; // No longer needed here as client ID cleanup is backend's concern
       ws.value = null;
-      // 可选：延迟后尝试重新连接
-      // setTimeout(connect, 5000); // 示例：5 秒延迟
+
+      // Frontend doesn't need to manage client ID mapping directly in onclose.
+      // Backend's WebSocketManager.removeClient (triggered by Elysia's ws.close hook) handles cleanup.
+      
+      // Attempt to reconnect if not a clean close or if it's a specific code we want to retry for
+      // For now, let's try to reconnect on any close if attempts are left.
+      if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttempts++;
+        console.log(`[WebSocket] Scheduling reconnect attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} in ${RECONNECT_DELAY / 1000}s.`);
+        if (reconnectTimeoutId) clearTimeout(reconnectTimeoutId); // Clear previous timeout if any
+        reconnectTimeoutId = setTimeout(() => connect(true), RECONNECT_DELAY);
+      } else {
+        console.warn(`[WebSocket] Max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) reached. Will not try again automatically.`);
+        error.value = "WebSocket disconnected. Max reconnect attempts reached.";
+      }
     };
   } else {
     console.error("[WebSocket] Cannot assign onclose handler: ws.value is null.");
-    // 可选：延迟后尝试重新连接
-    // setTimeout(connect, 5000); // 示例：5 秒延迟
+    // This case should ideally not happen if ws.value was just new WebSocket()
   }
 };
+
+// Helper function to get client ID from ws instance (needed for onclose cleanup)
+// Removed getClientIdByWs as it's not applicable/feasible in the frontend context
+// and relies on backend-specific types (ServerWebSocket, WsContextData).
+// Client ID management and mapping are primarily handled by the backend WebSocketManager.
 
 const disconnect = () => {
   if (ws.value) {
@@ -323,9 +380,14 @@ const disconnect = () => {
     ws.value.onmessage = null;
     ws.value.onerror = null;
     ws.value.onclose = null;
-    ws.value.close();
-    ws.value = null; // 调用 close 后立即设置为 null
-    isConnected.value = false; // 更新连接状态
+    ws.value.close(1000, "Client initiated disconnect"); // Send a clean close code
+    // ws.value = null; // onclose handler will set this to null
+    // isConnected.value = false; // onclose handler will set this
+  }
+  if (reconnectTimeoutId) { // Clear any pending reconnect attempts if disconnect is called explicitly
+    clearTimeout(reconnectTimeoutId);
+    reconnectTimeoutId = null;
+    reconnectAttempts = 0; // Reset attempts on explicit disconnect
   }
 };
 

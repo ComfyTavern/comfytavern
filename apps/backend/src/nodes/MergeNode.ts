@@ -18,7 +18,7 @@ export class TextMergeNodeImpl {
 // Renamed export to 'definition' for NodeLoader convention
 export const definition: NodeDefinition = {
   type: 'TextMerge', // Base type name
-  category: '文本', // Functional category
+  category: '实用工具', // Functional category
   displayName: '📝文本合并',
   description: '将多个文本输入合并成一个完整的文本',
 

@@ -3,10 +3,10 @@
     <div class="panel-header">
       <div class="header-top">
         <div class="panel-title">节点库</div>
-        <Tooltip content="重新启动后端服务以重载节点">
+        <Tooltip content="重新加载节点定义">
           <button
             @click="reloadNodes"
-            :disabled="nodeLoading || localLoading || isWaitingForReload"
+            :disabled="nodeLoading || localLoading"
             class="reload-button"
           >
             🔄
@@ -18,30 +18,33 @@
       </div>
     </div>
 
-    <div v-if="nodeLoading || localLoading || isWaitingForReload" class="panel-loading">
+    <!--
+      调整加载状态的判断逻辑:
+      - nodeStore.notifiedNodesReloaded: 显示 "节点已重载，正在刷新列表..."
+      - nodeStore.loading (nodeLoading): 显示 "加载节点中..." (当非 notifiedNodesReloaded 时)
+      - localLoading: 用于 reloadNodes API 调用期间的加载状态
+      - nodeStore.reloadError: 显示重载错误信息
+    -->
+    <div v-if="notifiedNodesReloaded || nodeLoading || localLoading || reloadError" class="panel-loading">
       <svg class="svg-spinner" viewBox="0 0 50 50">
         <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
       </svg>
-      <span>{{
-        isWaitingForReload
-          ? "等待服务器重启中..."
-          : nodeLoading || localLoading
-          ? "加载节点中..."
-          : ""
-      }}</span>
-      <template v-if="showManualRefreshButton">
-        <div class="mt-4 text-sm text-gray-500">服务器重启超时</div>
+      <span v-if="notifiedNodesReloaded">节点已重载，正在刷新列表...</span>
+      <span v-else-if="nodeLoading || localLoading">加载节点中...</span>
+      <span v-if="reloadError" class="text-red-500 mt-2">
+        重载失败: {{ reloadError }}
         <button
-          @click="manualRefresh"
-          class="mt-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md"
+          @click="reloadNodes"
+          class="ml-2 px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs"
+          :disabled="localLoading"
         >
-          手动刷新
+          重试
         </button>
-      </template>
+      </span>
     </div>
 
     <OverlayScrollbarsComponent
-      v-else
+      v-else-if="!reloadError"
       :options="{
         scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
       }"
@@ -159,7 +162,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from "vue";
+import { ref, computed, onMounted } from "vue"; // 移除了 nextTick
 import { useNodeStore, type FrontendNodeDefinition } from "../../../stores/nodeStore";
 import { useApi } from "../../../utils/api";
 import useDragAndDrop from "../../../composables/canvas/useDnd";
@@ -192,21 +195,19 @@ const { onDragStart } = useDragAndDrop();
 
 const {
   nodeDefinitions,
-  loading: nodeLoading,
-  error: nodeError,
+  loading: nodeLoading, // 来自 store 的主加载状态
+  // error: nodeError, // 主错误状态，现在通过 nodeStore.error 和 nodeStore.reloadError 处理
   definitionsLoaded,
+  notifiedNodesReloaded, // 新增：监听来自 store 的重载通知状态
+  reloadError, // 新增：监听来自 store 的重载错误状态
 } = storeToRefs(nodeStore);
 const { isDark } = storeToRefs(themeStore);
 
-const localLoading = ref(false); // 用于 reloadNodes 等本地操作的加载状态
+const localLoading = ref(false); // 用于 reloadNodes API 调用期间的加载状态
 const searchQuery = ref("");
 const selectedNodeType = ref<string | null>(null);
 const isDragging = ref(false);
-const isWaitingForReload = ref(false);
-const showManualRefreshButton = ref(false);
-let reloadIntervalId: ReturnType<typeof setInterval> | null = null;
-const maxReloadAttempts = 10;
-let reloadAttempts = 0;
+// 移除了 isWaitingForReload, showManualRefreshButton, reloadIntervalId, maxReloadAttempts, reloadAttempts
 
 // fetchNodes action 现在主要调用 store action
 // 本地加载状态 localLoading 可以用于指示 fetchNodes 这个特定操作
@@ -225,9 +226,15 @@ const fetchNodes = async () => {
 
 // Updated grouping: Namespace -> Category -> Nodes
 const nodesByNamespaceAndCategory = computed(() => {
+  console.log('[NodePanel] Recalculating nodesByNamespaceAndCategory. Current nodeDefinitions count:', nodeDefinitions.value?.length);
+  // console.log('[NodePanel] nodeDefinitions for nodesByNamespaceAndCategory:', JSON.parse(JSON.stringify(nodeDefinitions.value)));
+
   const result: Record<string, Record<string, FrontendNodeDefinition[]>> = {};
 
-  if (!nodeDefinitions.value) return result;
+  if (!nodeDefinitions.value || nodeDefinitions.value.length === 0) { // 检查数组是否为空
+    console.log('[NodePanel] nodesByNamespaceAndCategory: nodeDefinitions is null or empty, returning empty result.');
+    return result;
+  }
 
   nodeDefinitions.value.forEach((node: FrontendNodeDefinition) => {
     const namespace = node.namespace || "core"; // Default to 'core' if namespace is missing
@@ -303,114 +310,50 @@ const handleDragEnd = (event: DragEvent) => {
   }, 100);
 };
 
-// 清理重载检查定时器
-const clearReloadInterval = () => {
-  if (reloadIntervalId) {
-    clearInterval(reloadIntervalId);
-    reloadIntervalId = null;
-    isWaitingForReload.value = false;
-    localLoading.value = false; // 控制本地操作的加载状态
-    reloadAttempts = 0;
-    console.log("Reload check interval cleared.");
-  }
-};
-
-const attemptFetchNodes = async () => {
-  reloadAttempts++;
-  console.log(`Attempting to fetch nodes (Attempt ${reloadAttempts}/${maxReloadAttempts})...`);
-  try {
-    // 尝试获取节点，但不显示加载状态，因为主加载状态仍在
-    await nodeStore.fetchAllNodeDefinitions();
-    // 如果成功获取到节点，说明后端已重启完成
-    console.log("Nodes fetched successfully after restart.");
-    console.log("节点已重新加载。");
-    clearReloadInterval();
-    // 确保 loading 状态被正确设置为 false - 应控制 localLoading
-    localLoading.value = false;
-    await nextTick(); // 等待DOM更新
-  } catch (error) {
-    console.warn(`Failed to fetch nodes on attempt ${reloadAttempts}:`, error);
-    if (reloadAttempts >= maxReloadAttempts) {
-      console.error("Max reload attempts reached. Stopping check.");
-      console.error("服务器重载超时，请手动刷新。"); // 显示手动刷新按钮
-      showManualRefreshButton.value = true; // 显示手动刷新按钮
-      clearReloadInterval();
-      // 保持 loading 状态，因为我们需要显示手动刷新按钮 - 应是 localLoading
-      isWaitingForReload.value = false;
-    }
-    // 失败则继续等待下一次尝试
-  }
-};
+// 移除了旧的 clearReloadInterval 和 attemptFetchNodes 方法
 
 const reloadNodes = async () => {
-  if (nodeLoading.value || localLoading.value || isWaitingForReload.value) return;
+  // 检查 localLoading 或 nodeStore 是否已处于某种加载/通知状态
+  if (localLoading.value || nodeLoading.value || notifiedNodesReloaded.value) return;
 
-  clearReloadInterval();
+  localLoading.value = true;
+  nodeStore.reloadError = null; // 清除之前的重载错误
+  // nodeStore.error = null; // 可选：清除主错误状态，让 fetchAllNodeDefinitions 重新评估
 
-  localLoading.value = true; // 使用本地加载状态指示重启请求过程
-  console.log("Requesting server restart...");
+  console.log("Requesting nodes reload from server via /api/nodes/reload...");
 
   try {
     const api = useApi();
-    const response = await api.post<{ success: boolean; message: string }>("/server/restart", {});
+    // 调用新的后端 API 端点，移除重复的 /api 前缀
+    const response = await api.post<{ success: boolean; message?: string; count?: number }>("/nodes/reload", {});
 
     if (response.success) {
-      console.log("Server restart request sent successfully.");
-      console.info("服务器正在重启，请稍候...");
-      isWaitingForReload.value = true;
-      reloadAttempts = 0;
-      // 稍作延迟后启动第一次检查，然后设置定时器
-      setTimeout(() => {
-        if (isWaitingForReload.value) {
-          attemptFetchNodes();
-          // 如果第一次尝试后仍然需要轮询
-          // 并且定时器还没有被清除
-          if (isWaitingForReload.value && !reloadIntervalId) {
-            reloadIntervalId = setInterval(attemptFetchNodes, 3000);
-          }
+      console.log("Node reload request API call successful.", response.message);
+      // API 调用本身成功。
+      // 主动获取一次最新的节点定义，以应对 WebSocket 通知可能延迟或因连接问题失败的情况。
+      // 这确保了用户点击按钮后，至少会尝试通过 HTTP GET 来刷新列表。
+      // 如果 WebSocket 通知也成功到达并触发了 fetch, Pinia store 的 action 通常是幂等的或能处理重复调用。
+      console.log('[NodePanel] Proactively fetching node definitions after successful /nodes/reload API call.');
+      nodeStore.fetchAllNodeDefinitions().catch(err => {
+        console.error('[NodePanel] Error during proactive fetch after reload API call:', err);
+        // 如果 nodeStore.reloadError 尚未被设置（例如，API 调用成功但后续的 WS->fetch 失败），则可以在此设置
+        if (!nodeStore.reloadError) {
+          nodeStore.reloadError = '主动获取节点列表失败。';
         }
-      }, 1500); // 初始延迟 1.5 秒
-      // 注意：保持 loading.value = true 直到重载完成或超时
+      });
     } else {
-      console.error("Failed to request server restart:", response.message);
-      console.error(`请求服务器重启失败: ${response.message}`);
-      localLoading.value = false;
+      console.error("API call to /api/nodes/reload failed:", response.message);
+      nodeStore.reloadError = response.message || "请求节点重载失败 (API)";
     }
-  } catch (error: any) {
-    // 使用 any 类型来检查 error.code
-    console.error("Error requesting server restart:", error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`请求服务器重启时出错: ${errorMessage}`);
-
-    // 特殊处理：如果错误是 ERR_CONNECTION_RESET，我们假设重启已触发
-    if (
-      error.code === "ERR_NETWORK" ||
-      error.message.includes("Network Error") ||
-      error.message.includes("ERR_CONNECTION_RESET")
-    ) {
-      console.warn(
-        "Connection reset detected, assuming restart was triggered. Starting polling..."
-      );
-      console.info("服务器正在重启，请稍候...");
-      isWaitingForReload.value = true;
-      reloadAttempts = 0;
-      // 稍作延迟后启动第一次检查，然后设置定时器 (同上)
-      setTimeout(() => {
-        if (isWaitingForReload.value) {
-          attemptFetchNodes();
-          if (isWaitingForReload.value && !reloadIntervalId) {
-            reloadIntervalId = setInterval(attemptFetchNodes, 3000);
-          }
-        }
-      }, 1500); // 初始延迟 1.5 秒
-      // 保持 loading 状态
-    } else {
-      // 其他错误，正常处理
-      localLoading.value = false;
-    }
+  } catch (err: any) {
+    console.error("Error during /api/nodes/reload API call:", err);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    nodeStore.reloadError = `请求节点重载时出错 (API): ${errorMessage}`;
+  } finally {
+    localLoading.value = false; // 确保在 API 请求完成后（无论成功、失败或异常）都重置 localLoading
   }
-  // 注意：成功发送请求后，loading 状态由 attemptFetchNodes 或 clearReloadInterval 控制
 };
+
 const selectNode = (node: FrontendNodeDefinition) => {
   const fullType = `${node.namespace || "core"}:${node.type}`; // Construct full type
   if (selectedNodeType.value === fullType) {
@@ -428,34 +371,13 @@ const addNodeToCanvas = (fullNodeType: string) => {
   emit("add-node", fullNodeType); // Emit the full type
 };
 
-// 手动刷新节点
-const manualRefresh = async () => {
-  console.log("手动刷新节点...");
-  showManualRefreshButton.value = false;
-  // loading.value = true; // 不再直接控制本地 loading，依赖 fetchNodes/store action
-  isWaitingForReload.value = false;
-
-  // 调用 fetchNodes
-  await fetchNodes();
-  // 可以在这里检查 nodeError.value 来判断是否成功
-  if (!nodeError.value) {
-    console.log("节点已手动刷新完成");
-  } else {
-    console.error("手动刷新失败:", nodeError.value);
-    showManualRefreshButton.value = true; // 如果 store action 失败，重新显示按钮
-  }
-  // localLoading 由 fetchNodes 控制
-};
+// 移除了 manualRefresh 方法
 
 onMounted(() => {
   if (!definitionsLoaded.value) {
-    fetchNodes();
+    fetchNodes(); // 初始加载节点
   }
-  // 组件卸载时清理定时器
-  // 返回清理函数是 onMounted 的一个特性，这里保持不变
-  return () => {
-    clearReloadInterval();
-  };
+  // 组件卸载时不再需要清理旧的定时器
 });
 </script>
 

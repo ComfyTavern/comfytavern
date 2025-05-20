@@ -2,7 +2,7 @@ import { ref, computed, watch } from 'vue'; // 导入 watch
 import { defineStore } from 'pinia'; // 导入 defineStore
 import { useApi } from '../utils/api';
 // 导入共享类型并重命名
-import type { NodeDefinition as SharedNodeDefinition } from '@comfytavern/types';
+import type { NodeDefinition as SharedNodeDefinition, NodesReloadedPayload } from '@comfytavern/types'; // 导入 NodesReloadedPayload
 import type { CSSProperties } from 'vue';
 
 // 节点样式类型
@@ -34,6 +34,8 @@ export const useNodeStore = defineStore('node', () => {
   const definitionsLoaded = ref(false); // 标记定义是否已加载
   const loading = ref(false);
   const error = ref<string | null>(null);
+  const notifiedNodesReloaded = ref(false); // 新增：标记是否收到了节点重载通知
+  const reloadError = ref<string | null>(null); // 新增：存储节点重载错误信息
 
   // --- Getters (Computed) ---
   const nodeDefinitionsByCategory = computed(() => {
@@ -64,9 +66,10 @@ export const useNodeStore = defineStore('node', () => {
 
     try {
       const data = await api.get<FrontendNodeDefinition[]>('/nodes');
+      console.log('[NodeStore] Data received from /api/nodes in fetchAllNodeDefinitions:', JSON.parse(JSON.stringify(data))); // 深入复制以避免代理问题
       nodeDefinitions.value = data;
+      console.log('[NodeStore] nodeDefinitions.value updated in fetchAllNodeDefinitions:', JSON.parse(JSON.stringify(nodeDefinitions.value))); // 深入复制
       definitionsLoaded.value = true; // 设置加载完成标志
-      // console.debug('节点定义已加载:', nodeDefinitions.value); // 注释掉重复日志
       return data;
     } catch (err) {
       error.value = err instanceof Error ? err.message : '获取节点定义失败';
@@ -160,6 +163,33 @@ export const useNodeStore = defineStore('node', () => {
     }
   };
 
+  const handleNodesReloadedNotification = async (payload: NodesReloadedPayload) => {
+    console.log('[NodeStore] Entered handleNodesReloadedNotification. Payload:', payload, 'Current loading:', loading.value, 'Current notified:', notifiedNodesReloaded.value); // 增强日志
+    reloadError.value = null; // 清除之前的重载错误
+
+    if (payload.success) {
+      notifiedNodesReloaded.value = true;
+      console.log('[NodeStore] notifiedNodesReloaded set to true. Calling fetchAllNodeDefinitions...'); // 增强日志
+      try {
+        await fetchAllNodeDefinitions(true); // 传入 true 以显示 loading 状态
+        console.log('[NodeStore] fetchAllNodeDefinitions completed successfully after reload notification.'); // 增强日志
+      } catch (fetchError) {
+        console.error('[NodeStore] Error fetching node definitions after reload notification:', fetchError);
+        // fetchAllNodeDefinitions 内部会设置 error.value
+        reloadError.value = error.value || 'Failed to fetch nodes after reload.';
+      } finally {
+        notifiedNodesReloaded.value = false;
+        console.log('[NodeStore] notifiedNodesReloaded set to false in finally. Current loading:', loading.value); // 增强日志
+      }
+    } else {
+      console.error('[NodeStore] Node reload notification indicated failure:', payload.message);
+      error.value = `Node reload failed: ${payload.message || 'Unknown error'}`; // 更新主错误状态
+      reloadError.value = payload.message || 'Node reload failed on server.';
+      notifiedNodesReloaded.value = false; // 确保重置
+      console.log('[NodeStore] Reload notification failed. notifiedNodesReloaded set to false. Current loading:', loading.value); // 增强日志
+    }
+  };
+
   // --- Return ---
   // 导出 state, getters, actions
   return {
@@ -168,6 +198,8 @@ export const useNodeStore = defineStore('node', () => {
     definitionsLoaded,
     loading,
     error,
+    notifiedNodesReloaded, // 导出新状态
+    reloadError, // 导出新状态
     // Getters
     nodeDefinitionsByCategory,
     // Actions
@@ -175,5 +207,6 @@ export const useNodeStore = defineStore('node', () => {
     searchNodeDefinitions,
     getNodeDefinitionByFullType, // 导出更新后的方法名
     ensureDefinitionsLoaded, // 导出方法名
+    handleNodesReloadedNotification, // 导出新 action
   };
 });

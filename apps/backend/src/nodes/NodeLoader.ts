@@ -22,24 +22,41 @@ export class NodeLoader {
         // Skip specific directories like 'client-scripts'
         if (entry.isDirectory() && entry.name !== 'client-scripts') {
           // 对于子目录，仍然尝试加载其 index.ts
-          // 假设 index.ts 会使用 createNodeRegisterer 并正确传递路径
+          const indexPath = join(fullPath, 'index.ts');
           try {
-            const indexPath = join(fullPath, 'index.ts');
-            // 检查 index.ts 是否存在 (避免不必要的错误日志)
-            try {
-              await import(indexPath); // 动态导入
-              console.log(`Executed node package entry point: ${indexPath}`);
-            } catch (indexError) {
-              if (indexError instanceof Error && 'code' in indexError && indexError.code === 'ERR_MODULE_NOT_FOUND') {
-                // index.ts 不存在是正常的，忽略
-              } else {
-                // 其他导入 index.ts 的错误需要记录
-                console.error(`Error executing node package entry point ${indexPath}:`, indexError);
+            // 尝试导入并处理 index.ts
+            // 使用 file:/// 协议并添加时间戳以尝试破坏缓存
+            const module = await import(`file:///${indexPath}?v=${Date.now()}`);
+            console.log(`Imported node package entry point (cache-busted): ${indexPath}`);
+
+            // 新增：检查并处理导出的 definitions 数组
+            if (module.definitions && Array.isArray(module.definitions)) {
+              let registeredCountFromIndex = 0;
+              for (const def of module.definitions) {
+                if (def && typeof def === 'object') {
+                  // 确保 def 是 NodeDefinition 类型，或进行适当的类型检查/转换
+                  nodeManager.registerNode(def as NodeDefinition, indexPath);
+                  registeredCountFromIndex++;
+                } else {
+                  console.warn(`Invalid item found in exported 'definitions' array from ${indexPath}`);
+                }
               }
+              if (registeredCountFromIndex > 0) {
+                console.log(`Successfully registered ${registeredCountFromIndex} node definition(s) from ${indexPath}`);
+              } else {
+                // console.warn(`No valid definitions found in exported 'definitions' array from ${indexPath}.`); // 允许为空
+              }
+            } else {
+              // console.log(`No 'definitions' array exported from ${indexPath}. Assuming direct registration or other mechanism if it was just executed.`);
             }
-          } catch (error) {
-            // 记录读取目录或构造路径时的错误
-            console.error(`Error accessing subdirectory ${entry.name}:`, error);
+          } catch (indexError) {
+            // 处理导入 index.ts 时的错误
+            if (indexError instanceof Error && 'code' in indexError && indexError.code === 'ERR_MODULE_NOT_FOUND') {
+              // index.ts 不存在是正常的，忽略
+            } else {
+              // 其他导入 index.ts 的错误需要记录
+              console.error(`Error importing or processing node package entry point ${indexPath}:`, indexError);
+            }
           }
         } else if (
           entry.isFile() &&
@@ -50,7 +67,8 @@ export class NodeLoader {
           // 加载并注册独立的节点文件
           try {
             console.log(`Attempting to load node definition(s) from: ${fullPath}`);
-            const module = await import(fullPath); // 动态导入
+            // 使用 file:/// 协议并添加时间戳以尝试破坏缓存
+            const module = await import(`file:///${fullPath}?v=${Date.now()}`);
 
             let registeredCount = 0;
 

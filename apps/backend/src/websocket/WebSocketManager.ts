@@ -156,7 +156,11 @@ export class WebSocketManager {
    * @param payload 消息载荷
    */
   public broadcast(type: string, payload: any): void {
-    // console.log(`[WS Manager] Broadcasting message type ${type} to ${this.clients.size} clients.`);
+    console.log(`[WS Manager] Attempting to broadcast message. Type: ${type}, Payload: ${JSON.stringify(payload)}, Number of clients: ${this.clients.size}`); // 新增日志
+    if (this.clients.size === 0) {
+      console.warn('[WS Manager] Broadcast called, but no clients are connected.');
+      return;
+    }
     // 需要手动序列化为 JSON 字符串
     const messageString = JSON.stringify({ type, payload });
     const clientsToRemove: WsContext[] = [];

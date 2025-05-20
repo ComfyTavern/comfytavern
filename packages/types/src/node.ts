@@ -248,6 +248,7 @@ export enum WebSocketMessageType {
   NODE_DEFINITIONS = 'node_definitions', // Response to get_node_definitions
   BACKEND_RELOADED = 'backend_reloaded', // Confirmation of backend reload
   ERROR = 'error', // General error message from backend
+  NODES_RELOADED = 'NODES_RELOADED', // New: Server -> Client, nodes have been reloaded
 }
 
 // Specific Payload Types (Examples)
@@ -270,6 +271,12 @@ export interface WorkflowStatusUpdatePayload extends WorkflowExecutionStatus { }
 export interface ErrorPayload {
   message: string;
   details?: any;
+}
+
+export interface NodesReloadedPayload {
+  success: boolean;
+  message?: string;
+  count?: number; // Optional: number of nodes reloaded
 }
 
 // Generic WebSocket Message Structure

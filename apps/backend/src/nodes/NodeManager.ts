@@ -18,7 +18,7 @@ export class NodeManager {
   registerNode(node: NodeDefinition, filePath?: string) {
     let finalNamespace: string;
 
-    // 1. 检查显式或批量设置的命名空间 (由 createNodeRegisterer 设置)
+    // 1. 检查节点定义中是否已显式设置命名空间
     if (node.namespace) {
       finalNamespace = node.namespace;
     } else if (filePath) {
@@ -96,7 +96,15 @@ export class NodeManager {
     // 直接使用 fullType 查找
     return this.nodes.get(fullType);
   }
+
+  /**
+   * 清空所有已注册的节点。
+   */
+  clearNodes() {
+    this.nodes.clear();
+    console.log('[NodeManager] All registered nodes have been cleared.');
+  }
 }
 
 // 创建单例实例
-export const nodeManager = new NodeManager()
+export const nodeManager = new NodeManager();

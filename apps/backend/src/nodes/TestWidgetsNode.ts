@@ -26,7 +26,7 @@ export class TestWidgetsNodeImpl {
 export const definition: NodeDefinition = {
   type: 'TestWidgets', // Base type name
   // namespace will be inferred as 'core' or 'builtin' by NodeManager based on path (assuming Test is not core)
-  category: 'Test', // Functional category
+  category: '实用工具', // Functional category
   displayName: '🧪测试组件节点',
   description: '用于测试各种输入组件的节点',
 
