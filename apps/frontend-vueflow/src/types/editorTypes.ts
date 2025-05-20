@@ -12,6 +12,8 @@ export interface BreadcrumbData {
 export interface EditorInstanceConfig {
   readOnly?: boolean;
   theme?: 'light' | 'dark';
+  lineNumbers?: boolean; // 添加行号配置
+  foldGutter?: boolean;  // 添加代码折叠配置
   // 其他 CodeMirror 配置项
 }
 

@@ -318,3 +318,19 @@
     - **开始日期: (待定)**
     - **完成日期: (待定)**
     - **备注: 进一步完善或扩展现有面板（如 [`RightPreviewPanel.vue`](../apps/frontend-vueflow/src/components/graph/sidebar/RightPreviewPanel.vue), [`DockedEditorWrapper.vue`](../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue)）的功能。审视并优化面板的交互和用户体验。具体需求待明确。**
+
+## 阶段 4.9: 为 RichCodeEditor.vue 添加右键菜单 - 進行中
+
+- **任务 4.9.1**: 调研 CodeMirror 右键菜单实现方案与功能。
+    - **状态: ✅ 完成**
+    - **分配给: 💻 Code 模式 (任务ID: NEXUSCORE_RICHCODEEDITOR_CONTEXTMENU_RESEARCH_V1)**
+    - **开始日期: 2025/05/20**
+    - **完成日期: 2025/05/20**
+    - **备注: CodeMirror 6 无内置右键菜单。推荐方案为监听 `contextmenu` DOM 事件，并使用 Vue 组件（参考项目内现有菜单）实现。核心功能包括撤销/重做、剪切/复制/粘贴、全选。详细调研结果已记录在 [`memory-bank/decision-log.md`](./decision-log.md)。**
+
+- **任务 4.9.2**: 在 [`RichCodeEditor.vue`](../apps/frontend-vueflow/src/components/common/RichCodeEditor.vue) 中实现右键菜单。
+    - **状态: ✅ 完成**
+    - **分配给: 💻 Code 模式 (任务ID: NEXUSCORE_RICHCODEEDITOR_CONTEXTMENU_IMPL_V1)**
+    - **开始日期: 2025/05/20**
+    - **完成日期: 2025/05/20**
+    - **备注: 成功实现右键菜单。创建了新组件 [`EditorContextMenu.vue`](../apps/frontend-vueflow/src/components/common/EditorContextMenu.vue)，集成了核心编辑功能，并处理了用户反馈（按钮状态、防溢出）。详细实现过程记录在 [`memory-bank/active-context.md`](./active-context.md) (现已归档)。**
