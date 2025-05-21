@@ -930,7 +930,7 @@ const openEditorForInput = (input: InputDefinition) => {
                     :allowHtml="getLanguageHintForInput(input) === 'markdown'"
                   >
                     <template #content>
-                      <div class="max-h-96 overflow-auto text-xs text-gray-100 font-mono">
+                      <div class="max-h-96 overflow-auto text-sm text-gray-100">
                         <template v-if="getLanguageHintForInput(input) === 'markdown'">
                           <MarkdownRenderer :markdownContent="getFormattedPreviewString(getInputValue(String(input.key)), input)" />
                         </template>
