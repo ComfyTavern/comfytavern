@@ -7,7 +7,7 @@ import { BuiltInSocketMatchCategory, DataFlowType } from './schemas';
 export const zBaseInputOptions = z.object({
   tooltip: z.string().optional(),
   hidden: z.boolean().optional(),
-  showReceivedValue: z.boolean().optional(), // 新增：连接后是否显示接收到的值
+  showReceivedValue: z.boolean().optional(), // 连接后是否显示接收到的值
   // required is part of InputDefinition now
   // description is part of InputDefinition/OutputDefinition now
 })
@@ -18,7 +18,7 @@ export const zNumericInputOptions = zBaseInputOptions.extend({
   max: z.number().optional(),
   step: z.number().optional(),
   default: z.number().optional(),
-  suggestions: z.array(z.number()).optional(), // 新增：提供建议值列表
+  suggestions: z.array(z.number()).optional(), // 提供建议值列表
 })
 
 // 字符串输入选项
@@ -27,7 +27,7 @@ export const zStringInputOptions = zBaseInputOptions.extend({
   multiline: z.boolean().optional(),
   placeholder: z.string().optional(),
   display_only: z.boolean().optional(), // 指示是否使用只读的TextDisplay组件
-  suggestions: z.array(z.string()).optional(), // 新增：提供建议值列表
+  suggestions: z.array(z.string()).optional(), // 提供建议值列表
 })
 
 // 布尔输入选项
@@ -64,7 +64,7 @@ export interface InputDefinition {
   config?: Record<string, any>
   multi?: boolean // 标记是否支持多输入
   allowDynamicType?: boolean // 标记该插槽是否支持从 'ANY' 动态变为具体类型
-  default?: any; // 新增：定义输入的默认值
+  default?: any; // 定义输入的默认值
   dataFlowType: DataFlowTypeName;
   matchCategories?: string[];
 } // Removed redundant defaultValue, min, max here. They are handled by config via Zod schemas.
@@ -92,19 +92,19 @@ export interface NodeDefinition {
   clientScriptUrl?: string; // Optional URL for loading client-side logic
   deprecated?: boolean
   experimental?: boolean
-  width?: number // 新增：允许节点定义指定自己的首选宽度
+  width?: number // 允许节点定义指定自己的首选宽度
 
   // 组节点相关属性
-  isGroupInternal?: boolean    // 标记节点是否只能在组内部使用
-  groupId?: string            // 节点所属的组ID
-  groupConfig?: {             // 组相关配置
-    allowExternalUse?: boolean  // 是否允许在组外使用
-    dynamicPorts?: boolean      // 是否支持动态端口 (旧，考虑移除或重命名)
+  isGroupInternal?: boolean                       // 标记节点是否只能在组内部使用
+  groupId?: string                                // 节点所属的组ID
+  groupConfig?: {                                 // 组相关配置
+    allowExternalUse?: boolean                    // 是否允许在组外使用
+    dynamicPorts?: boolean                        // 是否支持动态端口 (旧，考虑移除或重命名)
   }
-  dynamicSlots?: boolean        // 标记节点是否支持动态添加/删除插槽 (例如 GroupInput/Output)
-  configSchema?: Record<string, InputDefinition>; // 新增：用于定义节点级别的配置项，其结构与输入类似
-  configValues?: Record<string, any>; // 新增：用于存储节点配置项的实际值
-  isPreviewUnsafe?: boolean; // 新增：标记节点在预览模式下是否不安全 (默认为 false/安全)
+  dynamicSlots?: boolean                          // 标记节点是否支持动态添加/删除插槽 (例如 GroupInput/Output)
+  configSchema?: Record<string, InputDefinition>; // 用于定义节点级别的配置项，其结构与输入类似
+  configValues?: Record<string, any>;             // 用于存储节点配置项的实际值
+  isPreviewUnsafe?: boolean;                      // 标记节点在预览模式下是否不安全 (默认为 false/安全)
 }
 
 // API设置类型

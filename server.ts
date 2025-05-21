@@ -81,7 +81,9 @@ class ComfyTavernServer {
     console.log('正在启动前端服务器...');
     if (isDev) {
       // 开发模式直接启动 dev server
-      this.spawnProcess('bun', ['run', 'dev'], { cwd: frontendPath }, 'Frontend Dev Server');
+      // Roo: 直接使用 bun x vite，而不是通过 package.json 脚本 'dev'
+      console.log(`[server.ts] Spawning: bun x vite in ${frontendPath}`);
+      this.spawnProcess('bun', ['x', 'vite'], { cwd: frontendPath }, 'Frontend Dev Server');
     } else {
       // 生产模式启动预览服务器（构建步骤已在start.bat/sh中完成）
       console.log('启动前端预览服务器...');

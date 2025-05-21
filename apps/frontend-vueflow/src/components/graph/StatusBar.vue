@@ -16,8 +16,6 @@
           @close="showWorkflowMenu = false"
         />
       </div>
-      <!-- 标签栏 -->
-      <TabBar class="flex-grow" />
       <!-- Added TabBar and flex-grow -->
 
       <!-- 编辑菜单触发器 (如果需要) -->
@@ -28,10 +26,11 @@
       </div>
       -->
       <!-- 可以添加其他菜单项，如视图、帮助等 -->
+      <!-- 标签栏 -->
+      <TabBar class="flex-grow" />
     </div>
 
     <div class="flex items-center space-x-4">
-      <!-- 增加间距 -->
       <!-- 可停靠编辑器切换按钮 -->
       <button
         @click="toggleDockedEditor"
@@ -74,7 +73,6 @@
           />
         </svg>
       </button>
-      <!-- 实时预览开关 -->
       <!-- 实时预览切换按钮 -->
       <button
         @click="togglePreview"

@@ -61,16 +61,18 @@ export default defineConfig({
       // Watch all files in the packages/types directory
       ignored: [
         // Ensure node_modules is ignored (Vite default, but good to be explicit)
+        // These are relative to Vite's root (apps/frontend-vueflow)
         '**/node_modules/**',
         '**/.git/**',
-        // Negated pattern to *include* the types package
-        `!${fileURLToPath(new URL('../../packages/types/src', import.meta.url))}/**`
+        // Negated pattern to *include* the types package.
+        // Calculate path relative to vite.config.ts's directory (which is Vite's root)
+        `!${path.relative(fileURLToPath(new URL('.', import.meta.url)), fileURLToPath(new URL('../../packages/types/src', import.meta.url)))}/**`,
         // You might need to add other packages here if they also need watching
-        // `!${fileURLToPath(new URL('../../packages/utils/src', import.meta.url))}/**`
+        // `!${path.relative(fileURLToPath(new URL('.', import.meta.url)), fileURLToPath(new URL('../../packages/utils/src', import.meta.url)))}/**`
       ],
       // Optional: You might need to adjust depth or polling depending on your OS/setup
       // depth: 99,
-      // usePolling: true,
+      usePolling: true, // Roo: Enable polling
     }
   },
   preview: { // 为预览服务器配置端口

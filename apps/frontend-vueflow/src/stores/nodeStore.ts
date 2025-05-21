@@ -66,9 +66,9 @@ export const useNodeStore = defineStore('node', () => {
 
     try {
       const data = await api.get<FrontendNodeDefinition[]>('/nodes');
-      console.log('[NodeStore] Data received from /api/nodes in fetchAllNodeDefinitions:', JSON.parse(JSON.stringify(data))); // 深入复制以避免代理问题
+      // console.log('[NodeStore] Data received from /api/nodes in fetchAllNodeDefinitions:', JSON.parse(JSON.stringify(data))); // 深入复制以避免代理问题
       nodeDefinitions.value = data;
-      console.log('[NodeStore] nodeDefinitions.value updated in fetchAllNodeDefinitions:', JSON.parse(JSON.stringify(nodeDefinitions.value))); // 深入复制
+      // console.log('[NodeStore] nodeDefinitions.value updated in fetchAllNodeDefinitions:', JSON.parse(JSON.stringify(nodeDefinitions.value))); // 深入复制
       definitionsLoaded.value = true; // 设置加载完成标志
       return data;
     } catch (err) {
@@ -119,7 +119,7 @@ export const useNodeStore = defineStore('node', () => {
   };
 
 
-  // 新增：确保节点定义已加载的辅助函数
+  // 确保节点定义已加载的辅助函数
   const ensureDefinitionsLoaded = async () => {
     // 如果已加载，直接返回
     if (definitionsLoaded.value) {
@@ -169,24 +169,24 @@ export const useNodeStore = defineStore('node', () => {
 
     if (payload.success) {
       notifiedNodesReloaded.value = true;
-      console.log('[NodeStore] notifiedNodesReloaded set to true. Calling fetchAllNodeDefinitions...'); // 增强日志
+      // console.log('[NodeStore] notifiedNodesReloaded set to true. Calling fetchAllNodeDefinitions...'); // 增强日志
       try {
         await fetchAllNodeDefinitions(true); // 传入 true 以显示 loading 状态
-        console.log('[NodeStore] fetchAllNodeDefinitions completed successfully after reload notification.'); // 增强日志
+        // console.log('[NodeStore] fetchAllNodeDefinitions completed successfully after reload notification.'); // 增强日志
       } catch (fetchError) {
-        console.error('[NodeStore] Error fetching node definitions after reload notification:', fetchError);
+        // console.error('[NodeStore] Error fetching node definitions after reload notification:', fetchError);
         // fetchAllNodeDefinitions 内部会设置 error.value
         reloadError.value = error.value || 'Failed to fetch nodes after reload.';
       } finally {
         notifiedNodesReloaded.value = false;
-        console.log('[NodeStore] notifiedNodesReloaded set to false in finally. Current loading:', loading.value); // 增强日志
+        // console.log('[NodeStore] notifiedNodesReloaded set to false in finally. Current loading:', loading.value); // 增强日志
       }
     } else {
       console.error('[NodeStore] Node reload notification indicated failure:', payload.message);
       error.value = `Node reload failed: ${payload.message || 'Unknown error'}`; // 更新主错误状态
       reloadError.value = payload.message || 'Node reload failed on server.';
       notifiedNodesReloaded.value = false; // 确保重置
-      console.log('[NodeStore] Reload notification failed. notifiedNodesReloaded set to false. Current loading:', loading.value); // 增强日志
+      // console.log('[NodeStore] Reload notification failed. notifiedNodesReloaded set to false. Current loading:', loading.value); // 增强日志
     }
   };
 

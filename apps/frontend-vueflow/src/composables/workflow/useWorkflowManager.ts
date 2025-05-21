@@ -323,9 +323,9 @@ function createWorkflowManager() {
       );
 
       if (snapshot) {
-        console.info(
-          `[useWorkflowManager/applyDefaultWorkflowToTab] 已成功将默认模板状态应用于 ${internalId}。`
-        );
+        // console.info(
+        //   `[useWorkflowManager/applyDefaultWorkflowToTab] 已成功将默认模板状态应用于 ${internalId}。`
+        // );
       } else {
         console.error(
           `[useWorkflowManager/applyDefaultWorkflowToTab] _applyWorkflowToTab 未能返回快照 for ${internalId}。`
