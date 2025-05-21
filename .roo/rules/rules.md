@@ -182,65 +182,29 @@ src/
 - **错误处理**: 实现全局和局部的错误处理机制，提供友好的用户反馈。
 - **代码格式化与检查**: 使用 Prettier 和 ESLint/Hint 强制执行代码风格和规范。
 - **代码检查**: `bun tsc -p apps/frontend-vueflow/tsconfig.json --noEmit`,`bun tsc -p apps/backend/tsconfig.json --noEmit`
-- **自动化总结提交**：按照 @/.clinerules 中的风格在其中追加精简版记录。然后再创建正式的提交信息。 @git-changes
 
 ## 项目进度 - 每次提交前在此追加精简版记录
 
-- **前端 VueFlow 分支**:
-  - 完成了项目初始化、配置和基础结构搭建。
-  - 更新了启动脚本，支持多种前端启动方式。
-  - 添加了基础页面布局、角色卡（支持 PNG 提取）、主题切换、右键菜单、节点库侧边栏（支持搜索、预览、拖拽添加）、后端节点加载等功能。
-  - 添加了后端测试节点和前端基础输入组件（包括 CodeInput），并集成到画布，支持动态渲染、输入管理和布局优化。
-  - 重构了节点组件 (`BaseNode`)，优化了状态管理、拖拽体验、暗色模式、插槽显示（悬停提示、对齐、多行文本框交互修复）。
-  - 拆分了画布连线逻辑 (`useCanvasConnections`)，修复了连线移除和类型检查问题。
-  - 优化了节点标题显示、自动宽度计算、滚动条样式和插槽间距。
-  - 添加了节点输入插槽的类型兼容规则。
-  - 实现了多对一输入插槽功能。
-  - 添加了文本显示组件、后端节点重载功能，修复了节点名称/描述显示，优化了节点预览面板和侧边栏管理。
-  - 添加了工作流保存/加载/导入导出功能，解决了文件名和节点 ID 问题，添加了启动画面。
-  - 引入了按钮输入类型和示例节点。
-  - 添加了节点引擎部分实现（未完成）。
-  - 引入了标签页系统和初步的节点组功能（内嵌/引用模式），更新了状态管理、快捷键和构建配置。
-  - 重构了 `workflowStore` 和 `BaseNode` 组件，拆分逻辑到 Composables。
-  - 后端改用 Zod 进行数据验证。
-  - 实现了节点的客户端逻辑执行功能。
-  - 优化了前端状态管理 (`nodeStore` 重构为 Pinia 标准写法)。
-  - 允许节点定义指定首选宽度，添加了插槽右键菜单删除连线，优化了 Tooltip 样式。
-- **项目结构与核心功能重构**:
+**核心里程碑与功能摘要 (详细记录请见 [`Updatelog.md`](Updatelog.md))**
 
-  - 引入“工程”（Project）概念重构项目结构，按工程管理资源。
-  - 修复了因子组件 Props 不稳定导致的递归更新错误。
-  - 添加了强制保存节点组接口更改的事件机制，确保状态同步。
-
-- **核心重构：节点组与工作流接口** - 借鉴 Blender 几何节点，重构了节点组功能。引入中心化的工作流接口定义（存储在 `WorkflowObject` 的 `interfaceInputs`/`Outputs` 中），侧边栏 (`GroupIOEdit.vue`) 成为接口管理的唯一入口。`GroupInput`/`Output` 节点现在是视觉“幻影”节点，其插槽动态反映中心接口。更新了类型系统，引入 `WILDCARD` 和 `CONVERTIBLE_ANY` 处理动态插槽。重构了连接逻辑 (`useCanvasConnections.ts`) 和插槽计算 (`useGroupIOSlots.ts`)，修复了相关 bug (详见 `docs/fix-groupio-initial-slot-disappearance.md`)。添加了接口同步机制 (`useGroupInterfaceSync.ts` 和相关事件如 `force-save-interface-changes`) 以确保状态一致性。
-
-- **多项目管理与视图重构**: 引入了多项目管理功能，允许用户创建、加载和管理多个工作流项目。新增了项目列表视图 (`ProjectListView`) 和角色卡视图 (`CharacterCardView`)。主页 (`HomeView`) 被重构为概览页面，展示项目和角色卡预览。更新了相关状态管理 (`projectStore`, `tabStore`, `workflowStore`) 和路由以支持新架构。调整了侧边栏导航，移除了旧的工具栏。
-
-- **后端 index.ts 重构**：将节点 API、全局工作流 API、项目 API 和 WebSocket 处理逻辑分别拆分到了 routes/nodeRoutes.ts、routes/workflowRoutes.ts、routes/projectRoutes.ts 和 websocket/handler.ts 模块中。将工作流和项目目录的路径配置集中到了 config.ts 文件。将项目相关的辅助函数提取到了 services/projectService.ts 文件。index.ts 文件现在更加简洁，主要负责初始化、中间件应用和模块挂载。整体代码结构更加清晰，易于维护。
-- **URL 加载与状态重构**: 通过 URL 加载工作流，重构核心状态管理 (`workflowStore`)，添加项目元数据更新接口，优化前端视图 (`HomeView`, `EditorView`) 和路由。
-- **workflowStore 重构**: 将庞大的 `workflowStore` 拆分为多个职责单一的 Composables (`useWorkflowState`, `useWorkflowCoreLogic`, `useWorkflowViewManagement`, `useWorkflowInterfaceManagement` 等)，将共享类型移至 `types/workflowTypes.ts`，更新了相关 Composables。
-- **核心状态管理重构与插件系统规划**: 再次重构 `workflowStore`，引入 `useWorkflowManager` 集中管理核心状态、历史记录和应用逻辑，解决先前拆分导致的同步问题；新增插件系统设计文档，规划了基于 `plugin.json` 的扩展架构；优化了部分 UI 组件（如 `BooleanToggle`）并支持动态输入组件注册；更新和整理了相关文档。
-
-- 修复了历史记录和状态管理相关 bug，修复了快捷键。增加了历史记录侧边面板，允许跳转记录、撤销/重做操作。
-- 通过重构 WebSocket 连接管理，将其改为全局单例模式，并解耦节点按钮点击事件的处理，修复了在撤销/重做操作时因节点重建导致大量 WebSocket 连接断开和重连的问题。现在点击历史记录项不再触发异常的 WebSocket 活动。
-- 重构了节点操作（添加、移动）与历史记录逻辑，将其集中到 `workflowStore` 中，并优化了节点添加时的定位逻辑；增强了画布和核心状态管理的调试日志。
-- 将 `apps/frontend-vueflow/src/views/EditorView.vue` 中的逻辑重构到多个独立的 composable 文件中：`useRouteHandler.ts`, `useCanvasInteraction.ts`, `useTabManagement.ts`, `useInterfaceWatcher.ts`, `useKeyboardShortcuts.ts`, 和 `useEditorState.ts`。这使得 `EditorView.vue` 组件更加简洁，专注于视图渲染和协调，提高了代码的可维护性和可读性。
-- 对 apps/frontend-vueflow/src/composables 目录下的模块进行了分组（Canvas、Node、Group、Workflow、Editor），提高可读性。
-- **状态与历史重构**: 引入交互与生命周期协调器 (`WorkflowInteractionCoordinator`, `WorkflowLifecycleCoordinator`) 重构 `workflowStore`，统一处理画布交互、生命周期和历史记录；添加 Markdown 支持 (`MarkdownRenderer`) 和相关依赖；改进组 IO 管理 (`useGroupIOActions`, `useGroupIOState`)；优化保存流程 (`promptAndSaveWorkflow`) 和侧边栏交互 (`Tooltip`)。
-- 增强工作流组功能(creationMethod, referencedWorkflows), 重构历史记录为结构化对象, 添加节点组件状态存储。
-- **状态与历史重构 - 其二**: 引入交互与生命周期协调器，重构历史记录为结构化对象，优化输入组件交互与历史记录触发，添加节点组件状态存储。
-- **前端执行准备**: 完善了前端触发工作流执行、处理后端状态/错误消息、可视化节点状态/错误以及处理按钮点击交互的核心功能，为对接后端执行引擎奠定基础。
-- **节点交互与样式优化**: 强制更新节点以响应 IO 顺序变化；重构 Handle 样式，支持主题和多类型；增强输入定义（默认值、范围）；修复历史记录中移除保存点时的索引 Bug；新增后端驱动预览方案文档。
-- **历史记录重构**: 将历史记录从字符串标签重构为结构化的 `HistoryEntry` 对象，更新相关类型、工具和前端模块。
-- **节点配置与组引用重构**: 重构了节点配置更新 (`useWorkflowInteractionCoordinator`) 和节点组引用更新 (`useWorkflowGrouping`) 的逻辑，确保与结构化历史记录 (`HistoryEntry`) 和状态管理 (`setElements`) 正确集成，修复了接口同步、边移除及输入组件更新触发等相关问题。
-- **工作流重命名与 NodeGroup 修复**: 实现工作流重命名功能（前后端）；修复 NodeGroup 加载 `referencedWorkflowId` 和过滤 `CONVERTIBLE_ANY` 插槽的 Bug；更新历史记录文档，新增执行计划文档。
-- 更新了节点类型文档。
-- 更新了浮动文本预览窗口计划并优化后端驱动预览功能文档。添加了节点自环检查，防止节点输出连接到自身的输入上。
-- **工作流数据重构:** 重构工作流数据结构，引入 WorkflowStorage* 和 Execution* 类型，优化存储（仅存差异值、Nano ID），统一默认值处理 (getEffectiveDefaultValue)，分离存储与执行关注点，更新相关类型、工具库、前后端适配（执行逻辑暂缓）。版本升至 0.0.5。
-- 删除老旧的`apps\frontend`目录，并更新了启动脚本。
-- 修复一些遗漏的类型定义和文档。
-- **节点命名空间**: 引入节点命名空间 (`namespace`) 机制，重构后端节点加载/注册逻辑 (`NodeLoader`, `NodeManager`)，更新核心类型 (`NodeDefinition`)，并适配前端 (`nodeStore`, `EditorView`) 以支持完整的 `namespace:type` 节点标识。
-- **工作流执行引擎**: 实现后端执行引擎核心逻辑（API、WebSocket、并发控制），并适配前端以支持执行状态显示与交互。
-- **UI 组件增强**: 优化 Tooltip (添加复制按钮、滚动条) 和 SuggestionDropdown (添加搜索、滚动条)，并应用于节点标题和历史记录面板。
-- **调试与优化**: 清理前端调试日志；修复 NodeGroup 类型判断（使用命名空间）；优化 Tooltip 组件。
-- **节点扩展与优化**: 新增 LLM、加载器（角色卡、历史、预设等）和处理器（正则、上下文构建）后端节点；优化前端加载动画；更新 LLM 适配器文档。
+- **项目初始化与前端选型 (VueFlow)**:
+    - 完成项目基础结构搭建，前端选用 VueFlow 替代 LiteGraph.js。
+    - 实现基础布局、角色卡 (PNG提取)、主题切换、右键菜单、节点库 (搜索、预览、拖拽添加)、后端节点加载。
+    - 开发各类前端输入组件 (CodeInput, ButtonInput 等) 并集成到画布。
+- **核心功能重构与增强**:
+    - **节点系统**: 重构 `BaseNode`，优化状态管理、交互体验、插槽显示；实现类型兼容、多对一输入。
+    - **工作流管理**: 实现保存/加载/导入导出，引入标签页系统、节点组 (内嵌/引用模式)。
+    - **状态管理**: 多次重构 `workflowStore` (拆分 Composables, 引入 `useWorkflowManager`)，`nodeStore` 改为 Pinia 标准写法。后端采用 Zod 验证。
+    - **项目与工程**: 引入“工程”(Project)概念，实现多项目管理与视图重构。
+    - **后端架构**: 重构 `index.ts`，拆分路由和服务；引入节点命名空间。
+    - **历史记录**: 实现撤销/重做，重构为结构化 `HistoryEntry` 对象，增加历史记录侧边面板。
+    - **执行与交互**: 实现节点客户端逻辑执行，后端执行引擎核心逻辑 (API, WebSocket)。
+- **关键技术点与优化**:
+    - **WebSocket**: 修复连接问题，改为全局单例模式。
+    - **UI/UX**: 优化 Tooltip、SuggestionDropdown，实现 Markdown 渲染，节点自环检查。
+    - **数据结构**: 重构工作流数据结构 (WorkflowStorage*, Execution*)，优化存储。
+- **近期主要进展**:
+    - **节点命名空间**: 完成后端加载/注册逻辑重构及前端适配。
+    - **工作流执行引擎**: 实现后端核心，前端适配执行状态显示与交互。
+    - **UI 组件增强**: 优化 Tooltip 和 SuggestionDropdown。
+    - **节点扩展**: 新增 LLM、加载器、处理器等后端节点。

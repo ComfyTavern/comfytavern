@@ -355,3 +355,149 @@ NodeGroupNode 现在支持两种模式：embedded (将组的定义内嵌在主�
 - 更新了节点类型文档。
 - 更新了浮动文本预览窗口计划并优化后端驱动预览功能文档。添加了节点自环检查，防止节点输出连接到自身的输入上。
 - **工作流数据重构:** 重构工作流数据结构，引入 WorkflowStorage* 和 Execution* 类型，优化存储（仅存差异值、Nano ID），统一默认值处理 (getEffectiveDefaultValue)，分离存储与执行关注点，更新相关类型、工具库、前后端适配（执行逻辑暂缓）。版本升至 0.0.5。
+---
+
+## 2025年5月7日
+- docs: 添加MIT许可证文档
+- 提交
+- 重构文档分类
+- 清理内容
+- 初始提交
+
+## 2025年5月16日
+- refactor(前端): 优化历史记录面板的格式化显示
+
+## 2025年5月17日
+- 创建了ROO的记忆库
+- docs: 更新节点插槽类型系统设计文档和重构计划
+- docs(architecture): 添加新版节点插槽类型系统设计文档
+
+## 2025年5月18日
+- feat: 新增 JSON 内联查看器并改造代码输入组件
+  - 新增 `JsonInlineViewer.vue` 组件，用于在节点内显示 JSON 数据的只读预览，并提供编辑按钮以打开可停靠编辑器。
+  - 改造 `CodeInput.vue`，移除内部编辑器，改为预览和编辑按钮，简化节点内 UI。
+  - 更新 `inputs/index.ts`，添加 `JSON` 和 `OBJECT` 类型的输入组件映射。
+  - 在 `TestWidgetsNode.ts` 中新增 `markdown_input` 和 `javascript_code_input`，并调整 `json_input` 的类型为 `OBJECT`。
+  - 更新 `MarkdownRenderer.vue`，集成 `highlight.js` 实现代码块语法高亮。
+  - 在 `useEditorState.ts` 和 `useWorkflowInteractionCoordinator.ts` 中添加对可停靠编辑器的支持，优化节点输入控件的交互逻辑。
+- feat(editor): 添加底部可停靠编辑器面板的空状态提示
+  - 在 `TabbedEditorHost.vue` 和 `DockedEditorWrapper.vue` 中添加空状态提示，当没有活动的编辑标签页时，显示提示信息“没有活动的编辑标签页。请从节点输入处打开编辑器。”。同时，为避免样式冲突，为 `TabbedEditorHost.vue` 内部的 CSS 类名添加 `ct-` 前缀。
+- feat(editor): 实现可停靠编辑器面板并集成到主视图
+  - 将编辑器状态移至模块级单例，新增 `isDockedEditorVisible` 状态和 `toggleDockedEditor` 方法。在状态栏添加控制按钮，并在主视图中集成 `DockedEditorWrapper` 组件。相关组件逻辑和样式已适配，确保编辑器面板与画布布局协调。
+- feat(编辑器): 实现可停靠编辑器面板及其核心组件
+  - 新增 RichCodeEditor.vue 和 TabbedEditorHost.vue 组件，用于构建可停靠编辑器面板的基础功能。同时添加了 DockedEditorWrapper.vue 作为面板的 UI 管理器和调度器，支持单页和多标签编辑模式，并实现了数据保存和状态持久化功能。
+- docs(architecture): 更新编辑器面板设计文档并删除旧文件
+  - 将 `floating-text-preview-plan.md` 删除，并新增 `enhanced-editor-panel-design.md`，详细描述增强型编辑器面板的设计方案。同时更新 `floating-preview-editor-design.md`，引用新设计文档并调整相关内容。
+- docs: 在规则文档中添加中文注释要求
+  - 在开发要求文档中新增一条规则，强调注释也需要使用中文，以确保代码的可读性和一致性
+- feat(EditorView): 添加右侧专用预览面板并集成到主视图
+  - 在 `EditorView.vue` 中添加了 `RightPreviewPanel` 组件，用于显示预览内容。该面板支持展开/收起、拖拽调整宽度和高度，并通过 `useLocalStorage` 持久化布局状态。同时，优化了 `useDnd.ts` 中的拖拽逻辑，避免与面板调整大小的操作冲突。
+- feat: 新增预览目标功能并优化代码编辑器
+  - 在 `BaseWorkflowObjectSchema` 中添加 `previewTarget` 字段，用于标记预览目标
+  - 在 `useWorkflowManager` 中添加 `setPreviewTarget` 和 `clearPreviewTarget` 方法管理预览状态
+  - 在 `CodeInput.vue` 中集成 `@codemirror/lint` 和 `@codemirror/search`，增强代码编辑器功能
+  - 在 `BaseNode.vue` 中实现 Alt+Click 事件处理，支持设置和清除预览目标
+  - 在 `SlotContextMenu.vue` 中添加右键菜单项，支持设置和取消预览
+  - 在 `useCanvasKeyboardShortcuts.ts` 中实现 Alt+Click 快捷键，支持节点输出插槽的循环预览
+  - 更新 `handleStyles.module.css`，为预览目标添加视觉反馈样式
+- refactor(节点插槽类型系统): 重构节点插槽类型系统，统一使用 DataFlowType 和 matchCategories
+  - 本次重构将原有的 SocketType 替换为新的 DataFlowType，并引入 matchCategories 用于连接验证。主要修改包括：
+    1. 在 types 包中定义新的 DataFlowType 和 matchCategories 枚举
+    2. 更新所有节点定义中的 type 字段为 dataFlowType
+    3. 为输入输出定义添加 matchCategories 字段
+    4. 修改相关工具函数和组件以适配新的类型系统
+    5. 更新前端组件以支持新的类型系统
+    6. 修改文档和注释以反映新的类型系统
+  - 重构后的类型系统更加清晰，便于扩展和维护，同时提高了类型检查的准确性。
+
+## 2025年5月19日
+- refactor(projectService): 提取并复用文件读取、目录检查和冲突验证逻辑
+  - 提取了 `_readAndValidateJsonFile`、`_ensureDirectoryExists` 和 `_checkFileConflict` 三个辅助函数，用于统一处理文件读取、目录创建和文件冲突检查的逻辑，减少了代码重复并提高了可维护性。
+- refactor(backend): 重构 projectRoutes 将业务逻辑迁移至服务层
+  - 本次提交主要对 `apps/backend/src/routes/projectRoutes.ts` 文件进行了重构，核心目标是提升代码的模块化、可读性和可维护性。
+  - 主要重构点：
+    1.  **业务逻辑与文件系统操作迁移至服务层:**
+        *   将原先在路由处理函数中直接执行的文件系统操作（如读写项目元数据 `project.json`、管理工作流文件等）和核心业务逻辑（如ID生成、冲突检查、数据构建等）统一迁移到了 `apps/backend/src/services/projectService.ts`。
+        *   路由层 (`projectRoutes.ts`) 现在更专注于HTTP请求的接收、参数校验、调用相应的服务层函数以及格式化响应。
+    2.  **参数处理逻辑提取与统一:**
+        *   针对路由中重复的 `projectId` 和 `workflowId` 参数解码（`decodeURIComponent`）和清理（`sanitizeProjectId`, `sanitizeWorkflowIdFromParam`）逻辑，已提取为可复用的辅助函数（例如，设想中的 `getSafeProjectIdOrErrorResponse` 和 `getSafeWorkflowIdOrErrorResponse` 的功能已内化到服务层或通过更简洁的方式在路由层处理）。
+        *   这减少了代码冗余，并使得参数处理更加一致。
+    3.  **错误处理结构优化:**
+        *   通过将业务逻辑移至服务层，服务函数现在能够抛出更具体的自定义错误类型（如 `ProjectNotFoundError`, `WorkflowConflictError` 等，这些是在后续工作目录更改中进一步完善的，但此阶段的重构为此奠定了基础）。
+        *   路由层可以更清晰地捕获这些特定错误，并据此设置恰当的HTTP状态码和返回更友好的错误信息。
+    4.  **Zod Schema 验证的持续应用:**
+        *   继续并推广了使用 Zod Schema ([`CreateProjectBodySchema`](apps/backend/src/routes/projectRoutes.ts:37:1), [`ProjectMetadataUpdateSchema`](apps/backend/src/routes/projectRoutes.ts:34:7), [`CreateWorkflowObjectSchema`](apps/backend/src/routes/projectRoutes.ts:8:3), [`UpdateWorkflowObjectSchema`](apps/backend/src/routes/projectRoutes.ts:9:3))对请求体进行验证，确保了API接口数据的健壮性。
+  - 通过以上重构，`apps/backend/src/routes/projectRoutes.ts` 文件变得更加简洁、职责更分明，为后续的功能迭代和维护打下了坚实的基础。
+- feat(project): 重构项目创建流程并增加输入验证
+  - 修改 `createProject` 方法以接受包含项目名称的对象
+  - 在 `useProjectManagement` 中添加项目名称的验证逻辑
+  - 在 `ProjectListView.vue` 中引入 `promptAndCreateProject` 方法以提示用户输入项目名称
+  - 在 `projectRoutes.ts` 中使用 Zod 验证创建项目的请求体，并增加详细的错误处理
+- feat: 新增角色卡API路由并优化前端服务逻辑
+  - 在backend中新增角色卡API路由，支持获取角色卡列表和图片
+  - 优化前端SillyTavernService，使用后端API获取角色卡数据
+  - 调整类型定义，统一角色卡数据结构
+- refactor(前端): 优化节点预览面板和连接验证逻辑
+  - 在 NodePreviewPanel.vue 中将参数类型显示从 `type` 改为 `dataFlowType`
+  - 在 useNodeGroupConnectionValidation.ts 中移除未使用的 `reason` 变量，简化代码逻辑
+- fix: 更新estree-walker版本并调整相关依赖
+- refactor: 优化前端和后端的构建及启动脚本
+  - 更新了前端和后端的构建脚本，简化了构建流程并优化了启动命令。同时，排除了 .d.ts 文件的加载，并增加了日志输出以便调试。
+- chore: 更新package.json中的依赖项
+  - 将typescript版本从^5.0.0更新为~5.8.0，并添加npm-run-all2、vite、vue-tsc和vitest到devDependencies。同时，从frontend-vueflow的package.json中移除重复的依赖项，以保持依赖管理的一致性。
+- build: 使用bun exec执行build脚本
+  - 修改package.json中的build脚本，使用bun exec来执行run-p命令，以确保在Bun环境下正确运行
+- chore: 更新依赖和脚本配置
+  - 添加@elysiajs/cors依赖以支持跨域请求
+  - 修改前端开发服务器启动命令为使用vite
+  - 添加build:frontend脚本用于构建前端项目
+- chore: 在启动脚本中添加依赖安装步骤
+  - 在start.bat和start.sh中添加了依赖安装步骤，以确保在启动应用时自动检查和安装所需的依赖项。这有助于避免因缺少依赖而导致的运行错误。
+- feat(editor): 添加暗黑模式支持并优化编辑器主题同步
+  - 在 `RichCodeEditor` 和 `TabbedEditorHost` 组件中添加暗黑模式支持
+  - 使用 `@uiw/codemirror-theme-vscode` 主题包实现主题切换
+  - 优化编辑器与全局主题状态的同步逻辑
+  - 移除未使用的常驻按钮相关代码，简化逻辑
+- fix(editor): 修复可停靠编辑器标签页内容加载和JSON处理问题
+  - 修复了可停靠编辑器面板在打开后标签页为空或内容未正确加载的问题，同时解决了编辑JSON内容时编辑器报错以及优化了标签页标题的显示。具体修改包括：
+    1. 在 `useEditorState.ts` 中引入 `requestedContextToOpen` ref，并在 `EditorView.vue` 中 `watch` 此状态，确保上下文正确传递给 `DockedEditorWrapper.vue` 的 `openEditor` 方法。
+    2. 在 `useWorkflowInteractionCoordinator.ts` 中，对JSON对象进行 `JSON.stringify` (传递给编辑器前) 和 `JSON.parse` (保存时) 处理。
+    3. 在 `DockedEditorWrapper.vue` 中，优先使用从 `EditorOpeningContext` 传入的 `context.title` 作为标签页标题。
+
+## 2025年5月20日
+- feat(editor): 为 RichCodeEditor 添加行号配置和代码折叠功能
+  - 在 `EditorInstanceConfig` 接口中添加 `lineNumbers` 和 `foldGutter` 配置项，允许用户自定义是否显示行号和代码折叠功能。同时，在 `RichCodeEditor.vue` 中实现右键菜单，支持撤销、重做、剪切、复制、粘贴和全选等操作。
+- docs: 更新决策日志，记录节点面板刷新功能优化过程
+  - 详细记录了节点面板“重新加载节点”功能的刷新时机与可靠性优化过程，包括问题诊断、修复方案及最终决策。优化了前后端的交互逻辑，确保用户操作后能更可靠地看到节点更新。
+- refactor(节点管理): 重构节点加载和重载逻辑，优化WebSocket通知处理
+  - 重构节点加载逻辑，移除`createNodeRegisterer`，直接导出`definitions`数组
+  - 在`NodeManager`中添加`clearNodes`方法，用于清空已注册节点
+  - 添加`NODES_RELOADED` WebSocket消息类型及处理逻辑
+  - 优化`NodeLoader`的节点加载过程，增加缓存破坏机制
+  - 在`nodeRoutes`中添加`/nodes/reload` API端点，支持节点重载
+  - 更新前端`NodePanel`组件，简化节点重载逻辑，移除冗余代码
+
+## 2025年5月21日
+- fix(dev): 修复 Vite HMR 及 monorepo 文件监视问题
+  - 主要修复了在 Bun 1.2.5 环境下，通过 `server.ts` 脚本启动时 Vite 开发服务器热更新 (HMR) 失效的问题。
+  - 关键变更：
+    - **`server.ts`**: 修改前端开发服务器的启动方式，从 `bun run dev` (间接调用 `package.json` 中的 `dev` 脚本) 改为直接 `spawn('bun', ['x', 'vite'], ...)`。这解决了 `apps/frontend-vueflow/src` 目录内文件 HMR 失效的核心问题。
+    - **`apps/frontend-vueflow/vite.config.ts`**:
+        - 调整 `server.watch.ignored` 中针对 `packages/types/src` 的路径模式，使用相对于 Vite 根目录 (`apps/frontend-vueflow`) 的相对路径否定模式，例如 `` `!${path.relative(viteConfigDir, typesSrcDir)}/**` ``。
+        - 启用 `server.watch.usePolling: true` 以增强文件监视的稳定性。
+        - 这些调整使得 `packages/types/src` 目录下的文件更改能够被 Vite 侦测到并触发页面重新加载。
+    - **相关日志清理**: 移除了部分在调试过程中添加的、现已不再需要的 `console.log` 语句。
+  - 经过这些修改，当通过 `.\start.bat dev` 启动应用时：
+    - `apps/frontend-vueflow/src` 目录内文件的修改会触发正常的 HMR。
+    - `packages/types/src` 目录内文件的修改会触发页面重新加载。
+    - API 和 WebSocket 代理功能保持正常。
+  - 注意：Vite 启动时可能仍会显示关于 `packages/types/src` 文件不在项目目录的警告，但实际测试表明文件监视和更新机制已按预期工作。
+- Merge branch 'main' of https://github.com/ComfyTavern/comfytavern
+- style(core): 调整输入提示文本的字体大小
+- fix: 增加项目目录检查和预览服务器配置，删除默认项目文件
+- feat: 增加系统代理检测与设置功能
+- refactor(editor): 优化代码编辑器样式和功能，提升用户体验
+  - 调整 RichCodeEditor 的代码格式，提高可读性
+  - 改进 DockedEditorWrapper 的拖拽和最大化功能
+  - 修复 JSON 格式处理逻辑，增强稳定性
+  - 优化状态栏的交互和样式，提升视觉一致性
