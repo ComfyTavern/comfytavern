@@ -313,11 +313,11 @@
         - 详细诊断和修复过程记录在 [`memory-bank/active-context.md`](./active-context.md) 中 (现已归档)。
 
 - **任务 4.8 (UI优化)**: 面板部分深化改造。
-    - **状态: ⏳ 待开始**
-    - **分配给: (待定)**
+    - **状态: ✅ 完成**
+    - **分配给: 用户**
     - **开始日期: (待定)**
-    - **完成日期: (待定)**
-    - **备注: 进一步完善或扩展现有面板（如 [`RightPreviewPanel.vue`](../apps/frontend-vueflow/src/components/graph/sidebar/RightPreviewPanel.vue), [`DockedEditorWrapper.vue`](../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue)）的功能。审视并优化面板的交互和用户体验。具体需求待明确。**
+    - **完成日期: 2025/05/21**
+    - **备注: 对编辑器及相关面板进行了多项优化和功能增强。主要包括：引入 `@rigstech/codemirror-vscodesearch` 插件替换原有搜索功能，并更新了右键菜单的搜索逻辑 ([`RichCodeEditor.vue`](../apps/frontend-vueflow/src/components/common/RichCodeEditor.vue:60), [`EditorContextMenu.vue`](../apps/frontend-vueflow/src/components/common/EditorContextMenu.vue:30))；优化了 [`RichCodeEditor.vue`](../apps/frontend-vueflow/src/components/common/RichCodeEditor.vue:400) 聚焦时的边框样式；在 [`TabbedEditorHost.vue`](../apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue:121) 中新增了标签页标题截断功能；改进了 [`DockedEditorWrapper.vue`](../apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue) 的拖拽和最大化功能；修复了JSON格式处理逻辑；并对状态栏的交互和样式进行了优化。**
 
 ## 阶段 4.9: 为 RichCodeEditor.vue 添加右键菜单 - 進行中
 
