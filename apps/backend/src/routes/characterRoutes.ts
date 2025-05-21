@@ -66,6 +66,24 @@ export const characterApiRoutes = new Elysia({ prefix: '/api/characters' })
   .get('/', async ({ set }) => {
     try {
       console.log(`[CharacterRoutes] Attempting to read directory: ${CHARACTER_CARD_DIR}`);
+      try {
+        await fs.access(CHARACTER_CARD_DIR);
+      } catch (accessError: any) {
+        if (accessError.code === 'ENOENT') {
+          console.log(`[CharacterRoutes] Character card directory not found, creating: ${CHARACTER_CARD_DIR}`);
+          try {
+            await fs.mkdir(CHARACTER_CARD_DIR, { recursive: true });
+            console.log(`[CharacterRoutes] Successfully created directory: ${CHARACTER_CARD_DIR}`);
+          } catch (mkdirError: any) {
+            console.error(`[CharacterRoutes] Failed to create directory ${CHARACTER_CARD_DIR}:`, mkdirError);
+            // 如果创建目录失败，则抛出错误，让外层catch处理
+            throw mkdirError;
+          }
+        } else {
+          // 如果是其他访问错误，也抛出
+          throw accessError;
+        }
+      }
       const files = await fs.readdir(CHARACTER_CARD_DIR);
       const characterCardsData: any[] = []; // 稍后定义更严格的类型
       const processedPngFiles = new Set<string>(); // 跟踪已从PNG处理的文件名（不含扩展名）

@@ -73,6 +73,19 @@ export default defineConfig({
       // usePolling: true,
     }
   },
+  preview: { // 为预览服务器配置端口
+    port: frontendPort,
+    proxy: { // 确保预览服务器也有代理配置
+      '/api': {
+        target: 'http://localhost:3233',
+        changeOrigin: true
+      },
+      '/ws': {
+        target: 'ws://localhost:3233',
+        ws: true
+      }
+    }
+  },
   // Define global constants that will be replaced during build
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion)

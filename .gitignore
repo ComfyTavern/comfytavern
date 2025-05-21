@@ -41,4 +41,5 @@ library
 library/*
 library/SillyTavern/CharacterCard
 projects
+projects/*
 .obsidian
