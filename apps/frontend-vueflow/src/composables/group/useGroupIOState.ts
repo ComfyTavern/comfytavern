@@ -74,7 +74,7 @@ export function useGroupIOState() {
       editingDescription.value = inputData.customDescription || "";
       // --- 初始化新增状态 ---
       // 使用 ?? 避免将 undefined 存入 ref，如果属性不存在则设为 null
-      editingDefaultValue.value = inputData.defaultValue ?? null;
+      editingDefaultValue.value = inputData.config?.default ?? null;
       editingMin.value = inputData.min ?? null;
       editingMax.value = inputData.max ?? null;
       // --- 结束初始化 ---

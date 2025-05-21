@@ -64,7 +64,6 @@ export interface InputDefinition {
   config?: Record<string, any>
   multi?: boolean // 标记是否支持多输入
   allowDynamicType?: boolean // 标记该插槽是否支持从 'ANY' 动态变为具体类型
-  default?: any; // 定义输入的默认值
   dataFlowType: DataFlowTypeName;
   matchCategories?: string[];
 } // Removed redundant defaultValue, min, max here. They are handled by config via Zod schemas.
@@ -326,7 +325,6 @@ export interface GroupSlotInfo {
   // description?: string; // REMOVED: Default description should be derived from the internal node's slot definition
   customDescription?: string; // Optional user-defined description for this specific group interface slot
   required?: boolean;
-  defaultValue?: any;
   config?: Record<string, any>;
   matchCategories?: string[]; // Optional. For input slots, specifies compatible categories of data types. For outputs, declares its categories.
   multi?: boolean;

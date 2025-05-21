@@ -69,8 +69,6 @@ export const GroupSlotInfoSchema = z.object({
   customDescription: z.string().optional(),
   /** 是否为必需插槽 */
   required: z.boolean().optional(),
-  /** 插槽的默认值 */
-  defaultValue: z.any().optional(),
   /** 插槽的配置选项（例如，下拉框的选项列表） */
   config: z.record(z.any()).optional(),
   /** 是否允许多个连接（仅用于输入插槽） */
