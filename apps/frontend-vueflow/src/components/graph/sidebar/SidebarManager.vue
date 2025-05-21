@@ -167,7 +167,7 @@ defineExpose({
 }
 
 .sidebar-icon-bar {
-  @apply flex flex-col w-16 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 items-center py-2 transition-all duration-300 ease-in-out;
+  @apply flex flex-col w-12 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 items-center py-2 transition-all duration-300 ease-in-out;
   /* 添加过渡 */
 }
 
