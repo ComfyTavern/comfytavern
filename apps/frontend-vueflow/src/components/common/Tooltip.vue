@@ -101,8 +101,8 @@ export default {
  * @param {boolean} [showCopyButton=false] - 是否显示复制按钮。
  * @param {boolean} [interactive=true] - Tooltip 是否可交互 (允许鼠标悬停在 Tooltip 内容上)。
  */
-import { ref, computed, watch, onMounted, onUnmounted } from "vue"; // 添加 onMounted
-import { useWindowSize, useEventListener } from "@vueuse/core"; // 导入 useWindowSize 和 useEventListener
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { useWindowSize, useEventListener, isClient } from "@vueuse/core"; // 导入 useWindowSize, useEventListener 和 isClient
 import {
   useFloating,
   offset,
@@ -176,6 +176,11 @@ let hideTimeout: ReturnType<typeof setTimeout> | null = null;
 let stillnessTimeout: ReturnType<typeof setTimeout> | null = null;
 const stillnessDelay = 75; // 鼠标静止检测延迟 (毫秒)
 
+// 移动端相关
+const isMobile = ref(isClient && 'ontouchstart' in window);
+let longPressTimeout: ReturnType<typeof setTimeout> | null = null;
+const longPressDuration = 500; // 长按时长 (毫秒)
+
 // --- 主题集成 ---
 const themeStore = useThemeStore();
 const { isDark } = storeToRefs(themeStore); // 获取 isDark 状态
@@ -240,9 +245,11 @@ const clearTimeouts = () => {
   if (stillnessTimeout) clearTimeout(stillnessTimeout);
   if (showTimeout) clearTimeout(showTimeout);
   if (hideTimeout) clearTimeout(hideTimeout);
+  if (longPressTimeout) clearTimeout(longPressTimeout);
   stillnessTimeout = null;
   showTimeout = null;
   hideTimeout = null;
+  longPressTimeout = null;
 };
 
 const startShowTimer = () => {
@@ -262,7 +269,7 @@ const startHideTimer = () => {
 };
 
 const handleMouseEnter = (event: MouseEvent) => {
-  // 如果鼠标左键按下 (可能在拖拽)，则不处理悬停进入
+  if (isMobile.value) return; // 移动端不处理
   if (event.buttons === 1) {
     return;
   }
@@ -271,10 +278,8 @@ const handleMouseEnter = (event: MouseEvent) => {
     clearTimeout(hideTimeout);
     hideTimeout = null;
   }
-  // 启动静止检测计时器
   if (stillnessTimeout) clearTimeout(stillnessTimeout);
   stillnessTimeout = setTimeout(() => {
-    // 静止时间达到，启动显示计时器
     if (!isTooltipVisible.value && !showTimeout) {
       startShowTimer();
     }
@@ -283,16 +288,14 @@ const handleMouseEnter = (event: MouseEvent) => {
 };
 
 const handleMouseMove = (event: MouseEvent) => {
-  // 如果鼠标左键按下 (可能在拖拽)，则不处理移动重置
+  if (isMobile.value) return; // 移动端不处理
   if (event.buttons === 1) {
-    // 如果因为拖拽导致 tooltip 意外显示了，离开时需要能隐藏，所以这里清除一下显示相关的 timer
     if (stillnessTimeout) clearTimeout(stillnessTimeout);
     if (showTimeout) clearTimeout(showTimeout);
     stillnessTimeout = null;
     showTimeout = null;
     return;
   }
-  // 鼠标移动时重置静止检测计时器 (仅当鼠标在元素内且左键未按下)
   if (isReferenceHovered.value) {
     if (stillnessTimeout) clearTimeout(stillnessTimeout);
     stillnessTimeout = setTimeout(() => {
@@ -305,15 +308,13 @@ const handleMouseMove = (event: MouseEvent) => {
 };
 
 const handleMouseLeave = () => {
+  if (isMobile.value) return; // 移动端不处理
   isReferenceHovered.value = false;
-  // 清除所有可能触发显示的计时器
   if (stillnessTimeout) clearTimeout(stillnessTimeout);
   if (showTimeout) clearTimeout(showTimeout);
   stillnessTimeout = null;
   showTimeout = null;
 
-  // 如果 Tooltip 当前可见，并且鼠标没有悬停在浮动内容上 (或者不允许交互)
-  // 则启动隐藏计时器
   if (isTooltipVisible.value && !hideTimeout) {
     if (!props.interactive || !isFloatingHovered.value) {
       startHideTimer();
@@ -321,18 +322,81 @@ const handleMouseLeave = () => {
   }
 };
 
-// 监听浮动元素的悬停状态变化 (仅当 interactive 为 true 时)
+// --- 移动端触摸事件处理 ---
+const handleTouchStart = (event: TouchEvent) => {
+  if (!isMobile.value) return;
+  // 防止多点触控干扰
+  if (event.touches.length > 1) {
+    if (longPressTimeout) clearTimeout(longPressTimeout);
+    longPressTimeout = null;
+    return;
+  }
+  clearTimeouts(); // 清除所有其他计时器
+
+  longPressTimeout = setTimeout(() => {
+    isTooltipVisible.value = true;
+    longPressTimeout = null;
+  }, longPressDuration);
+};
+
+const handleTouchEnd = () => {
+  if (!isMobile.value) return;
+  if (longPressTimeout) {
+    clearTimeout(longPressTimeout);
+    longPressTimeout = null;
+  }
+  // Tooltip 的显示/隐藏由 handleClickOutside 控制
+};
+
+const handleTouchMove = () => {
+  if (!isMobile.value) return;
+  if (longPressTimeout) {
+    clearTimeout(longPressTimeout);
+    longPressTimeout = null;
+  }
+};
+
+// --- 点击外部隐藏逻辑 ---
+const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+  if (!isTooltipVisible.value) return;
+
+  const target = event.target as Node;
+  const isClickInsideReference = referenceRef.value?.contains(target);
+  const isClickInsideFloating = floatingRef.value?.contains(target);
+
+  if (isClickInsideReference) {
+    // 点击触发器本身，不通过此全局处理器关闭。
+    // 移动端：长按显示，再次点击触发器不应关闭。
+    // 桌面端：由 mouseleave/hover 逻辑控制。
+    return;
+  }
+
+  if (isClickInsideFloating) {
+    if (props.interactive) {
+      // 交互模式下，点击浮动内容内部，不关闭。
+      return;
+    }
+    // 非交互模式下，点击浮动内容内部，也视为“点击其他地方”，关闭。
+  }
+
+  // 至此，情况包括：
+  // 1. 点击完全在 reference 和 floating 之外。
+  // 2. 非交互模式下，点击在 floating 之内。
+  isTooltipVisible.value = false;
+  clearTimeouts(); // 确保清除所有计时器
+};
+
+
+// 监听浮动元素的悬停状态变化 (仅当 interactive 为 true 且非移动端时)
 watch(isFloatingHovered, (hovering) => {
-  if (!props.interactive) return;
+  if (isMobile.value || !props.interactive) return;
 
   if (hovering) {
-    // 进入浮动元素，清除隐藏计时器
     if (hideTimeout) {
       clearTimeout(hideTimeout);
       hideTimeout = null;
     }
   } else {
-    // 离开浮动元素，如果鼠标也不在触发器上，则启动隐藏计时器
     if (isTooltipVisible.value && !isReferenceHovered.value && !hideTimeout) {
       startHideTimer();
     }
@@ -343,10 +407,20 @@ watch(isFloatingHovered, (hovering) => {
 
 onMounted(() => {
   if (referenceRef.value) {
-    useEventListener(referenceRef.value, "mouseenter", handleMouseEnter);
-    useEventListener(referenceRef.value, "mousemove", handleMouseMove);
-    useEventListener(referenceRef.value, "mouseleave", handleMouseLeave);
+    if (isMobile.value) {
+      useEventListener(referenceRef.value, "touchstart", handleTouchStart, { passive: true });
+      useEventListener(referenceRef.value, "touchend", handleTouchEnd);
+      useEventListener(referenceRef.value, "touchmove", handleTouchMove, { passive: true });
+    } else {
+      useEventListener(referenceRef.value, "mouseenter", handleMouseEnter);
+      useEventListener(referenceRef.value, "mousemove", handleMouseMove);
+      useEventListener(referenceRef.value, "mouseleave", handleMouseLeave);
+    }
   }
+  // 全局监听点击/触摸事件，用于点击外部关闭
+  // 使用捕获模式确保能先于其他点击事件，并能正确判断点击目标
+  useEventListener(document, 'click', handleClickOutside, true);
+  useEventListener(document, 'touchstart', handleClickOutside, { capture: true, passive: true });
 });
 
 /**

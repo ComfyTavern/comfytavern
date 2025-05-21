@@ -3,7 +3,8 @@
     @dragleave="onDragLeave" @drop.prevent="onDrop" @dragenter.prevent>
     <VueFlow v-bind="$attrs" ref="vueFlowRef" v-model="internalElements" :node-types="props.nodeTypes" :default-viewport="{ x: 0, y: 0, zoom: 1 }"
       :min-zoom="0.2" :max-zoom="4" fit-view-on-init :connect-on-drop="true" :snap-to-grid="true"
-      :snapping-tolerance="10" :selectionMode="SelectionMode.Partial" @edges-change="handleEdgesChange">
+      :snapping-tolerance="10" :selectionMode="SelectionMode.Partial" @edges-change="handleEdgesChange"
+      :panOnDrag="true" :zoomOnScroll="true">
       <!-- 背景 -->
       <Background :pattern-color="isDark ? '#555' : '#aaa'" :gap="16" />
 

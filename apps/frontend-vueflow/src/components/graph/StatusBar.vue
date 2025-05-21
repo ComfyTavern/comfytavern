@@ -4,7 +4,7 @@
   >
     <div class="flex items-center space-x-4 flex-grow">
       <!-- Added flex-grow -->
-      <div>一个神秘的编辑器</div>
+      <div class="text-blue-500 dark:text-blue-400 font-semibold">{{ projectName }}</div>
       <!-- 工作流菜单触发器 -->
       <div class="relative">
         <button ref="workflowButtonRef" @click="toggleWorkflowMenu" class="status-bar-button">
@@ -173,6 +173,7 @@ import { useWorkflowStore } from "@/stores/workflowStore"; // Import workflow st
 import { useTabStore } from "@/stores/tabStore"; // Import tab store
 import { useExecutionStore } from "@/stores/executionStore"; // 导入执行状态存储
 import { useEditorState } from "@/composables/editor/useEditorState"; // <-- 咕咕：导入 editor state
+import { useProjectStore } from "@/stores/projectStore"; // 导入项目状态存储
 import { storeToRefs } from "pinia";
 import WorkflowMenu from "@/components/graph/menus/WorkflowMenu.vue";
 import TabBar from "@/components/graph/TabBar.vue"; // Import TabBar
@@ -195,6 +196,9 @@ const executionStore = useExecutionStore(); // 获取执行状态存储实例
 const { isPreviewEnabled } = storeToRefs(executionStore); // 获取预览状态
 const { togglePreview } = executionStore; // 获取切换 Action
 const { isDockedEditorVisible, toggleDockedEditor } = useEditorState(); // <-- 咕咕：获取编辑器状态和切换函数
+const projectStore = useProjectStore();
+const { currentProjectMetadata } = storeToRefs(projectStore); // <-- 修正：使用 currentProjectMetadata
+const projectName = computed(() => currentProjectMetadata.value?.name || "ComfyTavern"); // 提供一个默认名称，以防项目名称为空
 // const { workflowStatus } = storeToRefs(executionStore); // 不再直接解构全局状态
 const showWorkflowMenu = ref(false);
 const workflowButtonRef = ref<HTMLButtonElement | null>(null);
@@ -352,5 +356,9 @@ const handleExecuteWorkflow = () => {
 
 .animate-pulse {
   animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.status-bar-button {
+  @apply px-2 py-0.5 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-150 focus:outline-none;
 }
 </style>

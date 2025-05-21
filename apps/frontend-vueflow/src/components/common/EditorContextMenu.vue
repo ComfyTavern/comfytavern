@@ -16,6 +16,8 @@
       <button class="context-menu-item" @click="execCommand('paste')">粘贴</button>
       <div class="context-menu-divider"></div>
       <button class="context-menu-item" @click="execCommand('selectAll')">全选</button>
+      <div class="context-menu-divider"></div>
+      <button class="context-menu-item" @click="execCommand('search')">搜索</button>
     </div>
   </Teleport>
 </template>
@@ -24,6 +26,7 @@
 import { ref, computed, watch, nextTick, reactive } from 'vue';
 import type { EditorView } from '@codemirror/view';
 import { undo, redo, selectAll, undoDepth, redoDepth } from '@codemirror/commands';
+import { openSearchPanel } from '@codemirror/search'; // 导入搜索面板功能
 import { onClickOutside } from '@vueuse/core';
 
 const props = defineProps<{
@@ -125,7 +128,7 @@ const canPaste = computed(() => {
   return typeof navigator.clipboard?.readText === 'function';
 });
 
-async function execCommand(command: 'undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'selectAll') {
+async function execCommand(command: 'undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'selectAll' | 'search') {
   if (!props.editorView) return;
   const view = props.editorView;
 
@@ -165,6 +168,9 @@ async function execCommand(command: 'undo' | 'redo' | 'cut' | 'copy' | 'paste' |
         break;
       case 'selectAll':
         selectAll(view);
+        break;
+      case 'search':
+        openSearchPanel(view);
         break;
     }
   } catch (err) {
