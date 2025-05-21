@@ -45,7 +45,7 @@ import {
   highlightActiveLineGutter,
 } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
+import { highlightSelectionMatches } from "@codemirror/search"; // searchKeymap 将被新的插件替换
 import {
   autocompletion,
   completionKeymap,
@@ -57,6 +57,8 @@ import { javascript } from "@codemirror/lang-javascript";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
 import { foldGutter, foldKeymap } from "@codemirror/language"; // 导入 foldGutter 和 foldKeymap
+import { vscodeSearch, customSearchKeymap } from '@rigstech/codemirror-vscodesearch'; // 导入新的搜索插件
+import type { KeyBinding } from "@codemirror/view"; // 导入 KeyBinding 类型
 import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
 import type { BreadcrumbData, EditorInstanceConfig } from "@/types/editorTypes";
 import { useThemeStore } from "@/stores/theme";
@@ -123,13 +125,39 @@ onMounted(() => {
     keymap.of([
       ...closeBracketsKeymap,
       ...defaultKeymap,
-      ...searchKeymap,
+      // ...searchKeymap, // 旧的搜索快捷键，将被 customSearchKeymap 替换
       ...historyKeymap,
       ...foldKeymap, // 添加 foldKeymap
       ...completionKeymap,
       ...lintKeymap,
       indentWithTab,
+      // 从 customSearchKeymap 中移除 Mod-F，然后手动添加，确保 preventDefault 生效
+      ...(customSearchKeymap as KeyBinding[]).filter(
+        (k: KeyBinding) => !(k.key && typeof k.key === 'string' && k.key.toLowerCase() === "mod-f")
+      ),
+      {
+        key: "Mod-f",
+        run: (view: EditorView): boolean => {
+          // 尝试执行 customSearchKeymap 中原始的 Mod-F 命令
+          const originalModFEntry = (customSearchKeymap as KeyBinding[]).find(
+            (k: KeyBinding) => k.key && typeof k.key === 'string' && k.key.toLowerCase() === "mod-f"
+          );
+          if (originalModFEntry && typeof originalModFEntry.run === 'function') {
+            originalModFEntry.run(view);
+          } else {
+            // 如果在 customSearchKeymap 中找不到 Mod-F 的处理函数，
+            // 这可能意味着 vscodeSearch 插件没有正确提供该快捷键，
+            // 或者它依赖于其他方式来激活搜索。
+            // 作为一个备选方案，可以尝试调用一个已知的搜索命令，但这里我们依赖库的配置。
+            console.warn("RichCodeEditor: Mod-F command not found in customSearchKeymap from @rigstech/codemirror-vscodesearch.");
+            // 即使找不到命令，也返回 true 来尝试阻止浏览器默认行为，
+            // 因为用户的意图是使用编辑器内搜索。
+          }
+          return true; // 阻止浏览器默认的查找行为
+        },
+      },
     ]),
+    vscodeSearch, // 添加新的搜索插件UI
     closeBrackets(),
     autocompletion(),
     EditorView.lineWrapping,
@@ -370,10 +398,10 @@ defineExpose({
   @apply border-gray-600; /* 暗色模式下的边框 */
 }
 .rich-code-editor-wrapper.is-focused {
-  @apply border-2 border-blue-500;
+  @apply border border-blue-500; /* 聚焦时边框宽度保持为1px，仅改变颜色 */
 }
 .rich-code-editor-wrapper.dark.is-focused {
-  @apply border-2 border-blue-400;
+  @apply border border-blue-400; /* 暗色模式下聚焦时边框宽度保持为1px，仅改变颜色 */
 }
 
 .breadcrumb-bar {
@@ -426,5 +454,15 @@ defineExpose({
     font-size: 0.8em;
     padding: 6px 10px;
   }
+}
+:deep(.cm-editor .find-replace-container) {
+  position: absolute !important;
+  top: 5px; /* 如果面包屑存在，可能需要调整为 40px 左右 */
+  right: 15px;
+  width: auto;
+  min-width: 350px;
+  z-index: 20;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
 }
 </style>

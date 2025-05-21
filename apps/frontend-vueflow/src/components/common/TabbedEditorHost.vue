@@ -8,7 +8,7 @@
         :class="{ active: tab.tabId === activeTabIdInternal }"
         @click="activateTab(tab.tabId)"
       >
-        <span class="ct-tab-title">{{ tab.title }}</span>
+        <span class="ct-tab-title">{{ getTruncatedTitle(tab.title) }}</span>
         <button class="ct-close-tab-btn" @click.stop="handleCloseTab(tab.tabId)">×</button>
       </div>
     </div>
@@ -115,6 +115,15 @@ const handleSaveRequested = (tabId: string, payload: { editorId: string; content
 // 处理关闭标签页按钮点击
 const handleCloseTab = (tabId: string) => {
   closeEditorTab(tabId);
+};
+
+// 咕咕：获取截断后的标题
+const getTruncatedTitle = (title: string): string => {
+  const maxLength = 30;
+  if (title.length > maxLength) {
+    return `${title.substring(0, maxLength)}...`;
+  }
+  return title;
 };
 
 // 暴露的方法

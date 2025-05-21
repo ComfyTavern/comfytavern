@@ -26,7 +26,9 @@
 import { ref, computed, watch, nextTick, reactive } from 'vue';
 import type { EditorView } from '@codemirror/view';
 import { undo, redo, selectAll, undoDepth, redoDepth } from '@codemirror/commands';
-import { openSearchPanel } from '@codemirror/search'; // 导入搜索面板功能
+// import { openSearchPanel } from '@codemirror/search'; // 旧的搜索面板功能，将被替换
+import { customSearchKeymap } from '@rigstech/codemirror-vscodesearch'; // 导入新的搜索插件的keymap
+import type { KeyBinding } from "@codemirror/view"; // 导入 KeyBinding 类型
 import { onClickOutside } from '@vueuse/core';
 
 const props = defineProps<{
@@ -170,7 +172,17 @@ async function execCommand(command: 'undo' | 'redo' | 'cut' | 'copy' | 'paste' |
         selectAll(view);
         break;
       case 'search':
-        openSearchPanel(view);
+        // 尝试执行 customSearchKeymap 中原始的 Mod-F 命令
+        // eslint-disable-next-line no-case-declarations
+        const originalModFEntry = (customSearchKeymap as KeyBinding[]).find(
+          (k: KeyBinding) => k.key && typeof k.key === 'string' && k.key.toLowerCase() === "mod-f"
+        );
+        if (originalModFEntry && typeof originalModFEntry.run === 'function') {
+          originalModFEntry.run(view);
+        } else {
+          console.warn("EditorContextMenu: Mod-F command (for vscodeSearch) not found in customSearchKeymap.");
+          // 作为备用，可以尝试一个通用的搜索命令，但这里我们期望 customSearchKeymap 提供
+        }
         break;
     }
   } catch (err) {
