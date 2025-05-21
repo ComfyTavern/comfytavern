@@ -16,18 +16,13 @@
         @blur="endEdit"
         @keydown.enter="endEdit"
         @keydown.esc="cancelEdit"
-        class="w-full px-2 py-1 text-xs rounded border transition-colors duration-200 h-6
-               bg-white dark:bg-gray-700
-               border-gray-300 dark:border-gray-600
-               text-gray-900 dark:text-gray-100
-               placeholder-gray-500 dark:placeholder-gray-400
-               focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-700 focus:border-transparent
-               hover:border-gray-400 dark:hover:border-gray-500
-               text-left"
+        class="w-full px-2 py-1 text-xs rounded border transition-colors duration-200 h-6 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-700 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500 text-left"
         :class="{
           'border-red-500 dark:border-red-700': hasError,
-          'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default focus:ring-0 focus:border-gray-300 dark:focus:border-gray-600': props.readonly && !props.disabled,
-          'disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed': props.disabled
+          'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default focus:ring-0 focus:border-gray-300 dark:focus:border-gray-600':
+            props.readonly && !props.disabled,
+          'disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed':
+            props.disabled,
         }"
         autocomplete="off"
       />
@@ -37,38 +32,44 @@
         <div
           class="flex items-stretch rounded overflow-hidden border border-gray-300 dark:border-gray-600 group focus-within:ring-1 focus-within:ring-blue-300 dark:focus-within:ring-blue-700 focus-within:border-transparent h-6"
           :class="{
-            'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default': props.readonly && !props.disabled,
-             'opacity-50 cursor-not-allowed': props.disabled
+            'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default':
+              props.readonly && !props.disabled,
+            'opacity-50 cursor-not-allowed': props.disabled,
           }"
         >
           <!-- 减少按钮 -->
           <button
-            class="flex items-center justify-center w-4 px-0.5 text-gray-500 dark:text-gray-400
-                   bg-gray-50 dark:bg-gray-700
-                   hover:bg-gray-100 dark:hover:bg-gray-600
-                   active:bg-gray-200 dark:active:bg-gray-500
-                   transition-colors duration-200 focus:outline-none border-r border-gray-300 dark:border-gray-600"
+            class="flex items-center justify-center w-4 px-0.5 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 active:bg-gray-200 dark:active:bg-gray-500 transition-colors duration-200 focus:outline-none border-r border-gray-300 dark:border-gray-600"
             @click.stop="stepValue(-1)"
             :disabled="props.disabled || props.readonly"
           >
-            <svg class="w-2.5 h-2.5 transform rotate-90" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <svg
+              class="w-2.5 h-2.5 transform rotate-90"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M6 9L12 15L18 9"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
           </button>
 
           <!-- 数值显示 -->
           <div
             ref="valueDisplayRef"
-            class="flex flex-1 items-center px-2 py-1 text-xs select-none
-                   text-gray-900 dark:text-gray-100 text-right
-                   transition-colors duration-200
-                   bg-white dark:bg-gray-700"
+            class="flex flex-1 items-center px-2 py-1 text-xs select-none text-gray-900 dark:text-gray-100 text-right transition-colors duration-200 bg-white dark:bg-gray-700"
             :class="{
               'opacity-50 cursor-not-allowed': props.disabled, // Highest precedence for disabled
               'opacity-75 cursor-default': props.readonly && !props.disabled, // Readonly takes precedence over interactive if not disabled
               'cursor-ew-resize': !props.disabled && !props.readonly, // Draggable only if not disabled or readonly
               'border-red-500 dark:border-red-700': hasError,
-              'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600': hasSuggestions && !props.disabled && !props.readonly && !isDragging // Click to open suggestions
+              'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600':
+                hasSuggestions && !props.disabled && !props.readonly && !isDragging, // Click to open suggestions
             }"
             @mousedown.stop="handleMouseDown"
           >
@@ -77,16 +78,23 @@
 
           <!-- 增加按钮 -->
           <button
-            class="flex items-center justify-center w-4 px-0.5 text-gray-500 dark:text-gray-400
-                   bg-gray-50 dark:bg-gray-700
-                   hover:bg-gray-100 dark:hover:bg-gray-600
-                   active:bg-gray-200 dark:active:bg-gray-500
-                   transition-colors duration-200 focus:outline-none border-l border-gray-300 dark:border-gray-600"
+            class="flex items-center justify-center w-4 px-0.5 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 active:bg-gray-200 dark:active:bg-gray-500 transition-colors duration-200 focus:outline-none border-l border-gray-300 dark:border-gray-600"
             @click.stop="stepValue(1)"
             :disabled="props.disabled || props.readonly"
           >
-            <svg class="w-2.5 h-2.5 transform -rotate-90" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <svg
+              class="w-2.5 h-2.5 transform -rotate-90"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M6 9L12 15L18 9"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
           </button>
         </div>
@@ -94,73 +102,84 @@
     </template>
 
     <!-- Suggestion Dropdown Component (Rendered outside the main input structure) -->
-    <SuggestionDropdown v-if="hasSuggestions" :suggestions="suggestions" :show="isDropdownVisible"
-      :position="dropdownPosition" :target-element="rootRef" :trigger-width="dropdownWidth"
-      :canvas-scale="currentCanvasScale" @select="handleSuggestionSelect" @close="closeDropdown" />
+    <SuggestionDropdown
+      v-if="hasSuggestions"
+      :suggestions="suggestions"
+      :show="isDropdownVisible"
+      :position="dropdownPosition"
+      :target-element="rootRef"
+      :trigger-width="dropdownWidth"
+      :canvas-scale="currentCanvasScale"
+      @select="handleSuggestionSelect"
+      @close="closeDropdown"
+    />
 
     <!-- Error Message -->
-    <div v-if="hasError" class="absolute top-full left-0 w-full text-xs text-red-500 dark:text-red-400 mt-1">
+    <div
+      v-if="hasError"
+      class="absolute top-full left-0 w-full text-xs text-red-500 dark:text-red-400 mt-1"
+    >
       {{ errorMessage }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onUnmounted, nextTick, computed } from 'vue'
-import { useVueFlow } from '@vue-flow/core'
-import SuggestionDropdown from '../../common/SuggestionDropdown.vue'
-import Tooltip from '../../common/Tooltip.vue';
+import { ref, watch, onUnmounted, nextTick, computed } from "vue";
+import { useVueFlow } from "@vue-flow/core";
+import SuggestionDropdown from "../../common/SuggestionDropdown.vue";
+import Tooltip from "../../common/Tooltip.vue";
 
 interface Props {
-  modelValue: number
-  type?: 'INT' | 'FLOAT'
-  min?: number
-  max?: number
-  step?: number
-  placeholder?: string
-  disabled?: boolean
-  suggestions?: number[]
-  readonly?: boolean
+  modelValue: number;
+  type?: "INTEGER" | "FLOAT"; // 将整数类型从旧的INT改为INTEGER
+  min?: number;
+  max?: number;
+  step?: number;
+  placeholder?: string;
+  disabled?: boolean;
+  suggestions?: number[];
+  readonly?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: 0,
-  type: 'FLOAT',
+  type: "FLOAT",
   min: undefined,
   max: undefined,
   step: undefined,
-  placeholder: '',
+  placeholder: "",
   disabled: false,
   suggestions: () => [],
   readonly: false,
-})
+});
 
 const emit = defineEmits<{
-  'update:modelValue': [value: number]
-}>()
+  "update:modelValue": [value: number];
+}>();
 
-const isEditing = ref(false)
-const inputRef = ref<HTMLInputElement | null>(null)
-const rootRef = ref<HTMLDivElement | null>(null)
-const valueDisplayRef = ref<HTMLDivElement | null>(null)
-const startValue = ref(0)
-const startX = ref(0)
-const isDragging = ref(false)
-const hasError = ref(false)
-const errorMessage = ref('')
+const isEditing = ref(false);
+const inputRef = ref<HTMLInputElement | null>(null);
+const rootRef = ref<HTMLDivElement | null>(null);
+const valueDisplayRef = ref<HTMLDivElement | null>(null);
+const startValue = ref(0);
+const startX = ref(0);
+const isDragging = ref(false);
+const hasError = ref(false);
+const errorMessage = ref("");
 const draggedValue = ref<number | null>(null);
-const editingValue = ref<string>('');
+const editingValue = ref<string>("");
 
 // Dropdown state
-const isDropdownVisible = ref(false)
-const dropdownPosition = ref({ x: 0, y: 0 })
-const dropdownWidth = ref(0)
+const isDropdownVisible = ref(false);
+const dropdownPosition = ref({ x: 0, y: 0 });
+const dropdownWidth = ref(0);
 
 // Get viewport from VueFlow to access zoom level
-const { viewport } = useVueFlow()
-const currentCanvasScale = computed(() => viewport.value.zoom ?? 1)
+const { viewport } = useVueFlow();
+const currentCanvasScale = computed(() => viewport.value.zoom ?? 1);
 
-const hasSuggestions = computed(() => props.suggestions && props.suggestions.length > 0)
+const hasSuggestions = computed(() => props.suggestions && props.suggestions.length > 0);
 
 const displayValue = computed(() => {
   if (isDragging.value && draggedValue.value !== null) {
@@ -174,43 +193,46 @@ const tooltipContent = computed(() => {
   if (props.min !== undefined) parts.push(`- **Min:** ${props.min}`);
   if (props.max !== undefined) parts.push(`- **Max:** ${props.max}`);
   if (props.step !== undefined) parts.push(`- **Step:** ${props.step}`);
-  return parts.length > 0 ? parts.join('\n') : undefined;
+  return parts.length > 0 ? parts.join("\n") : undefined;
 });
 
 const closeDropdown = () => {
-  isDropdownVisible.value = false
-}
+  isDropdownVisible.value = false;
+};
 
 const handleSuggestionSelect = (selectedValue: string | number) => {
-  const numericValue = Number(selectedValue)
+  const numericValue = Number(selectedValue);
   if (!isNaN(numericValue) && validateValue(numericValue)) {
     if (numericValue !== props.modelValue) {
-      emit('update:modelValue', numericValue)
+      emit("update:modelValue", numericValue);
     }
     hasError.value = false;
-    errorMessage.value = '';
+    errorMessage.value = "";
     isEditing.value = false;
   } else {
     hasError.value = true;
-    errorMessage.value = '选择的值无效';
+    errorMessage.value = "选择的值无效";
     isEditing.value = false;
   }
-  closeDropdown()
-}
+  closeDropdown();
+};
 
 const formatDisplayValue = (value: number): string => {
-  if (props.type === 'INT') {
-    return Math.round(value).toString()
+  if (props.type === "INTEGER") {
+    const intResult = Math.round(value).toString();
+    return intResult;
   }
   const numValue = Number(value);
   if (isNaN(numValue)) {
-    return 'NaN';
+    return "NaN";
   }
   const stepStr = String(props.step ?? 0.01);
-  const parts = stepStr.split('.');
+  const parts = stepStr.split(".");
   const decimalPlaces = parts.length > 1 && parts[1] ? parts[1].length : 0;
-  return numValue.toFixed(Math.max(2, decimalPlaces));
-}
+
+  const floatResult = numValue.toFixed(Math.max(props.type === "FLOAT" ? 2 : 0, decimalPlaces)); // 如果是FLOAT，至少2位，否则根据decimalPlaces（INT时这里不执行）
+  return floatResult;
+};
 
 const startEdit = async () => {
   if (props.disabled || props.readonly) return;
@@ -218,21 +240,21 @@ const startEdit = async () => {
   let calculatedPosition: { x: number; y: number } | null = null;
   let calculatedWidth = 0;
   if (hasSuggestions.value && rootRef.value) {
-    const rect = rootRef.value.getBoundingClientRect()
+    const rect = rootRef.value.getBoundingClientRect();
     calculatedPosition = {
       x: rect.left,
-      y: rect.bottom + window.scrollY
-    }
+      y: rect.bottom + window.scrollY,
+    };
     calculatedWidth = rootRef.value.offsetWidth;
   }
 
   editingValue.value = String(props.modelValue);
-  isEditing.value = true
+  isEditing.value = true;
 
-  await nextTick()
+  await nextTick();
 
-  inputRef.value?.focus()
-  inputRef.value?.select()
+  inputRef.value?.focus();
+  inputRef.value?.select();
 
   if (hasSuggestions.value && calculatedPosition && calculatedWidth > 0) {
     dropdownPosition.value = calculatedPosition;
@@ -241,7 +263,7 @@ const startEdit = async () => {
   } else {
     closeDropdown();
   }
-}
+};
 
 const endEdit = () => {
   if (!isEditing.value) {
@@ -250,7 +272,7 @@ const endEdit = () => {
   }
 
   const finalInputValue = editingValue.value;
-  let numericValue = finalInputValue === '' ? 0 : Number(finalInputValue);
+  let numericValue = finalInputValue === "" ? 0 : Number(finalInputValue);
   let correctedValue = numericValue;
 
   if (!validateValue(numericValue)) {
@@ -260,13 +282,13 @@ const endEdit = () => {
     else if (isNaN(numericValue)) correctedValue = props.min !== undefined ? props.min : 0;
     else correctedValue = numericValue;
 
-    if (props.type === 'INT') {
+    if (props.type === "INTEGER") {
       correctedValue = Math.round(correctedValue);
     }
   } else {
     hasError.value = false;
-    errorMessage.value = '';
-    if (props.type === 'INT') {
+    errorMessage.value = "";
+    if (props.type === "INTEGER") {
       correctedValue = Math.round(numericValue);
     } else {
       correctedValue = numericValue;
@@ -274,154 +296,155 @@ const endEdit = () => {
   }
 
   if (correctedValue !== props.modelValue) {
-    emit('update:modelValue', correctedValue);
+    emit("update:modelValue", correctedValue);
   }
 
   isEditing.value = false;
-  editingValue.value = '';
+  editingValue.value = "";
   closeDropdown();
-}
+};
 
 const cancelEdit = () => {
-  isEditing.value = false
-  editingValue.value = '';
+  isEditing.value = false;
+  editingValue.value = "";
   hasError.value = false;
-  errorMessage.value = '';
-  closeDropdown()
-}
+  errorMessage.value = "";
+  closeDropdown();
+};
 
 const stepValue = (direction: number) => {
   if (props.disabled || props.readonly) return; // Added readonly check
-  closeDropdown()
+  closeDropdown();
 
-  const step = props.step ?? (props.type === 'INT' ? 1 : 0.1)
-  let newValue = props.modelValue + (step * direction)
+  const step = props.step ?? (props.type === "INTEGER" ? 1 : 0.1);
+  let newValue = props.modelValue + step * direction;
 
-  if (props.min !== undefined) newValue = Math.max(props.min, newValue)
-  if (props.max !== undefined) newValue = Math.min(props.max, newValue)
-  if (props.type === 'INT') newValue = Math.round(newValue)
+  if (props.min !== undefined) newValue = Math.max(props.min, newValue);
+  if (props.max !== undefined) newValue = Math.min(props.max, newValue);
+  if (props.type === "INTEGER") newValue = Math.round(newValue);
 
   if (validateValue(newValue)) {
     hasError.value = false;
-    errorMessage.value = '';
-    emit('update:modelValue', newValue)
+    errorMessage.value = "";
+    emit("update:modelValue", newValue);
   } else {
     hasError.value = true;
   }
-}
+};
 
 const handleMouseDown = (event: MouseEvent) => {
   if (props.disabled || props.readonly || isEditing.value) return;
   closeDropdown();
 
   const startTime = Date.now();
-  const initialX = event.clientX
+  const initialX = event.clientX;
 
   const handleMouseMove = (moveEvent: MouseEvent) => {
     if (Math.abs(moveEvent.clientX - initialX) > 3) {
-      startDrag(event)
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
+      startDrag(event);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     }
-  }
+  };
 
   const handleMouseUp = (upEvent: MouseEvent) => {
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
 
     const clickDuration = Date.now() - startTime;
-    const isClick = !isDragging.value && clickDuration < 200 && Math.abs(upEvent.clientX - initialX) <= 3;
+    const isClick =
+      !isDragging.value && clickDuration < 200 && Math.abs(upEvent.clientX - initialX) <= 3;
 
     if (isClick) {
       startEdit();
     }
-  }
+  };
 
-  document.addEventListener('mousemove', handleMouseMove)
-  document.addEventListener('mouseup', handleMouseUp)
-}
+  document.addEventListener("mousemove", handleMouseMove);
+  document.addEventListener("mouseup", handleMouseUp);
+};
 
 const startDrag = (event: MouseEvent) => {
   if (props.disabled || props.readonly || isEditing.value) return;
 
-  event.preventDefault()
-  isDragging.value = true
-  startValue.value = props.modelValue
-  draggedValue.value = props.modelValue
-  startX.value = event.clientX
-  document.body.style.cursor = 'ew-resize'
-  window.addEventListener('mousemove', handleDrag)
-  window.addEventListener('mouseup', stopDrag)
-}
+  event.preventDefault();
+  isDragging.value = true;
+  startValue.value = props.modelValue;
+  draggedValue.value = props.modelValue;
+  startX.value = event.clientX;
+  document.body.style.cursor = "ew-resize";
+  window.addEventListener("mousemove", handleDrag);
+  window.addEventListener("mouseup", stopDrag);
+};
 
 const handleDrag = (event: MouseEvent) => {
-  if (!isDragging.value) return
+  if (!isDragging.value) return;
 
-  const delta = event.clientX - startX.value
-  const isShiftPressed = event.shiftKey
-  let sensitivity = props.type === 'INT' ? 1 : 0.01
-  if (isShiftPressed) sensitivity = props.type === 'INT' ? 0.33 : 0.001
+  const delta = event.clientX - startX.value;
+  const isShiftPressed = event.shiftKey;
+  let sensitivity = props.type === "INTEGER" ? 0.25 : 0.01; // 降低整数拖拽的默认灵敏度
+  if (isShiftPressed) sensitivity = props.type === "INTEGER" ? 0.1 : 0.001; // 进一步降低Shift按下时的灵敏度
 
-  let newValue = startValue.value + delta * sensitivity
-  if (props.min !== undefined) newValue = Math.max(props.min, newValue)
-  if (props.max !== undefined) newValue = Math.min(props.max, newValue)
-  if (props.type === 'INT') newValue = Math.round(newValue)
+  let newValue = startValue.value + delta * sensitivity;
+  if (props.min !== undefined) newValue = Math.max(props.min, newValue);
+  if (props.max !== undefined) newValue = Math.min(props.max, newValue);
+  if (props.type === "INTEGER") newValue = Math.round(newValue);
 
   if (validateValue(newValue)) {
     draggedValue.value = newValue;
   }
-}
+};
 
 const stopDrag = () => {
-  if (!isDragging.value) return
+  if (!isDragging.value) return;
 
   const finalValue = draggedValue.value;
 
-  isDragging.value = false
-  document.body.style.cursor = ''
-  window.removeEventListener('mousemove', handleDrag)
-  window.removeEventListener('mouseup', stopDrag)
+  isDragging.value = false;
+  document.body.style.cursor = "";
+  window.removeEventListener("mousemove", handleDrag);
+  window.removeEventListener("mouseup", stopDrag);
   draggedValue.value = null;
 
   if (finalValue !== null && finalValue !== startValue.value) {
     if (validateValue(finalValue)) {
       hasError.value = false;
-      errorMessage.value = '';
-      emit('update:modelValue', finalValue);
+      errorMessage.value = "";
+      emit("update:modelValue", finalValue);
     } else {
       hasError.value = true;
     }
   } else {
     if (!validateValue(startValue.value)) {
-       hasError.value = true;
+      hasError.value = true;
     } else {
-       hasError.value = false;
-       errorMessage.value = '';
+      hasError.value = false;
+      errorMessage.value = "";
     }
   }
-}
+};
 
 onUnmounted(() => {
   if (isDragging.value) {
-    stopDrag()
+    stopDrag();
   }
-})
+});
 
 const validateValue = (value: number): boolean => {
   if (isNaN(value)) {
-    errorMessage.value = '请输入有效的数字'
-    return false
+    errorMessage.value = "请输入有效的数字";
+    return false;
   }
   if (props.min !== undefined && value < props.min) {
-    errorMessage.value = `值不能小于 ${props.min}`
-    return false
+    errorMessage.value = `值不能小于 ${props.min}`;
+    return false;
   }
   if (props.max !== undefined && value > props.max) {
-    errorMessage.value = `值不能大于 ${props.max}`
-    return false
+    errorMessage.value = `值不能大于 ${props.max}`;
+    return false;
   }
-  return true
-}
+  return true;
+};
 
 const handleInput = (event: Event) => {
   const target = event.target as HTMLInputElement;
@@ -429,25 +452,28 @@ const handleInput = (event: Event) => {
 
   editingValue.value = currentInputValue;
 
-  const numericValue = currentInputValue === '' ? 0 : Number(currentInputValue);
+  const numericValue = currentInputValue === "" ? 0 : Number(currentInputValue);
 
   hasError.value = false;
-  errorMessage.value = '';
+  errorMessage.value = "";
 
-  if (currentInputValue !== '' && !validateValue(numericValue)) {
+  if (currentInputValue !== "" && !validateValue(numericValue)) {
+    hasError.value = true;
+  }
+};
+
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    if (!validateValue(newValue)) {
       hasError.value = true;
-  }
-}
-
-watch(() => props.modelValue, (newValue) => {
-  if (!validateValue(newValue)) {
-    hasError.value = true
-  } else {
-    hasError.value = false
-    errorMessage.value = ''
-  }
-}, { immediate: true })
-
+    } else {
+      hasError.value = false;
+      errorMessage.value = "";
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>

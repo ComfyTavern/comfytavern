@@ -79,6 +79,7 @@ export function useNodeProps(props: Readonly<UseNodeStateProps>) {
           componentProps.step = config.step ?? 1;
           componentProps.min = config.min;
           componentProps.max = config.max;
+          componentProps.type = DataFlowType.INTEGER; // 显式设置类型
           if (config.suggestions && config.suggestions.length > 0) {
             component = SelectInput;
           }
@@ -88,6 +89,7 @@ export function useNodeProps(props: Readonly<UseNodeStateProps>) {
           componentProps.step = config.step ?? 0.01;
           componentProps.min = config.min;
           componentProps.max = config.max;
+          componentProps.type = DataFlowType.FLOAT; // 显式设置类型
           if (config.suggestions && config.suggestions.length > 0) {
             component = SelectInput;
           }
