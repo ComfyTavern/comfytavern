@@ -14,6 +14,7 @@ import {
 } from '@comfytavern/types';
 import { nodeManager } from './nodes/NodeManager'; // 用于获取节点定义
 import { WebSocketManager } from './websocket/WebSocketManager';
+import { DataFlowType, BuiltInSocketMatchCategory } from '@comfytavern/types';
 // import { OutputManager } from './services/OutputManager'; // TODO: Import OutputManager
 // import { HistoryService } from './services/HistoryService'; // TODO: Import HistoryService
 
@@ -32,6 +33,7 @@ export class ExecutionEngine {
   private edges: ExecutionEdge[] = [];
   private nodeStates: Record<NanoId, ExecutionStatus> = {};
   private nodeResults: Record<NanoId, any> = {}; // 存储节点输出 { [outputKey]: value }
+  private nodePseudoOutputs: Record<NanoId, any> = {}; // 存储绕过节点的伪输出
   private executionOrder: NanoId[] = [];
   private isInterrupted: boolean = false;
 
@@ -76,8 +78,38 @@ export class ExecutionEngine {
         }
 
         const node = this.nodes[nodeId];
-        // TODO: 检查节点是否被禁用/绕过 (需要标准化 bypassed 属性位置)
-        // if (node?.config?.bypassed === true) { ... }
+        // 检查节点是否被绕过
+        if (node?.bypassed === true) {
+          console.log(`[Engine-${this.promptId}] Node ${nodeId} is bypassed, handling bypass logic...`);
+          try {
+            const definition = nodeManager.getNode(node.fullType);
+            if (!definition) {
+              throw new Error(`Node type ${node.fullType} not found in registry.`);
+            }
+            
+            // 准备输入以便传递给绕过处理函数
+            const inputs = this.prepareNodeInputs(nodeId);
+            
+            // 处理绕过逻辑并获取伪输出
+            const pseudoOutputs = this.handleBypassedNode(definition, node, inputs);
+            
+            // 存储伪输出并发送通知
+            this.nodePseudoOutputs[nodeId] = pseudoOutputs;
+            this.nodeResults[nodeId] = pseudoOutputs; // 同时存入nodeResults，以供下游节点使用
+            this.nodeStates[nodeId] = ExecutionStatus.SKIPPED;
+            
+            // 通知前端节点被绕过
+            this.sendNodeBypassed(nodeId, pseudoOutputs);
+            
+            // 继续处理下一个节点
+            continue;
+          } catch (error: any) {
+            console.error(`[Engine-${this.promptId}] Error processing bypassed node ${nodeId}:`, error);
+            // 发送错误消息并终止工作流执行
+            this.sendNodeError(nodeId, `Error in bypass processing: ${error.message}`, 'full');
+            return { status: ExecutionStatus.ERROR, error: error.message || String(error) };
+          }
+        }
 
         const inputs = this.prepareNodeInputs(nodeId);
         const result = await this.executeNode(nodeId, inputs, 'full');
@@ -259,11 +291,13 @@ export class ExecutionEngine {
         const targetInputKey = edge.targetHandle;
 
         if (sourceNodeId && sourceOutputKey && targetInputKey) {
+          // 检查是否有结果或伪输出
           const sourceResultOutputs = this.nodeResults[sourceNodeId]; // 直接获取输出对象
+          
           // 确保源节点已成功执行且有输出
-          // 注意：需要检查 sourceResultOutputs 是否存在以及是否为 ERROR 状态
+          // 注意：检查 sourceResultOutputs 是否存在，以及节点状态
           const sourceNodeState = this.nodeStates[sourceNodeId];
-          if (sourceNodeState === ExecutionStatus.COMPLETE && sourceResultOutputs) {
+          if ((sourceNodeState === ExecutionStatus.COMPLETE || sourceNodeState === ExecutionStatus.SKIPPED) && sourceResultOutputs) {
             const sourceValue = sourceResultOutputs[sourceOutputKey];
 
             const inputDef = definition.inputs[targetInputKey];
@@ -299,23 +333,55 @@ export class ExecutionEngine {
 
     // 3. 应用节点定义中的默认值 (如果输入仍未定义)
     for (const inputKey in definition.inputs) {
-        if (inputs[inputKey] === undefined && definition.inputs[inputKey].default !== undefined) {
-            inputs[inputKey] = definition.inputs[inputKey].default;
+        if (inputs[inputKey] === undefined && definition.inputs[inputKey].config?.default !== undefined) {
+            inputs[inputKey] = definition.inputs[inputKey].config.default;
         }
     }
 
-
-    // 4. 检查必需输入 (可选)
-    // for (const inputKey in definition.inputs) {
-    //   if (definition.inputs[inputKey].required && inputs[inputKey] === undefined) {
-    //     throw new Error(`Missing required input '${inputKey}' for node ${nodeId}`);
-    //   }
-    // }
+    // 4. 检查必需输入
+    for (const inputKey in definition.inputs) {
+      // 获取输入定义
+      const inputDef = definition.inputs[inputKey];
+      
+      // 检查是否为必需输入
+      const isRequired = typeof inputDef.required === 'function'
+        ? inputDef.required(node.configValues || {})
+        : inputDef.required === true;
+      
+      if (isRequired && inputs[inputKey] === undefined) {
+        throw new Error(`Missing required input '${inputKey}' for node ${nodeId} (${node.fullType})`);
+      }
+    }
 
     return inputs;
+   }
+
+
+  /**
+   * 执行单个节点逻辑。
+   * @param nodeId 要执行的节点 ID
+   * @param inputs 节点的输入值
+   * @param executionType 'full' 或 'preview'
+   * @returns 包含状态和错误信息（如果失败）的对象
+   */
+  /**
+   * 发送节点错误状态。
+   * @param nodeId 节点ID
+   * @param errorDetails 错误详情
+   * @param executionType 执行类型
+   */
+  private sendNodeError(nodeId: NanoId, errorDetails: any, executionType: ExecutionType): void {
+    // 对于预览错误，我们可能不想广播给所有人，或者使用不同的消息类型
+    // 但当前设计是统一处理
+    const payload: NodeErrorPayload = {
+      promptId: this.promptId,
+      nodeId,
+      errorDetails: { message: String(errorDetails) }, // 简化错误信息
+    };
+    // 注意：错误消息也需要区分 executionType 吗？设计文档未明确，暂时不加
+    this.wsManager.broadcast('NODE_ERROR', payload); // 考虑是否只发给相关 client
   }
-
-
+  
   /**
    * 执行单个节点逻辑。
    * @param nodeId 要执行的节点 ID
@@ -459,16 +525,225 @@ export class ExecutionEngine {
     this.wsManager.broadcast('NODE_COMPLETE', payload); // 考虑是否只发给相关 client
   }
 
-  private sendNodeError(nodeId: NanoId, errorDetails: any, executionType: ExecutionType): void {
-     // 对于预览错误，我们可能不想广播给所有人，或者使用不同的消息类型
-     // 但当前设计是统一处理
-    const payload: NodeErrorPayload = {
-      promptId: this.promptId,
-      nodeId,
-      errorDetails: { message: String(errorDetails) }, // 简化错误信息
-    };
-     // 注意：错误消息也需要区分 executionType 吗？设计文档未明确，暂时不加
-    this.wsManager.broadcast('NODE_ERROR', payload); // 考虑是否只发给相关 client
+  /**
+   * 处理被绕过的节点，生成伪输出。
+   * @param nodeDefinition 节点定义
+   * @param executionNode 执行节点数据
+   * @param currentInputs 当前节点的输入值
+   * @returns 生成的伪输出
+   */
+  private handleBypassedNode(
+    nodeDefinition: NodeDefinition,
+    executionNode: ExecutionNode,
+    currentInputs: Record<string, any>
+  ): Record<string, any> {
+      const pseudoOutputs: Record<string, any> = {};
+      const { bypassBehavior } = nodeDefinition;
+  
+      // 1. 如果 bypassBehavior === 'mute'，所有输出槽设为 undefined
+      if (bypassBehavior === 'mute') {
+        console.log(`[Engine-${this.promptId}] Node ${executionNode.id} has 'mute' bypass behavior, setting all outputs to undefined.`);
+        for (const outputKey in nodeDefinition.outputs) {
+          pseudoOutputs[outputKey] = undefined;
+        }
+        return pseudoOutputs;
+      }
+  
+      // 2. 如果 bypassBehavior 是一个对象
+      if (bypassBehavior && typeof bypassBehavior === 'object') {
+        // 处理 passThrough 规则
+        if (bypassBehavior.passThrough) {
+          for (const [outputKey, inputKey] of Object.entries(bypassBehavior.passThrough)) {
+            // 验证输入和输出键是否存在
+            if (nodeDefinition.outputs[outputKey] && inputKey in currentInputs) {
+              const outputDef = nodeDefinition.outputs[outputKey];
+              const inputDef = nodeDefinition.inputs[inputKey];
+              
+              // 验证类型兼容性
+              if (this.isTypeCompatible(outputDef, inputDef)) {
+                pseudoOutputs[outputKey] = currentInputs[inputKey];
+              } else {
+                console.warn(`[Engine-${this.promptId}] Type incompatibility in passThrough for node ${executionNode.id}: ${inputKey}->${outputKey}`);
+                pseudoOutputs[outputKey] = undefined;
+              }
+            }
+          }
+        }
+  
+        // 处理 defaults 规则
+        if (bypassBehavior.defaults) {
+          for (const [outputKey, defaultValue] of Object.entries(bypassBehavior.defaults)) {
+            // 只在 passThrough 没有设置该输出时才应用默认值
+            if (!(outputKey in pseudoOutputs)) {
+              pseudoOutputs[outputKey] = defaultValue;
+            }
+          }
+        }
+  
+        // 如果有任何输出都没有被处理，检查是否需要进一步设置
+        for (const outputKey in nodeDefinition.outputs) {
+          if (!(outputKey in pseudoOutputs)) {
+            pseudoOutputs[outputKey] = this.getGenericEmptyValueForType(nodeDefinition.outputs[outputKey].dataFlowType);
+          }
+        }
+  
+        return pseudoOutputs;
+      }
+  
+      // 3. 默认回退策略：智能穿透匹配
+      console.log(`[Engine-${this.promptId}] Node ${executionNode.id} has no explicit bypass behavior, using default strategy.`);
+      
+      // 获取所有输入和输出的定义
+      const inputSlotDefs = nodeDefinition.inputs || {};
+      const outputSlotDefs = nodeDefinition.outputs || {};
+      
+      // 可用输入键列表
+      const availableInputKeys = Object.keys(currentInputs);
+      
+      // 遍历所有输出槽
+      for (const outputKey in outputSlotDefs) {
+        const outputDef = outputSlotDefs[outputKey];
+        let matched = false;
+        
+        // 尝试找到匹配的输入
+        for (let i = 0; i < availableInputKeys.length; i++) {
+          const inputKey = availableInputKeys[i];
+          const inputDef = inputSlotDefs[inputKey];
+          
+          if (inputDef && this.isTypeCompatible(outputDef, inputDef)) {
+            // 找到匹配的输入，设置伪输出并从可用列表中移除
+            pseudoOutputs[outputKey] = currentInputs[inputKey];
+            availableInputKeys.splice(i, 1); // 移除已使用的输入
+            matched = true;
+            break;
+          }
+        }
+        
+        // 如果没有找到匹配的输入，使用通用空值
+        if (!matched) {
+          pseudoOutputs[outputKey] = this.getGenericEmptyValueForType(outputDef.dataFlowType);
+        }
+      }
+      
+      return pseudoOutputs;
+    }
+  
+    /**
+     * 检查输出定义和输入定义之间的类型兼容性。
+     * @param outputDef 输出槽定义
+     * @param inputDef 输入槽定义
+     * @returns 是否类型兼容
+     */
+    /**
+     * 检查输出定义和输入定义之间的类型兼容性。
+     * 实现了设计文档的连接兼容性规则。
+     * @param outputDef 输出槽定义
+     * @param inputDef 输入槽定义
+     * @returns 是否类型兼容
+     */
+    private isTypeCompatible(
+      outputDef: { dataFlowType: string; matchCategories?: string[] },
+      inputDef: { dataFlowType: string; matchCategories?: string[] }
+    ): boolean {
+      // 1. 特殊行为标签检查 (BEHAVIOR_WILDCARD, BEHAVIOR_CONVERTIBLE)
+      // 如果输出具有BEHAVIOR_WILDCARD标签，可以连接到任何输入
+      if (outputDef.matchCategories?.includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD)) {
+        return true;
+      }
+      
+      // 如果输入具有BEHAVIOR_WILDCARD标签，可以接受任何输出
+      if (inputDef.matchCategories?.includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD)) {
+        return true;
+      }
+      
+      // BEHAVIOR_CONVERTIBLE不在此处实际处理，但在连接时需要特殊处理
+      
+      // 2. 如果输出是 WILDCARD/CONVERTIBLE_ANY，可以匹配任何输入
+      if (outputDef.dataFlowType === DataFlowType.WILDCARD ||
+          outputDef.dataFlowType === DataFlowType.CONVERTIBLE_ANY) {
+        return true;
+      }
+      
+      // 3. 如果输入是 WILDCARD/CONVERTIBLE_ANY，可以接受任何输出
+      if (inputDef.dataFlowType === DataFlowType.WILDCARD ||
+          inputDef.dataFlowType === DataFlowType.CONVERTIBLE_ANY) {
+        return true;
+      }
+      
+      // 4. 基于 SocketMatchCategory 的优先匹配
+      // 只有当输入和输出都有matchCategories时才进行
+      if (outputDef.matchCategories?.length && inputDef.matchCategories?.length) {
+        // 检查是否有至少一个相同的分类
+        for (const category of outputDef.matchCategories) {
+          if (inputDef.matchCategories.includes(category)) {
+            return true;
+          }
+        }
+        
+        // 可以在此处添加更复杂的兼容性规则
+        // 例如：某些matchCategories之间可能有预定义的兼容关系
+      }
+      
+      // 5. 基于 DataFlowType 的保底匹配
+      // 检查基本类型匹配
+      if (outputDef.dataFlowType === inputDef.dataFlowType) {
+        return true;
+      }
+  
+      // 特殊类型转换 (例如 INTEGER 可以转换为 FLOAT)
+      if (outputDef.dataFlowType === DataFlowType.INTEGER &&
+          inputDef.dataFlowType === DataFlowType.FLOAT) {
+        return true;
+      }
+      
+      // STRING, INTEGER, FLOAT, BOOLEAN 可以连接到 STRING
+      if (inputDef.dataFlowType === DataFlowType.STRING &&
+          (outputDef.dataFlowType === DataFlowType.INTEGER ||
+           outputDef.dataFlowType === DataFlowType.FLOAT ||
+           outputDef.dataFlowType === DataFlowType.BOOLEAN)) {
+        return true;
+      }
+      
+      return false;
+    }
+  
+    /**
+     * 根据数据流类型获取通用空值。
+     * @param dataFlowType 数据流类型
+     * @returns 对应类型的通用空值
+     */
+    private getGenericEmptyValueForType(dataFlowType: string): any {
+      switch (dataFlowType) {
+        case DataFlowType.STRING:
+          return '';
+        case DataFlowType.INTEGER:
+        case DataFlowType.FLOAT:
+          return 0;
+        case DataFlowType.BOOLEAN:
+          return false;
+        case DataFlowType.ARRAY:
+          return [];
+        case DataFlowType.OBJECT:
+          return {};
+        case DataFlowType.BINARY:
+        case DataFlowType.WILDCARD:
+        case DataFlowType.CONVERTIBLE_ANY:
+        default:
+          return null;
+      }
+    }
+  
+    /**
+     * 发送节点被绕过的消息。
+     * @param nodeId 节点ID
+     * @param pseudoOutputs 伪输出数据
+     */
+    private sendNodeBypassed(nodeId: NanoId, pseudoOutputs: Record<string, any>): void {
+      const payload = {
+        promptId: this.promptId,
+        nodeId,
+        pseudoOutputs,
+      };
+      this.wsManager.broadcast('NODE_BYPASSED', payload);
+    }
   }
-
-}

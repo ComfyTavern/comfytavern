@@ -132,10 +132,10 @@ const connect = (isRetry = false) => {
       console.debug("WebSocket message received:", message);
 
       const payload = message.payload as any;
-      // 尝试从 payload 中提取 internalId 或 workflowId 来确定目标 tab
+      // 尝试从 payload 中提取 internalId、workflowId 或 promptId 来确定目标 tab
       // 注意：不同消息类型可能使用不同的字段来标识目标
       const messageTabId = payload?.internalId; // 优先使用 internalId
-      const messageWorkflowId = payload?.workflowId; // 备用 workflowId
+      const messageWorkflowId = payload?.workflowId || payload?.promptId; // 备用 workflowId 或 promptId
 
       const currentActiveTabId = activeTabId.value; // 获取当前活动 tab ID
 
@@ -165,11 +165,11 @@ const connect = (isRetry = false) => {
             }
           }
           if (!targetTabId) {
-            console.warn(`[WebSocket] Received message for workflow ${messageWorkflowId} but no active tab found associated with it. Type: ${message.type}`);
+            console.warn(`[WebSocket] Received message with ID ${messageWorkflowId} but no active tab found associated with it. Type: ${message.type}`);
             // return; // 暂时不返回，允许全局消息或错误处理
           }
         } else {
-           console.warn(`[WebSocket] Received message type ${message.type} that requires tab association, but lacks internalId or workflowId.`);
+           console.warn(`[WebSocket] Received message type ${message.type} that requires tab association, but lacks internalId, workflowId, or promptId.`);
            // return; // 无法确定目标 tab，忽略
         }
 

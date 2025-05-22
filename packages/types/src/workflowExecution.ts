@@ -19,10 +19,12 @@ export interface ExecutionNode {
   id: NanoId;
   /** 节点的完整类型 (namespace:type) */
   fullType: string;
-  /** 节点的配置参数 */
-  config?: Record<string, any>; // 或者更具体的类型，取决于节点定义
   /** 节点的输入值 (仅包含非默认值或连接值) */
   inputs?: Record<string, any>; // 或者更具体的类型
+  /** 节点的配置值 */
+  configValues?: Record<string, any>; // 或者更具体的类型
+  /** 节点是否被绕过 */
+  bypassed?: boolean;
 }
 
 /**
@@ -155,6 +157,18 @@ export interface NodeErrorPayload {
   nodeId: NanoId;
   /** 错误详情 */
   errorDetails: any;
+}
+
+/**
+ * 通知节点被绕过的载荷。
+ */
+export interface NodeBypassedPayload {
+  /** 执行 ID (Nano ID) */
+  promptId: NanoId;
+  /** 被绕过的节点 ID (Nano ID) */
+  nodeId: NanoId;
+  /** 绕过时产生的伪输出 */
+  pseudoOutputs: Record<string, any>;
 }
 
 /**

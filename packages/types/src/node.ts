@@ -78,6 +78,16 @@ export interface OutputDefinition {
   matchCategories?: string[];
 }
 
+/**
+ * 绕过行为定义，用于指定节点在被绕过时的行为。
+ */
+export interface BypassBehavior {
+  /** 输出键到输入键的映射，用于指定伪输出如何从输入获取 */
+  passThrough?: Record<string, string>;
+  /** 输出键到默认值的映射，用于指定无法从输入获取值时的默认值 */
+  defaults?: Record<string, any>;
+}
+
 // 节点定义
 export interface NodeDefinition {
   type: string // 节点的基本名称 (e.g., 'MergeNode')
@@ -104,6 +114,7 @@ export interface NodeDefinition {
   configSchema?: Record<string, InputDefinition>; // 用于定义节点级别的配置项，其结构与输入类似
   configValues?: Record<string, any>;             // 用于存储节点配置项的实际值
   isPreviewUnsafe?: boolean;                      // 标记节点在预览模式下是否不安全 (默认为 false/安全)
+  bypassBehavior?: 'mute' | BypassBehavior;       // 节点在被绕过时的行为
 }
 
 // API设置类型
