@@ -60,7 +60,13 @@
 ## 后端执行机制
 
 1.  **并发调度器 (Concurrency Scheduler)**:
-    *   (基本不变) 维护最大并发数、运行列表、等待队列，分配 `promptId`，处理执行与排队，发送全局状态更新。
+    *   维护一个可配置的最大并发数 `max_concurrent_workflows`。
+    *   维护正在运行的工作流列表 (`runningExecutions`) 和等待队列 (`waitingQueue`)。
+    *   接收来自 WebSocket 和 HTTP 的执行请求。
+    *   分配唯一的 `promptId`。
+    *   根据当前并发数决定是立即执行还是放入等待队列。
+    *   在工作流完成或出错后，从运行列表移除，并尝试从等待队列启动新任务。
+    *   通过 WebSocket 发送 `PROMPT_ACCEPTED_RESPONSE` 和 `EXECUTION_STATUS_UPDATE`。
 
 2.  **执行引擎 (Execution Engine)**:
     *   由调度器启动，负责单个工作流的执行。
@@ -133,14 +139,20 @@
 
 ## 前端集成 (ComfyTavern UI)
 
-1.  **触发**: (不变)
-2.  **转换与扁平化**: (不变)
-    *   在转换为 `WorkflowExecutionPayload` 时，确保 `ExecutionNode` 包含正确的 `bypassed` 状态和 `configValues`。
-3.  **发送**: (不变)
-4.  **状态管理**: (`useWorkflowExecutionState` 或类似机制)
-    *   (基本不变) 监听执行事件。
-    *   **新增**: 监听并处理 `NODE_BYPASSED` 事件，更新节点状态以反映其被绕过，并存储/显示其 `pseudoOutputs`。
-    *   区分预览、完整执行结果和绕过伪输出。
+1.  **触发**: UI 上的 "运行" 按钮通过 `useWorkflowInteractionCoordinator` 调用。
+2.  **转换与扁平化**: 在发送请求前，前端需要执行以下步骤：
+    *   将当前的画布状态（VueFlow 节点/边）转换为内部逻辑表示。
+    *   **处理 NodeGroup**: 递归地展开所有 `NodeGroup` 节点，将其引用的子工作流内容（节点和边）合并到主流程中，并正确映射输入/输出连接。生成一个**扁平化**的节点和边列表。
+    *   将扁平化后的列表转换为最终的 `WorkflowExecutionPayload` 格式，确保使用 Nano ID 并只包含必要的逻辑信息和非默认输入值。
+3.  **发送**:
+    *   **完整执行**: 通过 WebSocket 发送 `PROMPT_REQUEST` 消息，载荷为转换后的 `WorkflowExecutionPayload`。
+    *   **实时预览**: 当用户修改输入且预览开启时（建议防抖/节流），通过 WebSocket 发送 `EXECUTE_PREVIEW_REQUEST` 消息，包含变更的节点 ID、输入键和新值。
+4.  **状态管理**: `useWorkflowExecutionState` 或类似机制：
+    *   连接 WebSocket 并监听执行相关的事件 (使用 `promptId` 和 Nano ID 关联状态)。
+    *   维护当前活动工作流的执行状态（全局状态、各节点状态、输出、错误等）。
+    *   **处理预览与完整执行**: 监听统一的 `NODE_COMPLETE` 消息。预览和完整执行共享相同的数据结构（例如 `node.data.outputs`）。`executionType` 字段用于指明是预览 (`'preview'`) 还是完整执行 (`'full'`)。预览执行是轻量级的，可能只执行部分节点或执行到特定目标 (`previewTarget`)，并可能跳过不适合预览的节点。
+    *   提供响应式的数据供 UI 组件使用。
+    *   **注意**: 完整执行状态和预览状态都是临时的，不记录到撤销/重做历史。预览状态的生命周期更短，通常在下次输入变更或完整执行后被清除。
 5.  **UI 反馈**:
     *   `BaseNode.vue` 等节点组件根据执行状态（包括是否被绕过）更新视觉样式。
         *   被绕过的节点应有特殊视觉提示（例如，半透明）。
@@ -159,7 +171,6 @@
 *   **与撤销/重做集成**:
     *   预览状态不记录历史。
     *   撤销/重做操作恢复核心状态后，如果输入值发生变化且预览开启，需要重新触发预览请求 (`EXECUTE_PREVIEW_REQUEST`) 以更新预览。
-*   **补充**: 当预览执行遇到被 `bypassed` 的节点时，也应遵循上述 `handleBypassedNode` 的逻辑来获取其伪输出，以确保预览数据流的连续性。
 
 ## Mermaid 流程图
 
