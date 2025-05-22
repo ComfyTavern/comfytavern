@@ -2,10 +2,14 @@
 import SideBar from './SideBar.vue'; // 侧边栏仍然需要
 import { useProjectManagement } from '../composables/editor/useProjectManagement';
 import { useThemeStore } from '../stores/theme'; // 导入 theme store
+import { computed } from 'vue';
+import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
+import "overlayscrollbars/overlayscrollbars.css";
 
 // 使用 Composable 获取项目数据和方法
 const { projects, isLoading, error, createNewProject, openProject } = useProjectManagement();
 const themeStore = useThemeStore(); // 获取 theme store 实例
+const isDark = computed(() => themeStore.isDark);
 
 const promptAndCreateProject = async () => {
   const projectName = window.prompt('请输入新项目的名称：');
@@ -47,20 +51,24 @@ const promptAndCreateProject = async () => {
       </div>
 
       <!-- 项目列表 -->
-      <div v-if="!isLoading || projects.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div v-for="project in projects" :key="project.id" @click="openProject(project.id)"
-          class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-shadow">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">{{ project.name }}</h2>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ project.description || '暂无描述' }}</p>
-          <div class="text-xs text-gray-500 dark:text-gray-500">
-            最后更新: {{ new Date(project.updatedAt).toLocaleString() }}
+      <OverlayScrollbarsComponent :options="{
+        scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
+      }" class="max-h-[70vh]" defer>
+        <div v-if="!isLoading || projects.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div v-for="project in projects" :key="project.id" @click="openProject(project.id)"
+            class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-shadow">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">{{ project.name }}</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ project.description || '暂无描述' }}</p>
+            <div class="text-xs text-gray-500 dark:text-gray-500">
+              最后更新: {{ new Date(project.updatedAt).toLocaleString() }}
+            </div>
           </div>
         </div>
-      </div>
-      <div v-if="!isLoading && projects.length === 0 && !error"
-        class="text-center text-gray-500 dark:text-gray-400 mt-10">
-        还没有项目，点击右上角按钮创建一个吧！
-      </div>
+        <div v-if="!isLoading && projects.length === 0 && !error"
+          class="text-center text-gray-500 dark:text-gray-400 mt-10">
+          还没有项目，点击右上角按钮创建一个吧！
+        </div>
+      </OverlayScrollbarsComponent>
     </div>
   </div>
 </template>

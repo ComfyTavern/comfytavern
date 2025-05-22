@@ -4,8 +4,15 @@
     <SideBar />
 
     <!-- 主要内容区域 -->
-    <div class="p-6 lg:p-8 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out"
-      :class="themeStore.collapsed ? 'ml-16' : 'ml-64'">
+    <OverlayScrollbarsComponent
+      :options="{
+        scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
+      }"
+      class="h-screen"
+      defer
+    >
+      <div class="p-6 lg:p-8 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out"
+        :class="themeStore.collapsed ? 'ml-16' : 'ml-64'">
       <h1
         class="text-5xl font-bold text-center mb-8 pb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-500">
         欢迎使用 ComfyTavern
@@ -61,7 +68,8 @@
         <p>探索侧边栏以开始您的创作之旅。</p>
       </div>
 
-    </div>
+      </div>
+    </OverlayScrollbarsComponent>
   </div>
 </template>
 
@@ -71,8 +79,11 @@ import CharacterCardPreview from '../components/CharacterCardPreview.vue';
 import { useThemeStore } from '../stores/theme'; // 导入 theme store
 import { useProjectManagement } from '../composables/editor/useProjectManagement';
 import { computed } from 'vue';
+import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
+import "overlayscrollbars/overlayscrollbars.css";
 
 const themeStore = useThemeStore(); // 获取 theme store 实例
+const isDark = computed(() => themeStore.isDark);
 const { projects, isLoading, error, openProject } = useProjectManagement();
 
 // 计算属性，获取最近修改的最多 6 个项目

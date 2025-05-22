@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import SideBar from './SideBar.vue';
 import { useThemeStore } from '../stores/theme'; // 导入 theme store
 import CharacterCard from '../components/CharacterCard.vue';
 import { sillyTavernService } from '../services/SillyTavernService';
 import type { CharacterCardUI } from '../../../../packages/types/SillyTavern';
+import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
+import "overlayscrollbars/overlayscrollbars.css";
 
 // 角色列表
 const characters = ref<CharacterCardUI[]>([]);
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 const themeStore = useThemeStore(); // 获取 theme store 实例
+const isDark = computed(() => themeStore.isDark);
 
 onMounted(async () => {
   isLoading.value = true;
@@ -49,17 +52,21 @@ onMounted(async () => {
         <span class="block sm:inline"> {{ error }}</span>
       </div>
 
-      <!-- 角色卡片网格 -->
-      <div v-if="!isLoading && characters.length > 0" class="flex flex-wrap gap-6">
-        <CharacterCard v-for="character in characters" :key="character.id" :name="character.name"
-          :description="character.description" :image="character.image" :creator-comment="character.creatorComment"
-          :character-version="character.characterVersion" :create-date="character.createDate" :tags="character.tags"
-          :creator="character.creator" :talkativeness="character.talkativeness" :favorite="character.favorite" />
-      </div>
-      <div v-if="!isLoading && characters.length === 0 && !error"
-        class="text-center text-gray-500 dark:text-gray-400 mt-10">
-        没有找到角色卡。
-      </div>
+      <OverlayScrollbarsComponent :options="{
+        scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
+      }" class="h-screen" defer>
+        <!-- 角色卡片网格 -->
+        <div v-if="!isLoading && characters.length > 0" class="flex flex-wrap gap-6">
+          <CharacterCard v-for="character in characters" :key="character.id" :name="character.name"
+            :description="character.description" :image="character.image" :creator-comment="character.creatorComment"
+            :character-version="character.characterVersion" :create-date="character.createDate" :tags="character.tags"
+            :creator="character.creator" :talkativeness="character.talkativeness" :favorite="character.favorite" />
+        </div>
+        <div v-if="!isLoading && characters.length === 0 && !error"
+          class="text-center text-gray-500 dark:text-gray-400 mt-10">
+          没有找到角色卡。
+        </div>
+      </OverlayScrollbarsComponent>
     </div>
   </div>
 </template>
