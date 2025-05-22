@@ -33,10 +33,8 @@ onMounted(async () => {
     <SideBar />
 
     <!-- 主要内容区域 -->
-    <div
-      class="p-4 lg:p-6 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out"
-      :class="themeStore.collapsed ? 'ml-16' : 'ml-64'"
-    >
+    <div class="p-4 lg:p-6 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out"
+      :class="themeStore.collapsed ? 'ml-16' : 'ml-64'">
       <h1 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">我的角色卡</h1>
 
       <!-- 加载状态 -->
@@ -45,29 +43,21 @@ onMounted(async () => {
       </div>
 
       <!-- 错误提示 -->
-      <div v-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
+      <div v-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6"
+        role="alert">
         <strong class="font-bold">加载错误:</strong>
         <span class="block sm:inline"> {{ error }}</span>
       </div>
 
       <!-- 角色卡片网格 -->
       <div v-if="!isLoading && characters.length > 0" class="flex flex-wrap gap-6">
-        <CharacterCard
-          v-for="character in characters"
-          :key="character.id"
-          :name="character.name"
-          :description="character.description"
-          :image="character.image"
-          :creator-comment="character.creatorComment"
-          :character-version="character.characterVersion"
-          :create-date="character.createDate"
-          :tags="character.tags"
-          :creator="character.creator"
-          :talkativeness="character.talkativeness"
-          :favorite="character.favorite"
-        />
+        <CharacterCard v-for="character in characters" :key="character.id" :name="character.name"
+          :description="character.description" :image="character.image" :creator-comment="character.creatorComment"
+          :character-version="character.characterVersion" :create-date="character.createDate" :tags="character.tags"
+          :creator="character.creator" :talkativeness="character.talkativeness" :favorite="character.favorite" />
       </div>
-      <div v-if="!isLoading && characters.length === 0 && !error" class="text-center text-gray-500 dark:text-gray-400 mt-10">
+      <div v-if="!isLoading && characters.length === 0 && !error"
+        class="text-center text-gray-500 dark:text-gray-400 mt-10">
         没有找到角色卡。
       </div>
     </div>

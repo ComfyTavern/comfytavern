@@ -4,10 +4,8 @@
     <SideBar />
 
     <!-- 主要内容区域 -->
-    <div
-      class="p-6 lg:p-8 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out"
-      :class="themeStore.collapsed ? 'ml-16' : 'ml-64'"
-    >
+    <div class="p-6 lg:p-8 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out"
+      :class="themeStore.collapsed ? 'ml-16' : 'ml-64'">
       <h1
         class="text-5xl font-bold text-center mb-8 pb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-500">
         欢迎使用 ComfyTavern
@@ -32,12 +30,9 @@
               <router-link to="/projects" class="text-blue-500 hover:underline ml-2">创建新项目</router-link>
             </div>
             <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-              <div
-                v-for="project in recentProjects"
-                :key="project.id"
+              <div v-for="project in recentProjects" :key="project.id"
                 class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
-                @click="openProject(project.id)"
-              >
+                @click="openProject(project.id)">
                 <h3 class="font-semibold text-lg text-gray-900 dark:text-white mb-2 truncate">{{ project.name }}</h3>
                 <p class="text-sm text-gray-600 dark:text-gray-300 mb-1">
                   最后修改: {{ formatDate(project.updatedAt) }}
@@ -47,7 +42,8 @@
                 </p>
               </div>
             </div>
-            <router-link to="/projects" class="text-blue-500 hover:underline mt-4 inline-block float-right">查看所有项目</router-link>
+            <router-link to="/projects"
+              class="text-blue-500 hover:underline mt-4 inline-block float-right">查看所有项目</router-link>
           </div>
         </div>
 
