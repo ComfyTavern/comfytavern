@@ -153,6 +153,77 @@
 -   **预览目标插槽消失**: 如果由于节点定义更新等原因，`previewTarget` 指向的插槽不再存在于对应节点上，`previewTarget` 应自动设为 `null`，预览面板清空。
 -   **清除预览标记**: 用户主动清除预览标记，`previewTarget` 设为 `null`，预览面板清空。
 
+### 3.4 预览触发与错误处理
+
+#### 3.4.1 自动触发机制
+- **触发条件**:
+  - 预览开关处于开启状态
+  - 发生能触发历史记录的操作，包括：
+    - 节点输入值修改
+    - 节点连接变更
+    - 节点添加/删除
+    - 撤销/重做操作
+    - 节点绕过状态切换
+- **防抖处理**:
+  ```typescript
+  const debouncedPreviewRequest = useDebouncedRef((trigger: HistoryTrigger) => {
+    if (!previewSettings.value.enabled) return;
+    executePreviewRequest({
+      workflowId: currentWorkflow.value?.id,
+      changedNodeId: trigger.nodeId,
+      inputKey: trigger.inputKey,
+      newValue: trigger.newValue
+    });
+  }, 300);
+  ```
+
+#### 3.4.2 预览状态持久化
+```typescript
+interface PreviewSettings {
+  enabled: boolean;
+  lastActiveWorkflow?: string;
+  workflowSettings: Record<string, {
+    enabled: boolean;
+    target?: { nodeId: string; slotKey: string; } | null;
+  }>;
+}
+```
+- 通过 `localStorage` 存储为 `previewSettings`
+- 在工作流切换时自动加载对应的设置
+
+#### 3.4.3 错误处理策略
+- **静默处理原则**：
+  - 不显示错误弹窗
+  - 不中断用户操作
+  - 在节点上使用视觉提示（淡红色边框）
+  - 错误详情可通过节点的 tooltip 或状态栏查看
+- **状态恢复**：
+  - 出错节点的输出值保持最后一次成功的预览结果
+  - 若无历史预览结果，则显示空值占位符
+
+#### 3.4.4 视觉反馈
+- **节点状态指示**：
+  ```css
+  .node-preview-executing {
+    animation: preview-pulse 2s infinite;
+    border-color: rgba(59, 130, 246, 0.5);
+  }
+  
+  .node-preview-error {
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+  
+  .node-preview-success {
+    animation: preview-success-flash 0.5s;
+  }
+  ```
+- **预览开关状态**：
+  - 工具栏中的预览开关图标反映当前状态
+  - 鼠标悬停时显示当前工作流的预览设置
+- **状态栏集成**：
+  - 显示最后一次预览的时间和状态
+  - 如有错误，提供简短的错误描述
+
 ## 4. 编辑机制 (基于可停靠编辑器面板)
 
 ### 4.1. 核心流程 (概述)
