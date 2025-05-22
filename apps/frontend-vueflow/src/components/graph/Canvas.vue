@@ -97,6 +97,35 @@ watch(internalElements, (newElements, oldElements) => {
   const oldEdges = oldElements?.filter(el => 'source' in el) || [];
   const newEdges = newElements?.filter(el => 'source' in el) || [];
 
+  // 调试连线问题 - 打印画布上显示的连线
+  if (newEdges.length !== oldEdges.length) {
+    console.debug(`[Canvas DEBUG] 连线数量变化: ${oldEdges.length} -> ${newEdges.length}`);
+    // 详细打印新增或删除的连线
+    if (newEdges.length > oldEdges.length) {
+      const addedEdges = newEdges.filter(newEdge =>
+        !oldEdges.some(oldEdge => oldEdge.id === newEdge.id)
+      );
+      console.debug(`[Canvas DEBUG] 新增连线:`, addedEdges.map(e => ({
+        id: e.id,
+        source: e.source,
+        sourceHandle: e.sourceHandle,
+        target: e.target,
+        targetHandle: e.targetHandle
+      })));
+    } else {
+      const removedEdges = oldEdges.filter(oldEdge =>
+        !newEdges.some(newEdge => newEdge.id === oldEdge.id)
+      );
+      console.debug(`[Canvas DEBUG] 移除连线:`, removedEdges.map(e => ({
+        id: e.id,
+        source: e.source,
+        sourceHandle: e.sourceHandle,
+        target: e.target,
+        targetHandle: e.targetHandle
+      })));
+    }
+  }
+
   const totalNodes = newNodes.length; // 获取当前节点总数
 
   if (totalNodes !== oldNodes.length || newEdges.length !== oldEdges.length) {
@@ -480,14 +509,49 @@ onPaneContextMenu((event) => {
 
 // 连接建立事件
 onConnect((params) => {
-  // console.debug('Canvas收到连接事件:', params.source, params.sourceHandle, '->', params.target, params.targetHandle);
+  console.debug('[Canvas DEBUG] 收到连接事件:', params.source, params.sourceHandle, '->', params.target, params.targetHandle);
+  
+  // 连线前，获取当前连线状态
+  const beforeEdges = getEdges.value;
+  console.debug('[Canvas DEBUG] 连接前画布边数量:', beforeEdges.length);
+  
   // 处理连接请求，确保单输入插槽只有一个输入连接
   const newEdge = handleConnect(params); // 调用 composable 中的 handleConnect
+  
   if (newEdge) {
-    console.debug('连接成功创建');
+    console.debug('[Canvas DEBUG] 连接成功创建, 新边ID:', newEdge.id);
+    
+    // 连线后，再次获取状态并比较
+    setTimeout(() => {
+      const afterEdges = getEdges.value;
+      console.debug('[Canvas DEBUG] 连接后画布边数量:', afterEdges.length);
+      
+      // 验证新创建的边是否真的存在于画布中
+      const edgeExists = afterEdges.some(e => e.id === newEdge.id);
+      console.debug(`[Canvas DEBUG] 新边 ${newEdge.id} 是否存在于画布中:`, edgeExists);
+      
+      // 对比工作流状态中的边
+      if (activeTabId.value) {
+        const storeEdges = workflowStore.getElements(activeTabId.value).filter(el => 'source' in el);
+        console.debug('[Canvas DEBUG] 工作流状态中的边数量:', storeEdges.length);
+        
+        // 比较画布和状态中的边
+        if (storeEdges.length !== afterEdges.length) {
+          console.warn('[Canvas DEBUG] 画布和状态中的边数量不一致!');
+          console.debug('[Canvas DEBUG] 工作流状态中的边:', storeEdges.map(e => ({
+            id: e.id,
+            source: e.source,
+            sourceHandle: e.sourceHandle,
+            target: e.target,
+            targetHandle: e.targetHandle
+          })));
+        }
+      }
+    }, 100);
+    
     emit('connect', params);
   } else {
-    console.debug('连接创建失败');
+    console.debug('[Canvas DEBUG] 连接创建失败');
   }
 });
 

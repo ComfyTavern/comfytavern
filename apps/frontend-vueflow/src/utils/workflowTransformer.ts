@@ -569,7 +569,7 @@ export function transformVueFlowToExecutionPayload(
       console.error(
         `[transformVueFlowToExecutionPayload] Node with ID ${vueNode.id} has no type defined. Skipping.`
       );
-      return { id: vueNode.id, fullType: "error", inputs: {}, config: {} };
+      return { id: vueNode.id, fullType: "error", inputs: {}, configValues: {} };
     }
     const nodeDef = nodeDefinitionsMap.get(nodeType); // Use safe nodeType
     if (!nodeDef) {
@@ -578,7 +578,7 @@ export function transformVueFlowToExecutionPayload(
         `[transformVueFlowToExecutionPayload] 找不到类型为 ${nodeType} (ID: ${vueNode.id}) 的节点定义，将跳过此节点。`
       ); // Use safe nodeType
       // 返回一个最小化的表示，或者根据策略抛出错误
-      return { id: vueNode.id, fullType: "error", inputs: {}, config: {} };
+      return { id: vueNode.id, fullType: "error", inputs: {}, configValues: {} };
     }
 
     const inputValues: Record<string, any> = {};

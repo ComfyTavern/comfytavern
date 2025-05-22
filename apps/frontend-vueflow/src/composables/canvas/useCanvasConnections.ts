@@ -10,7 +10,7 @@ import {
   BuiltInSocketMatchCategory, // Enum-like object
   // InputDefinition and OutputDefinition removed as they are unused
 } from "@comfytavern/types";
-import { createHistoryEntry } from "@comfytavern/utils";
+import { createHistoryEntry, getEffectiveDefaultValue } from "@comfytavern/utils";
 import { useTabStore } from "@/stores/tabStore";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { getNodeType } from "@/utils/nodeUtils";
@@ -395,17 +395,18 @@ export function useCanvasConnections({
       ): GroupSlotInfo => {
         const connectedCurrentValue = connectedNode.data?.values?.[connectedHandleKey];
         return {
-          ...baseSlot, // Keep original key, multi, allowDynamicType, config etc.
+          ...baseSlot, // Keep original key, multi, allowDynamicType etc.
           dataFlowType: newDft,
           matchCategories: newCats,
           // Update display name and description from the connected slot
           displayName: connectedSlot.displayName || connectedHandleKey,
           customDescription: connectedSlot.customDescription || "",
-          // Use connected slot's current value if available, else its default, else base default
-          defaultValue: connectedCurrentValue !== undefined ? connectedCurrentValue : (connectedSlot.config?.default !== undefined ? connectedSlot.config.default : baseSlot.config?.default),
-          // Potentially update min/max from connected slot if applicable and defined
-          min: connectedSlot.config?.min !== undefined ? connectedSlot.config.min : baseSlot.config?.min,
-          max: connectedSlot.config?.max !== undefined ? connectedSlot.config.max : baseSlot.config?.max,
+          config: {
+            ...baseSlot.config,
+            default: connectedCurrentValue ?? getEffectiveDefaultValue(connectedSlot),
+            min: connectedSlot.config?.min ?? baseSlot.config?.min,
+            max: connectedSlot.config?.max ?? baseSlot.config?.max,
+          },
           // type: newDft, // Keep the old 'type' field consistent for now if syncInterfaceSlotFromConnection relies on it
         };
     };
@@ -511,10 +512,15 @@ export function useCanvasConnections({
     };
 
     // --- DEBUGGING START ---
-    // console.log('[DEBUG] Final Edge Object before adding:', JSON.stringify(newEdge, null, 2));
-    // console.log(`[DEBUG] Final types used for style: Source=${finalSourceType}, Target=${finalTargetType}`);
-    // console.log(`[DEBUG] Edge style calculated:`, JSON.stringify(edgeStyle, null, 2));
-    // console.log(`[DEBUG] Edge marker calculated:`, JSON.stringify(edgeMarkerEnd, null, 2));
+    console.debug('[useCanvasConnections DEBUG] 准备添加边:', {
+      id: newEdge.id,
+      source: newEdge.source,
+      sourceHandle: newEdge.sourceHandle,
+      target: newEdge.target,
+      targetHandle: newEdge.targetHandle,
+      finalSourceDft,
+      finalTargetDft
+    });
     // --- DEBUGGING END ---
 
     // 6. 添加边并处理接口更新（如果需要）
@@ -576,9 +582,23 @@ export function useCanvasConnections({
           targetNodeId: target,
           targetHandle: targetHandle,
         });
-        console.debug("新连接已添加 (无接口更新，记录历史):", newEdge.id);
+        console.debug("[useCanvasConnections DEBUG] 添加连接 (无接口更新):", {
+          id: newEdge.id,
+          source: newEdge.source,
+          sourceHandle: newEdge.sourceHandle,
+          target: newEdge.target,
+          targetHandle: newEdge.targetHandle
+        });
         workflowStore.addEdgeAndRecord(currentTabId, newEdge, entry);
-        // console.log(`[DEBUG] Called addEdgeAndRecord for edge ${newEdge.id}`);
+        
+        // 添加调试 - 验证边是否成功添加到状态
+        setTimeout(() => {
+          const currentTabState = workflowStore.getAllTabStates.get(currentTabId);
+          const stateEdges = currentTabState?.elements.filter((el: any) => 'source' in el) || [];
+          // 不使用Edge类型，而是使用any类型避免类型不匹配问题
+          const edgeExists = stateEdges.some((e: any) => e.id === newEdge.id);
+          console.debug(`[useCanvasConnections DEBUG] 边 ${newEdge.id} 添加到状态后检查: 是否存在=${edgeExists}, 状态中边总数=${stateEdges.length}`);
+        }, 50);
       } else {
         console.error("无法添加普通连接并记录历史：找不到当前活动的标签页 ID。");
         // Fallback: 只添加边

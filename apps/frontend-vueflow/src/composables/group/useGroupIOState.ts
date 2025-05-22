@@ -3,6 +3,7 @@ import { storeToRefs } from "pinia";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useTabStore } from "@/stores/tabStore";
 import type { GroupSlotInfo } from "@comfytavern/types";
+import { getEffectiveDefaultValue } from "@comfytavern/utils";
 
 /**
  * 管理 GroupIOEdit 组件的内部状态和选择逻辑。
@@ -74,9 +75,9 @@ export function useGroupIOState() {
       editingDescription.value = inputData.customDescription || "";
       // --- 初始化新增状态 ---
       // 使用 ?? 避免将 undefined 存入 ref，如果属性不存在则设为 null
-      editingDefaultValue.value = inputData.config?.default ?? null;
-      editingMin.value = inputData.min ?? null;
-      editingMax.value = inputData.max ?? null;
+      editingDefaultValue.value = getEffectiveDefaultValue(inputData);
+      editingMin.value = inputData.config?.min ?? null;
+      editingMax.value = inputData.config?.max ?? null;
       // --- 结束初始化 ---
       oldInputDisplayName.value = editingDisplayName.value;
     } else {

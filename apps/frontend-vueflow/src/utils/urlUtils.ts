@@ -11,7 +11,7 @@ export function getApiBaseUrl(): string {
   
   // 判断是否需要显式添加端口
   const isDefaultPort = (API_PORT === '80' && API_PROTOCOL === 'http:') ||
-                         (API_PORT === '443' && API_PROTOCOL === 'https:');
+                        (API_PORT === '443' && API_PROTOCOL === 'https:');
   
   // 如果是默认端口，则不添加端口部分
   const url = isDefaultPort
@@ -34,7 +34,7 @@ export function getBackendBaseUrl(): string {
   
   // 判断是否需要显式添加端口
   const isDefaultPort = (API_PORT === '80' && API_PROTOCOL === 'http:') ||
-                         (API_PORT === '443' && API_PROTOCOL === 'https:');
+                        (API_PORT === '443' && API_PROTOCOL === 'https:');
   
   // 如果是默认端口，则不添加端口部分
   const url = isDefaultPort
@@ -58,7 +58,7 @@ export function getWebSocketUrl(): string {
   
   // 判断是否需要显式添加端口
   const isDefaultPort = (WS_PORT === '80' && HTTP_PROTOCOL === 'http:') ||
-                         (WS_PORT === '443' && HTTP_PROTOCOL === 'https:');
+                        (WS_PORT === '443' && HTTP_PROTOCOL === 'https:');
   
   // 如果是默认端口，则不添加端口部分
   const url = isDefaultPort

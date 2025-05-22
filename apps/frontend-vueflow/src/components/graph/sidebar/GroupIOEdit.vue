@@ -4,7 +4,7 @@ import { storeToRefs } from "pinia";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useTabStore } from "@/stores/tabStore";
 import { DataFlowType, type DataFlowTypeName, type GroupSlotInfo, type HistoryEntry } from "@comfytavern/types"; // <-- Import HistoryEntry
-import { createHistoryEntry } from "@comfytavern/utils"; // <-- Import createHistoryEntry
+import { createHistoryEntry, getEffectiveDefaultValue } from "@comfytavern/utils"; // <-- Import createHistoryEntry
 import { useGroupIOState } from "@/composables/group/useGroupIOState";
 import { useGroupIOActions } from "@/composables/group/useGroupIOActions";
 import Tooltip from "@/components/common/Tooltip.vue";
@@ -331,11 +331,11 @@ function handleInputDefaultValueChange() {
     activeTabId.value &&
     selectedInputKey.value &&
     selectedInputData.value &&
-    selectedInputData.value.defaultValue !== editingDefaultValue.value // 比较原始值和编辑值
+    getEffectiveDefaultValue(selectedInputData.value) !== editingDefaultValue.value // 比较有效默认值和编辑值
   ) {
     const keyToUpdate = selectedInputKey.value;
     const newDefaultValue = editingDefaultValue.value;
-    const oldDefaultValue = selectedInputData.value?.defaultValue; // Get old value
+    const oldDefaultValue = getEffectiveDefaultValue(selectedInputData.value); // Get old effective default value
     // const label = `修改 - 接口 (更新默认值 ${keyToUpdate})`; // Removed label
 
     const updateFn = (
@@ -344,15 +344,14 @@ function handleInputDefaultValueChange() {
     ): { inputs: Record<string, GroupSlotInfo>; outputs: Record<string, GroupSlotInfo> } => {
       const updatedInputs = { ...currentInputs };
       if (updatedInputs[keyToUpdate]) {
-        // 更新默认值，如果新值为 null 或 undefined，则从对象中删除该属性
-        if (newDefaultValue === null || newDefaultValue === undefined) {
-          delete updatedInputs[keyToUpdate].defaultValue;
-        } else {
-          updatedInputs[keyToUpdate] = {
-            ...updatedInputs[keyToUpdate],
-            defaultValue: newDefaultValue,
-          };
-        }
+        // 确保 config 对象存在
+        updatedInputs[keyToUpdate] = {
+          ...updatedInputs[keyToUpdate],
+          config: {
+            ...(updatedInputs[keyToUpdate].config || {}),
+            default: newDefaultValue,
+          },
+        };
       } else {
         console.warn(`[GroupIOEdit @change defVal updateFn] Input key ${keyToUpdate} not found.`);
       }
@@ -364,7 +363,7 @@ function handleInputDefaultValueChange() {
     const summary = `修改输入 ${inputName} 默认值`;
     const entry: HistoryEntry = createHistoryEntry("modify", "interfaceInput", summary, {
       key: keyToUpdate,
-      propertyName: "defaultValue",
+      propertyName: "config.default",
       oldValue: oldDefaultValue,
       newValue: newDefaultValue,
     });
@@ -377,11 +376,11 @@ function handleInputMinBlur() {
     activeTabId.value &&
     selectedInputKey.value &&
     selectedInputData.value &&
-    selectedInputData.value.min !== editingMin.value // 比较原始值和编辑值
+    selectedInputData.value?.config?.min !== editingMin.value // 比较 config.min 和编辑值
   ) {
     const keyToUpdate = selectedInputKey.value;
     const newMin = editingMin.value;
-    const oldMin = selectedInputData.value?.min; // Get old value
+    const oldMin = selectedInputData.value?.config?.min; // Get old min from config
     // const label = `修改 - 接口 (更新最小值 ${keyToUpdate})`; // Removed label
 
     const updateFn = (
@@ -390,12 +389,14 @@ function handleInputMinBlur() {
     ): { inputs: Record<string, GroupSlotInfo>; outputs: Record<string, GroupSlotInfo> } => {
       const updatedInputs = { ...currentInputs };
       if (updatedInputs[keyToUpdate]) {
-        // 更新 min，如果新值为 null 或 undefined，则删除属性
-        if (newMin === null || newMin === undefined) {
-          delete updatedInputs[keyToUpdate].min;
-        } else {
-          updatedInputs[keyToUpdate] = { ...updatedInputs[keyToUpdate], min: newMin };
-        }
+        // 确保 config 对象存在
+        updatedInputs[keyToUpdate] = {
+          ...updatedInputs[keyToUpdate],
+          config: {
+            ...(updatedInputs[keyToUpdate].config || {}),
+            min: newMin,
+          },
+        };
       } else {
         console.warn(`[GroupIOEdit @blur min updateFn] Input key ${keyToUpdate} not found.`);
       }
@@ -420,11 +421,11 @@ function handleInputMaxBlur() {
     activeTabId.value &&
     selectedInputKey.value &&
     selectedInputData.value &&
-    selectedInputData.value.max !== editingMax.value // 比较原始值和编辑值
+    selectedInputData.value?.config?.max !== editingMax.value // 比较 config.max 和编辑值
   ) {
     const keyToUpdate = selectedInputKey.value;
     const newMax = editingMax.value;
-    const oldMax = selectedInputData.value?.max; // Get old value
+    const oldMax = selectedInputData.value?.config?.max; // Get old max from config
     // const label = `修改 - 接口 (更新最大值 ${keyToUpdate})`; // Removed label
 
     const updateFn = (
@@ -433,12 +434,14 @@ function handleInputMaxBlur() {
     ): { inputs: Record<string, GroupSlotInfo>; outputs: Record<string, GroupSlotInfo> } => {
       const updatedInputs = { ...currentInputs };
       if (updatedInputs[keyToUpdate]) {
-        // 更新 max，如果新值为 null 或 undefined，则删除属性
-        if (newMax === null || newMax === undefined) {
-          delete updatedInputs[keyToUpdate].max;
-        } else {
-          updatedInputs[keyToUpdate] = { ...updatedInputs[keyToUpdate], max: newMax };
-        }
+        // 确保 config 对象存在
+        updatedInputs[keyToUpdate] = {
+          ...updatedInputs[keyToUpdate],
+          config: {
+            ...(updatedInputs[keyToUpdate].config || {}),
+            max: newMax,
+          },
+        };
       } else {
         console.warn(`[GroupIOEdit @blur max updateFn] Input key ${keyToUpdate} not found.`);
       }
