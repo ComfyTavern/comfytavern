@@ -58,7 +58,9 @@
     *   Response: `{ running: PromptInfo[], pending: PromptInfo[] }`
 *   **`GET /history`**: 获取已完成的执行历史列表（支持分页）。 (待实现 History DB)
 *   **`GET /history/{promptId}`**: 获取特定已完成执行的详细信息。 (待实现 History DB)
-*   **`GET /view?filename=...&subfolder=...&type=...`**: 获取执行产生的输出文件。 (待实现 Output Manager)
+*   **`GET /view/{projectId}/{...projectRelativePath}`**: 获取项目沙盒内指定的输出文件。
+*   **`GET /api/projects/{projectId}/outputs?path=...`**: 列出项目沙盒输出目录的内容。
+    *   (文件输出管理的详细设计见 [`./file-output-management.md`](./file-output-management.md))
 *   **`POST /interrupt/{promptId}`**: 中断指定的执行（如果还在运行或排队）。
 *   **`GET /object_info`**: 获取所有可用节点的定义信息。
 *   **`GET /system_stats`**: 获取系统状态信息。
@@ -92,7 +94,7 @@
                 *   **执行前验证**: 严格检查 `preparedInputs`，确保所有在 `nodeDefinition.inputs` 中标记为 `required: true` 的输入都具有有效值（非 `undefined`）。如果必需输入缺失，则节点执行失败，发送 `NODE_ERROR`，工作流中止。
                 *   调用 `nodeDefinition.execute(preparedInputs, executionNode.configValues || {}, context)`。
                 *   通过 WebSocket 发送 `NODE_EXECUTING`, `NODE_COMPLETE` / `NODE_ERROR` 事件。
-        *   (其余逻辑如处理中断、与 Output Manager/History DB 协作基本不变，但 Output Manager 和 History DB 尚待实现)。
+        *   (其余逻辑如处理中断、与 `FileOutputService` (详见 [`./file-output-management.md`](./file-output-management.md)) 和 History DB 协作基本不变，但 History DB 尚待实现)。
     *   **处理实时预览 (`EXECUTE_PREVIEW_REQUEST`)**:
         *   (基本逻辑不变) 接收 `ExecutePreviewRequestPayload`，加载工作流，分析下游依赖。
         *   遍历下游节点，检查 `isPreviewUnsafe`。
@@ -135,9 +137,11 @@
                                 *   `WILDCARD`/`CONVERTIBLE_ANY`: `undefined`。
         2.  返回计算得到的 `pseudoOutputs`。
 
-4.  **输出管理器 (Output Manager)**: (待实现)
-    *   负责存储执行产生的实际输出文件（非伪输出）。
-    *   提供 `/view` API 的文件访问能力。
+4.  **文件输出管理 (File Output Management)**:
+    *   工作流执行产生的实际输出文件（非伪输出）由 `FileOutputService` 负责管理。
+    *   该服务支持项目专属的沙盒输出和高级模式下的绝对路径输出。
+    *   提供 `/view/{projectId}/{...}` API 用于访问沙盒文件，以及 `/api/projects/{projectId}/outputs` API 用于列出沙盒内容。
+    *   详细设计请参见：[`./file-output-management.md`](./file-output-management.md)。
 <!-- 
 5.  **历史记录 (History DB)**: (待实现)
     *   存储已完成或出错的工作流执行记录。
@@ -287,7 +291,7 @@ graph TD
         Scheduler -- Manage Queue & Concurrency --> StartExec
         
         %% Placeholder for future services
-        Executor --> OutputMgr[(Output Manager - TBD)]
+        Executor --> FileOutputSvc[FileOutputService (see file-output-management.md)]
         Executor --> HistoryDB[(History DB - TBD)]
     end
 ```
@@ -297,7 +301,7 @@ graph TD
 *   `WorkflowExecutionPayload` 中是否需要包含 `workflowData` 或其他元数据 (如 `clientId`, `userId`)。 (保持讨论)
 *   错误处理细节：节点错误是否总是中断整个工作流？预览执行失败如何更优雅处理？ (保持讨论)
 *   并发执行时的资源管理策略。 (保持讨论)
-*   历史记录存储的具体内容和格式 (待 Output Manager / History DB 实现时细化)。
+*   历史记录存储的具体内容和格式 (待 `FileOutputService` / History DB 实现时细化，例如历史记录可能需要引用输出文件的路径元数据)。
 *   身份验证/授权机制。 (未来功能)
 *   未来迭代/循环场景的支持方式。 (未来功能)
 *   预览不安全标记 (`isPreviewUnsafe`) 的具体标准和默认值。 (保持现有设计)
