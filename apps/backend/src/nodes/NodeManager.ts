@@ -2,7 +2,6 @@ import type { NodeDefinition } from '@comfytavern/types';
 import path from 'node:path'; // 导入 path 模块
 
 // 定义核心/内置节点的基础路径
-// 假设 NodeManager.ts 位于 apps/backend/src/nodes/ 目录下
 const baseNodesPath = path.resolve(__dirname);
 
 export class NodeManager {

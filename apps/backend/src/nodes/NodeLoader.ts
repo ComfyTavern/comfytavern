@@ -6,7 +6,7 @@ import type { NodeDefinition } from '@comfytavern/types'; // Import NodeDefiniti
 export class NodeLoader {
   /**
    * 加载指定目录下的所有节点定义。
-   * - 对于子目录，尝试加载其 index.ts (假设它内部处理注册)。
+   * - 对于子目录，尝试加载其 index.ts。
    * - 对于独立的 .ts 文件，导入并查找导出的 'definition' 或 'definitions'。
    * @param dirPath 节点目录路径 (相对于项目根目录)
    */

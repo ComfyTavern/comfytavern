@@ -133,7 +133,6 @@ const getTabComponent = computed(() => {
 });
 
 // 设置激活的标签页，如果点击的是当前激活的标签，则关闭
-// 设置激活的标签页
 const setActiveTab = (tabId: string) => {
   if (activeTab.value === tabId) {
     activeTab.value = null;

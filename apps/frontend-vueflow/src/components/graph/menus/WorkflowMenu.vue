@@ -22,7 +22,7 @@
         </button>
       </li>
       <li class="menu-separator">
-        <hr class="border-gray-200 dark:border-gray-700 my-1">
+        <hr class="border-gray-200 dark:border-gray-700 my-1" />
       </li>
       <li>
         <button @click="handleSave" class="menu-item" :disabled="!isCurrentTabDirty && !!currentWorkflowData?.id">
@@ -47,7 +47,7 @@
         </button>
       </li>
       <li class="menu-separator">
-        <hr class="border-gray-200 dark:border-gray-700 my-1">
+        <hr class="border-gray-200 dark:border-gray-700 my-1" />
       </li>
       <li>
         <button @click="handleImportClick" class="menu-item">
@@ -58,7 +58,7 @@
           </svg>
           导入...
         </button>
-        <input type="file" ref="importInputRef" @change="handleFileChange" accept=".json" style="display: none;" />
+        <input type="file" ref="importInputRef" @change="handleFileChange" accept=".json" style="display: none" />
       </li>
       <li>
         <button @click="handleExport" class="menu-item">
@@ -71,11 +71,12 @@
         </button>
       </li>
       <li class="menu-separator">
-        <hr class="border-gray-200 dark:border-gray-700 my-1">
+        <hr class="border-gray-200 dark:border-gray-700 my-1" />
       </li>
       <li>
         <button @click="handleUndoClick" class="menu-item" :disabled="!canUndoActive">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-2 transform scale-x-[-1]">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+            stroke="currentColor" class="w-4 h-4 mr-2 transform scale-x-[-1]">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
           </svg>
           撤销
@@ -84,7 +85,8 @@
       </li>
       <li>
         <button @click="handleRedoClick" class="menu-item" :disabled="!canRedoActive">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-2">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+            stroke="currentColor" class="w-4 h-4 mr-2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
           </svg>
           重做
@@ -96,29 +98,19 @@
 </template>
 
 <script setup lang="ts">
+import type { WorkflowData } from "@/types/workflowTypes";
+import { useWorkflowStore } from "@/stores/workflowStore";
+import { useTabStore } from "@/stores/tabStore";
+import { storeToRefs } from "pinia";
+import { ref, computed } from "vue";
+import sanitize from "sanitize-filename";
 
-import type { WorkflowData } from '@/types/workflowTypes';  // Import WorkflowData type using relative path
-import { useWorkflowStore } from '@/stores/workflowStore'; // Removed WorkflowData import
-import { useTabStore } from '@/stores/tabStore'; // 导入 Tab Store
-import { storeToRefs } from 'pinia';
-// import { useVueFlow } from '@vue-flow/core'; // 不再需要
-import { ref, computed } from 'vue'; // 导入 computed
-// import type { WorkflowObject } from '@comfytavern/types'; // 不再需要
-import sanitize from 'sanitize-filename'; // 导入 sanitize-filename
-// 假设有一个 UI store 来控制侧边栏
-// import { useUiStore } from '@/stores/uiStore'; // 导入 UI Store (假设) - 待创建
-// 导入事件总线或 provide/inject 来触发侧边栏打开
-// import { eventBus } from '@/utils/eventBus'; // 假设有事件总线
-const emit = defineEmits(['close']);
-
+const emit = defineEmits(["close"]);
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore();
-// const uiStore = useUiStore(); // 实例化 UI Store (假设) - 待创建
-
 const { activeTabId } = storeToRefs(tabStore);
-// const vueFlow = useVueFlow(); // 不再直接在顶层使用
 const importInputRef = ref<HTMLInputElement | null>(null);
-// --- Computed properties for active tab state ---
+
 const currentTabState = computed(() => {
   return activeTabId.value ? workflowStore.getActiveTabState() : undefined;
 });
@@ -141,9 +133,8 @@ const canRedoActive = computed(() => {
 });
 
 const closeMenu = () => {
-  emit('close');
+  emit("close");
 };
-
 
 const handleNew = () => {
   if (activeTabId.value) {
@@ -172,9 +163,12 @@ const handleSave = async () => {
   }
 
   // 如果是新工作流 (没有 ID 或 ID 以 'temp-' 开头)，则调用 store action 获取名称并保存
-  const isNewOrTemp = !currentWorkflowData.value?.id || currentWorkflowData.value.id.startsWith('temp-');
+  const isNewOrTemp =
+    !currentWorkflowData.value?.id || currentWorkflowData.value.id.startsWith("temp-");
   if (isNewOrTemp) {
-    console.debug("[WorkflowMenu handleSave] 检测到新工作流或临时工作流，触发 promptAndSaveWorkflow。"); // 添加日志
+    console.debug(
+      "[WorkflowMenu handleSave] 检测到新工作流或临时工作流，触发 promptAndSaveWorkflow。"
+    ); // 添加日志
     await workflowStore.promptAndSaveWorkflow(false);
     closeMenu(); // promptAndSaveWorkflow 不负责关闭菜单
   } else {
@@ -184,8 +178,8 @@ const handleSave = async () => {
       await workflowStore.saveWorkflow(); // 调用 store action 保存，不需要参数
       closeMenu();
     } catch (error) {
-      console.error('保存工作流时出错:', error);
-      alert(`保存工作流失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      console.error("保存工作流时出错:", error);
+      alert(`保存工作流失败: ${error instanceof Error ? error.message : "未知错误"}`);
       closeMenu();
     }
   }
@@ -212,7 +206,7 @@ const handleFileChange = (event: Event) => {
     alert("无法导入：请先打开一个标签页。");
     // 重置文件输入
     if (importInputRef.value) {
-      importInputRef.value.value = '';
+      importInputRef.value.value = "";
     }
     return;
   }
@@ -228,12 +222,25 @@ const handleFileChange = (event: Event) => {
 
       // 验证导入的数据结构是否基本符合预期 (FlowExportObject)
       // 注意：这里导入的是 VueFlow 的导出格式，可能需要适配 WorkflowObject
-      if (parsedData && Array.isArray(parsedData.nodes) && Array.isArray(parsedData.edges) && parsedData.viewport) {
-
+      if (
+        parsedData &&
+        Array.isArray(parsedData.nodes) &&
+        Array.isArray(parsedData.edges) &&
+        parsedData.viewport
+      ) {
         // 尝试从导入的数据中提取元数据
-        const name = ('name' in parsedData && typeof parsedData.name === 'string') ? parsedData.name : file.name.replace(/\.json$/i, '');
-        const description = ('description' in parsedData && typeof parsedData.description === 'string') ? parsedData.description : undefined;
-        const version = ('version' in parsedData && typeof parsedData.version === 'string') ? parsedData.version : undefined;
+        const name =
+          "name" in parsedData && typeof parsedData.name === "string"
+            ? parsedData.name
+            : file.name.replace(/\.json$/i, "");
+        const description =
+          "description" in parsedData && typeof parsedData.description === "string"
+            ? parsedData.description
+            : undefined;
+        const version =
+          "version" in parsedData && typeof parsedData.version === "string"
+            ? parsedData.version
+            : undefined;
 
         // TODO: 需要在 workflowStore 中实现 loadImportedData action 来处理导入
         // const importPayload: WorkflowObject = { ... };
@@ -243,72 +250,70 @@ const handleFileChange = (event: Event) => {
         // 这不是最佳实践，但作为过渡
         const vueFlowInstance = workflowStore.getVueFlowInstance(currentTabId);
         if (vueFlowInstance) {
-            vueFlowInstance.setNodes(parsedData.nodes);
-            vueFlowInstance.setEdges(parsedData.edges);
-            vueFlowInstance.setViewport(parsedData.viewport);
+          vueFlowInstance.setNodes(parsedData.nodes);
+          vueFlowInstance.setEdges(parsedData.edges);
+          vueFlowInstance.setViewport(parsedData.viewport);
         }
         // 更新 store 中的数据 (需要更健壮的方式)
         const tabState = workflowStore.getActiveTabState(); // 获取当前状态
-        if(tabState) {
-            tabState.elements = [...parsedData.nodes, ...parsedData.edges];
-            tabState.viewport = parsedData.viewport;
-            // 更新 workflowData，注意 id 应为空，表示未保存的导入
-            tabState.workflowData = {
-                ...(tabState.workflowData || {}), // 保留可能的旧数据？或者完全覆盖？先覆盖
-                id: '', // 必须为空，表示新导入未保存
-                name: name,
-                description: description,
-                version: version,
-                nodes: parsedData.nodes, // 存储转换后的类型？暂时用 any
-                edges: parsedData.edges,
-                viewport: parsedData.viewport,
-                embeddedWorkflows: ('embeddedWorkflows' in parsedData) ? parsedData.embeddedWorkflows : undefined, // 保留嵌入式组
-            } as WorkflowData; // 需要确保类型匹配
-            workflowStore.markAsDirty(currentTabId); // 标记为脏
-            // 重置历史记录
-            // historyHandler.clearHistory(currentTabId);
-            // historyHandler.recordHistory(currentTabId, tabState.elements);
-            console.warn("导入成功，但历史记录未正确处理，store action 未实现");
+        if (tabState) {
+          tabState.elements = [...parsedData.nodes, ...parsedData.edges];
+          tabState.viewport = parsedData.viewport;
+          // 更新 workflowData，注意 id 应为空，表示未保存的导入
+          tabState.workflowData = {
+            ...(tabState.workflowData || {}), // 保留可能的旧数据？或者完全覆盖？先覆盖
+            id: "", // 必须为空，表示新导入未保存
+            name: name,
+            description: description,
+            version: version,
+            nodes: parsedData.nodes, // 存储转换后的类型？暂时用 any
+            edges: parsedData.edges,
+            viewport: parsedData.viewport,
+            embeddedWorkflows:
+              "embeddedWorkflows" in parsedData ? parsedData.embeddedWorkflows : undefined, // 保留嵌入式组
+          } as WorkflowData; // 需要确保类型匹配
+          workflowStore.markAsDirty(currentTabId); // 标记为脏
+          // 重置历史记录
+          // historyHandler.clearHistory(currentTabId);
+          // historyHandler.recordHistory(currentTabId, tabState.elements);
+          console.warn("导入成功，但历史记录未正确处理，store action 未实现");
         }
-         // 更新 Tab 标签名称
-        tabStore.updateTab(currentTabId, { label: name, isDirty: true, associatedId: '' });
+        // 更新 Tab 标签名称
+        tabStore.updateTab(currentTabId, { label: name, isDirty: true, associatedId: "" });
 
-
-        console.log('工作流导入成功（临时实现）。'); // Keep as log - user action feedback
+        console.log("工作流导入成功（临时实现）。"); // Keep as log - user action feedback
         alert(`工作流 "${name}" 已导入到当前标签页。请记得保存。`);
         // --- 临时方案结束 ---
-
       } else {
-        throw new Error('无效的工作流文件格式。需要包含 nodes, edges, 和 viewport。');
+        throw new Error("无效的工作流文件格式。需要包含 nodes, edges, 和 viewport。");
       }
     } catch (error) {
-      console.error('导入工作流时出错:', error);
-      alert(`导入工作流失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      console.error("导入工作流时出错:", error);
+      alert(`导入工作流失败: ${error instanceof Error ? error.message : "未知错误"}`);
     } finally {
       // 重置文件输入，以便可以再次选择相同的文件
       if (importInputRef.value) {
-        importInputRef.value.value = '';
+        importInputRef.value.value = "";
       }
     }
   };
   reader.onerror = (error) => {
-    console.error('读取文件时出错:', error);
-    alert('读取文件失败。');
+    console.error("读取文件时出错:", error);
+    alert("读取文件失败。");
     if (importInputRef.value) {
-      importInputRef.value.value = '';
+      importInputRef.value.value = "";
     }
   };
   reader.readAsText(file);
 };
 
-
 const handleExport = () => {
   const currentTabId = activeTabId.value;
   if (!currentTabId) {
-      console.error("无法导出：没有活动的标签页。");
-      alert("无法导出：请先打开一个标签页。");
-      closeMenu();
-      return;
+    console.error("无法导出：没有活动的标签页。");
+    alert("无法导出：请先打开一个标签页。");
+    closeMenu();
+    return;
   }
   const instance = workflowStore.getVueFlowInstance(currentTabId);
   if (!instance) {
@@ -330,26 +335,25 @@ const handleExport = () => {
     // embeddedWorkflows: workflowMeta?.embeddedWorkflows, // 如果需要导出嵌入式组
   };
 
-
   const jsonString = JSON.stringify(dataToExport, null, 2);
-  const blob = new Blob([jsonString], { type: 'application/json' });
+  const blob = new Blob([jsonString], { type: "application/json" });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   let workflowName = currentWorkflowData.value?.name; // 使用 computed 属性
-  let filename = '';
+  let filename = "";
 
   if (workflowName) {
     // 使用 sanitize-filename 清理名称
-    filename = `${sanitize(workflowName, { replacement: '_' })}.json`;
+    filename = `${sanitize(workflowName, { replacement: "_" })}.json`;
   } else {
     // 生成带时间戳的默认文件名
     const now = new Date();
     const year = now.getFullYear();
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const day = now.getDate().toString().padStart(2, '0');
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    const seconds = now.getSeconds().toString().padStart(2, '0');
+    const month = (now.getMonth() + 1).toString().padStart(2, "0");
+    const day = now.getDate().toString().padStart(2, "0");
+    const hours = now.getHours().toString().padStart(2, "0");
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    const seconds = now.getSeconds().toString().padStart(2, "0");
     filename = `CT_workflow_${year}${month}${day}_${hours}${minutes}${seconds}.json`;
   }
 
@@ -361,7 +365,6 @@ const handleExport = () => {
   URL.revokeObjectURL(url);
   closeMenu();
 };
-
 
 const handleUndoClick = () => {
   if (activeTabId.value) {
@@ -395,7 +398,6 @@ const handleRedoClick = () => {
 //     window.removeEventListener('keydown', handleKeyDown);
 //   });
 // });
-
 </script>
 
 <style scoped>
