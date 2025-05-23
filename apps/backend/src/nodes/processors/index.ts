@@ -1,6 +1,3 @@
-// apps/backend/src/nodes/processors/index.ts
-// import { createNodeRegisterer } from '../../utils/nodeRegistration'; // 移除
-// import { nodeManager } from '../NodeManager'; // 移除
 import type { NodeDefinition } from '@comfytavern/types';
 
 // 导入处理器节点的定义
@@ -12,5 +9,3 @@ export const definitions: NodeDefinition[] = [
   { ...ApplyRegexNodeDefinition, namespace: 'core' },
   { ...ContextBuilderNodeDefinition, namespace: 'core' },
 ];
-
-// console.log('Processor node definitions prepared for export.');
