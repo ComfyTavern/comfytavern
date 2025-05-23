@@ -72,7 +72,7 @@
             <div class="node-actions">
               <Tooltip content="点击或拖拽添加到画布">
                 <div class="node-drag-handle" @click.stop="addNodeToCanvas(node.type)">
-                  <span>⋮⋮</span>
+                  <span>+</span>
                 </div>
               </Tooltip>
             </div>
@@ -141,7 +141,7 @@
                           class="node-drag-handle"
                           @click.stop="addNodeToCanvas(`${namespace}:${node.type}`)"
                         >
-                          <span>⋮⋮</span>
+                          <span>+</span>
                         </div>
                       </Tooltip>
                     </div>
@@ -498,12 +498,8 @@ onMounted(() => {
 }
 
 .node-drag-handle {
-  @apply w-6 h-6 flex items-center justify-center text-gray-400 dark:text-gray-500 rounded hover:bg-gray-200 dark:hover:bg-gray-600 cursor-grab ml-1 opacity-0;
-  transition: opacity 0.2s;
-}
-
-.node-item:hover .node-drag-handle {
-  @apply opacity-100;
+  @apply w-8 h-8 flex text-3xl items-center justify-center text-gray-400 dark:text-gray-500 rounded hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer ml-1;
+  transition: background-color 0.2s;
 }
 
 .node-item.dragging .node-drag-handle {
