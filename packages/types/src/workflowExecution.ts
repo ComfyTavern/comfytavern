@@ -243,17 +243,19 @@ export interface HistoryEntryResponse extends PromptStatusResponse {
   durationMs?: number;
 }
 
+
+// History DB砍掉了，这是AI趁我不注意擅自添加的过度设计方案。
 /**
  * `/history` API 的响应结构 (示例)。
  * 参考: workflow-execution-plan.md 第 49 行
  */
-export interface HistoryListResponse {
-  /** 历史记录条目列表 */
-  items: HistoryEntryResponse[];
-  /** 总条目数 */
-  total: number;
-  /** 当前页码 */
-  page: number;
-  /** 每页数量 */
-  pageSize: number;
-}
+// export interface HistoryListResponse {
+//   /** 历史记录条目列表 */
+//   items: HistoryEntryResponse[];
+//   /** 总条目数 */
+//   total: number;
+//   /** 当前页码 */
+//   page: number;
+//   /** 每页数量 */
+//   pageSize: number;
+// }
