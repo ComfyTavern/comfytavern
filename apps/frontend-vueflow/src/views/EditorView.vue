@@ -67,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, markRaw, watch, nextTick } from "vue";
+import { ref, onMounted, onUnmounted, computed, markRaw, watch, nextTick, provide } from "vue";
 import Canvas from "../components/graph/Canvas.vue";
 import BaseNode from "../components/graph/nodes/BaseNode.vue";
 import SidebarManager from "../components/graph/sidebar/SidebarManager.vue";
@@ -88,8 +88,16 @@ import { useKeyboardShortcuts } from "../composables/editor/useKeyboardShortcuts
 import { useEditorState } from "../composables/editor/useEditorState";
 
 // 组件实例引用
+// 定义 SidebarManager 的类型
+type SidebarManagerInstance = InstanceType<typeof SidebarManager> & {
+  setActiveTab: (tabId: string) => void;
+  isSidebarVisible: boolean;
+  activeTab: string | null;
+};
+
 const canvasRef = ref<InstanceType<typeof Canvas> | null>(null);
 const dockedEditorWrapperRef = ref<InstanceType<typeof DockedEditorWrapper> | null>(null);
+const sidebarManagerRef = ref<SidebarManagerInstance | null>(null);
 
 // 存储实例
 const nodeStore = useNodeStore();
@@ -104,7 +112,6 @@ const {
   loading,
   selectedNodeForPreview,
   isSidebarReady,
-  sidebarManagerRef,
   isDockedEditorVisible,
   requestedContextToOpen,
   clearRequestedContext,
@@ -192,6 +199,15 @@ const handlePaneReady = async (instance: any) => {
   }
 };
 
+// 提供 sidebarRef 给子组件
+provide('sidebarRef', {
+  setActiveTab: (tabId: string) => {
+    if (sidebarManagerRef.value) {
+      sidebarManagerRef.value.setActiveTab(tabId);
+    }
+  }
+});
+
 // 组件挂载
 onMounted(async () => {
   // 监听拖放事件
@@ -219,7 +235,6 @@ onMounted(async () => {
   // 初始化路由处理
   initializeRouteHandling();
 });
-
 // 组件卸载
 onUnmounted(() => {
   if (activeTabId.value) {

@@ -10,7 +10,14 @@ const generateUniqueId = () => Date.now().toString(36) + Math.random().toString(
 const loading = ref(false); // 初始节点定义获取的加载状态
 const selectedNodeForPreview = ref<FrontendNodeDefinition | null>(null);
 const isSidebarReady = ref(false); // 控制 NodePreviewPanel 的渲染
-const sidebarManagerRef = shallowRef<{ isSidebarVisible: boolean } | null>(null); // SidebarManager 实例的引用
+// SidebarManager 实例的类型定义
+type SidebarManagerInstance = {
+  isSidebarVisible: boolean;
+  activeTab: string | null;
+  setActiveTab: (tabId: string) => void;
+};
+
+const sidebarManagerRef = shallowRef<SidebarManagerInstance | null>(null); // SidebarManager 实例的引用
 
 // --- 可停靠编辑器相关状态 ---
 const isDockedEditorVisible = ref(false); // 控制 DockedEditorWrapper 的可见性

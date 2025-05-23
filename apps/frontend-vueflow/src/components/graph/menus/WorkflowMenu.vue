@@ -104,8 +104,10 @@ import { useTabStore } from "@/stores/tabStore";
 import { storeToRefs } from "pinia";
 import { ref, computed } from "vue";
 import sanitize from "sanitize-filename";
+import { inject } from "vue";
 
 const emit = defineEmits(["close"]);
+const sidebarRef = inject<{ setActiveTab: (tabId: string) => void }>('sidebarRef');
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore();
 const { activeTabId } = storeToRefs(tabStore);
@@ -147,11 +149,17 @@ const handleNew = () => {
   closeMenu();
 };
 const handleOpen = () => {
-  // TODO: 实现打开侧边栏工作流面板的逻辑 (需要 UI Store 或其他机制)
-  console.warn("需要实现打开侧边栏工作流面板的逻辑");
-  alert("打开功能需要连接到侧边栏，暂未实现");
-  // uiStore.openSidebarTab('workflows'); // 调用 UI store action (假设) - 待创建
-  closeMenu();
+  if (!sidebarRef) {
+    console.warn("侧边栏引用不可用，请确保 SidebarManager 已正确加载");
+    return;
+  }
+  try {
+    sidebarRef.setActiveTab('workflows');
+  } catch (error) {
+    console.warn("打开侧边栏工作流面板失败:", error);
+  } finally {
+    closeMenu();
+  }
 };
 
 const handleSave = async () => {

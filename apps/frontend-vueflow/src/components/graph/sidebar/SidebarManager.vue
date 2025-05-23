@@ -153,10 +153,11 @@ const addNodeToCanvas = (nodeType: string, position?: { x: number, y: number }) 
 // 计算侧边栏是否可见（即是否有激活的标签页）
 const isSidebarVisible = computed(() => activeTab.value !== null);
 
-// 暴露状态给父组件
+// 暴露状态和方法给父组件
 defineExpose({
   isSidebarVisible,
-  activeTab // 如果父组件需要知道具体哪个 tab 打开了，也可以暴露 activeTab
+  activeTab,
+  setActiveTab // 暴露 setActiveTab 方法给父组件
 });
 </script>
 
