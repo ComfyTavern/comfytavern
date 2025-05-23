@@ -19,8 +19,7 @@ export class NodeLoader {
       for (const entry of entries) {
         const fullPath = join(absoluteDirPath, entry.name);
 
-        // Skip specific directories like 'client-scripts'
-        if (entry.isDirectory() && entry.name !== 'client-scripts') {
+        if (entry.isDirectory()) {
           // 对于子目录，仍然尝试加载其 index.ts
           const indexPath = join(fullPath, 'index.ts');
           try {
