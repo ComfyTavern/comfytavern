@@ -99,6 +99,7 @@ export interface NodeDefinition {
   outputs: Record<string, OutputDefinition>
   execute?: (inputs: Record<string, any>, context?: any) => Promise<Record<string, any>>; // Made optional
   clientScriptUrl?: string; // Optional URL for loading client-side logic
+  filePath?: string; // Optional: The absolute path to the file from which this node definition was loaded
   deprecated?: boolean
   experimental?: boolean
   width?: number // 允许节点定义指定自己的首选宽度
@@ -270,8 +271,11 @@ export interface ExecuteWorkflowPayload extends WorkflowExecutionPayload {
 }
 
 export interface ButtonClickPayload {
-  nodeId: string;
-  buttonName: string; // Identifier for the button within the node
+  nodeId: string; // 节点的唯一ID
+  buttonName: string; // 节点内按钮的标识符 (通常是输入槽的key)
+  workflowId?: string; // (可选) 按钮所在工作流的ID
+  nodeType?: string; // (可选) 节点的类型 (e.g., 'RandomNumber')
+  nodeDisplayName?: string; // (可选) 节点的显示名称 (e.g., '🎲随机数生成器')
 }
 
 export interface NodeStatusUpdatePayload extends NodeExecutionResult { }

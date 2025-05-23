@@ -66,7 +66,10 @@ export class NodeManager {
 
     // 将最终确定的命名空间存回节点定义对象，以便 getDefinitions 返回一致数据
     node.namespace = finalNamespace;
-
+    if (filePath) { // Store the filePath if provided
+      node.filePath = filePath;
+    }
+ 
     // 组合 fullType
     const fullType = `${finalNamespace}:${node.type}`;
 

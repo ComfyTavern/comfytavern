@@ -3,7 +3,7 @@ import { storeToRefs } from 'pinia';
 import { useNodeStore, type FrontendNodeDefinition } from '@/stores/nodeStore';
 import { useWebSocket } from '@/composables/useWebSocket'; // 导入 WebSocket composable
 import { WebSocketMessageType, type ButtonClickPayload } from '@comfytavern/types'; // 导入类型
-import { getBackendBaseUrl } from '@/utils/urlUtils';
+import { getApiBaseUrl } from '@/utils/urlUtils'; // <--- 改为 getApiBaseUrl
 import type { UseNodeStateProps } from './useNodeState'; // 导入节点状态 Props 类型
 
 // 定义传递给 Composable 的参数类型
@@ -13,10 +13,15 @@ export interface UseNodeClientScriptProps extends UseNodeStateProps {
   getInputValue: (inputKey: string) => any;
 }
 
-export function useNodeClientScript(props: UseNodeClientScriptProps) {
+export function useNodeClientScript(props: UseNodeClientScriptProps) { // Removed async
   const nodeStore = useNodeStore();
   const { definitionsLoaded, nodeDefinitions } = storeToRefs(nodeStore);
   const { updateInputValue, getInputValue } = props; // 从 props 解构
+
+  // For workflowId
+  // const { useTabStore } = await import('@/stores/tabStore'); // Dynamic import for tabStore
+  // const tabStore = useTabStore();
+  // const { activeTab } = storeToRefs(tabStore);
 
   const clientScriptLoaded = ref(false);
   const clientScriptError = ref<string | null>(null);
@@ -27,18 +32,27 @@ export function useNodeClientScript(props: UseNodeClientScriptProps) {
     let fullScriptUrl = ''; // 在 try 块外部声明
 
     // 重新从 store 获取最新的定义，确保使用最新版本
-    const currentDef = nodeDefinitions.value.find((def: FrontendNodeDefinition) => def.type === props.data.type);
-    const scriptUrl = currentDef?.clientScriptUrl;
+    const currentDef = nodeDefinitions.value.find((def: FrontendNodeDefinition) => def.type === props.data.type && def.namespace === props.data.namespace); // Ensure namespace matches too for safety
+    const clientScriptRelativePath = currentDef?.clientScriptUrl;
+    const nodeNamespace = currentDef?.namespace;
+    const nodeType = currentDef?.type; // props.data.type should be the same
     const isLoaded = clientScriptLoaded.value;
 
-    if (!currentDef || !scriptUrl || isLoaded) {
-      return; // 如果没有定义、没有脚本 URL 或已加载，则不执行
+    if (!currentDef || !clientScriptRelativePath || !nodeNamespace || !nodeType || isLoaded) {
+      if (currentDef && currentDef.clientScriptUrl && !isLoaded) { // Log if essential parts are missing
+        console.warn(`[${props.id}] Cannot load client script: Missing namespace or type for node type ${props.data.type}. Definition:`, currentDef);
+      }
+      return; // 如果没有定义、脚本相对路径、命名空间、类型，或已加载，则不执行
     }
 
     clientScriptError.value = null;
     try {
-      const backendBaseUrl = getBackendBaseUrl();
-      fullScriptUrl = `${backendBaseUrl}${scriptUrl}`; // 在 try 块内部赋值
+      const apiBaseUrl = getApiBaseUrl(); // This should be 'http://localhost:xxxx/api'
+      // New URL format: /api/nodes/:namespace/:type/client-script/:relativeScriptPath
+      // apiBaseUrl already includes '/api'
+      fullScriptUrl = `${apiBaseUrl}/nodes/${nodeNamespace}/${nodeType}/client-script/${clientScriptRelativePath}`;
+      // Example: http://localhost:3233/api/nodes/core/RandomNumber/client-script/client-scripts/RandomNumberNode.js
+      console.log(`[${props.id}] Attempting to load client script from: ${fullScriptUrl}`);
 
       const scriptModule = await import(/* @vite-ignore */ fullScriptUrl);
 
@@ -69,12 +83,12 @@ export function useNodeClientScript(props: UseNodeClientScriptProps) {
         clientScriptApi.value = api; // 存储返回的 API
         clientScriptLoaded.value = true;
       } else {
-        console.error(`[${props.id}] Client script ${scriptUrl} did not export a setupClientNode function.`);
-        clientScriptError.value = `Script ${scriptUrl} format error`;
+        console.error(`[${props.id}] Client script ${clientScriptRelativePath} did not export a setupClientNode function.`);
+        clientScriptError.value = `Script ${clientScriptRelativePath} format error`;
       }
     } catch (error) {
       console.error(`[${props.id}] Failed to load or execute client script from ${fullScriptUrl}:`, error); // 使用完整 URL 记录错误
-      clientScriptError.value = `Failed to load script ${scriptUrl}: ${error instanceof Error ? error.message : String(error)}`;
+      clientScriptError.value = `Failed to load script ${clientScriptRelativePath}: ${error instanceof Error ? error.message : String(error)}`;
     }
   };
 
@@ -131,8 +145,14 @@ export function useNodeClientScript(props: UseNodeClientScriptProps) {
   // --- 按钮点击处理 ---
   const { sendMessage } = useWebSocket(); // 获取 sendMessage 函数
 
-  const handleButtonClick = (inputKey: string) => {
+  const handleButtonClick = async (inputKey: string) => { // Made async to allow await for tabStore
     console.log(`[${props.id}] Button clicked: ${inputKey}`);
+
+    // Dynamically import and use tabStore here
+    const { useTabStore } = await import('@/stores/tabStore');
+    const tabStore = useTabStore();
+    const { activeTab } = storeToRefs(tabStore);
+
 
     // 1. 调用客户端脚本 (如果存在)
     if (clientScriptApi.value && typeof clientScriptApi.value.onButtonClick === 'function') {
@@ -148,9 +168,32 @@ export function useNodeClientScript(props: UseNodeClientScriptProps) {
     }
 
     // 2. 发送 WebSocket 消息到后端
+    const nodeType = props.data.type; // 从 props.data 获取类型
+    let nodeDisplayName: string | undefined;
+
+    // 优先尝试从 props.data.label (如果它是字符串)
+    if (typeof props.data.label === 'string' && props.data.label.trim() !== '') {
+      nodeDisplayName = props.data.label;
+    }
+
+    // 如果 props.data.label 不是有效的字符串，则从节点定义中获取 displayName
+    if (!nodeDisplayName) {
+      const currentDef = nodeDefinitions.value.find(def => def.type === nodeType && def.namespace === props.data.namespace);
+      nodeDisplayName = currentDef?.displayName;
+    }
+    
+    // 如果仍然没有，则回退到节点类型本身
+    if (!nodeDisplayName) {
+      nodeDisplayName = nodeType;
+    }
+
+
     const payload: ButtonClickPayload = {
       nodeId: props.id,
-      buttonName: inputKey, // 使用 inputKey 作为按钮标识符
+      buttonName: inputKey,
+      workflowId: activeTab.value?.associatedId || undefined, // Get workflowId from active tab
+      nodeType: nodeType,
+      nodeDisplayName: nodeDisplayName,
     };
     sendMessage({
       type: WebSocketMessageType.BUTTON_CLICK,

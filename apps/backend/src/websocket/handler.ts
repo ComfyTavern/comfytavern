@@ -4,6 +4,7 @@ import {
   type WebSocketMessage,
   type WorkflowExecutionPayload, // Use the correct payload type
   type ExecutePreviewRequestPayload, // Import preview payload type
+  type ButtonClickPayload, // <-- Import ButtonClickPayload
   type ErrorPayload,
   NanoId, // Import NanoId
 } from '@comfytavern/types';
@@ -102,8 +103,11 @@ export function createWebsocketHandler(
 
           // 保留其他可能的消息类型处理逻辑 (如果需要)
           case WebSocketMessageType.BUTTON_CLICK: {
-            console.log(`[Handler] Received BUTTON_CLICK from ${clientId}`);
-            // TODO: 实现按钮点击处理
+            const payload = message.payload as ButtonClickPayload; // Assert type
+            console.log(`[Handler] Received BUTTON_CLICK from client ${clientId}: Node ID: ${payload.nodeId}, Button: ${payload.buttonName}, Workflow ID: ${payload.workflowId || 'N/A'}, Node Type: ${payload.nodeType || 'N/A'}, Display Name: ${payload.nodeDisplayName || 'N/A'}`);
+            // TODO: 实现按钮点击处理，现在可以使用 payload 中的额外上下文信息
+            // 例如，如果某些按钮点击需要在后端触发特定操作，
+            // scheduler.handleNodeButtonInteraction(payload);
             break;
           }
 

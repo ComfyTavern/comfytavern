@@ -53,7 +53,7 @@ export const definition: NodeDefinition = {
     } as OutputDefinition
   },
   // execute 函数已移除，逻辑在前端处理
-  clientScriptUrl: '/client-scripts/RandomNumberNode.js' // 指向前端逻辑脚本的 URL
+  clientScriptUrl: 'client-scripts/RandomNumberNode.js' // 指向相对于此定义文件的前端逻辑脚本的 URL
 }
 
 // Removed: Node registration is now handled by NodeLoader
