@@ -660,8 +660,8 @@ onMounted(() => {
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  padding: 5px;
   /* 边框宽度 */
+  padding: 3px;
   box-shadow: 0 0 8px rgba(0, 164, 255, 0.2);
   /* 增强发光效果 */
 }
