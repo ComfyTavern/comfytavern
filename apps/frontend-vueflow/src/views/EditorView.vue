@@ -57,12 +57,12 @@
         />
       </template>
 
-      <!-- 右侧专用预览面板 -->
-      <RightPreviewPanel />
     </div>
 
     <!-- 底部状态栏 -->
     <StatusBar class="editor-statusbar" />
+    <!-- 右侧专用预览面板 - 移动到 editor-container 的直接子节点，以确保正确的悬浮行为 -->
+    <RightPreviewPanel />
   </div>
 </template>
 
