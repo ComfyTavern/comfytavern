@@ -1,88 +1,84 @@
-import { z } from 'zod'
-// Removed unused import: import type { WorkflowNode, WorkflowEdge } from '.'
-import type { DataFlowTypeName } from './schemas';
-import { BuiltInSocketMatchCategory, DataFlowType } from './schemas';
+import { z } from "zod";
+import type { DataFlowTypeName } from "./schemas";
+import { BuiltInSocketMatchCategory, DataFlowType } from "./schemas";
 
 // 基础输入选项
 export const zBaseInputOptions = z.object({
-  tooltip: z.string().optional(),
-  hidden: z.boolean().optional(),
+  tooltip: z.string().optional(), // 提示信息
+  hidden: z.boolean().optional(), // 是否隐藏
   showReceivedValue: z.boolean().optional(), // 连接后是否显示接收到的值
-  // required is part of InputDefinition now
-  // description is part of InputDefinition/OutputDefinition now
-})
+});
 
 // 数值输入选项
 export const zNumericInputOptions = zBaseInputOptions.extend({
-  min: z.number().optional(),
-  max: z.number().optional(),
-  step: z.number().optional(),
-  default: z.number().optional(),
+  min: z.number().optional(), // 最小值
+  max: z.number().optional(), // 最大值
+  step: z.number().optional(), // 步长
+  default: z.number().optional(), // 默认值
   suggestions: z.array(z.number()).optional(), // 提供建议值列表
-})
+});
 
 // 字符串输入选项
 export const zStringInputOptions = zBaseInputOptions.extend({
-  default: z.string().optional(),
-  multiline: z.boolean().optional(),
-  placeholder: z.string().optional(),
+  default: z.string().optional(), // 默认值
+  multiline: z.boolean().optional(), // 是否支持多行输入
+  placeholder: z.string().optional(), // 占位提示符
   display_only: z.boolean().optional(), // 指示是否使用只读的TextDisplay组件
   suggestions: z.array(z.string()).optional(), // 提供建议值列表
-})
+});
 
 // 布尔输入选项
 export const zBooleanInputOptions = zBaseInputOptions.extend({
-  default: z.boolean().optional(),
-})
+  default: z.boolean().optional(), // 默认值
+});
 
-// 组合框选项
+// 组合框选项 (下拉选择)
 export const zComboInputOptions = zBaseInputOptions.extend({
-  suggestions: z.array(z.union([z.string(), z.number()])).optional(), // Renamed from options
-  default: z.union([z.string(), z.number()]).optional(),
-})
+  suggestions: z.array(z.union([z.string(), z.number()])).optional(), // 建议选项列表
+  default: z.union([z.string(), z.number()]).optional(), // 默认值
+});
 
-// Code 输入选项 (用于代码编辑器)
+// 代码输入选项 (用于代码编辑器)
 export const zCodeInputOptions = zBaseInputOptions.extend({
-  default: z.string().optional(),
-  language: z.string().optional(), // e.g., 'javascript', 'json', 'python'
-  placeholder: z.string().optional(),
-})
+  default: z.string().optional(), // 默认代码内容
+  language: z.string().optional(), // 编程语言 (例如: 'javascript', 'json', 'python')
+  placeholder: z.string().optional(), // 占位提示符
+});
 
 // 按钮输入选项
 export const zButtonInputOptions = zBaseInputOptions.extend({
   label: z.string().optional(), // 按钮上显示的文本
-})
+});
 
 // 自定义类型选项 (保持基础，用于未知或特殊类型)
-export const zCustomInputOptions = zBaseInputOptions
+export const zCustomInputOptions = zBaseInputOptions;
+
 // 输入定义
 export interface InputDefinition {
-  // name?: string // 内部标识符 - 使用 key 代替
-  displayName?: string // UI 显示名称 (优先用于前端展示)
-  description?: string // 插槽详细描述 (用于tooltip等)
-  required?: boolean | ((configValues: Record<string, any>) => boolean); // Allow boolean or function for conditional requirement
-  config?: Record<string, any>
-  multi?: boolean // 标记是否支持多输入
-  allowDynamicType?: boolean // 标记该插槽是否支持从 'ANY' 动态变为具体类型
-  dataFlowType: DataFlowTypeName;
-  matchCategories?: string[];
-} // Removed redundant defaultValue, min, max here. They are handled by config via Zod schemas.
+  displayName?: string; // UI 显示名称 (优先用于前端展示)
+  description?: string; // 插槽详细描述 (用于tooltip等)
+  required?: boolean | ((configValues: Record<string, any>) => boolean); // 是否必需 (可为布尔值或函数，用于条件性必需)
+  config?: Record<string, any>; // 输入控件的特定配置 (例如 min, max, step for number)
+  multi?: boolean; // 标记是否支持多输入连接
+  allowDynamicType?: boolean; // 标记该插槽是否支持从 'ANY' 动态变为具体类型
+  dataFlowType: DataFlowTypeName; // 数据流类型
+  matchCategories?: string[]; // 匹配类别，用于类型检查和连接建议
+}
 
 // 输出定义
 export interface OutputDefinition {
-  // name?: string // 内部标识符 - 使用 key 代替
-  displayName?: string // UI 显示名称 (优先用于前端展示)
-  description?: string // 插槽详细描述 (用于tooltip等)
-  allowDynamicType?: boolean // 标记该插槽是否支持从 'ANY' 动态变为具体类型
-  dataFlowType: DataFlowTypeName;
-  matchCategories?: string[];
+  displayName?: string; // UI 显示名称 (优先用于前端展示)
+  description?: string; // 插槽详细描述 (用于tooltip等)
+  allowDynamicType?: boolean; // 标记该插槽是否支持从 'ANY' 动态变为具体类型
+  dataFlowType: DataFlowTypeName; // 数据流类型
+  matchCategories?: string[]; // 匹配类别，用于类型检查和连接建议
 }
 
 /**
  * 绕过行为定义，用于指定节点在被绕过时的行为。
  */
 export interface BypassBehavior {
-  /** 输出键到输入键的映射，用于指定伪输出如何从输入获取 */
+  /** 输出键到输入键的映射，用于指定伪输出如何从输入获取值 */
   passThrough?: Record<string, string>;
   /** 输出键到默认值的映射，用于指定无法从输入获取值时的默认值 */
   defaults?: Record<string, any>;
@@ -90,296 +86,265 @@ export interface BypassBehavior {
 
 // 节点定义
 export interface NodeDefinition {
-  type: string // 节点的基本名称 (e.g., 'MergeNode')
+  type: string; // 节点的基本类型名称 (例如: 'MergeNode')
   namespace?: string; // 节点的命名空间/来源 (可选)
-  category: string // 功能分类 (e.g., 'Logic', 'IO/Group')
-  displayName: string
-  description: string
-  inputs: Record<string, InputDefinition>
-  outputs: Record<string, OutputDefinition>
-  execute?: (inputs: Record<string, any>, context?: any) => Promise<Record<string, any>>; // Made optional
-  clientScriptUrl?: string; // Optional URL for loading client-side logic
-  filePath?: string; // Optional: The absolute path to the file from which this node definition was loaded
-  deprecated?: boolean
-  experimental?: boolean
-  width?: number // 允许节点定义指定自己的首选宽度
+  category: string; // 功能分类 (例如: 'Logic', 'IO/Group')
+  displayName: string; // 节点显示名称
+  description: string; // 节点描述
+  inputs: Record<string, InputDefinition>; // 输入插槽定义
+  outputs: Record<string, OutputDefinition>; // 输出插槽定义
+  execute?: (inputs: Record<string, any>, context?: any) => Promise<Record<string, any>>; // 节点执行函数 (可选)
+  clientScriptUrl?: string; // 用于加载客户端逻辑的URL (可选)
+  filePath?: string; // 加载此节点定义的文件绝对路径 (可选)
+  deprecated?: boolean; // 是否已弃用
+  experimental?: boolean; // 是否为实验性功能
+  width?: number; // 允许节点定义指定自己的首选宽度
 
   // 组节点相关属性
-  isGroupInternal?: boolean                       // 标记节点是否只能在组内部使用
-  groupId?: string                                // 节点所属的组ID
-  groupConfig?: {                                 // 组相关配置
-    allowExternalUse?: boolean                    // 是否允许在组外使用
-    dynamicPorts?: boolean                        // 是否支持动态端口 (旧，考虑移除或重命名)
-  }
-  dynamicSlots?: boolean                          // 标记节点是否支持动态添加/删除插槽 (例如 GroupInput/Output)
-  configSchema?: Record<string, InputDefinition>; // 用于定义节点级别的配置项，其结构与输入类似
-  configValues?: Record<string, any>;             // 用于存储节点配置项的实际值
-  isPreviewUnsafe?: boolean;                      // 标记节点在预览模式下是否不安全 (默认为 false/安全)
-  bypassBehavior?: 'mute' | BypassBehavior;       // 节点在被绕过时的行为
+  isGroupInternal?: boolean; // 标记节点是否只能在组内部使用
+  groupId?: string; // 节点所属的组ID
+  groupConfig?: {
+    // 组相关配置
+    allowExternalUse?: boolean; // 是否允许在组外使用
+    dynamicPorts?: boolean; // 是否支持动态端口 (旧，考虑移除或重命名)
+  };
+  dynamicSlots?: boolean; // 标记节点是否支持动态添加/删除插槽 (例如 GroupInput/Output)
+  configSchema?: Record<string, InputDefinition>; // 用于定义节点级别配置项，其结构与输入类似
+  configValues?: Record<string, any>; // 用于存储节点配置项的实际值
+  isPreviewUnsafe?: boolean; // 标记节点在预览模式下是否不安全 (默认为 false/安全)
+  bypassBehavior?: "mute" | BypassBehavior; // 节点在被绕过时的行为 ("mute" 表示静默，或自定义行为)
 }
 
 // API设置类型
 export interface APISettings {
-  use_env_vars: boolean
-  base_url: string
-  api_key: string
+  use_env_vars: boolean; // 是否使用环境变量
+  base_url: string; // API基础URL
+  api_key: string; // API密钥
 }
 
-// 类型导出
-export type BaseInputOptions = z.infer<typeof zBaseInputOptions>
-export type NumericInputOptions = z.infer<typeof zNumericInputOptions>
-export type StringInputOptions = z.infer<typeof zStringInputOptions>
-export type BooleanInputOptions = z.infer<typeof zBooleanInputOptions>
-export type ComboInputOptions = z.infer<typeof zComboInputOptions>
-export type CodeInputOptions = z.infer<typeof zCodeInputOptions> // 新增
-export type ButtonInputOptions = z.infer<typeof zButtonInputOptions> // 新增
-export type CustomInputOptions = z.infer<typeof zCustomInputOptions>
+// 类型导出 (从Zod Schema推断)
+export type BaseInputOptions = z.infer<typeof zBaseInputOptions>;
+export type NumericInputOptions = z.infer<typeof zNumericInputOptions>;
+export type StringInputOptions = z.infer<typeof zStringInputOptions>;
+export type BooleanInputOptions = z.infer<typeof zBooleanInputOptions>;
+export type ComboInputOptions = z.infer<typeof zComboInputOptions>;
+export type CodeInputOptions = z.infer<typeof zCodeInputOptions>;
+export type ButtonInputOptions = z.infer<typeof zButtonInputOptions>;
+export type CustomInputOptions = z.infer<typeof zCustomInputOptions>;
 
-// 验证函数
+// 验证输入选项的函数
 export function validateInputOptions(
   dataFlowType: DataFlowTypeName,
   options: any,
   matchCategories?: string[]
 ): BaseInputOptions | null {
-  let schema
+  let schema;
   switch (dataFlowType) {
     case DataFlowType.INTEGER:
     case DataFlowType.FLOAT:
-      schema = zNumericInputOptions
-      break
+      schema = zNumericInputOptions;
+      break;
     case DataFlowType.BOOLEAN:
-      schema = zBooleanInputOptions
-      break
+      schema = zBooleanInputOptions;
+      break;
     case DataFlowType.STRING:
       if (matchCategories?.includes(BuiltInSocketMatchCategory.CODE)) {
         schema = zCodeInputOptions;
       } else if (options?.suggestions && Array.isArray(options.suggestions)) {
+        // 如果有 suggestions 数组，则认为是 Combo 类型
         schema = zComboInputOptions;
       } else {
         schema = zStringInputOptions;
       }
       break;
-    case DataFlowType.WILDCARD:
+    case DataFlowType.WILDCARD: // 通配符类型
       if (matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)) {
+        // 如果是触发器类别，则使用按钮选项
         schema = zButtonInputOptions;
       } else {
-        schema = zCustomInputOptions; // Default for WILDCARD if not a TRIGGER
+        // 否则默认为自定义选项
+        schema = zCustomInputOptions;
       }
       break;
     case DataFlowType.OBJECT:
     case DataFlowType.ARRAY:
     case DataFlowType.BINARY:
     case DataFlowType.CONVERTIBLE_ANY:
-      schema = zCustomInputOptions; // These types currently use custom/base options
+      // 这些类型目前使用自定义/基础选项
+      schema = zCustomInputOptions;
       break;
     default:
-      // console.warn(`Unknown dataFlowType "${dataFlowType}" in validateInputOptions, using zCustomInputOptions.`);
-      schema = zCustomInputOptions
+      // 未知数据流类型，使用自定义选项作为后备
+      schema = zCustomInputOptions;
   }
 
-  const result = schema.safeParse(options)
+  const result = schema.safeParse(options);
   if (!result.success) {
     // 使用 result.error.format() 以获得更清晰的错误输出
-    console.warn(`Invalid input options for dataFlowType ${dataFlowType}:`, result.error.format())
-    return null
+    console.warn(`数据流类型 ${dataFlowType} 的输入选项无效:`, result.error.format());
+    return null;
   }
-  return result.data
+  return result.data;
 }
 
-// --- Execution Related Types ---
+// --- 执行相关类型 ---
 
-// Removed NodeInternalStatus enum, use ExecutionStatus from workflowExecution.ts
-// export enum NodeInternalStatus { ... }
-
-// Node Execution Context
+// 节点执行上下文
 export interface NodeExecutionContext {
-  nodeId: string;
-  inputs: Record<string, any>; // Resolved input values
-  // Potentially add workflow-level context if needed
-  // workflowContext?: WorkflowExecutionContext;
+  nodeId: string; // 节点ID
+  inputs: Record<string, any>; // 已解析的输入值
+  // workflowContext?: WorkflowExecutionContext; // (可选) 工作流级别的上下文
 }
 
-// Node Execution Result
-// Import ExecutionStatus enum from the shared types
-import { ExecutionStatus } from './workflowExecution';
+// 节点执行结果
+// 从共享类型导入 ExecutionStatus 枚举
+import { ExecutionStatus } from "./workflowExecution";
 
 export interface NodeExecutionResult {
-  nodeId: string;
-  status: ExecutionStatus; // Use imported ExecutionStatus enum
-  outputs?: Record<string, any>; // Output values if COMPLETED
-  error?: string; // Error message if ERROR
-  startTime?: number; // Execution start timestamp
-  endTime?: number; // Execution end timestamp
+  nodeId: string; // 节点ID
+  status: ExecutionStatus; // 执行状态 (使用导入的 ExecutionStatus 枚举)
+  outputs?: Record<string, any>; // 输出值 (如果状态为 COMPLETED)
+  error?: string; // 错误信息 (如果状态为 ERROR)
+  startTime?: number; // 执行开始时间戳
+  endTime?: number; // 执行结束时间戳
 }
 
-// Workflow Execution Context (Data needed to start execution)
-// Removed the first definition of WorkflowExecutionPayload (lines 196-215)
-// as it was redundant and potentially caused type conflicts (TS2717).
-// The definition at line 348 uses the correct ExecutionNode/ExecutionEdge types.
-
-// Workflow Execution Status Update (Represents overall workflow state)
+// 工作流执行状态更新 (表示工作流的整体状态)
 export interface WorkflowExecutionStatus {
-  workflowId: string; // Or some identifier for the execution instance
-  status: ExecutionStatus; // Use imported ExecutionStatus enum
-  startTime?: number;
-  endTime?: number;
-  error?: string;
-  // Could include progress percentage, etc.
+  workflowId: string; // 工作流ID或执行实例的标识符
+  status: ExecutionStatus; // 执行状态 (使用导入的 ExecutionStatus 枚举)
+  startTime?: number; // 开始时间戳
+  endTime?: number; // 结束时间戳
+  error?: string; // 错误信息
+  // 可以包含进度百分比等其他信息
 }
 
-// --- WebSocket Message Types ---
+// --- WebSocket 消息类型 ---
 
 export enum WebSocketMessageType {
-  // Client -> Server (根据 workflow-execution-plan.md V3 调整)
-  PROMPT_REQUEST = 'PROMPT_REQUEST', // 提交完整工作流执行
-  EXECUTE_PREVIEW_REQUEST = 'EXECUTE_PREVIEW_REQUEST', // 请求预览执行
-  // EXECUTE_WORKFLOW = 'execute_workflow', // 旧的执行请求，保留或移除？暂时注释掉
-  BUTTON_CLICK = 'button_click', // For triggering actions via button widgets
-  LOAD_WORKFLOW = 'load_workflow', // Request to load a specific workflow
-  SAVE_WORKFLOW = 'save_workflow', // Request to save the current workflow
-  LIST_WORKFLOWS = 'list_workflows', // Request list of saved workflows
-  GET_NODE_DEFINITIONS = 'get_node_definitions', // Request available node types
-  RELOAD_BACKEND = 'reload_backend', // Request backend reload (e.g., for new nodes)
-  // 添加中断请求 (虽然设计文档放在 HTTP API，但 WebSocket 也可能需要)
-  INTERRUPT_REQUEST = 'INTERRUPT_REQUEST',
+  // 客户端 -> 服务端 (根据 workflow-execution-plan.md V3 调整)
+  PROMPT_REQUEST = "PROMPT_REQUEST", // 提交完整工作流执行
+  EXECUTE_PREVIEW_REQUEST = "EXECUTE_PREVIEW_REQUEST", // 请求预览执行
+  BUTTON_CLICK = "button_click", // 通过按钮小部件触发操作
+  LOAD_WORKFLOW = "load_workflow", // 请求加载特定工作流
+  SAVE_WORKFLOW = "save_workflow", // 请求保存当前工作流
+  LIST_WORKFLOWS = "list_workflows", // 请求已保存的工作流列表
+  GET_NODE_DEFINITIONS = "get_node_definitions", // 请求可用的节点类型
+  RELOAD_BACKEND = "reload_backend", // 请求后端重新加载 (例如，用于新节点)
+  INTERRUPT_REQUEST = "INTERRUPT_REQUEST", // 中断执行请求
 
-  // Server -> Client (根据 workflow-execution-plan.md V3 调整)
-  PROMPT_ACCEPTED_RESPONSE = 'PROMPT_ACCEPTED_RESPONSE', // 确认收到请求
-  EXECUTION_STATUS_UPDATE = 'EXECUTION_STATUS_UPDATE', // 更新工作流整体状态
-  NODE_EXECUTING = 'NODE_EXECUTING', // 节点开始执行
-  NODE_PROGRESS = 'NODE_PROGRESS', // (可选) 节点进度
-  NODE_COMPLETE = 'NODE_COMPLETE', // 节点完成 (包含预览和完整执行)
-  NODE_ERROR = 'NODE_ERROR', // 节点出错
-  // NODE_STATUS_UPDATE = 'node_status_update', // 旧的状态更新，保留或移除？暂时注释掉
-  // WORKFLOW_STATUS_UPDATE = 'workflow_status_update', // 旧的状态更新，保留或移除？暂时注释掉
-  EXECUTION_RESULT = 'execution_result', // Final result of a node or workflow
-  WORKFLOW_LOADED = 'workflow_loaded', // Response to load_workflow
-  WORKFLOW_SAVED = 'workflow_saved', // Confirmation of save_workflow
-  WORKFLOW_LIST = 'workflow_list', // Response to list_workflows
-  NODE_DEFINITIONS = 'node_definitions', // Response to get_node_definitions
-  BACKEND_RELOADED = 'backend_reloaded', // Confirmation of backend reload
-  ERROR = 'error', // General error message from backend
-  NODES_RELOADED = 'NODES_RELOADED', // New: Server -> Client, nodes have been reloaded
+  // 服务端 -> 客户端 (根据 workflow-execution-plan.md V3 调整)
+  PROMPT_ACCEPTED_RESPONSE = "PROMPT_ACCEPTED_RESPONSE", // 确认收到执行请求
+  EXECUTION_STATUS_UPDATE = "EXECUTION_STATUS_UPDATE", // 更新工作流整体状态
+  NODE_EXECUTING = "NODE_EXECUTING", // 节点开始执行
+  NODE_PROGRESS = "NODE_PROGRESS", // (可选) 节点执行进度
+  NODE_COMPLETE = "NODE_COMPLETE", // 节点完成 (包含预览和完整执行)
+  NODE_ERROR = "NODE_ERROR", // 节点执行出错
+  EXECUTION_RESULT = "execution_result", // 节点或工作流的最终执行结果
+  WORKFLOW_LOADED = "workflow_loaded", // 对 load_workflow 的响应
+  WORKFLOW_SAVED = "workflow_saved", // 对 save_workflow 的确认
+  WORKFLOW_LIST = "workflow_list", // 对 list_workflows 的响应
+  NODE_DEFINITIONS = "node_definitions", // 对 get_node_definitions 的响应
+  BACKEND_RELOADED = "backend_reloaded", // 对 backend_reload 的确认
+  ERROR = "error", // 来自后端的通用错误消息
+  NODES_RELOADED = "NODES_RELOADED", // 新增: 服务端 -> 客户端, 通知节点已重新加载
 }
 
-// Specific Payload Types (Examples)
-// Import the correct WorkflowExecutionPayload from the shared types
-import type { WorkflowExecutionPayload } from './workflowExecution';
+// 特定的负载类型 (示例)
+// 从共享类型导入正确的 WorkflowExecutionPayload
+import type { WorkflowExecutionPayload } from "./workflowExecution";
 
 export interface ExecuteWorkflowPayload extends WorkflowExecutionPayload {
-  // Any additional data needed to start execution
+  // 启动执行所需的任何附加数据
 }
 
 export interface ButtonClickPayload {
   nodeId: string; // 节点的唯一ID
   buttonName: string; // 节点内按钮的标识符 (通常是输入槽的key)
   workflowId?: string; // (可选) 按钮所在工作流的ID
-  nodeType?: string; // (可选) 节点的类型 (e.g., 'RandomNumber')
-  nodeDisplayName?: string; // (可选) 节点的显示名称 (e.g., '🎲随机数生成器')
+  nodeType?: string; // (可选) 节点的类型 (例如: 'RandomNumber')
+  nodeDisplayName?: string; // (可选) 节点的显示名称 (例如: '🎲随机数生成器')
 }
 
-export interface NodeStatusUpdatePayload extends NodeExecutionResult { }
+export interface NodeStatusUpdatePayload extends NodeExecutionResult {}
 
-export interface WorkflowStatusUpdatePayload extends WorkflowExecutionStatus { }
+export interface WorkflowStatusUpdatePayload extends WorkflowExecutionStatus {}
 
 export interface ErrorPayload {
-  message: string;
-  details?: any;
+  message: string; // 错误消息
+  details?: any; // 详细信息 (可选)
 }
 
 export interface NodesReloadedPayload {
-  success: boolean;
-  message?: string;
-  count?: number; // Optional: number of nodes reloaded
+  success: boolean; // 是否成功
+  message?: string; // 消息 (可选)
+  count?: number; // 重新加载的节点数量 (可选)
 }
 
-// Generic WebSocket Message Structure
+// 通用 WebSocket 消息结构
 export interface WebSocketMessage<T = any> {
-  type: WebSocketMessageType;
-  payload: T;
-  // Optional: correlationId, timestamp, etc.
+  type: WebSocketMessageType; // 消息类型
+  payload: T; // 消息负载
+  // correlationId?: string; // 关联ID (可选)
+  // timestamp?: number; // 时间戳 (可选)
 }
 
-// --- Workflow Storage and Execution Structures ---
+// --- 工作流存储和执行结构 ---
 
 /**
- * Represents a node as stored in the database or file.
- * Uses Nano ID for unique identification.
+ * 表示存储在数据库或文件中的节点。
+ * 使用 Nano ID 进行唯一标识。
  */
 export interface WorkflowStorageNode {
-  id: string; // Nano ID (e.g., 10 chars)
-  type: string; // Node type identifier (e.g., 'RandomNumberNode')
-  position: { x: number; y: number }; // Position on the canvas
-  size?: { width: number; height: number }; // Optional size override
-  customLabel?: string; // Optional user-defined label for the node, overrides default display name
-  customDescription?: string; // Optional user-defined description for the node, overrides default description
-  customSlotDescriptions?: { inputs?: Record<string, string>, outputs?: Record<string, string> }; // Optional user-defined descriptions for specific slots on this node instance
-  inputValues?: Record<string, any>; // Stored values for input slots (only if different from effective default)
-  configValues?: Record<string, any>; // Stored values for node configuration
-  // label?: string; // REMOVED: Replaced by customLabel for clarity
+  id: string; // Nano ID (例如: 10个字符)
+  type: string; // 节点类型标识符 (例如: 'RandomNumberNode')
+  position: { x: number; y: number }; // 在画布上的位置
+  size?: { width: number; height: number }; // (可选) 尺寸覆盖
+  customLabel?: string; // (可选) 用户为节点定义的标签，覆盖默认显示名称
+  customDescription?: string; // (可选) 用户为节点定义的描述，覆盖默认描述
+  customSlotDescriptions?: { inputs?: Record<string, string>; outputs?: Record<string, string> }; // (可选) 用户为此节点实例上特定插槽定义的描述
+  inputValues?: Record<string, any>; // 输入插槽的存储值 (仅当与有效默认值不同时)
+  configValues?: Record<string, any>; // 节点配置项的存储值
 }
 
 /**
- * Represents an edge as stored in the database or file.
- * Uses Nano ID for unique identification and references.
+ * 表示存储在数据库或文件中的边。
+ * 使用 Nano ID 进行唯一标识和引用。
  */
 export interface WorkflowStorageEdge {
-  id: string; // Nano ID (e.g., 10 chars)
-  source: string; // Nano ID of the source node
-  target: string; // Nano ID of the target node
-  sourceHandle: string; // ID of the source handle/slot
-  targetHandle: string; // ID of the target handle/slot
-  label?: string; // Optional label for the edge (added to fix TS2339)
+  id: string; // Nano ID (例如: 10个字符)
+  source: string; // 源节点的 Nano ID
+  target: string; // 目标节点的 Nano ID
+  sourceHandle: string; // 源句柄/插槽的 ID
+  targetHandle: string; // 目标句柄/插槽的 ID
+  label?: string; // (可选) 边的标签
 }
 
-// Define GroupSlotInfo based on the Zod schema in schemas.ts
+// 根据 schemas.ts 中的 Zod schema 定义 GroupSlotInfo
 export interface GroupSlotInfo {
-  key: string;
-  displayName: string;
-  dataFlowType: DataFlowTypeName; // Specifies the data flow type (e.g., 'DATA_FLOW_STRING', 'DATA_FLOW_IMAGE')
-  // description?: string; // REMOVED: Default description should be derived from the internal node's slot definition
-  customDescription?: string; // Optional user-defined description for this specific group interface slot
-  required?: boolean;
-  config?: Record<string, any>;
-  matchCategories?: string[]; // Optional. For input slots, specifies compatible categories of data types. For outputs, declares its categories.
-  multi?: boolean;
-  allowDynamicType?: boolean;
-  min?: number;
-  max?: number;
+  key: string; // 唯一键
+  displayName: string; // 显示名称
+  dataFlowType: DataFlowTypeName; // 数据流类型 (例如: 'DATA_FLOW_STRING', 'DATA_FLOW_IMAGE')
+  customDescription?: string; // (可选) 用户为此特定组接口插槽定义的描述
+  required?: boolean; // 是否必需
+  config?: Record<string, any>; // 配置项
+  matchCategories?: string[]; // (可选) 对于输入插槽，指定兼容的数据类型类别。对于输出，声明其类别。
+  multi?: boolean; // 是否支持多连接
+  allowDynamicType?: boolean; // 是否允许动态类型
+  min?: number; // 最小值 (如果适用)
+  max?: number; // 最大值 (如果适用)
 }
 
 /**
- * Represents the complete workflow structure for storage.
+ * 表示用于存储的完整工作流结构。
  */
 export interface WorkflowStorageObject {
-  // Existing fields like name, description, viewport should be preserved if they exist elsewhere
-  // For now, focusing on the core structure based on the new types
-  name?: string; // Workflow name remains
-  // description?: string; // REMOVED: Node description handled by NodeDefinition or WorkflowStorageNode.customDescription
-  viewport?: { x: number; y: number; zoom: number }; // Example viewport structure
-  nodes: WorkflowStorageNode[];
-  edges: WorkflowStorageEdge[];
-  interfaceInputs?: Record<string, GroupSlotInfo>; // Added to fix TS2339
-  interfaceOutputs?: Record<string, GroupSlotInfo>; // Added to fix TS2339
-  referencedWorkflows?: string[]; // Add missing referencedWorkflows property
-  // Add other top-level metadata as needed
+  name?: string; // 工作流名称
+  viewport?: { x: number; y: number; zoom: number }; // 视口信息 (例如位置和缩放)
+  nodes: WorkflowStorageNode[]; // 节点列表
+  edges: WorkflowStorageEdge[]; // 边列表
+  interfaceInputs?: Record<string, GroupSlotInfo>; // 工作流的输入接口定义
+  interfaceOutputs?: Record<string, GroupSlotInfo>; // 工作流的输出接口定义
+  referencedWorkflows?: string[]; // 引用的其他工作流ID列表
+  // 可根据需要添加其他顶层元数据
 }
-
-// Removed ExecutionNode, ExecutionEdge, and WorkflowExecutionPayload interfaces
-// as they are now defined in workflowExecution.ts and exported via index.ts
-// /**
-//  * Represents a node specifically for the execution payload.
-//  * Contains only the necessary information for the backend execution engine.
-//  */
-// export interface ExecutionNode { ... }
-
-// /**
-//  * Represents an edge specifically for the execution payload.
-//  */
-// export interface ExecutionEdge { ... }
-
-// /**
-//  * Payload sent to the backend to initiate workflow execution.
-//  * Contains the minimal graph structure needed for execution.
-//  */
-// export interface WorkflowExecutionPayload { ... }

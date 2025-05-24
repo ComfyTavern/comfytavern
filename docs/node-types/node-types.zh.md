@@ -1,129 +1,230 @@
 # 节点类型系统文档 (中文版)
 
-本文档概述了 ComfyTavern 项目中用于节点输入和输出的数据类型、配置选项以及它们之间的连接规则。
+本文档概述了 ComfyTavern 项目中节点输入和输出插槽的新版类型系统，包括数据流类型 (`DataFlowType`)、插槽匹配类别 (`SocketMatchCategory`)、配置选项以及它们之间的连接规则。
 
-## 核心数据类型
+## 1. 核心概念
 
-以下类型用于定义节点的输入或输出插槽处理的数据种类。配置选项通常定义在节点定义 (`NodeDefinition`) 中对应插槽的 `config` 对象内。通用 UI 选项 (`tooltip`, `hidden`, `showReceivedValue`) 也定义在 `config` 对象内。`required` 属性是 `InputDefinition` 的顶级属性。
+新的类型系统旨在明确区分数据流的实际格式与连接时的匹配逻辑，增强灵活性和可扩展性。
 
-| 类型                | 描述           | UI 组件 (示例)                                                                                                               | 传输的数据类型        | 配置选项 (`config` 对象内, 除非另有说明) & 说明                                                                                                                                                                                                                      |
-| :------------------ | :------------- | :--------------------------------------------------------------------------------------------------------------------------- | :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `INT`               | 整数           | `NumberInput` (内联)                                                                                                         | `number`              | `config`: `default`, `min`, `max`, `step`, `suggestions` (数字列表)。通用: `tooltip`, `hidden`, `showReceivedValue`。顶级: `required` (布尔或函数), `defaultValue`, `min`, `max` (注意: 顶级属性与 config 内可能重复，需根据具体节点实现确认优先级)。                |
-| `FLOAT`             | 浮点数         | `NumberInput` (内联)                                                                                                         | `number`              | `config`: `default`, `min`, `max`, `step`, `suggestions` (数字列表)。通用: `tooltip`, `hidden`, `showReceivedValue`。顶级: `required` (布尔或函数), `defaultValue`, `min`, `max` (注意: 顶级属性与 config 内可能重复，需根据具体节点实现确认优先级)。                |
-| `STRING`            | 文本字符串     | `StringInput` (内联, `multiline:false`), `TextAreaInput` (块状, `multiline:true`), `TextDisplay` (块状, `display_only:true`) | `string`              | `config`: `default`, `multiline` (布尔), `placeholder`, `display_only` (布尔), `suggestions` (字符串列表)。通用: `tooltip`, `hidden`, `showReceivedValue`。顶级: `required` (布尔或函数), `defaultValue`。                                                           |
-| `BOOLEAN`           | 布尔值         | `BooleanToggle` (内联)                                                                                                       | `boolean`             | `config`: `default`。通用: `tooltip`, `hidden`, `showReceivedValue`。顶级: `required` (布尔或函数), `defaultValue`。                                                                                                                                                 |
-| `COMBO`             | 预定义列表选择 | `SelectInput` (内联)                                                                                                         | `string` 或 `number`  | `config`: `options` (字符串/数字数组), `default`。传输的是选项的 _值_。通用: `tooltip`, `hidden`, `showReceivedValue`。顶级: `required` (布尔或函数), `defaultValue`。                                                                                               |
-| `CODE`              | 代码片段       | `CodeInput` (块状)                                                                                                           | `string`              | `config`: `default`, `language` (字符串, 如 'javascript'), `placeholder`。UI 带语法高亮。通用: `tooltip`, `hidden`, `showReceivedValue`。顶级: `required` (布尔或函数), `defaultValue`。                                                                             |
-| `BUTTON`            | 动作触发器     | `ButtonInput` (块状)                                                                                                         | (事件触发)            | `config`: `label` (按钮文本)。不传输持久数据，点击时触发后端动作 (通过 WebSocket 的 `button_click` 事件) 或客户端脚本 (`clientScriptUrl`)。通用: `tooltip`, `hidden`。顶级: 通常 `required` 为 false。                                                               |
-| `WILDCARD` (`*`)    | 任意类型兼容   | (取决于连接)                                                                                                                 | `any`                 | 纯粹的兼容性通配符，连接时不改变自身类型。通用: `tooltip`, `hidden`, `showReceivedValue`。参见类型兼容性规则。                                                                                                                                                       |
-| `CONVERTIBLE_ANY`   | 动态可变类型   | (取决于连接，连接后行为像具体类型)                                                                                           | `any` (初始)          | 连接时会实际改变自身类型以匹配对方，变化会持久化并可能同步组接口。通用: `tooltip`, `hidden`, `showReceivedValue`。顶级: `required` (布尔或函数), `defaultValue`。参见类型兼容性规则。                                                                                |
-| `HISTORY`           | 历史记录       | `TextAreaInput` (块状)                                                                                                       | `any` / `object[]`    | 通常用于聊天历史等。通用: `tooltip`, `hidden`, `showReceivedValue`。顶级: `required` (布尔或函数), `defaultValue`。                                                                                                                                                  |
-| `RESOURCE_SELECTOR` | 资源选择器     | `ResourceSelectorInput` (块状)                                                                                               | `string` (资源标识符) | `config`: `acceptedTypes` (数组, 定义可选资源类型, 如 `[{ value: 'workflow', label: '工作流' }]`), `editable` (布尔), `placeholder`。通用: `tooltip`, `hidden`, `showReceivedValue`。顶级: `required` (布尔或函数), `defaultValue`。                                 |
-| `IMAGE`             | 图像数据       | `ImageInput` (块状, 上传/指定), 可选 `ImagePreview` (块状, 显示)                                                             | `object` / `string`   | `config`: `default` (路径/URL/Base64), `showPreview` (布尔), `maxWidth`, `maxHeight` (预览限制)。传输的数据可能是包含元数据和图像数据（如 Base64）的对象，或仅为标识符（如 URL）。通用: `tooltip`, `hidden`, `showReceivedValue`。顶级: `required`, `defaultValue`。 |
+### 1.1. `DataFlowType` (数据流类型)
 
-**注意：**
+`DataFlowType` 定义了插槽实际传输和处理的基础数据结构。它们相对稳定和通用。
 
-- **UI 组件**: 上表中的 UI 组件是前端 (`apps/frontend-vueflow/src/components/graph/inputs/index.ts`) 中定义的示例。实际渲染的组件由 `getInputComponent` 函数根据类型和 `config` (如 `multiline`, `display_only`, `showPreview`) 决定。
-  - **内联组件**: 通常在输入未连接时显示在插槽旁边 (如 `NumberInput`, `StringInput`, `BooleanToggle`, `SelectInput`)。
-  - **块状组件**: 通常显示在节点主体区域 (如 `TextAreaInput`, `CodeInput`, `ButtonInput`, `TextDisplay`, `ResourceSelectorInput`, `ImageInput`, 以及可选的 `ImagePreview`)。
-- **配置选项**:
-  - 节点的 `InputDefinition` 中的 `config` 对象可以包含对应类型的特定选项 (如 `StringInputOptions`, `NumericInputOptions` 等) 以及通用 UI 选项 (`tooltip`, `hidden`, `showReceivedValue`)。
-  - `required` 是 `InputDefinition` 的顶级属性，可以是布尔值或一个返回布尔值的函数，以实现条件性必填。
-  - `InputDefinition` 接口本身也定义了 `defaultValue`, `min`, `max` 顶级属性，可能与 `config` 内的同名字段功能重叠，具体行为和优先级取决于节点实现。
-- **`suggestions`**: 对于 `INT`, `FLOAT`, `STRING` 类型，提供推荐值列表，用户仍可输入该类型的其他有效值。
-- **`showReceivedValue`**: 若输入已连接且此选项为 `true`，块状输入组件可能保持可见以显示接收到的值（具体行为取决于前端实现）。
-- **`display_only`**: 对于 `STRING` 类型，若此选项为 `true`，前端使用只读的 `TextDisplay` 组件显示文本（块状）。
-- **插槽名称显示**: 前端 (`apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue`) 显示插槽名称的优先级:
-  - **Tooltip**: 优先 `description` (格式化 `\\n` 为换行)，其次 `displayName` 或 `key`。
-  - **直接显示**: 优先 `displayName`，其次 `description` (格式化后)，最后 `key`。
+| `DataFlowType` 名称 | 描述                                                                                                  | 对应 TypeScript 类型 (示例) |
+| :------------------ | :---------------------------------------------------------------------------------------------------- | :-------------------------- |
+| `STRING`            | 通用文本字符串                                                                                        | `string`                    |
+| `INTEGER`           | 整数                                                                                                  | `number`                    |
+| `FLOAT`             | 浮点数                                                                                                | `number`                    |
+| `BOOLEAN`           | 布尔值                                                                                                | `boolean`                   |
+| `OBJECT`            | 通用 JavaScript 对象                                                                                  | `object`                    |
+| `ARRAY`             | 通用 JavaScript 数组                                                                                  | `any[]`                     |
+| `BINARY`            | 二进制数据                                                                                            | `ArrayBuffer`, `Uint8Array` |
+| `WILDCARD`          | 特殊类型：通配符，不指定数据格式，可连接任何类型，连接时不强制转换。                                  | `any`                       |
+| `CONVERTIBLE_ANY`   | 特殊类型：连接时动态转换，会将其自身的 `dataFlowType` 和 `matchCategories` 更改为与连接对方完全一致。 | `any` (初始)                |
 
-## 类型兼容性规则
+### 1.2. `SocketMatchCategory` (插槽匹配类别/标签)
 
-输出插槽和输入插槽之间的连接基于以下规则，主要由前端 (`apps/frontend-vueflow/src/composables/canvas/useCanvasConnections.ts`) 在创建连接时强制执行：
+`SocketMatchCategory` 是一组**可选的字符串标签**，用于描述插槽的语义、用途、内容特征或特殊匹配行为。它主要用于连接时的兼容性判断，如果提供，则作为优先匹配条件。开发者可以自由定义和使用自定义标签。
 
-1.  **精确匹配：** 任何类型都可以连接到相同的类型 (例如 `STRING` -> `STRING`, `INT` -> `INT`)。
+#### 1.2.1. 内置的、推荐的 `SocketMatchCategory` 标签
 
-2.  **通配符与动态类型：**
+以下是一些内置的推荐标签：
 
-    - **`WILDCARD` (`*`)**:
-      - 纯粹的兼容性通配符。
-      - 任何类型都可连接到 `WILDCARD` 输入 (`*` -> `WILDCARD`)。
-      - `WILDCARD` 输出可连接到任何类型 (`WILDCARD` -> `*`)。
-      - 连接时，`WILDCARD` 插槽的类型**不会**改变。
-    - **`CONVERTIBLE_ANY`**:
-      - 动态类型，连接时会**实际改变自身类型**以匹配连接的另一端。
-      - `CONVERTIBLE_ANY` 输出连接到具体类型输入时，输出插槽类型变为该具体类型，并获取对方的当前值、名称、描述等信息。
-      - 具体类型输出连接到 `CONVERTIBLE_ANY` 输入时，输入插槽类型变为该具体类型。
-      - 类型改变是**持久化**的，并可能触发组接口同步。
-      - **不能**直接连接到 `WILDCARD` 或另一个 `CONVERTIBLE_ANY`。
+**语义化/内容特征标签:**
 
-3.  **数值转换：**
+*   `Code`: 代码
+*   `Json`: JSON 格式数据
+*   `Markdown`: Markdown 格式文本
+*   `Url`: URL 字符串
+*   `FilePath`: 文件路径字符串
+*   `Prompt`: 提示词文本
+*   `ChatMessage`: 单条聊天消息对象
+*   `ChatHistory`: 聊天历史记录数组
+*   `LlmConfig`: LLM 配置对象
+*   `LlmOutput`: LLM 输出结果
+*   `VectorEmbedding`: 向量嵌入数据
+*   `CharacterProfile`: 角色配置文件/对象
+*   `ImageData`: 实际图像数据 (通常为 `OBJECT` 或 `BINARY` DataFlowType)
+*   `AudioData`: 实际音频数据 (通常为 `OBJECT` 或 `BINARY` DataFlowType)
+*   `VideoData`: 实际视频数据 (通常为 `OBJECT` 或 `BINARY` DataFlowType)
+*   `ResourceId`: 资源标识符
+*   `Trigger`: 触发信号 (常用于按钮类交互)
+*   `StreamChunk`: 数据流块
+*   `ComboOption`: 用于标记来源于或适用于 COMBO (下拉建议) 选择的值
 
-    - `INT` 可以连接到 `FLOAT` (`INT` -> `FLOAT`) (隐式转换)。
+**行为标签:**
 
-4.  **转换为字符串：**
+*   `BehaviorWildcard`: 行为标签：通配符，覆盖其他规则，可连接到任何其他插槽。
+*   `BehaviorConvertible`: 行为标签：可转换，连接时会将其自身的 `dataFlowType` 和 `matchCategories` 更改为与连接对方完全一致。
 
-    - `INT` 可以连接到 `STRING` (`INT` -> `STRING`)。
-    - `FLOAT` 可以连接到 `STRING` (`FLOAT` -> `STRING`)。
-    - `BOOLEAN` 可以连接到 `STRING` (`BOOLEAN` -> `STRING`)。
+#### 1.2.2. 自定义标签
 
-5.  **特殊文本兼容性：**
+开发者可以根据应用场景创建新的标签，例如 `"MySpecificDataFormat"`, `"GameEntityReference"` 等。建议为自定义标签设定命名规范和长度限制。
 
-    - `STRING` 可以连接到 `CODE` (`STRING` -> `CODE`) (将纯文本视为代码)。
-    - `STRING` 可以连接到 `COMBO` (`STRING` -> `COMBO`) (字符串值**必须**精确匹配目标 `COMBO` 的 `config.options` 中的某个值)。
-    - **注意:** 不再支持 `INT`/`FLOAT` 直接连接到 `COMBO`。
+## 2. 节点插槽定义
 
-6.  **多输入插槽 (`multi: true`)：**
-    - 若输入插槽定义了 `multi: true` (顶级属性)，可接受多个连接。
-    - **类型检查**:
-      - 若定义了 `acceptTypes` (类型字符串数组，顶级属性)，每个连接的输出类型必须**精确匹配** `acceptTypes` 中的*至少一个*类型 (不应用其他转换规则)。
-      - 若未定义 `acceptTypes`，每个连接必须与该输入插槽自身的 `type` 兼容 (遵循规则 1-5)。
-    - 节点的 `execute` 函数通常收到输入值的数组。
+在节点的 `InputDefinition` 和 `OutputDefinition` 中：
+
+*   旧的 `type: string` 字段被 `dataFlowType: DataFlowTypeName` 替换。
+*   新增**可选的** `matchCategories: string[]` 字段，用于定义语义或行为标签。
+*   `config` 对象包含用于指导前端 UI 渲染和交互行为的具体配置项。
+
+### 2.1. `config` 对象常用配置项
+
+以下是一些在 `InputDefinition` 的 `config` 对象中常用的配置项，它们指导着前端 UI 的渲染和行为：
+
+| 配置项                     | 类型      | 描述与用途                                                                                                                                                              | 适用 `DataFlowType` (示例)         |
+| :------------------------- | :-------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------- |
+| `default`                  | `any`     | 插槽的默认值。                                                                                                                                                          | 所有                               |
+| `multiline`                | `boolean` | 是否为多行输入。`true` 通常渲染为文本区域，`false` 为单行输入框。                                                                                                       | `STRING`                           |
+| `placeholder`              | `string`  | 输入框的占位提示文本。                                                                                                                                                  | `STRING`, `INTEGER`, `FLOAT`       |
+| `languageHint`             | `string`  | 指定代码编辑器应使用的语言（如 `'javascript'`, `'python'`, `'json'`, `'markdown'`）。当 `dataFlowType` 为 `STRING` 时，此配置用于指定前端使用的代码编辑器及其语言高亮。 | `STRING`                           |
+| `suggestions`              | `any[]`   | 提供一个建议值列表。前端可渲染为下拉选择框 (combo-box/select)。                                                                                                         | `STRING`, `INTEGER`, `FLOAT`       |
+| `min`, `max`, `step`       | `number`  | 用于数字类型的最小值、最大值和步长。可用于渲染滑块等 UI。                                                                                                               | `INTEGER`, `FLOAT`                 |
+| `label`                    | `string`  | 主要用于按钮 (`Trigger` 类型) 的显示文本。                                                                                                                              | `WILDCARD` (配合 `Trigger`)        |
+| `readOnly` / `displayOnly` | `boolean` | 指示输入为只读，前端应渲染为不可编辑的文本展示。                                                                                                                        | `STRING`, 等                       |
+| `displayAs`                | `string`  | (可选新增) 更明确地指定非默认的 UI 表现，例如 `'slider'`, `'color-picker'`。                                                                                            | 特定类型                           |
+| `bottomEditorMode`         | `string`  | (可选) 配置底部停靠编辑器的模式：`'lightweightSingle'` (轻量级单页编辑) 或 `'fullMultiTab'` (全功能多标签页编辑，默认)。用于复杂内容（如代码、JSON）的编辑。            | `STRING`, `OBJECT`, `ARRAY`        |
+| `showPreview`              | `boolean` | (特定于图像等) 是否显示预览。                                                                                                                                           | `OBJECT`, `BINARY`, `STRING` (URL) |
+| `maxWidth`, `maxHeight`    | `number`  | (特定于图像等) 预览图像的最大宽度/高度。                                                                                                                                | `OBJECT`, `BINARY`, `STRING` (URL) |
+
+**其他顶级属性**:
+
+*   `displayName: string`: 在 UI 中显示的名称。
+*   `description: string`: 对插槽的详细描述，常用于 Tooltip。
+*   `required: boolean | ((inputs: Record<string, any>, configValues: Record<string, any>) => boolean)`: (仅输入) 定义该输入是否为必需。
+*   `multi: boolean`: (仅输入) 如果为 `true`，该输入插槽可以接受多个连接。
+    *   `acceptTypes: string[]`: (仅当 `multi: true` 时) 定义此多输入插槽接受的 `DataFlowType` 或 `SocketMatchCategory` 列表。连接时进行精确匹配。
+
+### 2.2. Tooltip 信息
+
+插槽的 Tooltip 通常会显示其 `displayName`、`description`，并可补充显示其 `dataFlowType` 和所有 `matchCategories` (包括内置和自定义的)，以帮助用户理解插槽的性质。
+
+### 2.3. UI 组件选择逻辑
+
+前端 UI 组件的选择和渲染方式，将主要依据 `DataFlowType`、`SocketMatchCategory` (可选，用于理解语义) 以及 `InputDefinition.config` 对象内部的具体配置项。
+
+例如：
+
+*   `dataFlowType: 'STRING'`, `config: { multiline: true }` -> 多行文本输入框。
+*   `dataFlowType: 'STRING'`, `matchCategories: ['Code']`, `config: { languageHint: 'javascript' }` -> JavaScript 代码编辑器 (在底部停靠编辑器中)。
+*   `dataFlowType: 'INTEGER'`, `config: { suggestions: [1, 2, 3], default: 1 }` -> 带建议的整数输入或下拉选择。
+*   `dataFlowType: 'WILDCARD'`, `matchCategories: ['Trigger']`, `config: { label: '执行' }` -> 一个显示为 "执行" 的按钮。
+
+### 2.4. 示例插槽定义 (参考 `TestWidgetsNode.ts`)
+
+```typescript
+// 示例: Markdown 输入插槽
+inputs: {
+  markdown_input: {
+    dataFlowType: 'STRING',
+    displayName: 'Markdown文本',
+    description: 'Markdown 内容输入测试',
+    required: false,
+    matchCategories: ['Markdown'], // 明确是 Markdown
+    config: {
+      default: '# 标题...',
+      multiline: true,
+      languageHint: 'markdown' // 辅助前端编辑器
+    }
+  }
+}
+
+// 示例: JSON 对象输入
+inputs: {
+  json_input: {
+    dataFlowType: 'OBJECT', // 或 'STRING' 如果期望字符串形式的JSON
+    displayName: 'JSON对象',
+    matchCategories: ['Json'], // 语义标签
+    config: {
+      default: { "key": "value" },
+      languageHint: 'json' // 如果 dataFlowType 是 STRING，这个有用
+    }
+  }
+}
+
+// 示例: 下拉选择 (Combo)
+inputs: {
+  combo_select: {
+    dataFlowType: 'STRING', // 假设选项值为字符串
+    displayName: '下拉选择',
+    matchCategories: ['ComboOption'], // 标记为COMBO选项来源
+    config: {
+      default: '选项A',
+      suggestions: ['选项A', '选项B', '选项C']
+    }
+  }
+}
+```
+
+## 3. 连接兼容性规则
+
+连接的有效性判断遵循以下顺序和逻辑：
+
+### 3.1. 特殊行为标签 (`SocketMatchCategory`) 的影响 (最高优先级)
+
+*   **`BEHAVIOR_WILDCARD`**: 如果一个插槽拥有此标签 (通常其 `dataFlowType` 为 `WILDCARD`)，它将覆盖其他规则，并可以连接到任何其他插槽。连接后，节点内部逻辑可以感知到对方的 `dataFlowType` 和 `matchCategories`。
+*   **`BEHAVIOR_CONVERTIBLE`**: 如果一个插槽拥有此标签 (通常其 `dataFlowType` 为 `CONVERTIBLE_ANY`)，它在连接时，会将其自身的 `dataFlowType` 和所有其他 `matchCategories` (除了 `BEHAVIOR_CONVERTIBLE` 自身) 更改为与连接对方完全一致。此更改是持久化的，并优先于其他匹配逻辑。
+
+### 3.2. 基于 `SocketMatchCategory` (语义/行为标签) 的优先匹配
+
+*   此匹配仅在**源插槽和目标插槽都定义了 `matchCategories` (且 `matchCategories` 数组不为空)** 时进行。
+*   令源插槽的 `matchCategories` 为 `SourceTags`，目标插槽的为 `TargetTags`。
+*   **直接匹配**: 如果 `SourceTags` 和 `TargetTags` 存在至少一个相同的标签，则视为兼容。
+*   **内置兼容规则**: (如果未来定义) 如果直接匹配失败，则查询一个预定义的规则集，该规则集说明某些 `SocketMatchCategory` 之间存在的单向或双向兼容性。
+*   如果通过上述方式找到兼容性，则连接被认为是有效的。
+
+### 3.3. 基于 `DataFlowType` (数据流类型) 的保底匹配
+
+*   此匹配在以下情况进行：
+    *   `SocketMatchCategory` 匹配未进行（例如，至少一个插槽没有定义 `matchCategories`，或定义的数组为空）。
+    *   或者，`SocketMatchCategory` 匹配已进行但未成功建立兼容性。
+*   兼容性基于预定义的 `DataFlowType` 转换规则：
+    *   `INTEGER` 可以连接到 `FLOAT` (隐式转换)。
+    *   `INTEGER`, `FLOAT`, `BOOLEAN` 可以连接到 `STRING` (隐式转换为字符串)。
+    *   `WILDCARD` 可以连接到任何 `DataFlowType`。任何 `DataFlowType` 也可以连接到 `WILDCARD`。
+    *   `CONVERTIBLE_ANY` 在连接时会将其自身的 `dataFlowType` 更改为与连接对方完全一致。
+*   如果通过 `DataFlowType` 规则找到兼容性，则连接被认为是有效的。
+
+**总结连接逻辑优先级：**
+
+1.  特殊行为标签 (`BEHAVIOR_WILDCARD`, `BEHAVIOR_CONVERTIBLE`) 具有最高优先级。
+2.  如果双方插槽都提供了有效的 `SocketMatchCategory` 列表，则优先尝试基于这些标签进行匹配。
+3.  如果 `SocketMatchCategory` 未提供或匹配失败，则回退到基于 `DataFlowType` 的匹配。
+
+**多输入插槽 (`multi: true`) 的额外规则：**
+
+*   若输入插槽定义了 `multi: true`，可接受多个连接。
+*   **类型检查**:
+    *   若定义了 `acceptTypes` (类型字符串数组，可以是 `DataFlowType` 名称或 `SocketMatchCategory` 标签)，每个连接的输出类型必须**精确匹配** `acceptTypes` 中的*至少一个*条目。
+    *   若未定义 `acceptTypes`，每个连接必须与该输入插槽自身的类型定义 (其 `dataFlowType` 和 `matchCategories`) 兼容 (遵循上述连接逻辑)。
 
 **重要提示：** 这些规则主要由前端强制执行以提供即时反馈。后端执行时可能进行额外验证或转换。
 
-## 节点级配置
+## 4. 节点级配置
 
 节点定义 (`NodeDefinition`) 可包含独立于插槽的配置：
 
-- **`configSchema`**: 定义节点级配置项 (结构类似 `inputs`)，显示在节点主体独立区域 (`apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue` 的 `.node-configs`)。
-- **`configValues`**: 存储 `configSchema` 定义的配置项的实际值。
-- **`clientScriptUrl`**: (可选) 指向节点特定前端 JS 文件的 URL，用于处理自定义逻辑 (如 `BUTTON` 点击)。
-- **`width`**: (可选) 节点渲染时的首选宽度 (像素)，用户可调整。
-- **组相关属性**:
-  - `isGroupInternal`: (布尔) 若为 `true`，此节点类型只能在组内使用。
-  - `groupId`: (字符串) 节点所属的组 ID。
-  - `groupConfig`: (对象) 组特定配置 (如 `allowExternalUse`)。
-  - `dynamicSlots`: (布尔) 标记节点是否支持动态添加/删除插槽 (如 `GroupInput`/`GroupOutput`)。
-- **`data.groupInfo`**: (前端) 若节点是 `NodeGroup`，其 `data` 可能包含 `groupInfo`，用于前端显示组内统计信息。
+*   **`configSchema`**: 定义节点级配置项 (结构类似 `inputs`)，显示在节点主体独立区域。
+*   **`configValues`**: 存储 `configSchema` 定义的配置项的实际值。
+*   **`clientScriptUrl`**: (可选) 指向节点特定前端 JS 文件的 URL，用于处理自定义客户端逻辑 (例如 `RandomNumberNode.ts` 中的按钮交互)。
+*   **`width`**: (可选) 节点渲染时的首选宽度 (像素)，用户可调整。
+*   **组相关属性**: `isGroupInternal`, `groupId`, `groupConfig`, `dynamicSlots`。
+*   **`data.groupInfo`**: (前端) 若节点是 `NodeGroup`，其 `data` 可能包含 `groupInfo`。
 
-这允许节点拥有独立于其输入/输出数据的可配置参数。
+## 5. 执行状态
 
-## 执行状态
+节点在工作流执行期间的状态由 `ExecutionStatus` 枚举定义：
 
-节点在工作流执行期间的状态由 `ExecutionStatus` 枚举定义 (`packages/types/src/node.ts`)：
+*   `IDLE`: 空闲/未执行
+*   `PENDING`: 等待执行 (依赖未就绪)
+*   `RUNNING`: 正在执行
+*   `COMPLETED`: 执行成功
+*   `ERROR`: 执行出错
+*   `SKIPPED`: 被跳过 (节点禁用或条件不满足)
 
-- `IDLE`: 空闲/未执行
-- `PENDING`: 等待执行 (依赖未就绪)
-- `RUNNING`: 正在执行
-- `COMPLETED`: 执行成功
-- `ERROR`: 执行出错
-- `SKIPPED`: 被跳过 (节点禁用或条件不满足)
+前端根据后端状态更新改变节点视觉样式。
 
-前端 (`apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue`) 根据后端状态更新 (通过 WebSocket 的 `NODE_STATUS_UPDATE` 消息) 改变节点视觉样式：
+## 6. WebSocket 通信
 
-- **外框颜色**: 运行中 (`RUNNING`) - 黄色，成功 (`COMPLETED`) - 绿色，错误 (`ERROR`) - 红色，选中 (`selected`) - 蓝色。
-- **透明度/边框**: 跳过 (`SKIPPED`) - 降低透明度，边框变虚线。
-- **错误提示**: 错误状态下，节点标题变红，Tooltip 显示错误信息。
-
-## WebSocket 通信
-
-节点系统依赖 WebSocket (`packages/types/src/node.ts` 中的 `WebSocketMessageType`) 进行前后端通信：
-
-- 工作流操作: `LOAD_WORKFLOW`, `SAVE_WORKFLOW`, `LIST_WORKFLOWS`
-- 节点定义: `GET_NODE_DEFINITIONS`
-- 执行控制: `EXECUTE_WORKFLOW`, `BUTTON_CLICK`
-- 状态更新: `NODE_STATUS_UPDATE`, `WORKFLOW_STATUS_UPDATE`
-- 结果/错误: `EXECUTION_RESULT`, `ERROR`
-- 后端控制: `RELOAD_BACKEND`
-- 操作确认: `WORKFLOW_LOADED`, `WORKFLOW_SAVED`, `WORKFLOW_LIST`, `NODE_DEFINITIONS`, `BACKEND_RELOADED`
+节点系统依赖 WebSocket 进行前后端通信，消息类型定义在 `packages/types/src/node.ts` 中的 `WebSocketMessageType`。这包括工作流操作、节点定义获取、执行控制、状态更新等。
