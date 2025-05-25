@@ -421,15 +421,15 @@ export function transformWorkflowToVueFlow(
         // 检查是否为 NodeGroup (其输出定义在 data.groupInterface.outputs)
         else if (sourceNode.type === "core:NodeGroup" && sourceNode.data?.groupInterface?.outputs) {
           const outputDef = sourceNode.data.groupInterface.outputs[storageEdge.sourceHandle];
-          if (outputDef) sourceType = outputDef.type || "any";
+          if (outputDef) sourceType = outputDef.dataFlowType || "any"; // <--- Roo: 修正属性名
         }
         // 检查是否为普通节点 (其输出定义在 data.outputs)
         // 注意：现在 data.outputs[handle] 存储的是包含类型的对象
         else if (sourceNode.data?.outputs?.[storageEdge.sourceHandle]) {
           const outputData = sourceNode.data.outputs[storageEdge.sourceHandle];
           // 从 outputData 对象中获取类型
-          if (outputData && typeof outputData === "object" && outputData.type) {
-            sourceType = outputData.type;
+          if (outputData && typeof outputData === "object" && outputData.dataFlowType) { // <--- Roo: 修正属性名
+            sourceType = outputData.dataFlowType;
           }
         }
       }
@@ -449,15 +449,15 @@ export function transformWorkflowToVueFlow(
         // 检查是否为 NodeGroup (其输入定义在 data.groupInterface.inputs)
         else if (targetNode.type === "core:NodeGroup" && targetNode.data?.groupInterface?.inputs) {
           const inputDef = targetNode.data.groupInterface.inputs[storageEdge.targetHandle];
-          if (inputDef) targetType = inputDef.type || "any";
+          if (inputDef) targetType = inputDef.dataFlowType || "any"; // <--- Roo: 修正属性名
         }
         // 检查是否为普通节点 (其输入定义在 data.inputs)
         // 注意：现在 data.inputs[handle] 存储的是包含类型和值的对象
         else if (targetNode.data?.inputs?.[storageEdge.targetHandle]) {
           const inputData = targetNode.data.inputs[storageEdge.targetHandle];
           // 从 inputData 对象中获取类型
-          if (inputData && typeof inputData === "object" && inputData.type) {
-            targetType = inputData.type;
+          if (inputData && typeof inputData === "object" && inputData.dataFlowType) { // <--- Roo: 修正属性名
+            targetType = inputData.dataFlowType;
           }
           // 旧的查找方式，现在不再需要，因为类型已直接存储
           // const targetNodeType = targetNode.type;
