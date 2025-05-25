@@ -10,8 +10,8 @@ import { getNodeType } from '@/utils/nodeUtils';
  * @param currentElements - 活动选项卡元素的计算属性引用。
  */
 export function useInterfaceWatcher(
-    activeTabId: Ref<string | null>,
-    currentElements: Ref<any[]> // 暂时使用 any[]，或使用 Elements 类型
+  activeTabId: Ref<string | null>,
+  currentElements: Ref<any[]> // 暂时使用 any[]，或使用 Elements 类型
 ) {
   const workflowStore = useWorkflowStore();
   const workflowManager = useWorkflowManager(); // Get the manager instance
@@ -30,62 +30,79 @@ export function useInterfaceWatcher(
 
       const currentElementsValue = currentElements.value;
       let elementsChanged = false;
-      // The map function might return slightly different types, but this is intended.
-      // The previous @ts-expect-error is no longer needed.
-      const updatedElements = currentElementsValue.map((el) => {
+
+      // Roo: 重构 elementsChanged 的计算逻辑，避免创建未使用的 updatedElements 数组
+      for (const el of currentElementsValue) {
+        if (elementsChanged) break; // 如果已经检测到更改，则无需继续检查
+
         if (isNode(el)) {
-          // 更新 GroupInput 节点的输出句柄
-          // Check if the fullType ends with ':GroupInput'
-          const nodeType = getNodeType(el); // Use getNodeType which should handle fullType
-          // Roo: Debugging node type check in watcher
-          // console.log(`[DEBUG Watcher Check] Node ID: ${el.id}, Type: ${nodeType}`);
+          const nodeType = getNodeType(el);
           if (nodeType === 'core:GroupInput') {
-            // console.log(`[DEBUG Watcher Check] Matched :GroupInput for ${el.id}`);
             const currentOutputs = el.data?.outputs || {};
-            const newOutputs = newInterface.inputs || {}; // 接口输入映射到 GroupInput 输出
-            // Use a more robust comparison if needed, but JSON stringify might be okay for now
+            const newOutputs = newInterface.inputs || {};
             if (JSON.stringify(currentOutputs) !== JSON.stringify(newOutputs)) {
-              // // console.debug(`[useInterfaceWatcher] 正在更新 GroupInput (${el.id}) 的输出。`);
               elementsChanged = true;
-              return {
-                ...el,
-                data: { ...el.data, outputs: newOutputs },
-              };
             }
-          }
-          // 更新 GroupOutput 节点的输入句柄
-          // Check if the fullType ends with ':GroupOutput'
-          else if (nodeType === 'core:GroupOutput') {
-            // console.log(`[DEBUG Watcher Check] Matched :GroupOutput for ${el.id}`);
+          } else if (nodeType === 'core:GroupOutput') {
             const currentInputs = el.data?.inputs || {};
-            const newInputs = newInterface.outputs || {}; // 接口输出映射到 GroupOutput 输入
-            // Use a more robust comparison if needed
+            const newInputs = newInterface.outputs || {};
             if (JSON.stringify(currentInputs) !== JSON.stringify(newInputs)) {
-              // // console.debug(`[useInterfaceWatcher] 正在更新 GroupOutput (${el.id}) 的输入。`);
               elementsChanged = true;
-              return {
-                ...el,
-                data: { ...el.data, inputs: newInputs },
-              };
             }
           }
         }
-        return el; // 未更改的元素
-      });
+      }
 
       // 如果元素已更改，状态应已通过触发接口更改的操作（例如 handleConnectionWithInterfaceUpdate）原子地更新。
       // 我们只需要在必要时分派 UI 刷新事件。
       // If elements were changed by the interface update, apply them back to the state via the manager.
       // This ensures the node's visual representation updates.
       if (elementsChanged && activeTabId.value) {
-        //  console.debug(
-        //    `[useInterfaceWatcher] Interface change detected for tab ${activeTabId.value}. Applying updated elements.`
-        //  );
-         // Apply the calculated updatedElements back to the workflow manager's state.
-         // Note: setElements handles deep cloning and dirty marking internally.
-         // We don't record history here because the history should have been recorded
-         // by the action that *triggered* the interface change (e.g., connection, sidebar edit).
-         workflowManager.setElements(activeTabId.value, updatedElements);
+        const internalId = activeTabId.value;
+        // console.debug(
+        //   `[useInterfaceWatcher] Interface change detected for tab ${internalId}. elementsChanged: ${elementsChanged}. Updating GroupIO nodes directly.`
+        // );
+
+        // Roo: 诊断日志 - 检查 watch 回调执行时 workflowManager 内部的原始状态和快照状态
+        // const directAccessState = workflowManager.getAllTabStates.value.get(internalId);
+        // const directAccessElements = directAccessState?.elements;
+        // console.log(`[DEBUG useInterfaceWatcher] Watch triggered for tab ${internalId}.`);
+        // console.log(`  Directly accessed elements BEFORE snapshot (count ${directAccessElements?.length}):`, JSON.stringify(directAccessElements?.map(e => e.id)));
+
+        const snapshot = workflowManager.getCurrentSnapshot(internalId);
+        const latestElementsSnapshot = snapshot?.elements; // 使用快照作为更新的权威来源
+        // console.log(`  Snapshot elements (count ${latestElementsSnapshot?.length}):`, JSON.stringify(latestElementsSnapshot?.map(e => e.id)));
+
+        if (!latestElementsSnapshot) {
+          // console.error(`[useInterfaceWatcher] Could not get latest elements snapshot from manager for tab ${internalId}. Aborting GroupIO node update.`);
+          // if (directAccessElements) {
+          // console.error(`[useInterfaceWatcher] Direct access elements were (count ${directAccessElements.length}):`, JSON.stringify(directAccessElements.map(e => e.id)));
+          // }
+          return;
+        }
+
+        // Roo: 遍历最新的元素快照，并使用 updateNodeInternalData 更新 GroupInput/Output 节点的 data
+        // newInterface 包含最新的顶层接口定义
+        latestElementsSnapshot.forEach(el => {
+          if (isNode(el)) {
+            const nodeType = getNodeType(el);
+            if (nodeType === 'core:GroupInput') {
+              const newOutputsForGroupInput = newInterface.inputs || {};
+              // 只有在实际需要更新时才调用 updateNodeInternalData
+              if (JSON.stringify(el.data?.outputs || {}) !== JSON.stringify(newOutputsForGroupInput)) {
+                // console.debug(`[useInterfaceWatcher] Updating GroupInput ${el.id} outputs for tab ${internalId}`);
+                workflowManager.updateNodeInternalData(internalId, el.id, { outputs: newOutputsForGroupInput });
+              }
+            } else if (nodeType === 'core:GroupOutput') {
+              const newInputsForGroupOutput = newInterface.outputs || {};
+              if (JSON.stringify(el.data?.inputs || {}) !== JSON.stringify(newInputsForGroupOutput)) {
+                // console.debug(`[useInterfaceWatcher] Updating GroupOutput ${el.id} inputs for tab ${internalId}`);
+                workflowManager.updateNodeInternalData(internalId, el.id, { inputs: newInputsForGroupOutput });
+              }
+            }
+          }
+        });
+        // 原有的 setElements 调用已被移除
 
         // Also dispatch the event for the sidebar UI refresh
         setTimeout(() => {

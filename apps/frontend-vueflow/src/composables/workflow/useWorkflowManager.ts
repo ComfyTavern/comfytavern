@@ -1,4 +1,4 @@
-import { reactive, computed } from "vue";
+import { reactive, computed, watch } from "vue";
 import { klona } from "klona";
 import { DataFlowType, type GroupSlotInfo, type WorkflowNode as StorageNode, type WorkflowEdge as StorageEdge } from "@comfytavern/types"; // Import StorageNode/Edge aliases
 import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core";
@@ -65,6 +65,42 @@ function createWorkflowManager() {
     return state?.workflowData?.previewTarget ?? null;
   });
 
+  // Roo: 监视活动标签页的 elements 变化
+  watch(() => {
+    const id = activeTabId.value;
+    if (id) {
+      const state = tabStates.get(id);
+      // 我们关心 elements 数组本身或其内容的任何变化
+      // 返回一个包含长度和ID字符串的元组，以便 watch 能检测到内容变化
+      // 确保在 state 或 state.elements 不存在时不尝试访问 map 或 stringify
+      if (!state || !state.elements) return undefined;
+      try {
+        return [state.elements.length, JSON.stringify(state.elements.map((e: VueFlowNode | VueFlowEdge) => e.id))];
+      } catch (error) {
+        // console.error('[DEBUG Watch activeTab.elements] Error stringifying elements:', error, state.elements);
+        return undefined; // 发生错误时返回 undefined
+      }
+    }
+    return undefined;
+  }, (newVal, oldVal) => {
+    const currentTabId = activeTabId.value;
+    if (currentTabId && newVal && oldVal) {
+      // newVal 和 oldVal 现在是 [length, idString]
+      const [_newLength, newIdString] = newVal;
+      const [_oldLength, oldIdString] = oldVal;
+
+      if (newIdString !== oldIdString) { // 只有当元素ID列表实际改变时才记录
+        // console.log(`[DEBUG Watch activeTab.elements] Elements changed for tab ${currentTabId}.`);
+        // console.log(`  Old: count=${oldLength}, ids=${oldIdString}`);
+        // console.log(`  New: count=${newLength}, ids=${newIdString}`);
+        // console.trace('[DEBUG Watch activeTab.elements] Call stack for change:');
+      }
+    } else if (currentTabId && newVal && !oldVal) {
+      // const [newLength, newIdString] = newVal;
+      // console.log(`[DEBUG Watch activeTab.elements] Elements initialized for tab ${currentTabId}. New: count=${newLength}, ids=${newIdString}`);
+    }
+  }, { deep: false }); // deep: false 因为我们观察的是元组 [length, idString] 的变化，这个元组的引用或内容变化就会触发
+
   // --- 内部转换辅助函数 ---
   /**
    * 将存储格式的节点转换为 VueFlow 节点格式。
@@ -72,24 +108,24 @@ function createWorkflowManager() {
    * @returns VueFlow 节点对象。
    */
   function _storageNodeToVueFlowNode(storageNode: StorageNode): VueFlowNode {
-      // 使用 nodeStore 获取节点定义
-      const nodeDef = nodeStore.getNodeDefinitionByFullType(storageNode.type);
-      const vueNode: VueFlowNode = {
-          id: storageNode.id,
-          type: storageNode.type, // 保留完整类型
-          position: storageNode.position,
-          label: storageNode.label || nodeDef?.displayName || storageNode.type,
-          // 合并节点定义和存储数据
-          data: nodeDef ? { ...nodeDef, ...(storageNode.data || {}) } : { ...(storageNode.data || {}) },
-          width: storageNode.width, // 从存储中获取宽度
-          height: storageNode.height, // 从存储中获取高度
-          style: { // 根据存储的宽高设置样式
-              ...(storageNode.width && { width: `${storageNode.width}px` }),
-              ...(storageNode.height && { height: `${storageNode.height}px` }),
-          },
-          // 其他 VueFlowNode 可能需要的属性...
-      };
-      return vueNode;
+    // 使用 nodeStore 获取节点定义
+    const nodeDef = nodeStore.getNodeDefinitionByFullType(storageNode.type);
+    const vueNode: VueFlowNode = {
+      id: storageNode.id,
+      type: storageNode.type, // 保留完整类型
+      position: storageNode.position,
+      label: storageNode.label || nodeDef?.displayName || storageNode.type,
+      // 合并节点定义和存储数据
+      data: nodeDef ? { ...nodeDef, ...(storageNode.data || {}) } : { ...(storageNode.data || {}) },
+      width: storageNode.width, // 从存储中获取宽度
+      height: storageNode.height, // 从存储中获取高度
+      style: { // 根据存储的宽高设置样式
+        ...(storageNode.width && { width: `${storageNode.width}px` }),
+        ...(storageNode.height && { height: `${storageNode.height}px` }),
+      },
+      // 其他 VueFlowNode 可能需要的属性...
+    };
+    return vueNode;
   }
 
   /**
@@ -98,16 +134,16 @@ function createWorkflowManager() {
    * @returns VueFlow 边对象。
    */
   function _storageEdgeToVueFlowEdge(storageEdge: StorageEdge): VueFlowEdge {
-      const vueEdge: VueFlowEdge = {
-          id: storageEdge.id,
-          source: storageEdge.source,
-          target: storageEdge.target,
-          sourceHandle: storageEdge.sourceHandle,
-          targetHandle: storageEdge.targetHandle,
-          data: storageEdge.data || {}, // 确保 data 存在
-          // 不包含样式属性 (markerStart, markerEnd, style, animated)
-      };
-      return vueEdge;
+    const vueEdge: VueFlowEdge = {
+      id: storageEdge.id,
+      source: storageEdge.source,
+      target: storageEdge.target,
+      sourceHandle: storageEdge.sourceHandle,
+      targetHandle: storageEdge.targetHandle,
+      data: storageEdge.data || {}, // 确保 data 存在
+      // 不包含样式属性 (markerStart, markerEnd, style, animated)
+    };
+    return vueEdge;
   }
 
 
@@ -238,9 +274,9 @@ function createWorkflowManager() {
     const associatedId = tabInfo?.associatedId || `temp-${internalId}`;
     const labelToUse = tabInfo?.label || defaultWorkflowTemplateUntyped.name || "*新工作流*"; // 使用模板名称或默认值
 
-    console.debug(
-      `[useWorkflowManager/applyDefaultWorkflowToTab] 正在将默认模板应用于 ${internalId} (ID: ${associatedId})`
-    );
+    // console.debug(
+    //   `[useWorkflowManager/applyDefaultWorkflowToTab] 正在将默认模板应用于 ${internalId} (ID: ${associatedId})`
+    // );
 
     try {
       // 确保节点定义已加载，以便正确填充节点数据
@@ -286,20 +322,20 @@ function createWorkflowManager() {
 
       // 处理节点
       for (const nodeTpl of templateData.nodes as StorageNode[]) { // 使用 StorageNode 类型
-          const vueNode = _storageNodeToVueFlowNode(nodeTpl); // 使用辅助函数
-          elements.push(vueNode);
+        const vueNode = _storageNodeToVueFlowNode(nodeTpl); // 使用辅助函数
+        elements.push(vueNode);
       }
 
       // 处理边
       if (Array.isArray(templateData.edges) && templateData.edges.length > 0) {
-          for (const edgeTpl of templateData.edges as StorageEdge[]) { // 使用 StorageEdge 类型
-              if (typeof edgeTpl === 'object' && edgeTpl !== null && edgeTpl.id && edgeTpl.source && edgeTpl.target) {
-                  const vueEdge = _storageEdgeToVueFlowEdge(edgeTpl); // 使用辅助函数
-                  elements.push(vueEdge);
-              } else {
-                  console.warn(`[applyDefaultWorkflowToTab] 跳过无效的边模板:`, edgeTpl);
-              }
+        for (const edgeTpl of templateData.edges as StorageEdge[]) { // 使用 StorageEdge 类型
+          if (typeof edgeTpl === 'object' && edgeTpl !== null && edgeTpl.id && edgeTpl.source && edgeTpl.target) {
+            const vueEdge = _storageEdgeToVueFlowEdge(edgeTpl); // 使用辅助函数
+            elements.push(vueEdge);
+          } else {
+            console.warn(`[applyDefaultWorkflowToTab] 跳过无效的边模板:`, edgeTpl);
           }
+        }
       }
 
       // 准备最终的 WorkflowData (使用模板数据，但更新 ID 和 name)
@@ -438,6 +474,31 @@ function createWorkflowManager() {
    * @param applyDefaultIfNeeded 如果为 true (默认)，则在状态是新的且标签页用于新工作流时应用默认工作流。
    * @returns 确保存在的 TabWorkflowState。
    */
+
+  // Roo: 辅助函数，用于创建 TabWorkflowState (移除了 Proxy)
+  function createTabWorkflowState(internalId: string, tabInfo?: ReturnType<typeof useTabStore>['tabs'][number]): TabWorkflowState {
+    const associatedId = tabInfo?.associatedId;
+    const initialWorkflowData: WorkflowData = {
+      id: associatedId || `temp-${internalId}`,
+      name: tabInfo?.label || "*新工作流*",
+      nodes: [],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+      interfaceInputs: {},
+      interfaceOutputs: {},
+    };
+    const state: TabWorkflowState = { // 重命名 targetState 为 state
+      workflowData: initialWorkflowData,
+      isDirty: false,
+      vueFlowInstance: null,
+      elements: [],
+      viewport: initialWorkflowData.viewport,
+      groupInterfaceInfo: null,
+      isLoaded: false,
+    };
+    return state; // 直接返回 state 对象，不再使用 Proxy
+  }
+
   async function ensureTabState(
     internalId: string,
     applyDefaultIfNeeded = true
@@ -452,25 +513,8 @@ function createWorkflowManager() {
       const associatedId = tabInfo?.associatedId;
       const isNewWorkflow = !associatedId || associatedId.startsWith("temp-");
 
-      // 首先创建一个最小的初始状态
-      const initialWorkflowData: WorkflowData = {
-        id: associatedId || `temp-${internalId}`,
-        name: tabInfo?.label || "*新工作流*",
-        nodes: [],
-        edges: [],
-        viewport: { x: 0, y: 0, zoom: 1 },
-        interfaceInputs: {}, // 将由 applyDefault 或 applyWorkflow 填充
-        interfaceOutputs: {}, // 将由 applyDefault 或 applyWorkflow 填充
-      };
-      const initialState: TabWorkflowState = {
-        workflowData: initialWorkflowData, // 最小化开始
-        isDirty: false,
-        vueFlowInstance: null, // 由 useWorkflowViewManagement 外部管理
-        elements: [],
-        viewport: initialWorkflowData.viewport,
-        groupInterfaceInfo: null,
-        isLoaded: false, // 初始标记为未加载
-      };
+      // Roo: 创建 initialState (移除了 Proxy)
+      const initialState = createTabWorkflowState(internalId, tabInfo); // 更新函数调用
       tabStates.set(internalId, initialState);
       state = initialState;
       // 移除了 ensureHistoryState 调用
@@ -532,7 +576,23 @@ function createWorkflowManager() {
     const state = tabStates.get(internalId);
     if (state && !state.isDirty) {
       state.isDirty = true;
+
+      // Roo: 诊断 - 在调用 tabStore.updateTab 之前检查 elements
+      // const elementsBeforeUpdateTab = tabStates.get(internalId)?.elements;
+      // if (elementsBeforeUpdateTab) {
+      //   console.log(`[DEBUG Manager - markAsDirty] BEFORE tabStore.updateTab. Elements count: ${elementsBeforeUpdateTab.length}`, elementsBeforeUpdateTab.map((e: VueFlowNode | VueFlowEdge) => e.id));
+      // }
+
       tabStore.updateTab(internalId, { isDirty: true }); // 与 tabStore 同步
+
+      // Roo: 诊断 - 在调用 tabStore.updateTab 之后检查 elements
+      // const elementsAfterUpdateTab = tabStates.get(internalId)?.elements;
+      // if (elementsAfterUpdateTab) {
+      //   console.log(`[DEBUG Manager - markAsDirty] AFTER tabStore.updateTab. Elements count: ${elementsAfterUpdateTab.length}`, elementsAfterUpdateTab.map((e: VueFlowNode | VueFlowEdge) => e.id));
+      //   if (elementsBeforeUpdateTab && JSON.stringify(elementsBeforeUpdateTab.map(e => e.id)) !== JSON.stringify(elementsAfterUpdateTab.map(e => e.id))) {
+      //     console.error(`[DEBUG Manager - markAsDirty] Elements CHANGED after tabStore.updateTab!`);
+      //   }
+      // }
       // console.debug(`[useWorkflowManager/markAsDirty] 标签页 ${internalId} 已标记为脏。`);
     } else if (!state) {
       console.warn(
@@ -604,9 +664,9 @@ function createWorkflowManager() {
     }
 
     // 深拷贝传入的数据以确保隔离
-    const newElements = JSON.parse(JSON.stringify(elements));
-    const newInputs = JSON.parse(JSON.stringify(inputs));
-    const newOutputs = JSON.parse(JSON.stringify(outputs));
+    const newElements = klona(elements);
+    const newInputs = klona(inputs);
+    const newOutputs = klona(outputs);
 
     // 检查状态是否真的发生了变化
     const elementsChanged = JSON.stringify(state.elements) !== JSON.stringify(newElements);
@@ -620,17 +680,55 @@ function createWorkflowManager() {
       //   `[setElementsAndInterface] 标签页 ${internalId} 的状态已更改。更新元素: ${elementsChanged}, 输入: ${inputsChanged}, 输出: ${outputsChanged}`
       // );
 
+      // Roo: Log before applying element updates
+      // console.log(`[DEBUG Manager - setElementsAndInterface] Tab ${internalId}. BEFORE state.elements assignment.`);
+      // console.log(`[DEBUG Manager - setElementsAndInterface] Current state.elements (count ${state.elements.length}):`, state.elements.map((e: VueFlowNode | VueFlowEdge) => e.id));
+      // console.log(`[DEBUG Manager - setElementsAndInterface] newElements to assign (count ${newElements.length}):`, newElements.map((e: VueFlowNode | VueFlowEdge) => e.id));
+
       // 应用更新
       state.elements = newElements;
+
+      // debugger; // Roo: 断点1 - elements 刚刚被修改
+
+      // Roo: Log after applying element updates
+      // console.log(`[DEBUG Manager - setElementsAndInterface] Tab ${internalId}. AFTER state.elements assignment.`);
+      // console.log(`[DEBUG Manager - setElementsAndInterface] New state.elements (count ${state.elements.length}):`, state.elements.map((e: VueFlowNode | VueFlowEdge) => e.id));
+
       state.workflowData.interfaceInputs = newInputs;
       state.workflowData.interfaceOutputs = newOutputs;
 
+      // Roo: 诊断日志 - 直接从 tabStates 重新获取并检查
+      // const reFetchedState = tabStates.get(internalId);
+      // if (reFetchedState) {
+      //   console.log(`[DEBUG Manager - setElementsAndInterface] Re-fetched state from tabStates.elements (count ${reFetchedState.elements.length}):`, reFetchedState.elements.map((e: VueFlowNode | VueFlowEdge) => e.id));
+      //   if (JSON.stringify(reFetchedState.elements) === JSON.stringify(newElements)) {
+      //     console.log(`[DEBUG Manager - setElementsAndInterface] Re-fetched state MATCHES newElements.`);
+      //   } else {
+      //     console.error(`[DEBUG Manager - setElementsAndInterface] Re-fetched state MISMATCHES newElements! Current reFetchedState.elements:`, JSON.stringify(reFetchedState.elements.map(e => e.id)), `Expected newElements:`, JSON.stringify(newElements.map(e => e.id)));
+      //   }
+      // } else {
+      //   console.error(`[DEBUG Manager - setElementsAndInterface] Could not re-fetch state for ${internalId} from tabStates.`);
+      // }
+
       // 标记为脏并记录历史
+      // Roo: 诊断 - 检查调用 markAsDirty 前的 isDirty 状态
+      // if (state) { // 确保 state 存在
+      // console.log(`[DEBUG Manager - setElementsAndInterface] About to call markAsDirty. Current state.isDirty: ${state.isDirty}`);
+      // }
       markAsDirty(internalId);
       // 移除了 recordHistory 调用
     } else {
       // console.debug(`[setElementsAndInterface] 标签页 ${internalId} 的状态未更改。跳过更新。`);
     }
+
+    // Roo: 在函数真正返回前，最后一次检查 tabStates Map
+    // const finalCheckState = tabStates.get(internalId);
+    // if (finalCheckState) {
+    // console.log(`[DEBUG Manager - setElementsAndInterface] FINAL CHECK before function return. Elements count: ${finalCheckState.elements.length}):`, finalCheckState.elements.map((e: VueFlowNode | VueFlowEdge) => e.id));
+    // } else {
+    // console.error(`[DEBUG Manager - setElementsAndInterface] FINAL CHECK: No state found for ${internalId} before function return.`);
+    // }
+    // debugger; // Roo: 断点2 - 函数即将返回
   }
 
   // --- 新增：状态快照获取与应用 ---
@@ -668,6 +766,18 @@ function createWorkflowManager() {
    * @param snapshot 要应用的状态快照。
    */
   function applyStateSnapshot(internalId: string, snapshot: WorkflowStateSnapshot): boolean {
+    // Roo: 诊断日志，非常重要！
+    // const currentElementsBeforeApply = tabStates.get(internalId)?.elements;
+    // const currentElementsCountBeforeApply = currentElementsBeforeApply?.length ?? 'N/A';
+    // const currentElementIdsBeforeApply = currentElementsBeforeApply?.map((e: VueFlowNode | VueFlowEdge) => e.id) ?? 'N/A';
+
+    // console.log(
+    //   `[DEBUG Manager - applyStateSnapshot] CALLED for tab ${internalId}. ` +
+    //   `Snapshot elements count: ${snapshot.elements.length}, IDs: ${JSON.stringify(snapshot.elements.map(e => e.id))}. ` +
+    //   `Current elements BEFORE apply (count ${currentElementsCountBeforeApply}): ${JSON.stringify(currentElementIdsBeforeApply)}`
+    // );
+    // console.trace(`[DEBUG Manager - applyStateSnapshot] Call stack`); // 打印调用栈
+
     const state = tabStates.get(internalId);
     if (!state) {
       console.error(`[applyStateSnapshot] 无法应用快照，未找到标签页 ${internalId} 的状态`);
@@ -927,6 +1037,68 @@ function createWorkflowManager() {
   }
   // --- 结束新增预览目标管理 ---
 
+  // --- 新增：更新节点内部数据 ---
+  /**
+   * 更新指定标签页中单个节点的内部 data 对象中的特定属性。
+   * 这个方法会标记标签页为脏状态，但不会自动记录历史。
+   * @param internalId 目标标签页的内部 ID。
+   * @param nodeId 节点 ID。
+   * @param dataPayload 一个包含要更新的 data 属性的局部对象。
+   */
+  async function updateNodeInternalData(
+    internalId: string,
+    nodeId: string,
+    dataPayload: Partial<VueFlowNode['data']> // 允许部分更新 data
+  ) {
+    const state = await ensureTabState(internalId, false); // 确保状态存在
+    if (!state) {
+      console.warn(`[updateNodeInternalData] 无法更新数据，未找到标签页 ${internalId} 的状态`);
+      return;
+    }
+
+    const nodeIndex = state.elements.findIndex(
+      (el) => el.id === nodeId && !("source" in el) // 确保是节点
+    );
+
+    if (nodeIndex !== -1) {
+      const currentNode = state.elements[nodeIndex] as VueFlowNode; // 类型断言
+      const currentData = currentNode.data || {}; // 确保 data 对象存在
+
+      // 创建新的 data 对象，合并旧数据和新数据
+      // 使用 klona 深拷贝 dataPayload 中的对象值，以避免意外的引用共享
+      const newData = {
+        ...currentData,
+        ...Object.fromEntries(
+          Object.entries(dataPayload).map(([key, value]) => [
+            key,
+            typeof value === 'object' && value !== null ? klona(value) : value,
+          ])
+        ),
+      };
+
+      // 只有当 data 实际改变时才更新并标记为脏
+      if (JSON.stringify(currentData) !== JSON.stringify(newData)) {
+        // console.debug(
+        //   `[updateNodeInternalData] 正在更新标签页 ${internalId} 中节点 ${nodeId} 的内部数据。`
+        // );
+        state.elements[nodeIndex] = {
+          ...currentNode,
+          data: newData,
+        };
+        markAsDirty(internalId);
+      } else {
+        // console.debug(
+        //   `[updateNodeInternalData] 标签页 ${internalId} 中节点 ${nodeId} 的内部数据未更改。跳过更新。`
+        // );
+      }
+    } else {
+      console.warn(
+        `[updateNodeInternalData] 未在标签页 ${internalId} 中找到要更新数据的节点: ${nodeId}`
+      );
+    }
+  }
+  // --- 结束新增 ---
+
   // --- 返回公共 API ---
   return {
     // Getters / 计算属性
@@ -958,6 +1130,7 @@ function createWorkflowManager() {
     updateNodeDimensions, // <-- 导出新方法
     setPreviewTarget, // <-- 导出新方法
     clearPreviewTarget, // <-- 导出新方法
+    updateNodeInternalData, // <-- 导出新方法
 
     // 移除了 undo 和 redo
 

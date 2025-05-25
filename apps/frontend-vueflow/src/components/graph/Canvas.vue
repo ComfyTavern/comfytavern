@@ -1,10 +1,10 @@
 <template>
   <div ref="canvasContainerRef" class="canvas-container h-full w-full" @dragover.prevent="onDragOver"
     @dragleave="onDragLeave" @drop.prevent="onDrop" @dragenter.prevent>
-    <VueFlow v-bind="$attrs" ref="vueFlowRef" v-model="internalElements" :node-types="props.nodeTypes" :default-viewport="{ x: 0, y: 0, zoom: 1 }"
-      :min-zoom="0.2" :max-zoom="4" fit-view-on-init :connect-on-drop="true" :snap-to-grid="true"
-      :snapping-tolerance="10" :selectionMode="SelectionMode.Partial" @edges-change="handleEdgesChange"
-      :panOnDrag="true" :zoomOnScroll="true">
+    <VueFlow v-bind="$attrs" ref="vueFlowRef" v-model="internalElements" :node-types="props.nodeTypes"
+      :default-viewport="{ x: 0, y: 0, zoom: 1 }" :min-zoom="0.2" :max-zoom="4" fit-view-on-init :connect-on-drop="true"
+      :snap-to-grid="true" :snapping-tolerance="10" :selectionMode="SelectionMode.Partial"
+      @edges-change="handleEdgesChange" :panOnDrag="true" :zoomOnScroll="true">
       <!-- 背景 -->
       <Background :pattern-color="isDark ? '#555' : '#aaa'" :gap="16" />
 
@@ -27,13 +27,10 @@
 
     <!-- 节点右键菜单 (根据选中数量显示不同内容) -->
     <NodeContextMenu :visible="showNodeContextMenu" :position="contextMenuPosition" :nodeId="selectedNodeId"
-      :selected-node-count="currentNodeSelectionCount"
-      @edit="editNode" @duplicate="duplicateNode" @connect="connectNode" @disconnect="disconnectNode"
-      @delete="deleteNode"
-      @copy-selection="handleCopySelection"
+      :selected-node-count="currentNodeSelectionCount" @edit="editNode" @duplicate="duplicateNode"
+      @connect="connectNode" @disconnect="disconnectNode" @delete="deleteNode" @copy-selection="handleCopySelection"
       @create-group-from-selection="handleCreateGroupFromSelection"
-      @create-frame-for-selection="handleCreateFrameForSelection"
-      @delete-selection="handleDeleteSelection"
+      @create-frame-for-selection="handleCreateFrameForSelection" @delete-selection="handleDeleteSelection"
       @close="closeNodeContextMenu" />
 
     <!-- 插槽右键菜单 -->
@@ -97,34 +94,6 @@ watch(internalElements, (newElements, oldElements) => {
   const oldEdges = oldElements?.filter(el => 'source' in el) || [];
   const newEdges = newElements?.filter(el => 'source' in el) || [];
 
-  // 调试连线问题 - 打印画布上显示的连线
-  if (newEdges.length !== oldEdges.length) {
-    console.debug(`[Canvas DEBUG] 连线数量变化: ${oldEdges.length} -> ${newEdges.length}`);
-    // 详细打印新增或删除的连线
-    if (newEdges.length > oldEdges.length) {
-      const addedEdges = newEdges.filter(newEdge =>
-        !oldEdges.some(oldEdge => oldEdge.id === newEdge.id)
-      );
-      console.debug(`[Canvas DEBUG] 新增连线:`, addedEdges.map(e => ({
-        id: e.id,
-        source: e.source,
-        sourceHandle: e.sourceHandle,
-        target: e.target,
-        targetHandle: e.targetHandle
-      })));
-    } else {
-      const removedEdges = oldEdges.filter(oldEdge =>
-        !newEdges.some(newEdge => newEdge.id === oldEdge.id)
-      );
-      console.debug(`[Canvas DEBUG] 移除连线:`, removedEdges.map(e => ({
-        id: e.id,
-        source: e.source,
-        sourceHandle: e.sourceHandle,
-        target: e.target,
-        targetHandle: e.targetHandle
-      })));
-    }
-  }
 
   const totalNodes = newNodes.length; // 获取当前节点总数
 
@@ -465,9 +434,9 @@ onNodeContextMenu(({ event, node }) => {
   // 只有当被右键点击的节点本身就在多选集合中时，才真正按多选处理
   const isClickedNodeSelected = selectedNodes.some(n => n.id === node.id);
   if (selectedNodes.length > 1 && isClickedNodeSelected) {
-      currentNodeSelectionCount.value = selectedNodes.length;
+    currentNodeSelectionCount.value = selectedNodes.length;
   } else {
-      currentNodeSelectionCount.value = 1; // 视为单选操作
+    currentNodeSelectionCount.value = 1; // 视为单选操作
   }
   // console.debug(`[Canvas] Node context menu on ${node.id}. Effective selection count: ${currentNodeSelectionCount.value}`);
 
@@ -509,49 +478,49 @@ onPaneContextMenu((event) => {
 
 // 连接建立事件
 onConnect((params) => {
-  console.debug('[Canvas DEBUG] 收到连接事件:', params.source, params.sourceHandle, '->', params.target, params.targetHandle);
-  
+  // console.debug('[Canvas DEBUG] 收到连接事件:', params.source, params.sourceHandle, '->', params.target, params.targetHandle);
+
   // 连线前，获取当前连线状态
-  const beforeEdges = getEdges.value;
-  console.debug('[Canvas DEBUG] 连接前画布边数量:', beforeEdges.length);
-  
+  // const beforeEdges = getEdges.value;
+  // console.debug('[Canvas DEBUG] 连接前画布边数量:', beforeEdges.length);
+
   // 处理连接请求，确保单输入插槽只有一个输入连接
   const newEdge = handleConnect(params); // 调用 composable 中的 handleConnect
-  
+
   if (newEdge) {
-    console.debug('[Canvas DEBUG] 连接成功创建, 新边ID:', newEdge.id);
-    
+    // console.debug('[Canvas DEBUG] 连接成功创建, 新边ID:', newEdge.id);
+
     // 连线后，再次获取状态并比较
-    setTimeout(() => {
-      const afterEdges = getEdges.value;
-      console.debug('[Canvas DEBUG] 连接后画布边数量:', afterEdges.length);
-      
-      // 验证新创建的边是否真的存在于画布中
-      const edgeExists = afterEdges.some(e => e.id === newEdge.id);
-      console.debug(`[Canvas DEBUG] 新边 ${newEdge.id} 是否存在于画布中:`, edgeExists);
-      
-      // 对比工作流状态中的边
-      if (activeTabId.value) {
-        const storeEdges = workflowStore.getElements(activeTabId.value).filter(el => 'source' in el);
-        console.debug('[Canvas DEBUG] 工作流状态中的边数量:', storeEdges.length);
-        
-        // 比较画布和状态中的边
-        if (storeEdges.length !== afterEdges.length) {
-          console.warn('[Canvas DEBUG] 画布和状态中的边数量不一致!');
-          console.debug('[Canvas DEBUG] 工作流状态中的边:', storeEdges.map(e => ({
-            id: e.id,
-            source: e.source,
-            sourceHandle: e.sourceHandle,
-            target: e.target,
-            targetHandle: e.targetHandle
-          })));
-        }
-      }
-    }, 100);
-    
+    // setTimeout(() => {
+    //   const afterEdges = getEdges.value;
+    //   console.debug('[Canvas DEBUG] 连接后画布边数量:', afterEdges.length);
+
+    //   // 验证新创建的边是否真的存在于画布中
+    //   const edgeExists = afterEdges.some(e => e.id === newEdge.id);
+    //   console.debug(`[Canvas DEBUG] 新边 ${newEdge.id} 是否存在于画布中:`, edgeExists);
+
+    //   // 对比工作流状态中的边
+    //   if (activeTabId.value) {
+    //     const storeEdges = workflowStore.getElements(activeTabId.value).filter(el => 'source' in el);
+    //     console.debug('[Canvas DEBUG] 工作流状态中的边数量:', storeEdges.length);
+
+    //     // 比较画布和状态中的边
+    //     if (storeEdges.length !== afterEdges.length) {
+    //       console.warn('[Canvas DEBUG] 画布和状态中的边数量不一致!');
+    //       console.debug('[Canvas DEBUG] 工作流状态中的边:', storeEdges.map(e => ({
+    //         id: e.id,
+    //         source: e.source,
+    //         sourceHandle: e.sourceHandle,
+    //         target: e.target,
+    //         targetHandle: e.targetHandle
+    //       })));
+    //     }
+    //   }
+    // }, 100);
+
     emit('connect', params);
   } else {
-    console.debug('[Canvas DEBUG] 连接创建失败');
+    // console.debug('[Canvas DEBUG] 连接创建失败');
   }
 });
 
@@ -643,9 +612,9 @@ const handleCreateGroupFromSelection = () => {
   // console.debug('[Canvas] Handling create-group-from-selection event from context menu for nodes:', selectedNodeIds);
 
   if (selectedNodeIds.length <= 1) {
-      console.log("Need to select more than one node to create a group.");
-      alert("请选择多个节点来创建节点组。"); // 用户提示
-      return;
+    console.log("Need to select more than one node to create a group.");
+    alert("请选择多个节点来创建节点组。"); // 用户提示
+    return;
   }
 
   if (!activeTabId.value) {
@@ -689,20 +658,20 @@ const handleCreateFrameForSelection = () => {
     const y = node.position.y;
 
     if (!isNaN(nodeWidth) && !isNaN(nodeHeight)) {
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x + nodeWidth);
-        maxY = Math.max(maxY, y + nodeHeight);
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x + nodeWidth);
+      maxY = Math.max(maxY, y + nodeHeight);
     } else {
-        console.warn(`[Canvas] Node ${node.id} has invalid dimensions, using fallback for frame calculation.`);
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x + 150);
-        maxY = Math.max(maxY, y + 50);
+      console.warn(`[Canvas] Node ${node.id} has invalid dimensions, using fallback for frame calculation.`);
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x + 150);
+      maxY = Math.max(maxY, y + 50);
     }
   });
 
-   if (minX === Infinity || minY === Infinity || maxX === -Infinity || maxY === -Infinity) {
+  if (minX === Infinity || minY === Infinity || maxX === -Infinity || maxY === -Infinity) {
     console.error("[Canvas] Failed to calculate bounding box for selected nodes.");
     alert("无法为选中节点创建分组框，计算边界失败。");
     return;
@@ -787,10 +756,14 @@ onUnmounted(() => {
 .canvas-container {
   width: 100%;
   height: 100%;
-  user-select: none; /* 禁止在画布容器上选择文本 */
-  -webkit-user-select: none; /* 兼容旧版 WebKit */
-  -moz-user-select: none; /* 兼容 Firefox */
-  -ms-user-select: none; /* 兼容 IE/Edge */
+  user-select: none;
+  /* 禁止在画布容器上选择文本 */
+  -webkit-user-select: none;
+  /* 兼容旧版 WebKit */
+  -moz-user-select: none;
+  /* 兼容 Firefox */
+  -ms-user-select: none;
+  /* 兼容 IE/Edge */
 }
 
 /* VueFlow容器样式 */

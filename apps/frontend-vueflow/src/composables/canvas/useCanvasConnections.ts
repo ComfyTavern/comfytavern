@@ -121,19 +121,19 @@ export function useCanvasConnections({
     // Compatibility based on SocketMatchCategory if DataFlowTypes differ but one is STRING
     // Example: Source is STRING, Target has matchCategory CODE
     if (sourceDft === DataFlowType.STRING && targetCats.includes(BuiltInSocketMatchCategory.CODE)) {
-        return true;
+      return true;
     }
     // Example: Source has matchCategory CODE, Target is STRING
     if (sourceCats.includes(BuiltInSocketMatchCategory.CODE) && targetDft === DataFlowType.STRING) {
-        return true;
+      return true;
     }
     // Example: Source is STRING, Target has matchCategory COMBO_OPTION
     if (sourceDft === DataFlowType.STRING && targetCats.includes(BuiltInSocketMatchCategory.COMBO_OPTION)) {
-        return true;
+      return true;
     }
-     // Example: Source has matchCategory COMBO_OPTION, Target is STRING
+    // Example: Source has matchCategory COMBO_OPTION, Target is STRING
     if (sourceCats.includes(BuiltInSocketMatchCategory.COMBO_OPTION) && targetDft === DataFlowType.STRING) {
-        return true;
+      return true;
     }
 
     return false;
@@ -174,7 +174,7 @@ export function useCanvasConnections({
       // Roo: Correct lookup for GroupInput source handle definition
       // The definition should be fetched from the central workflow state (interfaceInputs)
       const activeState = workflowStore.getActiveTabState();
-      console.log(`[DEBUG GroupInput Lookup] Trying to find handle: '${sourceHandle}' in workflowData.interfaceInputs:`, activeState?.workflowData?.interfaceInputs);
+      // console.log(`[DEBUG GroupInput Lookup] Trying to find handle: '${sourceHandle}' in workflowData.interfaceInputs:`, activeState?.workflowData?.interfaceInputs);
       sourceOutput = activeState?.workflowData?.interfaceInputs?.[sourceHandle];
     } else if (getNodeType(sourceNode) === 'core:NodeGroup') {
       sourceOutput = (sourceNode.data as any)?.groupInterface?.outputs?.[sourceHandle];
@@ -293,7 +293,7 @@ export function useCanvasConnections({
     if (currentTabIdCheck) {
       const currentElements = workflowStore.getElements(currentTabIdCheck); // 获取当前元素
       const existingEdge = currentElements.find(
-        (el) =>
+        (el: Node | Edge) => // 使用正确的类型别名 Node
           !("position" in el) && // 确保是边
           el.source === source &&
           el.sourceHandle === sourceHandle &&
@@ -326,7 +326,7 @@ export function useCanvasConnections({
       // Roo: Correct lookup for GroupInput source handle definition
       // The definition should be fetched from the central workflow state (interfaceInputs)
       const activeState = workflowStore.getActiveTabState();
-      console.log(`[DEBUG GroupInput Lookup in handleConnect] Trying to find handle: '${sourceHandle!}' in workflowData.interfaceInputs:`, activeState?.workflowData?.interfaceInputs);
+      // console.log(`[DEBUG GroupInput Lookup in handleConnect] Trying to find handle: '${sourceHandle!}' in workflowData.interfaceInputs:`, activeState?.workflowData?.interfaceInputs);
       sourceOutputDef = activeState?.workflowData?.interfaceInputs?.[sourceHandle!];
     } else if (getNodeType(sourceNode) === 'core:NodeGroup') {
       sourceOutputDef = (sourceNode.data as any)?.groupInterface?.outputs?.[sourceHandle!];
@@ -366,7 +366,7 @@ export function useCanvasConnections({
       inputs: Record<string, GroupSlotInfo>;
       outputs: Record<string, GroupSlotInfo>;
     } | null = null;
-    let requiresInterfaceUpdate = false;
+    // let requiresInterfaceUpdate = false; // 移除了未使用的变量
     // console.debug(`[handleConnect] Initial DFTs: Source=${originalSourceDft}, Target=${originalTargetDft}`);
 
     const isSourceNodeConvertible =
@@ -375,7 +375,7 @@ export function useCanvasConnections({
     const isTargetNodeConvertible =
       originalTargetDft === DataFlowType.CONVERTIBLE_ANY ||
       originalTargetCats.includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
-    
+
     const isSourceNodeWildcard =
       originalSourceDft === DataFlowType.WILDCARD ||
       originalSourceCats.includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD);
@@ -386,29 +386,29 @@ export function useCanvasConnections({
 
     // Helper to create newSlotInfo for syncInterfaceSlotFromConnection
     const createSyncSlotInfo = (
-        baseSlot: GroupSlotInfo,
-        newDft: DataFlowTypeName,
-        newCats: string[],
-        connectedSlot: GroupSlotInfo,
-        connectedNode: Node,
-        connectedHandleKey: string
-      ): GroupSlotInfo => {
-        const connectedCurrentValue = connectedNode.data?.values?.[connectedHandleKey];
-        return {
-          ...baseSlot, // Keep original key, multi, allowDynamicType etc.
-          dataFlowType: newDft,
-          matchCategories: newCats,
-          // Update display name and description from the connected slot
-          displayName: connectedSlot.displayName || connectedHandleKey,
-          customDescription: connectedSlot.customDescription || "",
-          config: {
-            ...baseSlot.config,
-            default: connectedCurrentValue ?? getEffectiveDefaultValue(connectedSlot),
-            min: connectedSlot.config?.min ?? baseSlot.config?.min,
-            max: connectedSlot.config?.max ?? baseSlot.config?.max,
-          },
-          // type: newDft, // Keep the old 'type' field consistent for now if syncInterfaceSlotFromConnection relies on it
-        };
+      baseSlot: GroupSlotInfo,
+      newDft: DataFlowTypeName,
+      newCats: string[],
+      connectedSlot: GroupSlotInfo,
+      connectedNode: Node,
+      connectedHandleKey: string
+    ): GroupSlotInfo => {
+      const connectedCurrentValue = connectedNode.data?.values?.[connectedHandleKey];
+      return {
+        ...baseSlot, // Keep original key, multi, allowDynamicType etc.
+        dataFlowType: newDft,
+        matchCategories: newCats,
+        // Update display name and description from the connected slot
+        displayName: connectedSlot.displayName || connectedHandleKey,
+        customDescription: connectedSlot.customDescription || "",
+        config: {
+          ...baseSlot.config,
+          default: connectedCurrentValue ?? getEffectiveDefaultValue(connectedSlot),
+          min: connectedSlot.config?.min ?? baseSlot.config?.min,
+          max: connectedSlot.config?.max ?? baseSlot.config?.max,
+        },
+        // type: newDft, // Keep the old 'type' field consistent for now if syncInterfaceSlotFromConnection relies on it
+      };
     };
 
 
@@ -429,7 +429,7 @@ export function useCanvasConnections({
         const currentTabId = tabStore.activeTabId;
         if (currentTabId) {
           const syncResult = syncInterfaceSlotFromConnection(currentTabId, sourceNode.id, sourceHandle!, newSlotInfo, "inputs");
-          if (syncResult) { interfaceUpdateResult = syncResult; requiresInterfaceUpdate = true; }
+          if (syncResult) { interfaceUpdateResult = syncResult; /* requiresInterfaceUpdate = true; */ }
         }
       }
     } else if (isTargetNodeConvertible && !isSourceNodeConvertible && !isSourceNodeWildcard) {
@@ -452,22 +452,22 @@ export function useCanvasConnections({
           const syncResult = syncInterfaceSlotFromConnection(currentTabId, targetNode.id, targetHandle!, newSlotInfo, centralDirection);
           if (syncResult) {
             if (!interfaceUpdateResult) interfaceUpdateResult = syncResult;
-            requiresInterfaceUpdate = true;
+            // requiresInterfaceUpdate = true;
           }
         }
       }
     } else if (isTargetNodeWildcard && !isSourceNodeConvertible) {
-        // Target is WILDCARD, adopts Source's type (if source is not CONVERTIBLE_ANY)
-        finalTargetDft = originalSourceDft;
-        finalTargetCats = [...originalSourceCats]; // Copy source categories
-        // Potentially update targetInputDef if WILDCARD type needs to be "materialized" in the definition
-        // For now, style props will use finalTargetDft. No interface sync needed for WILDCARD target type change.
+      // Target is WILDCARD, adopts Source's type (if source is not CONVERTIBLE_ANY)
+      finalTargetDft = originalSourceDft;
+      finalTargetCats = [...originalSourceCats]; // Copy source categories
+      // Potentially update targetInputDef if WILDCARD type needs to be "materialized" in the definition
+      // For now, style props will use finalTargetDft. No interface sync needed for WILDCARD target type change.
     } else if (isSourceNodeWildcard && !isTargetNodeConvertible) {
-        // Source is WILDCARD, adopts Target's type (if target is not CONVERTIBLE_ANY)
-        // This case is less common for styling as output usually dictates.
-        // finalSourceDft = originalTargetDft;
-        // finalSourceCats = [...originalTargetCats];
-        // No interface sync needed for WILDCARD source type change.
+      // Source is WILDCARD, adopts Target's type (if target is not CONVERTIBLE_ANY)
+      // This case is less common for styling as output usually dictates.
+      // finalSourceDft = originalTargetDft;
+      // finalSourceCats = [...originalTargetCats];
+      // No interface sync needed for WILDCARD source type change.
     }
 
 
@@ -512,23 +512,23 @@ export function useCanvasConnections({
     };
 
     // --- DEBUGGING START ---
-    console.debug('[useCanvasConnections DEBUG] 准备添加边:', {
-      id: newEdge.id,
-      source: newEdge.source,
-      sourceHandle: newEdge.sourceHandle,
-      target: newEdge.target,
-      targetHandle: newEdge.targetHandle,
-      finalSourceDft,
-      finalTargetDft
-    });
+    // console.debug('[useCanvasConnections DEBUG] 准备添加边:', {
+    //   id: newEdge.id,
+    //   source: newEdge.source,
+    //   sourceHandle: newEdge.sourceHandle,
+    //   target: newEdge.target,
+    //   targetHandle: newEdge.targetHandle,
+    //   finalSourceDft,
+    //   finalTargetDft
+    // });
     // --- DEBUGGING END ---
 
     // 6. 添加边并处理接口更新（如果需要）
-    console.debug(`[handleConnect] Final check before adding edge: requiresInterfaceUpdate=${requiresInterfaceUpdate}, interfaceUpdateResult=`, interfaceUpdateResult);
+    // console.debug(`[handleConnect] Final check before adding edge: requiresInterfaceUpdate=${requiresInterfaceUpdate}, interfaceUpdateResult=`, interfaceUpdateResult);
     // Use interfaceUpdateResult directly as the condition and type guard
     // If interfaceUpdateResult is truthy (non-null), it means requiresInterfaceUpdate must have been true at some point.
     if (interfaceUpdateResult) {
-      console.debug("[handleConnect] Path chosen: handleConnectionWithInterfaceUpdate (interfaceUpdateResult is non-null)");
+      // console.debug("[handleConnect] Path chosen: handleConnectionWithInterfaceUpdate (interfaceUpdateResult is non-null)");
       const currentTabId = tabStore.activeTabId;
       if (currentTabId) {
         // 创建历史记录条目
@@ -547,6 +547,16 @@ export function useCanvasConnections({
         });
 
         // 调用 store action 原子性地处理边和接口更新
+        // console.debug(`[DEBUG Roo] Before workflowStore.handleConnectionWithInterfaceUpdate:`, {
+        //   tabId: currentTabId,
+        //   edgeToAdd: JSON.parse(JSON.stringify(newEdge)), // 深拷贝以便日志记录快照
+        //   updatedInputs: JSON.parse(JSON.stringify(interfaceUpdateResult.inputs)),
+        //   updatedOutputs: JSON.parse(JSON.stringify(interfaceUpdateResult.outputs)),
+        //   sourceNodeId: sourceNode.id,
+        //   targetNodeId: targetNode.id,
+        //   historyEntry: JSON.parse(JSON.stringify(entry)),
+        // });
+
         workflowStore.handleConnectionWithInterfaceUpdate(
           currentTabId,
           newEdge,
@@ -556,16 +566,23 @@ export function useCanvasConnections({
           targetNode.id,
           entry
         );
-        // console.log(`[DEBUG] Called handleConnectionWithInterfaceUpdate for edge ${newEdge.id}`);
+        // console.debug(`[DEBUG Roo] After workflowStore.handleConnectionWithInterfaceUpdate. Current VueFlow edges count: ${getEdges.value.length}`);
+        // const edgeInVueFlow = getEdges.value.find(e => e.id === newEdge.id);
+        // console.debug(`[DEBUG Roo] New edge ${newEdge.id} in VueFlow after store action:`, edgeInVueFlow ? JSON.parse(JSON.stringify(edgeInVueFlow)) : 'NOT FOUND IN VUEFLOW INSTANCE');
+
+        // 强制 VueFlow 实例检查其元素，这有时有助于解决响应性问题
+        // 这是一个尝试性的修复，可能需要更深入地了解 VueFlow 的内部机制
+        // addEdges([]); // 调用一个空操作，有时会触发 VueFlow 的内部更新
+
       } else {
         console.error("无法处理带接口更新的连接：找不到当前活动的标签页 ID。");
         // Fallback: 只添加边
         addEdges([newEdge]);
-        // console.log(`[DEBUG] Added edge ${newEdge.id} via fallback addEdges (no tab ID)`);
-        console.debug("新连接已添加 (Fallback - 无 Tab ID):", newEdge.id);
+        // console.debug(`[DEBUG Roo] Added edge ${newEdge.id} via fallback addEdges (no tab ID), current VueFlow edges count: ${getEdges.value.length}`);
+        // console.debug("新连接已添加 (Fallback - 无 Tab ID):", newEdge.id);
       }
     } else {
-      console.debug("[handleConnect] Path chosen: addEdgeAndRecord (or fallback)");
+      // console.debug("[handleConnect] Path chosen: addEdgeAndRecord (or fallback)");
       // 普通连接，调用 store action 添加边并记录历史
       const currentTabId = tabStore.activeTabId;
       if (currentTabId) {
@@ -582,25 +599,25 @@ export function useCanvasConnections({
           targetNodeId: target,
           targetHandle: targetHandle,
         });
-        console.debug("[useCanvasConnections DEBUG] 添加连接 (无接口更新):", {
-          id: newEdge.id,
-          source: newEdge.source,
-          sourceHandle: newEdge.sourceHandle,
-          target: newEdge.target,
-          targetHandle: newEdge.targetHandle
-        });
+        // console.debug("[useCanvasConnections DEBUG] 添加连接 (无接口更新):", {
+        //   id: newEdge.id,
+        //   source: newEdge.source,
+        //   sourceHandle: newEdge.sourceHandle,
+        //   target: newEdge.target,
+        //   targetHandle: newEdge.targetHandle
+        // });
         workflowStore.addEdgeAndRecord(currentTabId, newEdge, entry);
-        
+
         // 添加调试 - 验证边是否成功添加到状态
-        setTimeout(() => {
-          const currentTabState = workflowStore.getAllTabStates.get(currentTabId);
-          const stateEdges = currentTabState?.elements.filter((el: any) => 'source' in el) || [];
-          // 不使用Edge类型，而是使用any类型避免类型不匹配问题
-          const edgeExists = stateEdges.some((e: any) => e.id === newEdge.id);
-          console.debug(`[useCanvasConnections DEBUG] 边 ${newEdge.id} 添加到状态后检查: 是否存在=${edgeExists}, 状态中边总数=${stateEdges.length}`);
-        }, 50);
+        // setTimeout(() => {
+        //   const currentTabState = workflowStore.getAllTabStates.get(currentTabId);
+        //   const stateEdges = currentTabState?.elements.filter((el: any) => 'source' in el) || [];
+        //   // 不使用Edge类型，而是使用any类型避免类型不匹配问题
+        //   const edgeExists = stateEdges.some((e: any) => e.id === newEdge.id);
+        //   console.debug(`[useCanvasConnections DEBUG] 边 ${newEdge.id} 添加到状态后检查: 是否存在=${edgeExists}, 状态中边总数=${stateEdges.length}`);
+        // }, 50);
       } else {
-        console.error("无法添加普通连接并记录历史：找不到当前活动的标签页 ID。");
+        // console.error("无法添加普通连接并记录历史：找不到当前活动的标签页 ID。");
         // Fallback: 只添加边
         addEdges([newEdge]);
         // console.log(`[DEBUG] Added edge ${newEdge.id} via fallback addEdges (no tab ID, no history)`);
