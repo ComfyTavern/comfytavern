@@ -237,6 +237,11 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
       // 旧的 label 字段不再保存
     };
 
+    // 处理 inputConnectionOrders
+    if (vueNode.data?.inputConnectionOrders) {
+      storageNode.inputConnectionOrders = vueNode.data.inputConnectionOrders;
+    }
+
     return storageNode;
   });
 
@@ -387,7 +392,7 @@ export function transformWorkflowToVueFlow(
       // 将默认标签存入 data 以便 tooltip 使用
       vueFlowData.defaultLabel = nodeDefaultLabel;
 
-      return {
+      const vueFlowNodeObject: VueFlowNode = {
         id: storageNode.id, // <-- 使用 storageNode 的 ID
         type: storageNode.type,
         position: storageNode.position,
@@ -397,6 +402,17 @@ export function transformWorkflowToVueFlow(
         // zIndex is not part of WorkflowStorageNode, removed assignment
         label: nodeDisplayLabel, // 应用最终确定的显示标签
       };
+
+      // 处理 inputConnectionOrders
+      if (storageNode.inputConnectionOrders) {
+        // vueFlowData 应该总是被初始化的，但为了安全起见，我们检查一下
+        if (!vueFlowNodeObject.data) {
+          vueFlowNodeObject.data = {};
+        }
+        vueFlowNodeObject.data.inputConnectionOrders = storageNode.inputConnectionOrders;
+      }
+
+      return vueFlowNodeObject;
     }
   );
 

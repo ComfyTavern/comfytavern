@@ -1213,6 +1213,68 @@ export function useWorkflowInteractionCoordinator() {
     editorState.openOrFocusEditorTab(context);
   };
 
+  /**
+   * 更新节点输入连接顺序并记录历史。
+   * @param internalId - 标签页的内部 ID。
+   * @param nodeId - 目标节点的 ID。
+   * @param handleKey - 输入插槽的 key。
+   * @param orderedEdgeIds - 排序后的 Edge ID 列表。
+   * @param entry - 接收一个已创建的 HistoryEntry 对象。
+   */
+  async function updateNodeInputConnectionOrderAndRecord(
+    internalId: string,
+    nodeId: string,
+    handleKey: string,
+    orderedEdgeIds: string[],
+    entry: HistoryEntry
+  ) {
+    // 1. 获取当前快照
+    const currentSnapshot = workflowManager.getCurrentSnapshot(internalId);
+    if (!currentSnapshot) {
+      console.error(
+        `[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
+      );
+      return;
+    }
+
+    // 2. 创建下一个状态的深拷贝
+    const nextSnapshot = klona(currentSnapshot);
+
+    // 3. 修改 nextSnapshot
+    const targetNodeIndex = nextSnapshot.elements.findIndex(
+      (el) => el.id === nodeId && !("source" in el) // 确保是节点而不是边
+    );
+
+    if (targetNodeIndex === -1) {
+      console.error(
+        `[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] 在标签页 ${internalId} 中未找到节点 ${nodeId}。`
+      );
+      return;
+    }
+
+    const targetNode = nextSnapshot.elements[targetNodeIndex] as VueFlowNode;
+
+    // 断言找到的元素为 VueFlowNode 类型 (虽然 findIndex 已经部分保证了)
+    // if (!targetNode || "source" in targetNode) { // 'source' in targetNode 检查是否为边
+    //   console.error(`[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] 元素 ${nodeId} 不是一个有效的节点。`);
+    //   return;
+    // }
+
+    // 确保节点的 data 对象存在
+    targetNode.data = targetNode.data || {};
+    // 确保节点的 data.inputConnectionOrders 对象存在
+    targetNode.data.inputConnectionOrders = targetNode.data.inputConnectionOrders || {};
+
+    // 更新 inputConnectionOrders
+    targetNode.data.inputConnectionOrders[handleKey] = orderedEdgeIds;
+
+    // 4. 应用状态更新
+    await workflowManager.setElements(internalId, nextSnapshot.elements);
+
+    // 5. 记录历史
+    historyManager.recordSnapshot(internalId, entry, nextSnapshot);
+  }
+ 
   // 导出公共接口
   return {
     // --- 核心交互函数 ---
@@ -1231,7 +1293,8 @@ export function useWorkflowInteractionCoordinator() {
     updateWorkflowDescriptionAndRecord, // 更新工作流描述
     setPreviewTargetAndRecord, // 新增：设置/清除预览目标并记录历史
     openDockedEditorForNodeInput, // 新增：打开可停靠编辑器
-
+    updateNodeInputConnectionOrderAndRecord, // 新增：更新节点输入连接顺序
+ 
     // --- 预览相关 (来自 useWorkflowPreview) ---
     isPreviewEnabled, // 导出从 useWorkflowPreview 获取的预览状态
     // requestPreviewExecution 主要由上面的更新函数内部调用，通常不直接从协调器暴露

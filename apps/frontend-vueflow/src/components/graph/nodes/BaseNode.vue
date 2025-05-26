@@ -33,6 +33,11 @@ const props = defineProps<NodeProps>();
 
 const nodeRootRef = ref<HTMLDivElement | null>(null); // 节点根元素引用
 
+// 多输入插槽动态高度相关常量
+const singleLineHeight = 20; // px, 单条连接线的高度
+const lineGap = 4; // px, 连接线之间的间隙
+const padding = 10; // px, 上下留白
+
 const { width, isResizing, startResize } = useNodeResize(props); // 使用节点宽度调整 Composable
 const themeStore = useThemeStore();
 const { isDark } = storeToRefs(themeStore);
@@ -488,6 +493,35 @@ const openEditorForInput = (input: InputDefinition) => {
   );
 };
 // --- 结束辅助函数 ---
+
+// 计算多输入插槽的动态样式
+const multiInputSlotDynamicStyle = computed(() => {
+  const styles: Record<string, { height: string; display: string; alignItems: string }> = {};
+  if (finalInputs.value) {
+    for (const input of finalInputs.value) {
+      if (input.multi) {
+        const connectionCount = getInputConnectionCount(String(input.key));
+        // 只有当连接数大于0时才应用动态高度，否则使用默认高度
+        if (connectionCount > 0) {
+          const calculatedHeight = connectionCount * singleLineHeight +
+                              (connectionCount > 0 ? (connectionCount - 1) * lineGap : 0) +
+                              padding;
+          // 确保高度至少为 singleLineHeight + padding (即一条线的高度加上下间距)
+          // 或者至少是默认 Handle 容器的高度（约20-24px），这里用 singleLineHeight + padding 作为基准
+          const finalHeight = Math.max(calculatedHeight, singleLineHeight + padding / 2); // 调整为 padding/2 使得单条线时更紧凑
+          styles[String(input.key)] = {
+            height: `${finalHeight}px`,
+            display: 'flex', // 用于垂直居中 Handle
+            alignItems: 'center', // 用于垂直居中 Handle
+          };
+        }
+        // 如果 connectionCount 为 0，则不为此插槽生成特定样式，让其保持默认高度
+      }
+    }
+  }
+  return styles;
+});
+
 </script>
 
 <template>
@@ -796,6 +830,7 @@ const openEditorForInput = (input: InputDefinition) => {
               )
             "
             class="relative flex-shrink-0"
+            :style="multiInputSlotDynamicStyle[String(input.key)] || {}"
             @contextmenu.prevent.stop="emitSlotContextMenu($event, String(input.key), 'target')"
           >
             <!-- Handle 的容器 -->

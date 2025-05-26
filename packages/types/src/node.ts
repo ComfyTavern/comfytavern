@@ -305,6 +305,12 @@ export interface WorkflowStorageNode {
   customSlotDescriptions?: { inputs?: Record<string, string>; outputs?: Record<string, string> }; // (可选) 用户为此节点实例上特定插槽定义的描述
   inputValues?: Record<string, any>; // 输入插槽的存储值 (仅当与有效默认值不同时)
   configValues?: Record<string, any>; // 节点配置项的存储值
+  /**
+   * 可选属性，用于存储连接到此节点输入句柄的边的有序列表。
+   * key 是输入句柄的 ID (inputHandleId)。
+   * value 是一个字符串数组，表示连接到该输入句柄的边的 ID (edgeId) 的有序列表。
+   */
+  inputConnectionOrders?: Record<string, string[]>;
 }
 
 /**

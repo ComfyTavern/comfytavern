@@ -2,8 +2,10 @@
   <div ref="canvasContainerRef" class="canvas-container h-full w-full" @dragover.prevent="onDragOver"
     @dragleave="onDragLeave" @drop.prevent="onDrop" @dragenter.prevent>
     <VueFlow v-bind="$attrs" ref="vueFlowRef" v-model="internalElements" :node-types="props.nodeTypes"
-      :default-viewport="{ x: 0, y: 0, zoom: 1 }" :min-zoom="0.2" :max-zoom="4" fit-view-on-init :connect-on-drop="true"
+      :default-viewport="{ x: 0, y: 0, zoom: 1 }" :min-zoom="0.2" :max-zoom="4" fit-view-on-init
+      :connect-on-drop="true" :edges-updatable="true" :edge-updater-radius="15"
       :snap-to-grid="true" :snapping-tolerance="10" :selectionMode="SelectionMode.Partial"
+      :connection-line-component="UnplugConnectionLine"
       @edges-change="handleEdgesChange" :panOnDrag="true" :zoomOnScroll="true">
       <!-- 背景 -->
       <Background :pattern-color="isDark ? '#555' : '#aaa'" :gap="16" />
@@ -45,6 +47,7 @@
 import { ref, computed, onMounted, onUnmounted, type PropType } from 'vue' // 导入 PropType
 import { watch, nextTick } from 'vue'
 import { VueFlow, useVueFlow, SelectionMode, type NodeTypesObject } from '@vue-flow/core' // 导入 NodeTypesObject
+import UnplugConnectionLine from './edges/UnplugConnectionLine.vue'; // +++ 导入自定义连接线组件
 import { useNodeStore } from '../../stores/nodeStore'
 // workflowStore is needed by the composable, ensure it's available or imported if not already
 import { useWorkflowStore } from '../../stores/workflowStore'; // 导入 WorkflowStore
@@ -78,7 +81,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: Array<Node | Edge>]
   'node-click': [node: Node]
   'pane-ready': [instance: any] // Revert to emitting the hook instance, use 'any' for now
-  'connect': [connection: Connection]
+  'connect': [connection: Connection],
 }>();
 
 // 使用计算属性处理双向绑定
@@ -136,12 +139,12 @@ const {
   onNodeClick,
   onNodeContextMenu,
   onPaneReady,
-  onConnect,
+  // onConnect,
   onPaneContextMenu,
   project,
   getNodes,
-  removeEdges,
-  addEdges,
+  removeEdges, // Keep this for direct VueFlow operations if needed, e.g., invalidNodeGroupEdgeIds
+  // addEdges,    // Keep this for direct VueFlow operations if needed
   getEdges,
   // instance, // The instance is directly available in vueFlowInstance
   onMoveEnd,
@@ -161,14 +164,12 @@ const activeTabId = computed(() => tabStore.activeTabId); // 获取活动标签�
 
 // 初始化连线逻辑
 const {
-  handleConnect,
   removeNodeConnections,
   // setupConnectionHandlers 已移除，无需解构
 } = useCanvasConnections({
   getNodes,
   isDark,
-  removeEdges, // 传递 removeEdges
-  addEdges,    // 传递 addEdges
+  // removeEdges and addEdges are no longer passed if useCanvasConnections doesn't expect them
   getEdges     // 传递 getEdges
   // elements: internalElements // elements 选项已移除，无需传递
 });
@@ -476,53 +477,9 @@ onPaneContextMenu((event) => {
 // 全选节点 - Logic moved to useCanvasKeyboardShortcuts
 // const selectAllNodes = () => { ... };
 
-// 连接建立事件
-onConnect((params) => {
-  // console.debug('[Canvas DEBUG] 收到连接事件:', params.source, params.sourceHandle, '->', params.target, params.targetHandle);
-
-  // 连线前，获取当前连线状态
-  // const beforeEdges = getEdges.value;
-  // console.debug('[Canvas DEBUG] 连接前画布边数量:', beforeEdges.length);
-
-  // 处理连接请求，确保单输入插槽只有一个输入连接
-  const newEdge = handleConnect(params); // 调用 composable 中的 handleConnect
-
-  if (newEdge) {
-    // console.debug('[Canvas DEBUG] 连接成功创建, 新边ID:', newEdge.id);
-
-    // 连线后，再次获取状态并比较
-    // setTimeout(() => {
-    //   const afterEdges = getEdges.value;
-    //   console.debug('[Canvas DEBUG] 连接后画布边数量:', afterEdges.length);
-
-    //   // 验证新创建的边是否真的存在于画布中
-    //   const edgeExists = afterEdges.some(e => e.id === newEdge.id);
-    //   console.debug(`[Canvas DEBUG] 新边 ${newEdge.id} 是否存在于画布中:`, edgeExists);
-
-    //   // 对比工作流状态中的边
-    //   if (activeTabId.value) {
-    //     const storeEdges = workflowStore.getElements(activeTabId.value).filter(el => 'source' in el);
-    //     console.debug('[Canvas DEBUG] 工作流状态中的边数量:', storeEdges.length);
-
-    //     // 比较画布和状态中的边
-    //     if (storeEdges.length !== afterEdges.length) {
-    //       console.warn('[Canvas DEBUG] 画布和状态中的边数量不一致!');
-    //       console.debug('[Canvas DEBUG] 工作流状态中的边:', storeEdges.map(e => ({
-    //         id: e.id,
-    //         source: e.source,
-    //         sourceHandle: e.sourceHandle,
-    //         target: e.target,
-    //         targetHandle: e.targetHandle
-    //       })));
-    //     }
-    //   }
-    // }, 100);
-
-    emit('connect', params);
-  } else {
-    // console.debug('[Canvas DEBUG] 连接创建失败');
-  }
-});
+// 连接建立事件处理已移至 useCanvasConnections.ts
+// onConnect hook (previously lines 482-527) has been removed as its logic
+// is now handled internally by useCanvasConnections.ts.
 
 // 处理来自 BaseNode 的插槽右键菜单事件
 const handleSlotContextMenu = (event: CustomEvent) => {
@@ -589,7 +546,7 @@ watch(invalidNodeGroupEdgeIds, (newInvalidIds, oldInvalidIds) => {
     // console.debug('[Canvas] Detected incompatible NodeGroup edges:', newInvalidIds);
     // 使用 nextTick 确保在 DOM 更新后执行移除操作，避免潜在的冲突
     nextTick(() => {
-      removeEdges(newInvalidIds);
+      removeEdges(newInvalidIds); // This removeEdges is from useVueFlow, for direct instance manipulation
       // 可选：通知用户
       alert(`因节点组接口变更或连接类型不兼容，已移除 ${newInvalidIds.length} 条连接。`);
       // removeEdges 会触发 getEdges 更新，进而可能重新计算 invalidNodeGroupEdgeIds
