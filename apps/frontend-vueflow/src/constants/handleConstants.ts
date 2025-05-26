@@ -20,7 +20,7 @@ export const HANDLE_VERTICAL_PADDING = 8;
  * 仿 Blender 细节：无连接时 Handle 至少为 N 倍单线视觉高度
  * 这个因子决定了即使没有连接，多输入 Handle 的最小高度。
  */
-export const MIN_MULTI_HANDLE_HEIGHT_FACTOR = 4;
+export const MIN_MULTI_HANDLE_HEIGHT_FACTOR = 2;
 
 /**
  * Handle 的宽度 (px)
