@@ -1,7 +1,7 @@
 <template>
   <div ref="canvasContainerRef" class="canvas-container h-full w-full" @dragover.prevent="onDragOver"
     @dragleave="onDragLeave" @drop.prevent="onDrop" @dragenter.prevent>
-    <VueFlow v-bind="$attrs" ref="vueFlowRef" v-model="internalElements" :node-types="props.nodeTypes"
+    <VueFlow v-bind="$attrs" ref="vueFlowRef" v-model="internalElements" :node-types="props.nodeTypes" :edge-types="edgeTypes"
       :default-viewport="{ x: 0, y: 0, zoom: 1 }" :min-zoom="0.2" :max-zoom="4" fit-view-on-init
       :connect-on-drop="true" :edges-updatable="true" :edge-updater-radius="15"
       :snap-to-grid="true" :snapping-tolerance="10" :selectionMode="SelectionMode.Partial"
@@ -44,10 +44,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, type PropType } from 'vue' // 导入 PropType
+import { ref, computed, onMounted, onUnmounted, type PropType, markRaw } from 'vue' // 导入 PropType 和 markRaw
 import { watch, nextTick } from 'vue'
 import { VueFlow, useVueFlow, SelectionMode, type NodeTypesObject } from '@vue-flow/core' // 导入 NodeTypesObject
-import UnplugConnectionLine from './edges/UnplugConnectionLine.vue'; // +++ 导入自定义连接线组件
+import UnplugConnectionLine from './edges/UnplugConnectionLine.vue';
+import SortedMultiTargetEdge from './edges/SortedMultiTargetEdge.vue'; // +++ 导入自定义边组件
 import { useNodeStore } from '../../stores/nodeStore'
 // workflowStore is needed by the composable, ensure it's available or imported if not already
 import { useWorkflowStore } from '../../stores/workflowStore'; // 导入 WorkflowStore
@@ -83,6 +84,10 @@ const emit = defineEmits<{
   'pane-ready': [instance: any] // Revert to emitting the hook instance, use 'any' for now
   'connect': [connection: Connection],
 }>();
+
+const edgeTypes = {
+  sortedMultiTarget: markRaw(SortedMultiTargetEdge),
+};
 
 // 使用计算属性处理双向绑定
 const internalElements = computed({

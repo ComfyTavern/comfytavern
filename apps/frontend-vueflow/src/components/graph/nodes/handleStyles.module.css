@@ -149,7 +149,7 @@
 
 /* 支持多个连接的输入插槽 (方形) */
 .handleMulti {
-  border-radius: 0 !important; /* 方形 */
+  /* border-radius: 0 !important; */ /* 方形 - 已由 JS 动态控制 */
 }
 
 /* BUTTON: 不显示 Handle，无需样式 */

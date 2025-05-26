@@ -28,15 +28,26 @@ import Tooltip from "../../common/Tooltip.vue"; // 导入提示框组件
 import MarkdownRenderer from "../../common/MarkdownRenderer.vue"; // 导入 Markdown 渲染器
 import { useWorkflowManager } from "../../../composables/workflow/useWorkflowManager"; // 导入工作流管理器
 import styles from "./handleStyles.module.css";
+// 移除重复导入: import type { InputDefinition } from "@comfytavern/types"; // InputDefinition 已在第12行导入
+import {
+  HANDLE_LINE_HEIGHT,
+  HANDLE_LINE_GAP,
+  HANDLE_VERTICAL_PADDING,
+  MIN_MULTI_HANDLE_HEIGHT_FACTOR,
+  HANDLE_WIDTH,
+} from "../../../constants/handleConstants"; // 导入共享常量
 
 const props = defineProps<NodeProps>();
 
 const nodeRootRef = ref<HTMLDivElement | null>(null); // 节点根元素引用
 
-// 多输入插槽动态高度相关常量
-const singleLineHeight = 20; // px, 单条连接线的高度
-const lineGap = 4; // px, 连接线之间的间隙
-const padding = 10; // px, 上下留白
+// 原有的多输入插槽动态高度相关常量 (用于Handle的父容器div) - 这些已不再使用
+// const singleLineHeight = 20; // px, 单条连接线的高度 (父容器概念)
+// const lineGap = 4; // px, 连接线之间的间隙 (父容器概念)
+// const padding = 10; // px, 上下留白 (父容器概念)
+
+// 常量已移至 handleConstants.ts
+
 
 const { width, isResizing, startResize } = useNodeResize(props); // 使用节点宽度调整 Composable
 const themeStore = useThemeStore();
@@ -491,39 +502,83 @@ const openEditorForInput = (input: InputDefinition) => {
     input, // input 本身就是 InputDefinition (或 DisplaySlotInfo)
     editorTitle
   );
-};
+}; // 正确结束 openEditorForInput 函数
 // --- 结束辅助函数 ---
 
-// 计算多输入插槽的动态样式
-const multiInputSlotDynamicStyle = computed(() => {
-  const styles: Record<string, { height: string; display: string; alignItems: string }> = {};
-  if (finalInputs.value) {
-    for (const input of finalInputs.value) {
-      if (input.multi) {
-        const connectionCount = getInputConnectionCount(String(input.key));
-        // 只有当连接数大于0时才应用动态高度，否则使用默认高度
-        if (connectionCount > 0) {
-          const calculatedHeight = connectionCount * singleLineHeight +
-                              (connectionCount > 0 ? (connectionCount - 1) * lineGap : 0) +
-                              padding;
-          // 确保高度至少为 singleLineHeight + padding (即一条线的高度加上下间距)
-          // 或者至少是默认 Handle 容器的高度（约20-24px），这里用 singleLineHeight + padding 作为基准
-          const finalHeight = Math.max(calculatedHeight, singleLineHeight + padding / 2); // 调整为 padding/2 使得单条线时更紧凑
-          styles[String(input.key)] = {
-            height: `${finalHeight}px`,
-            display: 'flex', // 用于垂直居中 Handle
-            alignItems: 'center', // 用于垂直居中 Handle
-          };
-        }
-        // 如果 connectionCount 为 0，则不为此插槽生成特定样式，让其保持默认高度
-      }
+// 新增：计算 Handle 动态样式的函数
+// (确保此函数定义在所有依赖它的计算属性如 multiInputSlotDynamicStyle 之前，
+// 并且在所有它依赖的常量如 handleLineHeight 等之后)
+const getDynamicHandleStyles = (input: InputDefinition, connectionCount: number) => {
+  const styles: Record<string, string> = {};
+  if (input.multi) {
+    let targetHeight: number;
+    const minLinesForAppearance = Math.max(1, MIN_MULTI_HANDLE_HEIGHT_FACTOR); // 使用导入的常量
+    const minHeightForMulti = (minLinesForAppearance * HANDLE_LINE_HEIGHT) + // 使用导入的常量
+                            Math.max(0, minLinesForAppearance - 1) * HANDLE_LINE_GAP + // 使用导入的常量
+                            HANDLE_VERTICAL_PADDING; // 使用导入的常量
+
+    if (connectionCount > 0) {
+      targetHeight = connectionCount * HANDLE_LINE_HEIGHT + // 使用导入的常量
+                     Math.max(0, connectionCount - 1) * HANDLE_LINE_GAP + // 使用导入的常量
+                     HANDLE_VERTICAL_PADDING; // 使用导入的常量
+      targetHeight = Math.max(targetHeight, minHeightForMulti);
+    } else {
+      targetHeight = minHeightForMulti;
     }
+    
+    styles.height = `${targetHeight}px !important`; // 添加 !important
+    styles.borderRadius = `${HANDLE_WIDTH / 2}px !important`; // 使用导入的常量
+    styles.top = '0px !important';
+    styles.transform = 'none !important';
+    styles.width = `${HANDLE_WIDTH}px !important`; // 使用导入的常量
+
+  } else {
+    // 单输入Handle样式由CSS控制，此处返回空对象
   }
   return styles;
+};
+
+// 计算多输入插槽的动态样式 (这个是给Handle的父容器div用的)
+const multiInputSlotDynamicStyle = computed(() => {
+const styles: Record<string, { height: string; display: string; alignItems: string }> = {};
+if (finalInputs.value) {
+  for (const input of finalInputs.value) {
+    if (input.multi) {
+      const connectionCount = getInputConnectionCount(String(input.key));
+      // 父容器的高度计算逻辑：
+      // 方案1: 沿用旧的父容器高度计算 (singleLineHeight, lineGap, padding)
+      // 方案2: 使其与Handle的新高度计算逻辑同步 (使用handleLineHeight等新常量)
+      // 这里暂时保留旧的计算逻辑，后续可能需要调整以确保父容器能完美包裹新Handle
+      
+      // 父容器的高度应该与 Handle 的高度一致
+      // 直接复用 getDynamicHandleStyles 中的高度计算逻辑
+      let containerHeight: number;
+      const minLinesForAppearance = Math.max(1, MIN_MULTI_HANDLE_HEIGHT_FACTOR); // 使用导入的常量
+      const minHeightForMulti = (minLinesForAppearance * HANDLE_LINE_HEIGHT) + // 使用导入的常量
+                              Math.max(0, minLinesForAppearance - 1) * HANDLE_LINE_GAP + // 使用导入的常量
+                              HANDLE_VERTICAL_PADDING; // 使用导入的常量
+
+      if (connectionCount > 0) {
+        containerHeight = connectionCount * HANDLE_LINE_HEIGHT + // 使用导入的常量
+                       Math.max(0, connectionCount - 1) * HANDLE_LINE_GAP + // 使用导入的常量
+                       HANDLE_VERTICAL_PADDING; // 使用导入的常量
+        containerHeight = Math.max(containerHeight, minHeightForMulti);
+      } else {
+        containerHeight = minHeightForMulti;
+      }
+
+      styles[String(input.key)] = {
+        height: `${containerHeight}px`, // 应用与Handle一致的高度
+        display: 'flex',
+        alignItems: 'flex-start', // Handle 通过 top:0 定位，所以父容器从顶部对齐
+      };
+    }
+  }
+}
+return styles;
 });
 
 </script>
-
 <template>
   <div
     ref="nodeRootRef"
@@ -854,8 +909,9 @@ const multiInputSlotDynamicStyle = computed(() => {
                   styles.handleLeft,
                   getHandleTypeClass(input.dataFlowType),
                   isAnyType(input.dataFlowType) && styles.handleAny, // 条件性添加类名
-                  input.multi && styles.handleMulti, // 如果支持多连接，添加方形样式
+                  // input.multi && styles.handleMulti, // .handleMulti 主要改变圆角，现在由JS动态控制borderRadius
                 ]"
+                :style="getDynamicHandleStyles(input as InputDefinition, getInputConnectionCount(String(input.key)))"
               />
             </Tooltip>
             <Handle
@@ -868,8 +924,9 @@ const multiInputSlotDynamicStyle = computed(() => {
                 styles.handleLeft,
                 getHandleTypeClass(input.dataFlowType), // 即使没有类型也尝试应用，可能为 null
                 isAnyType(input.dataFlowType) && styles.handleAny, // 条件性添加类名
-                input.multi && styles.handleMulti, // 如果支持多连接，添加方形样式
+                // input.multi && styles.handleMulti,
               ]"
+              :style="getDynamicHandleStyles(input as InputDefinition, getInputConnectionCount(String(input.key)))"
             />
           </div>
 

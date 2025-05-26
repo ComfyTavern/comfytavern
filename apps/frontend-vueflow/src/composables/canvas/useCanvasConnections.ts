@@ -289,10 +289,15 @@ export function useCanvasConnections({
     }
 
     const { animated, style, markerEnd } = getEdgeStyleProps(finalSourceDft, finalTargetDft, isDark.value);
+    
+    // 检查目标输入是否为多输入类型
+    const isTargetMultiInput = targetInputDef?.multi === true;
+
     const edgeToAdd: Edge = {
       id: nanoid(10),
       source: source!, sourceHandle: sourceHandle!, target: target!, targetHandle: targetHandle!,
-      type: "default", animated, style, markerEnd,
+      type: isTargetMultiInput ? "sortedMultiTarget" : "default", // 动态设置边的类型
+      animated, style, markerEnd,
       data: {
         sourceType: finalSourceDft, targetType: finalTargetDft,
         originalSourceDft, originalSourceCats, originalTargetDft, originalTargetCats,
@@ -326,6 +331,34 @@ export function useCanvasConnections({
       });
       await workflowStore.addEdgeAndRecord(tabId, edgeToAdd, entry);
     }
+
+    // 如果目标是多输入 Handle，则更新其连接顺序
+    if (isTargetMultiInput && targetNode && targetHandle) {
+      const currentOrders = klona(targetNode.data.inputConnectionOrders?.[targetHandle] || []);
+      currentOrders.push(edgeToAdd.id);
+
+      const orderHistorySummary = `更新节点 ${targetNodeName} 输入 ${targetHandleName} 的连接顺序 (添加新连接)`;
+      const orderHistoryEntry = createHistoryEntry(
+        'modify',
+        'node_data',
+        orderHistorySummary,
+        {
+          nodeId: target!,
+          handleId: targetHandle,
+          updatedProperty: `inputConnectionOrders.${targetHandle}`,
+          newValue: klona(currentOrders),
+          reason: 'add_new_multi_input_connection'
+        }
+      );
+      await workflowStore.updateNodeInputConnectionOrderAndRecord(
+        tabId,
+        target!,
+        targetHandle,
+        klona(currentOrders),
+        orderHistoryEntry
+      );
+    }
+
     return edgeToAdd;
   }
 
@@ -654,6 +687,39 @@ export function useCanvasConnections({
     await workflowStore.removeElementsAndRecord(currentTabId, [originalEdge], removeHistoryEntry);
     console.debug(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Removed original edge ${originalEdge.id}.`);
 
+    // 如果原始目标是多输入 Handle，则更新其连接顺序
+    if (activeDraggingState.isOriginalTargetMultiInput && activeDraggingState.originalTargetNodeId && activeDraggingState.originalTargetHandleId) {
+      const targetNodeForOrderUpdate = findNode(activeDraggingState.originalTargetNodeId);
+      if (targetNodeForOrderUpdate?.data?.inputConnectionOrders?.[activeDraggingState.originalTargetHandleId]) {
+        let currentOrders = klona(targetNodeForOrderUpdate.data.inputConnectionOrders[activeDraggingState.originalTargetHandleId] as string[]);
+        const oldOrderLength = currentOrders.length;
+        currentOrders = currentOrders.filter(id => id !== originalEdge.id);
+
+        if (currentOrders.length < oldOrderLength) {
+          const orderHistorySummary = `更新节点 ${targetNodeForOrderUpdate.data?.label || activeDraggingState.originalTargetNodeId} 输入 ${activeDraggingState.originalTargetHandleId} 的连接顺序 (移除连接)`;
+          const orderHistoryEntry = createHistoryEntry(
+            'modify',
+            'node_data',
+            orderHistorySummary,
+            {
+              nodeId: activeDraggingState.originalTargetNodeId,
+              handleId: activeDraggingState.originalTargetHandleId,
+              updatedProperty: `inputConnectionOrders.${activeDraggingState.originalTargetHandleId}`,
+              newValue: klona(currentOrders),
+              reason: 'remove_multi_input_connection_on_update_end'
+            }
+          );
+          await workflowStore.updateNodeInputConnectionOrderAndRecord(
+            currentTabId,
+            activeDraggingState.originalTargetNodeId,
+            activeDraggingState.originalTargetHandleId,
+            klona(currentOrders),
+            orderHistoryEntry
+          );
+        }
+      }
+    }
+
     if (edge) { // VueFlow 认为连接到了某个东西 (payload.edge 不为 null)
       console.debug(`[CanvasConnections DEBUG] onEdgeUpdateEnd: VueFlow's \`edge\` payload is present. Info:`, JSON.parse(JSON.stringify(edge)));
 
@@ -738,6 +804,38 @@ export function useCanvasConnections({
     } else {
       // 拖放到画布上 (VueFlow 的 `edge` 参数为 null)，原始边已被移除，无需创建新边
       console.debug(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Dropped on pane (VueFlow's \`edge\` payload is null). Original edge ${originalEdge.id} removed. No new edge to create.`);
+      // 即使拖放到画布，如果原始目标是多输入，也需要更新其顺序 (因为 originalEdge 已被移除)
+      if (activeDraggingState.isOriginalTargetMultiInput && activeDraggingState.originalTargetNodeId && activeDraggingState.originalTargetHandleId) {
+        const targetNodeForOrderUpdate = findNode(activeDraggingState.originalTargetNodeId);
+        if (targetNodeForOrderUpdate?.data?.inputConnectionOrders?.[activeDraggingState.originalTargetHandleId]) {
+          let currentOrders = klona(targetNodeForOrderUpdate.data.inputConnectionOrders[activeDraggingState.originalTargetHandleId] as string[]);
+          const oldOrderLength = currentOrders.length;
+          currentOrders = currentOrders.filter(id => id !== originalEdge.id);
+
+          if (currentOrders.length < oldOrderLength) {
+            const orderHistorySummary = `更新节点 ${targetNodeForOrderUpdate.data?.label || activeDraggingState.originalTargetNodeId} 输入 ${activeDraggingState.originalTargetHandleId} 的连接顺序 (移除连接 - 拖放至画布)`;
+            const orderHistoryEntry = createHistoryEntry(
+              'modify',
+              'node_data',
+              orderHistorySummary,
+              {
+                nodeId: activeDraggingState.originalTargetNodeId,
+                handleId: activeDraggingState.originalTargetHandleId,
+                updatedProperty: `inputConnectionOrders.${activeDraggingState.originalTargetHandleId}`,
+                newValue: klona(currentOrders),
+                reason: 'remove_multi_input_connection_dropped_on_pane'
+              }
+            );
+            await workflowStore.updateNodeInputConnectionOrderAndRecord(
+              currentTabId,
+              activeDraggingState.originalTargetNodeId,
+              activeDraggingState.originalTargetHandleId,
+              klona(currentOrders),
+              orderHistoryEntry
+            );
+          }
+        }
+      }
     }
     console.debug('[DIAGNOSTIC LOG] onEdgeUpdateEnd: Exit (normal). activeDraggingState (local copy):', activeDraggingState ? JSON.parse(JSON.stringify(activeDraggingState)) : null);
   });

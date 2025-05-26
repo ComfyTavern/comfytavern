@@ -53,7 +53,83 @@
                       (connectionCount > 0 ? (connectionCount - 1) * lineGap : 0) + 
                       padding;
     ```
-2.  对于 `multi: true` 的输入插槽，仍渲染单个标准 `<Handle>`
+2.  对于 `multi: true` 的输入插槽，仍渲染单个标准 `<Handle>`。其视觉表现将通过以下方式增强。
+
+### 2.1. 多输入插槽 Handle 组件动态样式与拉伸 (Blender 风格)
+
+**目标**：使 `multi: true` 的输入插槽的 `<Handle>` 组件能够根据连接数量动态调整其高度，呈现为“跑道形状”（两端半圆），并且在无连接时至少保持两倍单线高度，以区别于普通单输入插槽。优先通过 JavaScript 动态设置样式，后续评估是否需要调整 CSS。
+
+**涉及文件**：[`apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue)
+
+**实施步骤概述 (将在 Code 模式下执行)**：
+
+1.  **在 `<script setup>` 中定义新常量**:
+    ```typescript
+    // Constants for multi-input Handle height calculation
+    const handleLineHeight = 3; // px, 单条连接线在Handle上占据的视觉高度
+    const handleLineGap = 2;    // px, 连接线在Handle上的视觉间隙
+    const handleVerticalPadding = 4; // px, Handle自身的上下总内边距 (例如，上下各2px)
+    const defaultSingleHandleHeight = 12; // px, 非multi时的基础高度，或multi无连接时的最小基准
+    const minMultiHandleHeightFactor = 2; // Blender细节：无连接时Handle至少为 N 倍单线视觉高度
+    const handleWidth = 12; // px, Handle的宽度，用于计算跑道形圆角
+    ```
+
+2.  **创建 `getDynamicHandleStyles` 函数**:
+    此函数根据输入定义 (`InputDefinition`) 和连接数 (`connectionCount`) 计算并返回一个样式对象。
+    ```typescript
+    const getDynamicHandleStyles = (input: InputDefinition, connectionCount: number) => {
+      const styles: Record<string, string> = {};
+      if (input.multi) {
+        let targetHeight: number;
+        const minLinesForAppearance = Math.max(1, minMultiHandleHeightFactor);
+        const minHeightForMulti = (minLinesForAppearance * handleLineHeight) +
+                                Math.max(0, minLinesForAppearance - 1) * handleLineGap +
+                                handleVerticalPadding;
+
+        if (connectionCount > 0) {
+          targetHeight = connectionCount * handleLineHeight +
+                         Math.max(0, connectionCount - 1) * handleLineGap +
+                         handleVerticalPadding;
+          targetHeight = Math.max(targetHeight, minHeightForMulti);
+        } else {
+          targetHeight = minHeightForMulti;
+        }
+        
+        styles.height = `${targetHeight}px`;
+        styles.borderRadius = `${handleWidth / 2}px`; // 跑道形圆角
+        styles.top = '0px'; // 从父容器顶部开始
+        styles.transform = 'none'; // 移除默认垂直居中
+        styles.width = `${handleWidth}px`; // 显式设置宽度
+      } else {
+        // 对于单输入Handle，返回空对象，使其沿用CSS定义的样式
+        // styles.height = `${defaultSingleHandleHeight}px`;
+        // styles.borderRadius = '50%';
+      }
+      return styles;
+    };
+    ```
+
+3.  **在模板中将动态样式绑定到输入 `<Handle>`**:
+    修改 `<Handle>` 组件的 `:style` 属性：
+    ```html
+    <Handle
+      :id="String(input.key)"
+      type="target"
+      :position="Position.Left"
+      :class="[
+        styles.handle,
+        styles.handleLeft,
+        getHandleTypeClass(input.dataFlowType),
+        isAnyType(input.dataFlowType) && styles.handleAny,
+        // 考虑移除 input.multi && styles.handleMulti 如果其主要作用是设置与JS冲突的borderRadius
+      ]"
+      :style="getDynamicHandleStyles(input as InputDefinition, getInputConnectionCount(String(input.key)))"
+    />
+    ```
+
+4.  **后续步骤 (在 Code 模式下评估与实施)**:
+    *   **CSS兼容性检查**：评估 [`apps/frontend-vueflow/src/components/graph/nodes/handleStyles.module.css`](apps/frontend-vueflow/src/components/graph/nodes/handleStyles.module.css) 中 `.handle` 和 `.handleMulti` 的 `!important` 规则是否与 JS 动态样式冲突。如果冲突，需要谨慎移除或调整 CSS 中的 `!important` 规则。
+    *   **Handle 父容器高度同步**：调整 `BaseNode.vue` 中 `multiInputSlotDynamicStyle` 计算属性的逻辑（该属性控制 Handle 父级 `div` 的高度），确保其计算结果能正确包裹动态调整高度后的 Handle 组件。可能需要使其也使用新的 Handle 相关常量。
 
 ## V. 自定义 Edge 组件 (`SortedMultiTargetEdge.vue`)
 

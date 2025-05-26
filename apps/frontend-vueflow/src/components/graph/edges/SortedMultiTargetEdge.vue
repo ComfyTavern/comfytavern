@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue' // 移除了 CSSProperties
 import { getBezierPath, type EdgeProps, type GraphNode } from '@vue-flow/core' // 导入 GraphNode
+import {
+  HANDLE_LINE_HEIGHT,
+  HANDLE_LINE_GAP,
+  HANDLE_VERTICAL_PADDING,
+  // MIN_MULTI_HANDLE_HEIGHT_FACTOR, // SortedMultiTargetEdge 不需要此常量
+  // HANDLE_WIDTH, // SortedMultiTargetEdge 不需要此常量
+} from '../../../constants/handleConstants'; // 导入共享常量
 
 // 定义 Props，扩展 EdgeProps 并明确 targetNode 和 targetHandleId
 interface SortedMultiTargetEdgeProps extends EdgeProps {
@@ -12,9 +19,6 @@ interface SortedMultiTargetEdgeProps extends EdgeProps {
 
 const props = defineProps<SortedMultiTargetEdgeProps>()
 
-// 从 BaseNode.vue 引入的常量
-const singleLineHeight = 20 // 单条连接线的高度 (px)
-const lineGap = 4 // 连接线之间的间隙 (px)
 
 const path = computed(() => {
   let verticalOffset = 0
@@ -30,16 +34,26 @@ const path = computed(() => {
     const currentIndex = orderedEdgeIds.indexOf(props.id)
 
     if (currentIndex !== -1) {
-      const N = orderedEdgeIds.length
-      const k = currentIndex
+      const N = orderedEdgeIds.length // 总连接数
+      const k = currentIndex // 当前边的索引 (0-based)
 
-      const H_total_slots = N * singleLineHeight + (N > 1 ? (N - 1) * lineGap : 0)
-      const Y_k_relative_to_top = k * (singleLineHeight + lineGap) + singleLineHeight / 2
-      verticalOffset = Y_k_relative_to_top - H_total_slots / 2
+      // 计算 Handle 的总高度，与 BaseNode.vue 中的 targetHeight 计算逻辑一致
+      const H_handle = N * HANDLE_LINE_HEIGHT + Math.max(0, N - 1) * HANDLE_LINE_GAP + HANDLE_VERTICAL_PADDING; // 使用导入的常量
+
+      // 计算当前边连接点 Yk 相对于 Handle 顶部的距离
+      // 线的中心应该在 (padding/2) + k*(line+gap) + line/2
+      const Y_k_relative_to_handle_top =
+        (HANDLE_VERTICAL_PADDING / 2) + // 使用导入的常量
+        (k * (HANDLE_LINE_HEIGHT + HANDLE_LINE_GAP)) + // 使用导入的常量
+        (HANDLE_LINE_HEIGHT / 2); // 使用导入的常量
+
+      // Vue Flow 的 targetY 是 Handle 的中心点 Y 坐标
+      // 我们需要计算 Y_k 相对于 Handle 中心的偏移
+      verticalOffset = Y_k_relative_to_handle_top - (H_handle / 2)
     }
   }
 
-  // 使用 getBezierPath 计算路径，可以根据需要替换为 getSmoothStepPath 等
+  // 使用 getBezierPath 计算路径
   const [pathValue, labelX, labelY] = getBezierPath({
     sourceX: props.sourceX,
     sourceY: props.sourceY,
