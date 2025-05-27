@@ -164,7 +164,6 @@ export function useCanvasConnections({
   };
 
   const isTypeCompatible = (sourceSlot: GroupSlotInfo, targetSlot: GroupSlotInfo): boolean => {
-    console.log('[CanvasConnections DEBUG] isTypeCompatible called. Source Slot:', JSON.parse(JSON.stringify(sourceSlot)), 'Target Slot:', JSON.parse(JSON.stringify(targetSlot)));
     const sourceDft = sourceSlot.dataFlowType;
     const sourceCats = sourceSlot.matchCategories || [];
     const targetDft = targetSlot.dataFlowType;
@@ -220,20 +219,15 @@ export function useCanvasConnections({
     if (sourceCats.includes(BuiltInSocketMatchCategory.CODE) && targetDft === DataFlowType.STRING) return true;
     if (sourceDft === DataFlowType.STRING && targetCats.includes(BuiltInSocketMatchCategory.COMBO_OPTION)) return true;
     if (sourceCats.includes(BuiltInSocketMatchCategory.COMBO_OPTION) && targetDft === DataFlowType.STRING) {
-      console.log('[CanvasConnections DEBUG] isTypeCompatible: COMBO_OPTION to STRING -> true');
       return true;
     }
-    console.log('[CanvasConnections DEBUG] isTypeCompatible: No compatibility rule matched -> false');
     return false;
   };
 
   const isValidConnection = (connection: Connection, updatingEdgeId?: string): boolean => {
-    console.log('%c[CanvasConnections DEBUG] isValidConnection CALLED (TOP LEVEL). Connection:', 'color: red; font-weight: bold;', JSON.parse(JSON.stringify(connection)), `UpdatingEdgeId: ${updatingEdgeId}`); // 强调日志
-    console.log('[CanvasConnections DEBUG] isValidConnection called. Connection:', JSON.parse(JSON.stringify(connection)), `UpdatingEdgeId: ${updatingEdgeId}`);
     const { source, target, sourceHandle: rawSourceHandle, targetHandle: rawTargetHandle } = connection;
 
     if (!source || !target || !rawSourceHandle || !rawTargetHandle) {
-      console.warn('[CanvasConnections DEBUG] isValidConnection: Missing connection parameters -> false');
       return false;
     }
 
@@ -241,7 +235,6 @@ export function useCanvasConnections({
     const { originalKey: targetKey } = parseSubHandleId(rawTargetHandle);
 
     if (!sourceKey || !targetKey) {
-      console.warn(`[CanvasConnections DEBUG] isValidConnection: Could not parse original key from raw handles. RawSource: ${rawSourceHandle}, RawTarget: ${rawTargetHandle} -> false`);
       return false;
     }
 
@@ -249,11 +242,9 @@ export function useCanvasConnections({
     const targetNode = getNodes.value.find((node) => node.id === target);
 
     if (!sourceNode || !targetNode) {
-      console.error("[CanvasConnections DEBUG] isValidConnection: Source or target node not found. Source:", source, "Target:", target, "-> false");
       return false;
     }
     if (source === target) {
-      console.warn("[CanvasConnections DEBUG] isValidConnection: Self-loop forbidden (source === target). Source:", source, "-> false");
       return false;
     }
 
@@ -278,11 +269,9 @@ export function useCanvasConnections({
     }
 
     if (!sourceOutput || !targetInput) {
-      console.error(`[CanvasConnections DEBUG] isValidConnection: Slot definition not found for ${sourceKey}(raw:${rawSourceHandle})@${source} or ${targetKey}(raw:${rawTargetHandle})@${target}. SourceOutput:`, sourceOutput, "TargetInput:", targetInput, "-> false");
       return false;
     }
     const compatible = isTypeCompatible(sourceOutput, targetInput);
-    console.log(`[CanvasConnections DEBUG] isValidConnection: Result of isTypeCompatible for ${sourceKey}@${source} -> ${targetKey}@${target} is: ${compatible}`);
     
     if (compatible) {
       // 首先，获取目标输入定义，以检查其是否为 multi:true
@@ -295,7 +284,6 @@ export function useCanvasConnections({
         if (!parsedTargetHandleInfo.isSubHandle) {
           // 连接尝试的目标句柄ID不是一个子句柄格式 (例如，是 'text_inputs' 而不是 'text_inputs__0')
           // 对于 multi:true 的输入，我们强制要求连接到具体的子句柄。
-          console.warn(`[CanvasConnections DEBUG] isValidConnection: Attempted to connect to the parent handle ('${rawTargetHandle}') of a multi-input slot on node '${target}'. Connections to multi-input slots must target a specific sub-handle (e.g., '${rawTargetHandle}__0'). -> false`);
           return false;
         }
       }
@@ -305,8 +293,6 @@ export function useCanvasConnections({
       const parsedTargetHandleInfoForOccupationCheck = parseSubHandleId(rawTargetHandle); // 重新parse或复用上面的
       const targetIsSubHandle = parsedTargetHandleInfoForOccupationCheck.isSubHandle;
       
-      console.log(`[CanvasConnections DEBUG] isValidConnection: Checking sub-handle occupation. Connection Target: ${connection.target}, Raw Target Handle: ${rawTargetHandle}, Parsed Target Handle Info:`, JSON.parse(JSON.stringify(parsedTargetHandleInfoForOccupationCheck)));
-      console.log(`[CanvasConnections DEBUG] isValidConnection: Is target a sub-handle (for occupation check)? ${targetIsSubHandle}`);
 
       if (targetIsSubHandle) { // targetIsSubHandle is true if connection.targetHandle is like 'key__index'
         const isNewConnection = !updatingEdgeId;
@@ -316,45 +302,36 @@ export function useCanvasConnections({
           // 对于新的连接到多输入插槽：
           // 即使视觉上指向的子句柄 (connection.targetHandle) 当前已被连接，我们也允许它通过此检查。
           // 实际的插入索引将由 reorderPreviewIndex 决定，并且 connectEdgeToMultiInput 会处理现有连接的顺延。
-          console.log(`[CanvasConnections DEBUG] isValidConnection: New connection targeting multi-input sub-handle ${connection.targetHandle}. Allowing. Reorder logic will manage placement and shifting.`);
           // 对于这种情况，我们不因“占用”而返回 false。类型兼容性等其他检查仍然适用。
         } else {
           // 对于以下情况，执行原始的占用检查：
           // 1. 目标不是多输入插槽，但句柄名恰好是 key__index 格式 (不太可能，但作为防御)。
           // 2. 正在更新一个现有的连接 (updatingEdgeId 已提供)。
           const currentEdges = getEdges.value;
-          console.log(`[CanvasConnections DEBUG] isValidConnection: Current edges count: ${currentEdges.length}`);
-          const edgesToTargetNode = currentEdges.filter(e => e.target === connection.target);
-          console.log(`[CanvasConnections DEBUG] isValidConnection: Edges connected to target node ${connection.target}:`, edgesToTargetNode.map(e => ({ id: e.id, targetHandle: e.targetHandle })));
           
           const occupyingEdges = currentEdges.filter(edge =>
             edge.target === connection.target &&
             edge.targetHandle === connection.targetHandle
           );
           const isOccupied = occupyingEdges.length > 0;
-          console.log(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} occupied by ${occupyingEdges.length} edge(s). (Not a new connection to multi-input where reorder applies, or target is not multi-input)`);
 
           if (isOccupied) {
             const singleOccupyingEdge = (occupyingEdges.length === 1) ? occupyingEdges[0] : null;
             if (updatingEdgeId && singleOccupyingEdge && singleOccupyingEdge.id === updatingEdgeId) {
-              console.log(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} is occupied by the edge being updated ('${updatingEdgeId}'). Allowing reconnection.`);
             } else { // 被不同的边或多个边占用
               // 如果目标是多输入插槽 (targetInput 应该已定义且 multi === true)
               // 即使这是一个连接更新，并且目标子句柄被其他边占用，我们也应该允许。
               // 后续的重排逻辑 (在 onEdgeUpdateEnd 中调用的 moveAndReconnectEdgeAndRecord) 会处理实际的放置。
               if (targetInput && targetInput.multi === true) {
-                console.log(`[CanvasConnections DEBUG] isValidConnection: Edge update/connection to multi-input sub-handle ${connection.target}::${connection.targetHandle} which is occupied by a different edge. Allowing, as reorder/placement logic will manage.`);
                 // 对于多输入插槽，当被其他边占用时，不在此处返回 false。
                 // 类型兼容性 (由 `compatible` 变量检查) 和其他通用规则仍然适用。
               } else {
                 // 对于非多输入插槽 (或者如果 targetInput 未定义/不是 multi 类型),
                 // 被不同的边占用是一个冲突。
-                console.warn(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} (non-multi-input or unknown type) is ALREADY OCCUPIED by a different edge. updatingEdgeId: '${updatingEdgeId}'. Occupying edge IDs: ${occupyingEdges.map(e => e.id).join(', ')}. -> false`);
                 return false;
               }
             }
           } else {
-            console.log(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} is NOT occupied (or it's a new connection to multi-input where occupation of specific sub-handle doesn't block initial validation). Proceeding.`);
           }
         }
       }
@@ -385,7 +362,6 @@ export function useCanvasConnections({
     else { targetInputDef = (targetNode.data as any)?.inputs?.[parsedTargetHandleKey]; }
 
     if (!sourceOutputDef || !targetInputDef) {
-        console.error(`[CanvasConnections DEBUG] createEdge: Slot definition not found. Source: ${params.sourceHandle}, Target (parsed): ${parsedTargetHandleKey} (raw: ${params.targetHandle})`);
         return null;
     }
 
@@ -410,10 +386,8 @@ export function useCanvasConnections({
       // 即便对于多输入，我们也希望使用 'default' 边类型，
       // 并且 finalTargetHandleForEdge 应该保持为 params.targetHandle (子句柄 ID)。
       // 如果标准边正确连接到各个子句柄，就不再需要 'sortedMultiTargetEdge' 及其连接到主键的逻辑。
-      console.log(`[CanvasConnections DEBUG] createEdge: Multi-input target. Edge type WILL BE: ${edgeType}. Edge targetHandle WILL BE the sub-handle: ${finalTargetHandleForEdge}.`);
     } else {
       // 单输入目标，标准边，连接到特定句柄。
-      console.log(`[CanvasConnections DEBUG] createEdge: Single-input target. Edge type: ${edgeType}. Edge targetHandle: ${finalTargetHandleForEdge}.`);
     }
 
     return {
@@ -431,37 +405,30 @@ export function useCanvasConnections({
   };
 
   const handleConnect = async (params: Connection): Promise<Edge | null> => {
-    console.log('[CanvasConnections DEBUG] handleConnect triggered. Params:', JSON.parse(JSON.stringify(params)));
     const currentTabId = tabStore.activeTabId;
     if (!currentTabId) {
-      console.error("[CanvasConnections DEBUG] [handleConnect] No active tab ID.");
       return null;
     }
 
     // onConnect (handleConnect) 只处理全新的连接。
     // 拖拽现有连接的逻辑已移至 onEdgeUpdateEnd。
     if (draggingState.value) {
-      console.warn('[CanvasConnections DEBUG] handleConnect: Expected draggingState to be null for a new connection, but it was not. This indicates an edge update is being handled by onEdgeUpdateEnd. Skipping handleConnect.');
       return null; // 让 onEdgeUpdateEnd 处理
     }
 
-    console.log('[CanvasConnections DEBUG] handleConnect: Processing as BRAND NEW connection.');
 
     if (!isValidConnection(params)) {
-      console.log('[CanvasConnections DEBUG] handleConnect (New): Connection is invalid.');
       return null;
     }
 
     const { source, target, sourceHandle, targetHandle } = params;
     if (!source || !target || !sourceHandle || !targetHandle) {
-      console.error('[CanvasConnections DEBUG] handleConnect: Missing critical connection parameters.');
       return null;
     }
 
     const sourceNode = findNode(source);
     const targetNode = findNode(target);
     if (!sourceNode || !targetNode) {
-      console.error(`[CanvasConnections DEBUG] handleConnect: Source or target node not found.`);
       return null;
     }
 
@@ -478,23 +445,16 @@ export function useCanvasConnections({
     }
 
     if (!targetInputDef) {
-      console.error(
-        `[CanvasConnections DEBUG] handleConnect: Target input definition not found for ${target}::${targetHandle}. Parsed key: ${parsedTargetHandleKeyFromParams}. Target node type: '${targetNodeType}'. Expected definition type (example for MergeNode): 'TextMerge'.`
-      );
       // 打印目标节点数据和所有可用节点定义以供调试
       if (targetNode?.data) {
-        console.log('[CanvasConnections DEBUG] Target node data.inputs:', JSON.parse(JSON.stringify(targetNode.data.inputs)));
       }
       // 从 nodeStore 获取节点定义数组
       const nodeDefinitionsArray: FrontendNodeDefinition[] = nodeStore.nodeDefinitions; // 直接访问，无需 .value
 
       if (nodeDefinitionsArray && nodeDefinitionsArray.length > 0) {
-        console.log('[CanvasConnections DEBUG] All available node definition types in nodeStore:', nodeDefinitionsArray.map((d: FrontendNodeDefinition) => d.type));
         const textMergeDef = nodeDefinitionsArray.find((d: FrontendNodeDefinition) => d.type === 'TextMerge' && d.namespace === 'Utilities'); // 确保也匹配命名空间
         if (textMergeDef) {
-            console.log('[CanvasConnections DEBUG] TextMerge definition from nodeStore:', JSON.parse(JSON.stringify(textMergeDef)));
         } else {
-            console.log('[CanvasConnections DEBUG] TextMerge definition NOT found in workflowManager.');
         }
       }
       return null;
@@ -505,14 +465,12 @@ export function useCanvasConnections({
     if (isTargetMultiInput) {
       if (reorderPreviewIndex.value !== null) {
         targetIndexInOrder = reorderPreviewIndex.value;
-        console.log(`[CanvasConnections DEBUG] handleConnect: Multi-input target. Using reorderPreviewIndex: ${targetIndexInOrder}.`);
       } else {
         // 如果 reorderPreviewIndex 不可用（例如非拖拽创建或 watch 逻辑未覆盖），则追加到末尾
         // 使用从 targetHandle 解析出的 originalKey 来访问 inputConnectionOrders
         const { originalKey: parsedTargetKeyForOrder } = parseSubHandleId(targetHandle);
         const existingConnectionsToHandle = (targetNode.data.inputConnectionOrders?.[parsedTargetKeyForOrder] as string[] | undefined) || [];
         targetIndexInOrder = existingConnectionsToHandle.length;
-        console.warn(`[CanvasConnections DEBUG] handleConnect: Multi-input target. reorderPreviewIndex is null. Using originalKey '${parsedTargetKeyForOrder}' for order calculation. Appending to end (index: ${targetIndexInOrder}).`);
       }
     } else {
       // 对于单输入，如果已有连接，协调器 connectEdgeToInputAndRecord 或 moveAndReconnectEdgeAndRecord 会处理替换逻辑。
@@ -526,7 +484,6 @@ export function useCanvasConnections({
 
     if (!newEdgeObjectFromCreateEdge) {
       // createEdge 内部已经调用了 isValidConnection 并可能打印了错误
-      console.error('[CanvasConnections DEBUG] handleConnect: createEdge returned null. Aborting connection.');
       return null;
     }
 
@@ -596,7 +553,6 @@ export function useCanvasConnections({
     // 我们返回一个象征性的 Edge 对象或 null。
     // 重要的是状态已通过协调器更新。
     const finalEdgeState = workflowStore.getElements(currentTabId).find(el => el.id === newEdgeObjectFromCreateEdge.id && "source" in el) as Edge | undefined; // 使用 newEdgeObjectFromCreateEdge.id
-    console.log(`[CanvasConnections DEBUG] handleConnect (New): Finished calling connectEdgeToInputAndRecord. Resulting edge in store:`, finalEdgeState ? finalEdgeState.id : 'not found in store immediately');
     return finalEdgeState || null; // 返回 store 中的边或 null
   };
 
@@ -615,11 +571,8 @@ export function useCanvasConnections({
   };
 
   onEdgeUpdateStart((eventDetails: any) => {
-    console.debug('[DIAGNOSTIC LOG] onEdgeUpdateStart: Entry. EventDetails:', eventDetails ? JSON.parse(JSON.stringify(eventDetails)) : eventDetails);
     if (!eventDetails || typeof eventDetails !== 'object') {
-      console.error('[CanvasConnections DEBUG] onEdgeUpdateStart: eventDetails is not an object or is undefined. Received:', eventDetails);
       draggingState.value = null;
-      console.debug('[DIAGNOSTIC LOG] onEdgeUpdateStart: Exit (early due to invalid eventDetails). Final draggingState:', draggingState.value ? JSON.parse(JSON.stringify(draggingState.value)) : null);
       return;
     }
 
@@ -627,9 +580,7 @@ export function useCanvasConnections({
     const edge = eventDetails.edge as Edge | undefined;
 
     if (!event || !edge) {
-      console.error('[CanvasConnections DEBUG] onEdgeUpdateStart: "event" or "edge" is missing in eventDetails. Received:', eventDetails);
       draggingState.value = null;
-      console.debug('[DIAGNOSTIC LOG] onEdgeUpdateStart: Exit (early due to missing event or edge). Final draggingState:', draggingState.value ? JSON.parse(JSON.stringify(draggingState.value)) : null);
       return;
     }
 
@@ -637,9 +588,7 @@ export function useCanvasConnections({
     // sourceHandle 可以是 string | null (例如，如果允许从节点本身拖拽，尽管我们主要处理句柄)。
     // DraggingState.originalTargetHandleId 要求 string。
     if (typeof edge.targetHandle !== 'string') {
-      console.error(`[CanvasConnections DEBUG] onEdgeUpdateStart: Edge targetHandle is invalid (not a string). Edge ID: ${edge.id}, Target Handle: ${edge.targetHandle}. This is required for DraggingState.`);
       draggingState.value = null;
-      console.debug('[DIAGNOSTIC LOG] onEdgeUpdateStart: Exit (early due to invalid edge.targetHandle). Final draggingState:', draggingState.value ? JSON.parse(JSON.stringify(draggingState.value)) : null);
       return;
     }
     // 至此，edge.targetHandle 可以安全地视为 string。
@@ -666,16 +615,13 @@ export function useCanvasConnections({
         draggedNodeId = edge.source;
         draggedHandleId = edge.sourceHandle ?? null; // sourceHandle 可以是 null
       } else {
-        console.error('[CanvasConnections DEBUG] onEdgeUpdateStart: Clicked on an edge updater, but cannot determine if it was source or target.', edgeUpdater);
         draggingState.value = null;
-        console.debug('[DIAGNOSTIC LOG] onEdgeUpdateStart: Exit (early due to unknown edge updater type). Final draggingState:', draggingState.value ? JSON.parse(JSON.stringify(draggingState.value)) : null);
         return;
       }
     } else {
       // 如果不是直接点击 updater，尝试回退到 vueFlowInstance.connectionStartHandle (作为备用方案)
       const fallbackStartHandleDetails = vueFlowInstance.connectionStartHandle.value;
       if (fallbackStartHandleDetails && fallbackStartHandleDetails.nodeId && fallbackStartHandleDetails.id && fallbackStartHandleDetails.type) {
-        console.warn('[CanvasConnections DEBUG] onEdgeUpdateStart: Could not determine dragged handle from event.target being an edge updater, falling back to vueFlowInstance.connectionStartHandle.value. This might be less reliable.', fallbackStartHandleDetails);
         isUnpluggingFromInputHandle = fallbackStartHandleDetails.type === 'target';
         draggedHandleType = fallbackStartHandleDetails.type;
         draggedNodeId = fallbackStartHandleDetails.nodeId;
@@ -690,9 +636,7 @@ export function useCanvasConnections({
         }
 
       } else {
-        console.error('[CanvasConnections DEBUG] onEdgeUpdateStart: Clicked on an edge, but cannot determine dragged handle from event.target (not an updater) and connectionStartHandle is not set or invalid.', { targetElement, fallbackStartHandleDetails });
         draggingState.value = null;
-        console.debug('[DIAGNOSTIC LOG] onEdgeUpdateStart: Exit (early due to undetermined drag start from edge click). Final draggingState:', draggingState.value ? JSON.parse(JSON.stringify(draggingState.value)) : null);
         return;
       }
     }
@@ -705,15 +649,12 @@ export function useCanvasConnections({
     // DraggingState.originalTargetHandleId 是 string。
 
     if (!draggedHandleType || !draggedNodeId) {
-      console.error('[CanvasConnections DEBUG] onEdgeUpdateStart: Failed to determine draggedHandleType or draggedNodeId.', { draggedHandleType, draggedNodeId });
       draggingState.value = null;
-      console.debug('[DIAGNOSTIC LOG] onEdgeUpdateStart: Exit (early due to missing type or nodeId). Final draggingState:', draggingState.value ? JSON.parse(JSON.stringify(draggingState.value)) : null);
       return;
     }
 
     // 如果拖拽的是目标句柄，那么 draggedHandleId 必须是字符串 (因为 edge.targetHandle 已验证为字符串)
     if (draggedHandleType === 'target' && typeof draggedHandleId !== 'string') {
-      console.error(`[CanvasConnections DEBUG] onEdgeUpdateStart: Dragging target handle, but draggedHandleId is not a string. This should not happen if edge.targetHandle was validated. draggedHandleId: ${draggedHandleId}`);
       draggingState.value = null;
       return;
     }
@@ -721,8 +662,6 @@ export function useCanvasConnections({
 
     // 在记录日志和设置 DraggingState 时，需要处理 draggedHandleId 可能为 null 的情况（当拖拽源句柄时）
     // const logHandleId = draggedHandleId === null ? 'NULL_HANDLE' : draggedHandleId; // 使用 getReadableNames 代替
-    const draggedNames = getReadableNames(draggedNodeId!, draggedHandleId, draggedHandleType!);
-    console.log(`[CanvasConnections DEBUG] onEdgeUpdateStart triggered. Edge ID: ${edge.id}. Drag started from handle type: ${draggedHandleType} on node ${draggedNames.nodeName} (ID: ${draggedNames.nodeId}) handle ${draggedNames.handleName} (ID: ${draggedNames.handleId}). Is unplugging from input: ${isUnpluggingFromInputHandle}`);
 
     let typeForDraggingState: DraggingState['type'] = isUnpluggingFromInputHandle ? 'unplug_from_input' : 'disconnect_reconnect';
     let isOriginalTargetMulti = false;
@@ -767,16 +706,11 @@ export function useCanvasConnections({
       // 阻止 VueFlow 默认的边更新行为，因为我们将手动处理这个“拔出”操作
       // 这通常通过在 onEdgeUpdate 回调中返回 false 来实现，但 onEdgeUpdateStart 没有这个机制。
       // 我们将在 onEdgeUpdateEnd 中处理，如果检测到是 unplug_from_input，则不创建新边，而是处理拔出逻辑。
-      console.log(`[CanvasConnections DEBUG] onEdgeUpdateStart: Detected unplug from input. Original edge ${edge.id} will be managed manually.`);
     }
 
-    console.log('[CanvasConnections DEBUG] onEdgeUpdateStart: Set draggingState. State:', JSON.parse(JSON.stringify(draggingState.value)));
-    console.debug('[DIAGNOSTIC LOG] onEdgeUpdateStart: draggingState AFTER set:', JSON.parse(JSON.stringify(draggingState.value)));
-    console.debug('[DIAGNOSTIC LOG] onEdgeUpdateStart: Exit (normal). Final draggingState:', JSON.parse(JSON.stringify(draggingState.value)));
   });
 
   onConnectStart((params) => {
-    console.log('[CanvasConnections DEBUG] onConnectStart triggered. Params:', JSON.parse(JSON.stringify(params)));
     const startHandleNodeId = params.nodeId;
     const startHandleId = params.handleId;
     const startHandleType = params.handleType; // 'source' or 'target'
@@ -787,7 +721,6 @@ export function useCanvasConnections({
     // 或者，当 onEdgeUpdateStart 触发时，它会设置 draggingState。
     // 如果 draggingState 已经设置，说明是 onEdgeUpdateStart 触发的。
     if (draggingState.value) {
-      console.log('[CanvasConnections DEBUG] onConnectStart: draggingState is already set (likely by onEdgeUpdateStart for an existing edge). onConnectStart will not overwrite it.');
       return;
     }
 
@@ -802,48 +735,23 @@ export function useCanvasConnections({
         // 这意味着用户从一个已连接的输入句柄开始拖拽。
         // VueFlow 应该会触发 onEdgeUpdateStart 来处理这个场景。
         // 我们在这里不应该设置 draggingState，以避免冲突。
-        console.log(`[CanvasConnections DEBUG] onConnectStart: Drag started from an already connected target handle (${startHandleNodeId}::${startHandleId}). This should be handled by onEdgeUpdateStart.`);
         // 不设置 draggingState，让 onEdgeUpdateStart 处理
         return;
       }
     }
 
     // 对于从空闲句柄开始的全新连接尝试，draggingState 保持 null
-    console.log('[CanvasConnections DEBUG] onConnectStart: Initializing for a brand new connection from a free handle (draggingState remains null).');
   });
 
 
   onConnectEnd(async (eventOrConnectionParams?: Connection | MouseEvent | TouchEvent) => {
-    console.debug('[DIAGNOSTIC LOG] onConnectEnd: Entry. Event/Params:', eventOrConnectionParams ? JSON.parse(JSON.stringify(eventOrConnectionParams)) : 'undefined', 'Current draggingState:', draggingState.value ? JSON.parse(JSON.stringify(draggingState.value)) : null);
     // 新增日志：记录原始参数和 draggingState
-    console.debug(
-      `%c[CanvasConnections DEBUG] onConnectEnd triggered.`,
-      'color: blue; font-weight: bold;',
-      'Event/Params:', eventOrConnectionParams ? JSON.parse(JSON.stringify(eventOrConnectionParams)) : 'undefined',
-      'Initial draggingState:', draggingState.value ? JSON.parse(JSON.stringify(draggingState.value)) : null
-    );
 
     // 新增日志：详细记录 event.target (如果参数是事件对象)
     if (eventOrConnectionParams && !(eventOrConnectionParams as Connection).targetHandle && (eventOrConnectionParams instanceof MouseEvent || eventOrConnectionParams instanceof TouchEvent)) {
       const event = eventOrConnectionParams as MouseEvent | TouchEvent;
       if (event.target) {
-        const targetElement = event.target as HTMLElement;
-        console.debug(
-          `[CanvasConnections DEBUG] onConnectEnd: event.target details:`,
-          {
-            tagName: targetElement.tagName,
-            id: targetElement.id,
-            classList: Array.from(targetElement.classList),
-            dataset: JSON.parse(JSON.stringify(targetElement.dataset)), // 深拷贝 dataset
-            closestHandle: targetElement.closest('.vue-flow__handle'), // 检查最近的 handle
-            // 尝试获取更具体的 vue-flow 元素信息
-            isPane: targetElement.classList.contains('vue-flow__pane'),
-            isEdge: targetElement.closest('.vue-flow__edge') !== null,
-            isNode: targetElement.closest('.vue-flow__node') !== null,
-          },
-        );
       } else {
-        console.debug('[CanvasConnections DEBUG] onConnectEnd: event.target is null or undefined.');
       }
     }
 
@@ -856,47 +764,37 @@ export function useCanvasConnections({
       // 如果 draggingState 仍然存在，意味着 onEdgeUpdateStart 被触发了（即拖拽现有连接），
       // 但 onEdgeUpdateEnd 可能由于某种原因没有触发或没有完全清理状态（例如拖拽被外部取消）。
       // 这是一个回退清理机制。
-      console.debug('[DIAGNOSTIC LOG] onConnectEnd: PRE-CLEAR. Condition for clearing draggingState (is draggingState.value truthy?):', !!draggingState.value, 'Current draggingState:', JSON.parse(JSON.stringify(draggingState.value)));
-      console.debug('[CanvasConnections DEBUG] onConnectEnd: draggingState is still populated. This implies an existing edge drag was started but not fully handled by onEdgeUpdateEnd. Clearing state as a fallback.', JSON.parse(JSON.stringify(draggingState.value)));
       // 此时，不确定原始边是否已被处理，所以不在这里移除原始边，
       // onEdgeUpdateEnd 应该负责处理边的移除。这里只清理客户端状态。
       // draggingState.value = null; // 修复：注释掉，防止过早清除
       // console.debug('[DIAGNOSTIC LOG] onConnectEnd: POST-CLEAR. draggingState is now:', JSON.parse(JSON.stringify(draggingState.value))); // 修复：相关的日志也注释掉
       // reorderPreviewIndex.value = null; // 修复：相关的清理也注释掉
-      console.debug('[CanvasConnections DEBUG] onConnectEnd: draggingState was populated, but NOT cleared here to allow onEdgeUpdateEnd to process it.');
     } else {
       // draggingState 为 null。
       // 这可能是：
       // 1. 全新连接尝试结束（无论成功连接还是拖放到画布）。
       // 2. 现有连接拖拽已由 onEdgeUpdateEnd 正确处理并清除了 draggingState。
       // 3. 没有拖动操作发生。
-      console.debug('[CanvasConnections DEBUG] onConnectEnd: draggingState is null. No specific cleanup action taken by onConnectEnd for this path, assuming prior handlers (onConnect, onEdgeUpdateEnd) or no drag state.');
     }
   });
 
   // 新增：处理现有连接更新的结束
   onEdgeUpdateEnd(async (payload: { edge?: Edge, event: MouseEvent | TouchEvent }) => { // Signature changed to single payload object
-    const { edge, event } = payload; // Destructure edge and event
+    const { edge } = payload; // Destructure edge and event
     // 在函数入口处立即捕获 connectionEndHandle 的当前值，并进行深拷贝
     const capturedConnectionEndHandle = vueFlowInstance.connectionEndHandle.value ? klona(vueFlowInstance.connectionEndHandle.value) : null;
 
-    console.debug('[DIAGNOSTIC LOG] onEdgeUpdateEnd: Entry. Payload:', { event, updatedEdge: edge ? JSON.parse(JSON.stringify(edge)) : 'undefined' }, 'Composable draggingState.value at entry:', draggingState.value ? JSON.parse(JSON.stringify(draggingState.value)) : null);
     // 打印捕获到的值，而不是实时值
-    console.debug('[DIAGNOSTIC LOG] onEdgeUpdateEnd: CAPTURED vueFlowInstance.connectionEndHandle.value:', capturedConnectionEndHandle ? JSON.parse(JSON.stringify(capturedConnectionEndHandle)) : null);
-    console.debug('[CanvasConnections DEBUG] onEdgeUpdateEnd triggered.', { event, updatedEdge: edge ? JSON.parse(JSON.stringify(edge)) : 'undefined', initialDraggingState: draggingState.value ? JSON.parse(JSON.stringify(draggingState.value)) : null });
 
     if (!draggingState.value || !draggingState.value.originalEdge) {
-      console.warn('[CanvasConnections DEBUG] onEdgeUpdateEnd: No original edge in draggingState or draggingState is null. This might happen if onEdgeUpdateStart did not set it, or it was cleared prematurely. Current draggingState:', draggingState.value ? JSON.parse(JSON.stringify(draggingState.value)) : 'null');
       draggingState.value = null; // 清理以防万一
       reorderPreviewIndex.value = null;
-      console.debug('[DIAGNOSTIC LOG] onEdgeUpdateEnd: Exit (early due to no original edge in draggingState).');
       return;
     }
 
     const activeDraggingState = klona(draggingState.value);
     // 立即清理全局 draggingState
     draggingState.value = null;
-    console.debug('[DIAGNOSTIC LOG] onEdgeUpdateEnd: Global draggingState.value AFTER immediate clear:', JSON.parse(JSON.stringify(draggingState.value)));
     reorderPreviewIndex.value = null;
 
     const { originalEdge } = activeDraggingState;
@@ -904,9 +802,7 @@ export function useCanvasConnections({
     const currentTabId = tabStore.activeTabId;
 
     if (!currentTabId) {
-      console.error("[CanvasConnections DEBUG] [onEdgeUpdateEnd] No active tab ID. Cannot process edge update.");
       // 注意：originalEdge 可能未被移除，这是一个潜在的问题状态。
-      console.debug('[DIAGNOSTIC LOG] onEdgeUpdateEnd: Exit (early due to no active tab ID). activeDraggingState (local copy):', activeDraggingState ? JSON.parse(JSON.stringify(activeDraggingState)) : null);
       return;
     }
 
@@ -914,7 +810,6 @@ export function useCanvasConnections({
     // 不再在此处直接调用 removeElementsAndRecord 或 updateNodeInputConnectionOrderAndRecord。
 
     if (edge) { // VueFlow 认为连接到了某个东西 (payload.edge 不为 null)
-      console.debug(`[CanvasConnections DEBUG] onEdgeUpdateEnd: VueFlow's \`edge\` payload is present. Info:`, JSON.parse(JSON.stringify(edge)));
 
       const finalTargetHandleInfo = capturedConnectionEndHandle; // 使用捕获的句柄信息
 
@@ -960,7 +855,6 @@ export function useCanvasConnections({
             targetHandle: finalTargetHandleInfo.id,
           };
         } else {
-          console.warn("[CanvasConnections DEBUG] onEdgeUpdateEnd: Could not determine if source or target was dragged based on connectionStartHandle. Defaulting to edge payload's source and finalTargetHandleInfo as target.");
           newConnectionParams = {
             source: edge.source,
             sourceHandle: edge.sourceHandle,
@@ -971,7 +865,6 @@ export function useCanvasConnections({
 
 
         if (isValidConnection(newConnectionParams, originalEdgeIdFromDrag)) {
-          console.debug(`[CanvasConnections DEBUG] onEdgeUpdateEnd: New connection is valid (passing originalEdgeId: ${originalEdgeIdFromDrag}). Attempting to move/reconnect.`);
 
           const targetNode = findNode(newConnectionParams.target);
           // 从 newConnectionParams.targetHandle 解析原始键
@@ -994,12 +887,10 @@ export function useCanvasConnections({
             const parsedNewTargetHandle = parseSubHandleId(newConnectionParams.targetHandle);
             if (parsedNewTargetHandle.isSubHandle && typeof parsedNewTargetHandle.index === 'number') {
               newTargetIndexInOrder = parsedNewTargetHandle.index;
-              console.log(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Multi-input target. Using index ${newTargetIndexInOrder} from connected sub-handle '${newConnectionParams.targetHandle}'.`);
             } else {
               // 连接到主多输入句柄 (例如 'text_inputs' 而非 'text_inputs__0') 或解析子句柄索引失败。
               // 这意味着应该追加到该多输入键的连接列表末尾。
               newTargetIndexInOrder = undefined; // undefined 表示追加，以匹配函数签名
-              console.warn(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Multi-input target '${newTargetOriginalKeyFromParams}'. Connected to main handle '${newConnectionParams.targetHandle}' or sub-handle index not found. Will append (targetIndex: undefined).`);
             }
           }
 
@@ -1035,7 +926,6 @@ export function useCanvasConnections({
             // 如果用户将边拖放到完全相同的子句柄，通常顺序不会改变，除非它是唯一的连接或重新排序逻辑导致。
 
           if (noChangeDetected) {
-            console.log(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Edge reconnected to the exact same source/target handles. No actual change. Skipping history record and store action.`);
             // 边已经存在于 store 中，并且其属性没有改变，所以不需要调用 store action。
             // VueFlow 应该已经正确处理了视觉上的拖拽和释放。
           } else {
@@ -1074,7 +964,6 @@ export function useCanvasConnections({
             );
           }
         } else {
-          console.warn(`[CanvasConnections DEBUG] onEdgeUpdateEnd: New connection for edge update is invalid. Original edge ${originalEdge.id} was (or should have been) disconnected. No new edge added. Target: ${newConnectionParams.target}::${newConnectionParams.targetHandle}`);
           // 如果连接无效，但原始边是从输入端拔出的 (activeDraggingState.type === 'unplug_from_input')，
           // 则需要确保它被正确地“断开”。
           if (activeDraggingState.type === 'unplug_from_input') {
@@ -1107,7 +996,6 @@ export function useCanvasConnections({
             // 假设：如果拖到无效区域，原始边已被移除，这里不需要额外操作。
             // 但为了确保，如果不是 unplug_from_input，我们可能需要显式删除。
             // 然而，更理想的是 moveAndReconnectEdgeAndRecord(..., null, null, null, null, historyEntryForDelete)
-            console.log(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Edge ${originalEdge.id} (dragged from source) dropped on invalid target. Assumed disconnected/deleted by coordinator or prior logic.`);
             // const deleteEntry = createHistoryEntry(
             // "delete", "edge", `删除连接 ${originalEdge.id} (从源拖到无效目标)`,
             // { edgeId: originalEdge.id, reason: "drag_from_source_to_invalid_target_on_update_end" }
@@ -1129,13 +1017,11 @@ export function useCanvasConnections({
             // 但这不完全正确，因为 disconnect 是针对 target 的。
             // 正确的做法是，如果从 source 拖到无效目标，应该调用一个能删除边的协调器。
             // 暂时，我们先假设这种情况由外部处理或是一个待修复点。
-            console.warn(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Edge ${originalEdge.id} dragged from source to invalid target. Deletion logic needs to be robustly handled by a coordinator. Original edge might not be removed if not unplugged from input.`);
             // );
             // TODO: Call a proper delete coordinator: await workflowStore.deleteEdgeAndRecord(currentTabId, originalEdge.id, deleteEntry);
           }
         }
       } else { // finalTargetHandleInfo 无效 (例如，拖到画布空白处，但 VueFlow 仍然提供了 edge payload，这不太可能)
-                console.warn(`[CanvasConnections DEBUG] onEdgeUpdateEnd: VueFlow's \`edge\` payload exists, but CAPTURED connectionEndHandle is invalid, not a target, or missing details. Treating as disconnect if unplugged from input.`);
                 if (activeDraggingState.type === 'unplug_from_input') {
                   const readableSource = getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source');
                   const readableTarget = getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target');
@@ -1159,13 +1045,10 @@ export function useCanvasConnections({
                     activeDraggingState.originalTargetHandleId,
                     disconnectEntry
                   );
-          console.log(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Edge ${originalEdge.id} (dragged from source) dropped on invalid area (edge payload present but no valid target handle). Assumed disconnected/deleted by coordinator.`);
         }
       }
     } else { // 拖放到画布上 (VueFlow 的 `edge` 参数为 null)
-      console.debug(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Dropped on pane (VueFlow's \`edge\` payload is null).`);
       if (activeDraggingState.type === 'unplug_from_input') {
-        console.log(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Edge ${originalEdge.id} was unplugged from input and dropped on pane. Disconnecting.`);
         const readableSource = getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source');
         const readableTarget = getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target');
         const disconnectSummary = `断开连接 (拖到画布): ${readableSource.nodeName}::${readableSource.handleName} -> ${readableTarget.nodeName}::${readableTarget.handleName}`;
@@ -1190,7 +1073,6 @@ export function useCanvasConnections({
         );
       } else { // activeDraggingState.type is 'reorder' or 'disconnect_reconnect'
         // 从源端拔出，或从已连接的输出端拔出，释放到画布，等同于删除原始边
-        console.log(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Edge ${originalEdge.id} (dragged from type '${activeDraggingState.type}') dropped on pane. Deleting original edge.`);
 
         const oldSourceNames = getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source');
         const oldTargetNames = getReadableNames(originalEdge.target, originalEdge.targetHandle, 'target');
@@ -1213,7 +1095,6 @@ export function useCanvasConnections({
       }
       // 如果 activeDraggingState.type === 'unplug_from_input' 且拖到画布，则已由上面的 disconnectEdgeFromInputAndRecord 处理
     }
-    console.debug('[DIAGNOSTIC LOG] onEdgeUpdateEnd: Exit (normal). activeDraggingState (local copy):', activeDraggingState ? JSON.parse(JSON.stringify(activeDraggingState)) : null);
   });
 
   // Watch for changes in the handle the mouse is currently over *while dragging*
@@ -1223,13 +1104,8 @@ export function useCanvasConnections({
     const startHandle = vueFlowInstance.connectionStartHandle.value; // This is ConnectingHandle | null
 
     if (startHandle) { // Only log if a connection drag is in progress
-      const startNames = getReadableNames(startHandle.nodeId, startHandle.id, startHandle.type);
 
       if (newEndHandle && newEndHandle.type === 'target') {
-        const newEndNames = getReadableNames(newEndHandle.nodeId, newEndHandle.id, newEndHandle.type);
-        console.log(
-          `[CanvasConnections DEBUG] Dragging from ${startNames.nodeName}::${startNames.handleName} (ID: ${startNames.nodeId}::${startNames.handleId}, Type: ${startHandle.type}). MOUSE ENTERED handle: ${newEndNames.nodeName}::${newEndNames.handleName} (ID: ${newEndNames.nodeId}::${newEndNames.handleId}, Type: ${newEndHandle.type})`,
-        );
 
         const targetNode = findNode(newEndHandle.nodeId);
         if (targetNode && newEndHandle.id) { // 确保 newEndHandle.id 不是 null
@@ -1252,18 +1128,15 @@ export function useCanvasConnections({
               // 如果鼠标直接悬停在一个已编号的子句柄上 (例如 text_inputs__0, text_inputs__1),
               // 那么 reorderPreviewIndex 就应该是那个子句柄的索引。
               reorderPreviewIndex.value = subHandleIndexOfHovered;
-              console.log(`[CanvasConnections DEBUG] Multi-input target. Hovered over specific sub-handle ${newEndHandle.id}. Using its index ${subHandleIndexOfHovered} as reorderPreviewIndex.`);
             } else if (!currentIsSubHandle) {
               // 如果鼠标悬停在多输入插槽的主区域，但不在一个具体的 __index 子句柄上
               // (这种情况可能较少，因为视觉上通常都是与具体的子句柄交互)
               // 此时，可以考虑追加到末尾。
               const inputOrders = (targetNode.data.inputConnectionOrders?.[currentOriginalHandleKey] as string[] | undefined) || [];
               reorderPreviewIndex.value = inputOrders.length;
-              console.log(`[CanvasConnections DEBUG] Multi-input target. Hovered over main handle part ${newEndHandle.id} (not a specific sub-handle). Defaulting reorderPreviewIndex to append: ${reorderPreviewIndex.value}.`);
             } else {
               // 其他未能识别的悬停情况 (例如，isSubHandle 为 true 但 subHandleIndexOfHovered 不是数字)
               // 这通常不应该发生，如果发生则表示解析或句柄ID格式有问题。
-              console.warn(`[CanvasConnections DEBUG] Multi-input target. Hovered handle ${newEndHandle.id} is not a recognized sub-handle index pattern for reordering. Setting reorderPreviewIndex to null.`);
               reorderPreviewIndex.value = null;
             }
           } else {
@@ -1273,10 +1146,6 @@ export function useCanvasConnections({
           reorderPreviewIndex.value = null; // 找不到目标节点
         }
       } else if (oldEndHandle) { // Mouse left a handle or newEndHandle is not a target
-        const oldEndNames = getReadableNames(oldEndHandle.nodeId, oldEndHandle.id, oldEndHandle.type);
-        console.log(
-          `[CanvasConnections DEBUG] Dragging from ${startNames.nodeName}::${startNames.handleName} (ID: ${startNames.nodeId}::${startNames.handleId}, Type: ${startHandle.type}). MOUSE LEFT handle: ${oldEndNames.nodeName}::${oldEndNames.handleName} (ID: ${oldEndNames.nodeId}::${oldEndNames.handleId}, Type: ${oldEndHandle.type})`, // 使用 oldEndHandle.type
-        );
         reorderPreviewIndex.value = null;
       } else {
         // newEndHandle is null and oldEndHandle was also null (or drag just started and not over anything yet)

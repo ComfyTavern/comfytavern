@@ -369,7 +369,6 @@ const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // output
   );
 
   interactionCoordinator.setPreviewTargetAndRecord(internalId, newTarget, entry);
-  console.log(`[BaseNode] Alt+Click on Handle: ${historySummary}`);
 };
 // --- 结束新增处理函数 ---
 
@@ -558,11 +557,9 @@ const multiInputSlotContainerStyle = computed(() => {
         const currentInputKey = String(input.key);
         // const numConnections = getInputConnectionCount(currentInputKey); // 不再直接在这里使用 numConnections
         const actualInteractiveSlots = getNumChildHandles(currentInputKey); // 获取实际要渲染的交互式子句柄数量
-        console.log(`[BaseNode DEBUG] multiInputSlotContainerStyle for ${currentInputKey}: actualInteractiveSlots = ${actualInteractiveSlots}`);
 
         // 确定用于高度计算的视觉槽位数
         const visualSlotsForHeightCalc = Math.max(actualInteractiveSlots, MIN_MULTI_HANDLE_HEIGHT_FACTOR);
-        console.log(`[BaseNode DEBUG] multiInputSlotContainerStyle for ${currentInputKey}: visualSlotsForHeightCalc (for minHeight) = ${visualSlotsForHeightCalc}`);
         
         // 容器的总垂直内边距 (上下各 HANDLE_VERTICAL_PADDING / 2)
         const totalVerticalPaddingForContainer = HANDLE_VERTICAL_PADDING;
@@ -570,7 +567,6 @@ const multiInputSlotContainerStyle = computed(() => {
           visualSlotsForHeightCalc * (HANDLE_LINE_HEIGHT + HANDLE_VERTICAL_PADDING) + // 基于视觉槽位数计算高度
           // Math.max(0, visualSlotsForHeightCalc - 1) * HANDLE_LINE_GAP + // 子Handle之间的间隙 - GAP IS NOW 0
           totalVerticalPaddingForContainer; // 容器自身的上下内边距
-        console.log(`[BaseNode DEBUG] multiInputSlotContainerStyle for ${currentInputKey}: minContainerHeight = ${minContainerHeight}`);
 
         stylesMap[currentInputKey] = {
           display: 'flex',
@@ -618,7 +614,6 @@ const getNumChildHandles = (inputKey: string): number => {
 // MIN_MULTI_HANDLE_HEIGHT_FACTOR 不应影响实际渲染的句柄数量，仅影响容器视觉高度。
 // handlesToRender 已经是计算好的实际应渲染的子句柄数。
 // 保留关键的最终日志输出，并指明 numConnections 的来源
-console.log(`[BaseNode DEBUG] getNumChildHandles for ${inputKey}: numConnections (from props.data) = ${numConnections}, returning handlesToRender = ${handlesToRender} (MIN_MULTI_HANDLE_HEIGHT_FACTOR = ${MIN_MULTI_HANDLE_HEIGHT_FACTOR} will be used for visual height only)`);
 return handlesToRender;
 };
 
@@ -1231,7 +1226,6 @@ export default {
         handleType: handleType,
         originalEvent: event, // 传递原始事件对象
       };
-      console.log("BaseNode emitting slot-contextmenu:", detail);
       // 使用 this.$el 触发事件，使其能够冒泡到 Canvas
       this.$el.dispatchEvent(
         new CustomEvent("slot-contextmenu", { detail, bubbles: true, composed: true })
