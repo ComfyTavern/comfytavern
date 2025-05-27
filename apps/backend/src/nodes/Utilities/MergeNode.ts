@@ -34,8 +34,7 @@ export const definition: NodeDefinition = {
         multiline: true,
         placeholder: '文本内容将在这里显示',
         default: '',
-        label: '文本输入',
-        display_only: true // 使用只读的TextDisplay组件
+        label: '文本输入'
       }
     },
     separator: {

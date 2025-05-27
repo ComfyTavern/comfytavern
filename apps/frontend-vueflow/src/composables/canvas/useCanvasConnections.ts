@@ -523,42 +523,43 @@ export function useCanvasConnections({
     // 所以，上面的 sourceNames 和 targetNames 应该基于 params 来获取，因为它们用于用户可读的日志。
     // 而 newEdgeParamsForCoordinator.targetHandle 必须是修正后的。
 
-    const sourceNames = getReadableNames(params.source, params.sourceHandle, 'source');
-    const targetNames = getReadableNames(target, targetHandle, 'target');
+            // Roo: sourceNames and targetNames removed as they were unused.
+            // HistoryEntry creation re-introduced below.
+        
+            // 调用新的协调器函数
+            // 注意：这里不再需要 createAndAddVerifiedEdge，因为类型转换和接口同步逻辑
+            // 应该在协调器函数内部或由协调器调用的更底层的服务处理。
+            // 目前 connectEdgeToInputAndRecord 还不处理类型转换或接口同步。
+            // 这部分可能需要在未来的重构中加入到协调器或其调用的服务中。
+            // 暂时，我们假设 connectEdgeToInputAndRecord 专注于连接和排序。
+        
+            // TODO: 考虑接口同步 (syncInterfaceSlotFromConnection) 和类型转换逻辑如何与新协调器集成。
+            // 目前的 connectEdgeToInputAndRecord 比较纯粹，只负责添加边和更新顺序。
+            // 复杂的类型转换和接口同步可能需要一个更高层次的协调器或在 connectEdgeToInputAndRecord 内部扩展。
+            
+            const readableSource = getReadableNames(params.source, params.sourceHandle, 'source');
+            const readableTarget = getReadableNames(params.target, params.targetHandle, 'target');
+            const connectSummary = `连接 ${readableSource.nodeName}::${readableSource.handleName} -> ${readableTarget.nodeName}::${readableTarget.handleName}`;
+            const historyEntry = createHistoryEntry(
+              "connect",
+              "edge",
+              connectSummary,
+              {
+                edgeId: newEdgeParamsForCoordinator.id,
+                sourceNodeId: newEdgeParamsForCoordinator.source,
+                sourceHandleId: newEdgeParamsForCoordinator.sourceHandle,
+                targetNodeId: newEdgeParamsForCoordinator.target,
+                targetHandleId: newEdgeParamsForCoordinator.targetHandle, // This is the sub-handle ID
+                type: newEdgeParamsForCoordinator.type,
+                data: newEdgeParamsForCoordinator.data,
+              }
+            );
 
-    const historyEntry = createHistoryEntry(
-      "create",
-      "edge",
-      `连接 ${sourceNames.nodeName}::${sourceNames.handleName} -> ${targetNames.nodeName}::${targetNames.handleName}`,
-      {
-        edgeId: newEdgeObjectFromCreateEdge.id, // 使用 newEdgeObjectFromCreateEdge.id
-        sourceNodeId: params.source, // 使用 params.source
-        sourceHandle: params.sourceHandle, // 使用 params.sourceHandle
-        targetNodeId: params.target, // 使用 params.target
-        targetHandle: params.targetHandle, // 使用 params.targetHandle (原始子句柄ID，用于历史记录的可读性)
-        targetIndexInOrder: isTargetMultiInput ? targetIndexInOrder : undefined,
-        reason: "connect_new_edge_via_handleConnect",
-      }
-    );
-
-    // 调用新的协调器函数
-    // 注意：这里不再需要 createAndAddVerifiedEdge，因为类型转换和接口同步逻辑
-    // 应该在协调器函数内部或由协调器调用的更底层的服务处理。
-    // 目前 connectEdgeToInputAndRecord 还不处理类型转换或接口同步。
-    // 这部分可能需要在未来的重构中加入到协调器或其调用的服务中。
-    // 暂时，我们假设 connectEdgeToInputAndRecord 专注于连接和排序。
-
-    // TODO: 考虑接口同步 (syncInterfaceSlotFromConnection) 和类型转换逻辑如何与新协调器集成。
-    // 目前的 connectEdgeToInputAndRecord 比较纯粹，只负责添加边和更新顺序。
-    // 复杂的类型转换和接口同步可能需要一个更高层次的协调器或在 connectEdgeToInputAndRecord 内部扩展。
-
-    await workflowStore.connectEdgeToInputAndRecord(
-      currentTabId,
-      newEdgeParamsForCoordinator,
-      targetIndexInOrder,
-      historyEntry
-    );
-
+            await workflowStore.connectEdgeToInputAndRecord(
+              newEdgeParamsForCoordinator, // First arg is the edge itself
+              targetIndexInOrder,
+              historyEntry // Third arg is the HistoryEntry
+            );
     // 由于 connectEdgeToInputAndRecord 是异步的，并且会更新 store，
     // VueFlow 应该会自动响应 store 的变化来渲染新的边。
     // 我们返回一个象征性的 Edge 对象或 null。
@@ -958,36 +959,36 @@ export function useCanvasConnections({
               console.warn(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Multi-input target. reorderPreviewIndex is null. Appending to end (index: ${newTargetIndexInOrder}).`);
             }
           }
-
+          const oldSourceForSummary = getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source');
+          const oldTargetForSummary = getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target');
+          const newTargetForSummary = getReadableNames(newConnectionParams.target, newConnectionParams.targetHandle, 'target');
+          const summary = `移动连接 ${oldSourceForSummary.nodeName}::${oldSourceForSummary.handleName} (${originalEdge.source}::${originalEdge.sourceHandle}) -> ${oldTargetForSummary.nodeName}::${oldTargetForSummary.handleName} (${activeDraggingState.originalTargetNodeId}::${activeDraggingState.originalTargetHandleId})  TO  ${newTargetForSummary.nodeName}::${newTargetForSummary.handleName} (${newConnectionParams.target}::${newConnectionParams.targetHandle})`;
           const historyEntry = createHistoryEntry(
-            "move", // 或者 "reconnect"
+            "modify",
             "edge",
-            // `移动连接 ${originalEdge.id} 到 ${newConnectionParams.target}::${newConnectionParams.targetHandle}`,
-            `移动连接 ${getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source').nodeName}::${getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source').handleName} -> ${getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target').nodeName}::${getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target').handleName}  TO  ${getReadableNames(newConnectionParams.target, newConnectionParams.targetHandle, 'target').nodeName}::${getReadableNames(newConnectionParams.target, newConnectionParams.targetHandle, 'target').handleName}`,
+            summary,
             {
               edgeId: originalEdge.id,
-              originalSourceNodeId: activeDraggingState.originalSourceNodeId,
-              originalSourceHandleId: activeDraggingState.originalSourceHandleId,
-              originalTargetNodeId: activeDraggingState.originalTargetNodeId,
-              originalTargetHandleId: activeDraggingState.originalTargetHandleId,
+              oldSourceNodeId: originalEdge.source,
+              oldSourceHandleId: originalEdge.sourceHandle,
+              oldTargetNodeId: activeDraggingState.originalTargetNodeId,
+              oldTargetHandleId: activeDraggingState.originalTargetHandleId,
               newSourceNodeId: newConnectionParams.source,
-              newSourceHandleId: newConnectionParams.sourceHandle,
+              newSourceHandleId: newConnectionParams.sourceHandle, // Will be string | null
               newTargetNodeId: newConnectionParams.target,
-              newTargetHandleId: newConnectionParams.targetHandle,
-              newTargetIndexInOrder: newTargetIndexInOrder, // 传递插入索引
-              reason: "edge_reconnected_to_new_target_via_onEdgeUpdateEnd",
+              newTargetHandleId: newConnectionParams.targetHandle, // Will be string | null
+              newTargetIndexInOrder: newTargetIndexInOrder,
             }
           );
 
           await workflowStore.moveAndReconnectEdgeAndRecord(
-            currentTabId,
             originalEdge.id,
             activeDraggingState.originalTargetNodeId,
             activeDraggingState.originalTargetHandleId,
             newConnectionParams.source,
-            newConnectionParams.sourceHandle ?? undefined, // 确保 null 转为 undefined
+            newConnectionParams.sourceHandle ?? undefined, // 确保 null 转为 undefined, coordinator expects string | undefined
             newConnectionParams.target,
-            newConnectionParams.targetHandle ?? undefined, // 确保 null 转为 undefined
+            newConnectionParams.targetHandle ?? undefined, // 确保 null 转为 undefined, coordinator expects string | undefined
             newTargetIndexInOrder,
             historyEntry
           );
@@ -996,19 +997,23 @@ export function useCanvasConnections({
           // 如果连接无效，但原始边是从输入端拔出的 (activeDraggingState.type === 'unplug_from_input')，
           // 则需要确保它被正确地“断开”。
           if (activeDraggingState.type === 'unplug_from_input') {
+            const readableSource = getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source');
+            const readableTarget = getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target');
+            const disconnectSummary = `断开连接 (更新无效): ${readableSource.nodeName}::${readableSource.handleName} -> ${readableTarget.nodeName}::${readableTarget.handleName}`;
             const disconnectEntry = createHistoryEntry(
-              "delete",
+              "disconnect",
               "edge",
-              `断开连接 ${getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source').nodeName}::${getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source').handleName} -> ${getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target').nodeName}::${getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target').handleName} (重连到无效目标)`,
+              disconnectSummary,
               {
                 edgeId: originalEdge.id,
-                originalTargetNodeId: activeDraggingState.originalTargetNodeId,
-                originalTargetHandleId: activeDraggingState.originalTargetHandleId,
-                reason: "unplug_from_input_reconnect_failed_invalid_target",
+                sourceNodeId: originalEdge.source,
+                sourceHandleId: originalEdge.sourceHandle,
+                targetNodeId: activeDraggingState.originalTargetNodeId,
+                targetHandleId: activeDraggingState.originalTargetHandleId,
+                reason: "edge_update_to_invalid_target_unplugged_from_input"
               }
             );
             await workflowStore.disconnectEdgeFromInputAndRecord(
-              currentTabId,
               originalEdge.id,
               activeDraggingState.originalTargetNodeId,
               activeDraggingState.originalTargetHandleId,
@@ -1036,12 +1041,7 @@ export function useCanvasConnections({
             // 或者 disconnectEdgeFromInputAndRecord 已经覆盖了所有需要“断开”的场景。
             // 如果拖拽的是源，并且目标无效，这等同于删除。
             // 我们需要一个协调器函数来删除边并更新相关顺序。
-            // 暂时，我们假设如果连接无效，且不是 unplug_from_input，则原始边已被移除。
-            // 这部分逻辑比较复杂，因为原始的 removeElementsAndRecord(L772)已被注释掉。
-            // 最好的做法是让 moveAndReconnectEdgeAndRecord 能够处理 target 为 null 的情况，
-            // 或者有一个专门的 deleteEdgeAndRecord。
-            // 由于我们还没有 deleteEdgeAndRecord，并且 moveAndReconnectEdgeAndRecord 当前不接受 null target，
-            // 这里的逻辑依赖于一个假设：如果不是 unplug_from_input，则原始边已被移除。
+            // 暂时，我们先假设如果连接无效，且不是 unplug_from_input，则原始边已被移除。
             // 这在当前代码中可能不成立，因为 L772 的 removeElementsAndRecord 被注释掉了。
             // 这是一个潜在的 bug：如果从 source 拖到无效目标，原始边可能不会被移除。
             // 修复：如果不是 unplug_from_input 且连接无效，则调用 disconnectEdgeFromInputAndRecord
@@ -1054,27 +1054,30 @@ export function useCanvasConnections({
           }
         }
       } else { // finalTargetHandleInfo 无效 (例如，拖到画布空白处，但 VueFlow 仍然提供了 edge payload，这不太可能)
-        console.warn(`[CanvasConnections DEBUG] onEdgeUpdateEnd: VueFlow's \`edge\` payload exists, but CAPTURED connectionEndHandle is invalid, not a target, or missing details. Treating as disconnect if unplugged from input.`);
-        if (activeDraggingState.type === 'unplug_from_input') {
-          const disconnectEntry = createHistoryEntry(
-            "delete",
-            "edge",
-            `断开连接 ${getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source').nodeName}::${getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source').handleName} -> ${getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target').nodeName}::${getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target').handleName} (拖到无效目标区域)`,
-            {
-              edgeId: originalEdge.id,
-              originalTargetNodeId: activeDraggingState.originalTargetNodeId,
-              originalTargetHandleId: activeDraggingState.originalTargetHandleId,
-              reason: "unplug_from_input_dropped_on_invalid_area_with_edge_payload",
-            }
-          );
-          await workflowStore.disconnectEdgeFromInputAndRecord(
-            currentTabId,
-            originalEdge.id,
-            activeDraggingState.originalTargetNodeId,
-            activeDraggingState.originalTargetHandleId,
-            disconnectEntry
-          );
-        } else {
+                console.warn(`[CanvasConnections DEBUG] onEdgeUpdateEnd: VueFlow's \`edge\` payload exists, but CAPTURED connectionEndHandle is invalid, not a target, or missing details. Treating as disconnect if unplugged from input.`);
+                if (activeDraggingState.type === 'unplug_from_input') {
+                  const readableSource = getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source');
+                  const readableTarget = getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target');
+                  const summary = `断开连接 (拖到无效目标区域): ${readableSource.nodeName}::${readableSource.handleName} -> ${readableTarget.nodeName}::${readableTarget.handleName}`;
+                  const disconnectEntry = createHistoryEntry(
+                    "disconnect",
+                    "edge",
+                    summary,
+                    {
+                      edgeId: originalEdge.id,
+                      sourceNodeId: originalEdge.source,
+                      sourceHandleId: originalEdge.sourceHandle,
+                      targetNodeId: activeDraggingState.originalTargetNodeId,
+                      targetHandleId: activeDraggingState.originalTargetHandleId,
+                      reason: "edge_update_dropped_on_invalid_area_unplugged_from_input"
+                    }
+                  );
+                  await workflowStore.disconnectEdgeFromInputAndRecord(
+                    originalEdge.id,
+                    activeDraggingState.originalTargetNodeId,
+                    activeDraggingState.originalTargetHandleId,
+                    disconnectEntry
+                  );
           console.log(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Edge ${originalEdge.id} (dragged from source) dropped on invalid area (edge payload present but no valid target handle). Assumed disconnected/deleted by coordinator.`);
         }
       }
@@ -1082,19 +1085,23 @@ export function useCanvasConnections({
       console.debug(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Dropped on pane (VueFlow's \`edge\` payload is null).`);
       if (activeDraggingState.type === 'unplug_from_input') {
         console.log(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Edge ${originalEdge.id} was unplugged from input and dropped on pane. Disconnecting.`);
+        const readableSource = getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source');
+        const readableTarget = getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target');
+        const disconnectSummary = `断开连接 (拖到画布): ${readableSource.nodeName}::${readableSource.handleName} -> ${readableTarget.nodeName}::${readableTarget.handleName}`;
         const disconnectEntry = createHistoryEntry(
-          "delete",
+          "disconnect",
           "edge",
-          `断开连接 ${getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source').nodeName}::${getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source').handleName} -> ${getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target').nodeName}::${getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target').handleName} (拖到画布)`,
+          disconnectSummary,
           {
             edgeId: originalEdge.id,
-            originalTargetNodeId: activeDraggingState.originalTargetNodeId,
-            originalTargetHandleId: activeDraggingState.originalTargetHandleId,
-            reason: "unplug_from_input_dropped_on_pane_on_edge_update_end",
+            sourceNodeId: originalEdge.source,
+            sourceHandleId: originalEdge.sourceHandle,
+            targetNodeId: activeDraggingState.originalTargetNodeId,
+            targetHandleId: activeDraggingState.originalTargetHandleId,
+            reason: "edge_unplugged_from_input_dropped_on_pane"
           }
         );
         await workflowStore.disconnectEdgeFromInputAndRecord(
-          currentTabId,
           originalEdge.id,
           activeDraggingState.originalTargetNodeId,
           activeDraggingState.originalTargetHandleId,

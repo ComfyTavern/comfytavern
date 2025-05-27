@@ -26,6 +26,7 @@ import { useWorkflowInteractionCoordinator } from "../../../composables/workflow
 import { useNodeClientScript } from "../../../composables/node/useNodeClientScript"; // 导入客户端脚本 Composable
 import Tooltip from "../../common/Tooltip.vue"; // 导入提示框组件
 import MarkdownRenderer from "../../common/MarkdownRenderer.vue"; // 导入 Markdown 渲染器
+import InlineConnectionSorter from '../inputs/InlineConnectionSorter.vue'; // 导入连接排序组件
 import { useWorkflowManager } from "../../../composables/workflow/useWorkflowManager"; // 导入工作流管理器
 import styles from "./handleStyles.module.css";
 // 移除重复导入: import type { InputDefinition } from "@comfytavern/types"; // InputDefinition 已在第12行导入
@@ -56,6 +57,21 @@ const tabStore = useTabStore();
 const { activeTabId } = storeToRefs(tabStore);
 const interactionCoordinator = useWorkflowInteractionCoordinator(); // 获取工作流交互协调器实例
 const workflowManager = useWorkflowManager(); // 获取工作流管理器实例
+
+const vueFlowInstance = useVueFlow(); // 确保 vueFlowInstance 在此作用域，因为它在 getNodeLabelForSorter 中使用
+
+// 辅助函数：为 Sorter 获取节点标签
+const getNodeLabelForSorter = (nodeId: string): string => {
+  const node = vueFlowInstance.getNode.value(nodeId); // 更正：getNode 是一个 ComputedRef，其 .value 是函数
+  return node?.label || node?.data?.displayName || node?.type || nodeId;
+};
+
+// 辅助函数：判断是否应显示连接排序器
+const shouldShowSorter = (input: (typeof finalInputs.value)[0]): boolean => {
+  return !!input.multi && // 确保 input.multi 是 true
+         !(input.dataFlowType === DataFlowType.WILDCARD &&
+           input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER));
+};
 
 // 使用节点状态、属性和操作相关的 Composables
 const {
@@ -1071,7 +1087,7 @@ const getDynamicParamHeaderStyle = (inputDef: (typeof finalInputs.value)[number]
               @mousedown.stop
             >
               <!-- 情况1: 简单内联输入 -->
-              <template v-if="isSimpleInlineInput(input) && getInputComponent(input.dataFlowType, input.config, input.matchCategories)">
+              <template v-if="isSimpleInlineInput(input) && getInputComponent(input.dataFlowType, input.config, input.matchCategories) && !shouldShowSorter(input)">
                 <component
                   :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
                   :model-value="getInputValue(String((input as any).key))"
@@ -1084,8 +1100,8 @@ const getDynamicParamHeaderStyle = (inputDef: (typeof finalInputs.value)[number]
                   class="w-full max-w-full"
                 />
               </template>
-              <!-- 情况2: 显示动作按钮 (预览/编辑) -->
-              <template v-else-if="showActionButtonsForInput(input)">
+              <!-- 情况2: 显示动作按钮 (预览/编辑) - 仅当不显示 Sorter 时 -->
+              <template v-else-if="showActionButtonsForInput(input) && !shouldShowSorter(input)">
                 <div class="flex items-center space-x-1">
                   <!-- 预览按钮 (Tooltip) -->
                   <Tooltip
@@ -1147,10 +1163,24 @@ const getDynamicParamHeaderStyle = (inputDef: (typeof finalInputs.value)[number]
           </div>
         </div>
 
+        <!-- 内联连接排序器 -->
+        <div v-if="shouldShowSorter(input)" class="param-content !p-0 !bg-transparent"> <!-- 使用 !p-0 和 !bg-transparent 移除默认的 param-content 样式，让 Sorter 自己控制 -->
+          <InlineConnectionSorter
+            :node-id="props.id"
+            :input-handle-key="String(input.key)"
+            :current-ordered-edge-ids="props.data.inputConnectionOrders?.[String(input.key)] || []"
+            :input-definition="input"
+            :all-edges="vueFlowInstance.edges.value"
+            :find-node="vueFlowInstance.findNode"
+            :get-node-label="getNodeLabelForSorter"
+          />
+        </div>
+
         <!-- 多行文本/JSON查看器等特殊输入组件 (根据条件显示) -->
         <!-- 注意：CodeInput 不会在这里渲染，它只在 param-header 中显示按钮 -->
         <div
           v-if="
+            (
             props.type !== 'core:GroupInput' &&
             props.type !== 'core:GroupOutput' &&
             getInputComponent(input.dataFlowType, input.config, input.matchCategories) &&
@@ -1167,6 +1197,7 @@ const getDynamicParamHeaderStyle = (inputDef: (typeof finalInputs.value)[number]
               !isInputConnected(String(input.key)) ||
               (isInputConnected(String(input.key)) && input.config?.showReceivedValue)
             )
+            ) && !shouldShowSorter(input)
           "
           class="param-content"
           @mousedown.stop

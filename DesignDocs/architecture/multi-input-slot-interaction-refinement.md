@@ -69,6 +69,7 @@
 *   **视觉指示**：
     *   当拖拽连接线悬停在跑道区域时，需要根据鼠标的垂直位置高亮跑道区域内对应的逻辑子Handle区域（例如，通过改变跑道特定部分的背景或边框）。
     *   跑道式的整体外观取代了原先在单个拉伸Handle内模拟视觉间隙的需求。连接点在逻辑上对应内部子Handle的位置。
+    *   **特定多输入插槽的UI简化**: 对于主要通过连接接收数据、且其连接顺序由专门的内联组件（如 `InlineConnectionSorter.vue`）管理的多输入插槽（例如“文本合并”节点的“文本输入”插槽），应避免渲染常规用于可直接编辑内容的输入控件的预览（眼睛图标）和编辑（铅笔图标）按钮。这些按钮在此类场景下是多余的，因为插槽内容本身不直接编辑，连接顺序由排序组件处理。这将需要调整 `BaseNode.vue` 中 `showActionButtonsForInput` 函数的逻辑或模板中的条件渲染。
 *   **移除或重构相关逻辑**：
     *   `getDynamicHandleStyles` (或类似函数) 将主要负责计算和应用跑道式父容器的样式（包括其动态高度和跑道形状），并可能辅助定位内部逻辑子Handle的交互区域。
     *   原有的针对单个Handle的跑道形样式逻辑将演变为应用于这个新的、包含多个逻辑子Handle的父容器。单个逻辑子Handle在概念上仍是标准交互单元，但其视觉表现融入父容器。
@@ -92,6 +93,35 @@
 ### 4. `apps/frontend-vueflow/src/components/graph/edges/UnplugConnectionLine.vue`
 *   **现状**：此组件已存在。
 *   **计划整合**：其现有样式和逻辑可以被复用或作为基础，用于实现连接线处于“拔出并重连”状态时的视觉反馈，以及高亮选中连接到特定子Handle的连接线。
+
+### 5. 内联连接排序组件 (`InlineConnectionSorter.vue`)
+
+为了解决画布内直接拖拽排序可能不够精确或在连接线较多时操作不便的问题，特别对于顺序敏感的多输入插槽（例如文本合并），引入一个内联的连接排序组件。
+
+*   **目的**: 在 `BaseNode.vue` 内部，为 `multi: true` 的输入插槽提供一个用户友好的、紧凑的UI，用于重新排列已连接的边的顺序。
+*   **集成方式**:
+*   直接在 `BaseNode.vue` 的节点主体内，与对应的多输入插槽关联渲染。
+*   通常显示在该插槽的参数头部 (`param-header`)下方。
+*   **显示条件**: 仅当 `input.multi === true` 且该插槽的连接数大于1时显示。
+*   **UI与交互**:
+*   呈现为一个紧凑的可拖拽列表，每一项代表一条进入该插槽的连接。
+*   列表项应清晰显示连接的来源信息（例如：源节点名称、源插槽名称）。
+*   用户通过拖拽列表中的条目来改变连接的顺序。
+*   **状态管理与历史记录**:
+*   当用户完成拖拽操作并且连接顺序实际发生改变后：
+    1.  组件根据新的列表顺序生成 `orderedEdgeIds` 数组。
+    2.  创建一个 `HistoryEntry` 对象，记录操作类型（例如 `'reorder'`）、对象类型（`'nodeInputConnectionOrder'`）、操作摘要以及新旧顺序等详细信息。
+    3.  调用工作流交互协调器中的相应函数（例如 `interactionCoordinator.updateNodeInputConnectionOrderAndRecord(...)`），传递节点ID、插槽key、新的 `orderedEdgeIds` 以及创建的 `HistoryEntry` 对象。
+    4.  协调器函数负责更新 `workflowStore` 中对应节点的 `inputConnectionOrders` 并记录此次原子操作。
+*   **核心 Props**:
+*   `nodeId: string`
+*   `inputHandleKey: string`
+*   `currentOrderedEdgeIds: string[]` (从 `BaseNode` 传入的当前连接顺序)
+*   `inputDefinition: InputDefinition` (相关的输入定义)
+*   `allEdges: Edge[]` (当前工作流的所有边，用于查找连接详情)
+*   `findNode: (id: string) => Node | undefined` (VueFlow 实例的 `findNode` 函数)
+*   `getNodeLabel: (nodeId: string) => string` (获取节点可读标签的辅助函数)
+*   **设计参考**: 其内联呈现方式参考了节点内部其他输入控件（如 `JsonInlineViewer.vue`）的集成模式，但功能上专注于连接排序。其状态更新和历史记录模式参考了项目中其他对工作流进行修改的组件（如 `GroupIOEdit.vue`）的实践。
 
 ## IV. 原子化历史记录与协调器
 

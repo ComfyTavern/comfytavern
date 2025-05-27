@@ -1,5 +1,5 @@
 // apps/frontend-vueflow/src/composables/workflow/useWorkflowInteractionCoordinator.ts
-import { nextTick } from "vue";
+import { nextTick, computed } from "vue"; // Roo: Remove unused Ref import
 import { klona } from "klona/full";
 import type { Node as VueFlowNode, Edge } from "@vue-flow/core";
 import type { GroupSlotInfo, HistoryEntry, InputDefinition } from "@comfytavern/types";
@@ -15,26 +15,11 @@ import { useWorkflowGrouping } from "../group/useWorkflowGrouping";
 import { useWorkflowPreview } from "./useWorkflowPreview"; // 导入新的预览 composable
 import { useEditorState } from "@/composables/editor/useEditorState"; // 导入 useEditorState
 import type { EditorOpeningContext } from "@/types/editorTypes"; // 导入 EditorOpeningContext
+import { useMultiInputConnectionActions } from "@/composables/node/useMultiInputConnectionActions"; // Roo: 导入新的 multi-input actions
 
-// 本地辅助函数，用于解析子句柄 ID
-function parseSubHandleIdLocal(handleId: string | null | undefined): { originalKey: string; index?: number; isSubHandle: boolean } {
-  if (!handleId) {
-    return { originalKey: '', index: undefined, isSubHandle: false };
-  }
-  const parts = handleId.split('__');
-  if (parts.length === 2) {
-    const keyPart = parts[0];
-    const indexStrPart = parts[1];
-    // 确保 keyPart 和 indexStrPart 都是字符串
-    if (typeof keyPart === 'string' && typeof indexStrPart === 'string') {
-      const potentialIndex = parseInt(indexStrPart, 10);
-      if (!isNaN(potentialIndex)) {
-        return { originalKey: keyPart, index: potentialIndex, isSubHandle: true };
-      }
-    }
-  }
-  return { originalKey: handleId, index: undefined, isSubHandle: false };
-}
+// 本地辅助函数 parseSubHandleIdLocal 已被移除，因为它不再被此文件中的任何函数使用。
+// useMultiInputConnectionActions.ts 中有其自己的版本。
+
 /**
  * @module composables/workflow/useWorkflowInteractionCoordinator
  * @description
@@ -50,6 +35,10 @@ export function useWorkflowInteractionCoordinator() {
   const workflowGrouping = useWorkflowGrouping();
   const tabStore = useTabStore();
   const { requestPreviewExecution, isPreviewEnabled } = useWorkflowPreview(); // 使用新的预览 composable
+  
+  // Roo: 创建一个新的 computed Ref 来包装 tabStore.activeTabId，确保它是一个 Ref 对象
+  const coordinatorActiveTabIdRef = computed(() => tabStore.activeTabId);
+  const multiInputActions = useMultiInputConnectionActions(coordinatorActiveTabIdRef);
 
   // --- 内部辅助函数 ---
 
@@ -1241,75 +1230,20 @@ export function useWorkflowInteractionCoordinator() {
    * @param entry - 接收一个已创建的 HistoryEntry 对象。
    */
   async function updateNodeInputConnectionOrderAndRecord(
-    internalId: string,
+    // internalId: string, // Roo: internalId is now derived from activeTabId in multiInputActions
     nodeId: string,
     handleKey: string,
-    newOrderedEdgeIds: string[], // 重命名为 newOrderedEdgeIds 以示清晰
+    newOrderedEdgeIds: string[],
     entry: HistoryEntry
   ) {
-    // 1. 获取当前快照
-    const currentSnapshot = _getCurrentSnapshot(internalId); // 使用 _getCurrentSnapshot
-    if (!currentSnapshot) {
-      console.error(
-        `[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
-      );
-      return;
-    }
-
-    const originalNode = currentSnapshot.elements.find(
-      (el) => el.id === nodeId && !("source" in el)
-    ) as VueFlowNode | undefined;
-
-    if (!originalNode) {
-      console.error(
-        `[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] 在当前快照中未找到节点 ${nodeId}。`
-      );
-      return;
-    }
-
-    const currentOrder = (originalNode.data?.inputConnectionOrders?.[handleKey] as string[] | undefined) || [];
-
-    // 变更检测：比较 newOrderedEdgeIds 与当前 inputConnectionOrders[handleKey]
-    if (
-      currentOrder.length === newOrderedEdgeIds.length &&
-      currentOrder.every((id: string, index: number) => id === newOrderedEdgeIds[index])
-    ) {
-      console.debug(
-        `[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] 节点 ${nodeId} 句柄 ${handleKey} 的连接顺序未改变。跳过历史记录。`
-      );
-      return;
-    }
-
-    // 2. 创建下一个状态的深拷贝
-    const nextSnapshot = klona(currentSnapshot);
-
-    // 3. 修改 nextSnapshot
-    const targetNodeInNextSnapshot = nextSnapshot.elements.find(
-      (el) => el.id === nodeId && !("source" in el)
-    ) as VueFlowNode | undefined; // 确保是节点而不是边
-
-    if (!targetNodeInNextSnapshot) {
-      // 这不应该发生，因为我们已经从 currentSnapshot 找到了它
-      console.error(
-        `[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] 在 nextSnapshot 中未找到节点 ${nodeId}。`
-      );
-      return;
-    }
-
-    // 确保节点的 data 对象存在
-    targetNodeInNextSnapshot.data = targetNodeInNextSnapshot.data || {};
-    // 确保节点的 data.inputConnectionOrders 对象存在
-    targetNodeInNextSnapshot.data.inputConnectionOrders =
-      targetNodeInNextSnapshot.data.inputConnectionOrders || {};
-
-    // 更新 inputConnectionOrders
-    targetNodeInNextSnapshot.data.inputConnectionOrders[handleKey] = newOrderedEdgeIds;
-
-    // 4. 应用状态更新
-    await workflowManager.setElements(internalId, nextSnapshot.elements);
-
-    // 5. 记录历史
-    _recordHistory(internalId, entry, nextSnapshot); // 使用 _recordHistory
+    // 调用新的 composable 中的方法
+    // internalId 将由 multiInputActions 内部通过 activeTabId.value 获取
+    await multiInputActions.updateNodeInputConnectionOrder(
+      nodeId,
+      handleKey,
+      newOrderedEdgeIds,
+      entry
+    );
   }
 
   /**
@@ -1321,77 +1255,19 @@ export function useWorkflowInteractionCoordinator() {
    * @param entry - 描述此操作的历史记录条目。
    */
   async function disconnectEdgeFromInputAndRecord(
-    internalId: string,
+    // internalId: string, // Roo: internalId is now derived from activeTabId in multiInputActions
     edgeId: string,
     originalTargetNodeId: string,
     originalTargetHandleId: string,
     entry: HistoryEntry
   ) {
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot) {
-      console.error(
-        `[InteractionCoordinator:disconnectEdgeFromInputAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
-      );
-      return;
-    }
-
-    const edgeToRemove = currentSnapshot.elements.find(
-      (el) => el.id === edgeId && "source" in el
-    ) as Edge | undefined;
-
-    if (!edgeToRemove) {
-      console.warn(
-        `[InteractionCoordinator:disconnectEdgeFromInputAndRecord] 未找到要断开的边 ${edgeId}。跳过。`
-      );
-      return;
-    }
-    // 确保边确实连接到指定的原始目标
-    if (
-      edgeToRemove.target !== originalTargetNodeId ||
-      edgeToRemove.targetHandle !== originalTargetHandleId
-    ) {
-      console.warn(
-        `[InteractionCoordinator:disconnectEdgeFromInputAndRecord] 边 ${edgeId} 的当前目标 (${edgeToRemove.target}::${edgeToRemove.targetHandle}) 与提供的原始目标 (${originalTargetNodeId}::${originalTargetHandleId}) 不匹配。跳过。`
-      );
-      return;
-    }
-
-    const nextSnapshot = klona(currentSnapshot);
-
-    // 1. 从 nextSnapshot 中移除边
-    nextSnapshot.elements = nextSnapshot.elements.filter((el) => el.id !== edgeId);
-
-    // 2. 更新原目标节点的 inputConnectionOrders (如果它是多输入插槽)
-    const { originalKey: targetOriginalKey } = parseSubHandleIdLocal(originalTargetHandleId);
-
-    const targetNodeInNextSnapshot = nextSnapshot.elements.find(
-      (el) => el.id === originalTargetNodeId && !("source" in el)
-    ) as VueFlowNode | undefined;
-
-    if (targetNodeInNextSnapshot?.data?.inputConnectionOrders?.[targetOriginalKey]) {
-      targetNodeInNextSnapshot.data.inputConnectionOrders[targetOriginalKey] =
-        (targetNodeInNextSnapshot.data.inputConnectionOrders[targetOriginalKey] as string[]).filter(
-          (id: string) => id !== edgeId
-        );
-      // 如果排序列表为空，可以考虑删除该键
-      if (
-        targetNodeInNextSnapshot.data.inputConnectionOrders[targetOriginalKey].length === 0
-      ) {
-        delete targetNodeInNextSnapshot.data.inputConnectionOrders[targetOriginalKey];
-        if (
-          Object.keys(targetNodeInNextSnapshot.data.inputConnectionOrders).length === 0
-        ) {
-          delete targetNodeInNextSnapshot.data.inputConnectionOrders; // 如果整个对象为空则删除
-        }
-      }
-    }
-
-    // 变更检测：至少边被移除了
-    // （更精细的检测可以比较 nextSnapshot.elements 和 targetNodeInNextSnapshot.data.inputConnectionOrders 与 currentSnapshot 的对应部分）
-    // 此处简化：如果 edgeToRemove 存在，则认为有变更。
-
-    await workflowManager.setElements(internalId, nextSnapshot.elements);
-    _recordHistory(internalId, entry, nextSnapshot);
+    // 调用新的 composable 中的方法
+    await multiInputActions.disconnectEdgeFromMultiInput(
+      edgeId,
+      originalTargetNodeId,
+      originalTargetHandleId,
+      entry
+    );
   }
 
   /**
@@ -1402,72 +1278,17 @@ export function useWorkflowInteractionCoordinator() {
    * @param entry - 描述此操作的历史记录条目。
    */
   async function connectEdgeToInputAndRecord(
-    internalId: string,
-    // newEdgeParams 现在应该包含一个完整的 Edge 对象所需的所有核心属性
-    // 包括 id, source, target, sourceHandle, targetHandle, type, animated, style, markerEnd, data
+    // internalId: string, // Roo: internalId is now derived from activeTabId in multiInputActions
     newEdgeParams: Edge,
     targetIndexInOrder: number | undefined,
     entry: HistoryEntry
   ) {
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot) {
-      console.error(
-        `[InteractionCoordinator:connectEdgeToInputAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
-      );
-      return;
-    }
-
-    // 检查边是否已存在 (基于 ID)
-    if (currentSnapshot.elements.some((el) => el.id === newEdgeParams.id)) {
-      console.warn(
-        `[InteractionCoordinator:connectEdgeToInputAndRecord] 边 ${newEdgeParams.id} 已存在。跳过。`
-      );
-      return;
-    }
-
-    const nextSnapshot = klona(currentSnapshot);
-    // newEdgeParams 现在是一个完整的 Edge 对象 (或包含所有必要属性)
-    // 直接将其作为 newEdge 使用
-    const newEdge: Edge = newEdgeParams;
-    nextSnapshot.elements.push(newEdge);
-
-    const targetNodeInNextSnapshot = nextSnapshot.elements.find(
-      (el) => el.id === newEdgeParams.target && !("source" in el)
-    ) as VueFlowNode | undefined;
-
-    if (targetNodeInNextSnapshot && newEdgeParams.targetHandle) {
-      const { originalKey: targetOriginalKey } = parseSubHandleIdLocal(newEdgeParams.targetHandle);
-      // newEdgeParams.targetHandle (可能是子句柄ID) 用于边本身的连接点。
-      // targetOriginalKey 用于访问 inputConnectionOrders。
-
-      // 假设如果 targetIndexInOrder 提供了，那么它就是一个多输入插槽，
-      // 并且 targetOriginalKey 应该是有效的。
-      if (typeof targetIndexInOrder === "number" && targetOriginalKey) {
-        targetNodeInNextSnapshot.data = targetNodeInNextSnapshot.data || {};
-        targetNodeInNextSnapshot.data.inputConnectionOrders =
-          targetNodeInNextSnapshot.data.inputConnectionOrders || {};
-        const currentOrder =
-          targetNodeInNextSnapshot.data.inputConnectionOrders[targetOriginalKey] || [];
-        
-        const newOrder = [...currentOrder];
-        // 防止重复添加相同的边ID到顺序数组中 (尽管通常不应该发生)
-        if (!newOrder.includes(newEdge.id)) {
-            newOrder.splice(targetIndexInOrder, 0, newEdge.id);
-        } else {
-            // 如果已存在，可能需要先移除再按新索引插入，或者警告
-            console.warn(`[connectEdgeToInputAndRecord] Edge ID ${newEdge.id} already exists in order for ${targetOriginalKey}. Re-inserting at index ${targetIndexInOrder}.`);
-            const existingIdx = newOrder.indexOf(newEdge.id);
-            if (existingIdx !== -1) newOrder.splice(existingIdx, 1);
-            newOrder.splice(targetIndexInOrder, 0, newEdge.id);
-        }
-        targetNodeInNextSnapshot.data.inputConnectionOrders[targetOriginalKey] = newOrder;
-      }
-    }
-
-    // 变更检测：至少新边被添加了。
-
-    await workflowManager.setElements(internalId, nextSnapshot.elements);
-    _recordHistory(internalId, entry, nextSnapshot);
+    // 调用新的 composable 中的方法
+    await multiInputActions.connectEdgeToMultiInput(
+      newEdgeParams,
+      targetIndexInOrder,
+      entry
+    );
   }
 
   /**
@@ -1485,133 +1306,29 @@ export function useWorkflowInteractionCoordinator() {
    * @param entry - 描述此操作的历史记录条目。
    */
   async function moveAndReconnectEdgeAndRecord(
-    internalId: string,
+    // internalId: string, // Roo: internalId is now derived from activeTabId in multiInputActions
     edgeToMoveId: string,
-    originalTargetNodeId: string, // 原始目标信息用于清理旧的 inputConnectionOrders
+    originalTargetNodeId: string,
     originalTargetHandleId: string,
     newSourceNodeId: string,
-    newSourceHandleId: string | undefined, // sourceHandle 可以是 undefined
+    newSourceHandleId: string | undefined,
     newTargetNodeId: string,
-    newTargetHandleId: string | undefined, // targetHandle 可以是 undefined
+    newTargetHandleId: string | undefined,
     newTargetIndexInOrder: number | undefined,
     entry: HistoryEntry
   ) {
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot) {
-      console.error(
-        `[InteractionCoordinator:moveAndReconnectEdgeAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
-      );
-      return;
-    }
-
-    const edgeIndexInCurrent = currentSnapshot.elements.findIndex((el) => el.id === edgeToMoveId && "source" in el);
-    if (edgeIndexInCurrent === -1) {
-      console.warn(
-        `[InteractionCoordinator:moveAndReconnectEdgeAndRecord] 未找到要移动的边 ${edgeToMoveId}。跳过。`
-      );
-      return;
-    }
-    const originalEdge = currentSnapshot.elements[edgeIndexInCurrent] as Edge;
-    
-    if (
-      originalEdge.source === newSourceNodeId &&
-      originalEdge.sourceHandle === newSourceHandleId &&
-      originalEdge.target === newTargetNodeId &&
-      originalEdge.targetHandle === newTargetHandleId &&
-      !newTargetHandleId // 如果是单输入，且所有点都一样
-    ) {
-       console.debug(
-        `[InteractionCoordinator:moveAndReconnectEdgeAndRecord] 边 ${edgeToMoveId} 的连接点和顺序未改变。跳过。`
-      );
-      return;
-    }
-     // 对于多输入，如果插回原位且顺序不变 (简化版检测)
-    if (originalEdge.target === newTargetNodeId && originalEdge.targetHandle === newTargetHandleId && newTargetHandleId) {
-        const targetNodeInCurrent = currentSnapshot.elements.find(el => el.id === newTargetNodeId && !("source" in el)) as VueFlowNode | undefined;
-        const currentOrder = targetNodeInCurrent?.data?.inputConnectionOrders?.[newTargetHandleId] || [];
-        const currentIndexOfMovedEdge = currentOrder.indexOf(edgeToMoveId);
-
-        if (currentIndexOfMovedEdge === newTargetIndexInOrder && currentOrder.length === 1 && currentOrder[0] === edgeToMoveId) {
-             if (originalEdge.source === newSourceNodeId && originalEdge.sourceHandle === newSourceHandleId) {
-                 console.debug(
-                    `[InteractionCoordinator:moveAndReconnectEdgeAndRecord] 边 ${edgeToMoveId} 插回原多输入插槽的原始位置且顺序未变。跳过。`
-                 );
-                 return;
-             }
-        }
-    }
-
-    const nextSnapshot = klona(currentSnapshot);
-
-    // 1. 从旧目标节点的 inputConnectionOrders 中移除 (如果存在)
-    const { originalKey: oldTargetOriginalKey } = parseSubHandleIdLocal(originalTargetHandleId);
-    const originalTargetNodeInNext = nextSnapshot.elements.find(
-      (el) => el.id === originalTargetNodeId && !("source" in el)
-    ) as VueFlowNode | undefined;
-
-    if (oldTargetOriginalKey && originalTargetNodeInNext?.data?.inputConnectionOrders?.[oldTargetOriginalKey]) {
-      originalTargetNodeInNext.data.inputConnectionOrders[oldTargetOriginalKey] =
-        (originalTargetNodeInNext.data.inputConnectionOrders[oldTargetOriginalKey] as string[]).filter(
-          (id: string) => id !== edgeToMoveId
-        );
-      if (originalTargetNodeInNext.data.inputConnectionOrders[oldTargetOriginalKey].length === 0) {
-        delete originalTargetNodeInNext.data.inputConnectionOrders[oldTargetOriginalKey];
-        if (Object.keys(originalTargetNodeInNext.data.inputConnectionOrders).length === 0) {
-          delete originalTargetNodeInNext.data.inputConnectionOrders;
-        }
-      }
-    }
-
-    // 2. 更新边本身的 source/target
-    const edgeToUpdateInNext = nextSnapshot.elements.find(
-      (el) => el.id === edgeToMoveId && "source" in el
-    ) as Edge | undefined;
-
-    if (!edgeToUpdateInNext) {
-      console.error(
-        `[InteractionCoordinator:moveAndReconnectEdgeAndRecord] 在 nextSnapshot 中未找到边 ${edgeToMoveId}。`
-      );
-      return;
-    }
-    edgeToUpdateInNext.source = newSourceNodeId;
-    edgeToUpdateInNext.sourceHandle = newSourceHandleId; // 保持传入的 (可能是子句柄的) ID
-    edgeToUpdateInNext.target = newTargetNodeId;
-    edgeToUpdateInNext.targetHandle = newTargetHandleId; // 保持传入的 (可能是子句柄的) ID
-
-    // 3. 添加到新目标节点的 inputConnectionOrders (如果新目标是多输入)
-    if (newTargetHandleId && typeof newTargetIndexInOrder === "number") {
-      const { originalKey: newTargetOriginalKey } = parseSubHandleIdLocal(newTargetHandleId);
-
-      if (newTargetOriginalKey) { // 确保 newTargetOriginalKey 有效
-        const newTargetNodeInNext = nextSnapshot.elements.find(
-          (el) => el.id === newTargetNodeId && !("source" in el)
-        ) as VueFlowNode | undefined;
-
-        if (newTargetNodeInNext) {
-          newTargetNodeInNext.data = newTargetNodeInNext.data || {};
-          newTargetNodeInNext.data.inputConnectionOrders =
-            newTargetNodeInNext.data.inputConnectionOrders || {};
-          const currentOrderAtNewTarget =
-            newTargetNodeInNext.data.inputConnectionOrders[newTargetOriginalKey] || [];
-          
-          const newOrderAtNewTarget = [...currentOrderAtNewTarget];
-
-          // 防止重复添加，或确保正确移动
-          const existingIdx = newOrderAtNewTarget.indexOf(edgeToMoveId);
-          if (existingIdx !== -1) {
-            newOrderAtNewTarget.splice(existingIdx, 1); // 先移除旧位置（如果存在于新目标中）
-          }
-          // 确保插入索引在有效范围内
-          const insertAtIndex = Math.max(0, Math.min(newTargetIndexInOrder, newOrderAtNewTarget.length));
-          newOrderAtNewTarget.splice(insertAtIndex, 0, edgeToMoveId);
-          
-          newTargetNodeInNext.data.inputConnectionOrders[newTargetOriginalKey] = newOrderAtNewTarget;
-        }
-      }
-    }
-    
-    await workflowManager.setElements(internalId, nextSnapshot.elements);
-    _recordHistory(internalId, entry, nextSnapshot);
+    // 调用新的 composable 中的方法
+    await multiInputActions.moveAndReconnectEdgeMultiInput(
+      edgeToMoveId,
+      originalTargetNodeId,
+      originalTargetHandleId,
+      newSourceNodeId,
+      newSourceHandleId,
+      newTargetNodeId,
+      newTargetHandleId,
+      newTargetIndexInOrder,
+      entry
+    );
   }
   
   // 导出公共接口

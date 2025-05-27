@@ -407,6 +407,155 @@ export const useWorkflowStore = defineStore("workflow", () => {
     });
   }
 
+  // --- 新增：根据 ID 获取边的方法 ---
+  function getEdgeById(internalId: string, edgeId: string): VueFlowEdge | undefined {
+    const elements = workflowManager.getElements(internalId);
+    return elements.find(el => el.id === edgeId && "source" in el) as VueFlowEdge | undefined;
+  }
+
+  // --- 新增：更新多输入连接顺序和边句柄并记录历史 ---
+  async function updateMultiInputConnectionsAndRecord(
+    internalId: string,
+    nodeId: string,
+    inputKey: string,
+    // oldOrderedEdgeIds: string[], // oldOrderedEdgeIds 包含在 entry.details 中
+    newOrderedEdgeIds: string[],
+    edgeTargetHandleChanges: Array<{ edgeId: string; oldTargetHandle?: string | null; newTargetHandle?: string | null }>,
+    entry: HistoryEntry
+  ): Promise<void> {
+    const currentSnapshot = workflowManager.getCurrentSnapshot(internalId);
+    if (!currentSnapshot) {
+      console.error(
+        `[WorkflowStore:updateMultiInputConnectionsAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
+      );
+      return;
+    }
+
+    const nextSnapshot = klona(currentSnapshot);
+
+    // 1. 更新节点上的 inputConnectionOrders
+    const nodeToUpdate = nextSnapshot.elements.find(
+      (el) => el.id === nodeId && !("source" in el)
+    ) as VueFlowNode | undefined;
+
+    if (!nodeToUpdate) {
+      console.error(
+        `[WorkflowStore:updateMultiInputConnectionsAndRecord] 在 nextSnapshot 中未找到节点 ${nodeId}。`
+      );
+      return;
+    }
+    nodeToUpdate.data = nodeToUpdate.data || {};
+    nodeToUpdate.data.inputConnectionOrders = nodeToUpdate.data.inputConnectionOrders || {};
+    nodeToUpdate.data.inputConnectionOrders[inputKey] = newOrderedEdgeIds;
+
+    // 2. 更新受影响边的 targetHandle
+    for (const change of edgeTargetHandleChanges) {
+      const edgeToUpdate = nextSnapshot.elements.find(
+        (el) => el.id === change.edgeId && "source" in el
+      ) as VueFlowEdge | undefined;
+      if (edgeToUpdate) {
+        if (change.newTargetHandle !== undefined) {
+          edgeToUpdate.targetHandle = change.newTargetHandle;
+        } else {
+          // 如果 newTargetHandle 是 undefined，则可能表示移除该句柄
+          // Vue Flow 通常希望 targetHandle 是字符串或 null。
+          // 如果确实要移除，根据 Vue Flow 的行为，可能设置为 null 或从对象中删除该属性。
+          // 此处假设为 undefined 意味着保持不变或由 Vue Flow 默认处理，
+          // 但更安全的做法是明确设置为 null 如果是有效状态，或者确保调用者提供正确的句柄。
+          // 鉴于我们的场景是更新 __index，它应该总是一个字符串。
+          // 如果一个边从多输入移到单输入，targetHandle 应该变为该单输入的 ID (不含 __index)。
+          // 如果 newTargetHandle 就是 undefined，这里保持原样或根据具体逻辑处理。
+          // 对于我们的用例，newTargetHandle 应该总是有值的。
+        }
+      } else {
+        console.warn(
+          `[WorkflowStore:updateMultiInputConnectionsAndRecord] 在 nextSnapshot 中未找到要更新 targetHandle 的边 ${change.edgeId}。`
+        );
+      }
+    }
+
+    // 3. 应用状态更新
+    await workflowManager.setElements(internalId, nextSnapshot.elements);
+
+    // 4. 记录历史
+    // entry 应该由 useMultiInputConnectionActions 准备好，包含所有必要的 details
+    historyManager.recordSnapshot(internalId, entry, nextSnapshot);
+    // console.debug(`[WorkflowStore:updateMultiInputConnectionsAndRecord] 已为节点 ${nodeId} 输入 ${inputKey} 更新连接并记录历史。`);
+  }
+
+  // --- 新增：仅更新节点输入连接顺序并记录历史 ---
+  async function updateNodeInputConnectionOrderAndRecordOnly(
+    internalId: string,
+    nodeId: string,
+    handleKey: string,
+    newOrderedEdgeIds: string[],
+    entry: HistoryEntry
+  ): Promise<void> {
+    const currentSnapshot = workflowManager.getCurrentSnapshot(internalId);
+    if (!currentSnapshot) {
+      console.error(
+        `[WorkflowStore:updateNodeInputConnectionOrderAndRecordOnly] 无法获取标签页 ${internalId} 的当前快照。`
+      );
+      return;
+    }
+
+    const nextSnapshot = klona(currentSnapshot);
+    const nodeToUpdate = nextSnapshot.elements.find(
+      (el) => el.id === nodeId && !("source" in el)
+    ) as VueFlowNode | undefined;
+
+    if (!nodeToUpdate) {
+      console.error(
+        `[WorkflowStore:updateNodeInputConnectionOrderAndRecordOnly] 在 nextSnapshot 中未找到节点 ${nodeId}。`
+      );
+      return;
+    }
+
+    nodeToUpdate.data = nodeToUpdate.data || {};
+    nodeToUpdate.data.inputConnectionOrders = nodeToUpdate.data.inputConnectionOrders || {};
+    nodeToUpdate.data.inputConnectionOrders[handleKey] = newOrderedEdgeIds;
+
+    // 应用状态更新
+    await workflowManager.setElements(internalId, nextSnapshot.elements);
+    
+    // 记录历史
+    // entry 应该由调用者准备好
+    historyManager.recordSnapshot(internalId, entry, nextSnapshot);
+    // console.debug(`[WorkflowStore:updateNodeInputConnectionOrderAndRecordOnly] 已为节点 ${nodeId} 句柄 ${handleKey} 更新连接顺序并记录历史。`);
+  }
+
+  // --- 新增：应用元素更改并记录历史的通用 Action ---
+  async function applyElementChangesAndRecordHistory(
+    internalId: string,
+    newElements: (VueFlowNode | VueFlowEdge)[],
+    entry: HistoryEntry
+  ): Promise<void> {
+    // 1. 应用元素更改
+    // 注意：setElements 内部会进行深拷贝，所以 newElements 可以直接传递
+    await workflowManager.setElements(internalId, newElements);
+
+    // 2. 获取应用更改后的当前快照以进行记录
+    // （或者，如果 setElements 返回了最终状态，则可以使用它）
+    // 为确保一致性，我们从管理器获取最新的完整快照
+    const snapshotToRecord = workflowManager.getCurrentSnapshot(internalId);
+
+    if (!snapshotToRecord) {
+      console.error(
+        `[WorkflowStore:applyElementChangesAndRecordHistory] 应用元素更改后无法获取标签页 ${internalId} 的快照。历史记录可能不准确。`
+      );
+      // 即使快照获取失败，更改也已应用。是否应该尝试回滚？目前，只记录错误。
+      // 仍然尝试使用一个基于 newElements 的最小快照进行记录，但这可能不完整。
+      // 为简单起见，如果无法获取完整快照，则不记录历史。
+      return;
+    }
+    
+    // 3. 记录历史
+    // entry 应该由调用者准备好
+    historyManager.recordSnapshot(internalId, entry, snapshotToRecord);
+    // console.debug(`[WorkflowStore:applyElementChangesAndRecordHistory] 已应用元素更改并为标签页 ${internalId} 记录历史: "${entry.summary}"`);
+  }
+
+
   // --- 新增：活动历史记录索引的 Getter ---
   const activeHistoryIndex = computed(() => {
     const activeId = tabStore.activeTabId;
@@ -616,6 +765,10 @@ export const useWorkflowStore = defineStore("workflow", () => {
     handleNodeButtonClick, // 导出新操作
     recordHistorySnapshot, // 导出手动历史记录函数
     promptAndSaveWorkflow, // 导出用于提示名称的新操作
+    getEdgeById, // <-- 导出新方法
+    updateMultiInputConnectionsAndRecord, // <-- 导出新 action
+    updateNodeInputConnectionOrderAndRecordOnly, // <-- 导出新 action
+    applyElementChangesAndRecordHistory, // <-- 导出新 action
     updateNodePositionAndRecord: workflowInteractionCoordinator.updateNodePositionAndRecord, // 使用协调器的函数
     addNodeAndRecord: workflowInteractionCoordinator.addNodeAndRecord, // 使用协调器的函数
     addEdgeAndRecord: workflowInteractionCoordinator.addEdgeAndRecord, // 导出用于添加边的新操作

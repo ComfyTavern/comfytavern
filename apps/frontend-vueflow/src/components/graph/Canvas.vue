@@ -96,10 +96,34 @@ const internalElements = computed({
 
 // 监听画布元素变化并打印日志
 watch(internalElements, (newElements, oldElements) => {
-  const oldNodes = oldElements?.filter(el => 'position' in el) as Node[] || []; // 类型断言为 Node[]
-  const newNodes = newElements?.filter(el => 'position' in el) as Node[] || []; // 类型断言为 Node[]
-  const oldEdges = oldElements?.filter(el => 'source' in el) || [];
-  const newEdges = newElements?.filter(el => 'source' in el) || [];
+  const oldNodes = oldElements?.filter(el => {
+    if (typeof el !== 'object' || el === null) {
+      // console.warn(`[Canvas] watch internalElements: Found non-object element in oldElements (for oldNodes):`, el); // 更详细的日志可选
+      return false;
+    }
+    return 'position' in el;
+  }) as Node[] || []; // 类型断言为 Node[]
+  const newNodes = newElements?.filter(el => {
+    if (typeof el !== 'object' || el === null) {
+      console.warn(`[Canvas] watch internalElements: Found non-object element in newElements (for newNodes):`, el);
+      return false;
+    }
+    return 'position' in el;
+  }) as Node[] || []; // 类型断言为 Node[]
+  const oldEdges = oldElements?.filter(el => {
+    if (typeof el !== 'object' || el === null) {
+      // console.warn(`[Canvas] watch internalElements: Found non-object element in oldElements (for oldEdges):`, el); // 更详细的日志可选
+      return false;
+    }
+    return 'source' in el;
+  }) || [];
+  const newEdges = newElements?.filter(el => {
+    if (typeof el !== 'object' || el === null) {
+      console.warn(`[Canvas] watch internalElements: Found non-object element in newElements (for newEdges):`, el);
+      return false;
+    }
+    return 'source' in el;
+  }) || [];
 
 
   const totalNodes = newNodes.length; // 获取当前节点总数
