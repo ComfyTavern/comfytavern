@@ -366,6 +366,8 @@ export function useWorkflowInteractionCoordinator() {
     newEdge: Edge,
     newInputs: Record<string, GroupSlotInfo>,
     newOutputs: Record<string, GroupSlotInfo>,
+    // Roo: 新增参数用于处理普通节点插槽的更新
+    modifiedSlotInfo: { node: VueFlowNode, handleKey: string, newDefinition: GroupSlotInfo, direction: 'inputs' | 'outputs' } | null,
     sourceNodeId: string,
     targetNodeId: string,
     entry: HistoryEntry
@@ -379,22 +381,57 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 2. 准备下一个状态快照 (添加边并更新接口)
+    // 2. 准备下一个状态快照
+    const nextSnapshotElements = [...currentSnapshot.elements];
+
+    // 2a. 处理普通节点插槽更新 (modifiedSlotInfo)
+    if (modifiedSlotInfo) {
+      const nodeIndex = nextSnapshotElements.findIndex(el => el.id === modifiedSlotInfo.node.id && !('source' in el));
+      if (nodeIndex !== -1) {
+        const nodeToUpdate = klona(nextSnapshotElements[nodeIndex]) as VueFlowNode; // klona to avoid modifying the current snapshot's elements directly yet
+        nodeToUpdate.data = nodeToUpdate.data || {};
+        if (modifiedSlotInfo.direction === 'inputs') {
+          nodeToUpdate.data.inputs = nodeToUpdate.data.inputs || {};
+          nodeToUpdate.data.inputs[modifiedSlotInfo.handleKey] = klona(modifiedSlotInfo.newDefinition);
+        } else { // outputs
+          nodeToUpdate.data.outputs = nodeToUpdate.data.outputs || {};
+          nodeToUpdate.data.outputs[modifiedSlotInfo.handleKey] = klona(modifiedSlotInfo.newDefinition);
+        }
+        nextSnapshotElements[nodeIndex] = nodeToUpdate; // Replace with the updated node
+      } else {
+        console.warn(`[handleConnectionWithInterfaceUpdate] Node ${modifiedSlotInfo.node.id} not found in snapshot for slot update.`);
+      }
+    }
+
+    // 2b. 添加新边
+    // Ensure no duplicate edge ID if newEdge.id is pre-generated and somehow already in elements
+    if (!nextSnapshotElements.find(el => el.id === newEdge.id)) {
+        nextSnapshotElements.push(klona(newEdge));
+    } else {
+        console.warn(`[handleConnectionWithInterfaceUpdate] Edge with ID ${newEdge.id} already exists. This might be an issue.`);
+        // Potentially find and update the existing edge instead of pushing, if that's the desired logic.
+        // For now, this indicates a potential problem if IDs are reused for new connections.
+    }
+    
     const nextSnapshot: WorkflowStateSnapshot = {
-      elements: [...currentSnapshot.elements, newEdge], // 添加新边
+      elements: nextSnapshotElements,
       viewport: currentSnapshot.viewport,
       workflowData: {
         ...currentSnapshot.workflowData,
-        interfaceInputs: newInputs, // 更新输入接口
-        interfaceOutputs: newOutputs, // 更新输出接口
+        // Roo: 更新接口定义 (newInputs/newOutputs 可能为空对象 if no interface change)
+        interfaceInputs: Object.keys(newInputs).length > 0 ? klona(newInputs) : currentSnapshot.workflowData.interfaceInputs,
+        interfaceOutputs: Object.keys(newOutputs).length > 0 ? klona(newOutputs) : currentSnapshot.workflowData.interfaceOutputs,
       },
     };
+    
+    // 如果 newInputs 或 newOutputs 为空对象但 currentSnapshot 中有值，确保保留 currentSnapshot 的值
+    // 上面的逻辑已通过检查 Object.keys().length > 0 来处理，如果 newInputs/Outputs 为空，则使用 currentSnapshot 的版本
 
     // 4. 记录历史 (在应用状态之前记录，以避免潜在的观察者竞态条件)
+    // 确保 entry.details 包含所有相关信息，包括 modifiedSlotInfo 和 interfaceUpdateResult (来自调用方)
     _recordHistory(internalId, entry, nextSnapshot);
 
     // 3. 应用状态更新 (同时设置元素和接口)
-    // console.log(`[DEBUG Coord - handleConnIfaceUpdate] BEFORE calling workflowManager.setElementsAndInterface with nextSnapshot.elements (count ${nextSnapshot.elements.length})`);
     await workflowManager.setElementsAndInterface(
       internalId,
       nextSnapshot.elements,
@@ -1111,7 +1148,7 @@ export function useWorkflowInteractionCoordinator() {
     activeTabId: string,
     nodeId: string,
     inputKey: string,
-    currentValue: any, // 咕咕：currentValue 可以是任何类型
+    currentValue: any, // currentValue 可以是任何类型
     inputDefinition: InputDefinition, // InputDefinition 是 GroupSlotInfo
     editorTitle?: string
   ) => {
@@ -1147,7 +1184,7 @@ export function useWorkflowInteractionCoordinator() {
       }
     }
 
-    // 咕咕：准备 initialContent，确保 JSON 对象被字符串化
+    // 准备 initialContent，确保 JSON 对象被字符串化
     let finalInitialContent: string;
     if (editorType === "json" && typeof currentValue === "object" && currentValue !== null) {
       try {
@@ -1212,11 +1249,11 @@ export function useWorkflowInteractionCoordinator() {
     // 调用 editorState 中的方法来打开/激活编辑器标签页
     // 假设 editorState 有一个名为 openEditor 的方法
     // editorState.openEditor(context);
-    // 咕咕：根据 useEditorState.ts 的当前实现，它还没有 openEditor 方法。
+    // 根据 useEditorState.ts 的当前实现，它还没有 openEditor 方法。
     // 我们需要先在 useEditorState.ts 中实现类似的功能。
     // 暂时，我们只打印日志，表示意图。
     console.log("[InteractionCoordinator] Requesting to open docked editor with context:", context);
-    // 咕咕：这里需要调用 useEditorState 提供的实际方法。
+    // 这里需要调用 useEditorState 提供的实际方法。
     // openOrFocusEditorTab 应该总是存在于 useEditorState 的返回中
     editorState.openOrFocusEditorTab(context);
   };

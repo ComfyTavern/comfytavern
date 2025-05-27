@@ -47,27 +47,26 @@ export function isTypeCompatible(sourceSlot: GroupSlotInfo, targetSlot: GroupSlo
     dft === DataFlowType.WILDCARD || // WILDCARD is a DataFlowType
     cats.includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD);
 
-  const isSourceConvertibleAny = isSlotConvertibleAny(sourceDft, sourceCats);
-  const isTargetConvertibleAny = isSlotConvertibleAny(targetDft, targetCats);
-  const isSourceWildcard = isSlotWildcard(sourceDft, sourceCats);
-  const isTargetWildcard = isSlotWildcard(targetDft, targetCats);
+  const isSourceConvertible = isSlotConvertibleAny(sourceDft, sourceCats);
+  const isTargetConvertible = isSlotConvertibleAny(targetDft, targetCats);
+  const isSourceWild = isSlotWildcard(sourceDft, sourceCats);
+  const isTargetWild = isSlotWildcard(targetDft, targetCats);
 
-  // Priority 1: Special Behavior Tags
-  // 1.1 BEHAVIOR_WILDCARD / WILDCARD DataFlowType
-  // Source WILDCARD connects to non-CONVERTIBLE_ANY Target.
-  if (isSourceWildcard && !isTargetConvertibleAny) return true;
-  // Target WILDCARD connects to non-CONVERTIBLE_ANY Source.
-  if (isTargetWildcard && !isSourceConvertibleAny) return true;
+  // 规则 1: 通配符行为 (WILDCARD or BEHAVIOR_WILDCARD)
+  // 如果一方是通配符，另一方不是可转换类型，则兼容。
+  // (通配符可以变成对方类型，可转换类型会变成对方类型，两者相遇时，通配符优先保持其通配行为，让对方去适应它，除非对方也是通配符)
+  if (isSourceWild && !isTargetConvertible) return true;
+  if (isTargetWild && !isSourceConvertible) return true;
+  if (isSourceWild && isTargetWild) return true; // 通配符之间互相兼容
 
-  // 1.2 BEHAVIOR_CONVERTIBLE / CONVERTIBLE_ANY DataFlowType
-  // Source CONVERTIBLE_ANY connects to non-WILDCARD AND non-CONVERTIBLE_ANY Target.
-  if (isSourceConvertibleAny) {
-    return !isTargetWildcard && !isTargetConvertibleAny;
-  }
-  // Target CONVERTIBLE_ANY connects to non-WILDCARD AND non-CONVERTIBLE_ANY Source.
-  if (isTargetConvertibleAny) {
-    return !isSourceWildcard && !isSourceConvertibleAny;
-  }
+  // 规则 2: 可转换行为 (CONVERTIBLE_ANY or BEHAVIOR_CONVERTIBLE)
+  // 如果一方是可转换类型，另一方不是通配符，则兼容 (包括两个可转换类型相遇的情况)。
+  if (isSourceConvertible && !isTargetWild) return true; // 源可转，目标不是通配符 (可以是具体类型或其他可转类型)
+  if (isTargetConvertible && !isSourceWild) return true; // 目标可转，源不是通配符 (可以是具体类型或其他可转类型)
+  // 注意：isSourceConvertible && isTargetConvertible 的情况已被上面覆盖。
+
+  // 如果执行到这里，说明源和目标都不是行为型通配符或可转换类型，或者是它们与这些类型的组合未被上述规则覆盖。
+  // 此时，我们只处理具体类型之间的匹配。
 
   // Priority 2: SocketMatchCategory Matching (if both have non-behavioral categories)
   const behaviorCategoryNames = [

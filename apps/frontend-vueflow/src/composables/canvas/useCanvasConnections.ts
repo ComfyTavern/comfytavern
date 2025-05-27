@@ -10,7 +10,7 @@ import {
   type ConnectingHandle,
 } from "@vue-flow/core";
 import { getEdgeStyleProps } from "./useEdgeStyles";
-// import { useGroupInterfaceSync } from "../group/useGroupInterfaceSync"; // 已移除，因为 syncInterfaceSlotFromConnection 被移除了
+import { useGroupInterfaceSync } from "../group/useGroupInterfaceSync"; // Roo: 重新引入
 import {
   type GroupSlotInfo,
   type DataFlowTypeName,
@@ -21,10 +21,11 @@ import { createHistoryEntry } from "@comfytavern/utils";
 import { useTabStore } from "@/stores/tabStore";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useNodeStore } from "@/stores/nodeStore"; // 新增导入
-import type { FrontendNodeDefinition } from '@/stores/nodeStore'; // 导入类型
+// import type { FrontendNodeDefinition } from '@/stores/nodeStore'; // Roo: 移除未使用的导入
 import { getNodeType } from "@/utils/nodeUtils";
 import { klona } from 'klona/json';
 import { nanoid } from 'nanoid';
+import type { Node as VueFlowNode } from '@vue-flow/core'; // Roo: 明确导入 VueFlow Node 类型
 
 // DraggingState 定义保持不变
 export interface DraggingState {
@@ -57,6 +58,7 @@ export function useCanvasConnections({
   const tabStore = useTabStore();
   const workflowStore = useWorkflowStore();
   const nodeStore = useNodeStore(); // 确保 nodeStore 在这里正确初始化
+  const { syncInterfaceSlotFromConnection } = useGroupInterfaceSync(); // Roo: 获取同步函数
 
   // vueFlowInstance 的类型现在是 VueFlowStore
   const vueFlowInstance: VueFlowStore = useVueFlow();
@@ -177,20 +179,26 @@ export function useCanvasConnections({
       dft === DataFlowType.WILDCARD ||
       cats.includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD);
 
-    const isSourceConvertibleAny = isSlotConvertibleAny(sourceDft, sourceCats);
-    const isTargetConvertibleAny = isSlotConvertibleAny(targetDft, targetCats);
-    const isSourceWildcard = isSlotWildcard(sourceDft, sourceCats);
-    const isTargetWildcard = isSlotWildcard(targetDft, targetCats);
+    const isSourceConvertible = isSlotConvertibleAny(sourceDft, sourceCats);
+    const isTargetConvertible = isSlotConvertibleAny(targetDft, targetCats);
+    const isSourceWild = isSlotWildcard(sourceDft, sourceCats);
+    const isTargetWild = isSlotWildcard(targetDft, targetCats);
 
-    if (isSourceWildcard && !isTargetConvertibleAny) return true;
-    if (isTargetWildcard && !isSourceConvertibleAny) return true;
+    // 规则 1: 通配符行为 (WILDCARD or BEHAVIOR_WILDCARD)
+    // 如果一方是通配符，另一方不是可转换类型，则兼容。
+    // (通配符可以变成对方类型，可转换类型会变成对方类型，两者相遇时，通配符优先保持其通配行为，让对方去适应它，除非对方也是通配符)
+    if (isSourceWild && !isTargetConvertible) return true;
+    if (isTargetWild && !isSourceConvertible) return true;
+    if (isSourceWild && isTargetWild) return true; // 通配符之间互相兼容
 
-    if (isSourceConvertibleAny) {
-      return !isTargetWildcard && !isTargetConvertibleAny;
-    }
-    if (isTargetConvertibleAny) {
-      return !isSourceWildcard && !isSourceConvertibleAny;
-    }
+    // 规则 2: 可转换行为 (CONVERTIBLE_ANY or BEHAVIOR_CONVERTIBLE)
+    // 如果一方是可转换类型，另一方不是通配符，则兼容 (包括两个可转换类型相遇的情况)。
+    if (isSourceConvertible && !isTargetWild) return true; // 源可转，目标不是通配符 (可以是具体类型或其他可转类型)
+    if (isTargetConvertible && !isSourceWild) return true; // 目标可转，源不是通配符 (可以是具体类型或其他可转类型)
+    // 注意：isSourceConvertible && isTargetConvertible 的情况已被上面覆盖。
+
+    // 如果执行到这里，说明源和目标都不是行为型通配符或可转换类型，或者是它们与这些类型的组合未被上述规则覆盖。
+    // 此时，我们只处理具体类型之间的匹配。
 
     const behaviorCategoryNames = [
       BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE,
@@ -404,6 +412,35 @@ export function useCanvasConnections({
     };
   };
 
+  // Roo: 辅助函数，用于创建同步插槽信息，复制相关属性，修复被弄丢的属性获取功能
+  const createSyncSlotInfo = (
+    baseSlot: GroupSlotInfo, // The CONVERTIBLE_ANY slot that is being transformed
+    newDft: DataFlowTypeName,
+    newCats: string[],
+    connectedSlot: GroupSlotInfo, // The slot it's connecting to
+  ): GroupSlotInfo => {
+    // Ensure config is an object before spreading
+    const connectedConfig = typeof connectedSlot.config === 'object' && connectedSlot.config !== null ? connectedSlot.config : {};
+    const baseConfig = typeof baseSlot.config === 'object' && baseSlot.config !== null ? baseSlot.config : {};
+
+    return {
+      ...baseSlot, // Preserve original key, multi, allowDynamicType etc.
+      dataFlowType: newDft,
+      matchCategories: [...newCats], // Ensure new array
+      displayName: connectedSlot.displayName || baseSlot.key,
+      customDescription: connectedSlot.customDescription || (connectedSlot as any).description || "",
+      config: { // Deep copy or selective copy of config
+        ...baseConfig, // Start with base config
+        ...connectedConfig, // Override with connected slot's config
+        // Explicitly copy default if it exists, as it's crucial
+        default: connectedSlot.config?.default ?? baseSlot.config?.default,
+      },
+      min: connectedSlot.min ?? baseSlot.min,
+      max: connectedSlot.max ?? baseSlot.max,
+      required: connectedSlot.required ?? baseSlot.required,
+    };
+  };
+
   const handleConnect = async (params: Connection): Promise<Edge | null> => {
     const currentTabId = tabStore.activeTabId;
     if (!currentTabId) {
@@ -432,52 +469,38 @@ export function useCanvasConnections({
       return null;
     }
 
+    // Roo: 获取源和目标插槽的完整定义
+    const { originalKey: parsedSourceHandleKey } = parseSubHandleId(sourceHandle);
+    const { originalKey: parsedTargetHandleKey } = parseSubHandleId(targetHandle);
+
+    let sourceOutputDef: GroupSlotInfo | undefined;
+    const sourceNodeType = getNodeType(sourceNode);
+    if (sourceNodeType === 'core:GroupInput') {
+      sourceOutputDef = workflowStore.getActiveTabState()?.workflowData?.interfaceInputs?.[parsedSourceHandleKey];
+    } else if (sourceNodeType === 'core:NodeGroup') {
+      sourceOutputDef = (sourceNode.data as any)?.groupInterface?.outputs?.[parsedSourceHandleKey];
+    } else {
+      sourceOutputDef = (sourceNode.data as any)?.outputs?.[parsedSourceHandleKey];
+    }
+
     let targetInputDef: GroupSlotInfo | undefined;
     const targetNodeType = getNodeType(targetNode);
-    const { originalKey: parsedTargetHandleKeyFromParams } = parseSubHandleId(targetHandle); // 解析原始键
-
     if (targetNodeType === 'core:GroupOutput') {
-        targetInputDef = workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[parsedTargetHandleKeyFromParams];
+        targetInputDef = workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[parsedTargetHandleKey];
     } else if (targetNodeType === 'core:NodeGroup') {
-        targetInputDef = (targetNode.data as any)?.groupInterface?.inputs?.[parsedTargetHandleKeyFromParams];
+        targetInputDef = (targetNode.data as any)?.groupInterface?.inputs?.[parsedTargetHandleKey];
     } else {
-        targetInputDef = (targetNode.data as any)?.inputs?.[parsedTargetHandleKeyFromParams];
+        targetInputDef = (targetNode.data as any)?.inputs?.[parsedTargetHandleKey];
     }
 
-    if (!targetInputDef) {
-      // 打印目标节点数据和所有可用节点定义以供调试
-      if (targetNode?.data) {
-      }
-      // 从 nodeStore 获取节点定义数组
-      const nodeDefinitionsArray: FrontendNodeDefinition[] = nodeStore.nodeDefinitions; // 直接访问，无需 .value
-
-      if (nodeDefinitionsArray && nodeDefinitionsArray.length > 0) {
-        const textMergeDef = nodeDefinitionsArray.find((d: FrontendNodeDefinition) => d.type === 'TextMerge' && d.namespace === 'Utilities'); // 确保也匹配命名空间
-        if (textMergeDef) {
-        } else {
-        }
-      }
+    if (!sourceOutputDef || !targetInputDef) {
+      console.error(`[handleConnect] Failed to find slot definitions for ${parsedSourceHandleKey}@${sourceNode.id} or ${parsedTargetHandleKey}@${targetNode.id}`);
       return null;
     }
+    // Roo: 深拷贝插槽定义，以便安全修改
+    const originalSourceOutputDef = klona(sourceOutputDef);
+    const originalTargetInputDef = klona(targetInputDef);
 
-    const isTargetMultiInput = targetInputDef.multi === true;
-    let targetIndexInOrder: number | undefined = undefined;
-    if (isTargetMultiInput) {
-      if (reorderPreviewIndex.value !== null) {
-        targetIndexInOrder = reorderPreviewIndex.value;
-      } else {
-        // 如果 reorderPreviewIndex 不可用（例如非拖拽创建或 watch 逻辑未覆盖），则追加到末尾
-        // 使用从 targetHandle 解析出的 originalKey 来访问 inputConnectionOrders
-        const { originalKey: parsedTargetKeyForOrder } = parseSubHandleId(targetHandle);
-        const existingConnectionsToHandle = (targetNode.data.inputConnectionOrders?.[parsedTargetKeyForOrder] as string[] | undefined) || [];
-        targetIndexInOrder = existingConnectionsToHandle.length;
-      }
-    } else {
-      // 对于单输入，如果已有连接，协调器 connectEdgeToInputAndRecord 或 moveAndReconnectEdgeAndRecord 会处理替换逻辑。
-      // 此处无需手动移除，只需传递正确的参数给协调器。
-      // 如果是全新连接到单输入，且该单输入已有连接，则旧连接会被替换。
-      // targetIndexInOrder 保持 undefined
-    }
 
     // 调用 createEdge 来获取包含正确 type 和 targetHandle (原始键 for multi-input) 的边对象
     const newEdgeObjectFromCreateEdge = createEdge(params);
@@ -511,20 +534,63 @@ export function useCanvasConnections({
     // 所以，上面的 sourceNames 和 targetNames 应该基于 params 来获取，因为它们用于用户可读的日志。
     // 而 newEdgeParamsForCoordinator.targetHandle 必须是修正后的。
 
-            // Roo: sourceNames and targetNames removed as they were unused.
-            // HistoryEntry creation re-introduced below.
-        
-            // 调用新的协调器函数
-            // 注意：这里不再需要 createAndAddVerifiedEdge，因为类型转换和接口同步逻辑
-            // 应该在协调器函数内部或由协调器调用的更底层的服务处理。
-            // 目前 connectEdgeToInputAndRecord 还不处理类型转换或接口同步。
-            // 这部分可能需要在未来的重构中加入到协调器或其调用的服务中。
-            // 暂时，我们假设 connectEdgeToInputAndRecord 专注于连接和排序。
-        
-            // TODO: 考虑接口同步 (syncInterfaceSlotFromConnection) 和类型转换逻辑如何与新协调器集成。
-            // 目前的 connectEdgeToInputAndRecord 比较纯粹，只负责添加边和更新顺序。
-            // 复杂的类型转换和接口同步可能需要一个更高层次的协调器或在 connectEdgeToInputAndRecord 内部扩展。
-            
+            // Roo: <<<< START CONVERTIBLE_ANY LOGIC >>>>
+            let finalSourceDefForEdge = klona(originalSourceOutputDef); // 用于边的data和样式
+            let finalTargetDefForEdge = klona(originalTargetInputDef); // 用于边的data和样式
+
+            const isSourceConv = originalSourceOutputDef.dataFlowType === DataFlowType.CONVERTIBLE_ANY || (originalSourceOutputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
+            const isTargetConv = originalTargetInputDef.dataFlowType === DataFlowType.CONVERTIBLE_ANY || (originalTargetInputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
+            const isSourceWild = originalSourceOutputDef.dataFlowType === DataFlowType.WILDCARD || (originalSourceOutputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD);
+            const isTargetWild = originalTargetInputDef.dataFlowType === DataFlowType.WILDCARD || (originalTargetInputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD);
+
+            let modifiedSlotInfo: { node: VueFlowNode, handleKey: string, newDefinition: GroupSlotInfo, direction: 'inputs' | 'outputs' } | null = null;
+            let interfaceUpdateResult: { inputs: Record<string, GroupSlotInfo>, outputs: Record<string, GroupSlotInfo> } | null = null;
+
+            if (isSourceConv && !isTargetConv && !isTargetWild) {
+              // 源是 CONVERTIBLE_ANY，转换为目标类型
+              finalSourceDefForEdge.dataFlowType = originalTargetInputDef.dataFlowType;
+              finalSourceDefForEdge.matchCategories = [...(originalTargetInputDef.matchCategories || [])];
+
+              const newSourceSlotDef = createSyncSlotInfo(originalSourceOutputDef, originalTargetInputDef.dataFlowType, originalTargetInputDef.matchCategories || [], originalTargetInputDef);
+              if (sourceNodeType === 'core:GroupInput') {
+                interfaceUpdateResult = syncInterfaceSlotFromConnection(currentTabId, sourceNode.id, parsedSourceHandleKey, newSourceSlotDef, 'inputs');
+              } else {
+                modifiedSlotInfo = { node: sourceNode, handleKey: parsedSourceHandleKey, newDefinition: newSourceSlotDef, direction: 'outputs' };
+              }
+            } else if (isTargetConv && !isSourceConv && !isSourceWild) {
+              // 目标是 CONVERTIBLE_ANY，转换为源类型
+              finalTargetDefForEdge.dataFlowType = originalSourceOutputDef.dataFlowType;
+              finalTargetDefForEdge.matchCategories = [...(originalSourceOutputDef.matchCategories || [])];
+
+              const newTargetSlotDef = createSyncSlotInfo(originalTargetInputDef, originalSourceOutputDef.dataFlowType, originalSourceOutputDef.matchCategories || [], originalSourceOutputDef);
+              if (targetNodeType === 'core:GroupOutput') {
+                interfaceUpdateResult = syncInterfaceSlotFromConnection(currentTabId, targetNode.id, parsedTargetHandleKey, newTargetSlotDef, 'outputs');
+              } else if (targetNodeType === 'core:GroupInput') { // Should not happen if target is GroupInput and CONVERTIBLE_ANY (GroupInput outputs)
+                 // This case might need review, typically GroupInput outputs are CONVERTIBLE_ANY
+              }
+              else {
+                modifiedSlotInfo = { node: targetNode, handleKey: parsedTargetHandleKey, newDefinition: newTargetSlotDef, direction: 'inputs' };
+              }
+            } else if (isTargetWild && !isSourceConv) {
+                finalTargetDefForEdge.dataFlowType = originalSourceOutputDef.dataFlowType;
+                finalTargetDefForEdge.matchCategories = [...(originalSourceOutputDef.matchCategories || [])];
+            } else if (isSourceWild && !isTargetConv) {
+                finalSourceDefForEdge.dataFlowType = originalTargetInputDef.dataFlowType;
+                finalSourceDefForEdge.matchCategories = [...(originalTargetInputDef.matchCategories || [])];
+            }
+            // Roo: <<<< END CONVERTIBLE_ANY LOGIC >>>>
+
+            // 更新边的样式和数据属性，使用转换后的类型
+            const { animated, style, markerEnd } = getEdgeStyleProps(finalSourceDefForEdge.dataFlowType, finalTargetDefForEdge.dataFlowType, isDark.value);
+            newEdgeParamsForCoordinator.animated = animated;
+            newEdgeParamsForCoordinator.style = style;
+            newEdgeParamsForCoordinator.markerEnd = markerEnd;
+            newEdgeParamsForCoordinator.data = {
+              sourceType: finalSourceDefForEdge.dataFlowType,
+              targetType: finalTargetDefForEdge.dataFlowType,
+            };
+
+
             const readableSource = getReadableNames(params.source, params.sourceHandle, 'source');
             const readableTarget = getReadableNames(params.target, params.targetHandle, 'target');
             const connectSummary = `连接 ${readableSource.nodeName}::${readableSource.handleName} -> ${readableTarget.nodeName}::${readableTarget.handleName}`;
@@ -540,16 +606,30 @@ export function useCanvasConnections({
                 targetHandleId: newEdgeParamsForCoordinator.targetHandle, // This is the sub-handle ID
                 type: newEdgeParamsForCoordinator.type,
                 data: newEdgeParamsForCoordinator.data,
+                // Roo: Add information about slot modifications for history/undo
+                modifiedSlotInfo: modifiedSlotInfo ? { nodeId: modifiedSlotInfo.node.id, handleKey: modifiedSlotInfo.handleKey, direction: modifiedSlotInfo.direction, newDefinition: klona(modifiedSlotInfo.newDefinition) } : undefined,
+                interfaceUpdateResult: interfaceUpdateResult ? klona(interfaceUpdateResult) : undefined,
               }
             );
-
-            await workflowStore.connectEdgeToInputAndRecord(
-              newEdgeParamsForCoordinator, // First arg is the edge itself
-              targetIndexInOrder,
-              historyEntry // Third arg is the HistoryEntry
+            
+            // Roo: 调用扩展后的 handleConnectionWithInterfaceUpdate 协调器函数
+            // 注意：targetIndexInOrder 在此模型中不直接传递给 handleConnectionWithInterfaceUpdate，
+            // 它应该在 newEdgeParamsForCoordinator.targetHandle 中通过子句柄ID体现，
+            // 或者由 multiInputActions 内部处理（如果适用）。
+            // 此处假设 newEdgeParamsForCoordinator 包含了所有必要的边信息。
+            // interfaceUpdateResult 可能为 null，所以使用 ?. 和 ?? {}
+            await workflowStore.handleConnectionWithInterfaceUpdate(
+              currentTabId, // internalId
+              newEdgeParamsForCoordinator, // newEdge
+              interfaceUpdateResult?.inputs ?? {}, // newInputs
+              interfaceUpdateResult?.outputs ?? {}, // newOutputs
+              modifiedSlotInfo, // Roo: new parameter for modified normal node slot
+              sourceNode.id, // sourceNodeId
+              targetNode.id, // targetNodeId
+              historyEntry
             );
-    // 由于 connectEdgeToInputAndRecord 是异步的，并且会更新 store，
-    // VueFlow 应该会自动响应 store 的变化来渲染新的边。
+    // 由于 handleConnectionWithInterfaceUpdate 是异步的，并且会更新 store，
+    // VueFlow 应该会自动响应 store 的变化来渲染新的边和节点（如果插槽更新导致重绘）。
     // 我们返回一个象征性的 Edge 对象或 null。
     // 重要的是状态已通过协调器更新。
     const finalEdgeState = workflowStore.getElements(currentTabId).find(el => el.id === newEdgeObjectFromCreateEdge.id && "source" in el) as Edge | undefined; // 使用 newEdgeObjectFromCreateEdge.id
@@ -929,10 +1009,91 @@ export function useCanvasConnections({
             // 边已经存在于 store 中，并且其属性没有改变，所以不需要调用 store action。
             // VueFlow 应该已经正确处理了视觉上的拖拽和释放。
           } else {
+            // Roo: <<<< START CONVERTIBLE_ANY LOGIC FOR EDGE UPDATE >>>>
+            const newSourceNode = findNode(newConnectionParams.source);
+            const newTargetNode = findNode(newConnectionParams.target);
+
+            if (!newSourceNode || !newTargetNode) {
+              // Should not happen if isValidConnection passed
+              console.error("[onEdgeUpdateEnd] Failed to find new source or target node.");
+              // Potentially revert or handle error state
+              return;
+            }
+
+            const { originalKey: parsedNewSourceHandleKey } = parseSubHandleId(newConnectionParams.sourceHandle);
+            const { originalKey: parsedNewTargetHandleKey } = parseSubHandleId(newConnectionParams.targetHandle);
+
+            let newSourceOutputDef: GroupSlotInfo | undefined;
+            const newSourceNodeType = getNodeType(newSourceNode);
+            if (newSourceNodeType === 'core:GroupInput') {
+              newSourceOutputDef = workflowStore.getActiveTabState()?.workflowData?.interfaceInputs?.[parsedNewSourceHandleKey];
+            } else if (newSourceNodeType === 'core:NodeGroup') {
+              newSourceOutputDef = (newSourceNode.data as any)?.groupInterface?.outputs?.[parsedNewSourceHandleKey];
+            } else {
+              newSourceOutputDef = (newSourceNode.data as any)?.outputs?.[parsedNewSourceHandleKey];
+            }
+
+            let newTargetInputDef: GroupSlotInfo | undefined;
+            const newTargetNodeType = getNodeType(newTargetNode);
+            if (newTargetNodeType === 'core:GroupOutput') {
+              newTargetInputDef = workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[parsedNewTargetHandleKey];
+            } else if (newTargetNodeType === 'core:NodeGroup') {
+              newTargetInputDef = (newTargetNode.data as any)?.groupInterface?.inputs?.[parsedNewTargetHandleKey];
+            } else {
+              newTargetInputDef = (newTargetNode.data as any)?.inputs?.[parsedNewTargetHandleKey];
+            }
+
+            if (!newSourceOutputDef || !newTargetInputDef) {
+              console.error(`[onEdgeUpdateEnd] Failed to find slot definitions for new connection: ${parsedNewSourceHandleKey}@${newSourceNode.id} or ${parsedNewTargetHandleKey}@${newTargetNode.id}`);
+              return;
+            }
+
+            const originalNewSourceOutputDef = klona(newSourceOutputDef);
+            const originalNewTargetInputDef = klona(newTargetInputDef);
+
+            let finalSourceDefForEdgeOnUpdate = klona(originalNewSourceOutputDef);
+            let finalTargetDefForEdgeOnUpdate = klona(originalNewTargetInputDef);
+
+            const isNewSourceConv = originalNewSourceOutputDef.dataFlowType === DataFlowType.CONVERTIBLE_ANY || (originalNewSourceOutputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
+            const isNewTargetConv = originalNewTargetInputDef.dataFlowType === DataFlowType.CONVERTIBLE_ANY || (originalNewTargetInputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
+            const isNewSourceWild = originalNewSourceOutputDef.dataFlowType === DataFlowType.WILDCARD || (originalNewSourceOutputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD);
+            const isNewTargetWild = originalNewTargetInputDef.dataFlowType === DataFlowType.WILDCARD || (originalNewTargetInputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD);
+
+            let modifiedSlotInfoOnUpdate: { node: VueFlowNode, handleKey: string, newDefinition: GroupSlotInfo, direction: 'inputs' | 'outputs' } | null = null;
+            let interfaceUpdateResultOnUpdate: { inputs: Record<string, GroupSlotInfo>, outputs: Record<string, GroupSlotInfo> } | null = null;
+
+            if (isNewSourceConv && !isNewTargetConv && !isNewTargetWild) {
+              finalSourceDefForEdgeOnUpdate.dataFlowType = originalNewTargetInputDef.dataFlowType;
+              finalSourceDefForEdgeOnUpdate.matchCategories = [...(originalNewTargetInputDef.matchCategories || [])];
+              const newSourceSlotDefConverted = createSyncSlotInfo(originalNewSourceOutputDef, originalNewTargetInputDef.dataFlowType, originalNewTargetInputDef.matchCategories || [], originalNewTargetInputDef);
+              if (newSourceNodeType === 'core:GroupInput') {
+                interfaceUpdateResultOnUpdate = syncInterfaceSlotFromConnection(currentTabId, newSourceNode.id, parsedNewSourceHandleKey, newSourceSlotDefConverted, 'inputs');
+              } else {
+                modifiedSlotInfoOnUpdate = { node: newSourceNode, handleKey: parsedNewSourceHandleKey, newDefinition: newSourceSlotDefConverted, direction: 'outputs' };
+              }
+            } else if (isNewTargetConv && !isNewSourceConv && !isNewSourceWild) {
+              finalTargetDefForEdgeOnUpdate.dataFlowType = originalNewSourceOutputDef.dataFlowType;
+              finalTargetDefForEdgeOnUpdate.matchCategories = [...(originalNewSourceOutputDef.matchCategories || [])];
+              const newTargetSlotDefConverted = createSyncSlotInfo(originalNewTargetInputDef, originalNewSourceOutputDef.dataFlowType, originalNewSourceOutputDef.matchCategories || [], originalNewSourceOutputDef);
+              if (newTargetNodeType === 'core:GroupOutput') {
+                interfaceUpdateResultOnUpdate = syncInterfaceSlotFromConnection(currentTabId, newTargetNode.id, parsedNewTargetHandleKey, newTargetSlotDefConverted, 'outputs');
+              } else {
+                modifiedSlotInfoOnUpdate = { node: newTargetNode, handleKey: parsedNewTargetHandleKey, newDefinition: newTargetSlotDefConverted, direction: 'inputs' };
+              }
+            } else if (isNewTargetWild && !isNewSourceConv) {
+                finalTargetDefForEdgeOnUpdate.dataFlowType = originalNewSourceOutputDef.dataFlowType;
+                finalTargetDefForEdgeOnUpdate.matchCategories = [...(originalNewSourceOutputDef.matchCategories || [])];
+            } else if (isNewSourceWild && !isNewTargetConv) {
+                finalSourceDefForEdgeOnUpdate.dataFlowType = originalNewTargetInputDef.dataFlowType;
+                finalSourceDefForEdgeOnUpdate.matchCategories = [...(originalNewTargetInputDef.matchCategories || [])];
+            }
+            // Roo: <<<< END CONVERTIBLE_ANY LOGIC FOR EDGE UPDATE >>>>
+
             const oldSourceForSummary = getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source');
             const oldTargetForSummary = getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target');
-            const newTargetForSummary = getReadableNames(newConnectionParams.target, newConnectionParams.targetHandle, 'target');
-            const summary = `移动连接 ${oldSourceForSummary.nodeName}::${oldSourceForSummary.handleName} (${originalEdge.source}::${originalEdge.sourceHandle}) -> ${oldTargetForSummary.nodeName}::${oldTargetForSummary.handleName} (${activeDraggingState.originalTargetNodeId}::${activeDraggingState.originalTargetHandleId})  TO  ${newTargetForSummary.nodeName}::${newTargetForSummary.handleName} (${newConnectionParams.target}::${newConnectionParams.targetHandle})`;
+            const newTargetForSummary = getReadableNames(newConnectionParams.target, newConnectionParams.targetHandle, 'target'); // newConnectionParams.source is the same as oldSourceForSummary if only target is changed
+            const summary = `移动连接 ${oldSourceForSummary.nodeName}::${oldSourceForSummary.handleName} (${originalEdge.source}::${originalEdge.sourceHandle}) -> ${oldTargetForSummary.nodeName}::${oldTargetForSummary.handleName} (${activeDraggingState.originalTargetNodeId}::${activeDraggingState.originalTargetHandleId})  TO  ${getReadableNames(newConnectionParams.source, newConnectionParams.sourceHandle, 'source').nodeName}::${getReadableNames(newConnectionParams.source, newConnectionParams.sourceHandle, 'source').handleName} -> ${newTargetForSummary.nodeName}::${newTargetForSummary.handleName}`;
+
             const historyEntry = createHistoryEntry(
               "modify",
               "edge",
@@ -948,19 +1109,32 @@ export function useCanvasConnections({
                 newTargetNodeId: newConnectionParams.target,
                 newTargetHandleId: newConnectionParams.targetHandle, // Will be string | null
                 newTargetIndexInOrder: newTargetIndexInOrder,
+                // Roo: Add information about slot/interface modifications for history/undo
+                modifiedSlotInfo: modifiedSlotInfoOnUpdate ? { nodeId: modifiedSlotInfoOnUpdate.node.id, handleKey: modifiedSlotInfoOnUpdate.handleKey, direction: modifiedSlotInfoOnUpdate.direction, newDefinition: klona(modifiedSlotInfoOnUpdate.newDefinition) } : undefined,
+                interfaceUpdateResult: interfaceUpdateResultOnUpdate ? klona(interfaceUpdateResultOnUpdate) : undefined,
+                // Roo: Add new edge data based on potential type conversion
+                newEdgeData: {
+                  sourceType: finalSourceDefForEdgeOnUpdate.dataFlowType,
+                  targetType: finalTargetDefForEdgeOnUpdate.dataFlowType,
+                }
               }
             );
 
+            // Roo: moveAndReconnectEdgeAndRecord WILL NEED TO BE MODIFIED to accept these new params
             await workflowStore.moveAndReconnectEdgeAndRecord(
               originalEdge.id,
               activeDraggingState.originalTargetNodeId,
               activeDraggingState.originalTargetHandleId,
               newConnectionParams.source,
-              newConnectionParams.sourceHandle ?? undefined, // 确保 null 转为 undefined, coordinator expects string | undefined
+              newConnectionParams.sourceHandle ?? undefined,
               newConnectionParams.target,
-              newConnectionParams.targetHandle ?? undefined, // 确保 null 转为 undefined, coordinator expects string | undefined
+              newConnectionParams.targetHandle ?? undefined,
               newTargetIndexInOrder,
-              historyEntry
+              historyEntry,
+              // Roo: Pass new parameters here once coordinator is updated
+              // modifiedSlotInfoOnUpdate,
+              // interfaceUpdateResultOnUpdate,
+              // { sourceType: finalSourceDefForEdgeOnUpdate.dataFlowType, targetType: finalTargetDefForEdgeOnUpdate.dataFlowType }
             );
           }
         } else {
