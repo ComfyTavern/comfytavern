@@ -37,18 +37,33 @@ const path = computed(() => {
       const N = orderedEdgeIds.length // 总连接数
       const k = currentIndex // 当前边的索引 (0-based)
 
-      // 计算 Handle 的总高度，与 BaseNode.vue 中的 targetHeight 计算逻辑一致
-      const H_handle = N * HANDLE_LINE_HEIGHT + Math.max(0, N - 1) * HANDLE_LINE_GAP + HANDLE_VERTICAL_PADDING; // 使用导入的常量
+      // --- 已修正的计算逻辑 ---
+      // HLH_const (4), HLG_const (6), HVP_const (8)
 
-      // 计算当前边连接点 Yk 相对于 Handle 顶部的距离
-      // 线的中心应该在 (padding/2) + k*(line+gap) + line/2
+      // 每个子 Handle 项的实际高度 (BaseNode.vue 中 .child-handle-item 的高度)
+      const childItemHeight = HANDLE_LINE_HEIGHT + HANDLE_VERTICAL_PADDING; // 4 + 8 = 12px
+
+      // 子 Handle 项之间的间隙
+      const childItemGap = HANDLE_LINE_GAP; // 6px
+
+      // 跑道容器（即主Handle）的单边垂直CSS padding
+      const containerVerticalPaddingHalf = HANDLE_VERTICAL_PADDING / 2; // 8 / 2 = 4px
+
+      // 计算主 Handle (跑道容器) 的总高度
+      // N * (子项高度) + (N-1) * (项间隙) + 容器总垂直CSSpadding
+      const H_handle =
+        N * childItemHeight +
+        Math.max(0, N - 1) * childItemGap +
+        HANDLE_VERTICAL_PADDING; // N * 12 + max(0,N-1)*6 + 8
+
+      // 计算当前边连接点 (第k个子Handle的中心) 相对于主Handle顶部的Y距离
       const Y_k_relative_to_handle_top =
-        (HANDLE_VERTICAL_PADDING / 2) + // 使用导入的常量
-        (k * (HANDLE_LINE_HEIGHT + HANDLE_LINE_GAP)) + // 使用导入的常量
-        (HANDLE_LINE_HEIGHT / 2); // 使用导入的常量
+        containerVerticalPaddingHalf + // 容器顶部padding
+        k * (childItemHeight + childItemGap) + // 前k个 (子项+间隙) 的总高度
+        (childItemHeight / 2); // 当前子项的中心
 
-      // Vue Flow 的 targetY 是 Handle 的中心点 Y 坐标
-      // 我们需要计算 Y_k 相对于 Handle 中心的偏移
+      // Vue Flow 的 targetY 是主 Handle 的中心点 Y 坐标
+      // 我们需要计算 Y_k 相对于主 Handle 中心的偏移
       verticalOffset = Y_k_relative_to_handle_top - (H_handle / 2)
     }
   }

@@ -188,3 +188,52 @@
 
 /* 移除旧的隐藏样式 */
 /* .handleHiddenWhenPreviewing { ... } */
+
+/* 新增：多输入插槽的子 Handle 样式 */
+.childHandle {
+  /* 使 Handle 组件本身完全透明并填充其父容器 (.runwaySlice) */
+  background-color: transparent !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  border-radius: 0 !important; /* 无独立圆角 */
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  /* 确保它在视觉上不贡献任何样式，仅作为交互层 */
+  /* position, top, transform 等由 .handle 类或 Vue Flow 默认处理，或由父级控制 */
+  /* 移除在 BaseNode.vue 中 getStandardHandleStyles(true) 设置的特定尺寸和圆点样式 */
+}
+
+/* .dark .childHandle 不需要特殊规则，因为基础 .childHandle 已设为透明 */
+
+/* 新增：跑道式多输入容器的样式 */
+.multiInputRunway {
+  background-color: var(--handle-color-string-light); /* 跑道本身负责填充颜色 */
+  border: 2px solid var(--handle-border-light); /* 改为2px并使用与单Handle一致的边框颜色 */
+  border-radius: 6px; /* 对应 Tailwind rounded-md */
+  /* padding, display: flex, flex-direction: column, gap: 0px 等由 BaseNode.vue 中的 multiInputSlotContainerStyle 设置 */
+  overflow: hidden; /* 确保子元素的任何溢出（理论上不应有）被裁剪 */
+  position: relative; /* 确保内部绝对定位的元素（如隐藏的主Handle）正确对齐 */
+}
+
+:global(.dark) .multiInputRunway {
+  background-color: var(--handle-color-string-dark); /* 跑道本身负责填充颜色 */
+  border: 2px solid var(--handle-border-dark); /* 改为2px并使用与单Handle一致的边框颜色 */
+}
+
+/* 新增：跑道中每个逻辑切片（包裹子Handle的div）的样式 */
+.runwaySlice {
+  /* 这个切片现在应该是透明的，让父级 .multiInputRunway 的背景显示出来 */
+  background-color: transparent !important;
+  /* height 由 BaseNode.vue 中的 :style 设置 */
+  /* display: flex, alignItems: center, position: relative 也由 BaseNode.vue 中的 :style 设置 */
+  /* 无独立边框或外边距，以实现融合效果 */
+  border: none; /* 切片自身无边框，边框在 .multiInputRunway 上 */
+  margin: 0;
+  padding: 0;
+  /* 如果需要，可以添加一个非常细微的内部边框来模拟Blender中插槽之间的分隔，但这会使其不完全融合 */
+  /* box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.1); */
+}
+
+/* :global(.dark) .runwaySlice 的特定暗色模式规则不再需要，因为它总是透明的 */

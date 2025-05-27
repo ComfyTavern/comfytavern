@@ -44,11 +44,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, type PropType, markRaw } from 'vue' // 导入 PropType 和 markRaw
+import { ref, computed, onMounted, onUnmounted, type PropType } from 'vue' // 导入 PropType
 import { watch, nextTick } from 'vue'
-import { VueFlow, useVueFlow, SelectionMode, type NodeTypesObject } from '@vue-flow/core' // 导入 NodeTypesObject
+import { VueFlow, useVueFlow, SelectionMode, type NodeTypesObject, type EdgeTypesObject } from '@vue-flow/core' // 导入 NodeTypesObject 和 EdgeTypesObject
 import UnplugConnectionLine from './edges/UnplugConnectionLine.vue';
-import SortedMultiTargetEdge from './edges/SortedMultiTargetEdge.vue'; // +++ 导入自定义边组件
 import { useNodeStore } from '../../stores/nodeStore'
 // workflowStore is needed by the composable, ensure it's available or imported if not already
 import { useWorkflowStore } from '../../stores/workflowStore'; // 导入 WorkflowStore
@@ -65,6 +64,7 @@ import ContextMenu from './menus/ContextMenu.vue'
 import NodeContextMenu from './menus/NodeContextMenu.vue'
 import SlotContextMenu from './menus/SlotContextMenu.vue'; // 导入插槽右键菜单
 import BaseNode from './nodes/BaseNode.vue'
+import SortedMultiTargetEdge from './edges/SortedMultiTargetEdge.vue'; // 导入自定义边组件
 import { useThemeStore } from '../../stores/theme'
 import { storeToRefs } from 'pinia'
 import { useCanvasConnections } from '../../composables/canvas/useCanvasConnections'
@@ -77,6 +77,9 @@ const props = defineProps({
   modelValue: { type: Array as PropType<Array<Node | Edge>>, required: true },
   nodeTypes: { type: Object as PropType<NodeTypesObject>, required: true }
 });
+const edgeTypes: EdgeTypesObject = {
+  'sorted-multi-target': SortedMultiTargetEdge, // 使用导入的自定义边组件
+};
 
 const emit = defineEmits<{
   'update:modelValue': [value: Array<Node | Edge>]
@@ -84,10 +87,6 @@ const emit = defineEmits<{
   'pane-ready': [instance: any] // Revert to emitting the hook instance, use 'any' for now
   'connect': [connection: Connection],
 }>();
-
-const edgeTypes = {
-  sortedMultiTarget: markRaw(SortedMultiTargetEdge),
-};
 
 // 使用计算属性处理双向绑定
 const internalElements = computed({

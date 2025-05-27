@@ -628,7 +628,13 @@ export const useWorkflowStore = defineStore("workflow", () => {
       workflowInteractionCoordinator.updateWorkflowDescriptionAndRecord, // <-- 导出描述更新协调器
     updateNodeInputConnectionOrderAndRecord:
       workflowInteractionCoordinator.updateNodeInputConnectionOrderAndRecord, // <-- 导出连接顺序更新协调器
- 
+    disconnectEdgeFromInputAndRecord:
+      workflowInteractionCoordinator.disconnectEdgeFromInputAndRecord, // 新增
+    connectEdgeToInputAndRecord:
+      workflowInteractionCoordinator.connectEdgeToInputAndRecord, // 新增
+    moveAndReconnectEdgeAndRecord:
+      workflowInteractionCoordinator.moveAndReconnectEdgeAndRecord, // 新增
+  
     // --- 内部辅助函数（为特定用例导出，如 EditorView 事件处理程序）---
     // ensureHistoryAndRecord, // 已移除：现在是协调器的内部函数
   };
