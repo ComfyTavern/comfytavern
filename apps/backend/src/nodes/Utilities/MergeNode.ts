@@ -23,6 +23,19 @@ export const definition: NodeDefinition = {
   description: '将多个文本输入合并成一个完整的文本',
 
   inputs: {
+    separator: {
+      dataFlowType: 'STRING',
+      displayName: '分隔符',
+      description: '用于分隔文本的字符串',
+      required: false,
+      // acceptTypes is handled by dataFlowType and matchCategories
+      config: {
+        default: '\n',
+        multiline: false,
+        placeholder: '输入分隔符',
+        label: '分隔符'
+      }
+    },
     text_inputs: {
       dataFlowType: 'STRING',
       displayName: '文本输入',
@@ -35,19 +48,6 @@ export const definition: NodeDefinition = {
         placeholder: '文本内容将在这里显示',
         default: '',
         label: '文本输入'
-      }
-    },
-    separator: {
-      dataFlowType: 'STRING',
-      displayName: '分隔符',
-      description: '用于分隔文本的字符串',
-      required: false,
-      // acceptTypes is handled by dataFlowType and matchCategories
-      config: {
-        default: '\n',
-        multiline: false,
-        placeholder: '输入分隔符',
-        label: '分隔符'
       }
     }
   },

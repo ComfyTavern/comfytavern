@@ -6,27 +6,34 @@
   >
     <draggable
       v-model="draggableConnections"
-      item-key="id" 
-      @end="onSortEnd" 
-      handle=".drag-handle"
+      item-key="id"
+      @end="onSortEnd"
       class="connection-list"
+      :animation="200"
     >
       <template #item="{element, index}">
-        <div class="sortable-connection-item">
-          <span class="drag-handle" title="拖拽排序">↕️</span>
+        <div class="sortable-connection-item" :title="getSourceTooltip(element)">
           <span class="connection-index">{{ index + 1 }}.</span>
           <div class="tooltip-flex-wrapper">
-            <Tooltip :content="getSourceTooltip(element)" placement="top" :show-delay="300">
+            <!-- Tooltip now wraps the button or the text, let's keep it on text for now -->
+             <Tooltip :content="getSourceTooltip(element)" placement="top" :show-delay="300">
               <span class="connection-label-container">
                 <span class="source-node-label-part" :title="element.sourceNodeLabel">
                   {{ element.sourceNodeLabel }}
-              </span>
-              <span class="source-handle-label-part" v-if="element.sourceHandleId" :title="element.sourceHandleLabel">
-                ({{ element.sourceHandleLabel }})
+                </span>
+                <span class="source-handle-label-part" v-if="element.sourceHandleId" :title="element.sourceHandleLabel">
+                  ({{ element.sourceHandleLabel }})
                 </span>
               </span>
             </Tooltip>
           </div>
+          <button
+            @click.stop="handleDisconnectEdge(element)"
+            class="disconnect-button"
+            title="断开此连接"
+          >
+            &times;
+          </button>
         </div>
       </template>
     </draggable>
@@ -34,13 +41,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, type PropType, computed } from 'vue'; // 添加了 computed
+import { ref, watch, type PropType, computed } from 'vue';
 import draggable from 'vuedraggable';
-import type { Edge, Node } from '@vue-flow/core';
-import type { InputDefinition, OutputDefinition } from '@comfytavern/types'; // HistoryEntry 和 createHistoryEntry 将由新的 composable 处理
-// import { createHistoryEntry } from '@comfytavern/utils'; // 由新的 composable 处理
-// import { useWorkflowInteractionCoordinator } from '@/composables/workflow/useWorkflowInteractionCoordinator'; // 将替换为新的 composable
-import { useMultiInputConnectionActions } from '@/composables/node/useMultiInputConnectionActions'; // <-- 新增导入
+import type { Edge, Node as VueFlowNode } from '@vue-flow/core'; // Renamed Node to VueFlowNode to avoid conflict
+import type { InputDefinition, OutputDefinition, HistoryEntry } from '@comfytavern/types';
+import { createHistoryEntry } from '@comfytavern/utils';
+import { klona } from 'klona/full';
+import { useMultiInputConnectionActions } from '@/composables/node/useMultiInputConnectionActions';
 import { useTabStore } from '@/stores/tabStore';
 import Tooltip from '@/components/common/Tooltip.vue';
 
@@ -50,6 +57,8 @@ interface DraggableConnectionItem {
   sourceHandleId: string | null | undefined;
   sourceNodeLabel: string;
   sourceHandleLabel: string;
+  targetNodeId: string; // Added for disconnect context
+  targetHandleId: string | null | undefined; // Added for disconnect context
 }
 
 const props = defineProps({
@@ -59,14 +68,13 @@ const props = defineProps({
   inputDefinition: { type: Object as PropType<InputDefinition>, required: true },
   // BaseNode 将通过 useVueFlow() 获取 vueFlowInstance 并传递所需部分
   allEdges: { type: Array as PropType<Edge[]>, required: true },
-  findNode: { type: Function as PropType<(id: string) => Node | undefined>, required: true },
+  findNode: { type: Function as PropType<(id: string) => VueFlowNode | undefined>, required: true },
   getNodeLabel: { type: Function as PropType<(nodeId: string) => string>, required: true },
 });
 
-// const interactionCoordinator = useWorkflowInteractionCoordinator(); // 不再需要
 const tabStore = useTabStore();
 const activeTabIdRef = computed(() => tabStore.activeTabId);
-const { reorderMultiInputConnections } = useMultiInputConnectionActions(activeTabIdRef); // <-- 实例化新的 composable
+const { reorderMultiInputConnections, disconnectEdgeFromMultiInput } = useMultiInputConnectionActions(activeTabIdRef);
 
 const draggableConnections = ref<DraggableConnectionItem[]>([]);
 
@@ -97,6 +105,8 @@ const mapEdgeIdsToDraggableItems = () => {
         // 如果源节点存在，则使用 getNodeLabel 获取其标签，否则显示源节点ID和“未找到”
         sourceNodeLabel: sourceNode ? props.getNodeLabel(edge.source) : `源节点 ${edge.source.substring(0,6)}... 未找到`,
         sourceHandleLabel: sourceHandleLabel,
+        targetNodeId: edge.target, // Added for disconnect
+        targetHandleId: edge.targetHandle, // Added for disconnect
       });
     } else {
       // 如果根据 edgeId 在 allEdges 中找不到边，这通常表示数据不一致
@@ -107,6 +117,8 @@ const mapEdgeIdsToDraggableItems = () => {
         sourceHandleId: 'error',
         sourceNodeLabel: `边 ${edgeId.substring(0,6)}... (数据错误)`,
         sourceHandleLabel: '!', // 用感叹号表示错误状态
+        targetNodeId: 'error', // Added for disconnect
+        targetHandleId: 'error', // Added for disconnect
       });
     }
   }
@@ -159,58 +171,103 @@ const onSortEnd = async () => {
   }
 };
 
+const handleDisconnectEdge = async (item: DraggableConnectionItem) => {
+  if (!activeTabIdRef.value) {
+    console.error("[InlineConnectionSorter] 无法断开连接：activeTabId 未定义。");
+    return;
+  }
+  if (!item.targetHandleId) {
+    console.error(`[InlineConnectionSorter] 边 ${item.id} 的 targetHandleId 未定义，无法断开。`);
+    return;
+  }
+
+  const edgeToDisconnect = props.allEdges.find(e => e.id === item.id);
+  if (!edgeToDisconnect) {
+    console.error(`[InlineConnectionSorter] 未在 allEdges 中找到要断开的边 ${item.id}。`);
+    return;
+  }
+
+  const targetNodeLabel = props.getNodeLabel(props.nodeId);
+  const inputDisplayName = props.inputDefinition.displayName || props.inputHandleKey;
+  
+  const summary = `断开连接: ${item.sourceNodeLabel}(${item.sourceHandleLabel}) -> ${targetNodeLabel}(${inputDisplayName})`;
+
+  const historyPayload = {
+    removedEdge: klona(edgeToDisconnect),
+    originalTargetNodeId: props.nodeId,
+    originalTargetHandleId: item.targetHandleId, // 使用 item 上的 targetHandleId
+    // context for undo: which input slot on which node was it connected to
+    contextNodeId: props.nodeId,
+    contextInputKey: props.inputHandleKey,
+  };
+
+  const entry: HistoryEntry = createHistoryEntry(
+    "edgeRemove",
+    "workflow", // entityType for edge removal is typically 'workflow' as it affects elements list
+    summary,
+    historyPayload
+  );
+
+  try {
+    await disconnectEdgeFromMultiInput(
+      item.id,
+      props.nodeId, // originalTargetNodeId for the function
+      item.targetHandleId, // originalTargetHandleId for the function
+      entry
+    );
+    // draggableConnections will update reactively due to props.allEdges changing
+  } catch (error) {
+    console.error(`[InlineConnectionSorter] 断开边 ${item.id} 失败:`, error);
+    // Optionally, re-fetch or revert UI if needed, though reactive updates should handle it
+  }
+};
+
 </script>
 
 <style scoped>
 .inline-connection-sorter {
-  padding: 4px;
-  margin-top: 2px; /* 与 param-header 稍微有点间距 */
-  background-color: var(--ct-bg-surface-raised, #f0f0f0); /* 比节点主体稍亮的背景 */
-  border-radius: 3px;
-  border: 1px solid var(--ct-border-DEFAULT, #e0e0e0);
+  padding: 8px;
+  margin-top: 2px;
+  background-color: var(--ct-bg-surface, #f9fafb);
+  border-radius: 4px;
+  border: 1px solid var(--ct-border-DEFAULT, #d1d5db);
 }
 .dark .inline-connection-sorter {
-  background-color: var(--ct-bg-surface-raised-dark, #2d2d2d);
-  border-color: var(--ct-border-dark, #3a3a3a);
+  background-color: var(--ct-bg-surface-dark, #1f2937);
+  border-color: var(--ct-border-dark, #4b5563);
 }
 
 .connection-list {
   display: flex;
   flex-direction: column;
-  gap: 2px; /* 列表项之间的间距 */
+  gap: 8px;
 }
 
 .sortable-connection-item {
   display: flex;
   align-items: center;
-  padding: 3px 5px;
-  background-color: var(--ct-bg-surface, #ffffff);
-  border: 1px solid var(--ct-border-input, #cccccc);
+  gap: 6px; /* Add gap for items including the new button */
+  padding: 4px 6px;
+  background-color: var(--ct-bg-input, #ffffff);
+  border: 1px solid var(--ct-border-input, #cbd5e1);
   border-radius: 3px;
-  font-size: 0.8em; /* 稍小字体以适应紧凑空间 */
-  cursor: grab;
-  color: var(--ct-text-default, #333333);
+  font-size: 0.9em;
+  cursor: grab; /* 整行可拖拽 */
+  color: var(--ct-text-default, #1f2937);
 }
 .dark .sortable-connection-item {
-  background-color: var(--ct-bg-input-dark, #374151); /* 与输入框背景类似 */
-  border-color: var(--ct-border-input-dark, #555555);
+  background-color: var(--ct-bg-input-dark, #374151);
+  border-color: var(--ct-border-input-dark, #6b7280);
   color: var(--ct-text-default-dark, #f3f4f6);
 }
 
 .sortable-connection-item:hover {
   border-color: var(--ct-accent-DEFAULT, #2563eb);
+  box-shadow: 0 0 0 1px var(--ct-accent-DEFAULT, #2563eb);
 }
 .dark .sortable-connection-item:hover {
   border-color: var(--ct-accent-dark, #3b82f6);
-}
-
-.drag-handle {
-  margin-right: 6px;
-  cursor: grab;
-  color: var(--ct-text-muted, #6b7280);
-}
-.dark .drag-handle {
-  color: var(--ct-text-muted-dark, #9ca3af);
+  box-shadow: 0 0 0 1px var(--ct-accent-dark, #3b82f6);
 }
 
 .connection-index {
@@ -223,9 +280,9 @@ const onSortEnd = async () => {
 }
 
 .tooltip-flex-wrapper {
-  flex-grow: 1; /* 占据剩余空间 */
-  min-width: 0; /* 允许缩小到内容宽度以下，这对于内部的 overflow:hidden 生效至关重要 */
-  overflow: hidden; /* 确保此包装器本身不会溢出其父级（.sortable-connection-item） */
+  flex-grow: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .connection-label-container {
@@ -233,23 +290,49 @@ const onSortEnd = async () => {
   align-items: baseline;
   overflow: hidden;
   flex-grow: 1;
-  min-width: 0; /* 允许容器在flex布局中正确收缩 */
+  min-width: 0;
 }
 
 .source-node-label-part {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex-shrink: 2; /* 节点名称部分优先收缩 (值越大越优先) */
-  min-width: 0; /* 确保在空间不足时可以缩小到0，从而触发省略号 */
+  flex-shrink: 2;
+  min-width: 0;
 }
 
 .source-handle-label-part {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex-shrink: 1; /* 插槽名称部分后收缩 */
-  margin-left: 4px; /* 与节点名称保持一点间距 */
-  min-width: 0; /* 确保在空间不足时可以缩小到0，从而触发省略号 */
+  flex-shrink: 1;
+  margin-left: 4px;
+  min-width: 0;
+}
+.disconnect-button {
+  flex-shrink: 0;
+  padding: 1px 4px; /* Smaller padding */
+  margin-left: auto; /* Push to the right */
+  background-color: transparent;
+  border: 1px solid transparent; /* Keep layout consistent */
+  color: var(--ct-text-danger, #dc2626);
+  cursor: pointer;
+  font-size: 0.9em; /* Slightly smaller or same as item text */
+  line-height: 1;
+  border-radius: 3px;
+  font-weight: bold;
+}
+.disconnect-button:hover {
+  background-color: var(--ct-bg-danger-hover, #fee2e2);
+  border-color: var(--ct-text-danger-hover, #ef4444);
+  color: var(--ct-text-danger-hover, #ef4444);
+}
+.dark .disconnect-button {
+  color: var(--ct-text-danger-dark, #f87171);
+}
+.dark .disconnect-button:hover {
+  background-color: var(--ct-bg-danger-hover-dark, #450a0a);
+  border-color: var(--ct-text-danger-hover-dark, #ff7272);
+  color: var(--ct-text-danger-hover-dark, #ff7272);
 }
 </style>

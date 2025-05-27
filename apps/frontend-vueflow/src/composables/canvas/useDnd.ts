@@ -45,25 +45,21 @@ export default function useDragAndDrop() {
         // 清除之前可能存在的数据
         event.dataTransfer.clearData();
 
-        // 设置多种数据类型，增加兼容性
-        try {
-          event.dataTransfer.setData("application/vueflow", nodeDataStr);
-        } catch (e) {
-          console.warn("无法设置application/vueflow数据类型:", e);
-        }
+        // 使用一个特定的MIME类型来避免与其他拖拽操作冲突
+        const DND_MIME_TYPE = "application/x-comfytavern-node-drag-data";
 
         try {
-          event.dataTransfer.setData("text/plain", nodeDataStr);
+          console.debug(`[useDnd] onDragStart: Attempting to set data with DND_MIME_TYPE. nodeDataStr (first 100 chars): "${nodeDataStr.substring(0,100)}..."`);
+          event.dataTransfer.setData(DND_MIME_TYPE, nodeDataStr);
+          // 验证是否设置成功 (注意：某些浏览器可能不允许在 dragstart 中立即 getData)
+          // console.debug(`[useDnd] onDragStart: Data set for ${DND_MIME_TYPE}. Trying to getData immediately (may not work):`, event.dataTransfer.getData(DND_MIME_TYPE));
+          console.debug(`[useDnd] onDragStart: event.dataTransfer.types after setData:`, Array.from(event.dataTransfer.types));
         } catch (e) {
-          console.warn("无法设置text/plain数据类型:", e);
+          console.error(`[useDnd] onDragStart: 无法设置 ${DND_MIME_TYPE} 数据类型:`, e);
         }
-
-        // 尝试使用JSON格式
-        try {
-          event.dataTransfer.setData("application/json", nodeDataStr);
-        } catch (e) {
-          console.warn("无法设置application/json数据类型:", e);
-        }
+        
+        // 移除了对 application/vueflow, text/plain, application/json 的设置，以增强隔离性
+        // 如果需要，可以保留一个通用类型作为后备，但优先使用特定类型
 
         event.dataTransfer.effectAllowed = "move";
 
@@ -140,16 +136,19 @@ export default function useDragAndDrop() {
    */
   function onDragOver(event: DragEvent) {
     try {
+      const DND_MIME_TYPE = "application/x-comfytavern-node-drag-data";
       // 检查是否是有效的节点拖拽操作
-      // 如果 dataTransfer 不存在，或者不包含我们期望的类型，则不认为是有效的拖放目标
-      if (!event.dataTransfer || !event.dataTransfer.types.includes("application/vueflow")) {
+      // 如果 dataTransfer 不存在，或者不包含我们期望的特定类型，则不认为是有效的拖放目标
+      if (!event.dataTransfer || !event.dataTransfer.types.includes(DND_MIME_TYPE)) {
         // 如果不是从节点面板拖拽过来的（没有设置特定数据类型），
         // 则不阻止默认行为，这样它就不会成为一个有效的放置目标。
         // 这有助于避免与非节点拖拽操作（如面板调整大小）冲突。
+        // console.debug(`[useDnd] onDragOver: Not a ComfyTavern node drag operation. Types: ${event.dataTransfer?.types.join(', ')}`);
         return;
       }
 
       event.preventDefault();
+      // console.debug(`[useDnd] onDragOver: Valid ComfyTavern node drag operation detected.`);
 
       // 只有在确认是有效的节点拖拽时，才设置 dropEffect 和 isDragOver
       // draggedNodeData.value 应该在 onDragStart 中被设置
@@ -160,10 +159,11 @@ export default function useDragAndDrop() {
         // 如果到这里 draggedNodeData 还是 null，可能意味着拖拽状态不一致
         // 或者拖拽的不是我们期望的节点数据。
         // 为安全起见，可以不设置 isDragOver 或 dropEffect。
+        console.warn("[useDnd] onDragOver: Valid MIME type detected, but draggedNodeData is null.");
         isDragOver.value = false; // 明确设置为 false
       }
     } catch (error) {
-      console.warn("拖拽悬停处理失败:", error);
+      console.warn("[useDnd] 拖拽悬停处理失败:", error);
       isDragOver.value = false; // 出错时也重置状态
     }
   }
@@ -201,43 +201,60 @@ export default function useDragAndDrop() {
   }
 
   async function onDrop(event: DragEvent) {
-    // 标记为异步函数
+    const DND_MIME_TYPE = "application/x-comfytavern-node-drag-data";
+
+    // 首先检查此 drop 事件是否针对 useDnd (即是否包含我们特定的 MIME 类型)
+    if (!event.dataTransfer || !event.dataTransfer.types.includes(DND_MIME_TYPE)) {
+      console.debug(`[useDnd] onDrop: Event ignored. MIME type "${DND_MIME_TYPE}" not found. This drop is likely for another handler or an unintended drop. Types: ${event.dataTransfer ? Array.from(event.dataTransfer.types).join(', ') : 'N/A'}`);
+      // 对于非预期的拖放，我们可能仍然需要清理 useDnd 自身的拖拽状态（isDragging, isDragOver）
+      // 因为 onDragLeave 可能没有在所有情况下都正确触发（例如，如果拖拽在浏览器窗口外释放然后返回）。
+      // onDragEnd() 会处理这些状态的重置。
+      // 注意：不应该在这里调用 event.preventDefault() 或 event.stopPropagation()，
+      // 因为这个事件不是由 useDnd 发起的拖拽操作对应的。
+      // 如果 onDragEnd 依赖于 drop 事件来清理，那么这里调用它可能是合适的。
+      // 考虑到 onDragEnd 也监听了 'dragend' 事件，它最终会被调用。
+      // 但为了确保 useDnd 的内部状态 (isDragOver) 立即清除，可以调用部分清理逻辑或 onDragEnd。
+      // 鉴于 onDragEnd 也会清除 draggedNodeData，这对于非DND操作是安全的。
+      onDragEnd(); // 清理 useDnd 相关的拖拽状态
+      return;
+    }
+    
+    // 如果事件是针对 useDnd 的，则阻止默认行为并处理它
     event.preventDefault();
+    console.debug(`[useDnd] onDrop: Event accepted. MIME type "${DND_MIME_TYPE}" found. Processing node drop.`);
+    
     let nodeData: DraggedNodeData | null = null; // 使用定义的接口
 
     try {
-      // 首先尝试从dataTransfer获取数据
+      // 首先尝试从dataTransfer获取数据 (此时我们已确认 DND_MIME_TYPE 存在)
       if (event.dataTransfer) {
-        // 尝试从多种数据类型获取拖拽数据
+        // console.debug(`[useDnd] onDrop: event.dataTransfer.types before getData (already checked):`, Array.from(event.dataTransfer.types)); // 日志已在上方添加
         let nodeDataStr: string | null = null;
-
-        // 定义我们要尝试的所有数据类型
-        const dataTypes = ["application/vueflow", "text/plain", "application/json"];
-
-        // 尝试所有数据类型
-        for (const type of dataTypes) {
-          try {
-            const data = event.dataTransfer.getData(type);
-            if (data) {
-              nodeDataStr = data;
-              console.debug(`成功从${type}获取数据`);
-              break;
-            }
-          } catch (e) {
-            console.warn(`获取${type}数据失败:`, e);
+        try {
+          const data = event.dataTransfer.getData(DND_MIME_TYPE);
+          if (data && data.length > 0) { // 确保数据不是空字符串
+            nodeDataStr = data;
+            console.debug(`[useDnd] onDrop: 成功从 ${DND_MIME_TYPE} 获取数据: "${data.substring(0,100)}..."`);
+          } else {
+            // 这不应该发生，因为我们已经在开始时检查了 types.includes(DND_MIME_TYPE)
+            // 并且如果类型存在，getData 通常应该返回非空字符串（除非 setData 时设置了空字符串）
+            console.warn(`[useDnd] onDrop: 从 ${DND_MIME_TYPE} 获取的数据为空字符串或null，尽管类型存在。 Data: "${data}"`);
           }
+        } catch (e) {
+          // 理论上，如果 types.includes 是 true，getData 不应该抛出“类型未设置”的错误，但可能因其他原因失败
+          console.warn(`[useDnd] onDrop: 获取 ${DND_MIME_TYPE} 数据时发生异常:`, e);
         }
-
-        // 如果从dataTransfer获取到了数据，解析它
+        
         if (nodeDataStr) {
           try {
             nodeData = JSON.parse(nodeDataStr);
-            console.debug("成功解析拖拽数据:", nodeData);
-          } catch (e) {
-            console.warn("解析JSON失败，将尝试使用全局状态", e);
+            console.debug("[useDnd] onDrop: 成功解析通过特定MIME类型获取的拖拽数据:", nodeData);
+          } catch (e: any) {
+            console.error(`[useDnd] onDrop: 解析从 ${DND_MIME_TYPE} 获取的JSON数据失败 ("${nodeDataStr.substring(0,100)}..."):`, e.message);
+            nodeData = null;
           }
         } else {
-          console.warn("未能从dataTransfer获取数据，将尝试使用全局状态");
+          console.warn(`[useDnd] onDrop: 未能从 ${DND_MIME_TYPE} 获取有效数据字符串，将尝试使用全局状态作为后备。`);
         }
       }
 
