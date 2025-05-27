@@ -227,9 +227,9 @@ export function useCanvasConnections({
     return false;
   };
 
-  const isValidConnection = (connection: Connection): boolean => {
-    console.log('%c[CanvasConnections DEBUG] isValidConnection CALLED (TOP LEVEL). Connection:', 'color: red; font-weight: bold;', JSON.parse(JSON.stringify(connection))); // 强调日志
-    console.log('[CanvasConnections DEBUG] isValidConnection called. Connection:', JSON.parse(JSON.stringify(connection)));
+  const isValidConnection = (connection: Connection, updatingEdgeId?: string): boolean => {
+    console.log('%c[CanvasConnections DEBUG] isValidConnection CALLED (TOP LEVEL). Connection:', 'color: red; font-weight: bold;', JSON.parse(JSON.stringify(connection)), `UpdatingEdgeId: ${updatingEdgeId}`); // 强调日志
+    console.log('[CanvasConnections DEBUG] isValidConnection called. Connection:', JSON.parse(JSON.stringify(connection)), `UpdatingEdgeId: ${updatingEdgeId}`);
     const { source, target, sourceHandle: rawSourceHandle, targetHandle: rawTargetHandle } = connection;
 
     if (!source || !target || !rawSourceHandle || !rawTargetHandle) {
@@ -314,15 +314,25 @@ export function useCanvasConnections({
         const edgesToTargetNode = currentEdges.filter(e => e.target === connection.target);
         console.log(`[CanvasConnections DEBUG] isValidConnection: Edges connected to target node ${connection.target}:`, edgesToTargetNode.map(e => ({ id: e.id, targetHandle: e.targetHandle })));
         
-        const isTargetSubHandleOccupied = currentEdges.some(edge =>
+        const occupyingEdges = currentEdges.filter(edge =>
           edge.target === connection.target &&
           edge.targetHandle === connection.targetHandle
         );
-        console.log(`[CanvasConnections DEBUG] isValidConnection: Is target sub-handle ${connection.target}::${connection.targetHandle} occupied? ${isTargetSubHandleOccupied}`);
+        const isOccupied = occupyingEdges.length > 0;
+        console.log(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} occupied by ${occupyingEdges.length} edge(s).`);
 
-        if (isTargetSubHandleOccupied) {
-          console.warn(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} is ALREADY OCCUPIED. -> false`);
-          return false; // 子Handle已被占用，连接无效
+        if (isOccupied) {
+          const singleOccupyingEdge = (occupyingEdges.length === 1) ? occupyingEdges[0] : null;
+          // 如果我们正在更新一个边 (updatingEdgeId 已提供),
+          // 并且占用此子句柄的 *唯一* 边就是正在更新的边,
+          // 那么这是一个有效的“重新连接”到同一插槽。
+          if (updatingEdgeId && singleOccupyingEdge && singleOccupyingEdge.id === updatingEdgeId) {
+            console.log(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} is occupied by the edge being updated ('${updatingEdgeId}'). Allowing reconnection.`);
+            // 有效的重新连接，继续后续检查 (例如类型兼容性，已在前面完成)
+          } else {
+            console.warn(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} is ALREADY OCCUPIED by a different edge or multiple edges. updatingEdgeId: '${updatingEdgeId}'. Occupying edge IDs: ${occupyingEdges.map(e => e.id).join(', ')}. -> false`);
+            return false; // 被不同的边或多个边占用
+          }
         } else {
           console.log(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} is NOT occupied. Proceeding.`);
         }
@@ -869,6 +879,7 @@ export function useCanvasConnections({
     reorderPreviewIndex.value = null;
 
     const { originalEdge } = activeDraggingState;
+    const originalEdgeIdFromDrag = originalEdge?.id; // 获取正在拖拽的原始边的 ID
     const currentTabId = tabStore.activeTabId;
 
     if (!currentTabId) {
@@ -938,8 +949,8 @@ export function useCanvasConnections({
         }
 
 
-        if (isValidConnection(newConnectionParams)) {
-          console.debug(`[CanvasConnections DEBUG] onEdgeUpdateEnd: New connection is valid. Attempting to move/reconnect.`);
+        if (isValidConnection(newConnectionParams, originalEdgeIdFromDrag)) {
+          console.debug(`[CanvasConnections DEBUG] onEdgeUpdateEnd: New connection is valid (passing originalEdgeId: ${originalEdgeIdFromDrag}). Attempting to move/reconnect.`);
 
           const targetNode = findNode(newConnectionParams.target);
           const targetInputDef = targetNode?.data?.inputs?.[newConnectionParams.targetHandle!];
@@ -959,39 +970,77 @@ export function useCanvasConnections({
               console.warn(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Multi-input target. reorderPreviewIndex is null. Appending to end (index: ${newTargetIndexInOrder}).`);
             }
           }
-          const oldSourceForSummary = getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source');
-          const oldTargetForSummary = getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target');
-          const newTargetForSummary = getReadableNames(newConnectionParams.target, newConnectionParams.targetHandle, 'target');
-          const summary = `移动连接 ${oldSourceForSummary.nodeName}::${oldSourceForSummary.handleName} (${originalEdge.source}::${originalEdge.sourceHandle}) -> ${oldTargetForSummary.nodeName}::${oldTargetForSummary.handleName} (${activeDraggingState.originalTargetNodeId}::${activeDraggingState.originalTargetHandleId})  TO  ${newTargetForSummary.nodeName}::${newTargetForSummary.handleName} (${newConnectionParams.target}::${newConnectionParams.targetHandle})`;
-          const historyEntry = createHistoryEntry(
-            "modify",
-            "edge",
-            summary,
-            {
-              edgeId: originalEdge.id,
-              oldSourceNodeId: originalEdge.source,
-              oldSourceHandleId: originalEdge.sourceHandle,
-              oldTargetNodeId: activeDraggingState.originalTargetNodeId,
-              oldTargetHandleId: activeDraggingState.originalTargetHandleId,
-              newSourceNodeId: newConnectionParams.source,
-              newSourceHandleId: newConnectionParams.sourceHandle, // Will be string | null
-              newTargetNodeId: newConnectionParams.target,
-              newTargetHandleId: newConnectionParams.targetHandle, // Will be string | null
-              newTargetIndexInOrder: newTargetIndexInOrder,
-            }
-          );
 
-          await workflowStore.moveAndReconnectEdgeAndRecord(
-            originalEdge.id,
-            activeDraggingState.originalTargetNodeId,
-            activeDraggingState.originalTargetHandleId,
-            newConnectionParams.source,
-            newConnectionParams.sourceHandle ?? undefined, // 确保 null 转为 undefined, coordinator expects string | undefined
-            newConnectionParams.target,
-            newConnectionParams.targetHandle ?? undefined, // 确保 null 转为 undefined, coordinator expects string | undefined
-            newTargetIndexInOrder,
-            historyEntry
-          );
+          // 检查是否有实际变更
+          const {
+            source: newSourceNodeId,
+            sourceHandle: newSourceHandleId, // string | null
+            target: newTargetNodeId,
+            targetHandle: newTargetHandleId, // string | null
+          } = newConnectionParams;
+
+          const {
+            originalSourceNodeId, // string
+            originalSourceHandleId, // string | undefined
+            originalTargetNodeId, // string
+            originalTargetHandleId, // string
+          } = activeDraggingState;
+
+          // 规范化句柄以便比较 (将 null 和 undefined 视为等效)
+          const currentNewSourceHandleForCompare = newSourceHandleId ?? undefined;
+          const currentNewTargetHandleForCompare = newTargetHandleId ?? undefined;
+
+          const noChangeDetected =
+            originalSourceNodeId === newSourceNodeId &&
+            originalSourceHandleId === currentNewSourceHandleForCompare &&
+            originalTargetNodeId === newTargetNodeId &&
+            originalTargetHandleId === currentNewTargetHandleForCompare;
+            // 注意：对于多输入，如果顺序没有改变，也应该视为无变化。
+            // 此处的 newTargetIndexInOrder 已经计算。
+            // 如果 noChangeDetected 为 true，且目标是多输入，
+            // 我们还需要检查 newTargetIndexInOrder 是否与原始索引相同。
+            // 但获取原始索引比较复杂，暂时简化为仅比较句柄。
+            // 如果用户将边拖放到完全相同的子句柄，通常顺序不会改变，除非它是唯一的连接或重新排序逻辑导致。
+
+          if (noChangeDetected) {
+            console.log(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Edge reconnected to the exact same source/target handles. No actual change. Skipping history record and store action.`);
+            // 边已经存在于 store 中，并且其属性没有改变，所以不需要调用 store action。
+            // VueFlow 应该已经正确处理了视觉上的拖拽和释放。
+          } else {
+            const oldSourceForSummary = getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source');
+            const oldTargetForSummary = getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target');
+            const newTargetForSummary = getReadableNames(newConnectionParams.target, newConnectionParams.targetHandle, 'target');
+            const summary = `移动连接 ${oldSourceForSummary.nodeName}::${oldSourceForSummary.handleName} (${originalEdge.source}::${originalEdge.sourceHandle}) -> ${oldTargetForSummary.nodeName}::${oldTargetForSummary.handleName} (${activeDraggingState.originalTargetNodeId}::${activeDraggingState.originalTargetHandleId})  TO  ${newTargetForSummary.nodeName}::${newTargetForSummary.handleName} (${newConnectionParams.target}::${newConnectionParams.targetHandle})`;
+            const historyEntry = createHistoryEntry(
+              "modify",
+              "edge",
+              summary,
+              {
+                edgeId: originalEdge.id,
+                oldSourceNodeId: originalEdge.source,
+                oldSourceHandleId: originalEdge.sourceHandle,
+                oldTargetNodeId: activeDraggingState.originalTargetNodeId,
+                oldTargetHandleId: activeDraggingState.originalTargetHandleId,
+                newSourceNodeId: newConnectionParams.source,
+                newSourceHandleId: newConnectionParams.sourceHandle, // Will be string | null
+                newTargetNodeId: newConnectionParams.target,
+                newTargetHandleId: newConnectionParams.targetHandle, // Will be string | null
+                newTargetIndexInOrder: newTargetIndexInOrder,
+              }
+            );
+
+            await workflowStore.moveAndReconnectEdgeAndRecord(
+              originalEdge.id,
+              activeDraggingState.originalTargetNodeId,
+              activeDraggingState.originalTargetHandleId,
+              newConnectionParams.source,
+              newConnectionParams.sourceHandle ?? undefined, // 确保 null 转为 undefined, coordinator expects string | undefined
+              newConnectionParams.target,
+              newConnectionParams.targetHandle ?? undefined, // 确保 null 转为 undefined, coordinator expects string | undefined
+              newTargetIndexInOrder,
+              historyEntry
+            );
+          }
         } else {
           console.warn(`[CanvasConnections DEBUG] onEdgeUpdateEnd: New connection for edge update is invalid. Original edge ${originalEdge.id} was (or should have been) disconnected. No new edge added. Target: ${newConnectionParams.target}::${newConnectionParams.targetHandle}`);
           // 如果连接无效，但原始边是从输入端拔出的 (activeDraggingState.type === 'unplug_from_input')，

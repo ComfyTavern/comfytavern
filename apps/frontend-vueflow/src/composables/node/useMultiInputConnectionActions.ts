@@ -76,7 +76,7 @@ export function useMultiInputConnectionActions(
     }> = [];
 
     newOrderedEdgeIds.forEach((edgeId, newIndex) => {
-      const edge = workflowStore.getEdgeById(tabId, edgeId); 
+      const edge = workflowStore.getEdgeById(tabId, edgeId);
       if (edge) {
         const newTargetHandle = `${inputKey}__${newIndex}`;
         if (edge.targetHandle !== newTargetHandle) {
@@ -90,22 +90,22 @@ export function useMultiInputConnectionActions(
         console.warn(`[MultiInputActions:reorderMultiInputConnections] 在重排序期间未找到边 ${edgeId}。`);
       }
     });
-    
+
     const summaryNode = nodeDisplayName || nodeId;
     const summaryInput = inputDisplayName || inputKey;
     const summary = `重排节点 [${summaryNode}] 输入 [${summaryInput}] 的连接 (更新句柄)`;
-    
+
     const historyPayload = {
       nodeId,
       inputKey,
-      oldEdgeIdOrder: [...originalOrderedEdgeIds], 
-      newEdgeIdOrder: [...newOrderedEdgeIds],     
-      edgeTargetHandleChanges, 
+      oldEdgeIdOrder: [...originalOrderedEdgeIds],
+      newEdgeIdOrder: [...newOrderedEdgeIds],
+      edgeTargetHandleChanges,
     };
 
     const entry: HistoryEntry = createHistoryEntry(
-      "reorder", 
-      "nodeMultiInputConnections", 
+      "reorder",
+      "nodeMultiInputConnections",
       summary,
       historyPayload
     );
@@ -115,9 +115,9 @@ export function useMultiInputConnectionActions(
         tabId,
         nodeId,
         inputKey,
-        newOrderedEdgeIds, 
-        edgeTargetHandleChanges, 
-        entry 
+        newOrderedEdgeIds,
+        edgeTargetHandleChanges,
+        entry
       );
       console.log("[MultiInputActions:reorderMultiInputConnections] 多输入连接已更新并记录历史。");
     } catch (error) {
@@ -161,7 +161,7 @@ export function useMultiInputConnectionActions(
       );
       return;
     }
-    
+
     const currentOrder = (originalNode.data?.inputConnectionOrders?.[handleKey] as string[] | undefined) || [];
 
     if (
@@ -190,14 +190,14 @@ export function useMultiInputConnectionActions(
     targetNodeInNextSnapshot.data.inputConnectionOrders =
       targetNodeInNextSnapshot.data.inputConnectionOrders || {};
     targetNodeInNextSnapshot.data.inputConnectionOrders[handleKey] = newOrderedEdgeIds;
-    
+
     try {
-      await workflowStore.updateNodeInputConnectionOrderAndRecordOnly( 
+      await workflowStore.updateNodeInputConnectionOrderAndRecordOnly(
         tabId,
         nodeId,
         handleKey,
         newOrderedEdgeIds,
-        entry 
+        entry
       );
     } catch (error) {
       console.error("[MultiInputActions:updateNodeInputConnectionOrder] 更新失败:", error);
@@ -249,7 +249,7 @@ export function useMultiInputConnectionActions(
     }
 
     const nextSnapshot = klona(currentSnapshot);
-    nextSnapshot.elements = nextSnapshot.elements.filter((el) => el.id !== edgeId); 
+    nextSnapshot.elements = nextSnapshot.elements.filter((el) => el.id !== edgeId);
 
     const { originalKey: targetOriginalKey } = parseSubHandleIdLocal(originalTargetHandleId);
     const targetNodeInNextSnapshot = nextSnapshot.elements.find(
@@ -260,22 +260,54 @@ export function useMultiInputConnectionActions(
       const oldOrder = targetNodeInNextSnapshot.data.inputConnectionOrders[targetOriginalKey] as string[];
       const newOrder = oldOrder.filter((id: string) => id !== edgeId);
       targetNodeInNextSnapshot.data.inputConnectionOrders[targetOriginalKey] = newOrder;
+
+      // 更新剩余连接的 targetHandle
+      newOrder.forEach((edgeInOrderId, indexInOrder) => {
+        const edgeToUpdate = nextSnapshot.elements.find(
+          (el) => el.id === edgeInOrderId && "source" in el
+        ) as Edge | undefined;
+        if (edgeToUpdate) {
+          edgeToUpdate.targetHandle = `${targetOriginalKey}__${indexInOrder}`;
+        }
+      });
+
+      // 同步 .value 数组的长度
+      if (targetNodeInNextSnapshot.data) {
+        if (!targetNodeInNextSnapshot.data.inputs) {
+          targetNodeInNextSnapshot.data.inputs = {};
+        }
+        if (!targetNodeInNextSnapshot.data.inputs[targetOriginalKey]) {
+          targetNodeInNextSnapshot.data.inputs[targetOriginalKey] = {};
+        }
+        targetNodeInNextSnapshot.data.inputs[targetOriginalKey].value = new Array(newOrder.length).fill(undefined);
+      }
+
       if (newOrder.length === 0) {
-          delete targetNodeInNextSnapshot.data.inputConnectionOrders[targetOriginalKey];
-          if (Object.keys(targetNodeInNextSnapshot.data.inputConnectionOrders).length === 0) {
-              delete targetNodeInNextSnapshot.data.inputConnectionOrders;
+        delete targetNodeInNextSnapshot.data.inputConnectionOrders[targetOriginalKey];
+        if (Object.keys(targetNodeInNextSnapshot.data.inputConnectionOrders).length === 0) {
+          delete targetNodeInNextSnapshot.data.inputConnectionOrders;
+        }
+        // 如果 inputConnectionOrders[targetOriginalKey] 被删除，也清理对应的 .value（如果存在）
+        if (targetNodeInNextSnapshot.data?.inputs?.[targetOriginalKey]) {
+          delete targetNodeInNextSnapshot.data.inputs[targetOriginalKey].value;
+          if (Object.keys(targetNodeInNextSnapshot.data.inputs[targetOriginalKey]).length === 0) {
+            delete targetNodeInNextSnapshot.data.inputs[targetOriginalKey];
           }
+          if (Object.keys(targetNodeInNextSnapshot.data.inputs).length === 0) {
+            delete targetNodeInNextSnapshot.data.inputs;
+          }
+        }
       }
     }
-    
+
     try {
-      await workflowStore.applyElementChangesAndRecordHistory( 
-          tabId, 
-          nextSnapshot.elements, 
-          entry
+      await workflowStore.applyElementChangesAndRecordHistory(
+        tabId,
+        nextSnapshot.elements,
+        entry
       );
     } catch (error) {
-       console.error("[MultiInputActions:disconnectEdgeFromMultiInput] 更新失败:", error);
+      console.error("[MultiInputActions:disconnectEdgeFromMultiInput] 更新失败:", error);
     }
   }
 
@@ -285,9 +317,9 @@ export function useMultiInputConnectionActions(
    * Assumes newEdgeParams.targetHandle already has the correct __index if connecting to multi-input.
    */
   async function connectEdgeToMultiInput(
-    newEdgeParams: Edge, 
-    targetIndexInOrder: number | undefined, 
-    entry: HistoryEntry 
+    newEdgeParams: Edge,
+    targetIndexInOrder: number | undefined,
+    entry: HistoryEntry
   ) {
     if (!activeTabId.value) {
       console.error("[MultiInputActions:connectEdgeToMultiInput] No active tab ID.");
@@ -320,7 +352,7 @@ export function useMultiInputConnectionActions(
     }
 
     const nextSnapshot = klona(currentSnapshot);
-    const newEdge: Edge = klona(newEdgeParams); 
+    const newEdge: Edge = klona(newEdgeParams);
     nextSnapshot.elements.push(newEdge);
 
     const targetNodeInNextSnapshot = nextSnapshot.elements.find(
@@ -347,25 +379,48 @@ export function useMultiInputConnectionActions(
           targetNodeInNextSnapshot.data.inputConnectionOrders || {};
         const currentOrder =
           targetNodeInNextSnapshot.data.inputConnectionOrders[targetOriginalKey] || [];
-        
+
         const newOrder = [...currentOrder];
         if (!newOrder.includes(newEdge.id)) {
-            newOrder.splice(targetIndexInOrder, 0, newEdge.id);
+          newOrder.splice(targetIndexInOrder, 0, newEdge.id);
         } else {
-            console.warn(`[MultiInputActions:connectEdgeToMultiInput] Edge ID ${newEdge.id} already in order for ${targetOriginalKey}. Re-inserting.`);
-            const existingIdx = newOrder.indexOf(newEdge.id);
-            if (existingIdx !== -1) newOrder.splice(existingIdx, 1);
-            newOrder.splice(targetIndexInOrder, 0, newEdge.id);
+          console.warn(`[MultiInputActions:connectEdgeToMultiInput] Edge ID ${newEdge.id} already in order for ${targetOriginalKey}. Re-inserting.`);
+          const existingIdx = newOrder.indexOf(newEdge.id);
+          if (existingIdx !== -1) newOrder.splice(existingIdx, 1);
+          newOrder.splice(targetIndexInOrder, 0, newEdge.id);
         }
         targetNodeInNextSnapshot.data.inputConnectionOrders[targetOriginalKey] = newOrder;
+
+        // 更新新顺序中所有连接的 targetHandle，确保索引正确
+        newOrder.forEach((edgeInOrderId, indexInOrder) => {
+          const edgeToUpdate = nextSnapshot.elements.find(
+            (el) => el.id === edgeInOrderId && "source" in el
+          ) as Edge | undefined;
+          if (edgeToUpdate) {
+            // 对于新添加的边，其 targetHandle 可能已经是正确的子句柄ID
+            // 但为了确保所有边（包括被推后的边）的索引都正确，统一更新
+            edgeToUpdate.targetHandle = `${targetOriginalKey}__${indexInOrder}`;
+          }
+        });
+
+        // 同步 .value 数组的长度
+        if (targetNodeInNextSnapshot.data) {
+          if (!targetNodeInNextSnapshot.data.inputs) {
+            targetNodeInNextSnapshot.data.inputs = {};
+          }
+          if (!targetNodeInNextSnapshot.data.inputs[targetOriginalKey]) {
+            targetNodeInNextSnapshot.data.inputs[targetOriginalKey] = {};
+          }
+          targetNodeInNextSnapshot.data.inputs[targetOriginalKey].value = new Array(newOrder.length).fill(undefined);
+        }
       }
     }
 
     try {
-      await workflowStore.applyElementChangesAndRecordHistory( 
-          tabId,
-          nextSnapshot.elements,
-          entry
+      await workflowStore.applyElementChangesAndRecordHistory(
+        tabId,
+        nextSnapshot.elements,
+        entry
       );
     } catch (error) {
       console.error("[MultiInputActions:connectEdgeToMultiInput] 更新失败:", error);
@@ -386,7 +441,7 @@ export function useMultiInputConnectionActions(
     newTargetNodeId: string,
     newTargetHandleId: string | undefined,
     newTargetIndexInOrder: number | undefined,
-    entry: HistoryEntry 
+    entry: HistoryEntry
   ) {
     if (!activeTabId.value) {
       console.error("[MultiInputActions:moveAndReconnectEdgeMultiInput] No active tab ID.");
@@ -421,13 +476,47 @@ export function useMultiInputConnectionActions(
       const oldOrder = originalTargetNodeInNext.data.inputConnectionOrders[oldTargetOriginalKey] as string[];
       const newOrder = oldOrder.filter((id: string) => id !== edgeToMoveId);
       if (newOrder.length !== oldOrder.length) {
-          originalTargetNodeInNext.data.inputConnectionOrders[oldTargetOriginalKey] = newOrder;
-          if (newOrder.length === 0) {
-              delete originalTargetNodeInNext.data.inputConnectionOrders[oldTargetOriginalKey];
-              if (Object.keys(originalTargetNodeInNext.data.inputConnectionOrders).length === 0) {
-                  delete originalTargetNodeInNext.data.inputConnectionOrders;
-              }
+        originalTargetNodeInNext.data.inputConnectionOrders[oldTargetOriginalKey] = newOrder;
+
+        // 更新旧目标插槽中剩余连接的 targetHandle
+        newOrder.forEach((edgeInOrderId, indexInOrder) => {
+          const edgeToUpdate = nextSnapshot.elements.find(
+            (el) => el.id === edgeInOrderId && "source" in el
+          ) as Edge | undefined;
+          if (edgeToUpdate) {
+            edgeToUpdate.targetHandle = `${oldTargetOriginalKey}__${indexInOrder}`;
           }
+        });
+
+        // 同步旧目标 .value 数组的长度
+        if (originalTargetNodeInNext?.data) {
+          if (!originalTargetNodeInNext.data.inputs) {
+            originalTargetNodeInNext.data.inputs = {};
+          }
+          if (!originalTargetNodeInNext.data.inputs[oldTargetOriginalKey]) {
+            originalTargetNodeInNext.data.inputs[oldTargetOriginalKey] = {};
+          }
+          originalTargetNodeInNext.data.inputs[oldTargetOriginalKey].value = new Array(newOrder.length).fill(undefined);
+        }
+
+        if (newOrder.length === 0) {
+          if (originalTargetNodeInNext?.data?.inputConnectionOrders) { // 检查 inputConnectionOrders 是否存在
+            delete originalTargetNodeInNext.data.inputConnectionOrders[oldTargetOriginalKey];
+            if (Object.keys(originalTargetNodeInNext.data.inputConnectionOrders).length === 0) {
+              delete originalTargetNodeInNext.data.inputConnectionOrders;
+            }
+          }
+          // 如果 inputConnectionOrders[oldTargetOriginalKey] 被删除，也清理对应的 .value
+          if (originalTargetNodeInNext?.data?.inputs?.[oldTargetOriginalKey]) {
+            delete originalTargetNodeInNext.data.inputs[oldTargetOriginalKey].value;
+            if (Object.keys(originalTargetNodeInNext.data.inputs[oldTargetOriginalKey]).length === 0) {
+              delete originalTargetNodeInNext.data.inputs[oldTargetOriginalKey];
+            }
+            if (Object.keys(originalTargetNodeInNext.data.inputs).length === 0) {
+              delete originalTargetNodeInNext.data.inputs;
+            }
+          }
+        }
       }
     }
 
@@ -442,7 +531,10 @@ export function useMultiInputConnectionActions(
     edgeToUpdateInNext.source = newSourceNodeId;
     edgeToUpdateInNext.sourceHandle = newSourceHandleId;
     edgeToUpdateInNext.target = newTargetNodeId;
-    edgeToUpdateInNext.targetHandle = newTargetHandleId;
+    // newTargetHandleId 已经是正确的子句柄ID (例如 key__index)
+    // 但如果这条边被插入到新的多输入插槽的中间，它自己的 targetHandle 可能需要根据最终位置更新，
+    // 并且该插槽中被它推后的其他边也需要更新 targetHandle。
+    // edgeToUpdateInNext.targetHandle = newTargetHandleId; // 暂时先这样设置，后续的循环会修正它和其它边
 
     if (newTargetHandleId && typeof newTargetIndexInOrder === "number") {
       const { originalKey: newTargetOriginalKey } = parseSubHandleIdLocal(newTargetHandleId);
@@ -457,24 +549,58 @@ export function useMultiInputConnectionActions(
             newTargetNodeInNext.data.inputConnectionOrders || {};
           const currentOrderAtNewTarget =
             newTargetNodeInNext.data.inputConnectionOrders[newTargetOriginalKey] || [];
-          
-          const newOrderAtNewTarget = [...currentOrderAtNewTarget];
-          const existingIdx = newOrderAtNewTarget.indexOf(edgeToMoveId); 
-          if (existingIdx !== -1) newOrderAtNewTarget.splice(existingIdx, 1);
-          
-          const insertAtIndex = Math.max(0, Math.min(newTargetIndexInOrder, newOrderAtNewTarget.length));
-          newOrderAtNewTarget.splice(insertAtIndex, 0, edgeToMoveId);
-          
-          newTargetNodeInNext.data.inputConnectionOrders[newTargetOriginalKey] = newOrderAtNewTarget;
+
+          let finalOrderAtNewTarget = [...currentOrderAtNewTarget];
+          const existingIdxInNewTarget = finalOrderAtNewTarget.indexOf(edgeToMoveId);
+          if (existingIdxInNewTarget !== -1) { // 如果边已存在于新目标（不太可能，除非是同一插槽内重排）
+            finalOrderAtNewTarget.splice(existingIdxInNewTarget, 1);
+          }
+
+          const insertAtIndex = Math.max(0, Math.min(newTargetIndexInOrder, finalOrderAtNewTarget.length));
+          finalOrderAtNewTarget.splice(insertAtIndex, 0, edgeToMoveId);
+
+          newTargetNodeInNext.data.inputConnectionOrders[newTargetOriginalKey] = finalOrderAtNewTarget;
+
+          // 更新新目标插槽中所有连接的 targetHandle
+          finalOrderAtNewTarget.forEach((edgeInOrderId, indexInOrder) => {
+            const edgeToReindex = nextSnapshot.elements.find(
+              (el) => el.id === edgeInOrderId && "source" in el
+            ) as Edge | undefined;
+            if (edgeToReindex) {
+              edgeToReindex.targetHandle = `${newTargetOriginalKey}__${indexInOrder}`;
+            }
+          });
+
+
+          // 同步新目标 .value 数组的长度
+          if (newTargetNodeInNext?.data) {
+            if (!newTargetNodeInNext.data.inputs) {
+              newTargetNodeInNext.data.inputs = {};
+            }
+            if (!newTargetNodeInNext.data.inputs[newTargetOriginalKey]) {
+              newTargetNodeInNext.data.inputs[newTargetOriginalKey] = {};
+            }
+            newTargetNodeInNext.data.inputs[newTargetOriginalKey].value = new Array(finalOrderAtNewTarget.length).fill(undefined);
+          }
         }
       }
     }
-    
+    else if (newTargetHandleId && edgeToUpdateInNext) { // 连接到单输入插槽，或者 newTargetIndexInOrder 未定义
+      edgeToUpdateInNext.targetHandle = newTargetHandleId; // 直接使用，因为不是多输入排序场景
+    } else if (edgeToUpdateInNext) { // newTargetHandleId 为空，表示断开连接（拖到画布）
+      // 边本身会被移除，所以不需要更新它的 targetHandle
+      // 从 elements 数组中移除这条边
+      const edgeToRemoveIndex = nextSnapshot.elements.findIndex((el: any) => el.id === edgeToMoveId && "source" in el);
+      if (edgeToRemoveIndex !== -1) {
+        nextSnapshot.elements.splice(edgeToRemoveIndex, 1);
+      }
+    }
+
     try {
-      await workflowStore.applyElementChangesAndRecordHistory( 
-          tabId,
-          nextSnapshot.elements,
-          entry
+      await workflowStore.applyElementChangesAndRecordHistory(
+        tabId, // 添加缺失的 tabId
+        nextSnapshot.elements,
+        entry
       );
     } catch (error) {
       console.error("[MultiInputActions:moveAndReconnectEdgeMultiInput] 更新失败:", error);
