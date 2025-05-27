@@ -3,12 +3,12 @@
 /**
  * 单条连接线在 Handle 上占据的视觉高度 (px)
  */
-export const HANDLE_LINE_HEIGHT = 6;
+export const HANDLE_LINE_HEIGHT = 8;
 
 /**
  * 连接线在 Handle 上的视觉间隙 (px)
  */
-export const HANDLE_LINE_GAP = 4; // 从 8 改为 4，减少间隙
+export const HANDLE_LINE_GAP = 4;
 
 /**
  * Handle 自身的上下总内边距 (px)

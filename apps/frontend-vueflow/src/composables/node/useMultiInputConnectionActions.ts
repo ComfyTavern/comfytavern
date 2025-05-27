@@ -582,6 +582,14 @@ export function useMultiInputConnectionActions(
             }
             newTargetNodeInNext.data.inputs[newTargetOriginalKey].value = new Array(finalOrderAtNewTarget.length).fill(undefined);
           }
+
+          // 调试日志：检查 newTargetNodeInNext 的 inputConnectionOrders
+          const finalOrderCheck = newTargetNodeInNext.data.inputConnectionOrders?.[newTargetOriginalKey];
+          if (finalOrderCheck) {
+            console.log(`[DEBUG MultiInputActions:moveAndReconnectEdgeMultiInput] AFTER data mods for node ${newTargetNodeId}, input ${newTargetOriginalKey}. Order:`, JSON.stringify(finalOrderCheck), `Length: ${finalOrderCheck.length}`);
+          } else {
+            console.log(`[DEBUG MultiInputActions:moveAndReconnectEdgeMultiInput] AFTER data mods for node ${newTargetNodeId}, input ${newTargetOriginalKey}. Order is UNDEFINED or NULL for newTargetNodeInNext.`);
+          }
         }
       }
     }

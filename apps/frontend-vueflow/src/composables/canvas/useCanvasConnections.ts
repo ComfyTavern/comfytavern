@@ -308,33 +308,54 @@ export function useCanvasConnections({
       console.log(`[CanvasConnections DEBUG] isValidConnection: Checking sub-handle occupation. Connection Target: ${connection.target}, Raw Target Handle: ${rawTargetHandle}, Parsed Target Handle Info:`, JSON.parse(JSON.stringify(parsedTargetHandleInfoForOccupationCheck)));
       console.log(`[CanvasConnections DEBUG] isValidConnection: Is target a sub-handle (for occupation check)? ${targetIsSubHandle}`);
 
-      if (targetIsSubHandle) {
-        const currentEdges = getEdges.value;
-        console.log(`[CanvasConnections DEBUG] isValidConnection: Current edges count: ${currentEdges.length}`);
-        const edgesToTargetNode = currentEdges.filter(e => e.target === connection.target);
-        console.log(`[CanvasConnections DEBUG] isValidConnection: Edges connected to target node ${connection.target}:`, edgesToTargetNode.map(e => ({ id: e.id, targetHandle: e.targetHandle })));
-        
-        const occupyingEdges = currentEdges.filter(edge =>
-          edge.target === connection.target &&
-          edge.targetHandle === connection.targetHandle
-        );
-        const isOccupied = occupyingEdges.length > 0;
-        console.log(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} occupied by ${occupyingEdges.length} edge(s).`);
+      if (targetIsSubHandle) { // targetIsSubHandle is true if connection.targetHandle is like 'key__index'
+        const isNewConnection = !updatingEdgeId;
 
-        if (isOccupied) {
-          const singleOccupyingEdge = (occupyingEdges.length === 1) ? occupyingEdges[0] : null;
-          // 如果我们正在更新一个边 (updatingEdgeId 已提供),
-          // 并且占用此子句柄的 *唯一* 边就是正在更新的边,
-          // 那么这是一个有效的“重新连接”到同一插槽。
-          if (updatingEdgeId && singleOccupyingEdge && singleOccupyingEdge.id === updatingEdgeId) {
-            console.log(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} is occupied by the edge being updated ('${updatingEdgeId}'). Allowing reconnection.`);
-            // 有效的重新连接，继续后续检查 (例如类型兼容性，已在前面完成)
-          } else {
-            console.warn(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} is ALREADY OCCUPIED by a different edge or multiple edges. updatingEdgeId: '${updatingEdgeId}'. Occupying edge IDs: ${occupyingEdges.map(e => e.id).join(', ')}. -> false`);
-            return false; // 被不同的边或多个边占用
-          }
+        // targetInput (正确的变量名) 应该在此函数的前面部分已经基于 originalKey 获取了
+        if (targetInput && targetInput.multi === true && isNewConnection) {
+          // 对于新的连接到多输入插槽：
+          // 即使视觉上指向的子句柄 (connection.targetHandle) 当前已被连接，我们也允许它通过此检查。
+          // 实际的插入索引将由 reorderPreviewIndex 决定，并且 connectEdgeToMultiInput 会处理现有连接的顺延。
+          console.log(`[CanvasConnections DEBUG] isValidConnection: New connection targeting multi-input sub-handle ${connection.targetHandle}. Allowing. Reorder logic will manage placement and shifting.`);
+          // 对于这种情况，我们不因“占用”而返回 false。类型兼容性等其他检查仍然适用。
         } else {
-          console.log(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} is NOT occupied. Proceeding.`);
+          // 对于以下情况，执行原始的占用检查：
+          // 1. 目标不是多输入插槽，但句柄名恰好是 key__index 格式 (不太可能，但作为防御)。
+          // 2. 正在更新一个现有的连接 (updatingEdgeId 已提供)。
+          const currentEdges = getEdges.value;
+          console.log(`[CanvasConnections DEBUG] isValidConnection: Current edges count: ${currentEdges.length}`);
+          const edgesToTargetNode = currentEdges.filter(e => e.target === connection.target);
+          console.log(`[CanvasConnections DEBUG] isValidConnection: Edges connected to target node ${connection.target}:`, edgesToTargetNode.map(e => ({ id: e.id, targetHandle: e.targetHandle })));
+          
+          const occupyingEdges = currentEdges.filter(edge =>
+            edge.target === connection.target &&
+            edge.targetHandle === connection.targetHandle
+          );
+          const isOccupied = occupyingEdges.length > 0;
+          console.log(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} occupied by ${occupyingEdges.length} edge(s). (Not a new connection to multi-input where reorder applies, or target is not multi-input)`);
+
+          if (isOccupied) {
+            const singleOccupyingEdge = (occupyingEdges.length === 1) ? occupyingEdges[0] : null;
+            if (updatingEdgeId && singleOccupyingEdge && singleOccupyingEdge.id === updatingEdgeId) {
+              console.log(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} is occupied by the edge being updated ('${updatingEdgeId}'). Allowing reconnection.`);
+            } else { // 被不同的边或多个边占用
+              // 如果目标是多输入插槽 (targetInput 应该已定义且 multi === true)
+              // 即使这是一个连接更新，并且目标子句柄被其他边占用，我们也应该允许。
+              // 后续的重排逻辑 (在 onEdgeUpdateEnd 中调用的 moveAndReconnectEdgeAndRecord) 会处理实际的放置。
+              if (targetInput && targetInput.multi === true) {
+                console.log(`[CanvasConnections DEBUG] isValidConnection: Edge update/connection to multi-input sub-handle ${connection.target}::${connection.targetHandle} which is occupied by a different edge. Allowing, as reorder/placement logic will manage.`);
+                // 对于多输入插槽，当被其他边占用时，不在此处返回 false。
+                // 类型兼容性 (由 `compatible` 变量检查) 和其他通用规则仍然适用。
+              } else {
+                // 对于非多输入插槽 (或者如果 targetInput 未定义/不是 multi 类型),
+                // 被不同的边占用是一个冲突。
+                console.warn(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} (non-multi-input or unknown type) is ALREADY OCCUPIED by a different edge. updatingEdgeId: '${updatingEdgeId}'. Occupying edge IDs: ${occupyingEdges.map(e => e.id).join(', ')}. -> false`);
+                return false;
+              }
+            }
+          } else {
+            console.log(`[CanvasConnections DEBUG] isValidConnection: Target sub-handle ${connection.target}::${connection.targetHandle} is NOT occupied (or it's a new connection to multi-input where occupation of specific sub-handle doesn't block initial validation). Proceeding.`);
+          }
         }
       }
     }
@@ -953,21 +974,32 @@ export function useCanvasConnections({
           console.debug(`[CanvasConnections DEBUG] onEdgeUpdateEnd: New connection is valid (passing originalEdgeId: ${originalEdgeIdFromDrag}). Attempting to move/reconnect.`);
 
           const targetNode = findNode(newConnectionParams.target);
-          const targetInputDef = targetNode?.data?.inputs?.[newConnectionParams.targetHandle!];
-          const isNewTargetMultiInput = targetInputDef?.multi === true;
-          let newTargetIndexInOrder: number | undefined = undefined;
+          // 从 newConnectionParams.targetHandle 解析原始键
+          const { originalKey: newTargetOriginalKeyFromParams } = parseSubHandleId(newConnectionParams.targetHandle);
+          let targetInputDef: GroupSlotInfo | undefined;
 
-          if (isNewTargetMultiInput) {
-            // TODO: 实现精确插入逻辑 (使用 reorderPreviewIndex.value)
-            // reorderPreviewIndex.value 应该在 onEdgeUpdate 期间被更新
-            // 如果 reorderPreviewIndex.value 不为 null，则使用它
-            if (reorderPreviewIndex.value !== null) {
-              newTargetIndexInOrder = reorderPreviewIndex.value;
-              console.log(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Multi-input target. Using reorderPreviewIndex: ${newTargetIndexInOrder}.`);
+          if (targetNode && newTargetOriginalKeyFromParams) {
+            // 使用原始键获取输入定义
+            const nodeDefinition = nodeStore.getNodeDefinitionByFullType(targetNode.type || '');
+            targetInputDef = nodeDefinition?.inputs?.[newTargetOriginalKeyFromParams] ||
+                             (targetNode.data as any)?.inputs?.[newTargetOriginalKeyFromParams] ||
+                             (getNodeType(targetNode) === 'core:NodeGroup' ? (targetNode.data as any)?.groupInterface?.inputs?.[newTargetOriginalKeyFromParams] : undefined) ||
+                             (getNodeType(targetNode) === 'core:GroupOutput' ? workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[newTargetOriginalKeyFromParams] : undefined);
+          }
+
+          const isNewTargetMultiInput = targetInputDef?.multi === true;
+          let newTargetIndexInOrder: number | undefined = undefined; // 维持 number | undefined
+
+          if (isNewTargetMultiInput && newTargetOriginalKeyFromParams && targetNode) { // 确保 targetNode 和 originalKey 有效
+            const parsedNewTargetHandle = parseSubHandleId(newConnectionParams.targetHandle);
+            if (parsedNewTargetHandle.isSubHandle && typeof parsedNewTargetHandle.index === 'number') {
+              newTargetIndexInOrder = parsedNewTargetHandle.index;
+              console.log(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Multi-input target. Using index ${newTargetIndexInOrder} from connected sub-handle '${newConnectionParams.targetHandle}'.`);
             } else {
-              const existingConnections = targetNode?.data?.inputConnectionOrders?.[newConnectionParams.targetHandle!] || [];
-              newTargetIndexInOrder = existingConnections.length;
-              console.warn(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Multi-input target. reorderPreviewIndex is null. Appending to end (index: ${newTargetIndexInOrder}).`);
+              // 连接到主多输入句柄 (例如 'text_inputs' 而非 'text_inputs__0') 或解析子句柄索引失败。
+              // 这意味着应该追加到该多输入键的连接列表末尾。
+              newTargetIndexInOrder = undefined; // undefined 表示追加，以匹配函数签名
+              console.warn(`[CanvasConnections DEBUG] onEdgeUpdateEnd: Multi-input target '${newTargetOriginalKeyFromParams}'. Connected to main handle '${newConnectionParams.targetHandle}' or sub-handle index not found. Will append (targetIndex: undefined).`);
             }
           }
 
@@ -1189,7 +1221,6 @@ export function useCanvasConnections({
   onConnect(handleConnect);
   watch(vueFlowInstance.connectionEndHandle, (newEndHandle: ConnectingHandle | null, oldEndHandle: ConnectingHandle | null) => {
     const startHandle = vueFlowInstance.connectionStartHandle.value; // This is ConnectingHandle | null
-    const MULTI_INPUT_SPACING = 10; // 假设的视觉间距，与 SortedMultiTargetEdge 一致
 
     if (startHandle) { // Only log if a connection drag is in progress
       const startNames = getReadableNames(startHandle.nodeId, startHandle.id, startHandle.type);
@@ -1202,41 +1233,41 @@ export function useCanvasConnections({
 
         const targetNode = findNode(newEndHandle.nodeId);
         if (targetNode && newEndHandle.id) { // 确保 newEndHandle.id 不是 null
-          const currentHandleId = newEndHandle.id; // 使用确保非null的ID
-          const nodeDefinition = nodeStore.getNodeDefinitionByFullType(targetNode.type || ''); // 修正方法名
-          const targetInputDef = nodeDefinition?.inputs?.[currentHandleId] || (targetNode.data as any)?.inputs?.[currentHandleId] || (targetNode.data as any)?.groupInterface?.inputs?.[currentHandleId];
+          const { originalKey: currentOriginalHandleKey } = parseSubHandleId(newEndHandle.id);
+          let targetInputDef: GroupSlotInfo | undefined;
 
-          if (targetInputDef && targetInputDef.multi === true) {
-            const inputOrders = (targetNode.data.inputConnectionOrders?.[currentHandleId] as string[] | undefined) || [];
-            const numExistingConnections = inputOrders.length;
+          if (currentOriginalHandleKey) {
+            const nodeDefinition = nodeStore.getNodeDefinitionByFullType(targetNode.type || '');
+            targetInputDef = nodeDefinition?.inputs?.[currentOriginalHandleKey] ||
+                             (targetNode.data as any)?.inputs?.[currentOriginalHandleKey] ||
+                             (getNodeType(targetNode) === 'core:NodeGroup' ? (targetNode.data as any)?.groupInterface?.inputs?.[currentOriginalHandleKey] : undefined) ||
+                             (getNodeType(targetNode) === 'core:GroupOutput' ? workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[currentOriginalHandleKey] : undefined);
+          }
 
-            const mouseFlowPosition = vueFlowInstance.connectionPosition.value; // 使用 .value
-            const mouseScreenPosition = vueFlowInstance.project(mouseFlowPosition); // 转换为屏幕坐标
-            const mouseScreenY = mouseScreenPosition.y;
-            const targetHandleScreenY = newEndHandle.y; // 目标句柄中心的屏幕Y坐标
-
-            const mouseOffsetYScreen = mouseScreenY - targetHandleScreenY;
-
-            let bestIndex = 0;
-            let minDiff = Infinity;
-
-            for (let k = 0; k <= numExistingConnections; k++) {
-              // 理想的Y偏移（屏幕坐标），如果新边插入到索引k
-              // 当新边插入后，总连接数是 numExistingConnections + 1
-              // 新边在这个序列中的 orderIndex 是 k
-              // yOffset = (orderIndex - (totalConnections - 1) / 2) * spacing
-              const idealOffsetYScreen = (k - numExistingConnections / 2) * MULTI_INPUT_SPACING;
-              const diff = Math.abs(mouseOffsetYScreen - idealOffsetYScreen);
-
-              if (diff < minDiff) {
-                minDiff = diff;
-                bestIndex = k;
-              }
+          if (targetInputDef && targetInputDef.multi === true && currentOriginalHandleKey) {
+            // newEndHandle.id 是鼠标当前悬停的句柄ID，例如 "text_inputs__0"
+            // currentIsSubHandle 和 subHandleIndexOfHovered 是从 newEndHandle.id 解析出来的
+            const { isSubHandle: currentIsSubHandle, index: subHandleIndexOfHovered } = parseSubHandleId(newEndHandle.id);
+            if (currentIsSubHandle && typeof subHandleIndexOfHovered === 'number') {
+              // 如果鼠标直接悬停在一个已编号的子句柄上 (例如 text_inputs__0, text_inputs__1),
+              // 那么 reorderPreviewIndex 就应该是那个子句柄的索引。
+              reorderPreviewIndex.value = subHandleIndexOfHovered;
+              console.log(`[CanvasConnections DEBUG] Multi-input target. Hovered over specific sub-handle ${newEndHandle.id}. Using its index ${subHandleIndexOfHovered} as reorderPreviewIndex.`);
+            } else if (!currentIsSubHandle) {
+              // 如果鼠标悬停在多输入插槽的主区域，但不在一个具体的 __index 子句柄上
+              // (这种情况可能较少，因为视觉上通常都是与具体的子句柄交互)
+              // 此时，可以考虑追加到末尾。
+              const inputOrders = (targetNode.data.inputConnectionOrders?.[currentOriginalHandleKey] as string[] | undefined) || [];
+              reorderPreviewIndex.value = inputOrders.length;
+              console.log(`[CanvasConnections DEBUG] Multi-input target. Hovered over main handle part ${newEndHandle.id} (not a specific sub-handle). Defaulting reorderPreviewIndex to append: ${reorderPreviewIndex.value}.`);
+            } else {
+              // 其他未能识别的悬停情况 (例如，isSubHandle 为 true 但 subHandleIndexOfHovered 不是数字)
+              // 这通常不应该发生，如果发生则表示解析或句柄ID格式有问题。
+              console.warn(`[CanvasConnections DEBUG] Multi-input target. Hovered handle ${newEndHandle.id} is not a recognized sub-handle index pattern for reordering. Setting reorderPreviewIndex to null.`);
+              reorderPreviewIndex.value = null;
             }
-            reorderPreviewIndex.value = bestIndex;
-            console.log(`[CanvasConnections DEBUG] Multi-input target hovered. MouseOffsetYScreen: ${mouseOffsetYScreen.toFixed(2)}, NumExisting: ${numExistingConnections}, Calculated reorderPreviewIndex: ${bestIndex}`);
           } else {
-            reorderPreviewIndex.value = null; // 不是多输入目标
+            reorderPreviewIndex.value = null; // 目标不是多输入，或者没有有效的原始键
           }
         } else {
           reorderPreviewIndex.value = null; // 找不到目标节点
