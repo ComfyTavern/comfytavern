@@ -230,7 +230,7 @@ const removeItem = (index: number) => {
   border-radius: 3px;
   background-color: var(--ct-bg-input, #ffffff);
   color: var(--ct-text-default, #1f2937); /* gray-800 */
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  /* 移除了 font-family 以继承全局字体 */
   font-size: 0.95em;
   line-height: 1.4;
   min-width: 0;
