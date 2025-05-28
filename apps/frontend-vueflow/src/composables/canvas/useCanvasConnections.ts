@@ -434,7 +434,6 @@ export function useCanvasConnections({
     }
 
     const { source, target, sourceHandle, targetHandle } = params;
-    console.debug(`[DEBUG-MI] handleConnect: Entry. Params:`, JSON.parse(JSON.stringify(params)));
     if (!source || !target || !sourceHandle || !targetHandle) {
       return null;
     }
@@ -448,7 +447,6 @@ export function useCanvasConnections({
     // Roo: 获取源和目标插槽的完整定义
     const { originalKey: parsedSourceHandleKey } = parseSubHandleId(sourceHandle);
     const { originalKey: parsedTargetHandleKey } = parseSubHandleId(targetHandle);
-    console.debug(`[DEBUG-MI] handleConnect: Parsed SourceKey: ${parsedSourceHandleKey}, Parsed TargetKey: ${parsedTargetHandleKey}`);
 
     let sourceOutputDef: GroupSlotInfo | undefined;
     const sourceNodeType = getNodeType(sourceNode);
@@ -471,10 +469,8 @@ export function useCanvasConnections({
     }
 
     if (!sourceOutputDef || !targetInputDef) {
-      console.error(`[DEBUG-MI] handleConnect: Failed to find slot definitions for ${parsedSourceHandleKey}@${sourceNode.id} or ${parsedTargetHandleKey}@${targetNode.id}`);
       return null;
     }
-    console.debug(`[DEBUG-MI] handleConnect: Target Node ID: ${targetNode?.id}, Target OriginalKey: ${parsedTargetHandleKey}, Target InputDef Multi: ${targetInputDef?.multi}`);
     // Roo: 深拷贝插槽定义，以便安全修改
     const originalSourceOutputDef = klona(sourceOutputDef);
     const originalTargetInputDef = klona(targetInputDef);
@@ -586,10 +582,8 @@ export function useCanvasConnections({
                   edge => edge.target === targetNode.id && parseSubHandleId(edge.targetHandle).originalKey === parsedTargetHandleKey
                 );
                 newTargetIndexInOrderForHistory = existingConnectionsToSlot.length;
-                console.warn(`[DEBUG-MI] handleConnect: reorderPreviewIndex.value was null for multi-input. Defaulting newTargetIndexInOrderForHistory to append index: ${newTargetIndexInOrderForHistory}`);
               }
             }
-            console.debug(`[DEBUG-MI] handleConnect: About to call handleConnectionWithInterfaceUpdate. Edge ID: ${newEdgeParamsForCoordinator.id}, TargetHandle (sub-handle): ${params.targetHandle}, newTargetIndexInOrderForHistory: ${newTargetIndexInOrderForHistory}, ModifiedSlotInfo: ${modifiedSlotInfo ? JSON.stringify(modifiedSlotInfo.newDefinition.dataFlowType) : 'null'}, InterfaceUpdate: ${interfaceUpdateResult ? 'yes' : 'no'}`);
             
             const historyEntryDetails: Record<string, any> = {
               edgeId: newEdgeParamsForCoordinator.id,
@@ -886,7 +880,6 @@ export function useCanvasConnections({
     const activeDraggingState = klona(draggingState.value);
     // 立即清理全局 draggingState
     draggingState.value = null;
-    console.debug('[DEBUG-MI] onEdgeUpdateEnd: Global draggingState.value AFTER immediate clear:', JSON.parse(JSON.stringify(draggingState.value)));
     reorderPreviewIndex.value = null;
 
     const { originalEdge } = activeDraggingState;
@@ -954,7 +947,6 @@ export function useCanvasConnections({
             targetHandle: finalTargetHandleInfo.id,
           };
         }
-        console.debug(`[DEBUG-MI] onEdgeUpdateEnd: Constructed newConnectionParams:`, JSON.parse(JSON.stringify(newConnectionParams)));
 
         if (isValidConnection(newConnectionParams, originalEdgeIdFromDrag)) {
 
@@ -985,7 +977,6 @@ export function useCanvasConnections({
               newTargetIndexInOrder = undefined; // undefined 表示追加，以匹配函数签名
             }
           }
-          console.debug(`[DEBUG-MI] onEdgeUpdateEnd: Calculated newTargetIndexInOrder: ${newTargetIndexInOrder}`);
           // 检查是否有实际变更
           const {
             source: newSourceNodeId,
@@ -1133,7 +1124,6 @@ export function useCanvasConnections({
             );
 
             // Roo: moveAndReconnectEdgeAndRecord WILL NEED TO BE MODIFIED to accept these new params
-            console.debug(`[DEBUG-MI] onEdgeUpdateEnd: Calling moveAndReconnectEdgeAndRecord with: originalEdgeId=${originalEdge.id}, oldTargetNodeId=${activeDraggingState.originalTargetNodeId}, oldTargetHandleId=${activeDraggingState.originalTargetHandleId}, newSourceNodeId=${newConnectionParams.source}, newSourceHandleId=${newConnectionParams.sourceHandle}, newTargetNodeId=${newConnectionParams.target}, newTargetHandleId=${newConnectionParams.targetHandle}, newTargetIndexInOrder=${newTargetIndexInOrder}`);
             await workflowStore.moveAndReconnectEdgeAndRecord(
               originalEdge.id,
               activeDraggingState.originalTargetNodeId,
@@ -1149,13 +1139,6 @@ export function useCanvasConnections({
               // interfaceUpdateResultOnUpdate,
               // { sourceType: finalSourceDefForEdgeOnUpdate.dataFlowType, targetType: finalTargetDefForEdgeOnUpdate.dataFlowType }
             );
-            // DEBUG LOGS START for moveAndReconnectEdgeAndRecord
-            if (currentTabId) {
-              console.debug('[DEBUG-EDGE-UPDATE] VueFlow Edges after moveAndReconnectEdgeAndRecord:', JSON.parse(JSON.stringify(vueFlowInstance.getEdges.value)));
-              const storeWorkflowData = workflowStore.getWorkflowData(currentTabId);
-              console.debug('[DEBUG-EDGE-UPDATE] Store Edges after moveAndReconnectEdgeAndRecord:', JSON.parse(JSON.stringify(storeWorkflowData?.edges || [])));
-            }
-            // DEBUG LOGS END
           }
         } else {
           // 如果连接无效，但原始边是从输入端拔出的 (activeDraggingState.type === 'unplug_from_input')，
@@ -1183,13 +1166,6 @@ export function useCanvasConnections({
               activeDraggingState.originalTargetHandleId,
               disconnectEntry
             );
-            // DEBUG LOGS START for disconnectEdgeFromInputAndRecord (invalid update, unplugged)
-            if (currentTabId) {
-              console.debug('[DEBUG-EDGE-UPDATE] VueFlow Edges after disconnectEdgeFromInputAndRecord (invalid update, unplugged):', JSON.parse(JSON.stringify(vueFlowInstance.getEdges.value)));
-              const storeWorkflowData = workflowStore.getWorkflowData(currentTabId);
-              console.debug('[DEBUG-EDGE-UPDATE] Store Edges after disconnectEdgeFromInputAndRecord (invalid update, unplugged):', JSON.parse(JSON.stringify(storeWorkflowData?.edges || [])));
-            }
-            // DEBUG LOGS END
           } else { // activeDraggingState.type is 'reorder' or 'disconnect_reconnect'
             // 如果是从源端拖拽到无效目标，也视为删除原始边。
             // moveAndReconnectEdgeAndRecord 应该能处理目标为 null/undefined 的情况，即删除。
@@ -1246,13 +1222,6 @@ export function useCanvasConnections({
                     activeDraggingState.originalTargetHandleId,
                     disconnectEntry
                   );
-                  // DEBUG LOGS START for disconnectEdgeFromInputAndRecord (dropped on invalid area, unplugged)
-                  if (currentTabId) {
-                    console.debug('[DEBUG-EDGE-UPDATE] VueFlow Edges after disconnectEdgeFromInputAndRecord (dropped on invalid area, unplugged):', JSON.parse(JSON.stringify(vueFlowInstance.getEdges.value)));
-                    const storeWorkflowData = workflowStore.getWorkflowData(currentTabId);
-                    console.debug('[DEBUG-EDGE-UPDATE] Store Edges after disconnectEdgeFromInputAndRecord (dropped on invalid area, unplugged):', JSON.parse(JSON.stringify(storeWorkflowData?.edges || [])));
-                  }
-                  // DEBUG LOGS END
         }
       }
     } else { // 拖放到画布上 (VueFlow 的 `edge` 参数为 null)
@@ -1279,13 +1248,6 @@ export function useCanvasConnections({
           activeDraggingState.originalTargetHandleId,
           disconnectEntry
         );
-        // DEBUG LOGS START for disconnectEdgeFromInputAndRecord (dropped on pane, unplugged)
-        if (currentTabId) {
-          console.debug('[DEBUG-EDGE-UPDATE] VueFlow Edges after disconnectEdgeFromInputAndRecord (dropped on pane, unplugged):', JSON.parse(JSON.stringify(vueFlowInstance.getEdges.value)));
-          const storeWorkflowData = workflowStore.getWorkflowData(currentTabId);
-          console.debug('[DEBUG-EDGE-UPDATE] Store Edges after disconnectEdgeFromInputAndRecord (dropped on pane, unplugged):', JSON.parse(JSON.stringify(storeWorkflowData?.edges || [])));
-        }
-        // DEBUG LOGS END
       } else { // activeDraggingState.type is 'reorder' or 'disconnect_reconnect'
         // 从源端拔出，或从已连接的输出端拔出，释放到画布，等同于删除原始边
 
@@ -1307,13 +1269,6 @@ export function useCanvasConnections({
           }
         );
 await workflowStore.removeElementsAndRecord(currentTabId, [originalEdge], deleteHistoryEntry);
-// DEBUG LOGS START for removeElementsAndRecord (dragged to pane)
-if (currentTabId) {
-  console.debug('[DEBUG-EDGE-UPDATE] VueFlow Edges after removeElementsAndRecord (dragged to pane):', JSON.parse(JSON.stringify(vueFlowInstance.getEdges.value)));
-  const storeWorkflowData = workflowStore.getWorkflowData(currentTabId);
-  console.debug('[DEBUG-EDGE-UPDATE] Store Edges after removeElementsAndRecord (dragged to pane):', JSON.parse(JSON.stringify(storeWorkflowData?.edges || [])));
-}
-// DEBUG LOGS END
 }
 // 如果 activeDraggingState.type === 'unplug_from_input' 且拖到画布，则已由上面的 disconnectEdgeFromInputAndRecord 处理
 }
@@ -1330,7 +1285,6 @@ if (currentTabId) {
 
       if (newEndHandle && newEndHandle.type === 'target') {
         // const newEndNames = getReadableNames(newEndHandle.nodeId, newEndHandle.id, newEndHandle.type); // Reduced verbosity
-        console.debug(`[DEBUG-MI] watch(connectionEndHandle): MOUSE ENTERED target handle: ${newEndHandle.nodeId}::${newEndHandle.id}`);
 
         const targetNode = findNode(newEndHandle.nodeId);
         if (targetNode && newEndHandle.id) { // 确保 newEndHandle.id 不是 null
@@ -1353,29 +1307,22 @@ if (currentTabId) {
               // 如果鼠标直接悬停在一个已编号的子句柄上 (例如 text_inputs__0, text_inputs__1),
               // 那么 reorderPreviewIndex 就应该是那个子句柄的索引。
               reorderPreviewIndex.value = subHandleIndexOfHovered;
-              console.log(`[DEBUG-MI] watch(connectionEndHandle): Multi-input target. Hovered over specific sub-handle ${newEndHandle.id}. Using its index ${subHandleIndexOfHovered} as reorderPreviewIndex.`);
             } else if (!currentIsSubHandle) {
               // 如果鼠标悬停在多输入插槽的主区域，但不在一个具体的 __index 子句柄上
               const inputOrders = (targetNode.data.inputConnectionOrders?.[currentOriginalHandleKey] as string[] | undefined) || [];
               reorderPreviewIndex.value = inputOrders.length;
-              console.log(`[DEBUG-MI] watch(connectionEndHandle): Multi-input target. Hovered over main handle part ${newEndHandle.id}. Defaulting reorderPreviewIndex to append: ${reorderPreviewIndex.value}.`);
             } else {
-              console.warn(`[DEBUG-MI] watch(connectionEndHandle): Multi-input target. Hovered handle ${newEndHandle.id} is not a recognized sub-handle index pattern. Setting reorderPreviewIndex to null.`);
               reorderPreviewIndex.value = null;
             }
           } else {
-            console.debug(`[DEBUG-MI] watch(connectionEndHandle): Target ${newEndHandle.id} is not multi-input or no originalKey. reorderPreviewIndex = null.`);
             reorderPreviewIndex.value = null; // 目标不是多输入，或者没有有效的原始键
           }
         } else {
-          console.debug(`[DEBUG-MI] watch(connectionEndHandle): Target node for ${newEndHandle.id} not found. reorderPreviewIndex = null.`);
           reorderPreviewIndex.value = null; // 找不到目标节点
         }
       } else if (oldEndHandle) { // Mouse left a handle or newEndHandle is not a target
-        console.debug(`[DEBUG-MI] watch(connectionEndHandle): MOUSE LEFT handle: ${oldEndHandle.nodeId}::${oldEndHandle.id}. reorderPreviewIndex = null.`);
         reorderPreviewIndex.value = null;
       } else {
-        console.debug(`[DEBUG-MI] watch(connectionEndHandle): newEndHandle is null and oldEndHandle was null. reorderPreviewIndex = null.`);
         reorderPreviewIndex.value = null;
       }
     } else { // Dragging not in progress

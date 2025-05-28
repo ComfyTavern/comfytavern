@@ -45,25 +45,10 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
   const nodeDefinitionsMap = new Map<string, NodeDefinition>(
     nodeStore.nodeDefinitions?.map((def) => [`${def.namespace}:${def.type}`, def]) ?? []
   );
-  let firstNodeLoggedForInputsDebug = false; // <--- 添加这个标志
 
   const nodes = flow.nodes.map((vueNode: VueFlowNode): WorkflowStorageNode => {
     const nodeType = vueNode.type; // Store type for safe access
 
-    // +++ 添加调试日志 +++
-    if (
-      !firstNodeLoggedForInputsDebug &&
-      nodeType &&
-      nodeType !== "core:GroupInput" &&
-      nodeType !== "core:GroupOutput"
-    ) {
-      console.log(
-        `[Roo Debug transformVueFlowToCoreWorkflow] Inputs for node ${vueNode.id} (${vueNode.type}):`,
-        JSON.parse(JSON.stringify(vueNode.data?.inputs)) // 使用 JSON.parse(JSON.stringify(...)) 来深拷贝并避免响应式代理问题
-      );
-      firstNodeLoggedForInputsDebug = true;
-    }
-    // +++ 结束调试日志 +++
     if (!nodeType) {
       console.error(
         `[transformVueFlowToCoreWorkflow] Node with ID ${vueNode.id} has no type defined. Skipping.`
@@ -157,13 +142,6 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
       }); // End of Object.entries loop for inputs
     } // End of if (nodeDef.inputs && ...)
 
-    // --- Roo: Add logging AFTER the loop ---
-    console.log(
-      `[Debug Save Final] Node: ${vueNode.id} (${vueNode.type})`,
-      `| Final inputValues Object: ${JSON.stringify(inputValues)}`,
-      `| Object.keys(inputValues).length > 0: ${Object.keys(inputValues).length > 0}`
-    );
-    // --- End Roo: Logging ---
 
     // Prepare custom slot descriptions
     const customSlotDescriptions: {
@@ -218,8 +196,8 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
       // 保存 configValues (如果存在且不为空)
       ...(vueNode.data?.configValues &&
         Object.keys(vueNode.data.configValues).length > 0 && {
-          configValues: vueNode.data.configValues,
-        }),
+        configValues: vueNode.data.configValues,
+      }),
       // 保存 size (如果存在)
       ...(vueNode.width !== undefined &&
         vueNode.height !== undefined && { size: { width: vueNode.width, height: vueNode.height } }),
@@ -229,8 +207,8 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
       // 保存 customDescription (如果存在且非默认)
       ...(vueNode.data?.description &&
         vueNode.data.description !== (nodeDef.description || "") && {
-          customDescription: vueNode.data.description,
-        }),
+        customDescription: vueNode.data.description,
+      }),
       // 保存 customSlotDescriptions (如果存在且不为空)
       ...(Object.keys(customSlotDescriptions).length > 0 && { customSlotDescriptions }),
       // zIndex is not part of WorkflowStorageNode, removed assignment
@@ -241,6 +219,7 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
     if (vueNode.data?.inputConnectionOrders) {
       storageNode.inputConnectionOrders = vueNode.data.inputConnectionOrders;
     }
+
 
     return storageNode;
   });
@@ -403,6 +382,7 @@ export function transformWorkflowToVueFlow(
         label: nodeDisplayLabel, // 应用最终确定的显示标签
       };
 
+
       // 处理 inputConnectionOrders
       if (storageNode.inputConnectionOrders) {
         // vueFlowData 应该总是被初始化的，但为了安全起见，我们检查一下
@@ -460,35 +440,52 @@ export function transformWorkflowToVueFlow(
         // 检查是否为 GroupOutput (其输入定义在 workflow.interfaceOutputs)
         if (targetNode.type === "core:GroupOutput") {
           const interfaceOutputDef = workflow.interfaceOutputs?.[storageEdge.targetHandle];
-          if (interfaceOutputDef) targetType = interfaceOutputDef.dataFlowType || "any";
+          if (interfaceOutputDef) {
+            targetType = interfaceOutputDef.dataFlowType || "any";
+          }
         }
         // 检查是否为 NodeGroup (其输入定义在 data.groupInterface.inputs)
         else if (targetNode.type === "core:NodeGroup" && targetNode.data?.groupInterface?.inputs) {
           const inputDef = targetNode.data.groupInterface.inputs[storageEdge.targetHandle];
-          if (inputDef) targetType = inputDef.dataFlowType || "any"; // <--- Roo: 修正属性名
+          if (inputDef) {
+            targetType = inputDef.dataFlowType || "any"; // <--- Roo: 修正属性名
+          }
         }
         // 检查是否为普通节点 (其输入定义在 data.inputs)
-        // 注意：现在 data.inputs[handle] 存储的是包含类型和值的对象
-        else if (targetNode.data?.inputs?.[storageEdge.targetHandle]) {
-          const inputData = targetNode.data.inputs[storageEdge.targetHandle];
-          // 从 inputData 对象中获取类型
-          if (inputData && typeof inputData === "object" && inputData.dataFlowType) { // <--- Roo: 修正属性名
-            targetType = inputData.dataFlowType;
+        else if (targetNode.data?.inputs) {
+          const fullTargetHandle = storageEdge.targetHandle; // targetHandle is a string, can be ""
+          const handleParts = fullTargetHandle.split('__');
+          const baseHandleName = handleParts[0]; // baseHandleName can be "" if fullTargetHandle is "" or starts with "__"
+
+          // 确保 baseHandleName 非空，并且是 targetNode.data.inputs 的一个实际键
+          if (baseHandleName && Object.prototype.hasOwnProperty.call(targetNode.data.inputs, baseHandleName)) {
+            const inputData = targetNode.data.inputs[baseHandleName]; // 类型安全访问
+
+            // 此处 inputData 不会是 undefined，因为 hasOwnProperty.call 保证了键的存在
+            // 并且 inputData 也不会是 null，因为它是从 nodeDef.inputs 构建的，其中每个条目都是一个对象
+            if (typeof inputData === "object" && inputData.dataFlowType) { // 检查 inputData 是否是我们期望的结构
+              targetType = inputData.dataFlowType;
+            } else {
+              // console.warn(`[Roo Debug Edge Target Type - Normal Node] inputData for '${baseHandleName}' does not have dataFlowType or is not a valid object. inputData:`, JSON.parse(JSON.stringify(inputData)));
+            }
+          } else {
+            // let reason = "";
+            // if (!baseHandleName) {
+            //   reason = `baseHandleName is empty (derived from fullTargetHandle: '${fullTargetHandle}')`;
+            // } else if (!targetNode.data.inputs) { // 防御性检查，尽管外层 if 应该已经处理了
+            //   reason = `targetNode.data.inputs is null or undefined for node ${targetNode.id}`;
+            // } else {
+            //   reason = `key '${baseHandleName}' not found in targetNode.data.inputs`;
+            // }
+            // console.warn(`[Roo Debug Edge Target Type - Normal Node] No inputData found or key invalid. Reason: ${reason}. Available keys in targetNode.data.inputs: ${targetNode.data?.inputs ? Object.keys(targetNode.data.inputs).join(', ') : 'targetNode.data.inputs is not available'}`);
           }
-          // 旧的查找方式，现在不再需要，因为类型已直接存储
-          // const targetNodeType = targetNode.type;
-          // if (targetNodeType) {
-          //   const targetNodeDef = nodeDefinitionsMap.get(targetNodeType);
-          //   const inputDef = targetNodeDef?.inputs?.[storageEdge.targetHandle ?? ''];
-          //   if (inputDef) targetType = inputDef.type || 'any';
-          // } else {
-          //    console.warn(`[transformWorkflowToVueFlow] Target node ${targetNode.id} has no type. Cannot determine target handle type.`);
-          // }
         }
       }
+
       if (targetType === "any") {
+        // 这个警告现在会在上面的逻辑中更早地被特定情况的 warn 覆盖（如果适用），但保留它作为最终的捕获
         console.warn(
-          `[transformWorkflowToVueFlow] Cannot determine specific target type for edge ${storageEdge.id} (target: ${storageEdge.target}::${storageEdge.targetHandle}). Defaulting to 'any'.`
+          `[transformWorkflowToVueFlow] FINAL CHECK: Cannot determine specific target type for edge ${storageEdge.id} (target: ${storageEdge.target}::${storageEdge.targetHandle}). Defaulting to 'any'. Source Type: ${sourceType}`
         );
       }
 
@@ -629,8 +626,8 @@ export function transformVueFlowToExecutionPayload(
       // 包含 configValues (如果存在且不为空)
       ...(vueNode.data?.configValues &&
         Object.keys(vueNode.data.configValues).length > 0 && {
-          configValues: vueNode.data.configValues,
-        }),
+        configValues: vueNode.data.configValues,
+      }),
     };
 
     return execNode;

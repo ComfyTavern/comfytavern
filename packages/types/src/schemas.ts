@@ -187,6 +187,8 @@ export const WorkflowNodeSchema = z.object({
   configValues: z.record(z.any()).optional(),
   /** 节点的输入值（通常由连接或用户输入提供） */
   inputValues: z.record(z.any()).optional(),
+  /** 存储多输入插槽的连接顺序，键为插槽的 key，值为连接到该插槽的边 ID 数组 */
+  inputConnectionOrders: z.record(z.array(z.string())).optional().describe('多输入插槽的连接顺序'),
 });
 /** 类型推断：工作流节点 */
 export type WorkflowNode = z.infer<typeof WorkflowNodeSchema>;

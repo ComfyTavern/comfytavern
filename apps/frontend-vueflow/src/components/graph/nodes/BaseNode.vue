@@ -611,8 +611,11 @@ const multiInputSlotContainerStyle = computed(() => {
 // 辅助函数：计算为多输入插槽渲染的子Handle数量
 const getNumChildHandles = (inputKey: string): number => {
   const inputDefinition = finalInputs.value.find(i => String(i.key) === inputKey);
-  if (!inputDefinition || !inputDefinition.multi) {
-    // console.log(`[BaseNode DEBUG] getNumChildHandles for ${inputKey}: Not multi-input or no definition. Returning 0.`);
+
+  if (!inputDefinition) {
+    return 0;
+  }
+  if (!inputDefinition.multi) {
     return 0;
   }
 
@@ -630,11 +633,9 @@ const getNumChildHandles = (inputKey: string): number => {
     handlesToRender = numConnections + 1;
   }
 
-
-// MIN_MULTI_HANDLE_HEIGHT_FACTOR 不应影响实际渲染的句柄数量，仅影响容器视觉高度。
-// handlesToRender 已经是计算好的实际应渲染的子句柄数。
-// 保留关键的最终日志输出，并指明 numConnections 的来源
-return handlesToRender;
+  // MIN_MULTI_HANDLE_HEIGHT_FACTOR 不应影响实际渲染的句柄数量，仅影响容器视觉高度。
+  // handlesToRender 已经是计算好的实际应渲染的子句柄数。
+  return handlesToRender;
 };
 
 // 计算输入参数头部的动态样式，以适应多输入跑道的高度

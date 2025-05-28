@@ -186,9 +186,6 @@ export function useMultiInputConnectionActions(
       currentOrder.length === newOrderedEdgeIds.length &&
       currentOrder.every((id: string, index: number) => id === newOrderedEdgeIds[index])
     ) {
-      console.debug(
-        `[MultiInputActions:updateNodeInputConnectionOrder] 节点 ${nodeId} 句柄 ${handleKey} 的连接顺序未改变。跳过。`
-      );
       return;
     }
 
@@ -251,7 +248,6 @@ export function useMultiInputConnectionActions(
       return Promise.resolve({ modifiedElements: elements, modifiedWorkflowData: workflowData });
     }
     elements.splice(edgeIndex, 1); // Remove the edge from elements
-    console.debug(`[MultiInputActions:disconnectEdgeFromMultiInput] Edge ${edgeId} removed from elements.`);
 
     // 2. Update original target node (if multi-input)
     const originalTargetNode = elements.find(el => el.id === originalTargetNodeId && !('source' in el)) as VueFlowNode | undefined;
@@ -265,7 +261,6 @@ export function useMultiInputConnectionActions(
     const targetNodeData = originalTargetNode.data as NodeInstanceData;
 
     if (targetNodeData?.inputs?.[targetOriginalKey]?.multi === true) {
-      console.debug(`[MultiInputActions:disconnectEdgeFromMultiInput] Original target ${originalTargetNodeId}::${targetOriginalKey} is multi-input.`);
       if (targetNodeData.inputConnectionOrders && targetNodeData.inputConnectionOrders[targetOriginalKey]) {
         const currentOrder = targetNodeData.inputConnectionOrders[targetOriginalKey];
         const edgeIndexInOrder = currentOrder.indexOf(edgeId);
