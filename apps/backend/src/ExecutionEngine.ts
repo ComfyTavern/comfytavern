@@ -48,7 +48,7 @@ export class ExecutionEngine {
     this.promptId = promptId;
     this.payload = payload;
     // Roo: 打印构造函数接收到的完整 payload
-    console.log(`%%%%%%% Engine Constructor: Received payload: %%%%%%%`, JSON.parse(JSON.stringify(this.payload)));
+    // console.log(`%%%%%%% Engine Constructor: Received payload: %%%%%%%`, JSON.parse(JSON.stringify(this.payload)));
     this.wsManager = wsManager;
     // this.outputManager = outputManager;
     // this.historyService = historyService;
