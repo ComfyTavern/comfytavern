@@ -44,17 +44,83 @@ export function useMultiInputConnectionActions(
    * @param inputDisplayName 输入插槽的可选显示名称，用于历史摘要。
    */
   async function reorderMultiInputConnections(
-    _nodeId: string,
-    _inputKey: string, // 例如 "text_input"
-    _newOrderedEdgeIds: string[],
-    _originalOrderedEdgeIds: string[], // 从 InlineConnectionSorter 传入
-    _nodeDisplayName?: string, // 可选，用于历史摘要
-    _inputDisplayName?: string // 可选，用于历史摘要
-  ) {
-    // 此函数依赖于直接的 store 访问和 getCurrentSnapshotLocal，这些正在从 action 中逐步淘汰。
-    // 它需要重构以接收快照数据并返回修改。
-    console.error(`[MultiInputActions] Function 'reorderMultiInputConnections' is pending full refactoring and should not be actively used.`);
-    return Promise.resolve(); // 假设异步函数可能需要返回一个 Promise
+    mutableSnapshot: WorkflowStateSnapshot, // 接收可变快照
+    nodeId: string,
+    inputKey: string, // 例如 "text_input"
+    newOrderedEdgeIds: string[]
+    // originalOrderedEdgeIds, nodeDisplayName, inputDisplayName 由调用者处理历史记录
+  ): Promise<{ modifiedElements: (VueFlowNode | Edge)[]; modifiedWorkflowData: (WorkflowObject & { id: string }) | null }> {
+    const elements = mutableSnapshot.elements;
+    const workflowData = mutableSnapshot.workflowData; // 可能为 null
+
+    const targetNode = elements.find(el => el.id === nodeId && !('source' in el)) as VueFlowNode | undefined;
+
+    if (!targetNode) {
+      console.warn(`[MultiInputActions:reorderMultiInputConnections] Target node ${nodeId} not found. Skipping.`);
+      return { modifiedElements: elements, modifiedWorkflowData: workflowData };
+    }
+
+    const targetNodeData = targetNode.data as NodeInstanceData;
+    if (!targetNodeData) {
+      console.warn(`[MultiInputActions:reorderMultiInputConnections] Target node ${nodeId} has no data. Skipping.`);
+      return { modifiedElements: elements, modifiedWorkflowData: workflowData };
+    }
+
+    // 确保 inputConnectionOrders 对象存在
+    targetNodeData.inputConnectionOrders = targetNodeData.inputConnectionOrders || {};
+    targetNodeData.inputConnectionOrders[inputKey] = [...newOrderedEdgeIds]; // 更新顺序
+
+    // 重新索引该插槽的所有边的 targetHandles
+    newOrderedEdgeIds.forEach((edgeId, newIndex) => {
+      const edgeToReindex = elements.find(el => el.id === edgeId && 'source' in el) as Edge | undefined;
+      if (edgeToReindex) {
+        const newTargetHandle = `${inputKey}__${newIndex}`;
+        if (edgeToReindex.targetHandle !== newTargetHandle) {
+          edgeToReindex.targetHandle = newTargetHandle;
+          console.debug(`[MultiInputActions:reorderMultiInputConnections] Re-indexed edge ${edgeId} targetHandle to ${newTargetHandle}.`);
+        }
+      } else {
+        console.warn(`[MultiInputActions:reorderMultiInputConnections] Edge ${edgeId} from new order not found in elements.`);
+      }
+    });
+
+    // 如果输入插槽的 .value 是一个数组，则调整其长度
+    if (targetNodeData.inputs && targetNodeData.inputs[inputKey]) {
+      const inputSlot = targetNodeData.inputs[inputKey];
+      // 检查它是否是 ComfyInputDefinition 并且具有 .value 属性
+      // 并且标记为 multi (尽管多输入排序器通常只用于 multi:true 的情况)
+      if (inputSlot && 'value' in inputSlot && (inputSlot as ComfyInputDefinition).multi === true) {
+        // 确保 .value 是一个数组，或者如果它尚不存在/不是数组，则将其设为数组
+        if (!Array.isArray((inputSlot as any).value)) {
+          (inputSlot as any).value = []; // 初始化为空数组
+          console.debug(`[MultiInputActions:reorderMultiInputConnections] Initialized .value array for multi-input slot ${inputKey} on node ${nodeId}.`);
+        }
+        // 现在 .value 肯定是一个数组，调整其长度并用 undefined 填充
+        (inputSlot as any).value = new Array(newOrderedEdgeIds.length).fill(undefined);
+        console.debug(`[MultiInputActions:reorderMultiInputConnections] Adjusted .value array for slot ${inputKey} on node ${nodeId} to length ${newOrderedEdgeIds.length}.`);
+      }
+    }
+
+    // 如果排序后列表为空，则清理 inputConnectionOrders 中的条目
+    if (newOrderedEdgeIds.length === 0) {
+      if (targetNodeData.inputConnectionOrders && targetNodeData.inputConnectionOrders[inputKey]) {
+        delete targetNodeData.inputConnectionOrders[inputKey];
+        if (Object.keys(targetNodeData.inputConnectionOrders).length === 0) {
+          delete targetNodeData.inputConnectionOrders;
+        }
+        console.debug(`[MultiInputActions:reorderMultiInputConnections] Order for ${inputKey} on node ${nodeId} is now empty and removed.`);
+      }
+      // 也清理 .value (如果存在且为空数组)
+      if (targetNodeData.inputs && targetNodeData.inputs[inputKey]) {
+        const inputSlot = targetNodeData.inputs[inputKey];
+        if (inputSlot && 'value' in inputSlot && Array.isArray((inputSlot as any).value) && (inputSlot as any).value.length === 0) {
+          // delete (inputSlot as any).value; // 或者保持为空数组，取决于期望的行为
+          console.debug(`[MultiInputActions:reorderMultiInputConnections] .value array for slot ${inputKey} on node ${nodeId} is now empty.`);
+        }
+      }
+    }
+
+    return { modifiedElements: elements, modifiedWorkflowData: workflowData };
   }
 
   /**

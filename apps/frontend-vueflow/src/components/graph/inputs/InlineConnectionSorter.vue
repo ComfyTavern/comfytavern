@@ -1,22 +1,12 @@
 <template>
-  <div
-    class="inline-connection-sorter"
-    v-if="draggableConnections.length > 1"
-    @mousedown.stop
-  >
-    <draggable
-      v-model="draggableConnections"
-      item-key="id"
-      @end="onSortEnd"
-      class="connection-list"
-      :animation="200"
-    >
-      <template #item="{element, index}">
+  <div class="inline-connection-sorter" v-if="draggableConnections.length > 1" @mousedown.stop>
+    <draggable v-model="draggableConnections" item-key="id" @end="onSortEnd" class="connection-list" :animation="200">
+      <template #item="{ element, index }">
         <div class="sortable-connection-item" :title="getSourceTooltip(element)">
           <span class="connection-index">{{ index + 1 }}.</span>
           <div class="tooltip-flex-wrapper">
             <!-- Tooltip now wraps the button or the text, let's keep it on text for now -->
-             <Tooltip :content="getSourceTooltip(element)" placement="top" :show-delay="300">
+            <Tooltip :content="getSourceTooltip(element)" placement="top" :show-delay="300">
               <span class="connection-label-container">
                 <span class="source-node-label-part" :title="element.sourceNodeLabel">
                   {{ element.sourceNodeLabel }}
@@ -27,11 +17,7 @@
               </span>
             </Tooltip>
           </div>
-          <button
-            @click.stop="handleDisconnectEdge(element)"
-            class="disconnect-button"
-            title="断开此连接"
-          >
+          <button @click.stop="handleDisconnectEdge(element)" class="disconnect-button" title="断开此连接">
             &times;
           </button>
         </div>
@@ -49,6 +35,8 @@ import { createHistoryEntry } from '@comfytavern/utils';
 import { klona } from 'klona/full';
 import { useMultiInputConnectionActions } from '@/composables/node/useMultiInputConnectionActions';
 import { useTabStore } from '@/stores/tabStore';
+import { useWorkflowManager } from '@/composables/workflow/useWorkflowManager'; // GUGU: 导入 useWorkflowManager
+import { useWorkflowHistory } from '@/composables/workflow/useWorkflowHistory'; // GUGU: 导入 useWorkflowHistory
 import Tooltip from '@/components/common/Tooltip.vue';
 
 interface DraggableConnectionItem {
@@ -74,6 +62,8 @@ const props = defineProps({
 
 const tabStore = useTabStore();
 const activeTabIdRef = computed(() => tabStore.activeTabId);
+const workflowManager = useWorkflowManager(); // GUGU: 获取 workflowManager 实例
+const workflowHistory = useWorkflowHistory(); // GUGU: 获取 workflowHistory 实例
 const { reorderMultiInputConnections, disconnectEdgeFromMultiInput } = useMultiInputConnectionActions(activeTabIdRef);
 
 const draggableConnections = ref<DraggableConnectionItem[]>([]);
@@ -103,7 +93,7 @@ const mapEdgeIdsToDraggableItems = () => {
         sourceNodeId: edge.source,
         sourceHandleId: edge.sourceHandle,
         // 如果源节点存在，则使用 getNodeLabel 获取其标签，否则显示源节点ID和“未找到”
-        sourceNodeLabel: sourceNode ? props.getNodeLabel(edge.source) : `源节点 ${edge.source.substring(0,6)}... 未找到`,
+        sourceNodeLabel: sourceNode ? props.getNodeLabel(edge.source) : `源节点 ${edge.source.substring(0, 6)}... 未找到`,
         sourceHandleLabel: sourceHandleLabel,
         targetNodeId: edge.target, // Added for disconnect
         targetHandleId: edge.targetHandle, // Added for disconnect
@@ -115,7 +105,7 @@ const mapEdgeIdsToDraggableItems = () => {
         id: edgeId,
         sourceNodeId: 'error-edge-not-in-allEdges',
         sourceHandleId: 'error',
-        sourceNodeLabel: `边 ${edgeId.substring(0,6)}... (数据错误)`,
+        sourceNodeLabel: `边 ${edgeId.substring(0, 6)}... (数据错误)`,
         sourceHandleLabel: '!', // 用感叹号表示错误状态
         targetNodeId: 'error', // Added for disconnect
         targetHandleId: 'error', // Added for disconnect
@@ -137,14 +127,14 @@ const getSourceTooltip = (item: DraggableConnectionItem): string => {
 
 const onSortEnd = async () => {
   const newOrderedEdgeIds = draggableConnections.value.map(conn => conn.id);
-  
+
   if (JSON.stringify(newOrderedEdgeIds) === JSON.stringify(props.currentOrderedEdgeIds)) {
     return; // 顺序未改变
   }
 
-  if (!tabStore.activeTabId) {
+  const activeTabId = tabStore.activeTabId; // 从 tabStore 获取
+  if (!activeTabId) {
     console.error("[InlineConnectionSorter] 无法更新顺序：activeTabId 未定义。");
-    // 可以考虑将列表重置回 props.currentOrderedEdgeIds 的状态，或者提示用户
     draggableConnections.value = mapEdgeIdsToDraggableItems(); // 恢复原始顺序
     return;
   }
@@ -152,16 +142,51 @@ const onSortEnd = async () => {
   const nodeDisplayName = props.getNodeLabel(props.nodeId);
   const inputDisplayName = props.inputDefinition.displayName || props.inputHandleKey;
 
-  // HistoryEntry 创建和具体的状态更新逻辑已移至 reorderMultiInputConnections
   try {
+    const currentSnapshot = workflowManager.getCurrentSnapshot(activeTabId);
+    if (!currentSnapshot) {
+      console.error("[InlineConnectionSorter] 无法获取当前工作流快照。");
+      draggableConnections.value = mapEdgeIdsToDraggableItems();
+      return;
+    }
+    const mutableSnapshot = klona(currentSnapshot); // 克隆快照以进行修改
+
+    // 调用已重构的函数，它现在修改快照
     await reorderMultiInputConnections(
+      mutableSnapshot, // 传递可变快照
       props.nodeId,
       props.inputHandleKey,
-      newOrderedEdgeIds,
-      [...props.currentOrderedEdgeIds], // 传递原始顺序的副本
-      nodeDisplayName,
-      inputDisplayName
+      newOrderedEdgeIds
+      // originalOrderedEdgeIds, nodeDisplayName, inputDisplayName 不再直接传递给此函数
     );
+
+    // 创建历史记录条目
+    const summary = `重排序节点 "${nodeDisplayName}" 上的输入 "${inputDisplayName}" 的连接`;
+    const historyPayload = {
+      nodeId: props.nodeId,
+      inputKey: props.inputHandleKey,
+      newOrder: newOrderedEdgeIds,
+      originalOrder: [...props.currentOrderedEdgeIds], // 原始顺序
+    };
+    const entry: HistoryEntry = createHistoryEntry(
+      "multiInputReorder", // 新的历史类型
+      "workflow", // 影响工作流元素
+      summary,
+      historyPayload
+    );
+
+    // 1. 应用对 elements 数组的更改 (包括节点数据和边句柄)
+    // 这会触发 VueFlow 的重新渲染
+    await workflowManager.setElements(activeTabId, mutableSnapshot.elements);
+
+    // 2. 应用对 workflowData (如名称、描述、接口等) 的更改
+    // applyStateSnapshot 会更新 workflowData 的顶层属性和接口，并确保动态插槽。
+    // 节点内部数据 (node.data) 已通过 setElements 更新，因为 elements 包含节点。
+    workflowManager.applyStateSnapshot(activeTabId, mutableSnapshot);
+
+    // 3. 记录历史 (使用修改后的快照)
+    workflowHistory.recordSnapshot(activeTabId, entry, mutableSnapshot);
+
     // 成功后，props.currentOrderedEdgeIds 应该会通过父组件的响应式更新
     // 这会触发 watch 重新计算 draggableConnections.value
   } catch (error) {
@@ -172,7 +197,8 @@ const onSortEnd = async () => {
 };
 
 const handleDisconnectEdge = async (item: DraggableConnectionItem) => {
-  if (!activeTabIdRef.value) {
+  const activeTabId = activeTabIdRef.value; // GUGU: 从 ref 获取 activeTabId 的当前值
+  if (!activeTabId) { // GUGU: 检查获取到的 activeTabId 值
     console.error("[InlineConnectionSorter] 无法断开连接：activeTabId 未定义。");
     return;
   }
@@ -189,16 +215,16 @@ const handleDisconnectEdge = async (item: DraggableConnectionItem) => {
 
   const targetNodeLabel = props.getNodeLabel(props.nodeId);
   const inputDisplayName = props.inputDefinition.displayName || props.inputHandleKey;
-  
+
   const summary = `断开连接: ${item.sourceNodeLabel}(${item.sourceHandleLabel}) -> ${targetNodeLabel}(${inputDisplayName})`;
 
   const historyPayload = {
     removedEdge: klona(edgeToDisconnect),
     originalTargetNodeId: props.nodeId,
     originalTargetHandleId: item.targetHandleId, // 使用 item 上的 targetHandleId
-    // context for undo: which input slot on which node was it connected to
     contextNodeId: props.nodeId,
     contextInputKey: props.inputHandleKey,
+    originalEdgeData: klona(edgeToDisconnect), // GUGU: 添加原始边数据以便撤销
   };
 
   const entry: HistoryEntry = createHistoryEntry(
@@ -209,12 +235,31 @@ const handleDisconnectEdge = async (item: DraggableConnectionItem) => {
   );
 
   try {
+    const currentSnapshot = workflowManager.getCurrentSnapshot(activeTabId);
+    if (!currentSnapshot) {
+      console.error("[InlineConnectionSorter:handleDisconnectEdge] 无法获取当前工作流快照。");
+      return;
+    }
+    const mutableSnapshot = klona(currentSnapshot);
+
     await disconnectEdgeFromMultiInput(
+      mutableSnapshot, // GUGU: 传递快照
       item.id,
       props.nodeId, // originalTargetNodeId for the function
-      item.targetHandleId, // originalTargetHandleId for the function
-      entry
+      item.targetHandleId // originalTargetHandleId for the function
+      // entry 不再直接传递给此函数
     );
+
+    // 1. 应用对 elements 数组的更改 (包括节点数据和边句柄)
+    // 这会触发 VueFlow 的重新渲染
+    await workflowManager.setElements(activeTabId, mutableSnapshot.elements);
+
+    // 2. 应用对 workflowData (如名称、描述、接口等) 的更改
+    workflowManager.applyStateSnapshot(activeTabId, mutableSnapshot);
+
+    // 3. 记录历史 (使用修改后的快照)
+    workflowHistory.recordSnapshot(activeTabId, entry, mutableSnapshot);
+
     // draggableConnections will update reactively due to props.allEdges changing
   } catch (error) {
     console.error(`[InlineConnectionSorter] 断开边 ${item.id} 失败:`, error);
@@ -232,6 +277,7 @@ const handleDisconnectEdge = async (item: DraggableConnectionItem) => {
   border-radius: 4px;
   border: 1px solid var(--ct-border-DEFAULT, #d1d5db);
 }
+
 .dark .inline-connection-sorter {
   background-color: var(--ct-bg-surface-dark, #1f2937);
   border-color: var(--ct-border-dark, #4b5563);
@@ -246,15 +292,18 @@ const handleDisconnectEdge = async (item: DraggableConnectionItem) => {
 .sortable-connection-item {
   display: flex;
   align-items: center;
-  gap: 6px; /* Add gap for items including the new button */
+  gap: 6px;
+  /* Add gap for items including the new button */
   padding: 4px 6px;
   background-color: var(--ct-bg-input, #ffffff);
   border: 1px solid var(--ct-border-input, #cbd5e1);
   border-radius: 3px;
   font-size: 0.9em;
-  cursor: grab; /* 整行可拖拽 */
+  cursor: grab;
+  /* 整行可拖拽 */
   color: var(--ct-text-default, #1f2937);
 }
+
 .dark .sortable-connection-item {
   background-color: var(--ct-bg-input-dark, #374151);
   border-color: var(--ct-border-input-dark, #6b7280);
@@ -265,6 +314,7 @@ const handleDisconnectEdge = async (item: DraggableConnectionItem) => {
   border-color: var(--ct-accent-DEFAULT, #2563eb);
   box-shadow: 0 0 0 1px var(--ct-accent-DEFAULT, #2563eb);
 }
+
 .dark .sortable-connection-item:hover {
   border-color: var(--ct-accent-dark, #3b82f6);
   box-shadow: 0 0 0 1px var(--ct-accent-dark, #3b82f6);
@@ -275,6 +325,7 @@ const handleDisconnectEdge = async (item: DraggableConnectionItem) => {
   color: var(--ct-text-muted, #6b7280);
   font-variant-numeric: tabular-nums;
 }
+
 .dark .connection-index {
   color: var(--ct-text-muted-dark, #9ca3af);
 }
@@ -309,27 +360,35 @@ const handleDisconnectEdge = async (item: DraggableConnectionItem) => {
   margin-left: 4px;
   min-width: 0;
 }
+
 .disconnect-button {
   flex-shrink: 0;
-  padding: 1px 4px; /* Smaller padding */
-  margin-left: auto; /* Push to the right */
+  padding: 1px 4px;
+  /* Smaller padding */
+  margin-left: auto;
+  /* Push to the right */
   background-color: transparent;
-  border: 1px solid transparent; /* Keep layout consistent */
+  border: 1px solid transparent;
+  /* Keep layout consistent */
   color: var(--ct-text-danger, #dc2626);
   cursor: pointer;
-  font-size: 0.9em; /* Slightly smaller or same as item text */
+  font-size: 0.9em;
+  /* Slightly smaller or same as item text */
   line-height: 1;
   border-radius: 3px;
   font-weight: bold;
 }
+
 .disconnect-button:hover {
   background-color: var(--ct-bg-danger-hover, #fee2e2);
   border-color: var(--ct-text-danger-hover, #ef4444);
   color: var(--ct-text-danger-hover, #ef4444);
 }
+
 .dark .disconnect-button {
   color: var(--ct-text-danger-dark, #f87171);
 }
+
 .dark .disconnect-button:hover {
   background-color: var(--ct-bg-danger-hover-dark, #450a0a);
   border-color: var(--ct-text-danger-hover-dark, #ff7272);
