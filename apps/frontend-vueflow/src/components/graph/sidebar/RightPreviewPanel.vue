@@ -15,7 +15,18 @@
 
     <!-- 面板头部，包含标题和切换按钮 -->
     <div class="panel-header" :class="{ 'collapsed': !panelLayout.isExpanded }" @mousedown.stop.prevent="startDragTop">
-      <h3 v-if="panelLayout.isExpanded" class="panel-title">预览</h3>
+      <h3 v-if="panelLayout.isExpanded" class="panel-title truncate"
+        :title="activeTarget ? `${nodeDisplayName} (ID: ${activeTarget.nodeId})` : '预览'">
+        <template v-if="activeTarget">
+          {{ nodeDisplayName }} <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(ID: {{ activeTarget.nodeId
+          }})</span>
+        </template>
+        <template v-else>
+          <span class="text-gray-700 dark:text-gray-300">预览面板 
+            <span class="text-gray-400 dark:text-gray-500">（未设置目标）</span>
+          </span>
+        </template>
+      </h3>
       <button class="toggle-button" @click="togglePanelExpansion">
         <!-- 收起状态显示放大镜图标 -->
         <svg v-if="!panelLayout.isExpanded" class="icon" viewBox="0 0 1024 1024" version="1.1"
@@ -35,15 +46,33 @@
 
     <!-- 面板内容区域 -->
     <div v-if="panelLayout.isExpanded" class="panel-content">
-      <template v-if="workflowManager.activePreviewTarget.value">
-        <p class="p-4 text-sm text-gray-500 dark:text-gray-400">
-          正在加载预览: 节点 {{ workflowManager.activePreviewTarget.value.nodeId }}, 插槽 {{
-            workflowManager.activePreviewTarget.value.slotKey }}
-        </p>
+      <template v-if="activeTarget">
+        <div class="p-4 space-y-2">
+          <div>
+            <p class="text-sm mb-2">
+              <span class="font-semibold text-gray-500 dark:text-gray-400">插槽: </span>
+              <span class="text-gray-800 dark:text-gray-100">{{ slotDisplayName }}</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(Key: {{ activeTarget.slotKey }})</span>
+              <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase ml-2">- 输出</span>
+            </p>
+            <div class="p-2 border rounded bg-gray-50 dark:bg-gray-700/50 max-h-96 overflow-y-auto"> <!-- 输出内容 -->
+              <template v-if="previewData !== null && previewData !== undefined">
+                <MarkdownRenderer v-if="isMarkdownSlot && typeof previewData === 'string'"
+                  :markdown-content="previewData" />
+                <pre v-else-if="typeof previewData === 'object' || Array.isArray(previewData)"
+                  class="text-xs whitespace-pre-wrap break-all">{{ JSON.stringify(previewData, null, 2) }}</pre>
+                <p v-else class="text-xs whitespace-pre-wrap break-all">{{ String(previewData) }}</p>
+              </template>
+              <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">
+                无可用预览数据或插槽未产生输出。
+              </p>
+            </div>
+          </div>
+        </div>
       </template>
       <template v-else>
         <p class="p-4 text-sm text-gray-500 dark:text-gray-400">
-          无预览目标被选中。
+          无预览目标被选中。右键点击节点输出桩或连线以预览。
         </p>
       </template>
     </div>
@@ -51,13 +80,80 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, type Ref } from 'vue';
+import { ref, onUnmounted, type Ref, computed } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import { useWorkflowManager } from '@/composables/workflow/useWorkflowManager';
+import { useExecutionStore } from '@/stores/executionStore';
+import { useWorkflowStore } from '@/stores/workflowStore';
+import { useNodeStore } from '@/stores/nodeStore';
+import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
+import type { Node as VueFlowNode } from "@vue-flow/core"; // 导入 VueFlowNode
+import type { OutputDefinition } from '@comfytavern/types'; // 修正：导入 OutputDefinition
 
 const workflowManager = useWorkflowManager();
+const executionStore = useExecutionStore();
+const workflowStore = useWorkflowStore();
+const nodeStore = useNodeStore();
 
 const panelElementRef: Ref<HTMLElement | null> = ref(null);
+
+const activeTarget = computed(() => workflowManager.activePreviewTarget.value);
+const activeTabId = computed(() => workflowManager.activeTabId.value);
+
+const previewData = computed(() => {
+  if (!activeTarget.value || !activeTabId.value) return null;
+  const { nodeId, slotKey } = activeTarget.value;
+  const tabState = executionStore.tabExecutionStates.get(activeTabId.value);
+  if (!tabState || !tabState.nodeOutputs || !tabState.nodeOutputs[nodeId]) {
+    return null;
+  }
+  return tabState.nodeOutputs[nodeId]?.[slotKey] ?? null;
+});
+
+const activeNodeInstance = computed(() => {
+  if (!activeTarget.value || !activeTabId.value) return null;
+  const workflowData = workflowStore.getWorkflowData(activeTabId.value);
+  return workflowData?.nodes.find((n: VueFlowNode) => n.id === activeTarget.value!.nodeId) || null;
+});
+
+const nodeDisplayName = computed(() => {
+  if (!activeNodeInstance.value) return activeTarget.value?.nodeId || 'N/A';
+  const node = activeNodeInstance.value;
+  const fullType = node.data?.namespace ? `${node.data.namespace}:${node.type}` : node.type;
+  const nodeDef = nodeStore.getNodeDefinitionByFullType(fullType);
+  // 优先顺序: 用户自定义标签 (node.data.label) -> VueFlow 标签 (node.label) -> 节点定义显示名 (nodeDef.displayName) -> 节点类型 (node.type)
+  return node.data?.label || node.label || nodeDef?.displayName || node.type;
+});
+
+const slotDisplayName = computed(() => {
+  if (!activeNodeInstance.value || !activeTarget.value) return activeTarget.value?.slotKey || 'N/A';
+  const node = activeNodeInstance.value;
+  const slotKey = activeTarget.value.slotKey; // 这个 slotKey 就是 outputs Record 中的键
+  const fullType = node.data?.namespace ? `${node.data.namespace}:${node.type}` : node.type;
+  const nodeDef = nodeStore.getNodeDefinitionByFullType(fullType);
+  const outputSlotDef: OutputDefinition | undefined = nodeDef?.outputs?.[slotKey]; // 直接通过 key 访问并添加类型注解
+  // 优先顺序: 插槽定义显示名 (outputSlotDef.displayName) -> 插槽键 (slotKey)
+  return outputSlotDef?.displayName || slotKey; // 使用 displayName
+});
+
+// 辅助函数判断内容是否可能是 Markdown
+const isMarkdownSlot = computed(() => {
+  if (!activeTarget.value) return false;
+  // 启发式规则: 如果 slotKey 包含 'markdown'
+  if (activeTarget.value.slotKey.toLowerCase().includes('markdown')) return true;
+
+  // 检查插槽定义的类型（如果可用）
+  const node = activeNodeInstance.value;
+  if (node) {
+    const slotKey = activeTarget.value.slotKey;
+    const fullType = node.data?.namespace ? `${node.data.namespace}:${node.type}` : node.type;
+    const nodeDef = nodeStore.getNodeDefinitionByFullType(fullType);
+    const outputSlotDef: OutputDefinition | undefined = nodeDef?.outputs?.[slotKey]; // 直接通过 key 访问并添加类型注解
+    // 假设 'markdown' 是一个明确的类型，检查 dataFlowType
+    if (outputSlotDef?.dataFlowType && typeof outputSlotDef.dataFlowType === 'string' && outputSlotDef.dataFlowType.toLowerCase().includes('markdown')) return true;
+  }
+  return false;
+});
 
 const panelLayout = useLocalStorage('rightPreviewPanelLayout', {
   isExpanded: true,
