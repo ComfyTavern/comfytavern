@@ -293,20 +293,27 @@ export function useCanvasConnections({
           if (isOccupied) {
             const singleOccupyingEdge = (occupyingEdges.length === 1) ? occupyingEdges[0] : null;
             if (updatingEdgeId && singleOccupyingEdge && singleOccupyingEdge.id === updatingEdgeId) {
+              // 正在更新同一条边，这是允许的
             } else { // 被不同的边或多个边占用
-              // 如果目标是多输入插槽 (targetInput 应该已定义且 multi === true)
-              // 即使这是一个连接更新，并且目标子句柄被其他边占用，我们也应该允许。
-              // 后续的重排逻辑 (在 onEdgeUpdateEnd 中调用的 moveAndReconnectEdgeAndRecord) 会处理实际的放置。
               if (targetInput && targetInput.multi === true) {
                 // 对于多输入插槽，当被其他边占用时，不在此处返回 false。
                 // 类型兼容性 (由 `compatible` 变量检查) 和其他通用规则仍然适用。
-              } else {
-                // 对于非多输入插槽 (或者如果 targetInput 未定义/不是 multi 类型),
-                // 被不同的边占用是一个冲突。
-                return false;
+                // 重排逻辑会处理实际的放置。
+              } else { // 这是非多输入插槽 (targetInput.multi 为 false 或 undefined)
+                if (!updatingEdgeId && isOccupied) {
+                  // 尝试创建【新】连接到一个【已占用】的【单输入】插槽。
+                  // isValidConnection 应该允许这种情况通过，后续 handleConnect 会处理替换逻辑。
+                  // 因此，这里不返回 false。
+                } else if (updatingEdgeId && isOccupied) {
+                  // 尝试【更新】一条边，使其连接到一个【已占用】的【单输入】插槽（且占用的不是当前更新的边）。
+                  // 这是一个冲突。
+                  return false;
+                }
+                // 如果是新连接到未占用的单输入槽，或更新到未占用的单输入槽，则继续。
               }
             }
           } else {
+            // 未被占用，继续。
           }
         }
       }
@@ -467,6 +474,38 @@ export function useCanvasConnections({
     const originalSourceOutputDef = klona(sourceOutputDef);
     const originalTargetInputDef = klona(targetInputDef);
 
+    // Roo: 如果目标是单输入插槽且已被连接，则先移除旧连接
+    let oldEdgeToReplace: Edge | undefined = undefined;
+    if (targetInputDef && targetInputDef.multi !== true) {
+      const existingEdgesToTargetHandle = getEdges.value.filter(
+        e => e.target === targetNode.id && e.targetHandle === targetHandle // targetHandle is params.targetHandle
+      );
+      if (existingEdgesToTargetHandle.length > 0) {
+        oldEdgeToReplace = klona(existingEdgesToTargetHandle[0]); // 假设只有一个
+      }
+    }
+
+    if (oldEdgeToReplace) {
+      // isValidConnection 已确保新连接是兼容的
+      const readableOldSource = getReadableNames(oldEdgeToReplace.source, oldEdgeToReplace.sourceHandle, 'source');
+      const readableOldTarget = getReadableNames(oldEdgeToReplace.target, oldEdgeToReplace.targetHandle, 'target');
+      const disconnectSummary = `自动断开旧连接: ${readableOldSource.nodeName}::${readableOldSource.handleName} -> ${readableOldTarget.nodeName}::${readableOldTarget.handleName} (为新连接让路)`;
+      const disconnectHistoryEntry = createHistoryEntry(
+        "disconnect", // 或者 "replace_connect"
+        "edge",
+        disconnectSummary,
+        {
+          edgeId: oldEdgeToReplace.id,
+          sourceNodeId: oldEdgeToReplace.source,
+          sourceHandleId: oldEdgeToReplace.sourceHandle,
+          targetNodeId: oldEdgeToReplace.target,
+          targetHandleId: oldEdgeToReplace.targetHandle,
+          reason: "single_input_slot_replacement"
+        }
+      );
+      // 确保这个移除操作被正确记录到历史中
+      await workflowStore.removeElementsAndRecord(currentTabId, [oldEdgeToReplace], disconnectHistoryEntry);
+    }
 
     // 调用 createEdge 来获取包含正确 type 和 targetHandle (原始键 for multi-input) 的边对象
     const newEdgeObjectFromCreateEdge = createEdge(params);
@@ -587,6 +626,7 @@ export function useCanvasConnections({
       data: newEdgeParamsForCoordinator.data,
       modifiedSlotInfo: modifiedSlotInfo ? { nodeId: modifiedSlotInfo.node.id, handleKey: modifiedSlotInfo.handleKey, direction: modifiedSlotInfo.direction, newDefinition: klona(modifiedSlotInfo.newDefinition) } : undefined,
       interfaceUpdateResult: interfaceUpdateResult ? klona(interfaceUpdateResult) : undefined,
+      replacedEdgeId: oldEdgeToReplace?.id // Roo: 记录被替换的边ID (如果发生替换)
     };
 
     if (newTargetIndexInOrderForHistory !== undefined) {
