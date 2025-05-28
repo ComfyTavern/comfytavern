@@ -1400,8 +1400,8 @@ export function useWorkflowInteractionCoordinator() {
       nextSnapshot,             // 1. mutableSnapshot
       edgeId,                   // 2. edgeId
       originalTargetNodeId,     // 3. originalTargetNodeId
-      originalTargetHandleId,   // 4. originalTargetHandleId
-      currentActiveTabId        // 5. activeTabIdString
+      originalTargetHandleId   // 4. originalTargetHandleId
+      // currentActiveTabId        // Roo: Removed 5th argument (activeTabIdString)
     );
 
     // 使用 action 返回的结果更新 nextSnapshot

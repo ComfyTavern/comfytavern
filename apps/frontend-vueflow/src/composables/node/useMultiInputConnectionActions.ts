@@ -238,8 +238,8 @@ export function useMultiInputConnectionActions(
     mutableSnapshot: WorkflowStateSnapshot,
     edgeId: string,
     originalTargetNodeId: string,
-    originalTargetHandleId: string,
-    activeTabIdString: string
+    originalTargetHandleId: string
+    // activeTabIdString: string // Roo: Removed as it's unused in this specific function
   ): Promise<{ modifiedElements: (VueFlowNode | Edge)[]; modifiedWorkflowData: (WorkflowObject & { id: string }) | null }> {
     const elements = mutableSnapshot.elements;
     const workflowData = mutableSnapshot.workflowData; // Though not directly modified here for multi-input logic
@@ -261,7 +261,7 @@ export function useMultiInputConnectionActions(
       return Promise.resolve({ modifiedElements: elements, modifiedWorkflowData: workflowData });
     }
 
-    const { originalKey: targetOriginalKey, index: oldTargetSubHandleIndex } = parseSubHandleId(originalTargetHandleId);
+    const { originalKey: targetOriginalKey } = parseSubHandleId(originalTargetHandleId); // Roo: Removed unused oldTargetSubHandleIndex
     const targetNodeData = originalTargetNode.data as NodeInstanceData;
 
     if (targetNodeData?.inputs?.[targetOriginalKey]?.multi === true) {
@@ -674,19 +674,43 @@ export function useMultiInputConnectionActions(
           });
           
           nodeData.inputs = nodeData.inputs || {};
-          // nodeData.inputs[newTargetOriginalKey] = nodeData.inputs[newTargetOriginalKey] || {}; // This line is problematic if it's GroupSlotInfo
-          
-          const newTargetInputSlot = nodeData.inputs[newTargetOriginalKey];
-          if (newTargetInputSlot && 'value' in newTargetInputSlot) {
-            newTargetInputSlot.value = new Array(finalOrderAtNewTarget.length).fill(undefined); // Rely on type guard narrowing
-          } else if (!newTargetInputSlot) {
-            // If the slot doesn't exist in data.inputs, but we have inputConnectionOrders,
-            // it implies it should be an InputDefinition. This case might need more robust handling
-            // like creating a minimal InputDefinition if schema allows. For now, log a warning.
-            console.warn(`[MultiInputActions] Input slot ${newTargetOriginalKey} not found in node data for multi-input value array init.`);
+          let targetSlotDefinition = nodeData.inputs[newTargetOriginalKey];
+
+          // Ensure the slot definition exists for the multi-input slot
+          if (!targetSlotDefinition) {
+            // This case implies the schema might be missing the input definition entirely,
+            // or newTargetOriginalKey is incorrect.
+            // For a multi-input (indicated by newTargetIndexInOrder being a number),
+            // we expect a definition.
+            // It's also possible the node's schema defines this input, but it hasn't been populated in `node.data.inputs` yet.
+            // We should try to fetch it from the node's schema if available.
+            // For now, we'll assume if it's not in data.inputs, it's an issue or needs creation.
+            console.error(`[MultiInputActions] Critical: Input slot definition for multi-input ${newTargetOriginalKey} not found in node data on target node ${newTargetNodeId}. Cannot initialize .value array.`);
           } else {
-            // It's a GroupSlotInfo, cannot set .value array
-             console.warn(`[MultiInputActions] Input slot ${newTargetOriginalKey} is a GroupSlotInfo, cannot set .value array for multi-input.`);
+            // Check if it's a ComfyInputDefinition and marked as multi.
+            // The 'multi' property is a good discriminator for ComfyInputDefinition vs GroupSlotInfo here.
+            if (targetSlotDefinition && 'multi' in targetSlotDefinition && (targetSlotDefinition as ComfyInputDefinition).multi === true) {
+                // At this point, targetSlotDefinition is known to be ComfyInputDefinition
+                const multiInputSlot = targetSlotDefinition as ComfyInputDefinition; // Narrow type for clarity
+
+                // Initialize .value if not present or undefined. This makes .value an array.
+                if (!('value' in multiInputSlot) || typeof (multiInputSlot as any).value === 'undefined') {
+                    (multiInputSlot as any).value = [];
+                    console.debug(`[MultiInputActions] Initialized .value array for native multi-input slot ${newTargetOriginalKey} on node ${newTargetNodeId}.`);
+                }
+
+                // Ensure .value is an array (it should be after the above block), then set its length and fill.
+                // This handles both freshly initialized 'value' and pre-existing 'value' that might not be an array (an error state for multi-input).
+                // Assigning a new array directly is safer.
+                (multiInputSlot as any).value = new Array(finalOrderAtNewTarget.length).fill(undefined);
+                console.debug(`[MultiInputActions] Set .value array for multi-input slot ${newTargetOriginalKey} on node ${newTargetNodeId} to length ${finalOrderAtNewTarget.length}.`);
+
+            } else if (targetSlotDefinition) { // It exists but is not a ComfyInputDefinition with multi:true
+                // This path means it's either a GroupSlotInfo, or a ComfyInputDefinition that is not multi,
+                // or a ComfyInputDefinition that is multi but the 'multi' property check failed (e.g. 'multi' is not 'true').
+                console.warn(`[MultiInputActions] Input slot ${newTargetOriginalKey} on node ${newTargetNodeId} is not a valid multi-input slot for .value array initialization (e.g., GroupSlotInfo, or non-multi/misconfigured ComfyInputDefinition).`);
+            }
+            // If targetSlotDefinition was null/undefined from the start, the outer 'if (!targetSlotDefinition)' at line 693 already handled logging an error.
           }
           console.debug(`[MultiInputActions:moveAndReconnectEdgeMultiInput (sync)] 多输入槽 ${newTargetOriginalKey} 的新顺序:`, JSON.parse(JSON.stringify(finalOrderAtNewTarget)));
 
