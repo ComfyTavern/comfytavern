@@ -109,13 +109,32 @@ export const useNodeStore = defineStore('node', () => {
    */
   const getNodeDefinitionByFullType = (fullType: string): FrontendNodeDefinition | undefined => {
     const parts = fullType.split(':');
-    if (parts.length !== 2) {
-      console.warn(`[NodeStore] Invalid fullType format provided to getNodeDefinitionByFullType: ${fullType}. Expected 'namespace:type'.`);
-      // Fallback: Try searching by the provided string as if it were a base type (for potential backward compatibility or simple types)
-      return nodeDefinitions.value.find(def => def.type === fullType);
+    if (parts.length === 2) {
+      // 标准查询 'namespace:type'
+      const [namespace, baseType] = parts;
+      return nodeDefinitions.value.find(def => def.namespace === namespace && def.type === baseType);
+    } else if (parts.length === 1 && fullType.trim() !== '') { // 确保 fullType 不是空字符串
+      // 查询只有基础类型名，例如 'NodeGroup'
+      const baseTypeQuery = fullType;
+      // 优先尝试在 'core' 命名空间查找
+      let foundDef = nodeDefinitions.value.find(def => def.namespace === 'core' && def.type === baseTypeQuery);
+      if (foundDef) {
+        return foundDef;
+      }
+      // 如果 'core' 中没有，则查找任何命名空间下的第一个匹配的基础类型
+      console.warn(`[NodeStore] Base type query '${baseTypeQuery}' did not find a 'core' namespaced version. Searching for the first match in any namespace.`);
+      foundDef = nodeDefinitions.value.find(def => def.type === baseTypeQuery);
+      if (foundDef) {
+        return foundDef;
+      }
+      // 如果仍然找不到
+      console.warn(`[NodeStore] No definition found for base type query '${baseTypeQuery}' in any namespace.`);
+      return undefined;
+    } else {
+      // 无效格式或空字符串
+      console.warn(`[NodeStore] Invalid or empty fullType format provided to getNodeDefinitionByFullType: '${fullType}'. Expected 'namespace:type' or non-empty 'type'.`);
+      return undefined;
     }
-    const [namespace, baseType] = parts;
-    return nodeDefinitions.value.find(def => def.namespace === namespace && def.type === baseType);
   };
 
 

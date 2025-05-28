@@ -102,19 +102,19 @@ export function isTypeCompatible(sourceSlot: GroupSlotInfo, targetSlot: GroupSlo
   // Compatibility based on SocketMatchCategory if DataFlowTypes differ but one is STRING
   // Example: Source is STRING, Target has matchCategory CODE
   if (sourceDft === DataFlowType.STRING && targetCats.includes(BuiltInSocketMatchCategory.CODE)) {
-      return true;
+    return true;
   }
   // Example: Source has matchCategory CODE, Target is STRING
   if (sourceCats.includes(BuiltInSocketMatchCategory.CODE) && targetDft === DataFlowType.STRING) {
-      return true;
+    return true;
   }
   // Example: Source is STRING, Target has matchCategory COMBO_OPTION
   if (sourceDft === DataFlowType.STRING && targetCats.includes(BuiltInSocketMatchCategory.COMBO_OPTION)) {
-      return true;
+    return true;
   }
-   // Example: Source has matchCategory COMBO_OPTION, Target is STRING
+  // Example: Source has matchCategory COMBO_OPTION, Target is STRING
   if (sourceCats.includes(BuiltInSocketMatchCategory.COMBO_OPTION) && targetDft === DataFlowType.STRING) {
-      return true;
+    return true;
   }
 
   return false;
@@ -260,7 +260,7 @@ async function updateNodeGroupWorkflowReferenceLogic(
         const targetHandleId = edge.targetHandle || "default";
         const targetNodeType = getNodeType(targetNode);
         const targetNodeDef = nodeDefinitions.value.find((def: any) => def.type === targetNodeType);
-        
+
         const targetInputDefinition = targetNodeDef?.inputs?.[targetHandleId];
 
         if (targetInputDefinition && outputSlot) {
@@ -280,9 +280,9 @@ async function updateNodeGroupWorkflowReferenceLogic(
             edgesToRemove.push(edge.id);
           }
         } else if (!outputSlot) { // Should be caught earlier by `if (!outputSlot)`
-             console.warn(`[updateNodeGroupWorkflowReferenceLogic] Output slot ${slotKey} is missing. Edge ${edge.id} considered incompatible.`);
-             incompatibleEdges.push(edge);
-             edgesToRemove.push(edge.id);
+          console.warn(`[updateNodeGroupWorkflowReferenceLogic] Output slot ${slotKey} is missing. Edge ${edge.id} considered incompatible.`);
+          incompatibleEdges.push(edge);
+          edgesToRemove.push(edge.id);
         } else { // targetInputDefinition is missing
           console.warn(
             `[updateNodeGroupWorkflowReferenceLogic] Target input definition ${targetHandleId} on node ${targetNode.id} not found. Edge ${edge.id} from output ${outputSlot.key} considered incompatible.`
@@ -340,9 +340,9 @@ async function updateNodeGroupWorkflowReferenceLogic(
             edgesToRemove.push(edge.id);
           }
         } else if (!inputSlot) { // Should be caught earlier by `if (!inputSlot)`
-            console.warn(`[updateNodeGroupWorkflowReferenceLogic] Input slot ${slotKey} is missing. Edge ${edge.id} considered incompatible.`);
-            incompatibleEdges.push(edge);
-            edgesToRemove.push(edge.id);
+          console.warn(`[updateNodeGroupWorkflowReferenceLogic] Input slot ${slotKey} is missing. Edge ${edge.id} considered incompatible.`);
+          incompatibleEdges.push(edge);
+          edgesToRemove.push(edge.id);
         } else { // sourceOutputDefinition is missing
           console.warn(
             `[updateNodeGroupWorkflowReferenceLogic] Source output definition ${sourceHandleId} on node ${sourceNode.id} not found. Edge ${edge.id} to input ${inputSlot.key} considered incompatible.`
@@ -664,7 +664,7 @@ async function createGroupFromSelectionLogic(
           data: { sourceType: edgeSourceType, targetType: edgeTargetType }, // Store types in data
         });
       } else {
-         console.warn(`[createGroupFromSelectionLogic] Mismatch: Boundary edge ${originalBoundaryEdge.id} target ${originalBoundaryEdge.target}:${targetHandleId} has no corresponding entry in groupInputsMap.`);
+        console.warn(`[createGroupFromSelectionLogic] Mismatch: Boundary edge ${originalBoundaryEdge.id} target ${originalBoundaryEdge.target}:${targetHandleId} has no corresponding entry in groupInputsMap.`);
       }
     } else {
       // Internal -> External (Connect Internal Source to GroupOutput)
@@ -692,7 +692,7 @@ async function createGroupFromSelectionLogic(
           data: { sourceType: edgeSourceType, targetType: edgeTargetType }, // Store types in data
         });
       } else {
-         console.warn(`[createGroupFromSelectionLogic] Mismatch: Boundary edge ${originalBoundaryEdge.id} source ${originalBoundaryEdge.source}:${sourceHandleId} has no corresponding entry in groupOutputsMap.`);
+        console.warn(`[createGroupFromSelectionLogic] Mismatch: Boundary edge ${originalBoundaryEdge.id} source ${originalBoundaryEdge.source}:${sourceHandleId} has no corresponding entry in groupOutputsMap.`);
       }
     }
   });
@@ -753,8 +753,7 @@ async function createGroupFromSelectionLogic(
   } catch (error) {
     console.error("[createGroupFromSelectionLogic] Error saving new workflow:", error);
     alert(
-      `创建节点组失败：无法保存新的工作流文件。\n${
-        error instanceof Error ? error.message : String(error)
+      `创建节点组失败：无法保存新的工作流文件。\n${error instanceof Error ? error.message : String(error)
       }`
     );
     return;
@@ -768,9 +767,12 @@ async function createGroupFromSelectionLogic(
 
   // --- 创建 NodeGroup 实例来替换选区 ---
   const nodeGroupNodeId = generateUniqueNodeId(currentTabId, "NodeGroup"); // 使用 generateUniqueNodeId 实例
-  const nodeGroupDef = nodeDefinitions.value.find((def: any) => def.type === 'core:NodeGroup'); // 使用 nodeDefinitions 实例
+  const nodeGroupDef = nodeDefinitions.value.find(
+    (def: any) => def.namespace === 'core' && def.type === 'NodeGroup'
+  ); // 使用 nodeDefinitions 实例
+
   if (!nodeGroupDef) {
-    console.error("[createGroupFromSelectionLogic] NodeGroup definition not found!");
+    console.error("[createGroupFromSelectionLogic] NodeGroup definition (namespace: 'core', type: 'NodeGroup') not found in nodeDefinitions.value!");
     alert("创建节点组失败：找不到 NodeGroup 定义。");
     return;
   }
@@ -895,14 +897,14 @@ async function createGroupFromSelectionLogic(
       console.debug(`[createGroupFromSelectionLogic] Command-based update applied for tab ${currentTabId}`);
 
     } catch (error) {
-        console.error(`[createGroupFromSelectionLogic] Error during command-based update for tab ${currentTabId}:`, error);
-        // Fallback or decide how to proceed if instance update fails
+      console.error(`[createGroupFromSelectionLogic] Error during command-based update for tab ${currentTabId}:`, error);
+      // Fallback or decide how to proceed if instance update fails
     }
   } else {
-      console.warn(`[createGroupFromSelectionLogic] No VueFlow instance found for tab ${currentTabId}. Cannot apply command-based update.`);
-      // If no instance, we still need to update the store's state directly
-      workflowStore.setElements(currentTabId, remainingElements);
-      // Viewport might be stale if instance wasn't available
+    console.warn(`[createGroupFromSelectionLogic] No VueFlow instance found for tab ${currentTabId}. Cannot apply command-based update.`);
+    // If no instance, we still need to update the store's state directly
+    workflowStore.setElements(currentTabId, remainingElements);
+    // Viewport might be stale if instance wasn't available
   }
 
   // **Crucially, update the manager's state AFTER instance update (or if no instance)**
@@ -915,27 +917,27 @@ async function createGroupFromSelectionLogic(
   // Get the workflow data for the snapshot
   const currentWorkflowData = workflowStore.getWorkflowData(currentTabId);
   if (!currentWorkflowData) {
-      console.error(`[createGroupFromSelectionLogic] Failed to get workflow data for tab ${currentTabId} before recording snapshot.`);
-      // Handle error - maybe don't record history?
+    console.error(`[createGroupFromSelectionLogic] Failed to get workflow data for tab ${currentTabId} before recording snapshot.`);
+    // Handle error - maybe don't record history?
   } else {
-      // Construct the snapshot payload manually
-      const snapshotPayload: WorkflowStateSnapshot = {
-          elements: remainingElements, // Use the calculated final elements
-          viewport: finalViewport,     // Use the final viewport
-          workflowData: currentWorkflowData // Use the fetched workflow data
-      };
-      console.debug(`[createGroupFromSelectionLogic] Recording history with constructed snapshot for tab ${currentTabId}`);
-      // 创建 HistoryEntry 对象
-      const historyEntry: HistoryEntry = createHistoryEntry(
-        'create', // actionType
-        'nodeGroup', // objectType
-        `创建节点组: ${nodeGroupInstance.label || nodeGroupNodeId}`, // summary
-        { nodeId: nodeGroupNodeId, referencedWorkflowId: newWorkflowId } // details
-      );
-      workflowStore.recordHistorySnapshot(
-          historyEntry, // <-- Pass HistoryEntry object
-          snapshotPayload // Pass the constructed payload
-      );
+    // Construct the snapshot payload manually
+    const snapshotPayload: WorkflowStateSnapshot = {
+      elements: remainingElements, // Use the calculated final elements
+      viewport: finalViewport,     // Use the final viewport
+      workflowData: currentWorkflowData // Use the fetched workflow data
+    };
+    console.debug(`[createGroupFromSelectionLogic] Recording history with constructed snapshot for tab ${currentTabId}`);
+    // 创建 HistoryEntry 对象
+    const historyEntry: HistoryEntry = createHistoryEntry(
+      'create', // actionType
+      'nodeGroup', // objectType
+      `创建节点组: ${nodeGroupInstance.label || nodeGroupNodeId}`, // summary
+      { nodeId: nodeGroupNodeId, referencedWorkflowId: newWorkflowId } // details
+    );
+    workflowStore.recordHistorySnapshot(
+      historyEntry, // <-- Pass HistoryEntry object
+      snapshotPayload // Pass the constructed payload
+    );
   }
   tabStore.updateTab(currentTabId, { isDirty: true });
 
@@ -956,7 +958,7 @@ export function useWorkflowGrouping() {
   const { generateUniqueNodeId } = useUniqueNodeId();
   const { getEdgeStyleProps } = useEdgeStyles();
   const workflowDataHandler = useWorkflowData();
- 
+
   /**
    * 公开的函数，用于从外部（如快捷键）触发分组过程。
    * @param selectedNodeIds 要分组的节点 ID 列表。
