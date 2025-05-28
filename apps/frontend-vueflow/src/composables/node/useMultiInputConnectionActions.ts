@@ -9,7 +9,7 @@ import {
   BuiltInSocketMatchCategory,
   type DataFlowTypeName,
   type WorkflowObject,
-  type InputDefinition,
+  type InputDefinition as ComfyInputDefinition, // GUGU: Use alias to avoid potential name collision
   type OutputDefinition,
   type GroupInterfaceInfo,
 } from "@comfytavern/types";
@@ -19,15 +19,17 @@ import type { Edge, Node as VueFlowNode } from '@vue-flow/core';
 // import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager"; // Roo: Marked as unused
 import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils"; // GUGU: Import parseSubHandleId
 import { useGroupInterfaceSync } from "@/composables/group/useGroupInterfaceSync";
+import type { WorkflowStateSnapshot } from "@/types/workflowTypes";
 
 // import { useTabStore } from "@/stores/tabStore";
 
 // Local type for node.data to provide better type safety within this composable
 interface NodeInstanceData {
-  inputs?: Record<string, InputDefinition | GroupSlotInfo>;
+  inputs?: Record<string, ComfyInputDefinition | GroupSlotInfo>;
   outputs?: Record<string, OutputDefinition | GroupSlotInfo>;
   groupInterface?: GroupInterfaceInfo;
-  // Add other known properties like inputConnectionOrders, configValues if they are accessed
+  inputConnectionOrders?: Record<string, string[]>; // GUGU: Added for type safety
+  // Add other known properties like configValues if they are accessed
 }
 
 /**
@@ -443,198 +445,184 @@ export function useMultiInputConnectionActions(
    * Handles moving and reconnecting an edge, updating inputConnectionOrders for multi-inputs.
    * Assumes newTargetHandleId has the correct __index if connecting to multi-input.
    */
-  async function moveAndReconnectEdgeMultiInput(
-    _edgeToMoveId: string,
-    _originalTargetNodeId: string,
-    _originalTargetHandleId: string,
-    _newSourceNodeId: string,
-    _newSourceHandleId: string | undefined,
-    _newTargetNodeId: string,
-    _newTargetHandleId: string | undefined,
-    _newTargetIndexInOrder: number | undefined,
-    _entry: HistoryEntry
-  ) {
-    // console.debug(`[DEBUG-MI] moveAndReconnectEdgeMultiInput: Entry. Edge: ${_edgeToMoveId}, OldTarget: ${_originalTargetNodeId}::${_originalTargetHandleId}, NewTarget: ${_newTargetNodeId}::${_newTargetHandleId}, NewIndex: ${_newTargetIndexInOrder}`); // Roo: Commented out as parameters are marked unused and function body is refactor-pending.
-    // Roo: This function relies on getCurrentSnapshotLocal and direct store/manager access. Pending refactor.
-    console.error(`[MultiInputActions] Function 'moveAndReconnectEdgeMultiInput' is pending full refactoring.`);
-    return Promise.resolve();
-    /*
-    console.debug(`[DEBUG-MI] moveAndReconnectEdgeMultiInput: Entry. Edge: ${edgeToMoveId}, OldTarget: ${originalTargetNodeId}::${originalTargetHandleId}, NewTarget: ${newTargetNodeId}::${newTargetHandleId}, NewIndex: ${newTargetIndexInOrder}`);
-    if (!activeTabId.value) {
-      console.error("[DEBUG-MI] moveAndReconnectEdgeMultiInput: No active tab ID.");
-      return;
-    }
-    const tabId = activeTabId.value;
+  // Roo: 重构 moveAndReconnectEdgeMultiInput
+  function moveAndReconnectEdgeMultiInput(
+    mutableSnapshot: WorkflowStateSnapshot, // 使用 WorkflowStateSnapshot 类型
+    edgeToMoveId: string,
+    originalTargetNodeId: string,
+    originalTargetHandleId: string,
+    newSourceNodeId: string,
+    newSourceHandleId: string | undefined,
+    newTargetNodeId: string | undefined, // 允许边被删除
+    newTargetHandleId: string | undefined, // 允许边被删除
+    newTargetIndexInOrder: number | undefined,
+    // 以下参数由协调器处理并预先合并到快照，或作为单独参数传入
+    // modifiedSlotInfo?: { nodeId: string, handleKey: string, newDefinition: GroupSlotInfo, direction: 'inputs' | 'outputs' },
+    // interfaceUpdateResult?: { inputs: Record<string, GroupSlotInfo>, outputs: Record<string, GroupSlotInfo> },
+    // newEdgeData?: { sourceType: DataFlowTypeName, targetType: DataFlowTypeName }, // 这个应该直接在协调器中更新到 edgeToUpdateInSnapshot.data
+    activeTabIdString: string // 用于 handleConvertibleAnyTypeChange
+  ): { modifiedElements: (VueFlowNode | Edge)[]; modifiedWorkflowData?: (WorkflowObject & { id: string }) | null } {
+    console.debug(`[MultiInputActions] moveAndReconnectEdgeMultiInput (sync): Entry. Edge: ${edgeToMoveId}, OldTarget: ${originalTargetNodeId}::${originalTargetHandleId}, NewTarget: ${newTargetNodeId}::${newTargetHandleId}, NewIndex: ${newTargetIndexInOrder}`);
 
-    const modifiedSlotInfoFromHistory = entry.details?.modifiedSlotInfo as ({ nodeId: string, handleKey: string, newDefinition: GroupSlotInfo, direction: 'inputs' | 'outputs' }) | undefined;
-    const interfaceUpdateResultFromHistory = entry.details?.interfaceUpdateResult as ({ inputs: Record<string, GroupSlotInfo>, outputs: Record<string, GroupSlotInfo> }) | undefined;
-    const newEdgeDataFromHistory = entry.details?.newEdgeData as ({ sourceType: DataFlowTypeName, targetType: DataFlowTypeName }) | undefined;
+    const elementsToModify = mutableSnapshot.elements;
+    let workflowDataToModify = mutableSnapshot.workflowData; // 可被 handleConvertibleAnyTypeChange 修改
 
-    const currentSnapshot = getCurrentSnapshotLocal(tabId); // TS Error: getCurrentSnapshotLocal
-    if (!currentSnapshot) {
-      console.error(
-        `[MultiInputActions:moveAndReconnectEdgeMultiInput] 无法获取标签页 ${tabId} 的当前快照。`
-      );
-      return;
-    }
-
-    const edgeIndexInCurrent = currentSnapshot.elements.findIndex((el: VueFlowNode | Edge) => el && el.id === edgeToMoveId && "source" in el); // Roo: Added type
-    if (edgeIndexInCurrent === -1) {
-      console.warn(
-        `[MultiInputActions:moveAndReconnectEdgeMultiInput] 未找到要移动的边 ${edgeToMoveId}。跳过。`
-      );
-      return;
-    }
-
-    let nextSnapshot = klona(currentSnapshot);
-
-    if (modifiedSlotInfoFromHistory) {
-      const nodeToUpdateInSnapshot = nextSnapshot.elements.find(
-        (el: VueFlowNode | Edge) => el.id === modifiedSlotInfoFromHistory.nodeId && !("source" in el) // Roo: Added type
-      ) as VueFlowNode | undefined;
-      if (nodeToUpdateInSnapshot) {
-        nodeToUpdateInSnapshot.data = nodeToUpdateInSnapshot.data || {};
-        if (modifiedSlotInfoFromHistory.direction === 'inputs') {
-          nodeToUpdateInSnapshot.data.inputs = nodeToUpdateInSnapshot.data.inputs || {};
-          nodeToUpdateInSnapshot.data.inputs[modifiedSlotInfoFromHistory.handleKey] = klona(modifiedSlotInfoFromHistory.newDefinition);
-        } else {
-          nodeToUpdateInSnapshot.data.outputs = nodeToUpdateInSnapshot.data.outputs || {};
-          nodeToUpdateInSnapshot.data.outputs[modifiedSlotInfoFromHistory.handleKey] = klona(modifiedSlotInfoFromHistory.newDefinition);
-        }
-      } else {
-        console.warn(`[MultiInputActions:moveAndReconnectEdgeMultiInput] Node ${modifiedSlotInfoFromHistory.nodeId} for slot update not found in snapshot.`);
-      }
-    }
-
-    if (interfaceUpdateResultFromHistory) {
-      if (!nextSnapshot.workflowData) {
-        console.warn("[MultiInputActions:moveAndReconnectEdgeMultiInput] nextSnapshot.workflowData is null/undefined. Initializing.");
-        nextSnapshot.workflowData = { id: `wf-${Date.now()}`, name: "Untitled Workflow", nodes: [], edges: [], viewport: { x:0, y:0, zoom:1 }, interfaceInputs: {}, interfaceOutputs: {} };
-      }
-      if (Object.keys(interfaceUpdateResultFromHistory.inputs).length > 0) {
-        nextSnapshot.workflowData.interfaceInputs = klona(interfaceUpdateResultFromHistory.inputs);
-      }
-      if (Object.keys(interfaceUpdateResultFromHistory.outputs).length > 0) {
-        nextSnapshot.workflowData.interfaceOutputs = klona(interfaceUpdateResultFromHistory.outputs);
-      }
-    }
-
+    // 1. 从旧目标断开连接
     const { originalKey: oldTargetOriginalKey } = parseSubHandleId(originalTargetHandleId);
-    const originalTargetNodeInNext = nextSnapshot.elements.find(
-      (el: VueFlowNode | Edge) => el && el.id === originalTargetNodeId && !("source" in el) // Roo: Added type
+    const originalTargetNodeInSnapshot = elementsToModify.find(
+      (el) => el && el.id === originalTargetNodeId && !("source" in el)
     ) as VueFlowNode | undefined;
 
-    if (oldTargetOriginalKey && originalTargetNodeInNext?.data?.inputConnectionOrders?.[oldTargetOriginalKey]) {
-      const oldOrder = originalTargetNodeInNext.data.inputConnectionOrders[oldTargetOriginalKey] as string[];
+    if (oldTargetOriginalKey && originalTargetNodeInSnapshot?.data?.inputConnectionOrders?.[oldTargetOriginalKey]) {
+      const nodeData = originalTargetNodeInSnapshot.data as NodeInstanceData; // 类型断言
+      const oldOrder = nodeData.inputConnectionOrders![oldTargetOriginalKey] as string[];
       const newOrderForOldTarget = oldOrder.filter((id: string) => id !== edgeToMoveId);
-      if (newOrderForOldTarget.length !== oldOrder.length) {
-        originalTargetNodeInNext.data.inputConnectionOrders[oldTargetOriginalKey] = newOrderForOldTarget;
+
+      if (newOrderForOldTarget.length !== oldOrder.length) { // 只有当边确实在旧顺序中时才更新
+        nodeData.inputConnectionOrders![oldTargetOriginalKey] = newOrderForOldTarget;
+
         newOrderForOldTarget.forEach((edgeInOrderId, indexInOrder) => {
-          const edgeToUpdate = nextSnapshot.elements.find(
-            (el: VueFlowNode | Edge) => el && el.id === edgeInOrderId && "source" in el // Roo: Added type
+          const edgeToUpdate = elementsToModify.find(
+            (el) => el && el.id === edgeInOrderId && "source" in el
           ) as Edge | undefined;
           if (edgeToUpdate) {
             edgeToUpdate.targetHandle = `${oldTargetOriginalKey}__${indexInOrder}`;
           }
         });
-        if (originalTargetNodeInNext.data) {
-            if(!originalTargetNodeInNext.data.inputs) originalTargetNodeInNext.data.inputs = {};
-            if(!originalTargetNodeInNext.data.inputs[oldTargetOriginalKey]) originalTargetNodeInNext.data.inputs[oldTargetOriginalKey] = {};
-            originalTargetNodeInNext.data.inputs[oldTargetOriginalKey]!.value = new Array(newOrderForOldTarget.length).fill(undefined);
+
+        if (nodeData.inputs && nodeData.inputs[oldTargetOriginalKey]) {
+          const inputSlot = nodeData.inputs[oldTargetOriginalKey];
+          if (inputSlot && 'value' in inputSlot) { // Type guard for InputDefinition
+            inputSlot.value = new Array(newOrderForOldTarget.length).fill(undefined); // Rely on type guard narrowing
+          }
         }
+
         if (newOrderForOldTarget.length === 0) {
-            if(originalTargetNodeInNext.data.inputConnectionOrders) delete originalTargetNodeInNext.data.inputConnectionOrders[oldTargetOriginalKey];
-            if(originalTargetNodeInNext.data.inputConnectionOrders && Object.keys(originalTargetNodeInNext.data.inputConnectionOrders).length === 0) delete originalTargetNodeInNext.data.inputConnectionOrders;
-            if(originalTargetNodeInNext.data.inputs?.[oldTargetOriginalKey]) {
-                delete originalTargetNodeInNext.data.inputs[oldTargetOriginalKey]!.value;
-                 if(Object.keys(originalTargetNodeInNext.data.inputs[oldTargetOriginalKey]!).length === 0) delete originalTargetNodeInNext.data.inputs[oldTargetOriginalKey];
-                 if(Object.keys(originalTargetNodeInNext.data.inputs).length === 0) delete originalTargetNodeInNext.data.inputs;
+          if (nodeData.inputConnectionOrders) delete nodeData.inputConnectionOrders[oldTargetOriginalKey];
+          if (nodeData.inputConnectionOrders && Object.keys(nodeData.inputConnectionOrders).length === 0) {
+            delete nodeData.inputConnectionOrders;
+          }
+          if (nodeData.inputs?.[oldTargetOriginalKey]) {
+            const inputSlotToClean = nodeData.inputs[oldTargetOriginalKey];
+            if (inputSlotToClean && 'value' in inputSlotToClean) {
+              delete inputSlotToClean.value; // Rely on type guard narrowing
             }
+            if (Object.keys(inputSlotToClean!).length === 0) { // Check after potentially deleting value
+              delete nodeData.inputs[oldTargetOriginalKey];
+            }
+            if (Object.keys(nodeData.inputs).length === 0) {
+              delete nodeData.inputs;
+            }
+          }
         }
       }
     }
 
-    const edgeToUpdateInNext = nextSnapshot.elements.find(
-      (el: VueFlowNode | Edge) => el && el.id === edgeToMoveId && "source" in el // Roo: Added type
-    ) as Edge | undefined;
+    // 2. 更新或移除边本身
+    const edgeToUpdateIndex = elementsToModify.findIndex(
+      (el) => el && el.id === edgeToMoveId && "source" in el
+    );
 
-    if (!edgeToUpdateInNext) {
-      console.error(`[MultiInputActions:moveAndReconnectEdgeMultiInput] 在 nextSnapshot 中未找到边 ${edgeToMoveId}。`);
-      return;
-    }
-    
-    if (newTargetNodeId && newTargetHandleId) {
-        edgeToUpdateInNext.source = newSourceNodeId;
-        edgeToUpdateInNext.sourceHandle = newSourceHandleId;
-        edgeToUpdateInNext.target = newTargetNodeId;
-        if (newEdgeDataFromHistory) {
-          edgeToUpdateInNext.data = { ...edgeToUpdateInNext.data, ...klona(newEdgeDataFromHistory) };
-        }
-    } else {
-        nextSnapshot.elements = nextSnapshot.elements.filter((el: VueFlowNode | Edge) => el.id !== edgeToMoveId); // Roo: Added type
+    if (edgeToUpdateIndex === -1) {
+      console.warn(`[MultiInputActions:moveAndReconnectEdgeMultiInput (sync)] 未找到要移动的边 ${edgeToMoveId}。跳过。`);
+      return { modifiedElements: elementsToModify, modifiedWorkflowData: workflowDataToModify };
     }
 
-    if (newTargetNodeId && newTargetHandleId && typeof newTargetIndexInOrder === "number") {
-      const { originalKey: newTargetOriginalKey } = parseSubHandleId(newTargetHandleId);
-      if (newTargetOriginalKey) {
-        const newTargetNodeInNext = nextSnapshot.elements.find(
-          (el: VueFlowNode | Edge) => el && el.id === newTargetNodeId && !("source" in el) // Roo: Added type
-        ) as VueFlowNode | undefined;
+    const edgeToUpdateInSnapshot = elementsToModify[edgeToUpdateIndex] as Edge;
 
-        if (newTargetNodeInNext) {
-          newTargetNodeInNext.data = newTargetNodeInNext.data || {};
-          newTargetNodeInNext.data.inputConnectionOrders =
-            newTargetNodeInNext.data.inputConnectionOrders || {};
-          const currentOrderAtNewTarget =
-            newTargetNodeInNext.data.inputConnectionOrders[newTargetOriginalKey] || [];
+    if (newTargetNodeId && newTargetHandleId) { // 边被连接到新的有效目标
+      edgeToUpdateInSnapshot.source = newSourceNodeId;
+      edgeToUpdateInSnapshot.sourceHandle = newSourceHandleId;
+      edgeToUpdateInSnapshot.target = newTargetNodeId;
+      // edgeToUpdateInSnapshot.targetHandle 将在下面 "连接到新目标" 部分处理
+      // newEdgeData (sourceType, targetType) 应该由协调器在调用此函数前，
+      // 通过 handleConvertibleAnyTypeChange 或其他逻辑确定并直接设置到 edgeToUpdateInSnapshot.data
+    } else { // 边被删除 (拖到画布上释放)
+      elementsToModify.splice(edgeToUpdateIndex, 1);
+      // 如果边被删除，后续的 "连接到新目标" 和 "CONVERTIBLE_ANY" 处理将不适用
+      console.debug(`[MultiInputActions:moveAndReconnectEdgeMultiInput (sync)] 边 ${edgeToMoveId} 已从 elements 中移除。`);
+      return { modifiedElements: elementsToModify, modifiedWorkflowData: workflowDataToModify };
+    }
+
+    // 3. 连接到新目标
+    if (newTargetNodeId && newTargetHandleId) { // 确保边没有被删除
+      const newTargetNodeInSnapshot = elementsToModify.find(
+        (el) => el && el.id === newTargetNodeId && !("source" in el)
+      ) as VueFlowNode | undefined;
+
+      if (newTargetNodeInSnapshot) {
+        const { originalKey: newTargetOriginalKey } = parseSubHandleId(newTargetHandleId);
+
+        if (typeof newTargetIndexInOrder === "number" && newTargetOriginalKey) { // 连接到多输入
+          const nodeData = newTargetNodeInSnapshot.data as NodeInstanceData; // 类型断言
+          nodeData.inputConnectionOrders = nodeData.inputConnectionOrders || {};
+          const currentOrderAtNewTarget = (nodeData.inputConnectionOrders[newTargetOriginalKey] || []) as string[];
+          
           let finalOrderAtNewTarget = [...currentOrderAtNewTarget];
           const existingIdxInNewTarget = finalOrderAtNewTarget.indexOf(edgeToMoveId);
-          if (existingIdxInNewTarget !== -1) {
+          if (existingIdxInNewTarget !== -1) { // 如果边已存在于目标顺序中 (不太可能，但防御性处理)
             finalOrderAtNewTarget.splice(existingIdxInNewTarget, 1);
           }
+          
           const validInsertAtIndex = Math.max(0, Math.min(newTargetIndexInOrder, finalOrderAtNewTarget.length));
           finalOrderAtNewTarget.splice(validInsertAtIndex, 0, edgeToMoveId);
-          newTargetNodeInNext.data.inputConnectionOrders[newTargetOriginalKey] = finalOrderAtNewTarget;
+          
+          nodeData.inputConnectionOrders[newTargetOriginalKey] = finalOrderAtNewTarget;
+
           finalOrderAtNewTarget.forEach((edgeInOrderId, indexInOrder) => {
-            const edgeToReindex = nextSnapshot.elements.find(
-              (el: VueFlowNode | Edge) => el && el.id === edgeInOrderId && "source" in el // Roo: Added type
+            const edgeToReindex = elementsToModify.find(
+              (el) => el && el.id === edgeInOrderId && "source" in el
             ) as Edge | undefined;
             if (edgeToReindex) {
               edgeToReindex.targetHandle = `${newTargetOriginalKey}__${indexInOrder}`;
             }
           });
-          if (newTargetNodeInNext.data) {
-            if(!newTargetNodeInNext.data.inputs) newTargetNodeInNext.data.inputs = {};
-            if(!newTargetNodeInNext.data.inputs[newTargetOriginalKey]) newTargetNodeInNext.data.inputs[newTargetOriginalKey] = {};
-            newTargetNodeInNext.data.inputs[newTargetOriginalKey]!.value = new Array(finalOrderAtNewTarget.length).fill(undefined);
+          
+          nodeData.inputs = nodeData.inputs || {};
+          // nodeData.inputs[newTargetOriginalKey] = nodeData.inputs[newTargetOriginalKey] || {}; // This line is problematic if it's GroupSlotInfo
+          
+          const newTargetInputSlot = nodeData.inputs[newTargetOriginalKey];
+          if (newTargetInputSlot && 'value' in newTargetInputSlot) {
+            newTargetInputSlot.value = new Array(finalOrderAtNewTarget.length).fill(undefined); // Rely on type guard narrowing
+          } else if (!newTargetInputSlot) {
+            // If the slot doesn't exist in data.inputs, but we have inputConnectionOrders,
+            // it implies it should be an InputDefinition. This case might need more robust handling
+            // like creating a minimal InputDefinition if schema allows. For now, log a warning.
+            console.warn(`[MultiInputActions] Input slot ${newTargetOriginalKey} not found in node data for multi-input value array init.`);
+          } else {
+            // It's a GroupSlotInfo, cannot set .value array
+             console.warn(`[MultiInputActions] Input slot ${newTargetOriginalKey} is a GroupSlotInfo, cannot set .value array for multi-input.`);
           }
+          console.debug(`[MultiInputActions:moveAndReconnectEdgeMultiInput (sync)] 多输入槽 ${newTargetOriginalKey} 的新顺序:`, JSON.parse(JSON.stringify(finalOrderAtNewTarget)));
+
+        } else if (newTargetHandleId) { // 连接到单输入
+          edgeToUpdateInSnapshot.targetHandle = newTargetHandleId;
+           console.debug(`[MultiInputActions:moveAndReconnectEdgeMultiInput (sync)] 单输入槽 ${newTargetHandleId} 的 targetHandle 已设置。`);
         }
+      } else {
+        console.warn(`[MultiInputActions:moveAndReconnectEdgeMultiInput (sync)] 未找到新的目标节点 ${newTargetNodeId}。`);
       }
-    } else if (newTargetNodeId && newTargetHandleId && edgeToUpdateInNext) {
-        edgeToUpdateInNext.targetHandle = newTargetHandleId;
     }
 
-    if (!nextSnapshot.viewport && currentSnapshot.viewport) {
-        nextSnapshot.viewport = klona(currentSnapshot.viewport);
+    // 4. 处理 CONVERTIBLE_ANY 类型变化
+    // 这一步应该在所有连接逻辑完成后，并且边已经更新了其 source/target/sourceHandle/targetHandle
+    if (newTargetNodeId && newTargetHandleId && edgeToUpdateInSnapshot) { // 确保边仍然存在且已连接
+        const { updatedElements, updatedWorkflowData } = handleConvertibleAnyTypeChange(
+            edgeToUpdateInSnapshot.source,
+            edgeToUpdateInSnapshot.sourceHandle,
+            edgeToUpdateInSnapshot.target, // 使用更新后的 target
+            edgeToUpdateInSnapshot.targetHandle, // 使用更新后的 targetHandle
+            elementsToModify,
+            workflowDataToModify,
+            activeTabIdString
+        );
+        // 更新 elementsToModify 和 workflowDataToModify 的引用
+        mutableSnapshot.elements = updatedElements; // 直接修改传入快照的属性
+        mutableSnapshot.workflowData = updatedWorkflowData; // 直接修改传入快照的属性
+        workflowDataToModify = updatedWorkflowData; // 更新局部变量以保持一致性
     }
-
-    try {
-      const elementsChanged = JSON.stringify(currentSnapshot.elements) !== JSON.stringify(nextSnapshot.elements);
-      const workflowDataChanged = JSON.stringify(currentSnapshot.workflowData) !== JSON.stringify(nextSnapshot.workflowData);
-
-      if (elementsChanged || workflowDataChanged) {
-        workflowManager.applyStateSnapshot(tabId, nextSnapshot); // TS Error: workflowManager
-      }
-
-      await workflowStore.applyElementChangesAndRecordHistory( // TS Error: workflowStore
-        tabId,
-        nextSnapshot.elements,
-        entry
-      );
-    } catch (error) {
-      console.error("[DEBUG-MI] moveAndReconnectEdgeMultiInput: 更新失败:", error);
-    }
-    */
+    
+    return { modifiedElements: mutableSnapshot.elements, modifiedWorkflowData: mutableSnapshot.workflowData };
   }
 
 
@@ -644,7 +632,7 @@ export function useMultiInputConnectionActions(
     handleId: string | null | undefined,
     handleType: 'source' | 'target',
     currentWorkflowData?: WorkflowObject | undefined // Changed type
-  ): InputDefinition | OutputDefinition | GroupSlotInfo | undefined { // Changed return type
+  ): ComfyInputDefinition | OutputDefinition | GroupSlotInfo | undefined { // Changed return type
     if (!handleId) return undefined;
 
     const { originalKey: slotKey } = parseSubHandleId(handleId); // GUGU: Use imported parseSubHandleId
@@ -669,7 +657,7 @@ export function useMultiInputConnectionActions(
       } else if (nodeType === 'core:NodeGroup') {
         return nodeData?.groupInterface?.inputs?.[slotKey];
       } else {
-        return nodeData?.inputs?.[slotKey] as InputDefinition | undefined; // Cast for clarity
+        return nodeData?.inputs?.[slotKey] as ComfyInputDefinition | undefined; // Cast for clarity
       }
     }
   }
@@ -686,7 +674,7 @@ export function useMultiInputConnectionActions(
     elementsToModifyArg: (VueFlowNode | Edge)[], // Roo: Changed type to include Edge
     workflowDataToModifyArg: (WorkflowObject & { id: string }) | undefined | null, // Roo: Allow null
     activeTabIdString: string
-  ): /* Promise<...> */ { updatedElements: (VueFlowNode | Edge)[]; updatedWorkflowData: (WorkflowObject & { id: string }) | undefined | null } {
+  ): /* Promise<...> */ { updatedElements: (VueFlowNode | Edge)[]; updatedWorkflowData: (WorkflowObject & { id: string }) | null } { // GUGU: Changed undefined to null
     // Roo: 操作传入参数的克隆副本，以避免直接修改原始快照外的引用，除非这是期望的行为。
     // Roo: connectEdgeToMultiInput 的调用者 (InteractionCoordinator) 应该已经克隆了整个快照。
     // Roo: 因此，这里可以直接修改 elementsToModifyArg 和 workflowDataToModifyArg，或者克隆它们。
@@ -697,13 +685,19 @@ export function useMultiInputConnectionActions(
     const sourceNode = elementsCopy.find(n => n.id === sourceNodeId && !("source" in n)) as VueFlowNode | undefined; // Roo: Ensure it's a node
     const targetNode = elementsCopy.find(n => n.id === targetNodeId && !("source" in n)) as VueFlowNode | undefined; // Roo: Ensure it's a node
 
-    if (!sourceNode || !targetNode) return { updatedElements: elementsCopy, updatedWorkflowData: workflowDataCopy };
+    if (!sourceNode || !targetNode) return {
+      updatedElements: elementsCopy as (VueFlowNode | Edge)[],
+      updatedWorkflowData: workflowDataCopy as ((WorkflowObject & { id: string }) | null)
+    };
 
     // Roo: workflowDataCopy 可能是 null，getSlotDefinition 需要能处理
     const sourceSlotDef = getSlotDefinition(sourceNode, sourceHandleId, 'source', workflowDataCopy ?? undefined);
     const targetSlotDef = getSlotDefinition(targetNode, targetHandleId, 'target', workflowDataCopy ?? undefined);
 
-    if (!sourceSlotDef || !targetSlotDef) return { updatedElements: elementsCopy, updatedWorkflowData: workflowDataCopy };
+    if (!sourceSlotDef || !targetSlotDef) return {
+      updatedElements: elementsCopy as (VueFlowNode | Edge)[],
+      updatedWorkflowData: workflowDataCopy as ((WorkflowObject & { id: string }) | null)
+    };
 
     let nodeToUpdate: VueFlowNode | undefined;
     let keyOfSlotOnUpdatedNode: string | undefined; // Renamed for clarity
@@ -718,30 +712,39 @@ export function useMultiInputConnectionActions(
       nodeToUpdate = sourceNode;
       keyOfSlotOnUpdatedNode = parseSubHandleId(sourceHandleId).originalKey; // GUGU: Use imported parseSubHandleId
       newType = targetSlotDef.dataFlowType;
-      newCategories = targetSlotDef.matchCategories?.filter(cat => cat !== BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE && cat !== BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD) || [];
+      newCategories = targetSlotDef.matchCategories?.filter((cat: string) => cat !== BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE && cat !== BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD) || [];
       isSourceNodeBeingUpdated = true;
     } else if (isTargetConvertible && !isSourceConvertible && sourceSlotDef.dataFlowType !== DataFlowType.WILDCARD && sourceSlotDef.dataFlowType !== DataFlowType.CONVERTIBLE_ANY) {
       nodeToUpdate = targetNode;
       keyOfSlotOnUpdatedNode = parseSubHandleId(targetHandleId).originalKey; // GUGU: Use imported parseSubHandleId
       newType = sourceSlotDef.dataFlowType;
-      newCategories = sourceSlotDef.matchCategories?.filter(cat => cat !== BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE && cat !== BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD) || [];
+      newCategories = sourceSlotDef.matchCategories?.filter((cat: string) => cat !== BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE && cat !== BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD) || [];
       isSourceNodeBeingUpdated = false;
     } else {
-      return { updatedElements: elementsCopy, updatedWorkflowData: workflowDataCopy };
+      return {
+        updatedElements: elementsCopy as (VueFlowNode | Edge)[],
+        updatedWorkflowData: workflowDataCopy as ((WorkflowObject & { id: string }) | null)
+      };
     }
 
     if (!nodeToUpdate || !keyOfSlotOnUpdatedNode || !newType) {
-      return { updatedElements: elementsCopy, updatedWorkflowData: workflowDataCopy };
+      return {
+        updatedElements: elementsCopy as (VueFlowNode | Edge)[],
+        updatedWorkflowData: workflowDataCopy as ((WorkflowObject & { id: string }) | null)
+      };
     }
 
     const nodeToUpdateInCopy = elementsCopy.find(n => n.id === nodeToUpdate!.id && !("source" in n)) as VueFlowNode | undefined; // Roo: Ensure it's a node
-    if (!nodeToUpdateInCopy) return { updatedElements: elementsCopy, updatedWorkflowData: workflowDataCopy };
+    if (!nodeToUpdateInCopy) return {
+      updatedElements: elementsCopy as (VueFlowNode | Edge)[],
+      updatedWorkflowData: workflowDataCopy as ((WorkflowObject & { id: string }) | null)
+    };
     
     nodeToUpdateInCopy.data = nodeToUpdateInCopy.data || {}; // Roo: Ensure data object exists
     const nodeDataToUpdate = nodeToUpdateInCopy.data as NodeInstanceData; // Use local type
 
     const nodeType = getNodeType(nodeToUpdateInCopy);
-    let slotDefinitionToUpdate: InputDefinition | OutputDefinition | GroupSlotInfo | undefined;
+    let slotDefinitionToUpdate: ComfyInputDefinition | OutputDefinition | GroupSlotInfo | undefined;
 
     if (nodeType === 'core:NodeGroup') {
       const interfaceKey = isSourceNodeBeingUpdated ? 'outputs' : 'inputs';
@@ -806,8 +809,8 @@ export function useMultiInputConnectionActions(
         slotDefinitionToUpdate = nodeDataToUpdate.inputs[keyOfSlotOnUpdatedNode];
       }
       if (slotDefinitionToUpdate) {
-        (slotDefinitionToUpdate as InputDefinition).dataFlowType = newType;
-        (slotDefinitionToUpdate as InputDefinition).matchCategories = newCategories;
+        (slotDefinitionToUpdate as ComfyInputDefinition).dataFlowType = newType;
+        (slotDefinitionToUpdate as ComfyInputDefinition).matchCategories = newCategories;
 
         const { syncInterfaceSlotFromConnection } = useGroupInterfaceSync();
         const updatedSlotInfoForSync: GroupSlotInfo = {
@@ -820,7 +823,7 @@ export function useMultiInputConnectionActions(
         if (syncedInterfaces) {
           if (workflowDataCopy) {
             workflowDataCopy.interfaceOutputs = syncedInterfaces.outputs;
-          } else if (workflowDataCopy === undefined) { // Explicitly check for undefined
+          } else if (workflowDataCopy === null && workflowDataToModifyArg === null) { // GUGU: More precise check for creating new if original was null
              workflowDataCopy = {
                id: `temp-wf-go-${Date.now()}`, // Ensure unique and descriptive temp ID
                name: 'Temporary Workflow Data (GroupOutput Sync)', // Ensure name is present
@@ -845,7 +848,7 @@ export function useMultiInputConnectionActions(
         
         // Mark as no longer dynamically typed
         if ('allowDynamicType' in slotDefinitionToUpdate) {
-          (slotDefinitionToUpdate as (InputDefinition | OutputDefinition | GroupSlotInfo)).allowDynamicType = false;
+          (slotDefinitionToUpdate as (ComfyInputDefinition | OutputDefinition | GroupSlotInfo)).allowDynamicType = false;
         }
 
         const slotToCopyFrom = isSourceNodeBeingUpdated ? targetSlotDef : sourceSlotDef;
@@ -865,7 +868,7 @@ export function useMultiInputConnectionActions(
 
         if (descriptionToCopy !== undefined) {
           if ('description' in slotDefinitionToUpdate) {
-            (slotDefinitionToUpdate as InputDefinition | OutputDefinition).description = descriptionToCopy;
+            (slotDefinitionToUpdate as ComfyInputDefinition | OutputDefinition).description = descriptionToCopy;
           } else if ('customDescription' in slotDefinitionToUpdate) {
             (slotDefinitionToUpdate as GroupSlotInfo).customDescription = descriptionToCopy;
           }
@@ -874,9 +877,9 @@ export function useMultiInputConnectionActions(
         // Copy config object (deep clone)
         // Copy config object (deep clone)
         // slotDefinitionToUpdate (the CONVERTIBLE_ANY slot) adopts config from slotToCopyFrom.
-        if ('config' in slotToCopyFrom && (slotToCopyFrom as InputDefinition | GroupSlotInfo).config !== undefined) {
+        if ('config' in slotToCopyFrom && (slotToCopyFrom as ComfyInputDefinition | GroupSlotInfo).config !== undefined) {
           // Source has a config, so the CONVERTIBLE_ANY slot should adopt it.
-          (slotDefinitionToUpdate as any).config = klona((slotToCopyFrom as InputDefinition | GroupSlotInfo).config);
+          (slotDefinitionToUpdate as any).config = klona((slotToCopyFrom as ComfyInputDefinition | GroupSlotInfo).config);
         } else {
           // Source does not have a config (or it's undefined), so remove it from the CONVERTIBLE_ANY slot.
           delete (slotDefinitionToUpdate as any).config;
@@ -892,18 +895,18 @@ export function useMultiInputConnectionActions(
         if ('min' in slotToCopyFrom && typeof (slotToCopyFrom as GroupSlotInfo).min === 'number') {
             minToApply = (slotToCopyFrom as GroupSlotInfo).min;
         }
-        // Then check config (for InputDefinition or GroupSlotInfo source with config)
-        else if ('config' in slotToCopyFrom && typeof (slotToCopyFrom as InputDefinition | GroupSlotInfo).config?.min === 'number') {
+        // Then check config (for ComfyInputDefinition or GroupSlotInfo source with config)
+        else if ('config' in slotToCopyFrom && typeof (slotToCopyFrom as ComfyInputDefinition | GroupSlotInfo).config?.min === 'number') {
             // If this branch is taken, .config is guaranteed to exist and .config.min is a number.
-            minToApply = (slotToCopyFrom as InputDefinition | GroupSlotInfo).config!.min as number;
+            minToApply = (slotToCopyFrom as ComfyInputDefinition | GroupSlotInfo).config!.min as number;
         }
 
         if ('max' in slotToCopyFrom && typeof (slotToCopyFrom as GroupSlotInfo).max === 'number') {
             maxToApply = (slotToCopyFrom as GroupSlotInfo).max;
         }
-        else if ('config' in slotToCopyFrom && typeof (slotToCopyFrom as InputDefinition | GroupSlotInfo).config?.max === 'number') {
+        else if ('config' in slotToCopyFrom && typeof (slotToCopyFrom as ComfyInputDefinition | GroupSlotInfo).config?.max === 'number') {
             // If this branch is taken, .config is guaranteed to exist and .config.max is a number.
-            maxToApply = (slotToCopyFrom as InputDefinition | GroupSlotInfo).config!.max as number;
+            maxToApply = (slotToCopyFrom as ComfyInputDefinition | GroupSlotInfo).config!.max as number;
         }
 
         if (minToApply !== undefined) {
@@ -920,7 +923,10 @@ export function useMultiInputConnectionActions(
         // For regular nodes, we don't add a new CONVERTIBLE_ANY placeholder automatically for now.
       }
     }
-    return { updatedElements: elementsCopy, updatedWorkflowData: workflowDataCopy };
+    return {
+      updatedElements: elementsCopy as (VueFlowNode | Edge)[],
+      updatedWorkflowData: workflowDataCopy as ((WorkflowObject & { id: string }) | null)
+    };
   }
 
   // Return all public methods
