@@ -1,14 +1,12 @@
 import { type Ref, type ComputedRef, ref, watch } from "vue";
 import {
+  useVueFlow,
   type Connection,
   type Edge,
   type Node,
-  useVueFlow,
-  // type HandleType, // 移除了未使用的 HandleType
-  // 从 @vue-flow/core 导入核心类型
   type VueFlowStore,
   type ConnectingHandle,
-} from "@vue-flow/core";
+} from "@vue-flow/core"; // 从 @vue-flow/core 导入核心类型
 import { getEdgeStyleProps } from "./useEdgeStyles";
 import { useGroupInterfaceSync } from "../group/useGroupInterfaceSync"; // Roo: 重新引入
 import {
@@ -21,7 +19,6 @@ import { createHistoryEntry } from "@comfytavern/utils";
 import { useTabStore } from "@/stores/tabStore";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useNodeStore } from "@/stores/nodeStore"; // 新增导入
-// import type { FrontendNodeDefinition } from '@/stores/nodeStore'; // Roo: 移除未使用的导入
 import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils"; // GUGU: Import parseSubHandleId
 import { klona } from 'klona/json';
 import { nanoid } from 'nanoid';
@@ -65,7 +62,6 @@ export function useCanvasConnections({
   const {
     onConnectStart, // 这个事件仍然可以用来检测新连接的开始意图
     onConnect,      // 用于处理全新的连接
-    onConnectEnd,
     findNode,
     removeEdges: vueFlowRemoveEdges,
     onEdgeUpdateStart,
@@ -75,7 +71,6 @@ export function useCanvasConnections({
   } = vueFlowInstance;
 
   // 将 handleConnect 注册为 onConnect 事件的回调
-  // onConnect(handleConnect); // 此调用已移至 handleConnect 定义之后、watch 块之前 (L663附近)
 
   const reorderPreviewIndex = ref<number | null>(null);
 
@@ -89,9 +84,6 @@ export function useCanvasConnections({
 
     let handleName = parsedHandleKey || 'UNKNOWN_HANDLE';
     // 如果是子句柄，可以在名称中体现索引，例如 "MyInput[0]"
-    // if (isSubHandle && typeof subHandleIndex === 'number') {
-    //   handleName = `${parsedHandleKey}[${subHandleIndex}]`;
-    // }
 
     const actualHandleIdForLog = rawHandleId || 'UNKNOWN_HANDLE_ID'; // 用于日志，避免 null
 
@@ -255,7 +247,7 @@ export function useCanvasConnections({
       return false;
     }
     const compatible = isTypeCompatible(sourceOutput, targetInput);
-    
+
     if (compatible) {
       // 首先，获取目标输入定义，以检查其是否为 multi:true
       // targetNode 和 targetKey 已经在此函数前面部分获取和验证过
@@ -275,7 +267,7 @@ export function useCanvasConnections({
       // 或者即使不是 multi:true，但如果handleID恰好是 key__index 格式，也按子句柄检查（虽然不太可能）
       const parsedTargetHandleInfoForOccupationCheck = parseSubHandleId(rawTargetHandle); // 重新parse或复用上面的
       const targetIsSubHandle = parsedTargetHandleInfoForOccupationCheck.isSubHandle;
-      
+
 
       if (targetIsSubHandle) { // targetIsSubHandle is true if connection.targetHandle is like 'key__index'
         const isNewConnection = !updatingEdgeId;
@@ -291,7 +283,7 @@ export function useCanvasConnections({
           // 1. 目标不是多输入插槽，但句柄名恰好是 key__index 格式 (不太可能，但作为防御)。
           // 2. 正在更新一个现有的连接 (updatingEdgeId 已提供)。
           const currentEdges = getEdges.value;
-          
+
           const occupyingEdges = currentEdges.filter(edge =>
             edge.target === connection.target &&
             edge.targetHandle === connection.targetHandle
@@ -319,7 +311,7 @@ export function useCanvasConnections({
         }
       }
     }
-    
+
     return compatible;
   };
 
@@ -345,7 +337,7 @@ export function useCanvasConnections({
     else { targetInputDef = (targetNode.data as any)?.inputs?.[parsedTargetHandleKey]; }
 
     if (!sourceOutputDef || !targetInputDef) {
-        return null;
+      return null;
     }
 
     let finalSourceDft = sourceOutputDef.dataFlowType;
@@ -361,7 +353,7 @@ export function useCanvasConnections({
     else if (isSourceWild && !isTargetConv) finalSourceDft = finalTargetDft;
 
     const { animated, style, markerEnd } = getEdgeStyleProps(finalSourceDft, finalTargetDft, isDark.value);
-    
+
     let edgeType = 'default'; // 始终使用默认边类型
     let finalTargetHandleForEdge = params.targetHandle; // 始终使用 Vue Flow 提供的实际连接句柄 (即子句柄 ID)
 
@@ -461,11 +453,11 @@ export function useCanvasConnections({
     let targetInputDef: GroupSlotInfo | undefined;
     const targetNodeType = getNodeType(targetNode);
     if (targetNodeType === 'core:GroupOutput') {
-        targetInputDef = workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[parsedTargetHandleKey];
+      targetInputDef = workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[parsedTargetHandleKey];
     } else if (targetNodeType === 'core:NodeGroup') {
-        targetInputDef = (targetNode.data as any)?.groupInterface?.inputs?.[parsedTargetHandleKey];
+      targetInputDef = (targetNode.data as any)?.groupInterface?.inputs?.[parsedTargetHandleKey];
     } else {
-        targetInputDef = (targetNode.data as any)?.inputs?.[parsedTargetHandleKey];
+      targetInputDef = (targetNode.data as any)?.inputs?.[parsedTargetHandleKey];
     }
 
     if (!sourceOutputDef || !targetInputDef) {
@@ -508,135 +500,128 @@ export function useCanvasConnections({
     // 所以，上面的 sourceNames 和 targetNames 应该基于 params 来获取，因为它们用于用户可读的日志。
     // 而 newEdgeParamsForCoordinator.targetHandle 必须是修正后的。
 
-            // Roo: <<<< START CONVERTIBLE_ANY LOGIC >>>>
-            let finalSourceDefForEdge = klona(originalSourceOutputDef); // 用于边的data和样式
-            let finalTargetDefForEdge = klona(originalTargetInputDef); // 用于边的data和样式
+    // Roo: <<<< START CONVERTIBLE_ANY LOGIC >>>>
+    let finalSourceDefForEdge = klona(originalSourceOutputDef); // 用于边的data和样式
+    let finalTargetDefForEdge = klona(originalTargetInputDef); // 用于边的data和样式
 
-            const isSourceConv = originalSourceOutputDef.dataFlowType === DataFlowType.CONVERTIBLE_ANY || (originalSourceOutputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
-            const isTargetConv = originalTargetInputDef.dataFlowType === DataFlowType.CONVERTIBLE_ANY || (originalTargetInputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
-            const isSourceWild = originalSourceOutputDef.dataFlowType === DataFlowType.WILDCARD || (originalSourceOutputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD);
-            const isTargetWild = originalTargetInputDef.dataFlowType === DataFlowType.WILDCARD || (originalTargetInputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD);
+    const isSourceConv = originalSourceOutputDef.dataFlowType === DataFlowType.CONVERTIBLE_ANY || (originalSourceOutputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
+    const isTargetConv = originalTargetInputDef.dataFlowType === DataFlowType.CONVERTIBLE_ANY || (originalTargetInputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
+    const isSourceWild = originalSourceOutputDef.dataFlowType === DataFlowType.WILDCARD || (originalSourceOutputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD);
+    const isTargetWild = originalTargetInputDef.dataFlowType === DataFlowType.WILDCARD || (originalTargetInputDef.matchCategories || []).includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD);
 
-            let modifiedSlotInfo: { node: VueFlowNode, handleKey: string, newDefinition: GroupSlotInfo, direction: 'inputs' | 'outputs' } | null = null;
-            let interfaceUpdateResult: { inputs: Record<string, GroupSlotInfo>, outputs: Record<string, GroupSlotInfo> } | null = null;
+    let modifiedSlotInfo: { node: VueFlowNode, handleKey: string, newDefinition: GroupSlotInfo, direction: 'inputs' | 'outputs' } | null = null;
+    let interfaceUpdateResult: { inputs: Record<string, GroupSlotInfo>, outputs: Record<string, GroupSlotInfo> } | null = null;
 
-            if (isSourceConv && !isTargetConv && !isTargetWild) {
-              // 源是 CONVERTIBLE_ANY，转换为目标类型
-              finalSourceDefForEdge.dataFlowType = originalTargetInputDef.dataFlowType;
-              finalSourceDefForEdge.matchCategories = [...(originalTargetInputDef.matchCategories || [])];
+    if (isSourceConv && !isTargetConv && !isTargetWild) {
+      // 源是 CONVERTIBLE_ANY，转换为目标类型
+      finalSourceDefForEdge.dataFlowType = originalTargetInputDef.dataFlowType;
+      finalSourceDefForEdge.matchCategories = [...(originalTargetInputDef.matchCategories || [])];
 
-              const newSourceSlotDef = createSyncSlotInfo(originalSourceOutputDef, originalTargetInputDef.dataFlowType, originalTargetInputDef.matchCategories || [], originalTargetInputDef);
-              if (sourceNodeType === 'core:GroupInput') {
-                interfaceUpdateResult = syncInterfaceSlotFromConnection(currentTabId, sourceNode.id, parsedSourceHandleKey, newSourceSlotDef, 'inputs');
-              } else {
-                modifiedSlotInfo = { node: sourceNode, handleKey: parsedSourceHandleKey, newDefinition: newSourceSlotDef, direction: 'outputs' };
-              }
-            } else if (isTargetConv && !isSourceConv && !isSourceWild) {
-              // 目标是 CONVERTIBLE_ANY，转换为源类型
-              finalTargetDefForEdge.dataFlowType = originalSourceOutputDef.dataFlowType;
-              finalTargetDefForEdge.matchCategories = [...(originalSourceOutputDef.matchCategories || [])];
+      const newSourceSlotDef = createSyncSlotInfo(originalSourceOutputDef, originalTargetInputDef.dataFlowType, originalTargetInputDef.matchCategories || [], originalTargetInputDef);
+      if (sourceNodeType === 'core:GroupInput') {
+        interfaceUpdateResult = syncInterfaceSlotFromConnection(currentTabId, sourceNode.id, parsedSourceHandleKey, newSourceSlotDef, 'inputs');
+      } else {
+        modifiedSlotInfo = { node: sourceNode, handleKey: parsedSourceHandleKey, newDefinition: newSourceSlotDef, direction: 'outputs' };
+      }
+    } else if (isTargetConv && !isSourceConv && !isSourceWild) {
+      // 目标是 CONVERTIBLE_ANY，转换为源类型
+      finalTargetDefForEdge.dataFlowType = originalSourceOutputDef.dataFlowType;
+      finalTargetDefForEdge.matchCategories = [...(originalSourceOutputDef.matchCategories || [])];
 
-              const newTargetSlotDef = createSyncSlotInfo(originalTargetInputDef, originalSourceOutputDef.dataFlowType, originalSourceOutputDef.matchCategories || [], originalSourceOutputDef);
-              if (targetNodeType === 'core:GroupOutput') {
-                interfaceUpdateResult = syncInterfaceSlotFromConnection(currentTabId, targetNode.id, parsedTargetHandleKey, newTargetSlotDef, 'outputs');
-              } else if (targetNodeType === 'core:GroupInput') { // Should not happen if target is GroupInput and CONVERTIBLE_ANY (GroupInput outputs)
-                 // This case might need review, typically GroupInput outputs are CONVERTIBLE_ANY
-              }
-              else {
-                modifiedSlotInfo = { node: targetNode, handleKey: parsedTargetHandleKey, newDefinition: newTargetSlotDef, direction: 'inputs' };
-              }
-            } else if (isTargetWild && !isSourceConv) {
-                finalTargetDefForEdge.dataFlowType = originalSourceOutputDef.dataFlowType;
-                finalTargetDefForEdge.matchCategories = [...(originalSourceOutputDef.matchCategories || [])];
-            } else if (isSourceWild && !isTargetConv) {
-                finalSourceDefForEdge.dataFlowType = originalTargetInputDef.dataFlowType;
-                finalSourceDefForEdge.matchCategories = [...(originalTargetInputDef.matchCategories || [])];
-            }
-            // Roo: <<<< END CONVERTIBLE_ANY LOGIC >>>>
+      const newTargetSlotDef = createSyncSlotInfo(originalTargetInputDef, originalSourceOutputDef.dataFlowType, originalSourceOutputDef.matchCategories || [], originalSourceOutputDef);
+      if (targetNodeType === 'core:GroupOutput') {
+        interfaceUpdateResult = syncInterfaceSlotFromConnection(currentTabId, targetNode.id, parsedTargetHandleKey, newTargetSlotDef, 'outputs');
+      } else if (targetNodeType === 'core:GroupInput') { // Should not happen if target is GroupInput and CONVERTIBLE_ANY (GroupInput outputs)
+        // This case might need review, typically GroupInput outputs are CONVERTIBLE_ANY
+      }
+      else {
+        modifiedSlotInfo = { node: targetNode, handleKey: parsedTargetHandleKey, newDefinition: newTargetSlotDef, direction: 'inputs' };
+      }
+    } else if (isTargetWild && !isSourceConv) {
+      finalTargetDefForEdge.dataFlowType = originalSourceOutputDef.dataFlowType;
+      finalTargetDefForEdge.matchCategories = [...(originalSourceOutputDef.matchCategories || [])];
+    } else if (isSourceWild && !isTargetConv) {
+      finalSourceDefForEdge.dataFlowType = originalTargetInputDef.dataFlowType;
+      finalSourceDefForEdge.matchCategories = [...(originalTargetInputDef.matchCategories || [])];
+    }
+    // Roo: <<<< END CONVERTIBLE_ANY LOGIC >>>>
 
-            // 更新边的样式和数据属性，使用转换后的类型
-            const { animated, style, markerEnd } = getEdgeStyleProps(finalSourceDefForEdge.dataFlowType, finalTargetDefForEdge.dataFlowType, isDark.value);
-            newEdgeParamsForCoordinator.animated = animated;
-            newEdgeParamsForCoordinator.style = style;
-            newEdgeParamsForCoordinator.markerEnd = markerEnd;
-            newEdgeParamsForCoordinator.data = {
-              sourceType: finalSourceDefForEdge.dataFlowType,
-              targetType: finalTargetDefForEdge.dataFlowType,
-            };
+    // 更新边的样式和数据属性，使用转换后的类型
+    const { animated, style, markerEnd } = getEdgeStyleProps(finalSourceDefForEdge.dataFlowType, finalTargetDefForEdge.dataFlowType, isDark.value);
+    newEdgeParamsForCoordinator.animated = animated;
+    newEdgeParamsForCoordinator.style = style;
+    newEdgeParamsForCoordinator.markerEnd = markerEnd;
+    newEdgeParamsForCoordinator.data = {
+      sourceType: finalSourceDefForEdge.dataFlowType,
+      targetType: finalTargetDefForEdge.dataFlowType,
+    };
 
 
-            const readableSource = getReadableNames(params.source, params.sourceHandle, 'source');
-            const readableTarget = getReadableNames(params.target, params.targetHandle, 'target');
-            const connectSummary = `连接 ${readableSource.nodeName}::${readableSource.handleName} -> ${readableTarget.nodeName}::${readableTarget.handleName}`;
-            
-            let newTargetIndexInOrderForHistory: number | undefined = undefined;
-            if (targetInputDef?.multi === true) {
-              // For new connections to multi-input, reorderPreviewIndex should hold the calculated index.
-              // Ensure reorderPreviewIndex.value is a number. If null, it might mean append (length of current connections).
-              if (typeof reorderPreviewIndex.value === 'number') {
-                newTargetIndexInOrderForHistory = reorderPreviewIndex.value;
-              } else {
-                // Fallback: if reorderPreviewIndex is null, calculate append index.
-                // This might happen if watch for connectionEndHandle didn't set it correctly or in race conditions.
-                const existingConnectionsToSlot = getEdges.value.filter(
-                  edge => edge.target === targetNode.id && parseSubHandleId(edge.targetHandle).originalKey === parsedTargetHandleKey
-                );
-                newTargetIndexInOrderForHistory = existingConnectionsToSlot.length;
-              }
-            }
-            
-            const historyEntryDetails: Record<string, any> = {
-              edgeId: newEdgeParamsForCoordinator.id,
-              sourceNodeId: newEdgeParamsForCoordinator.source,
-              sourceHandleId: newEdgeParamsForCoordinator.sourceHandle,
-              targetNodeId: newEdgeParamsForCoordinator.target,
-              targetHandleId: newEdgeParamsForCoordinator.targetHandle, // This is the sub-handle ID
-              type: newEdgeParamsForCoordinator.type,
-              data: newEdgeParamsForCoordinator.data,
-              modifiedSlotInfo: modifiedSlotInfo ? { nodeId: modifiedSlotInfo.node.id, handleKey: modifiedSlotInfo.handleKey, direction: modifiedSlotInfo.direction, newDefinition: klona(modifiedSlotInfo.newDefinition) } : undefined,
-              interfaceUpdateResult: interfaceUpdateResult ? klona(interfaceUpdateResult) : undefined,
-            };
+    const readableSource = getReadableNames(params.source, params.sourceHandle, 'source');
+    const readableTarget = getReadableNames(params.target, params.targetHandle, 'target');
+    const connectSummary = `连接 ${readableSource.nodeName}::${readableSource.handleName} -> ${readableTarget.nodeName}::${readableTarget.handleName}`;
 
-            if (newTargetIndexInOrderForHistory !== undefined) {
-              historyEntryDetails.newTargetIndexInOrder = newTargetIndexInOrderForHistory;
-            }
+    let newTargetIndexInOrderForHistory: number | undefined = undefined;
+    if (targetInputDef?.multi === true) {
+      // For new connections to multi-input, reorderPreviewIndex should hold the calculated index.
+      // Ensure reorderPreviewIndex.value is a number. If null, it might mean append (length of current connections).
+      if (typeof reorderPreviewIndex.value === 'number') {
+        newTargetIndexInOrderForHistory = reorderPreviewIndex.value;
+      } else {
+        // Fallback: if reorderPreviewIndex is null, calculate append index.
+        // This might happen if watch for connectionEndHandle didn't set it correctly or in race conditions.
+        const existingConnectionsToSlot = getEdges.value.filter(
+          edge => edge.target === targetNode.id && parseSubHandleId(edge.targetHandle).originalKey === parsedTargetHandleKey
+        );
+        newTargetIndexInOrderForHistory = existingConnectionsToSlot.length;
+      }
+    }
 
-            const historyEntry = createHistoryEntry(
-              "connect",
-              "edge",
-              connectSummary,
-              historyEntryDetails
-            );
-            
-            // Roo: 调用扩展后的 handleConnectionWithInterfaceUpdate 协调器函数
-            // 注意：targetIndexInOrder 在此模型中不直接传递给 handleConnectionWithInterfaceUpdate，
-            // 它应该在 newEdgeParamsForCoordinator.targetHandle 中通过子句柄ID体现，
-            // 或者由 multiInputActions 内部处理（如果适用）。
-            // 此处假设 newEdgeParamsForCoordinator 包含了所有必要的边信息。
-            // interfaceUpdateResult 可能为 null，所以使用 ?. 和 ?? {}
-            await workflowStore.handleConnectionWithInterfaceUpdate(
-              currentTabId, // internalId
-              newEdgeParamsForCoordinator, // newEdge
-              interfaceUpdateResult?.inputs ?? {}, // newInputs
-              interfaceUpdateResult?.outputs ?? {}, // newOutputs
-              modifiedSlotInfo, // Roo: new parameter for modified normal node slot
-              sourceNode.id, // sourceNodeId
-              targetNode.id, // targetNodeId
-              historyEntry
-            );
+    const historyEntryDetails: Record<string, any> = {
+      edgeId: newEdgeParamsForCoordinator.id,
+      sourceNodeId: newEdgeParamsForCoordinator.source,
+      sourceHandleId: newEdgeParamsForCoordinator.sourceHandle,
+      targetNodeId: newEdgeParamsForCoordinator.target,
+      targetHandleId: newEdgeParamsForCoordinator.targetHandle, // This is the sub-handle ID
+      type: newEdgeParamsForCoordinator.type,
+      data: newEdgeParamsForCoordinator.data,
+      modifiedSlotInfo: modifiedSlotInfo ? { nodeId: modifiedSlotInfo.node.id, handleKey: modifiedSlotInfo.handleKey, direction: modifiedSlotInfo.direction, newDefinition: klona(modifiedSlotInfo.newDefinition) } : undefined,
+      interfaceUpdateResult: interfaceUpdateResult ? klona(interfaceUpdateResult) : undefined,
+    };
+
+    if (newTargetIndexInOrderForHistory !== undefined) {
+      historyEntryDetails.newTargetIndexInOrder = newTargetIndexInOrderForHistory;
+    }
+
+    const historyEntry = createHistoryEntry(
+      "connect",
+      "edge",
+      connectSummary,
+      historyEntryDetails
+    );
+
+    // Roo: 调用扩展后的 handleConnectionWithInterfaceUpdate 协调器函数
+    // 注意：targetIndexInOrder 在此模型中不直接传递给 handleConnectionWithInterfaceUpdate，
+    // 它应该在 newEdgeParamsForCoordinator.targetHandle 中通过子句柄ID体现，
+    // 或者由 multiInputActions 内部处理（如果适用）。
+    // 此处假设 newEdgeParamsForCoordinator 包含了所有必要的边信息。
+    // interfaceUpdateResult 可能为 null，所以使用 ?. 和 ?? {}
+    await workflowStore.handleConnectionWithInterfaceUpdate(
+      currentTabId, // internalId
+      newEdgeParamsForCoordinator, // newEdge
+      interfaceUpdateResult?.inputs ?? {}, // newInputs
+      interfaceUpdateResult?.outputs ?? {}, // newOutputs
+      modifiedSlotInfo, // Roo: new parameter for modified normal node slot
+      sourceNode.id, // sourceNodeId
+      targetNode.id, // targetNodeId
+      historyEntry
+    );
     // 由于 handleConnectionWithInterfaceUpdate 是异步的，并且会更新 store，
     // VueFlow 应该会自动响应 store 的变化来渲染新的边和节点（如果插槽更新导致重绘）。
     // 我们返回一个象征性的 Edge 对象或 null。
     // 重要的是状态已通过协调器更新。
     const finalEdgeState = workflowStore.getElements(currentTabId).find(el => el.id === newEdgeObjectFromCreateEdge.id && "source" in el) as Edge | undefined; // 使用 newEdgeObjectFromCreateEdge.id
 
-    // DEBUG LOGS START
-    // if (currentTabId) {
-      // console.debug('[DEBUG-CONNECT] VueFlow Edges after handleConnect:', JSON.parse(JSON.stringify(vueFlowInstance.getEdges.value)));
-      // const storeWorkflowData = workflowStore.getWorkflowData(currentTabId);
-      // console.debug('[DEBUG-CONNECT] Store Edges after handleConnect:', JSON.parse(JSON.stringify(storeWorkflowData?.edges || [])));
-    // }
-    // DEBUG LOGS END
 
     return finalEdgeState || null; // 返回 store 中的边或 null
   };
@@ -746,7 +731,6 @@ export function useCanvasConnections({
     // 如果拖拽的是源句柄，draggedHandleId 可以是 string | null。
 
     // 在记录日志和设置 DraggingState 时，需要处理 draggedHandleId 可能为 null 的情况（当拖拽源句柄时）
-    // const logHandleId = draggedHandleId === null ? 'NULL_HANDLE' : draggedHandleId; // 使用 getReadableNames 代替
 
     let typeForDraggingState: DraggingState['type'] = isUnpluggingFromInputHandle ? 'unplug_from_input' : 'disconnect_reconnect';
     let isOriginalTargetMulti = false;
@@ -829,39 +813,6 @@ export function useCanvasConnections({
   });
 
 
-  onConnectEnd(async (eventOrConnectionParams?: Connection | MouseEvent | TouchEvent) => {
-    // 新增日志：记录原始参数和 draggingState
-
-    // 新增日志：详细记录 event.target (如果参数是事件对象)
-    if (eventOrConnectionParams && !(eventOrConnectionParams as Connection).targetHandle && (eventOrConnectionParams instanceof MouseEvent || eventOrConnectionParams instanceof TouchEvent)) {
-      const event = eventOrConnectionParams as MouseEvent | TouchEvent;
-      if (event.target) {
-      } else {
-      }
-    }
-
-    // 拖拽现有连接的逻辑已移至 onEdgeUpdateEnd。
-    // onConnectEnd 主要用于清理可能由 onEdgeUpdateStart 设置但未被 onEdgeUpdateEnd 完全处理的 draggingState，
-    // 例如拖拽被取消或发生意外情况。
-    // 对于全新的连接尝试（draggingState 为 null），如果拖放到画布，此函数目前不会执行特殊清理，
-    // 因为 onConnectStart 并没有为全新连接设置 draggingState。
-    if (draggingState.value) {
-      // 如果 draggingState 仍然存在，意味着 onEdgeUpdateStart 被触发了（即拖拽现有连接），
-      // 但 onEdgeUpdateEnd 可能由于某种原因没有触发或没有完全清理状态（例如拖拽被外部取消）。
-      // 这是一个回退清理机制。
-      // 此时，不确定原始边是否已被处理，所以不在这里移除原始边，
-      // onEdgeUpdateEnd 应该负责处理边的移除。这里只清理客户端状态。
-      // draggingState.value = null; // 修复：注释掉，防止过早清除
-      // console.debug('[DIAGNOSTIC LOG] onConnectEnd: POST-CLEAR. draggingState is now:', JSON.parse(JSON.stringify(draggingState.value))); // 修复：相关的日志也注释掉
-      // reorderPreviewIndex.value = null; // 修复：相关的清理也注释掉
-    } else {
-      // draggingState 为 null。
-      // 这可能是：
-      // 1. 全新连接尝试结束（无论成功连接还是拖放到画布）。
-      // 2. 现有连接拖拽已由 onEdgeUpdateEnd 正确处理并清除了 draggingState。
-      // 3. 没有拖动操作发生。
-    }
-  });
 
   // 新增：处理现有连接更新的结束
   onEdgeUpdateEnd(async (payload: { edge?: Edge, event: MouseEvent | TouchEvent }) => { // Signature changed to single payload object
@@ -869,7 +820,6 @@ export function useCanvasConnections({
     // 在函数入口处立即捕获 connectionEndHandle 的当前值，并进行深拷贝
     const capturedConnectionEndHandle = vueFlowInstance.connectionEndHandle.value ? klona(vueFlowInstance.connectionEndHandle.value) : null;
 
-    // 打印捕获到的值，而不是实时值
 
     if (!draggingState.value || !draggingState.value.originalEdge) {
       draggingState.value = null; // 清理以防万一
@@ -959,9 +909,9 @@ export function useCanvasConnections({
             // 使用原始键获取输入定义
             const nodeDefinition = nodeStore.getNodeDefinitionByFullType(targetNode.type || '');
             targetInputDef = nodeDefinition?.inputs?.[newTargetOriginalKeyFromParams] ||
-                             (targetNode.data as any)?.inputs?.[newTargetOriginalKeyFromParams] ||
-                             (getNodeType(targetNode) === 'core:NodeGroup' ? (targetNode.data as any)?.groupInterface?.inputs?.[newTargetOriginalKeyFromParams] : undefined) ||
-                             (getNodeType(targetNode) === 'core:GroupOutput' ? workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[newTargetOriginalKeyFromParams] : undefined);
+              (targetNode.data as any)?.inputs?.[newTargetOriginalKeyFromParams] ||
+              (getNodeType(targetNode) === 'core:NodeGroup' ? (targetNode.data as any)?.groupInterface?.inputs?.[newTargetOriginalKeyFromParams] : undefined) ||
+              (getNodeType(targetNode) === 'core:GroupOutput' ? workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[newTargetOriginalKeyFromParams] : undefined);
           }
 
           const isNewTargetMultiInput = targetInputDef?.multi === true;
@@ -1001,12 +951,12 @@ export function useCanvasConnections({
             originalSourceHandleId === currentNewSourceHandleForCompare &&
             originalTargetNodeId === newTargetNodeId &&
             originalTargetHandleId === currentNewTargetHandleForCompare;
-            // 注意：对于多输入，如果顺序没有改变，也应该视为无变化。
-            // 此处的 newTargetIndexInOrder 已经计算。
-            // 如果 noChangeDetected 为 true，且目标是多输入，
-            // 我们还需要检查 newTargetIndexInOrder 是否与原始索引相同。
-            // 但获取原始索引比较复杂，暂时简化为仅比较句柄。
-            // 如果用户将边拖放到完全相同的子句柄，通常顺序不会改变，除非它是唯一的连接或重新排序逻辑导致。
+          // 注意：对于多输入，如果顺序没有改变，也应该视为无变化。
+          // 此处的 newTargetIndexInOrder 已经计算。
+          // 如果 noChangeDetected 为 true，且目标是多输入，
+          // 我们还需要检查 newTargetIndexInOrder 是否与原始索引相同。
+          // 但获取原始索引比较复杂，暂时简化为仅比较句柄。
+          // 如果用户将边拖放到完全相同的子句柄，通常顺序不会改变，除非它是唯一的连接或重新排序逻辑导致。
 
           if (noChangeDetected) {
             // 边已经存在于 store 中，并且其属性没有改变，所以不需要调用 store action。
@@ -1084,11 +1034,11 @@ export function useCanvasConnections({
                 modifiedSlotInfoOnUpdate = { node: newTargetNode, handleKey: parsedNewTargetHandleKey, newDefinition: newTargetSlotDefConverted, direction: 'inputs' };
               }
             } else if (isNewTargetWild && !isNewSourceConv) {
-                finalTargetDefForEdgeOnUpdate.dataFlowType = originalNewSourceOutputDef.dataFlowType;
-                finalTargetDefForEdgeOnUpdate.matchCategories = [...(originalNewSourceOutputDef.matchCategories || [])];
+              finalTargetDefForEdgeOnUpdate.dataFlowType = originalNewSourceOutputDef.dataFlowType;
+              finalTargetDefForEdgeOnUpdate.matchCategories = [...(originalNewSourceOutputDef.matchCategories || [])];
             } else if (isNewSourceWild && !isNewTargetConv) {
-                finalSourceDefForEdgeOnUpdate.dataFlowType = originalNewTargetInputDef.dataFlowType;
-                finalSourceDefForEdgeOnUpdate.matchCategories = [...(originalNewTargetInputDef.matchCategories || [])];
+              finalSourceDefForEdgeOnUpdate.dataFlowType = originalNewTargetInputDef.dataFlowType;
+              finalSourceDefForEdgeOnUpdate.matchCategories = [...(originalNewTargetInputDef.matchCategories || [])];
             }
             // Roo: <<<< END CONVERTIBLE_ANY LOGIC FOR EDGE UPDATE >>>>
 
@@ -1123,7 +1073,6 @@ export function useCanvasConnections({
               }
             );
 
-            // Roo: moveAndReconnectEdgeAndRecord WILL NEED TO BE MODIFIED to accept these new params
             await workflowStore.moveAndReconnectEdgeAndRecord(
               originalEdge.id,
               activeDraggingState.originalTargetNodeId,
@@ -1134,10 +1083,6 @@ export function useCanvasConnections({
               newConnectionParams.targetHandle ?? undefined,
               newTargetIndexInOrder,
               historyEntry,
-              // Roo: Pass new parameters here once coordinator is updated
-              // modifiedSlotInfoOnUpdate,
-              // interfaceUpdateResultOnUpdate,
-              // { sourceType: finalSourceDefForEdgeOnUpdate.dataFlowType, targetType: finalTargetDefForEdgeOnUpdate.dataFlowType }
             );
           }
         } else {
@@ -1166,62 +1111,32 @@ export function useCanvasConnections({
               activeDraggingState.originalTargetHandleId,
               disconnectEntry
             );
-          } else { // activeDraggingState.type is 'reorder' or 'disconnect_reconnect'
-            // 如果是从源端拖拽到无效目标，也视为删除原始边。
-            // moveAndReconnectEdgeAndRecord 应该能处理目标为 null/undefined 的情况，即删除。
-            // 或者，如果原始边没有被其他方式移除，这里需要一个删除操作。
-            // 假设：如果拖到无效区域，原始边已被移除，这里不需要额外操作。
-            // 但为了确保，如果不是 unplug_from_input，我们可能需要显式删除。
-            // 然而，更理想的是 moveAndReconnectEdgeAndRecord(..., null, null, null, null, historyEntryForDelete)
-            // const deleteEntry = createHistoryEntry(
-            // "delete", "edge", `删除连接 ${originalEdge.id} (从源拖到无效目标)`,
-            // { edgeId: originalEdge.id, reason: "drag_from_source_to_invalid_target_on_update_end" }
-            // );
-            // 再次，我们不应该在这里直接调用 removeElementsAndRecord。
-            // 理想情况下，moveAndReconnectEdgeAndRecord 应该处理这种情况。
-            // 暂时依赖于：如果不是 unplug_from_input，则原始边已被移除或将被其他逻辑处理。
-            // 这是一个需要进一步澄清的流程点。
-            // 为了安全，如果 activeDraggingState.type !== 'unplug_from_input'，
-            // 并且我们确定原始边没有被其他协调器调用处理，这里应该有一个删除。
-            // 但目前，我们假设 moveAndReconnectEdgeAndRecord 能够处理这种情况，
-            // 或者 disconnectEdgeFromInputAndRecord 已经覆盖了所有需要“断开”的场景。
-            // 如果拖拽的是源，并且目标无效，这等同于删除。
-            // 我们需要一个协调器函数来删除边并更新相关顺序。
-            // 暂时，我们先假设如果连接无效，且不是 unplug_from_input，则原始边已被移除。
-            // 这在当前代码中可能不成立，因为 L772 的 removeElementsAndRecord 被注释掉了。
-            // 这是一个潜在的 bug：如果从 source 拖到无效目标，原始边可能不会被移除。
-            // 修复：如果不是 unplug_from_input 且连接无效，则调用 disconnectEdgeFromInputAndRecord
-            // 但这不完全正确，因为 disconnect 是针对 target 的。
-            // 正确的做法是，如果从 source 拖到无效目标，应该调用一个能删除边的协调器。
-            // 暂时，我们先假设这种情况由外部处理或是一个待修复点。
-            // );
-            // TODO: Call a proper delete coordinator: await workflowStore.deleteEdgeAndRecord(currentTabId, originalEdge.id, deleteEntry);
           }
         }
       } else { // finalTargetHandleInfo 无效 (例如，拖到画布空白处，但 VueFlow 仍然提供了 edge payload，这不太可能)
-                if (activeDraggingState.type === 'unplug_from_input') {
-                  const readableSource = getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source');
-                  const readableTarget = getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target');
-                  const summary = `断开连接 (拖到无效目标区域): ${readableSource.nodeName}::${readableSource.handleName} -> ${readableTarget.nodeName}::${readableTarget.handleName}`;
-                  const disconnectEntry = createHistoryEntry(
-                    "disconnect",
-                    "edge",
-                    summary,
-                    {
-                      edgeId: originalEdge.id,
-                      sourceNodeId: originalEdge.source,
-                      sourceHandleId: originalEdge.sourceHandle,
-                      targetNodeId: activeDraggingState.originalTargetNodeId,
-                      targetHandleId: activeDraggingState.originalTargetHandleId,
-                      reason: "edge_update_dropped_on_invalid_area_unplugged_from_input"
-                    }
-                  );
-                  await workflowStore.disconnectEdgeFromInputAndRecord(
-                    originalEdge.id,
-                    activeDraggingState.originalTargetNodeId,
-                    activeDraggingState.originalTargetHandleId,
-                    disconnectEntry
-                  );
+        if (activeDraggingState.type === 'unplug_from_input') {
+          const readableSource = getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source');
+          const readableTarget = getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target');
+          const summary = `断开连接 (拖到无效目标区域): ${readableSource.nodeName}::${readableSource.handleName} -> ${readableTarget.nodeName}::${readableTarget.handleName}`;
+          const disconnectEntry = createHistoryEntry(
+            "disconnect",
+            "edge",
+            summary,
+            {
+              edgeId: originalEdge.id,
+              sourceNodeId: originalEdge.source,
+              sourceHandleId: originalEdge.sourceHandle,
+              targetNodeId: activeDraggingState.originalTargetNodeId,
+              targetHandleId: activeDraggingState.originalTargetHandleId,
+              reason: "edge_update_dropped_on_invalid_area_unplugged_from_input"
+            }
+          );
+          await workflowStore.disconnectEdgeFromInputAndRecord(
+            originalEdge.id,
+            activeDraggingState.originalTargetNodeId,
+            activeDraggingState.originalTargetHandleId,
+            disconnectEntry
+          );
         }
       }
     } else { // 拖放到画布上 (VueFlow 的 `edge` 参数为 null)
@@ -1268,11 +1183,11 @@ export function useCanvasConnections({
             reason: 'edge_dragged_to_pane_and_deleted'
           }
         );
-await workflowStore.removeElementsAndRecord(currentTabId, [originalEdge], deleteHistoryEntry);
-}
-// 如果 activeDraggingState.type === 'unplug_from_input' 且拖到画布，则已由上面的 disconnectEdgeFromInputAndRecord 处理
-}
-});
+        await workflowStore.removeElementsAndRecord(currentTabId, [originalEdge], deleteHistoryEntry);
+      }
+      // 如果 activeDraggingState.type === 'unplug_from_input' 且拖到画布，则已由上面的 disconnectEdgeFromInputAndRecord 处理
+    }
+  });
 
   // Watch for changes in the handle the mouse is currently over *while dragging*
   // 将 handleConnect 注册为 onConnect 事件的回调
@@ -1281,10 +1196,8 @@ await workflowStore.removeElementsAndRecord(currentTabId, [originalEdge], delete
     const startHandle = vueFlowInstance.connectionStartHandle.value; // This is ConnectingHandle | null
 
     if (startHandle) { // Only log if a connection drag is in progress
-      // const startNames = getReadableNames(startHandle.nodeId, startHandle.id, startHandle.type); // Reduced verbosity
 
       if (newEndHandle && newEndHandle.type === 'target') {
-        // const newEndNames = getReadableNames(newEndHandle.nodeId, newEndHandle.id, newEndHandle.type); // Reduced verbosity
 
         const targetNode = findNode(newEndHandle.nodeId);
         if (targetNode && newEndHandle.id) { // 确保 newEndHandle.id 不是 null
@@ -1294,9 +1207,9 @@ await workflowStore.removeElementsAndRecord(currentTabId, [originalEdge], delete
           if (currentOriginalHandleKey) {
             const nodeDefinition = nodeStore.getNodeDefinitionByFullType(targetNode.type || '');
             targetInputDef = nodeDefinition?.inputs?.[currentOriginalHandleKey] ||
-                             (targetNode.data as any)?.inputs?.[currentOriginalHandleKey] ||
-                             (getNodeType(targetNode) === 'core:NodeGroup' ? (targetNode.data as any)?.groupInterface?.inputs?.[currentOriginalHandleKey] : undefined) ||
-                             (getNodeType(targetNode) === 'core:GroupOutput' ? workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[currentOriginalHandleKey] : undefined);
+              (targetNode.data as any)?.inputs?.[currentOriginalHandleKey] ||
+              (getNodeType(targetNode) === 'core:NodeGroup' ? (targetNode.data as any)?.groupInterface?.inputs?.[currentOriginalHandleKey] : undefined) ||
+              (getNodeType(targetNode) === 'core:GroupOutput' ? workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[currentOriginalHandleKey] : undefined);
           }
 
           if (targetInputDef && targetInputDef.multi === true && currentOriginalHandleKey) {
