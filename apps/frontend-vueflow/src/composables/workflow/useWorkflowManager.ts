@@ -686,7 +686,26 @@ function createWorkflowManager() {
       // console.log(`[DEBUG Manager - setElementsAndInterface] newElements to assign (count ${newElements.length}):`, newElements.map((e: VueFlowNode | VueFlowEdge) => e.id));
 
       // 应用更新
-      state.elements = newElements;
+      state.elements = newElements; // VueFlow elements (包含节点和边) 被更新
+
+      // GUGU: 从 newElements (即 state.elements) 中提取边，并更新 state.workflowData.edges
+      // 这是为了确保 workflowManager 内部的 workflowData.edges 与其管理的 elements 列表中的边保持同步。
+      if (state.workflowData) { // 确保 workflowData 存在
+        const edgesFromElements = state.elements.filter(el => 'source' in el) as VueFlowEdge[];
+        // 将 VueFlowEdge 转换为存储格式的 StorageEdge (即 WorkflowEdge from @comfytavern/types)
+        state.workflowData.edges = edgesFromElements.map(vueEdge => ({
+          id: vueEdge.id,
+          source: vueEdge.source,
+          target: vueEdge.target,
+          sourceHandle: vueEdge.sourceHandle ?? null,
+          targetHandle: vueEdge.targetHandle ?? null,
+          type: vueEdge.type, // VueFlowEdge 也有 type 字段，通常是自定义边的类型
+          data: vueEdge.data ? klona(vueEdge.data) : {}, // 深拷贝 data，确保 data 总是对象
+        }));
+        // console.debug(`[DEBUG-MI] WORKFLOW_MANAGER (setElementsAndInterface): Updated state.workflowData.edges with ${state.workflowData.edges.length} edges from state.elements.`);
+      } else {
+        // console.warn("[DEBUG-MI] WORKFLOW_MANAGER (setElementsAndInterface): state.workflowData is null, cannot update edges.");
+      }
 
       // debugger; // Roo: 断点1 - elements 刚刚被修改
 
