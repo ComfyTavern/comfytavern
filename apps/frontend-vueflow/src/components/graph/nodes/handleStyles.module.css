@@ -1,21 +1,27 @@
 :root {
   /* Light Mode Colors */
   --handle-color-string-light: #1890ff;
-  --handle-color-int-light: #52c41a;
+  --handle-color-integer-light: #52c41a;
   --handle-color-float-light: #13c2c2;
   --handle-color-boolean-light: #fa8c16;
   --handle-color-combo-light: #722ed1;
   --handle-color-code-light: #8c8c8c;
+  --handle-color-object-light: #4F46E5; /* 深蓝紫 (Indigo) */
+  --handle-color-array-light: #DB2777; /* 粉红 (Pink) */
+  --handle-color-binary-light: #475569; /* 岩灰 (Slate) */
   --handle-color-any-border-light: #1890ff;
   --handle-color-default-light: #9CA3AF; /* 默认灰色 */
 
   /* Dark Mode Colors */
   --handle-color-string-dark: #63b3ed;
-  --handle-color-int-dark: #a0d911;
+  --handle-color-integer-dark: #a0d911;
   --handle-color-float-dark: #36cfc9;
   --handle-color-boolean-dark: #ffa940;
   --handle-color-combo-dark: #b37feb;
   --handle-color-code-dark: #bfbfbf;
+  --handle-color-object-dark: #818CF8; /* 亮蓝紫 (Indigo) */
+  --handle-color-array-dark: #F472B6; /* 亮粉红 (Pink) */
+  --handle-color-binary-dark: #94A3B8; /* 亮岩灰 (Slate) */
   --handle-color-any-border-dark: #63b3ed;
   --handle-color-default-dark: #6B7280; /* 默认灰色 */
 
@@ -116,11 +122,11 @@
 .handleTypeSTRING.handleAny { border-color: var(--handle-color-string-light) !important; }
 :global(.dark) .handleTypeSTRING.handleAny { border-color: var(--handle-color-string-dark) !important; }
 
-/* INT (绿色) */
-.handleTypeINT { background-color: var(--handle-color-int-light) !important; }
-:global(.dark) .handleTypeINT { background-color: var(--handle-color-int-dark) !important; }
-.handleTypeINT.handleAny { border-color: var(--handle-color-int-light) !important; }
-:global(.dark) .handleTypeINT.handleAny { border-color: var(--handle-color-int-dark) !important; }
+/* INTEGER (绿色) */
+.handleTypeINTEGER { background-color: var(--handle-color-integer-light) !important; }
+:global(.dark) .handleTypeINTEGER { background-color: var(--handle-color-integer-dark) !important; }
+.handleTypeINTEGER.handleAny { border-color: var(--handle-color-integer-light) !important; }
+:global(.dark) .handleTypeINTEGER.handleAny { border-color: var(--handle-color-integer-dark) !important; }
 
 /* COMBO (紫色) */
 .handleTypeCOMBO { background-color: var(--handle-color-combo-light) !important; }
@@ -145,6 +151,24 @@
 :global(.dark) .handleTypeCODE { background-color: var(--handle-color-code-dark) !important; }
 .handleTypeCODE.handleAny { border-color: var(--handle-color-code-light) !important; }
 :global(.dark) .handleTypeCODE.handleAny { border-color: var(--handle-color-code-dark) !important; }
+
+/* OBJECT (深蓝紫/亮蓝紫) */
+.handleTypeOBJECT { background-color: var(--handle-color-object-light) !important; }
+:global(.dark) .handleTypeOBJECT { background-color: var(--handle-color-object-dark) !important; }
+.handleTypeOBJECT.handleAny { border-color: var(--handle-color-object-light) !important; }
+:global(.dark) .handleTypeOBJECT.handleAny { border-color: var(--handle-color-object-dark) !important; }
+
+/* ARRAY (粉红/亮粉红) */
+.handleTypeARRAY { background-color: var(--handle-color-array-light) !important; }
+:global(.dark) .handleTypeARRAY { background-color: var(--handle-color-array-dark) !important; }
+.handleTypeARRAY.handleAny { border-color: var(--handle-color-array-light) !important; }
+:global(.dark) .handleTypeARRAY.handleAny { border-color: var(--handle-color-array-dark) !important; }
+
+/* BINARY (岩灰/亮岩灰) */
+.handleTypeBINARY { background-color: var(--handle-color-binary-light) !important; }
+:global(.dark) .handleTypeBINARY { background-color: var(--handle-color-binary-dark) !important; }
+.handleTypeBINARY.handleAny { border-color: var(--handle-color-binary-light) !important; }
+:global(.dark) .handleTypeBINARY.handleAny { border-color: var(--handle-color-binary-dark) !important; }
 
 
 /* 支持多个连接的输入插槽 (方形) */

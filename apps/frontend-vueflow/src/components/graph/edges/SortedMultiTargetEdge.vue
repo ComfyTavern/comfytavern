@@ -5,8 +5,6 @@ import {
   HANDLE_LINE_HEIGHT,
   HANDLE_LINE_GAP,
   HANDLE_VERTICAL_PADDING,
-  // MIN_MULTI_HANDLE_HEIGHT_FACTOR, // SortedMultiTargetEdge 不需要此常量
-  // HANDLE_WIDTH, // SortedMultiTargetEdge 不需要此常量
 } from '../../../constants/handleConstants'; // 导入共享常量
 
 // 定义 Props，扩展 EdgeProps 并明确 targetNode 和 targetHandleId
@@ -87,13 +85,8 @@ const path = computed(() => {
 </script>
 
 <template>
-  <path
-    :id="props.id"
-    class="vue-flow__edge-path"
-    :d="path.pathValue"
-    :marker-end="props.markerEnd"
-    :style="props.style"
-  />
+  <path :id="props.id" class="vue-flow__edge-path" :d="path.pathValue" :marker-end="props.markerEnd"
+    :style="props.style" />
   <!-- 如果需要标签，可以在这里添加 EdgeLabel -->
   <!--
   <EdgeLabel

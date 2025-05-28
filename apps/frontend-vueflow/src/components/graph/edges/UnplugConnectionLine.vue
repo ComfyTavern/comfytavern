@@ -1,18 +1,10 @@
 <template>
   <g v-if="isUnplugging && sourceScreenPosInternal">
-    <path
-      class="vue-flow__connection-path"
-      :d="customPathDefinition"
-      :style="{ stroke: '#ff0000', strokeWidth: 3 }"
-    />
+    <path class="vue-flow__connection-path" :d="customPathDefinition" :style="{ stroke: '#ff0000', strokeWidth: 3 }" />
   </g>
   <g v-else-if="!isUnplugging">
     <!-- 默认 VueFlow 连线渲染 (当不拔出时) -->
-    <path
-      class="vue-flow__connection-path"
-      :d="defaultPathDefinition"
-      :style="{ stroke: '#555', strokeWidth: 2 }"
-    />
+    <path class="vue-flow__connection-path" :d="defaultPathDefinition" :style="{ stroke: '#555', strokeWidth: 2 }" />
   </g>
 </template>
 
@@ -41,41 +33,41 @@ const sourceScreenPosInternal = computed(() => {
 
   let handle: HandleElement | undefined;
   if (sourceNode.handleBounds && sourceNode.handleBounds.source) {
-     handle = sourceNode.handleBounds.source.find(h => h.id === edge.sourceHandle);
+    handle = sourceNode.handleBounds.source.find(h => h.id === edge.sourceHandle);
   }
 
   if (!handle) {
     let nodeWidth = sourceNode.dimensions?.width;
     if (nodeWidth == null) {
-        const style = sourceNode.style as Styles; // 类型断言为 Styles 对象
-        if (typeof style === 'object' && style && style.width) {
-            if (typeof style.width === 'string') {
-                const parsed = parseFloat(style.width);
-                if (!isNaN(parsed)) nodeWidth = parsed;
-            } else if (typeof style.width === 'number') {
-                nodeWidth = style.width;
-            }
+      const style = sourceNode.style as Styles; // 类型断言为 Styles 对象
+      if (typeof style === 'object' && style && style.width) {
+        if (typeof style.width === 'string') {
+          const parsed = parseFloat(style.width);
+          if (!isNaN(parsed)) nodeWidth = parsed;
+        } else if (typeof style.width === 'number') {
+          nodeWidth = style.width;
         }
+      }
     }
     if (nodeWidth == null) nodeWidth = 150; // 默认宽度
 
     let nodeHeight = sourceNode.dimensions?.height;
-     if (nodeHeight == null) {
-        const style = sourceNode.style as Styles; // 类型断言为 Styles 对象
-        if (typeof style === 'object' && style && style.height) {
-            if (typeof style.height === 'string') {
-                const parsed = parseFloat(style.height);
-                if (!isNaN(parsed)) nodeHeight = parsed;
-            } else if (typeof style.height === 'number') {
-                nodeHeight = style.height;
-            }
+    if (nodeHeight == null) {
+      const style = sourceNode.style as Styles; // 类型断言为 Styles 对象
+      if (typeof style === 'object' && style && style.height) {
+        if (typeof style.height === 'string') {
+          const parsed = parseFloat(style.height);
+          if (!isNaN(parsed)) nodeHeight = parsed;
+        } else if (typeof style.height === 'number') {
+          nodeHeight = style.height;
         }
+      }
     }
     if (nodeHeight == null) nodeHeight = 50; // 默认高度
-    
+
     const x = sourceNode.position.x + nodeWidth;
     const y = sourceNode.position.y + nodeHeight / 2;
-     return {
+    return {
       x: (x * viewport.value.zoom) + viewport.value.x,
       y: (y * viewport.value.zoom) + viewport.value.y,
     };
