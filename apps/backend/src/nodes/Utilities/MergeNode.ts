@@ -4,9 +4,13 @@ import type { NodeDefinition } from '@comfytavern/types'
 export class TextMergeNodeImpl {
   static async execute(inputs: Record<string, any>): Promise<Record<string, any>> {
     const { text_inputs = [], separator = '\n' } = inputs
+    console.log(`[TextMergeNode] Inputs received: ${JSON.stringify(inputs)}`);
+    console.log(`[TextMergeNode] text_inputs: ${JSON.stringify(text_inputs)}, type: ${typeof text_inputs}, isArray: ${Array.isArray(text_inputs)}`);
+    console.log(`[TextMergeNode] separator: ${JSON.stringify(separator)}`);
 
     // 确保所有输入都是字符串类型，不需要转换因为已经限制了只接受STRING类型
     const values = Array.isArray(text_inputs) ? text_inputs : [text_inputs]
+    console.log(`[TextMergeNode] Values to join: ${JSON.stringify(values)}`);
     const result = values.join(separator)
 
     return {

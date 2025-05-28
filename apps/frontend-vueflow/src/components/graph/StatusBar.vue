@@ -167,8 +167,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from "vue"; // <-- Removed onMounted, onUnmounted
-import type { Edge as VueFlowEdge } from "@vue-flow/core"; // <-- Import VueFlowEdge
+import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core"; // <-- Import VueFlowNode and VueFlowEdge
 import { onClickOutside } from "@vueuse/core";
+import { klona } from "klona/full"; // Roo: Added import for klona
 import { useWorkflowStore } from "@/stores/workflowStore"; // Import workflow store
 import { useTabStore } from "@/stores/tabStore"; // Import tab store
 import { useExecutionStore } from "@/stores/executionStore"; // 导入执行状态存储
@@ -303,6 +304,25 @@ const handleExecuteWorkflow = () => {
     return;
   }
 
+  // Roo: Debug log for TestWidgets_1 node data from store before transform
+  if (currentWorkflowValue && currentWorkflowValue.nodes) {
+    const testWidgetsNodeFromStore = currentWorkflowValue.nodes.find(
+      (el: any) => el.id === "0CIaUOcVM_" // Roo: Corrected ID based on user's workflow
+    ) as VueFlowNode | undefined;
+
+    console.log(
+      "[StatusBar DEBUG] Node 0CIaUOcVM_ from currentWorkflowValue.nodes (for execution):", // Roo: Corrected ID
+      klona(testWidgetsNodeFromStore)
+    );
+    if (testWidgetsNodeFromStore) {
+      console.log(
+        "[StatusBar DEBUG] Node 0CIaUOcVM_.data from currentWorkflowValue.nodes:", // Roo: Corrected ID
+        klona(testWidgetsNodeFromStore.data) // <--- 这是关键的日志点
+      );
+    }
+  }
+  // Roo: End debug log
+
   // 使用转换函数将当前状态转换为执行载荷
   // Ensure the argument matches the expected structure { nodes: VueFlowNode[], edges: VueFlowEdge[] }
   // Use type assertion for edges to bypass markerEnd incompatibility, as it's not used in the execution payload.
@@ -322,6 +342,14 @@ const handleExecuteWorkflow = () => {
   };
 
   console.log("发送 EXECUTE_WORKFLOW 消息, payload:", payload);
+  // Roo: 打印将要发送的完整 payload
+  console.log('%%%%%%% StatusBar: Full payload to be sent (stringified): %%%%%%%', JSON.stringify(payload, null, 2));
+  console.log('%%%%%%% StatusBar: Nodes to be sent (expanded and stringified): %%%%%%%');
+  if (payload && payload.nodes) {
+    payload.nodes.forEach((node, index) => {
+      console.log(`Node ${index} (ID: ${node.id}) (stringified):`, JSON.stringify(node, null, 2));
+    });
+  }
   
   // 在发送 PROMPT_REQUEST 之前设置发起请求的 tabId
   if (activeTabId.value) { // 再次确认 activeTabId.value 存在 (虽然前面已有检查)

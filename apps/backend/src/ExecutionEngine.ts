@@ -47,6 +47,8 @@ export class ExecutionEngine {
   ) {
     this.promptId = promptId;
     this.payload = payload;
+    // Roo: 打印构造函数接收到的完整 payload
+    console.log(`%%%%%%% Engine Constructor: Received payload: %%%%%%%`, JSON.parse(JSON.stringify(this.payload)));
     this.wsManager = wsManager;
     // this.outputManager = outputManager;
     // this.historyService = historyService;
@@ -65,7 +67,7 @@ export class ExecutionEngine {
    * 执行完整的工作流。
    */
   public async run(): Promise<{ status: ExecutionStatus.COMPLETE | ExecutionStatus.ERROR | ExecutionStatus.INTERRUPTED; error?: any }> {
-    console.log(`[Engine-${this.promptId}] Starting full execution...`);
+    console.log(`[Engine-${this.promptId}]----- Starting full execution | 开始执行完整工作流 ----`);
     this.isInterrupted = false; // 重置中断标志
 
     try {
@@ -144,7 +146,7 @@ export class ExecutionEngine {
    * @param previewRequest 预览请求的载荷
    */
   public async runPreview(previewRequest: ExecutePreviewRequestPayload): Promise<void> {
-    console.log(`[Engine-${this.promptId}] Starting preview execution for node ${previewRequest.changedNodeId}...`);
+    console.log(`[Engine-${this.promptId}]----- Starting preview execution for node ${previewRequest.changedNodeId} | 开始执行实时预览 -----`);
     const { changedNodeId, inputKey, newValue } = previewRequest;
 
     // 1. 更新变更节点的输入值 (临时，只为预览计算)
@@ -275,6 +277,9 @@ export class ExecutionEngine {
     const inputs: Record<string, any> = {};
     const node = this.nodes[nodeId];
 
+    // Roo: 添加日志 - 方法入口
+    console.log(`[Engine-${this.promptId}] prepareNodeInputs for ${nodeId}. Node config inputs: ${JSON.stringify(node?.inputs)}, inputConnectionOrders: ${JSON.stringify((node as any)?.inputConnectionOrders)}`);
+
     if (!node) {
       console.warn(`[Engine-${this.promptId}] Node ${nodeId} not found during input preparation.`);
       return {};
@@ -334,6 +339,11 @@ export class ExecutionEngine {
       }
     });
 
+    // Roo: 添加日志 - 步骤1之后
+    console.log(`[Engine-${this.promptId}] After collecting connected inputs for ${nodeId}:`);
+    console.log(`  multiInputBuffer: ${JSON.stringify(multiInputBuffer)}`);
+    console.log(`  inputs (from single connections): ${JSON.stringify(inputs)}`);
+
     // 2. 根据 inputConnectionOrders 排序多输入值并放入最终的 inputs 对象
     const currentInputConnectionOrders = (node as any).inputConnectionOrders as Record<string, string[]> | undefined;
     if (currentInputConnectionOrders) {
@@ -362,6 +372,10 @@ export class ExecutionEngine {
     // 可以考虑使用 buffer 中的值（顺序不定）。但更推荐的是确保前端数据一致性。
     // 当前选择：严格依赖 inputConnectionOrders 来构建多输入数组。
 
+    // Roo: 添加日志 - 步骤2之后
+    console.log(`[Engine-${this.promptId}] After processing multi-input orders for ${nodeId}:`);
+    console.log(`  inputs: ${JSON.stringify(inputs)}`);
+
     // 3. 处理来自节点 inputs 属性的预设值 (仅当输入未通过连接提供时)
     if (node.inputs) {
       for (const inputKey in node.inputs) {
@@ -389,6 +403,10 @@ export class ExecutionEngine {
         }
       }
     }
+
+    // Roo: 添加日志 - 步骤3之后
+    console.log(`[Engine-${this.promptId}] After applying node preset inputs for ${nodeId}:`);
+    console.log(`  inputs: ${JSON.stringify(inputs)}`);
 
     // 4. 应用节点定义中的默认值 (如果输入仍未定义)
     for (const inputKey in definition.inputs) {
@@ -421,6 +439,9 @@ export class ExecutionEngine {
         throw new Error(`Missing required input '${inputKey}' for node ${nodeId} (${node.fullType})`);
       }
     }
+
+    // Roo: 添加日志 - 步骤4之后 (返回之前)
+    console.log(`[Engine-${this.promptId}] Final prepared inputs for ${nodeId} (before required check): ${JSON.stringify(inputs)}`);
 
     return inputs;
   }

@@ -594,41 +594,43 @@ export function transformVueFlowToExecutionPayload(
       return { id: vueNode.id, fullType: "error", inputs: {}, configValues: {} };
     }
 
-    const inputValues: Record<string, any> = {};
-    // 检查 vueNode.data 和 vueNode.data.inputs 是否存在，并且不是 GroupOutput 节点
-    if (nodeDef.inputs && vueNode.data?.inputs && nodeType !== "core:GroupOutput") {
-      Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
-        // For execution payload, we expect inputData to be the value itself or an object containing value
-        const currentValue =
-          typeof inputData === "object" && inputData !== null && "value" in inputData
-            ? inputData.value
-            : inputData;
+    const executionInputValues: Record<string, any> = {};
+    // 直接从 vueNode.inputValues (即 StorageNode.inputValues) 获取输入值
+    // vueNode 在这里实际上是 StorageNode 结构 (或兼容结构)
+    if (nodeDef.inputs && (vueNode as any).inputValues) {
+      Object.entries((vueNode as any).inputValues).forEach(([inputName, storedValue]) => {
         const inputDef = nodeDef.inputs?.[inputName];
         if (inputDef) {
           const effectiveDefault = getEffectiveDefaultValue(inputDef);
-          // 进行深比较，仅当当前值与有效默认值不同时才包含
-          if (!isEqual(currentValue, effectiveDefault)) {
-            inputValues[inputName] = currentValue;
+          // 仅当存储的值与有效默认值不同时才包含
+          if (!isEqual(storedValue, effectiveDefault)) {
+            executionInputValues[inputName] = storedValue;
           }
         } else {
+          // 这个警告仍然有效，因为 inputValues 中的键可能在定义中不存在
           console.warn(
-            `[transformVueFlowToExecutionPayload] Node ${vueNode.id} (${vueNode.type}): Input '${inputName}' found in data but not in definition. Skipping inclusion for this input.`
+            `[transformVueFlowToExecutionPayload] Node ${vueNode.id} (${vueNode.type}): Input '${inputName}' found in inputValues but not in definition. Skipping inclusion for this input.`
           );
         }
       });
     }
 
     const execNode: ExecutionNode = {
-      id: vueNode.id, // 使用 VueFlow 节点的 ID
-      fullType: nodeType, // Use the safe nodeType variable
-      // 仅当 inputValues 不为空时才包含它
-      ...(Object.keys(inputValues).length > 0 && { inputValues }),
-      // 包含 configValues (如果存在且不为空)
-      ...(vueNode.data?.configValues &&
-        Object.keys(vueNode.data.configValues).length > 0 && {
-        configValues: vueNode.data.configValues,
+      id: vueNode.id,
+      fullType: nodeType,
+      // 仅当 executionInputValues 不为空时才包含它
+      ...(Object.keys(executionInputValues).length > 0 && { inputs: executionInputValues }),
+      // 直接从 vueNode.configValues (即 StorageNode.configValues) 获取配置值
+      ...((vueNode as any).configValues &&
+        Object.keys((vueNode as any).configValues).length > 0 && {
+        configValues: (vueNode as any).configValues,
       }),
     };
+
+    // 直接从 vueNode.inputConnectionOrders (即 StorageNode.inputConnectionOrders) 获取
+    if ((vueNode as any).inputConnectionOrders && Object.keys((vueNode as any).inputConnectionOrders).length > 0) {
+      execNode.inputConnectionOrders = (vueNode as any).inputConnectionOrders;
+    }
 
     return execNode;
   });

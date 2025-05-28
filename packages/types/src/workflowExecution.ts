@@ -25,6 +25,8 @@ export interface ExecutionNode {
   configValues?: Record<string, any>; // 或者更具体的类型
   /** 节点是否被绕过 */
   bypassed?: boolean;
+  /** 节点的多输入连接顺序 (可选) */
+  inputConnectionOrders?: Record<string, string[]>;
 }
 
 /**
