@@ -57,6 +57,7 @@ ComfyTavern 的核心价值主张体现在以下两个层面：
   - 启动 `.bat` 文件需要添加 `.\` 前缀，例如 `.\start.bat`。
 - **后端入口**: `apps/backend/src/index.ts` (已重构，具体路由见 `apps/backend/src/routes/`)
 - **核心类型定义**: `packages/types/src/schemas.ts` (使用 Zod 定义和验证)
+- **节点或插槽的显示**：优先使用`displayName`,其次再是id。
 
 ## 参考资料
 
