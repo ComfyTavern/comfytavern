@@ -69,3 +69,33 @@ export function generateSafeWorkflowFilename(name: string | undefined | null): s
     // 限制文件名长度，以防万一
     return safeFilename.substring(0, 200);
 }
+
+export interface ParsedHandleId {
+  originalKey: string;
+  index?: number;
+  isSubHandle: boolean;
+}
+
+/**
+ * 解析句柄 ID，区分普通句柄和子句柄 (例如 'key__0')。
+ * @param handleId 原始句柄 ID
+ * @returns 解析后的句柄信息对象
+ */
+export function parseSubHandleId(handleId: string | null | undefined): ParsedHandleId {
+  if (!handleId) {
+    return { originalKey: '', isSubHandle: false };
+  }
+
+  const parts = handleId.split('__');
+  if (parts.length === 2) {
+    const originalKey = parts[0];
+    const indexStr = parts[1];
+    const index = parseInt(indexStr, 10);
+
+    if (!isNaN(index) && String(index) === indexStr) { // 确保索引是纯数字且转换后一致
+      return { originalKey, index, isSubHandle: true };
+    }
+  }
+  // 如果不符合 'key__index' 格式，则视为普通句柄 ID
+  return { originalKey: handleId, isSubHandle: false };
+}
