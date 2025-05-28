@@ -635,6 +635,15 @@ export function useCanvasConnections({
     // 我们返回一个象征性的 Edge 对象或 null。
     // 重要的是状态已通过协调器更新。
     const finalEdgeState = workflowStore.getElements(currentTabId).find(el => el.id === newEdgeObjectFromCreateEdge.id && "source" in el) as Edge | undefined; // 使用 newEdgeObjectFromCreateEdge.id
+
+    // DEBUG LOGS START
+    if (currentTabId) {
+      console.debug('[DEBUG-CONNECT] VueFlow Edges after handleConnect:', JSON.parse(JSON.stringify(vueFlowInstance.getEdges.value)));
+      const storeWorkflowData = workflowStore.getWorkflowData(currentTabId);
+      console.debug('[DEBUG-CONNECT] Store Edges after handleConnect:', JSON.parse(JSON.stringify(storeWorkflowData?.edges || [])));
+    }
+    // DEBUG LOGS END
+
     return finalEdgeState || null; // 返回 store 中的边或 null
   };
 
@@ -1140,6 +1149,13 @@ export function useCanvasConnections({
               // interfaceUpdateResultOnUpdate,
               // { sourceType: finalSourceDefForEdgeOnUpdate.dataFlowType, targetType: finalTargetDefForEdgeOnUpdate.dataFlowType }
             );
+            // DEBUG LOGS START for moveAndReconnectEdgeAndRecord
+            if (currentTabId) {
+              console.debug('[DEBUG-EDGE-UPDATE] VueFlow Edges after moveAndReconnectEdgeAndRecord:', JSON.parse(JSON.stringify(vueFlowInstance.getEdges.value)));
+              const storeWorkflowData = workflowStore.getWorkflowData(currentTabId);
+              console.debug('[DEBUG-EDGE-UPDATE] Store Edges after moveAndReconnectEdgeAndRecord:', JSON.parse(JSON.stringify(storeWorkflowData?.edges || [])));
+            }
+            // DEBUG LOGS END
           }
         } else {
           // 如果连接无效，但原始边是从输入端拔出的 (activeDraggingState.type === 'unplug_from_input')，
@@ -1167,6 +1183,13 @@ export function useCanvasConnections({
               activeDraggingState.originalTargetHandleId,
               disconnectEntry
             );
+            // DEBUG LOGS START for disconnectEdgeFromInputAndRecord (invalid update, unplugged)
+            if (currentTabId) {
+              console.debug('[DEBUG-EDGE-UPDATE] VueFlow Edges after disconnectEdgeFromInputAndRecord (invalid update, unplugged):', JSON.parse(JSON.stringify(vueFlowInstance.getEdges.value)));
+              const storeWorkflowData = workflowStore.getWorkflowData(currentTabId);
+              console.debug('[DEBUG-EDGE-UPDATE] Store Edges after disconnectEdgeFromInputAndRecord (invalid update, unplugged):', JSON.parse(JSON.stringify(storeWorkflowData?.edges || [])));
+            }
+            // DEBUG LOGS END
           } else { // activeDraggingState.type is 'reorder' or 'disconnect_reconnect'
             // 如果是从源端拖拽到无效目标，也视为删除原始边。
             // moveAndReconnectEdgeAndRecord 应该能处理目标为 null/undefined 的情况，即删除。
@@ -1223,6 +1246,13 @@ export function useCanvasConnections({
                     activeDraggingState.originalTargetHandleId,
                     disconnectEntry
                   );
+                  // DEBUG LOGS START for disconnectEdgeFromInputAndRecord (dropped on invalid area, unplugged)
+                  if (currentTabId) {
+                    console.debug('[DEBUG-EDGE-UPDATE] VueFlow Edges after disconnectEdgeFromInputAndRecord (dropped on invalid area, unplugged):', JSON.parse(JSON.stringify(vueFlowInstance.getEdges.value)));
+                    const storeWorkflowData = workflowStore.getWorkflowData(currentTabId);
+                    console.debug('[DEBUG-EDGE-UPDATE] Store Edges after disconnectEdgeFromInputAndRecord (dropped on invalid area, unplugged):', JSON.parse(JSON.stringify(storeWorkflowData?.edges || [])));
+                  }
+                  // DEBUG LOGS END
         }
       }
     } else { // 拖放到画布上 (VueFlow 的 `edge` 参数为 null)
@@ -1249,6 +1279,13 @@ export function useCanvasConnections({
           activeDraggingState.originalTargetHandleId,
           disconnectEntry
         );
+        // DEBUG LOGS START for disconnectEdgeFromInputAndRecord (dropped on pane, unplugged)
+        if (currentTabId) {
+          console.debug('[DEBUG-EDGE-UPDATE] VueFlow Edges after disconnectEdgeFromInputAndRecord (dropped on pane, unplugged):', JSON.parse(JSON.stringify(vueFlowInstance.getEdges.value)));
+          const storeWorkflowData = workflowStore.getWorkflowData(currentTabId);
+          console.debug('[DEBUG-EDGE-UPDATE] Store Edges after disconnectEdgeFromInputAndRecord (dropped on pane, unplugged):', JSON.parse(JSON.stringify(storeWorkflowData?.edges || [])));
+        }
+        // DEBUG LOGS END
       } else { // activeDraggingState.type is 'reorder' or 'disconnect_reconnect'
         // 从源端拔出，或从已连接的输出端拔出，释放到画布，等同于删除原始边
 
@@ -1269,11 +1306,18 @@ export function useCanvasConnections({
             reason: 'edge_dragged_to_pane_and_deleted'
           }
         );
-        await workflowStore.removeElementsAndRecord(currentTabId, [originalEdge], deleteHistoryEntry);
-      }
-      // 如果 activeDraggingState.type === 'unplug_from_input' 且拖到画布，则已由上面的 disconnectEdgeFromInputAndRecord 处理
-    }
-  });
+await workflowStore.removeElementsAndRecord(currentTabId, [originalEdge], deleteHistoryEntry);
+// DEBUG LOGS START for removeElementsAndRecord (dragged to pane)
+if (currentTabId) {
+  console.debug('[DEBUG-EDGE-UPDATE] VueFlow Edges after removeElementsAndRecord (dragged to pane):', JSON.parse(JSON.stringify(vueFlowInstance.getEdges.value)));
+  const storeWorkflowData = workflowStore.getWorkflowData(currentTabId);
+  console.debug('[DEBUG-EDGE-UPDATE] Store Edges after removeElementsAndRecord (dragged to pane):', JSON.parse(JSON.stringify(storeWorkflowData?.edges || [])));
+}
+// DEBUG LOGS END
+}
+// 如果 activeDraggingState.type === 'unplug_from_input' 且拖到画布，则已由上面的 disconnectEdgeFromInputAndRecord 处理
+}
+});
 
   // Watch for changes in the handle the mouse is currently over *while dragging*
   // 将 handleConnect 注册为 onConnect 事件的回调
