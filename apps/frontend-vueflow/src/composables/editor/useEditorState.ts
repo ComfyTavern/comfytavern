@@ -1,4 +1,4 @@
-import { ref, shallowRef, watch, computed } from 'vue';
+import { ref, shallowRef, computed } from 'vue';
 import type { FrontendNodeDefinition } from '@/stores/nodeStore';
 import type { TabData, EditorOpeningContext } from '@/types/editorTypes';
 import { klona } from 'klona/full'; // 咕咕：确保导入 klona
@@ -9,7 +9,7 @@ const generateUniqueId = () => Date.now().toString(36) + Math.random().toString(
 // 咕咕：将状态移到函数外部，使其成为模块级单例状态
 const loading = ref(false); // 初始节点定义获取的加载状态
 const selectedNodeForPreview = ref<FrontendNodeDefinition | null>(null);
-const isSidebarReady = ref(false); // 控制 NodePreviewPanel 的渲染
+// const isSidebarReady = ref(false); // 此状态已由 EditorView.vue 中的 v-if="sidebarManagerRef" 替代
 // SidebarManager 实例的类型定义
 type SidebarManagerInstance = {
   isSidebarVisible: boolean;
@@ -49,18 +49,18 @@ export function useEditorState() {
     // TODO: 添加面向用户的错误通知 UI
   };
 
-  // 监听 SidebarManager 组件是否挂载
-  watch(
-    sidebarManagerRef,
-    (newValue) => {
-      if (newValue && !isSidebarReady.value) {
-        isSidebarReady.value = true;
-      }
-    },
-    {
-      flush: "post", // 确保在检查 ref 之前 DOM 已更新
-    }
-  );
+  // 监听 SidebarManager 组件是否挂载的 watch (用于设置 isSidebarReady) 已不再需要，因为 isSidebarReady 已被移除。
+  // watch(
+  //   sidebarManagerRef,
+  //   (newValue) => {
+  //     if (newValue && !isSidebarReady.value) { // isSidebarReady 已移除
+  //       // isSidebarReady.value = true; // isSidebarReady 已移除
+  //     }
+  //   },
+  //   {
+  //     flush: "post",
+  //   }
+  // );
 
   const toggleDockedEditor = () => {
     isDockedEditorVisible.value = !isDockedEditorVisible.value;
@@ -170,7 +170,7 @@ export function useEditorState() {
   return {
     loading,
     selectedNodeForPreview,
-    isSidebarReady,
+    // isSidebarReady, // 已移除
     sidebarManagerRef,
     // 可停靠编辑器相关
     isDockedEditorVisible,

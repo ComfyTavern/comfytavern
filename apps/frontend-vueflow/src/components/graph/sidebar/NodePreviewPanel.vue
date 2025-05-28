@@ -30,6 +30,12 @@
             <div class="param-name">{{ input.displayName || key }}</div>
             <div class="param-type">{{ input.dataFlowType }}</div>
           </div>
+          <!-- 显示输入参数的 matchCategories -->
+          <div v-if="input.matchCategories && input.matchCategories.length > 0" class="param-categories">
+            <span v-for="category in input.matchCategories" :key="`input-${key}-${category}`" class="category-tag">
+              {{ category }}
+            </span>
+          </div>
           <!-- 如果 description 存在，则显示 -->
           <div v-if="input.description" class="param-description">
             <MarkdownRenderer :markdown-content="input.description" />
@@ -44,6 +50,12 @@
             <!-- 优先使用 displayName，然后是 key -->
             <div class="param-name">{{ output.displayName || key }}</div>
             <div class="param-type">{{ output.dataFlowType }}</div>
+          </div>
+          <!-- 显示输出参数的 matchCategories -->
+          <div v-if="output.matchCategories && output.matchCategories.length > 0" class="param-categories">
+            <span v-for="category in output.matchCategories" :key="`output-${key}-${category}`" class="category-tag">
+              {{ category }}
+            </span>
           </div>
           <!-- 如果 description 存在，则显示 -->
           <div v-if="output.description" class="param-description">
@@ -163,7 +175,7 @@ const closePanel = () => {
 <style scoped>
 .node-preview-panel {
   /* 移除 left-4 */
-  @apply fixed top-20 z-50 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col;
+  @apply fixed top-20 z-[55] w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col;
   max-height: calc(100vh - 10rem);
   /* 限制最大高度，留出上下边距 */
 }
@@ -229,5 +241,15 @@ const closePanel = () => {
 .param-description {
   @apply text-xs text-gray-500 dark:text-gray-400 mt-1;
   /* 增加上边距 */
+}
+
+.param-categories {
+  @apply mt-1 flex flex-wrap gap-1;
+  /* 参数的类别标签容器 */
+}
+
+.category-tag {
+  @apply text-xs px-1.5 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md;
+  /* 类别标签样式 */
 }
 </style>

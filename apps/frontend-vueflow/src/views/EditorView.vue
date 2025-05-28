@@ -48,10 +48,13 @@
       </div>
 
       <!-- 节点预览面板 - 仅在侧边栏准备好后渲染 -->
-      <template v-if="isSidebarReady">
+      <!-- 调试信息显示面板已帮助定位问题 (isSidebarReady)，现将其移除。 -->
+
+      <!-- 修改 v-if 条件，直接判断 sidebarManagerRef 是否已挂载并可用 -->
+      <template v-if="sidebarManagerRef">
         <NodePreviewPanel
           :selected-node="selectedNodeForPreview"
-          :is-sidebar-visible="sidebarManagerRef?.isSidebarVisible ?? false"
+          :is-sidebar-visible="sidebarManagerRef.isSidebarVisible"
           @close="selectedNodeForPreview = null"
           @add-node="handleAddNodeFromPanel"
         />
@@ -67,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, markRaw, watch, nextTick, provide } from "vue";
+import { ref, onMounted, onUnmounted, computed, markRaw, watch, nextTick, provide } from "vue"; // watch 已经存在，无需重复导入
 import Canvas from "../components/graph/Canvas.vue";
 import BaseNode from "../components/graph/nodes/BaseNode.vue";
 import SidebarManager from "../components/graph/sidebar/SidebarManager.vue";
@@ -111,13 +114,15 @@ const { initializeRouteHandling } = useRouteHandler();
 const {
   loading,
   selectedNodeForPreview,
-  isSidebarReady,
+  // isSidebarReady, // 此变量已不再直接使用，移除以解决 TS 警告
   isDockedEditorVisible,
   requestedContextToOpen,
   clearRequestedContext,
   handleNodeSelected,
   handleError,
 } = useEditorState();
+
+// 之前的 selectedNodeForPreview watch 已帮助定位问题 (isSidebarReady)，现将其移除。
 
 watch(
   requestedContextToOpen,

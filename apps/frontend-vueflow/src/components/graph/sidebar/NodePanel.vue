@@ -355,14 +355,17 @@ const reloadNodes = async () => {
 };
 
 const selectNode = (node: FrontendNodeDefinition) => {
+  console.debug('[NodePanel] selectNode called with:', node ? `${node.namespace || 'core'}:${node.type}` : null, 'Current selectedNodeType:', selectedNodeType.value); // 添加诊断日志
   const fullType = `${node.namespace || "core"}:${node.type}`; // Construct full type
   if (selectedNodeType.value === fullType) {
     // Compare with full type
     selectedNodeType.value = null;
     emit("node-selected", null);
+    console.debug('[NodePanel] emitted node-selected with null (deselected)'); // 添加诊断日志
   } else {
     selectedNodeType.value = fullType; // Store full type
     emit("node-selected", node);
+    console.debug('[NodePanel] emitted node-selected with node:', node ? `${node.namespace || 'core'}:${node.type}` : null); // 添加诊断日志
   }
 };
 
