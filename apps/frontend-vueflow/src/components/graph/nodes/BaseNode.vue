@@ -1,82 +1,74 @@
 <script setup lang="ts">
-import { Handle, Position, type NodeProps } from "@vue-flow/core";
-import { getInputComponent } from "../inputs";
+// 第 1 部分：导入
+// Vue 和 VueFlow 核心
 import { computed, ref, watch, nextTick } from "vue";
-import { useVueFlow } from "@vue-flow/core";
+import { useVueFlow, Handle, Position, type NodeProps } from "@vue-flow/core";
+
+// Pinia 和状态存储
+import { storeToRefs } from "pinia";
 import { useThemeStore } from "../../../stores/theme";
 import { useTabStore } from "../../../stores/tabStore";
-import { storeToRefs } from "pinia";
+import { useExecutionStore } from "../../../stores/executionStore";
+
+// 项目类型和工具函数
 import {
   DataFlowType,
   type HistoryEntry,
   type InputDefinition,
   BuiltInSocketMatchCategory,
-} from "@comfytavern/types"; // <-- Import HistoryEntry
-// 导入 EditorOpeningContext 代替 OpenDockedEditorPayload
-// import type { EditorOpeningContext } from '../../../types/editorTypes'; // EditorOpeningContext 不再直接在此文件使用
-import { ExecutionStatus } from "@comfytavern/types";
-import { createHistoryEntry } from "@comfytavern/utils"; // <-- Import createHistoryEntry
-import { useExecutionStore } from "../../../stores/executionStore"; // 导入执行状态 Store
+  ExecutionStatus,
+} from "@comfytavern/types";
+import { createHistoryEntry } from "@comfytavern/utils";
+
+// 可组合函数
 import { useNodeResize } from "../../../composables/node/useNodeResize";
-import { useGroupIOSlots } from "../../../composables/group/useGroupIOSlots"; // 导入 Group IO 插槽 Composable
-import { useNodeState } from "../../../composables/node/useNodeState"; // 导入节点状态 Composable
-import { useNodeProps as useNodePropsComposable } from "../../../composables/node/useNodeProps"; // 导入节点 Props Composable 并重命名
-import { useNodeActions } from "../../../composables/node/useNodeActions"; // 导入节点操作 Composable
-import { useWorkflowInteractionCoordinator } from "../../../composables/workflow/useWorkflowInteractionCoordinator"; // 导入工作流交互协调器
-import { useNodeClientScript } from "../../../composables/node/useNodeClientScript"; // 导入客户端脚本 Composable
-import Tooltip from "../../common/Tooltip.vue"; // 导入提示框组件
-import MarkdownRenderer from "../../common/MarkdownRenderer.vue"; // 导入 Markdown 渲染器
-import InlineConnectionSorter from '../inputs/InlineConnectionSorter.vue'; // 导入连接排序组件
-import { useWorkflowManager } from "../../../composables/workflow/useWorkflowManager"; // 导入工作流管理器
-import styles from "./handleStyles.module.css";
-// 移除重复导入: import type { InputDefinition } from "@comfytavern/types"; // InputDefinition 已在第12行导入
+import { useGroupIOSlots } from "../../../composables/group/useGroupIOSlots";
+import { useNodeState } from "../../../composables/node/useNodeState";
+import { useNodeProps as useNodePropsComposable } from "../../../composables/node/useNodeProps";
+import { useNodeActions } from "../../../composables/node/useNodeActions";
+import { useWorkflowInteractionCoordinator } from "../../../composables/workflow/useWorkflowInteractionCoordinator";
+import { useNodeClientScript } from "../../../composables/node/useNodeClientScript";
+import { useWorkflowManager } from "../../../composables/workflow/useWorkflowManager";
+
+// 组件
+import { getInputComponent } from "../inputs";
+import Tooltip from "../../common/Tooltip.vue";
+import MarkdownRenderer from "../../common/MarkdownRenderer.vue";
+import InlineConnectionSorter from '../inputs/InlineConnectionSorter.vue';
+
+// 常量和样式
 import {
   HANDLE_LINE_HEIGHT,
   HANDLE_VERTICAL_PADDING,
   MIN_MULTI_HANDLE_HEIGHT_FACTOR,
   HANDLE_WIDTH,
-} from "../../../constants/handleConstants"; // 导入共享常量
+} from "../../../constants/handleConstants";
+import styles from "./handleStyles.module.css";
 
+// 第 2 部分：Props
 const props = defineProps<NodeProps>();
 
+// 第 3 部分：本地 Refs
 const nodeRootRef = ref<HTMLDivElement | null>(null); // 节点根元素引用
 
-// 原有的多输入插槽动态高度相关常量 (用于Handle的父容器div) - 这些已不再使用
-// const singleLineHeight = 20; // px, 单条连接线的高度 (父容器概念)
-// const lineGap = 4; // px, 连接线之间的间隙 (父容器概念)
-// const padding = 10; // px, 上下留白 (父容器概念)
-
-// 常量已移至 handleConstants.ts
-
-
-const { width, isResizing, startResize } = useNodeResize(props); // 使用节点宽度调整 Composable
+// 第 4 部分：Composables、Store 实例和 Store Refs
+// Store
 const themeStore = useThemeStore();
 const { isDark } = storeToRefs(themeStore);
 const executionStore = useExecutionStore(); // 获取执行状态 Store 实例
 const tabStore = useTabStore();
 const { activeTabId } = storeToRefs(tabStore);
+
+// VueFlow 和工作流管理器
+const vueFlowInstance = useVueFlow(); // 确保 vueFlowInstance 在此作用域
 const interactionCoordinator = useWorkflowInteractionCoordinator(); // 获取工作流交互协调器实例
 const workflowManager = useWorkflowManager(); // 获取工作流管理器实例
 
-const vueFlowInstance = useVueFlow(); // 确保 vueFlowInstance 在此作用域，因为它在 getNodeLabelForSorter 中使用
-
-// 辅助函数：为 Sorter 获取节点标签
-const getNodeLabelForSorter = (nodeId: string): string => {
-  const node = vueFlowInstance.getNode.value(nodeId); // 更正：getNode 是一个 ComputedRef，其 .value 是函数
-  return node?.label || node?.data?.displayName || node?.type || nodeId;
-};
-
-// 辅助函数：判断是否应显示连接排序器
-const shouldShowSorter = (input: (typeof finalInputs.value)[0]): boolean => {
-  return !!input.multi && // 确保 input.multi 是 true
-    !(input.dataFlowType === DataFlowType.WILDCARD &&
-      input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER));
-};
-
-// 使用节点状态、属性和操作相关的 Composables
+// 节点特定的 Composables
+const { width, isResizing, startResize } = useNodeResize(props); // 使用节点宽度调整 Composable
 const {
   isInputConnected,
-  // getInputConnectionCount,
+  // getInputConnectionCount, // 原始代码中已注释
   isMultiInput,
   getInputValue,
   updateInputValue,
@@ -87,24 +79,24 @@ const {
 const { getInputProps: calculateInputProps, getConfigProps: calculateConfigProps } =
   useNodePropsComposable(props);
 const { editNodeGroup, isNodeGroup } = useNodeActions(props); // 使用节点操作 Composable
-// 使用 Group IO 插槽 Composable
 // 使用重构后的 useGroupIOSlots，它现在接收完整 props 并返回 finalInputs/finalOutputs
 const { finalInputs, finalOutputs } = useGroupIOSlots(props);
-
-// 使用客户端脚本 Composable
-const { clientScriptError, handleButtonClick } = useNodeClientScript({
+const { clientScriptError, handleButtonClick } = useNodeClientScript({ // 使用客户端脚本 Composable
   ...props,
   updateInputValue,
   getInputValue,
 }); // 传入 props 和需要的函数
+const { updateNodeInternals } = vueFlowInstance; // 从 useVueFlow 获取更新函数
 
-// 计算属性：从节点 ID 中提取数字部分
+// 第 5 部分：计算属性
+
+// 节点信息和元数据
 const nodeIdNumber = computed(() => {
   const match = props.id.match(/_(\d+)$/);
   return match ? match[1] : null; // 如果匹配到数字则返回，否则返回 null
 });
 
-// 计算属性：获取当前节点的执行状态 (需要 activeTabId)
+// 执行状态
 const nodeExecutionStatus = computed(() => {
   if (!activeTabId.value) {
     // 如果没有活动标签页，返回 IDLE 状态
@@ -114,7 +106,6 @@ const nodeExecutionStatus = computed(() => {
   return executionStore.getNodeState(activeTabId.value, props.id) || ExecutionStatus.IDLE;
 });
 
-// 计算属性：获取当前节点的执行错误信息
 const nodeExecutionError = computed(() => {
   if (!activeTabId.value) {
     return null;
@@ -123,10 +114,7 @@ const nodeExecutionError = computed(() => {
   return executionStore.getNodeError(activeTabId.value, props.id);
 });
 
-// --- 不再需要内部计算属性，直接使用 finalInputs/finalOutputs ---
-// (移除 nodeFinalOutputValues 和 nodePreviewOutputValues)
-
-// 计算属性：获取节点组信息（依赖 props.data.groupInfo）
+// 节点组信息
 const nodeGroupInfo = computed(() => {
   if (!isNodeGroup.value || !props.data.groupInfo) {
     return null;
@@ -139,9 +127,7 @@ const nodeGroupInfo = computed(() => {
   };
 });
 
-// --- 客户端脚本逻辑已移至 useNodeClientScript ---
-
-// --- Memoized Props Calculation ---
+// 动态组件的 Props 映射
 const inputPropsMap = computed(() => {
   const map: Record<string, Record<string, any>> = {};
   // 确保在 computed 内部访问 finalInputs.value
@@ -167,33 +153,118 @@ const configPropsMap = computed(() => {
   return map;
 });
 
-// Watch 已被移除，逻辑移至 useNodeState.ts 的 updateConfigValue 中
-// inputKeySuffix 和 outputKeySuffix 已移除，使用更稳定的 key
+// 用于 Watcher 的 IO 顺序键
+const inputOrderKey = computed(() => finalInputs.value.map((i) => String(i.key)).join(","));
+const outputOrderKey = computed(() => finalOutputs.value.map((o) => String(o.key)).join(","));
 
-// --- Handle 样式辅助函数 ---
-const getHandleTypeClass = (type: string | undefined): string | null => {
-  if (!type) return null;
-  // 将类型转换为大写以匹配 CSS 类名 (确保 SocketType 中的值是大写的)
-  const upperType = type.toUpperCase();
-  // 检查是否存在对应的类名
-  const className = `handleType${upperType}`;
-  // 确保 CSS 模块中有这个类
-  return styles[className] ? styles[className] : null;
+// Tooltip 内容
+const tooltipContentForNodeTitle = computed(() => {
+  let content = "";
+  if (props.data.description) {
+    // formatDescription 仅处理 \n，Markdown 渲染器处理 Markdown 语法
+    content += formatDescription(props.data.description);
+  }
+  if (props.data.defaultLabel && props.data.defaultLabel !== props.label) {
+    if (content) {
+      // 添加 Markdown 分隔符
+      content += "\n\n---\n\n";
+    }
+    content += `默认名称: ${props.data.defaultLabel}`;
+  }
+  // 如果没有内容，确保返回 undefined 或空字符串，以便 Tooltip 正确处理
+  return content || undefined;
+});
+
+// Handle 和布局样式
+const multiInputSlotContainerStyle = computed(() => {
+  const stylesMap: Record<string, any> = {};
+  if (finalInputs.value) {
+    for (const input of finalInputs.value) {
+      if (input.multi) {
+        const currentInputKey = String(input.key);
+        const actualInteractiveSlots = getNumChildHandles(currentInputKey); // 获取实际要渲染的交互式子句柄数量
+        const visualSlotsForHeightCalc = Math.max(actualInteractiveSlots, MIN_MULTI_HANDLE_HEIGHT_FACTOR);
+        const totalVerticalPaddingForContainer = HANDLE_VERTICAL_PADDING;
+        const minContainerHeight =
+          visualSlotsForHeightCalc * (HANDLE_LINE_HEIGHT + HANDLE_VERTICAL_PADDING) + // 基于视觉槽位数计算高度
+          totalVerticalPaddingForContainer; // 容器自身的上下内边距
+
+        stylesMap[currentInputKey] = {
+          display: 'flex',
+          flexDirection: 'column' as 'column',
+          padding: `${HANDLE_VERTICAL_PADDING / 2}px 4px`, // 容器的内边距
+          gap: `0px`, // 子 Handle 项之间无间隙
+          minHeight: `${minContainerHeight}px`,
+          position: 'absolute',   // 改为绝对定位
+          top: '0px',             // 从顶部开始定位
+          zIndex: 15,             // 设置合适的 z-index
+          boxSizing: 'border-box',
+          left: `-${HANDLE_WIDTH / 2}px`, // 向左偏移
+        };
+      }
+    }
+  }
+  return stylesMap;
+});
+
+// 第 6 部分：辅助函数
+
+// UI 条件判断和信息提取器
+const getNodeLabelForSorter = (nodeId: string): string => {
+  const node = vueFlowInstance.getNode.value(nodeId); // 更正：getNode 是一个 ComputedRef，其 .value 是函数
+  return node?.label || node?.data?.displayName || node?.type || nodeId;
 };
 
-const isAnyType = (type: string | undefined): boolean => {
-  return type === DataFlowType.WILDCARD || type === DataFlowType.CONVERTIBLE_ANY;
+const shouldShowSorter = (input: (typeof finalInputs.value)[0]): boolean => {
+  return !!input.multi && // 确保 input.multi 是 true
+    !(input.dataFlowType === DataFlowType.WILDCARD &&
+      input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER));
 };
-// --- End Handle 样式辅助函数 ---
 
-// 辅助函数：将描述中的字面量 \\n 替换为实际换行符 \n
+const isSimpleInlineInput = (input: InputDefinition): boolean => {
+  if (input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)) return false;
+  if (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)) return false;
+  if (input.dataFlowType === DataFlowType.STRING && input.config?.multiline) return false;
+  if (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.MARKDOWN)) return false;
+  if (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON)) return false;
+  if (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.CHAT_HISTORY)) return false;
+
+  return (
+    input.dataFlowType === DataFlowType.INTEGER ||
+    input.dataFlowType === DataFlowType.FLOAT ||
+    input.dataFlowType === DataFlowType.BOOLEAN ||
+    (input.dataFlowType === DataFlowType.STRING && !!input.config?.suggestions) || // COMBO
+    (input.dataFlowType === DataFlowType.STRING && !input.config?.multiline && !input.matchCategories?.some(cat => (cat === BuiltInSocketMatchCategory.CODE || cat === BuiltInSocketMatchCategory.MARKDOWN)))
+  );
+};
+
+const showActionButtonsForInput = (input: InputDefinition): boolean => {
+  return (
+    (input.dataFlowType === DataFlowType.STRING && input.config?.multiline) ||
+    (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.MARKDOWN)) ||
+    (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON)) ||
+    (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE))
+  );
+};
+
+const getLanguageHintForInput = (input: InputDefinition): string | undefined => {
+  if (input.config?.languageHint) return input.config.languageHint;
+  if (input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON)) return 'json';
+  if (input.matchCategories?.includes(BuiltInSocketMatchCategory.MARKDOWN)) return 'markdown';
+  if (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)) {
+    if (input.matchCategories?.find(cat => cat.toLowerCase() === 'code:javascript')) return 'javascript';
+    if (input.matchCategories?.find(cat => cat.toLowerCase() === 'code:python')) return 'python';
+    return 'plaintext'; // 对于通用的 CODE 类型，默认为纯文本
+  }
+  return undefined;
+};
+
+// 数据格式化器
 const formatDescription = (desc: string | undefined): string | undefined => {
   if (!desc) return undefined;
-  // 全局替换字面量 '\\n' 为实际换行符 '\n'
-  return desc.replace(/\\n/g, "\n");
+  return desc.replace(/\\n/g, "\n"); // 全局替换字面量 '\\n' 为实际换行符 '\n'
 };
 
-// 辅助函数：格式化输出值以在 Tooltip 中显示
 const formatOutputValueForTooltip = (value: any): string => {
   if (value === undefined || value === null) {
     return "无";
@@ -212,131 +283,156 @@ const formatOutputValueForTooltip = (value: any): string => {
   return String(value);
 };
 
-// 处理组件失焦事件 (例如 CodeInput)
+const getFormattedPreviewString = (value: any, inputDef: InputDefinition): string => {
+  const langHint = getLanguageHintForInput(inputDef);
+
+  if (value === undefined || value === null) return "无内容";
+
+  let strValue = "";
+  let processedValue = value;
+
+  if (langHint === 'json' && typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed === 'object' && parsed !== null) {
+        processedValue = parsed;
+      }
+    } catch (e) { /* 解析失败，使用原始字符串 */ }
+  }
+
+  if (typeof processedValue === 'object' && processedValue !== null) {
+    try {
+      strValue = JSON.stringify(processedValue, null, 2); // JSON 美化
+    } catch {
+      strValue = "[无法序列化的对象]";
+    }
+  } else {
+    strValue = String(processedValue);
+  }
+
+  if (strValue.trim() === "") {
+    if (langHint === 'json') return "空JSON内容";
+    if (langHint === 'markdown') return "空Markdown内容";
+    if (langHint) return `空 ${langHint} 内容`;
+    return "无内容";
+  }
+  return strValue;
+};
+
+// Handle 样式和布局计算器
+const getHandleTypeClass = (type: string | undefined): string | null => {
+  if (!type) return null;
+  const upperType = type.toUpperCase(); // 将类型转换为大写以匹配 CSS 类名
+  const className = `handleType${upperType}`;
+  return styles[className] ? styles[className] : null; // 确保 CSS 模块中有这个类
+};
+
+const isAnyType = (type: string | undefined): boolean => {
+  return type === DataFlowType.WILDCARD || type === DataFlowType.CONVERTIBLE_ANY;
+};
+
+const getStandardHandleStyles = (isChild: boolean = false) => {
+  const styleObj: Record<string, string> = {};
+  if (isChild) {
+    styleObj.width = '100%';
+    styleObj.height = '100%';
+    styleObj.borderRadius = '0';
+    styleObj.border = 'none';
+    styleObj.backgroundColor = 'transparent';
+    styleObj.boxShadow = 'none';
+    styleObj.margin = '0';
+    styleObj.padding = '0';
+  } else {
+    styleObj.width = `${HANDLE_WIDTH}px`;
+    styleObj.height = `${HANDLE_LINE_HEIGHT + HANDLE_VERTICAL_PADDING}px`;
+    styleObj.borderRadius = '50%';
+  }
+  return styleObj;
+};
+
+const getNumChildHandles = (inputKey: string): number => {
+  const inputDefinition = finalInputs.value.find(i => String(i.key) === inputKey);
+  if (!inputDefinition || !inputDefinition.multi) {
+    return 0;
+  }
+  const connectionsArray = props.data?.inputConnectionOrders?.[inputKey];
+  const numConnections = connectionsArray ? connectionsArray.length : 0;
+
+  if (inputDefinition?.allowMoreConnections === false && numConnections >= (inputDefinition.maxConnections ?? Infinity)) {
+    return numConnections;
+  }
+  return numConnections + 1;
+};
+
+const getDynamicParamHeaderStyle = (inputDef: (typeof finalInputs.value)[number]) => {
+  const styleObj: Record<string, string> = {};
+  if (inputDef.multi) {
+    const runwayContainerStyle = multiInputSlotContainerStyle.value[String(inputDef.key)];
+    if (runwayContainerStyle && runwayContainerStyle.minHeight) {
+      const runwayMinHeightPx = parseFloat(runwayContainerStyle.minHeight);
+      const defaultParamHeaderMinHeight = 24; // .param-header 在 CSS 中有 min-height: 24px;
+      const requiredMinHeight = Math.max(defaultParamHeaderMinHeight, runwayMinHeightPx);
+      styleObj.minHeight = `${requiredMinHeight}px`;
+    }
+  }
+  return styleObj;
+};
+
+// 事件处理器和交互协调器
 const handleComponentBlur = (inputKey: string, currentValue: string) => {
   if (!activeTabId.value) {
     console.warn(`[BaseNode ${props.id}] 无法记录组件失焦：无活动标签页 ID。`);
     return;
   }
-
-  // 使用正确的协调器函数记录值更改
   const inputDefinition = finalInputs.value.find((i) => String(i.key) === inputKey);
   const inputDisplayName = inputDefinition?.displayName || inputKey;
-  // 截断长值以用于标签
   const truncatedValue =
     currentValue.length > 30 ? currentValue.substring(0, 27) + "..." : currentValue;
-  // 更清晰地展示节点名、输入项名和新值
   const nodeName = props.data.displayName || props.data.label || "未命名节点";
   const summary = `编辑 ${nodeName} - ${inputDisplayName}: "${truncatedValue}"`;
-
-  // 创建 HistoryEntry 对象
   const entry: HistoryEntry = createHistoryEntry(
-    "update", // actionType (假设是更新操作)
-    "nodeInputValue", // objectType
-    summary, // summary
-    { inputKey: inputKey, value: truncatedValue } // details
+    "update",
+    "nodeInputValue",
+    summary,
+    { inputKey: inputKey, value: truncatedValue }
   );
   interactionCoordinator.updateNodeInputValueAndRecord(
     activeTabId.value,
     props.id,
     inputKey,
-    currentValue, // 传递从失焦事件接收到的值
-    entry // 传递 HistoryEntry 对象
+    currentValue,
+    entry
   );
 };
 
-// 处理组件调整大小结束事件 (例如 TextAreaInput)
 const handleComponentResizeEnd = (inputKey: string, payload: { newHeight: number }) => {
   if (!activeTabId.value) {
     console.warn(`[BaseNode ${props.id}] 无法记录组件调整大小：无活动标签页 ID。`);
     return;
   }
-
   const { newHeight } = payload;
-
-  // 查找输入定义以获取显示名称
   const inputDefinition = finalInputs.value.find((i) => String(i.key) === inputKey);
   const inputDisplayName = inputDefinition?.displayName || inputKey;
-  // 调整摘要格式以保持一致性
   const nodeName = props.data.displayName || props.data.label || "未命名节点";
   const summary = `调整 ${nodeName} - ${inputDisplayName} 高度: ${newHeight}px`;
-
-  // 准备组件的状态更新对象
   const stateUpdate = { height: newHeight };
-
-  // 使用正确的协调器函数更新组件状态并记录交互
-  // 创建 HistoryEntry 对象
   const entry: HistoryEntry = createHistoryEntry(
-    "update", // actionType (假设是更新操作)
-    "nodeComponentState", // objectType
-    summary, // summary
-    { inputKey: inputKey, state: stateUpdate } // details
+    "update",
+    "nodeComponentState",
+    summary,
+    { inputKey: inputKey, state: stateUpdate }
   );
   interactionCoordinator.updateNodeComponentStateAndRecord(
     activeTabId.value,
     props.id,
     inputKey,
-    stateUpdate, // 传递状态更新对象 { height: newHeight }
-    entry // 传递 HistoryEntry 对象
+    stateUpdate,
+    entry
   );
 };
 
-// --- IO 顺序更改时强制更新 ---
-const { updateNodeInternals } = useVueFlow(); // 获取更新函数
-
-// 计算顺序键
-const inputOrderKey = computed(() => finalInputs.value.map((i) => String(i.key)).join(","));
-const outputOrderKey = computed(() => finalOutputs.value.map((o) => String(o.key)).join(","));
-
-// 新增：监听 outputOrderKey 变化并记录 GroupInput 的 finalOutputs
-// watch(outputOrderKey, (_newVal, _oldVal) => {
-//   if (props.type === 'core:GroupInput') {
-//   }
-// });
-
-// 监听顺序更改并触发更新
-watch(
-  [inputOrderKey, outputOrderKey],
-  () => {
-    // Log for GroupInput output changes
-    if (props.type === 'core:GroupInput' && finalInputs.value.length === 0) { // GroupInput has no finalInputs
-    }
-    nextTick(() => {
-      if (props.type === 'core:GroupInput' && finalInputs.value.length === 0) {
-      }
-      updateNodeInternals([props.id]);
-      if (props.type === 'core:GroupInput' && finalInputs.value.length === 0) {
-      }
-    });
-  },
-  { flush: "post" } // 使用 'post' flush 在 DOM 更新后运行
-);
-// --- 结束强制更新 ---
-
-// --- Tooltip 内容计算 ---
-// 计算节点标题 Tooltip 的内容，组合描述和默认标签
-const tooltipContentForNodeTitle = computed(() => {
-  let content = "";
-  if (props.data.description) {
-    // formatDescription 仅处理 \n，Markdown 渲染器处理 Markdown 语法
-    content += formatDescription(props.data.description);
-  }
-  if (props.data.defaultLabel && props.data.defaultLabel !== props.label) {
-    if (content) {
-      // 添加 Markdown 分隔符
-      content += "\n\n---\n\n";
-    }
-    content += `默认名称: ${props.data.defaultLabel}`;
-  }
-  // 如果没有内容，确保返回 undefined 或空字符串，以便 Tooltip 正确处理
-  return content || undefined;
-});
-// --- 结束 Tooltip 内容计算 ---
-
-// --- 新增：处理输出 Handle 的 Alt+Click 事件 ---
-const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // outputSlot 类型应为 DisplaySlotInfo，但 DisplaySlotInfo 未导出
+const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // outputSlot 类型应为 DisplaySlotInfo
   if (!event.altKey) return; // 只处理 Alt+Click
-
   event.preventDefault();
   event.stopPropagation(); // 阻止事件冒泡到 onNodeClick
 
@@ -346,7 +442,6 @@ const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // output
     return;
   }
 
-  // 检查插槽类型，如果是 WILDCARD 或 CONVERTIBLE_ANY，则不允许设置为预览目标
   if (outputSlot.dataFlowType === DataFlowType.WILDCARD || outputSlot.dataFlowType === DataFlowType.CONVERTIBLE_ANY) {
     console.warn(`[BaseNode] Alt+Click: 类型为 ${outputSlot.dataFlowType} 的插槽 ${props.id}::${outputSlot.key} 不可被设置为预览目标。`);
     return;
@@ -380,95 +475,8 @@ const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // output
       slotKey: slotKeyStr,
     }
   );
-
   interactionCoordinator.setPreviewTargetAndRecord(internalId, newTarget, entry);
 };
-// --- 结束新增处理函数 ---
-
-// --- 辅助函数：判断输入类型以便在模板中使用 ---
-const isSimpleInlineInput = (input: InputDefinition): boolean => {
-  // 简单单行输入: Number, Boolean, Select(Combo), 普通单行String
-  // 排除多行文本、Markdown、JSON、Code、Button、History
-  if (input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)) return false;
-  if (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)) return false;
-  if (input.dataFlowType === DataFlowType.STRING && input.config?.multiline) return false;
-  if (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.MARKDOWN)) return false;
-  if (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON)) return false;
-  if (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.CHAT_HISTORY)) return false;
-
-  return (
-    input.dataFlowType === DataFlowType.INTEGER ||
-    input.dataFlowType === DataFlowType.FLOAT ||
-    input.dataFlowType === DataFlowType.BOOLEAN ||
-    (input.dataFlowType === DataFlowType.STRING && !!input.config?.suggestions) || // COMBO
-    (input.dataFlowType === DataFlowType.STRING && !input.config?.multiline && !input.matchCategories?.some(cat => (cat === BuiltInSocketMatchCategory.CODE || cat === BuiltInSocketMatchCategory.MARKDOWN)))
-  );
-};
-
-const showActionButtonsForInput = (input: InputDefinition): boolean => {
-  // 需要显示预览/编辑按钮的类型: 多行文本, Markdown, JSON, Code
-  return (
-    (input.dataFlowType === DataFlowType.STRING && input.config?.multiline) ||
-    (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.MARKDOWN)) ||
-    (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON)) ||
-    (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE))
-  );
-};
-
-const getLanguageHintForInput = (input: InputDefinition): string | undefined => {
-  if (input.config?.languageHint) return input.config.languageHint;
-  if (input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON)) return 'json';
-  if (input.matchCategories?.includes(BuiltInSocketMatchCategory.MARKDOWN)) return 'markdown';
-  if (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)) {
-    // 检查更具体的代码语言分类，例如 "Code:javascript" (注意大小写可能需要灵活处理)
-    if (input.matchCategories?.find(cat => cat.toLowerCase() === 'code:javascript')) return 'javascript';
-    if (input.matchCategories?.find(cat => cat.toLowerCase() === 'code:python')) return 'python';
-    // 可以根据需要添加更多语言的判断
-    return 'plaintext'; // 对于通用的 CODE 类型，默认为纯文本
-  }
-  return undefined;
-};
-
-// 辅助函数，用于生成 Tooltip 内容的字符串版本 (不含 Markdown 代码块包装，不截断)
-const getFormattedPreviewString = (value: any, inputDef: InputDefinition): string => {
-  const langHint = getLanguageHintForInput(inputDef);
-
-  if (value === undefined || value === null) return "无内容";
-
-  let strValue = "";
-  let processedValue = value;
-
-  // 尝试解析和格式化 JSON (如果值是字符串且提示是json)
-  if (langHint === 'json' && typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      if (typeof parsed === 'object' && parsed !== null) {
-        processedValue = parsed;
-      }
-    } catch (e) { /* 解析失败，使用原始字符串 */ }
-  }
-
-  // 将处理后的值转为字符串
-  if (typeof processedValue === 'object' && processedValue !== null) {
-    try {
-      strValue = JSON.stringify(processedValue, null, 2); // JSON 美化
-    } catch {
-      strValue = "[无法序列化的对象]";
-    }
-  } else {
-    strValue = String(processedValue);
-  }
-
-  // 处理完全空的内容
-  if (strValue.trim() === "") {
-    if (langHint === 'json') return "空JSON内容";
-    if (langHint === 'markdown') return "空Markdown内容";
-    if (langHint) return `空 ${langHint} 内容`; // 例如 "空 javascript 内容"
-    return "无内容";
-  }
-  return strValue; // 返回原始或格式化后的字符串，不截断，不加额外前缀
-};
-
 
 const openEditorForInput = (input: InputDefinition) => {
   if (!activeTabId.value) {
@@ -481,12 +489,10 @@ const openEditorForInput = (input: InputDefinition) => {
   }
 
   const nodeDisplayName = typeof props.data.label === 'string' ? props.data.label : (typeof props.data.displayName === 'string' ? props.data.displayName : props.id);
-  // 使用 (input as any).key 来临时解决 TypeScript 可能的类型推断问题
   const inputKeyString = String((input as any).key);
   const editorTitle = `${nodeDisplayName} > ${input.displayName || inputKeyString}`;
-  let currentValue = getInputValue(inputKeyString); // 获取原始值
+  let currentValue = getInputValue(inputKeyString);
 
-  // 对 currentValue 进行格式化，确保传递给编辑器的是美化后的 JSON 字符串
   const langHint = getLanguageHintForInput(input);
   if (currentValue !== undefined && currentValue !== null) {
     if (langHint === 'json') {
@@ -494,159 +500,41 @@ const openEditorForInput = (input: InputDefinition) => {
         try {
           const parsed = JSON.parse(currentValue);
           if (typeof parsed === 'object' && parsed !== null) {
-            currentValue = JSON.stringify(parsed, null, 2); // 字符串转对象再转格式化字符串
-          } else {
-            // 如果解析出来不是对象（比如数字、布尔值），或者解析失败，
-            // 并且原始字符串不像一个已格式化的JSON (没有换行或只有一行)
-            // 尝试将其视为一个简单的值，不需要特别的JSON格式化。
-            // 如果原始字符串包含换行，则可能已经是格式化好的，保留原样。
-            if (!currentValue.includes('\n') && currentValue.split('\n').length <= 1) {
-              // no-op, currentValue is already a simple string or unformattable
-            }
+            currentValue = JSON.stringify(parsed, null, 2);
           }
-        } catch (e) {
-          // 解析失败，如果原始字符串不像一个已格式化的JSON，则保留原样
-          // 如果原始字符串包含换行，则可能已经是格式化好的，保留原样。
-          if (!currentValue.includes('\n') && currentValue.split('\n').length <= 1) {
-            // no-op, currentValue is already a simple string or unformattable
-          }
-        }
+        } catch (e) { /* 解析失败，保留原始字符串 */ }
       } else if (typeof currentValue === 'object') {
-        currentValue = JSON.stringify(currentValue, null, 2); // 对象直接转格式化字符串
+        currentValue = JSON.stringify(currentValue, null, 2);
       }
     }
-    // 对于其他类型 (如 code, markdown, plain text)，currentValue 通常已经是字符串，
-    // 或者 DockedEditorWrapper/RichCodeEditor 会处理其显示。
-    // 这里主要确保 JSON 是格式化好的。
   }
-
 
   interactionCoordinator.openDockedEditorForNodeInput(
     activeTabId.value,
     props.id,
     inputKeyString,
     currentValue,
-    input, // input 本身就是 InputDefinition (或 DisplaySlotInfo)
+    input,
     editorTitle
   );
-}; // 正确结束 openEditorForInput 函数
-// --- 结束辅助函数 ---
-
-// 新增：计算 Handle 动态样式的函数
-// (确保此函数定义在所有依赖它的计算属性如 multiInputSlotDynamicStyle 之前，
-// 并且在所有它依赖的常量如 handleLineHeight 等之后)
-// getDynamicHandleStyles 函数不再用于拉伸单个 Handle 的高度。
-// 对于多输入，Handle 本身是标准尺寸，其父容器负责排列。
-// 此函数现在主要用于应用基础样式或特定于单个标准尺寸Handle的样式（如果需要）。
-const getStandardHandleStyles = (isChild: boolean = false) => {
-  const styles: Record<string, string> = {};
-  if (isChild) {
-    // 子 Handle 样式 (使其成为透明的交互层，充满其父 div.child-handle-item)
-    styles.width = '100%';
-    styles.height = '100%';
-    styles.borderRadius = '0'; // 父 div.child-handle-item 或最外层跑道容器负责圆角
-    styles.border = 'none';
-    styles.backgroundColor = 'transparent'; // 确保背景透明
-    styles.boxShadow = 'none';
-    styles.margin = '0'; // 无外边距
-    styles.padding = '0'; // 无内边距
-    // position, top, transform 等由 .handle 类或 Vue Flow 默认处理
-  } else {
-    // 标准 Handle 样式 (圆形)
-    styles.width = `${HANDLE_WIDTH}px`; // 宽度通常由常量或 CSS 控制 (例如 12px)
-    styles.height = `${HANDLE_LINE_HEIGHT + HANDLE_VERTICAL_PADDING}px`; // 高度计算保持不变
-    styles.borderRadius = '50%'; // 确保对于其实际渲染尺寸，这是一个圆形
-    // 标准 Handle 的背景色等由其 CSS 类控制
-  }
-  return styles;
 };
 
-// 计算多输入插槽的父容器的动态样式
-const multiInputSlotContainerStyle = computed(() => {
-  const stylesMap: Record<string, any> = {};
-  if (finalInputs.value) {
-    for (const input of finalInputs.value) {
-      if (input.multi) {
-        const currentInputKey = String(input.key);
-        // const numConnections = getInputConnectionCount(currentInputKey); // 不再直接在这里使用 numConnections
-        const actualInteractiveSlots = getNumChildHandles(currentInputKey); // 获取实际要渲染的交互式子句柄数量
-
-        // 确定用于高度计算的视觉槽位数
-        const visualSlotsForHeightCalc = Math.max(actualInteractiveSlots, MIN_MULTI_HANDLE_HEIGHT_FACTOR);
-
-        // 容器的总垂直内边距 (上下各 HANDLE_VERTICAL_PADDING / 2)
-        const totalVerticalPaddingForContainer = HANDLE_VERTICAL_PADDING;
-        const minContainerHeight =
-          visualSlotsForHeightCalc * (HANDLE_LINE_HEIGHT + HANDLE_VERTICAL_PADDING) + // 基于视觉槽位数计算高度
-          // Math.max(0, visualSlotsForHeightCalc - 1) * HANDLE_LINE_GAP + // 子Handle之间的间隙 - GAP IS NOW 0
-          totalVerticalPaddingForContainer; // 容器自身的上下内边距
-
-        stylesMap[currentInputKey] = {
-          display: 'flex',
-          flexDirection: 'column' as 'column',
-          // 容器的内边距：垂直方向由 HANDLE_VERTICAL_PADDING 控制，水平方向固定为4px
-          padding: `${HANDLE_VERTICAL_PADDING / 2}px 4px`,
-          gap: `0px`, // 子 Handle 项之间无间隙，以融合
-          minHeight: `${minContainerHeight}px`,
-          // borderRadius 将在模板中通过 Tailwind 类应用，以匹配视觉
-          position: 'absolute',   // 改为绝对定位，使其行为类似单个Handle
-          top: '0px',             // 从顶部开始定位
-          zIndex: 15,             // 设置合适的 z-index 以确保可交互和正确层叠
-          boxSizing: 'border-box', // 保留 boxSizing
-          left: `-${HANDLE_WIDTH / 2}px`, // 保留向左偏移
-        };
-      }
-    }
-  }
-  return stylesMap;
-});
-
-// 辅助函数：计算为多输入插槽渲染的子Handle数量
-const getNumChildHandles = (inputKey: string): number => {
-  const inputDefinition = finalInputs.value.find(i => String(i.key) === inputKey);
-
-  if (!inputDefinition) {
-    return 0;
-  }
-  if (!inputDefinition.multi) {
-    return 0;
-  }
-
-  // 直接从 props.data 获取连接数
-  const connectionsArray = props.data?.inputConnectionOrders?.[inputKey];
-  const numConnections = connectionsArray ? connectionsArray.length : 0;
-
-  let handlesToRender: number;
-
-  if (inputDefinition?.allowMoreConnections === false && numConnections >= (inputDefinition.maxConnections ?? Infinity)) {
-    // 如果不允许更多连接，并且已达到或超过最大连接数，则精确渲染 numConnections 个句柄
-    handlesToRender = numConnections;
-  } else {
-    // 否则，渲染 numConnections + 1 个句柄，为下一个潜在连接提供空位
-    handlesToRender = numConnections + 1;
-  }
-
-  // MIN_MULTI_HANDLE_HEIGHT_FACTOR 不应影响实际渲染的句柄数量，仅影响容器视觉高度。
-  // handlesToRender 已经是计算好的实际应渲染的子句柄数。
-  return handlesToRender;
-};
-
-// 计算输入参数头部的动态样式，以适应多输入跑道的高度
-const getDynamicParamHeaderStyle = (inputDef: (typeof finalInputs.value)[number]) => {
-  const styles: Record<string, string> = {};
-  if (inputDef.multi) {
-    const runwayContainerStyle = multiInputSlotContainerStyle.value[String(inputDef.key)];
-    if (runwayContainerStyle && runwayContainerStyle.minHeight) {
-      const runwayMinHeightPx = parseFloat(runwayContainerStyle.minHeight);
-      // .param-header 在 CSS 中有 min-height: 24px;
-      const defaultParamHeaderMinHeight = 24;
-      const requiredMinHeight = Math.max(defaultParamHeaderMinHeight, runwayMinHeightPx);
-      styles.minHeight = `${requiredMinHeight}px`;
-    }
-  }
-  return styles;
-};
+// 第 7 部分：Watchers (侦听器)
+watch(
+  [inputOrderKey, outputOrderKey],
+  () => {
+    // GroupInput 输出变化的日志 (原始注释)
+    // if (props.type === 'core:GroupInput' && finalInputs.value.length === 0) { }
+    nextTick(() => {
+      // if (props.type === 'core:GroupInput' && finalInputs.value.length === 0) { }
+      updateNodeInternals([props.id]);
+      // if (props.type === 'core:GroupInput' && finalInputs.value.length === 0) { }
+    });
+  },
+  { flush: "post" } // 使用 'post' flush 在 DOM 更新后运行
+);
 </script>
+
 <template>
   <div ref="nodeRootRef" class="custom-node" :class="{
     selected,
@@ -888,7 +776,6 @@ const getDynamicParamHeaderStyle = (inputDef: (typeof finalInputs.value)[number]
                   height: `${HANDLE_LINE_HEIGHT + HANDLE_VERTICAL_PADDING}px`, // e.g., 12px
                   display: 'flex',
                   alignItems: 'center',
-                  /* justifyContent: 'center', // 移除，让 .runwaySlice 的背景色填充，或让内部 Handle 自然填充 */
                   position: 'relative',
                   zIndex: 1 // 确保子Handle在主Handle之上，以便交互
                 }"
@@ -985,7 +872,7 @@ const getDynamicParamHeaderStyle = (inputDef: (typeof finalInputs.value)[number]
                             :markdownContent="'**' + input.displayName + '**' + '\n' + '```' + (getLanguageHintForInput(input) || 'text') + '\n' + getFormattedPreviewString(getInputValue(String(input.key)), input) + '\n' + '```'" />
                         </template>
                         <pre v-else class="whitespace-pre-wrap break-all">{{ getFormattedPreviewString(getInputValue(String(input.key)),
-          input) }}</pre>
+                          input) }}</pre>
                       </div>
                     </template>
                     <button class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none">
