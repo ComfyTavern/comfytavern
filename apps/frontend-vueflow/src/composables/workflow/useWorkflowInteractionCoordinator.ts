@@ -1376,15 +1376,75 @@ export function useWorkflowInteractionCoordinator() {
     edgeId: string,
     originalTargetNodeId: string,
     originalTargetHandleId: string,
-    entry: HistoryEntry
+    entry: HistoryEntry // This entry is for _recordHistory
   ) {
-    // 调用新的 composable 中的方法
-    await multiInputActions.disconnectEdgeFromMultiInput(
-      edgeId,
-      originalTargetNodeId,
-      originalTargetHandleId,
-      entry
+    const currentActiveTabId = tabStore.activeTabId;
+    if (!currentActiveTabId) {
+      console.error("[InteractionCoordinator:disconnectEdgeFromInputAndRecord] No active tab ID.");
+      return;
+    }
+
+    const currentSnapshot = _getCurrentSnapshot(currentActiveTabId);
+    if (!currentSnapshot) {
+      console.error(`[InteractionCoordinator:disconnectEdgeFromInputAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`);
+      return;
+    }
+    
+    const nextSnapshot = klona(currentSnapshot); // Prepare mutable snapshot
+
+    // 调用 action，它将修改 nextSnapshot 或返回要更新的部分
+    // disconnectEdgeFromMultiInput 期望 (mutableSnapshot, edgeId, originalTargetNodeId, originalTargetHandleId, activeTabIdString)
+    // 并且应该返回 { modifiedElements, modifiedWorkflowData }
+    // 目前它是一个存根，所以我们先假设它会正确修改 nextSnapshot 并返回结构
+    const result = await multiInputActions.disconnectEdgeFromMultiInput(
+      nextSnapshot,             // 1. mutableSnapshot
+      edgeId,                   // 2. edgeId
+      originalTargetNodeId,     // 3. originalTargetNodeId
+      originalTargetHandleId,   // 4. originalTargetHandleId
+      currentActiveTabId        // 5. activeTabIdString
     );
+
+    // 使用 action 返回的结果更新 nextSnapshot
+    // 如果 action 直接修改了 nextSnapshot.elements 和 nextSnapshot.workflowData，
+    // 并且返回了这些引用，那么这里的赋值是正确的。
+    // 如果 action 返回了全新的对象，这也是正确的。
+    nextSnapshot.elements = result.modifiedElements;
+    if (result.modifiedWorkflowData !== undefined) {
+      nextSnapshot.workflowData = result.modifiedWorkflowData;
+    }
+    
+    // 确保边确实从 nextSnapshot.elements 中移除了 (如果 action 应该这样做的话)
+    // 这一步的验证依赖于 disconnectEdgeFromMultiInput 的正确实现。
+    // 目前，由于它是存根，nextSnapshot.elements 可能没有改变。
+    // 当 disconnectEdgeFromMultiInput 实现后，它应该负责从 elements 中移除边。
+
+    // 记录历史
+    _recordHistory(currentActiveTabId, entry, nextSnapshot);
+
+    // 应用状态更新
+    if (nextSnapshot.workflowData) {
+        await workflowManager.setElementsAndInterface(
+            currentActiveTabId,
+            nextSnapshot.elements,
+            nextSnapshot.workflowData.interfaceInputs ?? {},
+            nextSnapshot.workflowData.interfaceOutputs ?? {}
+        );
+    } else {
+        await workflowManager.setElements(currentActiveTabId, nextSnapshot.elements);
+    }
+    
+    // (可选) 触发视图更新
+    await nextTick();
+    const instance = workflowViewManagement.getVueFlowInstance(currentActiveTabId);
+    if (instance) {
+      // 如果原始目标节点存在于更新后的快照中，则更新它
+      // (如果节点本身被删除了，则不需要更新)
+      if (nextSnapshot.elements.find(n => n.id === originalTargetNodeId && !('source' in n))) {
+        await nextTick();
+        instance.updateNodeInternals([originalTargetNodeId]);
+        await nextTick();
+      }
+    }
   }
 
   /**

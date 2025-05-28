@@ -226,16 +226,111 @@ export function useMultiInputConnectionActions(
   /**
    * (Migrated from useWorkflowInteractionCoordinator)
    * Handles disconnecting an edge from an input, updating inputConnectionOrders if it's a multi-input.
+   * 重要：此函数应修改传入的 mutableSnapshot 并返回修改后的部分。
+   * @param mutableSnapshot - 可变的工作流状态快照。
+   * @param edgeId - 要断开的边的 ID。
+   * @param originalTargetNodeId - 原始目标节点的 ID。
+   * @param originalTargetHandleId - 原始目标句柄的 ID (子句柄 ID)。
+   * @param activeTabIdString - 当前活动标签页的 ID 字符串。
+   * @returns 一个包含 modifiedElements 和 modifiedWorkflowData 的对象。
    */
   async function disconnectEdgeFromMultiInput(
-    _edgeId: string,
-    _originalTargetNodeId: string,
-    _originalTargetHandleId: string,
-    _entry: HistoryEntry // Caller (coordinator) prepares the full entry
-  ) {
-    // Roo: This function relies on getCurrentSnapshotLocal and direct store access. Pending refactor.
-    console.error(`[MultiInputActions] Function 'disconnectEdgeFromMultiInput' is pending full refactoring.`);
-    return Promise.resolve();
+    mutableSnapshot: WorkflowStateSnapshot,
+    edgeId: string,
+    originalTargetNodeId: string,
+    originalTargetHandleId: string,
+    activeTabIdString: string
+  ): Promise<{ modifiedElements: (VueFlowNode | Edge)[]; modifiedWorkflowData: (WorkflowObject & { id: string }) | null }> {
+    const elements = mutableSnapshot.elements;
+    const workflowData = mutableSnapshot.workflowData; // Though not directly modified here for multi-input logic
+
+    // 1. Find and remove the edge
+    const edgeIndex = elements.findIndex(el => el.id === edgeId && 'source' in el);
+    if (edgeIndex === -1) {
+      console.warn(`[MultiInputActions:disconnectEdgeFromMultiInput] Edge ${edgeId} not found in snapshot. Skipping.`);
+      return Promise.resolve({ modifiedElements: elements, modifiedWorkflowData: workflowData });
+    }
+    elements.splice(edgeIndex, 1); // Remove the edge from elements
+    console.debug(`[MultiInputActions:disconnectEdgeFromMultiInput] Edge ${edgeId} removed from elements.`);
+
+    // 2. Update original target node (if multi-input)
+    const originalTargetNode = elements.find(el => el.id === originalTargetNodeId && !('source' in el)) as VueFlowNode | undefined;
+
+    if (!originalTargetNode) {
+      console.warn(`[MultiInputActions:disconnectEdgeFromMultiInput] Original target node ${originalTargetNodeId} not found. Edge removed, but target node state not updated.`);
+      return Promise.resolve({ modifiedElements: elements, modifiedWorkflowData: workflowData });
+    }
+
+    const { originalKey: targetOriginalKey, index: oldTargetSubHandleIndex } = parseSubHandleId(originalTargetHandleId);
+    const targetNodeData = originalTargetNode.data as NodeInstanceData;
+
+    if (targetNodeData?.inputs?.[targetOriginalKey]?.multi === true) {
+      console.debug(`[MultiInputActions:disconnectEdgeFromMultiInput] Original target ${originalTargetNodeId}::${targetOriginalKey} is multi-input.`);
+      if (targetNodeData.inputConnectionOrders && targetNodeData.inputConnectionOrders[targetOriginalKey]) {
+        const currentOrder = targetNodeData.inputConnectionOrders[targetOriginalKey];
+        const edgeIndexInOrder = currentOrder.indexOf(edgeId);
+
+        if (edgeIndexInOrder !== -1) {
+          currentOrder.splice(edgeIndexInOrder, 1); // Remove edgeId from order
+
+          // Update .value array if it exists and is an array
+          const targetInputSlot = targetNodeData.inputs[targetOriginalKey];
+          if (targetInputSlot && 'value' in targetInputSlot && Array.isArray(targetInputSlot.value)) {
+            if (edgeIndexInOrder < targetInputSlot.value.length) {
+              targetInputSlot.value.splice(edgeIndexInOrder, 1);
+              console.debug(`[MultiInputActions:disconnectEdgeFromMultiInput] Value removed from inputs[${targetOriginalKey}].value at index ${edgeIndexInOrder}. New length: ${targetInputSlot.value.length}`);
+            } else {
+              console.warn(`[MultiInputActions:disconnectEdgeFromMultiInput] edgeIndexInOrder ${edgeIndexInOrder} out of bounds for value array (length ${targetInputSlot.value.length}) for ${targetOriginalKey}.`);
+            }
+          } else {
+             console.debug(`[MultiInputActions:disconnectEdgeFromMultiInput] inputs[${targetOriginalKey}].value is not an array or slot not found, skipping value removal.`);
+          }
+
+
+          // Re-index subsequent edges' targetHandles
+          currentOrder.forEach((remainingEdgeId, newIndexInOrder) => {
+            const edgeToReindex = elements.find(el => el.id === remainingEdgeId && 'source' in el) as Edge | undefined;
+            if (edgeToReindex) {
+              const newTargetHandle = `${targetOriginalKey}__${newIndexInOrder}`;
+              if (edgeToReindex.targetHandle !== newTargetHandle) {
+                edgeToReindex.targetHandle = newTargetHandle;
+                console.debug(`[MultiInputActions:disconnectEdgeFromMultiInput] Re-indexed edge ${remainingEdgeId} targetHandle to ${newTargetHandle}.`);
+              }
+            }
+          });
+
+          if (currentOrder.length === 0) {
+            delete targetNodeData.inputConnectionOrders[targetOriginalKey];
+            if (Object.keys(targetNodeData.inputConnectionOrders).length === 0) {
+              delete targetNodeData.inputConnectionOrders;
+            }
+            // Optionally clean up the input slot itself if it becomes "empty"
+            // For now, just removing the order is sufficient for connection logic.
+            // The .value array should also be empty now if it was managed.
+            if (targetInputSlot && 'value' in targetInputSlot && Array.isArray(targetInputSlot.value) && targetInputSlot.value.length === 0) {
+                // If schema implies value should be undefined/null when no connections, handle here.
+                // For now, an empty array is fine. Or delete it:
+                // delete targetInputSlot.value;
+                // if (Object.keys(targetInputSlot).length === 0) delete targetNodeData.inputs[targetOriginalKey];
+            }
+             console.debug(`[MultiInputActions:disconnectEdgeFromMultiInput] Order for ${targetOriginalKey} is now empty and removed.`);
+          } else {
+            console.debug(`[MultiInputActions:disconnectEdgeFromMultiInput] New order for ${targetOriginalKey}:`, currentOrder);
+          }
+        } else {
+          console.warn(`[MultiInputActions:disconnectEdgeFromMultiInput] Edge ${edgeId} not found in inputConnectionOrder for ${targetOriginalKey}. State might be inconsistent if it was expected to be there.`);
+        }
+      } else {
+        console.debug(`[MultiInputActions:disconnectEdgeFromMultiInput] No inputConnectionOrders for ${targetOriginalKey} on node ${originalTargetNodeId}, or slot is not multi-input. No order update needed for this slot.`);
+      }
+    } else {
+      console.debug(`[MultiInputActions:disconnectEdgeFromMultiInput] Original target ${originalTargetNodeId}::${targetOriginalKey} is NOT multi-input (or slot/data missing). No multi-input specific cleanup needed for target node.`);
+    }
+
+    return Promise.resolve({
+      modifiedElements: elements,
+      modifiedWorkflowData: workflowData,
+    });
     /*
     if (!activeTabId.value) {
       console.error("[MultiInputActions:disconnectEdgeFromMultiInput] No active tab ID.");
