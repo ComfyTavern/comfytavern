@@ -17,7 +17,7 @@ import type { WorkflowStateSnapshot } from "@/types/workflowTypes";
 import { createHistoryEntry } from "@comfytavern/utils";
 import type { Edge, Node as VueFlowNode } from '@vue-flow/core';
 import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager";
-import { getNodeType } from "@/utils/nodeUtils";
+import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils"; // GUGU: Import parseSubHandleId
 import { useGroupInterfaceSync } from "@/composables/group/useGroupInterfaceSync";
 
 // import { useTabStore } from "@/stores/tabStore";
@@ -40,24 +40,7 @@ export function useMultiInputConnectionActions(
   const workflowStore = useWorkflowStore();
   const workflowManager = useWorkflowManager();
 
-  // Inner helper functions, accessible by all methods returned by this composable
-  const parseSubHandleIdLocal = (handleId: string | null | undefined): { originalKey: string; index?: number; isSubHandle: boolean } => {
-    if (!handleId) {
-      return { originalKey: '', index: undefined, isSubHandle: false };
-    }
-    const parts = handleId.split('__');
-    if (parts.length === 2) {
-      const keyPart = parts[0];
-      const indexStrPart = parts[1];
-      if (typeof keyPart === 'string' && typeof indexStrPart === 'string') {
-        const potentialIndex = parseInt(indexStrPart, 10);
-        if (!isNaN(potentialIndex)) {
-          return { originalKey: keyPart, index: potentialIndex, isSubHandle: true };
-        }
-      }
-    }
-    return { originalKey: handleId, index: undefined, isSubHandle: false };
-  };
+  // GUGU: Removed internal parseSubHandleIdLocal, will use imported version
 
   const getCurrentSnapshotLocal = (idToUse?: string): WorkflowStateSnapshot | undefined => {
     const effectiveId = idToUse ?? activeTabId.value;
@@ -273,7 +256,7 @@ export function useMultiInputConnectionActions(
     const nextSnapshot = klona(currentSnapshot);
     nextSnapshot.elements = nextSnapshot.elements.filter((el) => el.id !== edgeId);
 
-    const { originalKey: targetOriginalKey } = parseSubHandleIdLocal(originalTargetHandleId);
+    const { originalKey: targetOriginalKey } = parseSubHandleId(originalTargetHandleId); // GUGU: Use imported parseSubHandleId
     const targetNodeInNextSnapshot = nextSnapshot.elements.find(
       (el) => el.id === originalTargetNodeId && !("source" in el)
     ) as VueFlowNode | undefined;
@@ -343,8 +326,9 @@ export function useMultiInputConnectionActions(
     targetIndexInOrder: number | undefined,
     entry: HistoryEntry
   ) {
+    console.debug(`[DEBUG-MI] connectEdgeToMultiInput: Entry. Edge ID: ${newEdgeParams.id}, Target Node: ${newEdgeParams.target}, Target Handle (sub-handle): ${newEdgeParams.targetHandle}, TargetIndexInOrder: ${targetIndexInOrder}`);
     if (!activeTabId.value) {
-      console.error("[MultiInputActions:connectEdgeToMultiInput] No active tab ID.");
+      console.error("[DEBUG-MI] connectEdgeToMultiInput: No active tab ID.");
       return;
     }
     const tabId = activeTabId.value;
@@ -373,24 +357,33 @@ export function useMultiInputConnectionActions(
     ) as VueFlowNode | undefined;
 
     if (targetNodeInNextSnapshot && newEdgeParams.targetHandle) {
-      const { originalKey: targetOriginalKey } = parseSubHandleIdLocal(newEdgeParams.targetHandle);
+      const { originalKey: targetOriginalKey } = parseSubHandleId(newEdgeParams.targetHandle); // GUGU: Use imported parseSubHandleId
+      console.debug(`[DEBUG-MI] connectEdgeToMultiInput: TargetOriginalKey: ${targetOriginalKey}`);
       if (typeof targetIndexInOrder === "number" && targetOriginalKey) {
         targetNodeInNextSnapshot.data = targetNodeInNextSnapshot.data || {};
         targetNodeInNextSnapshot.data.inputConnectionOrders =
           targetNodeInNextSnapshot.data.inputConnectionOrders || {};
         const currentOrder =
           targetNodeInNextSnapshot.data.inputConnectionOrders[targetOriginalKey] || [];
+        console.debug(`[DEBUG-MI] connectEdgeToMultiInput: Current order for ${targetOriginalKey}:`, JSON.parse(JSON.stringify(currentOrder)));
 
         const newOrder = [...currentOrder];
         if (!newOrder.includes(newEdge.id)) {
-          newOrder.splice(targetIndexInOrder, 0, newEdge.id);
+            // Ensure targetIndexInOrder is valid for splice
+            const validIndex = Math.max(0, Math.min(targetIndexInOrder, newOrder.length));
+            newOrder.splice(validIndex, 0, newEdge.id);
+            console.debug(`[DEBUG-MI] connectEdgeToMultiInput: Splicing new edge ${newEdge.id} at index ${validIndex}.`);
         } else {
-          console.warn(`[MultiInputActions:connectEdgeToMultiInput] Edge ID ${newEdge.id} already in order for ${targetOriginalKey}. Re-inserting.`);
-          const existingIdx = newOrder.indexOf(newEdge.id);
-          if (existingIdx !== -1) newOrder.splice(existingIdx, 1);
-          newOrder.splice(targetIndexInOrder, 0, newEdge.id);
+            console.warn(`[DEBUG-MI] connectEdgeToMultiInput: Edge ID ${newEdge.id} already in order for ${targetOriginalKey}. Re-inserting.`);
+            const existingIdx = newOrder.indexOf(newEdge.id);
+            if (existingIdx !== -1) newOrder.splice(existingIdx, 1);
+            // Ensure targetIndexInOrder is valid for splice
+            const validIndex = Math.max(0, Math.min(targetIndexInOrder, newOrder.length));
+            newOrder.splice(validIndex, 0, newEdge.id);
+            console.debug(`[DEBUG-MI] connectEdgeToMultiInput: Re-splicing edge ${newEdge.id} at index ${validIndex}.`);
         }
         targetNodeInNextSnapshot.data.inputConnectionOrders[targetOriginalKey] = newOrder;
+        console.debug(`[DEBUG-MI] connectEdgeToMultiInput: New order for ${targetOriginalKey}:`, JSON.parse(JSON.stringify(newOrder)));
 
         newOrder.forEach((edgeInOrderId, indexInOrder) => {
           const edgeToUpdate = nextSnapshot.elements.find(
@@ -405,6 +398,7 @@ export function useMultiInputConnectionActions(
             if (!targetNodeInNextSnapshot.data.inputs) targetNodeInNextSnapshot.data.inputs = {};
             if (!targetNodeInNextSnapshot.data.inputs[targetOriginalKey]) targetNodeInNextSnapshot.data.inputs[targetOriginalKey] = {};
             targetNodeInNextSnapshot.data.inputs[targetOriginalKey]!.value = new Array(newOrder.length).fill(undefined);
+            console.debug(`[DEBUG-MI] connectEdgeToMultiInput: Synced inputs[${targetOriginalKey}].value array length to ${newOrder.length}`);
         }
       }
     }
@@ -462,7 +456,7 @@ export function useMultiInputConnectionActions(
         entry
       );
     } catch (error) {
-      console.error("[MultiInputActions:connectEdgeToMultiInput] 更新失败:", error);
+      console.error("[DEBUG-MI] connectEdgeToMultiInput: 更新失败:", error);
     }
   }
 
@@ -482,8 +476,9 @@ export function useMultiInputConnectionActions(
     newTargetIndexInOrder: number | undefined,
     entry: HistoryEntry
   ) {
+    console.debug(`[DEBUG-MI] moveAndReconnectEdgeMultiInput: Entry. Edge: ${edgeToMoveId}, OldTarget: ${originalTargetNodeId}::${originalTargetHandleId}, NewTarget: ${newTargetNodeId}::${newTargetHandleId}, NewIndex: ${newTargetIndexInOrder}`);
     if (!activeTabId.value) {
-      console.error("[MultiInputActions:moveAndReconnectEdgeMultiInput] No active tab ID.");
+      console.error("[DEBUG-MI] moveAndReconnectEdgeMultiInput: No active tab ID.");
       return;
     }
     const tabId = activeTabId.value;
@@ -546,16 +541,18 @@ export function useMultiInputConnectionActions(
     }
 
     // Remove from old multi-input order if applicable
-    const { originalKey: oldTargetOriginalKey } = parseSubHandleIdLocal(originalTargetHandleId);
+    const { originalKey: oldTargetOriginalKey } = parseSubHandleId(originalTargetHandleId); // GUGU: Use imported parseSubHandleId
     const originalTargetNodeInNext = nextSnapshot.elements.find(
       (el: any) => el && el.id === originalTargetNodeId && !("source" in el)
     ) as VueFlowNode | undefined;
 
     if (oldTargetOriginalKey && originalTargetNodeInNext?.data?.inputConnectionOrders?.[oldTargetOriginalKey]) {
       const oldOrder = originalTargetNodeInNext.data.inputConnectionOrders[oldTargetOriginalKey] as string[];
+      console.debug(`[DEBUG-MI] moveAndReconnectEdgeMultiInput: Old target ${originalTargetNodeId}::${oldTargetOriginalKey} - oldOrder:`, JSON.parse(JSON.stringify(oldOrder)));
       const newOrderForOldTarget = oldOrder.filter((id: string) => id !== edgeToMoveId);
       if (newOrderForOldTarget.length !== oldOrder.length) {
         originalTargetNodeInNext.data.inputConnectionOrders[oldTargetOriginalKey] = newOrderForOldTarget;
+        console.debug(`[DEBUG-MI] moveAndReconnectEdgeMultiInput: Old target ${originalTargetNodeId}::${oldTargetOriginalKey} - newOrderForOldTarget (after removal):`, JSON.parse(JSON.stringify(newOrderForOldTarget)));
         newOrderForOldTarget.forEach((edgeInOrderId, indexInOrder) => {
           const edgeToUpdate = nextSnapshot.elements.find(
             (el: any) => el && el.id === edgeInOrderId && "source" in el
@@ -568,6 +565,7 @@ export function useMultiInputConnectionActions(
             if(!originalTargetNodeInNext.data.inputs) originalTargetNodeInNext.data.inputs = {};
             if(!originalTargetNodeInNext.data.inputs[oldTargetOriginalKey]) originalTargetNodeInNext.data.inputs[oldTargetOriginalKey] = {};
             originalTargetNodeInNext.data.inputs[oldTargetOriginalKey]!.value = new Array(newOrderForOldTarget.length).fill(undefined);
+            console.debug(`[DEBUG-MI] moveAndReconnectEdgeMultiInput: Old target ${originalTargetNodeId}::${oldTargetOriginalKey} - synced .value array length to ${newOrderForOldTarget.length}`);
         }
         if (newOrderForOldTarget.length === 0) {
             if(originalTargetNodeInNext.data.inputConnectionOrders) delete originalTargetNodeInNext.data.inputConnectionOrders[oldTargetOriginalKey];
@@ -609,7 +607,7 @@ export function useMultiInputConnectionActions(
 
     // Add to new multi-input order if applicable
     if (newTargetNodeId && newTargetHandleId && typeof newTargetIndexInOrder === "number") {
-      const { originalKey: newTargetOriginalKey } = parseSubHandleIdLocal(newTargetHandleId);
+      const { originalKey: newTargetOriginalKey } = parseSubHandleId(newTargetHandleId); // GUGU: Use imported parseSubHandleId
       if (newTargetOriginalKey) {
         const newTargetNodeInNext = nextSnapshot.elements.find(
           (el: any) => el && el.id === newTargetNodeId && !("source" in el)
@@ -621,15 +619,21 @@ export function useMultiInputConnectionActions(
             newTargetNodeInNext.data.inputConnectionOrders || {};
           const currentOrderAtNewTarget =
             newTargetNodeInNext.data.inputConnectionOrders[newTargetOriginalKey] || [];
+          console.debug(`[DEBUG-MI] moveAndReconnectEdgeMultiInput: New target ${newTargetNodeId}::${newTargetOriginalKey} - currentOrderAtNewTarget:`, JSON.parse(JSON.stringify(currentOrderAtNewTarget)));
 
           let finalOrderAtNewTarget = [...currentOrderAtNewTarget];
           const existingIdxInNewTarget = finalOrderAtNewTarget.indexOf(edgeToMoveId);
           if (existingIdxInNewTarget !== -1) {
             finalOrderAtNewTarget.splice(existingIdxInNewTarget, 1);
+            console.debug(`[DEBUG-MI] moveAndReconnectEdgeMultiInput: Edge ${edgeToMoveId} already in new target's order, removed from old position ${existingIdxInNewTarget}.`);
           }
-          const insertAtIndex = Math.max(0, Math.min(newTargetIndexInOrder, finalOrderAtNewTarget.length));
-          finalOrderAtNewTarget.splice(insertAtIndex, 0, edgeToMoveId);
+          // Ensure insertAtIndex is valid
+          const validInsertAtIndex = Math.max(0, Math.min(newTargetIndexInOrder, finalOrderAtNewTarget.length));
+          finalOrderAtNewTarget.splice(validInsertAtIndex, 0, edgeToMoveId);
+          console.debug(`[DEBUG-MI] moveAndReconnectEdgeMultiInput: Splicing edge ${edgeToMoveId} into new target's order at index ${validInsertAtIndex}.`);
+
           newTargetNodeInNext.data.inputConnectionOrders[newTargetOriginalKey] = finalOrderAtNewTarget;
+          console.debug(`[DEBUG-MI] moveAndReconnectEdgeMultiInput: New target ${newTargetNodeId}::${newTargetOriginalKey} - finalOrderAtNewTarget:`, JSON.parse(JSON.stringify(finalOrderAtNewTarget)));
 
           finalOrderAtNewTarget.forEach((edgeInOrderId, indexInOrder) => {
             const edgeToReindex = nextSnapshot.elements.find(
@@ -643,6 +647,7 @@ export function useMultiInputConnectionActions(
             if(!newTargetNodeInNext.data.inputs) newTargetNodeInNext.data.inputs = {};
             if(!newTargetNodeInNext.data.inputs[newTargetOriginalKey]) newTargetNodeInNext.data.inputs[newTargetOriginalKey] = {};
             newTargetNodeInNext.data.inputs[newTargetOriginalKey]!.value = new Array(finalOrderAtNewTarget.length).fill(undefined);
+            console.debug(`[DEBUG-MI] moveAndReconnectEdgeMultiInput: New target ${newTargetNodeId}::${newTargetOriginalKey} - synced .value array length to ${finalOrderAtNewTarget.length}`);
           }
         }
       }
@@ -682,7 +687,7 @@ export function useMultiInputConnectionActions(
         entry
       );
     } catch (error) {
-      console.error("[MultiInputActions:moveAndReconnectEdgeMultiInput] 更新失败:", error);
+      console.error("[DEBUG-MI] moveAndReconnectEdgeMultiInput: 更新失败:", error);
     }
   }
 
@@ -696,7 +701,7 @@ export function useMultiInputConnectionActions(
   ): InputDefinition | OutputDefinition | GroupSlotInfo | undefined { // Changed return type
     if (!handleId) return undefined;
 
-    const { originalKey: slotKey } = parseSubHandleIdLocal(handleId);
+    const { originalKey: slotKey } = parseSubHandleId(handleId); // GUGU: Use imported parseSubHandleId
     if (!slotKey) return undefined;
 
     const nodeType = getNodeType(node);
@@ -756,13 +761,13 @@ export function useMultiInputConnectionActions(
 
     if (isSourceConvertible && !isTargetConvertible && targetSlotDef.dataFlowType !== DataFlowType.WILDCARD && targetSlotDef.dataFlowType !== DataFlowType.CONVERTIBLE_ANY) {
       nodeToUpdate = sourceNode;
-      keyOfSlotOnUpdatedNode = parseSubHandleIdLocal(sourceHandleId).originalKey; // Use parsed key
+      keyOfSlotOnUpdatedNode = parseSubHandleId(sourceHandleId).originalKey; // GUGU: Use imported parseSubHandleId
       newType = targetSlotDef.dataFlowType;
       newCategories = targetSlotDef.matchCategories?.filter(cat => cat !== BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE && cat !== BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD) || [];
       isSourceNodeBeingUpdated = true;
     } else if (isTargetConvertible && !isSourceConvertible && sourceSlotDef.dataFlowType !== DataFlowType.WILDCARD && sourceSlotDef.dataFlowType !== DataFlowType.CONVERTIBLE_ANY) {
       nodeToUpdate = targetNode;
-      keyOfSlotOnUpdatedNode = parseSubHandleIdLocal(targetHandleId).originalKey; // Use parsed key
+      keyOfSlotOnUpdatedNode = parseSubHandleId(targetHandleId).originalKey; // GUGU: Use imported parseSubHandleId
       newType = sourceSlotDef.dataFlowType;
       newCategories = sourceSlotDef.matchCategories?.filter(cat => cat !== BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE && cat !== BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD) || [];
       isSourceNodeBeingUpdated = false;

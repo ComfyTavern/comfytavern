@@ -23,4 +23,31 @@ export function getNodeType(node: VueFlowNode | undefined | null): string {
   return 'unknown'; // 或者返回 undefined，取决于调用处的处理方式
 }
 
+/**
+ * 解析句柄 ID，区分普通句柄和子句柄 (例如 'key__0')。
+ * @param handleId 待解析的句柄 ID。
+ * @returns 返回一个对象，包含原始键名、可选的索引和是否为子句柄的布尔值。
+ */
+export function parseSubHandleId(handleId: string | null | undefined): { originalKey: string; index?: number; isSubHandle: boolean } {
+  if (!handleId) { // Covers null, undefined, and empty string ""
+    return { originalKey: '', index: undefined, isSubHandle: false };
+  }
+  const parts = handleId.split('__');
+  
+  if (parts.length === 2) {
+    const keyPart = parts[0];
+    const indexStrPart = parts[1];
+    // 显式检查以帮助 TypeScript 缩小类型，即使逻辑上已知它们是字符串
+    if (typeof keyPart === 'string' && typeof indexStrPart === 'string') {
+      const potentialIndex = parseInt(indexStrPart, 10);
+      if (!isNaN(potentialIndex)) {
+        return { originalKey: keyPart, index: potentialIndex, isSubHandle: true };
+      }
+    }
+  }
+  // 如果不符合 "key__index" 格式，或 index 不是数字，或类型检查未通过，
+  // 则原始的 handleId 作为 key。
+  return { originalKey: handleId, index: undefined, isSubHandle: false };
+}
+
 // 未来可以添加更多节点相关的工具函数到这里...

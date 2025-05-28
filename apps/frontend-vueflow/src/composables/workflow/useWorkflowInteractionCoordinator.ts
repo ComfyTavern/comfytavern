@@ -10,15 +10,15 @@ import { useWorkflowViewManagement } from "./useWorkflowViewManagement";
 import { useWorkflowInterfaceManagement } from "./useWorkflowInterfaceManagement";
 import { useTabStore } from "@/stores/tabStore";
 import type { WorkflowStateSnapshot } from "@/types/workflowTypes";
-import { getNodeType } from "@/utils/nodeUtils"; // 用于在配置更新中检查 NodeGroup
+import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils"; // GUGU: Import parseSubHandleId, 用于在配置更新中检查 NodeGroup
 import { useWorkflowGrouping } from "../group/useWorkflowGrouping";
 import { useWorkflowPreview } from "./useWorkflowPreview"; // 导入新的预览 composable
 import { useEditorState } from "@/composables/editor/useEditorState"; // 导入 useEditorState
 import type { EditorOpeningContext } from "@/types/editorTypes"; // 导入 EditorOpeningContext
 import { useMultiInputConnectionActions } from "@/composables/node/useMultiInputConnectionActions"; // Roo: 导入新的 multi-input actions
 
-// 本地辅助函数 parseSubHandleIdLocal 已被移除，因为它不再被此文件中的任何函数使用。
-// useMultiInputConnectionActions.ts 中有其自己的版本。
+// GUGU: Comment about parseSubHandleIdLocal removed as it's no longer relevant.
+// We will now import and use the shared parseSubHandleId from nodeUtils.
 
 /**
  * @module composables/workflow/useWorkflowInteractionCoordinator
@@ -388,63 +388,130 @@ export function useWorkflowInteractionCoordinator() {
     if (modifiedSlotInfo) {
       const nodeIndex = nextSnapshotElements.findIndex(el => el.id === modifiedSlotInfo.node.id && !('source' in el));
       if (nodeIndex !== -1) {
-        const nodeToUpdate = klona(nextSnapshotElements[nodeIndex]) as VueFlowNode; // klona to avoid modifying the current snapshot's elements directly yet
+        const nodeToUpdate = klona(nextSnapshotElements[nodeIndex]) as VueFlowNode;
         nodeToUpdate.data = nodeToUpdate.data || {};
         if (modifiedSlotInfo.direction === 'inputs') {
           nodeToUpdate.data.inputs = nodeToUpdate.data.inputs || {};
           nodeToUpdate.data.inputs[modifiedSlotInfo.handleKey] = klona(modifiedSlotInfo.newDefinition);
-        } else { // outputs
+        } else {
           nodeToUpdate.data.outputs = nodeToUpdate.data.outputs || {};
           nodeToUpdate.data.outputs[modifiedSlotInfo.handleKey] = klona(modifiedSlotInfo.newDefinition);
         }
-        nextSnapshotElements[nodeIndex] = nodeToUpdate; // Replace with the updated node
+        nextSnapshotElements[nodeIndex] = nodeToUpdate;
+        console.debug(`[DEBUG-MI] WorkflowInteractionCoordinator: Applied modifiedSlotInfo for node ${modifiedSlotInfo.node.id}, handle ${modifiedSlotInfo.handleKey}`);
       } else {
-        console.warn(`[handleConnectionWithInterfaceUpdate] Node ${modifiedSlotInfo.node.id} not found in snapshot for slot update.`);
+        console.warn(`[DEBUG-MI] WorkflowInteractionCoordinator: Node ${modifiedSlotInfo.node.id} not found in snapshot for slot update.`);
       }
     }
 
     // 2b. 添加新边
-    // Ensure no duplicate edge ID if newEdge.id is pre-generated and somehow already in elements
     if (!nextSnapshotElements.find(el => el.id === newEdge.id)) {
         nextSnapshotElements.push(klona(newEdge));
+        console.debug(`[DEBUG-MI] WorkflowInteractionCoordinator: Added new edge ${newEdge.id} to snapshot elements.`);
     } else {
-        console.warn(`[handleConnectionWithInterfaceUpdate] Edge with ID ${newEdge.id} already exists. This might be an issue.`);
-        // Potentially find and update the existing edge instead of pushing, if that's the desired logic.
-        // For now, this indicates a potential problem if IDs are reused for new connections.
+        console.warn(`[DEBUG-MI] WorkflowInteractionCoordinator: Edge with ID ${newEdge.id} already exists. This might be an issue.`);
     }
     
+    // >>>>>>>>>>>> GUGU: START MULTI-INPUT CHECK <<<<<<<<<<<<<<
+    const targetNodeForMultiInputCheck = nextSnapshotElements.find(el => el.id === targetNodeId && !('source' in el)) as VueFlowNode | undefined;
+    if (targetNodeForMultiInputCheck && newEdge.targetHandle) {
+        const { originalKey: targetOriginalKey } = parseSubHandleId(newEdge.targetHandle); // GUGU: Use imported parseSubHandleId
+        const targetInputDef = targetNodeForMultiInputCheck.data?.inputs?.[targetOriginalKey];
+        
+        if (targetInputDef?.multi === true) {
+            console.debug(`[DEBUG-MI] WorkflowInteractionCoordinator: Target ${targetNodeId}::${targetOriginalKey} IS a multi-input. History entry details:`, JSON.parse(JSON.stringify(entry.details)));
+            // 关键: targetIndexInOrder 应该从 entry.details 中获取，它是由 useCanvasConnections 计算的
+            const targetIndexInOrder = entry.details?.newTargetIndexInOrder as number | undefined;
+            if (typeof targetIndexInOrder === 'number') {
+                console.debug(`[DEBUG-MI] WorkflowInteractionCoordinator: Calling multiInputActions.connectEdgeToMultiInput with targetIndexInOrder: ${targetIndexInOrder}`);
+                // 注意：connectEdgeToMultiInput 内部会创建自己的快照和历史记录。
+                // 这里我们可能需要调整，让 connectEdgeToMultiInput 直接修改 nextSnapshotElements
+                // 或者，这里的 handleConnectionWithInterfaceUpdate 不应该直接添加边到 multi-input，
+                // 而是让 connectEdgeToMultiInput 全权负责。
+                // 暂时，我们先假设 connectEdgeToMultiInput 会处理好一切，包括可能重复添加边的问题（它内部有检查）。
+                // 但更清洁的做法是，如果检测到是多输入，就不在这里的 nextSnapshotElements.push(klona(newEdge))，
+                // 而是让 multiInputActions.connectEdgeToMultiInput 来添加。
+
+                // 为了避免重复添加和状态不一致，我们先从 nextSnapshotElements 中移除这条边，
+                // 让 connectEdgeToMultiInput 来负责添加和管理顺序。
+                const edgeIndex = nextSnapshotElements.findIndex(el => el.id === newEdge.id);
+                if (edgeIndex !== -1) {
+                    nextSnapshotElements.splice(edgeIndex, 1);
+                    console.debug(`[DEBUG-MI] WorkflowInteractionCoordinator: Temporarily removed edge ${newEdge.id} from nextSnapshotElements, will be re-added by connectEdgeToMultiInput.`);
+                }
+                // 这个调用是异步的，它会自己处理历史记录和状态更新
+                // 这意味着当前的 _recordHistory 和 setElementsAndInterface 可能基于一个不完整的状态（如果 connectEdgeToMultiInput 异步执行）
+                // 这是一个潜在的重构点：多输入连接应该同步修改快照，或者整个流程需要重新设计。
+                // 暂时，我们先调用它，看看日志。
+                // TODO: Refactor this flow. connectEdgeToMultiInput should ideally modify 'nextSnapshot' directly or return changes to be merged.
+                // For now, we'll let it run and it will manage its own history entry. This might lead to two history entries for one action.
+                 multiInputActions.connectEdgeToMultiInput(
+                     klona(newEdge), // Pass a clone of the new edge
+                     targetIndexInOrder,
+                     entry // Pass the original history entry, connectEdgeToMultiInput might need to create a more specific one or use parts of it
+                 );
+                 // Since connectEdgeToMultiInput handles its own snapshot and history,
+                 // we might not need to proceed with the _recordHistory and setElementsAndInterface below for this specific edge.
+                 // However, other changes (modifiedSlotInfo, interfaceUpdates) still need to be applied.
+                 // This is getting complicated. For now, let's assume connectEdgeToMultiInput handles the edge and its related node state.
+                 // The current function will then proceed to record history for other changes.
+            } else {
+                console.warn(`[DEBUG-MI] WorkflowInteractionCoordinator: Target is multi-input, but targetIndexInOrder is missing or not a number in history entry details. Details:`, JSON.parse(JSON.stringify(entry.details)));
+            }
+        } else {
+             console.debug(`[DEBUG-MI] WorkflowInteractionCoordinator: Target ${targetNodeId}::${targetOriginalKey} is NOT a multi-input (or def not found).`);
+        }
+    }
+    // >>>>>>>>>>>> GUGU: END MULTI-INPUT CHECK <<<<<<<<<<<<<<
+
+
     const nextSnapshot: WorkflowStateSnapshot = {
-      elements: nextSnapshotElements,
+      elements: nextSnapshotElements, // May or may not contain newEdge if handled by multi-input
       viewport: currentSnapshot.viewport,
       workflowData: {
         ...currentSnapshot.workflowData,
-        // Roo: 更新接口定义 (newInputs/newOutputs 可能为空对象 if no interface change)
         interfaceInputs: Object.keys(newInputs).length > 0 ? klona(newInputs) : currentSnapshot.workflowData.interfaceInputs,
         interfaceOutputs: Object.keys(newOutputs).length > 0 ? klona(newOutputs) : currentSnapshot.workflowData.interfaceOutputs,
       },
     };
     
-    // 如果 newInputs 或 newOutputs 为空对象但 currentSnapshot 中有值，确保保留 currentSnapshot 的值
-    // 上面的逻辑已通过检查 Object.keys().length > 0 来处理，如果 newInputs/Outputs 为空，则使用 currentSnapshot 的版本
-
-    // 4. 记录历史 (在应用状态之前记录，以避免潜在的观察者竞态条件)
-    // 确保 entry.details 包含所有相关信息，包括 modifiedSlotInfo 和 interfaceUpdateResult (来自调用方)
     _recordHistory(internalId, entry, nextSnapshot);
 
-    // 3. 应用状态更新 (同时设置元素和接口)
     await workflowManager.setElementsAndInterface(
       internalId,
-      nextSnapshot.elements,
+      nextSnapshot.elements, // This snapshot might be problematic if multi-input handling is async or separate
       nextSnapshot.workflowData?.interfaceInputs ?? {},
       nextSnapshot.workflowData?.interfaceOutputs ?? {}
     );
+
+    // 新增状态日志
+    console.log(`[DEBUG-MI] COORD Post-setElementsAndInterface State for GroupInput (${sourceNodeId}):`);
+    const updatedSourceNode = nextSnapshot.elements.find(el => el.id === sourceNodeId && !('source' in el)) as VueFlowNode | undefined;
+    if (updatedSourceNode && updatedSourceNode.type === 'core:GroupInput') {
+        console.log(`[DEBUG-MI]   Relevant interfaceInputs for GroupInput's outputs:`, JSON.parse(JSON.stringify(nextSnapshot.workflowData?.interfaceInputs)));
+    } else if (updatedSourceNode) {
+        console.log(`[DEBUG-MI]   SourceNode (${sourceNodeId}) data.outputs:`, JSON.parse(JSON.stringify(updatedSourceNode.data?.outputs)));
+    }
+
+    console.log(`[DEBUG-MI] COORD Post-setElementsAndInterface State for Target (${targetNodeId}):`);
+    const updatedTargetNode = nextSnapshot.elements.find(el => el.id === targetNodeId && !('source' in el)) as VueFlowNode | undefined;
+    if (updatedTargetNode && newEdge.targetHandle) {
+        const { originalKey: targetOriginalKey } = parseSubHandleId(newEdge.targetHandle); // Ensure parseSubHandleId is available
+        console.log(`[DEBUG-MI]   TargetNode (${targetNodeId}) input '${targetOriginalKey}' connections stringified:`, JSON.stringify(updatedTargetNode.data?.inputConnectionOrders?.[targetOriginalKey]));
+        console.log(`[DEBUG-MI]   TargetNode (${targetNodeId}) input '${targetOriginalKey}' values stringified:`, JSON.stringify(updatedTargetNode.data?.inputs?.[targetOriginalKey]?.value));
+    }
+
+    const finalEdgeInSnapshot = nextSnapshot.elements.find(el => el.id === newEdge.id && 'source' in el) as Edge | undefined;
+    console.log(`[DEBUG-MI] COORD Edge (${newEdge.id}) in nextSnapshot stringified:`, JSON.stringify(finalEdgeInSnapshot));
+    // 结束新增状态日志
 
     await nextTick(); // Roo: 等待下一个 tick，确保响应式更新已传播
 
     // 5. 触发视图更新 (强制更新连接节点的内部结构)
     const instance = workflowViewManagement.getVueFlowInstance(internalId);
     if (instance) {
-      await nextTick(); // 等待 DOM 更新
+      await nextTick(); // Tick 2 (Vue DOM updates based on store changes should start)
+      await nextTick(); // Tick 3 (Give more time for DOM to settle from BaseNode's v-for re-render)
       instance.updateNodeInternals([sourceNodeId, targetNodeId]); // 更新节点内部
       await nextTick(); // 确保 updateNodeInternals 完成后的更新生效
     } else {

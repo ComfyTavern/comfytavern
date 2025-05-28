@@ -288,12 +288,32 @@ const { updateNodeInternals } = useVueFlow(); // 获取更新函数
 const inputOrderKey = computed(() => finalInputs.value.map((i) => String(i.key)).join(","));
 const outputOrderKey = computed(() => finalOutputs.value.map((o) => String(o.key)).join(","));
 
+// 新增：监听 outputOrderKey 变化并记录 GroupInput 的 finalOutputs
+watch(outputOrderKey, (newVal, oldVal) => {
+  if (props.type === 'core:GroupInput') {
+    console.log(`[DEBUG-MI] BaseNode (${props.id} - GroupInput) outputOrderKey changed.`);
+    console.log(`[DEBUG-MI]   Old keys: ${oldVal}`);
+    console.log(`[DEBUG-MI]   New keys: ${newVal}`);
+    console.log('[DEBUG-MI]   Current finalOutputs:', JSON.parse(JSON.stringify(finalOutputs.value)));
+  }
+});
+
 // 监听顺序更改并触发更新
 watch(
   [inputOrderKey, outputOrderKey],
   () => {
+    // Log for GroupInput output changes
+    if (props.type === 'core:GroupInput' && finalInputs.value.length === 0) { // GroupInput has no finalInputs
+        console.log(`[DEBUG-MI] BaseNode (${props.id} - GroupInput) watch for orderKey triggered to call updateNodeInternals. outputOrderKey: ${outputOrderKey.value}`);
+    }
     nextTick(() => {
+      if (props.type === 'core:GroupInput' && finalInputs.value.length === 0) {
+        console.log(`[DEBUG-MI] BaseNode (${props.id} - GroupInput) INSIDE nextTick, BEFORE updateNodeInternals for [${props.id}]`);
+      }
       updateNodeInternals([props.id]);
+      if (props.type === 'core:GroupInput' && finalInputs.value.length === 0) {
+        console.log(`[DEBUG-MI] BaseNode (${props.id} - GroupInput) INSIDE nextTick, AFTER updateNodeInternals for [${props.id}]`);
+      }
     });
   },
   { flush: "post" } // 使用 'post' flush 在 DOM 更新后运行
