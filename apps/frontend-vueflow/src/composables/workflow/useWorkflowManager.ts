@@ -688,7 +688,7 @@ function createWorkflowManager() {
       // 应用更新
       state.elements = newElements; // VueFlow elements (包含节点和边) 被更新
 
-      // GUGU: 从 newElements (即 state.elements) 中提取边，并更新 state.workflowData.edges
+      // 从 newElements (即 state.elements) 中提取边，并更新 state.workflowData.edges
       // 这是为了确保 workflowManager 内部的 workflowData.edges 与其管理的 elements 列表中的边保持同步。
       if (state.workflowData) { // 确保 workflowData 存在
         const edgesFromElements = state.elements.filter(el => 'source' in el) as VueFlowEdge[];

@@ -19,7 +19,7 @@ import { createHistoryEntry } from "@comfytavern/utils";
 import { useTabStore } from "@/stores/tabStore";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useNodeStore } from "@/stores/nodeStore"; // 新增导入
-import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils"; // GUGU: Import parseSubHandleId
+import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils"; // Import parseSubHandleId
 import { klona } from 'klona/json';
 import { nanoid } from 'nanoid';
 import type { Node as VueFlowNode } from '@vue-flow/core'; // Roo: 明确导入 VueFlow Node 类型
@@ -74,7 +74,7 @@ export function useCanvasConnections({
 
   const reorderPreviewIndex = ref<number | null>(null);
 
-  // GUGU: Removed internal parseSubHandleId, will use imported version
+  // Removed internal parseSubHandleId, will use imported version
 
   const getReadableNames = (nodeId: string, rawHandleId: string | null | undefined, handleType?: 'source' | 'target') => {
     const node = findNode(nodeId);

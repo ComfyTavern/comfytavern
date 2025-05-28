@@ -35,8 +35,8 @@ import { createHistoryEntry } from '@comfytavern/utils';
 import { klona } from 'klona/full';
 import { useMultiInputConnectionActions } from '@/composables/node/useMultiInputConnectionActions';
 import { useTabStore } from '@/stores/tabStore';
-import { useWorkflowManager } from '@/composables/workflow/useWorkflowManager'; // GUGU: 导入 useWorkflowManager
-import { useWorkflowHistory } from '@/composables/workflow/useWorkflowHistory'; // GUGU: 导入 useWorkflowHistory
+import { useWorkflowManager } from '@/composables/workflow/useWorkflowManager'; // 导入 useWorkflowManager
+import { useWorkflowHistory } from '@/composables/workflow/useWorkflowHistory'; // 导入 useWorkflowHistory
 import Tooltip from '@/components/common/Tooltip.vue';
 
 interface DraggableConnectionItem {
@@ -62,8 +62,8 @@ const props = defineProps({
 
 const tabStore = useTabStore();
 const activeTabIdRef = computed(() => tabStore.activeTabId);
-const workflowManager = useWorkflowManager(); // GUGU: 获取 workflowManager 实例
-const workflowHistory = useWorkflowHistory(); // GUGU: 获取 workflowHistory 实例
+const workflowManager = useWorkflowManager(); // 获取 workflowManager 实例
+const workflowHistory = useWorkflowHistory(); // 获取 workflowHistory 实例
 const { reorderMultiInputConnections, disconnectEdgeFromMultiInput } = useMultiInputConnectionActions(activeTabIdRef);
 
 const draggableConnections = ref<DraggableConnectionItem[]>([]);
@@ -197,8 +197,8 @@ const onSortEnd = async () => {
 };
 
 const handleDisconnectEdge = async (item: DraggableConnectionItem) => {
-  const activeTabId = activeTabIdRef.value; // GUGU: 从 ref 获取 activeTabId 的当前值
-  if (!activeTabId) { // GUGU: 检查获取到的 activeTabId 值
+  const activeTabId = activeTabIdRef.value; // 从 ref 获取 activeTabId 的当前值
+  if (!activeTabId) { // 检查获取到的 activeTabId 值
     console.error("[InlineConnectionSorter] 无法断开连接：activeTabId 未定义。");
     return;
   }
@@ -224,7 +224,7 @@ const handleDisconnectEdge = async (item: DraggableConnectionItem) => {
     originalTargetHandleId: item.targetHandleId, // 使用 item 上的 targetHandleId
     contextNodeId: props.nodeId,
     contextInputKey: props.inputHandleKey,
-    originalEdgeData: klona(edgeToDisconnect), // GUGU: 添加原始边数据以便撤销
+    originalEdgeData: klona(edgeToDisconnect), // 添加原始边数据以便撤销
   };
 
   const entry: HistoryEntry = createHistoryEntry(
@@ -243,7 +243,7 @@ const handleDisconnectEdge = async (item: DraggableConnectionItem) => {
     const mutableSnapshot = klona(currentSnapshot);
 
     await disconnectEdgeFromMultiInput(
-      mutableSnapshot, // GUGU: 传递快照
+      mutableSnapshot, // 传递快照
       item.id,
       props.nodeId, // originalTargetNodeId for the function
       item.targetHandleId // originalTargetHandleId for the function

@@ -7,12 +7,12 @@ import {
   BuiltInSocketMatchCategory,
   type DataFlowTypeName,
   type WorkflowObject,
-  type InputDefinition as ComfyInputDefinition, // GUGU: 使用别名以避免潜在的名称冲突
+  type InputDefinition as ComfyInputDefinition, // 使用别名以避免潜在的名称冲突
   type OutputDefinition,
   type GroupInterfaceInfo,
 } from "@comfytavern/types";
 import type { Edge, Node as VueFlowNode } from '@vue-flow/core';
-import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils"; // GUGU: 导入 parseSubHandleId
+import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils"; // 导入 parseSubHandleId
 import { useGroupInterfaceSync } from "@/composables/group/useGroupInterfaceSync";
 import type { WorkflowStateSnapshot } from "@/types/workflowTypes";
 
@@ -22,7 +22,7 @@ interface NodeInstanceData {
   inputs?: Record<string, ComfyInputDefinition | GroupSlotInfo>;
   outputs?: Record<string, OutputDefinition | GroupSlotInfo>;
   groupInterface?: GroupInterfaceInfo;
-  inputConnectionOrders?: Record<string, string[]>; // GUGU: 为类型安全添加
+  inputConnectionOrders?: Record<string, string[]>; // 为类型安全添加
   // 如果访问，则添加其他已知属性，如 configValues
 }
 
@@ -567,7 +567,7 @@ export function useMultiInputConnectionActions(
   ): ComfyInputDefinition | OutputDefinition | GroupSlotInfo | undefined { // 已更改返回类型
     if (!handleId) return undefined;
 
-    const { originalKey: slotKey } = parseSubHandleId(handleId); // GUGU: 使用导入的 parseSubHandleId
+    const { originalKey: slotKey } = parseSubHandleId(handleId); // 使用导入的 parseSubHandleId
     if (!slotKey) return undefined;
 
     const nodeType = getNodeType(node);
@@ -606,7 +606,7 @@ export function useMultiInputConnectionActions(
     elementsToModifyArg: (VueFlowNode | Edge)[], // 已更改类型以包含 Edge
     workflowDataToModifyArg: (WorkflowObject & { id: string }) | undefined | null, // 允许 null
     activeTabIdString: string
-  ): /* Promise<...> */ { updatedElements: (VueFlowNode | Edge)[]; updatedWorkflowData: (WorkflowObject & { id: string }) | null } { // GUGU: 将 undefined 更改为 null
+  ): /* Promise<...> */ { updatedElements: (VueFlowNode | Edge)[]; updatedWorkflowData: (WorkflowObject & { id: string }) | null } { // 将 undefined 更改为 null
     // 操作传入参数的克隆副本，以避免直接修改原始快照外的引用，除非这是期望的行为。
     // connectEdgeToMultiInput 的调用者 (InteractionCoordinator) 应该已经克隆了整个快照。
     // 因此，这里可以直接修改 elementsToModifyArg 和 workflowDataToModifyArg，或者克隆它们。
@@ -642,13 +642,13 @@ export function useMultiInputConnectionActions(
 
     if (isSourceConvertible && !isTargetConvertible && targetSlotDef.dataFlowType !== DataFlowType.WILDCARD && targetSlotDef.dataFlowType !== DataFlowType.CONVERTIBLE_ANY) {
       nodeToUpdate = sourceNode;
-      keyOfSlotOnUpdatedNode = parseSubHandleId(sourceHandleId).originalKey; // GUGU: 使用导入的 parseSubHandleId
+      keyOfSlotOnUpdatedNode = parseSubHandleId(sourceHandleId).originalKey; // 使用导入的 parseSubHandleId
       newType = targetSlotDef.dataFlowType;
       newCategories = targetSlotDef.matchCategories?.filter((cat: string) => cat !== BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE && cat !== BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD) || [];
       isSourceNodeBeingUpdated = true;
     } else if (isTargetConvertible && !isSourceConvertible && sourceSlotDef.dataFlowType !== DataFlowType.WILDCARD && sourceSlotDef.dataFlowType !== DataFlowType.CONVERTIBLE_ANY) {
       nodeToUpdate = targetNode;
-      keyOfSlotOnUpdatedNode = parseSubHandleId(targetHandleId).originalKey; // GUGU: 使用导入的 parseSubHandleId
+      keyOfSlotOnUpdatedNode = parseSubHandleId(targetHandleId).originalKey; // 使用导入的 parseSubHandleId
       newType = sourceSlotDef.dataFlowType;
       newCategories = sourceSlotDef.matchCategories?.filter((cat: string) => cat !== BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE && cat !== BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD) || [];
       isSourceNodeBeingUpdated = false;
@@ -755,7 +755,7 @@ export function useMultiInputConnectionActions(
         if (syncedInterfaces) {
           if (workflowDataCopy) {
             workflowDataCopy.interfaceOutputs = syncedInterfaces.outputs;
-          } else if (workflowDataCopy === null && workflowDataToModifyArg === null) { // GUGU: 如果原始值为 null，则进行更精确的检查以创建新值
+          } else if (workflowDataCopy === null && workflowDataToModifyArg === null) { // 如果原始值为 null，则进行更精确的检查以创建新值
             workflowDataCopy = {
               id: `temp-wf-go-${Date.now()}`, // 确保唯一且描述性的临时 ID
               name: 'Temporary Workflow Data (GroupOutput Sync)', // 确保 name 存在

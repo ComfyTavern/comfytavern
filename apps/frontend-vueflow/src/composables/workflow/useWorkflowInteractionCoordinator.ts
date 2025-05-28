@@ -10,14 +10,14 @@ import { useWorkflowViewManagement } from "./useWorkflowViewManagement";
 import { useWorkflowInterfaceManagement } from "./useWorkflowInterfaceManagement";
 import { useTabStore } from "@/stores/tabStore";
 import type { WorkflowStateSnapshot } from "@/types/workflowTypes";
-import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils"; // GUGU: Import parseSubHandleId, 用于在配置更新中检查 NodeGroup
+import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils"; // Import parseSubHandleId, 用于在配置更新中检查 NodeGroup
 import { useWorkflowGrouping } from "../group/useWorkflowGrouping";
 import { useWorkflowPreview } from "./useWorkflowPreview"; // 导入新的预览 composable
 import { useEditorState } from "@/composables/editor/useEditorState"; // 导入 useEditorState
 import type { EditorOpeningContext } from "@/types/editorTypes"; // 导入 EditorOpeningContext
 import { useMultiInputConnectionActions } from "@/composables/node/useMultiInputConnectionActions"; // Roo: 导入新的 multi-input actions
 
-// GUGU: Comment about parseSubHandleIdLocal removed as it's no longer relevant.
+// Comment about parseSubHandleIdLocal removed as it's no longer relevant.
 // We will now import and use the shared parseSubHandleId from nodeUtils.
 
 /**
