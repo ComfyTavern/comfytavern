@@ -31,6 +31,7 @@ let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 5000; // 5 seconds
 let reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
+let initiatingTabIdForNextPrompt: string | null = null; // 新增：存储下一个 PROMPT_ACCEPTED_RESPONSE 期望的 tabId
 
 let executionStore: ReturnType<typeof useExecutionStore> | null = null; // 延迟初始化
 let tabStore: ReturnType<typeof useTabStore> | null = null; // 延迟初始化
@@ -153,46 +154,56 @@ const connect = (isRetry = false) => {
 
       let targetTabId: string | null = null;
 
-      if (requiresTabAssociation) {
-        if (messageTabId) {
+      // 特殊处理 PROMPT_ACCEPTED_RESPONSE 来确定 targetTabId
+      if (message.type === WebSocketMessageType.PROMPT_ACCEPTED_RESPONSE) {
+        if (initiatingTabIdForNextPrompt) {
+          targetTabId = initiatingTabIdForNextPrompt;
+          initiatingTabIdForNextPrompt = null; // 使用后清除
+        } else {
+          console.error("[WebSocket] Received PROMPT_ACCEPTED_RESPONSE but no initiating tab was recorded. This may lead to misdirected updates.");
+          // 如果没有 initiatingTabIdForNextPrompt，targetTabId 将保持 null
+          // 后续逻辑会判断是否忽略此消息或使用 currentActiveTabId (不推荐)
+        }
+      } else if (requiresTabAssociation) {
+        // 对于其他需要关联的消息，使用现有逻辑
+        if (messageTabId) { // payload?.internalId
           targetTabId = messageTabId;
-        } else if (messageWorkflowId) {
-          // 如果没有 internalId 但有 workflowId，尝试找到拥有该 workflowId 的 tab
-          for (const [tabId, state] of executionStore.tabExecutionStates.entries()) {
-            if (state.promptId === messageWorkflowId) { // 使用 promptId 替代 workflowId
-              targetTabId = tabId;
+        } else if (messageWorkflowId && executionStore) { // payload?.workflowId || payload?.promptId
+          // 此循环用于在 promptId 已通过 PROMPT_ACCEPTED_RESPONSE 关联后查找 tab
+          for (const [tabIdEntry, state] of executionStore.tabExecutionStates.entries()) {
+            if (state.promptId === messageWorkflowId) {
+              targetTabId = tabIdEntry;
               break;
             }
           }
           if (!targetTabId) {
-            console.warn(`[WebSocket] Received message with ID ${messageWorkflowId} but no active tab found associated with it. Type: ${message.type}`);
-            // return; // 暂时不返回，允许全局消息或错误处理
+            // 此警告现在更准确，因为 PROMPT_ACCEPTED_RESPONSE 有单独处理
+            console.warn(`[WebSocket] For message type ${message.type} with ID ${messageWorkflowId}, no active tab found associated with it.`);
           }
-        } else {
-           console.warn(`[WebSocket] Received message type ${message.type} that requires tab association, but lacks internalId, workflowId, or promptId.`);
-           // return; // 无法确定目标 tab，忽略
+        } else if (executionStore) { // 添加 executionStore 检查避免访问 null
+          console.warn(`[WebSocket] Received message type ${message.type} that requires tab association, but lacks internalId, workflowId, or promptId.`);
         }
+      }
 
-        // 如果确定了目标 Tab，但不是当前活动 Tab，则忽略 (除非是全局错误等特殊情况)
-        if (targetTabId && targetTabId !== currentActiveTabId) {
-           // 允许处理非活动 tab 的完成/错误消息，以便更新状态，但不触发 UI 交互
-           if (message.type !== WebSocketMessageType.NODE_COMPLETE &&
-               message.type !== WebSocketMessageType.NODE_ERROR &&
-               message.type !== WebSocketMessageType.EXECUTION_STATUS_UPDATE && // 使用正确的类型
-               message.type !== WebSocketMessageType.ERROR) { // 允许处理全局错误
-             console.debug(
-               `[WebSocket] Ignoring non-final message for inactive tab ${targetTabId} (active: ${currentActiveTabId}). Type: ${message.type}`
-             );
-             return;
-           } else {
-             console.debug(`[WebSocket] Processing final state/error message for inactive tab ${targetTabId}. Type: ${message.type}`);
-           }
+      // 如果确定了目标 Tab (对于 PROMPT_ACCEPTED_RESPONSE 或其他类型)，但不是当前活动 Tab，则忽略 (除非是全局错误等特殊情况)
+      if (targetTabId && targetTabId !== currentActiveTabId) {
+        // 允许处理非活动 tab 的完成/错误消息，以便更新状态，但不触发 UI 交互
+        if (message.type !== WebSocketMessageType.NODE_COMPLETE &&
+          message.type !== WebSocketMessageType.NODE_ERROR &&
+          message.type !== WebSocketMessageType.EXECUTION_STATUS_UPDATE && // 使用正确的类型
+          message.type !== WebSocketMessageType.ERROR) { // 允许处理全局错误
+          console.debug(
+            `[WebSocket] Ignoring non-final message for inactive tab ${targetTabId} (active: ${currentActiveTabId}). Type: ${message.type}`
+          );
+          return;
+        } else {
+          console.debug(`[WebSocket] Processing final state/error message for inactive tab ${targetTabId}. Type: ${message.type}`);
         }
-        // 如果需要关联但找不到目标 Tab ID，并且不是全局错误，则忽略
-        else if (!targetTabId && message.type !== WebSocketMessageType.ERROR) {
-            console.warn(`[WebSocket] Could not determine target tab for message type ${message.type}. Ignoring.`);
-            return;
-        }
+      }
+      // 如果需要关联但找不到目标 Tab ID，并且不是全局错误，则忽略
+      else if (!targetTabId && message.type !== WebSocketMessageType.ERROR) {
+        console.warn(`[WebSocket] Could not determine target tab for message type ${message.type}. Ignoring.`);
+        return;
       }
       // --- 过滤结束 ---
 
@@ -201,16 +212,19 @@ const connect = (isRetry = false) => {
 
       // 对于需要 tabId 的操作，再次检查 effectiveTabId 是否有效
       if (requiresTabAssociation && !effectiveTabId) {
-          console.warn(`[WebSocket] Cannot process message type ${message.type}: No effective tab ID could be determined.`);
-          return;
+        console.warn(`[WebSocket] Cannot process message type ${message.type}: No effective tab ID could be determined.`);
+        return;
       }
 
 
       switch (message.type) {
         case WebSocketMessageType.PROMPT_ACCEPTED_RESPONSE: {
-          if (effectiveTabId) {
-            const typedPayload = payload as PromptAcceptedResponsePayload; // 使用正确的类型
-            executionStore.handlePromptAccepted(effectiveTabId, typedPayload);
+          const typedPayload = payload as PromptAcceptedResponsePayload; // 类型转换
+          if (targetTabId) { // 必须使用上面确定的 targetTabId (即 initiatingTabIdForNextPrompt)
+            executionStore.handlePromptAccepted(targetTabId, typedPayload);
+          } else {
+            // 这是关键错误：如果 PROMPT_ACCEPTED_RESPONSE 没有目标 tab，后续所有消息都会失败
+            console.error(`[WebSocket] Critical: Could not determine initiating tab for PROMPT_ACCEPTED_RESPONSE (promptId: ${typedPayload.promptId}). Message ignored. Ensure 'setInitiatingTabForNextPrompt' is called before sending PROMPT_REQUEST.`);
           }
           break;
         }
@@ -312,11 +326,11 @@ const connect = (isRetry = false) => {
         default:
           // Check if the message type might be a custom node message
           if (message.type.startsWith('custom/')) {
-             console.log(`[WebSocket] Received custom node message: ${message.type}`, payload);
-             // TODO: Implement routing or handling for custom node messages if needed
-             // Example: Event bus or dedicated store module
+            console.log(`[WebSocket] Received custom node message: ${message.type}`, payload);
+            // TODO: Implement routing or handling for custom node messages if needed
+            // Example: Event bus or dedicated store module
           } else {
-             console.warn(`Unhandled WebSocket message type: ${message.type}`);
+            console.warn(`Unhandled WebSocket message type: ${message.type}`);
           }
           break;
       }
@@ -348,7 +362,7 @@ const connect = (isRetry = false) => {
 
       // Frontend doesn't need to manage client ID mapping directly in onclose.
       // Backend's WebSocketManager.removeClient (triggered by Elysia's ws.close hook) handles cleanup.
-      
+
       // Attempt to reconnect if not a clean close or if it's a specific code we want to retry for
       // For now, let's try to reconnect on any close if attempts are left.
       if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
@@ -417,28 +431,37 @@ export const sendMessage = (message: WebSocketMessage) => {
       connect();
     }
   }
+}
+
+/**
+* 设置下一个 PROMPT_ACCEPTED_RESPONSE 期望关联的标签页 ID。
+* 应在发送 PROMPT_REQUEST 之前调用。
+* @param tabId 发起请求的标签页 ID。
+*/
+export const setInitiatingTabForNextPrompt = (tabId: string) => {
+  initiatingTabIdForNextPrompt = tabId;
 };
 
 /**
- * 初始化 WebSocket 连接。应在应用程序设置期间调用一次。
- */
+* 初始化 WebSocket 连接。应在应用程序设置期间调用一次。
+*/
 export const initializeWebSocket = () => {
   console.log("Initializing WebSocket connection..."); // 保留为日志
   connect();
 };
 
 /**
- * 关闭 WebSocket 连接。如有必要，应在应用程序拆卸期间调用。
- */
+* 关闭 WebSocket 连接。如有必要，应在应用程序拆卸期间调用。
+*/
 export const closeWebSocket = () => {
   console.log("Closing WebSocket connection..."); // 保留为日志
   disconnect();
 };
 
 /**
- * 用于访问单例 WebSocket 状态和方法的可组合函数。
- * @returns 连接状态/错误的只读引用以及 sendMessage 函数。
- */
+* 用于访问单例 WebSocket 状态和方法的可组合函数。
+* @returns 连接状态/错误的只读引用以及 sendMessage 函数。
+*/
 export function useWebSocket() {
   // Ensure stores are initialized when the composable is first used
   // 这是在 initializeWebSocket 未及早调用的情况下的后备方案
@@ -448,6 +471,7 @@ export function useWebSocket() {
     isConnected: readonly(isConnected), // 返回只读引用以确保安全
     error: readonly(error),
     sendMessage, // 暴露共享的 sendMessage 函数
+    setInitiatingTabForNextPrompt, // 暴露设置函数
     // 如果其他地方需要手动控制，则可以选择性地暴露 connect/disconnect
     // connect,
     // disconnect,

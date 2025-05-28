@@ -280,9 +280,9 @@ onClickOutside(
 );
 
 // --- 执行工作流 ---
-const { sendMessage } = useWebSocket();
+const { sendMessage, setInitiatingTabForNextPrompt } = useWebSocket(); // 获取 setInitiatingTabForNextPrompt
 // 移除 toObject
-
+ 
 const handleExecuteWorkflow = () => {
   console.log("触发执行工作流...");
   if (!activeTabId.value) {
@@ -322,11 +322,17 @@ const handleExecuteWorkflow = () => {
   };
 
   console.log("发送 EXECUTE_WORKFLOW 消息, payload:", payload);
+  
+  // 在发送 PROMPT_REQUEST 之前设置发起请求的 tabId
+  if (activeTabId.value) { // 再次确认 activeTabId.value 存在 (虽然前面已有检查)
+    setInitiatingTabForNextPrompt(activeTabId.value);
+  }
+
   sendMessage({
     type: WebSocketMessageType.PROMPT_REQUEST,
     payload: payload,
   });
-
+ 
   // 发送消息后立即更新状态为 PENDING
   if (activeTabId.value) {
     executionStore.setWorkflowStatusManually(activeTabId.value, ExecutionStatus.QUEUED); // Use QUEUED
