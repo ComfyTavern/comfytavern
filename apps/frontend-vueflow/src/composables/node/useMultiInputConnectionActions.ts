@@ -435,7 +435,6 @@ export function useMultiInputConnectionActions(
     // entry: HistoryEntry, // Roo: HistoryEntry 将由协调器处理
     activeTabIdString: string // Roo: 需要 tabId 用于 handleConvertibleAnyTypeChange
   ): { modifiedElements: (VueFlowNode | Edge)[]; modifiedWorkflowData?: (WorkflowObject & { id: string }) | null } {
-    console.debug(`[DEBUG-MI] connectEdgeToMultiInput (sync): Entry. Edge ID: ${newEdgeParams.id}, Target Node: ${newEdgeParams.target}, Target Handle (sub-handle): ${newEdgeParams.targetHandle}, TargetIndexInOrder: ${targetIndexInOrder}`);
     
     // Roo: 直接使用传入的 mutableSnapshot，不再获取 currentSnapshot 或 klona
     // Roo: 调用者 (InteractionCoordinator) 应该负责克隆初始快照
@@ -458,30 +457,24 @@ export function useMultiInputConnectionActions(
 
     if (targetNodeInElements && newEdgeParams.targetHandle) {
       const { originalKey: targetOriginalKey } = parseSubHandleId(newEdgeParams.targetHandle);
-      console.debug(`[DEBUG-MI] connectEdgeToMultiInput (sync): TargetOriginalKey: ${targetOriginalKey}`);
       if (typeof targetIndexInOrder === "number" && targetOriginalKey) {
         targetNodeInElements.data = targetNodeInElements.data || {};
         targetNodeInElements.data.inputConnectionOrders =
           targetNodeInElements.data.inputConnectionOrders || {};
         const currentOrder =
           targetNodeInElements.data.inputConnectionOrders[targetOriginalKey] || [];
-        console.debug(`[DEBUG-MI] connectEdgeToMultiInput (sync): Current order for ${targetOriginalKey}:`, JSON.parse(JSON.stringify(currentOrder)));
 
         const newOrder = [...currentOrder];
         if (!newOrder.includes(newEdge.id)) {
             const validIndex = Math.max(0, Math.min(targetIndexInOrder, newOrder.length));
             newOrder.splice(validIndex, 0, newEdge.id);
-            console.debug(`[DEBUG-MI] connectEdgeToMultiInput (sync): Splicing new edge ${newEdge.id} at index ${validIndex}.`);
         } else {
-            console.warn(`[DEBUG-MI] connectEdgeToMultiInput (sync): Edge ID ${newEdge.id} already in order for ${targetOriginalKey}. Re-inserting.`);
             const existingIdx = newOrder.indexOf(newEdge.id);
             if (existingIdx !== -1) newOrder.splice(existingIdx, 1);
             const validIndex = Math.max(0, Math.min(targetIndexInOrder, newOrder.length));
             newOrder.splice(validIndex, 0, newEdge.id);
-            console.debug(`[DEBUG-MI] connectEdgeToMultiInput (sync): Re-splicing edge ${newEdge.id} at index ${validIndex}.`);
         }
         targetNodeInElements.data.inputConnectionOrders[targetOriginalKey] = newOrder;
-        console.debug(`[DEBUG-MI] connectEdgeToMultiInput (sync): New order for ${targetOriginalKey}:`, JSON.parse(JSON.stringify(newOrder)));
 
         newOrder.forEach((edgeInOrderId, indexInOrderLoop) => { // Roo: Renamed indexInOrder to avoid conflict
           const edgeToUpdate = elementsToModify.find(
@@ -496,7 +489,6 @@ export function useMultiInputConnectionActions(
             if (!targetNodeInElements.data.inputs) targetNodeInElements.data.inputs = {};
             if (!targetNodeInElements.data.inputs[targetOriginalKey]) targetNodeInElements.data.inputs[targetOriginalKey] = {};
             targetNodeInElements.data.inputs[targetOriginalKey]!.value = new Array(newOrder.length).fill(undefined);
-            console.debug(`[DEBUG-MI] connectEdgeToMultiInput (sync): Synced inputs[${targetOriginalKey}].value array length to ${newOrder.length}`);
         }
       }
     }

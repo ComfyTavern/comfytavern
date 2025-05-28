@@ -631,11 +631,11 @@ export function useCanvasConnections({
     const finalEdgeState = workflowStore.getElements(currentTabId).find(el => el.id === newEdgeObjectFromCreateEdge.id && "source" in el) as Edge | undefined; // 使用 newEdgeObjectFromCreateEdge.id
 
     // DEBUG LOGS START
-    if (currentTabId) {
-      console.debug('[DEBUG-CONNECT] VueFlow Edges after handleConnect:', JSON.parse(JSON.stringify(vueFlowInstance.getEdges.value)));
-      const storeWorkflowData = workflowStore.getWorkflowData(currentTabId);
-      console.debug('[DEBUG-CONNECT] Store Edges after handleConnect:', JSON.parse(JSON.stringify(storeWorkflowData?.edges || [])));
-    }
+    // if (currentTabId) {
+      // console.debug('[DEBUG-CONNECT] VueFlow Edges after handleConnect:', JSON.parse(JSON.stringify(vueFlowInstance.getEdges.value)));
+      // const storeWorkflowData = workflowStore.getWorkflowData(currentTabId);
+      // console.debug('[DEBUG-CONNECT] Store Edges after handleConnect:', JSON.parse(JSON.stringify(storeWorkflowData?.edges || [])));
+    // }
     // DEBUG LOGS END
 
     return finalEdgeState || null; // 返回 store 中的边或 null

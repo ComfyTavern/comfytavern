@@ -403,9 +403,6 @@ export function useWorkflowInteractionCoordinator() {
           nodeToUpdate.data.outputs[modifiedSlotInfo.handleKey] = klona(modifiedSlotInfo.newDefinition);
         }
         nextSnapshotElements[nodeIndex] = nodeToUpdate;
-        console.debug(`[DEBUG-MI] WorkflowInteractionCoordinator: Applied modifiedSlotInfo for node ${modifiedSlotInfo.node.id}, handle ${modifiedSlotInfo.handleKey}`);
-      } else {
-        console.warn(`[DEBUG-MI] WorkflowInteractionCoordinator: Node ${modifiedSlotInfo.node.id} not found in snapshot for slot update.`);
       }
     }
 
@@ -419,11 +416,9 @@ export function useWorkflowInteractionCoordinator() {
 
         if (targetInputDef?.multi === true) {
             isMultiInputConnection = true;
-            console.debug(`[DEBUG-MI] COORD: Target ${targetNodeId}::${targetOriginalKey} IS a multi-input. History entry details:`, JSON.parse(JSON.stringify(entry.details)));
             const targetIndexInOrder = entry.details?.newTargetIndexInOrder as number | undefined;
 
             if (typeof targetIndexInOrder === 'number') {
-                console.debug(`[DEBUG-MI] COORD: Calling multiInputActions.connectEdgeToMultiInput with targetIndexInOrder: ${targetIndexInOrder}`);
                 
                 // 调用 multiInputActions.connectEdgeToMultiInput
                 // 它被修改为 async 并返回 Promise<{ updatedElements, updatedWorkflowData, ... }>
@@ -445,11 +440,8 @@ export function useWorkflowInteractionCoordinator() {
                 // nextSnapshotElements = nextSnapshot.elements; // 这行其实不需要，因为后续直接用 nextSnapshot.elements
                 // nextWorkflowData = nextSnapshot.workflowData!; // 这行也不需要，后续直接用 nextSnapshot.workflowData
 
-                console.debug(`[DEBUG-MI] COORD: multiInputActions.connectEdgeToMultiInput completed. Resulting elements count: ${multiInputResult.modifiedElements.length}, workflowData updated: ${multiInputResult.modifiedWorkflowData !== undefined}`);
 
             } else {
-                console.warn(`[DEBUG-MI] COORD: Target is multi-input, but targetIndexInOrder is missing or not a number in history entry details. Details:`, JSON.parse(JSON.stringify(entry.details)));
-                console.error(`[DEBUG-MI] COORD: Critical error - targetIndexInOrder is invalid for multi-input. The edge ${newEdge.id} might not be added correctly or state might be inconsistent.`);
                 // 在这种情况下，我们不应尝试添加边，因为 multiInputActions.connectEdgeToMultiInput 未被调用
                 // isMultiInputConnection 仍然是 true，所以下面的 !isMultiInputConnection 分支不会执行
             }
@@ -458,11 +450,9 @@ export function useWorkflowInteractionCoordinator() {
 
     if (!isMultiInputConnection) {
         // 如果不是多输入连接 (例如，目标不是多输入，或者 targetHandle 无效)
-        console.debug(`[DEBUG-MI] COORD: Target is NOT a multi-input or multi-input check was inconclusive. Adding edge ${newEdge.id} directly to snapshot elements.`);
         if (!nextSnapshot.elements.find(el => el.id === newEdge.id)) { // 确保 nextSnapshot.elements 是最新的
             nextSnapshot.elements.push(klona(newEdge)); // 直接修改 nextSnapshot.elements
         } else {
-            console.warn(`[DEBUG-MI] COORD: Edge with ID ${newEdge.id} already exists in snapshot elements (non-multi-input path). This might be an issue.`);
         }
     }
 
@@ -483,9 +473,6 @@ export function useWorkflowInteractionCoordinator() {
     // 已经被修改 (通过 nextSnapshotElements/nextWorkflowData 引用，或通过 multiInputResult 直接赋值)。
     // 所以，nextSnapshot 此时应该是最终状态。
     
-    console.debug(`[DEBUG-MI] COORD: Final nextSnapshot before recording history. Elements count: ${nextSnapshot.elements.length}, WorkflowData name: ${nextSnapshot.workflowData?.name}`);
-    const finalEdgeInSnapshotDebug = nextSnapshot.elements.find(el => el.id === newEdge.id && 'source' in el) as Edge | undefined;
-    console.log(`[DEBUG-MI] COORD Edge (${newEdge.id}) in FINAL nextSnapshot before history stringified:`, JSON.stringify(finalEdgeInSnapshotDebug));
 
 
     _recordHistory(internalId, entry, nextSnapshot); // 使用最终的、完整的 nextSnapshot
@@ -498,24 +485,6 @@ export function useWorkflowInteractionCoordinator() {
     );
 
     // 新增状态日志
-    console.log(`[DEBUG-MI] COORD Post-setElementsAndInterface State for GroupInput (${sourceNodeId}):`);
-    const updatedSourceNode = nextSnapshot.elements.find(el => el.id === sourceNodeId && !('source' in el)) as VueFlowNode | undefined;
-    if (updatedSourceNode && updatedSourceNode.type === 'core:GroupInput') {
-        console.log(`[DEBUG-MI]   Relevant interfaceInputs for GroupInput's outputs:`, JSON.parse(JSON.stringify(nextSnapshot.workflowData?.interfaceInputs)));
-    } else if (updatedSourceNode) {
-        console.log(`[DEBUG-MI]   SourceNode (${sourceNodeId}) data.outputs:`, JSON.parse(JSON.stringify(updatedSourceNode.data?.outputs)));
-    }
-
-    console.log(`[DEBUG-MI] COORD Post-setElementsAndInterface State for Target (${targetNodeId}):`);
-    const updatedTargetNode = nextSnapshot.elements.find(el => el.id === targetNodeId && !('source' in el)) as VueFlowNode | undefined;
-    if (updatedTargetNode && newEdge.targetHandle) {
-        const { originalKey: targetOriginalKey } = parseSubHandleId(newEdge.targetHandle); // Ensure parseSubHandleId is available
-        console.log(`[DEBUG-MI]   TargetNode (${targetNodeId}) input '${targetOriginalKey}' connections stringified:`, JSON.stringify(updatedTargetNode.data?.inputConnectionOrders?.[targetOriginalKey]));
-        console.log(`[DEBUG-MI]   TargetNode (${targetNodeId}) input '${targetOriginalKey}' values stringified:`, JSON.stringify(updatedTargetNode.data?.inputs?.[targetOriginalKey]?.value));
-    }
-
-    const finalEdgeInSnapshot = nextSnapshot.elements.find(el => el.id === newEdge.id && 'source' in el) as Edge | undefined;
-    console.log(`[DEBUG-MI] COORD Edge (${newEdge.id}) in nextSnapshot stringified:`, JSON.stringify(finalEdgeInSnapshot));
     // 结束新增状态日志
 
     await nextTick(); // Roo: 等待下一个 tick，确保响应式更新已传播
