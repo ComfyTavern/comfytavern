@@ -65,9 +65,14 @@ export function setupClientNode(vueFlow, node, context) {
       // 如果模式变为 '随机'，立即生成新值
       if (newMode === '随机') {
         updateValue(generateRandom24BitInt());
+      } else if (newMode === '增加') {
+        // 当模式更改为“增加”时，立即将当前值加1
+        updateValue(currentValue.value + 1);
+      } else if (newMode === '减少') {
+        // 当模式更改为“减少”时，立即将当前值减1
+        updateValue(currentValue.value - 1);
       }
-      // 增加/减少模式通常由执行引擎触发，这里只更新模式状态
-      // 如果需要在模式更改时立即执行增/减，可以在这里添加逻辑，但这可能不符合预期
+      // 对于“固定”模式，值保持不变，除非通过 reroll 按钮或外部 value 输入更改
     }
   }, { immediate: false }); // 不需要立即执行，等待用户交互或连接
 

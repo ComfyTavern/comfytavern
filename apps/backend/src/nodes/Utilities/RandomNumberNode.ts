@@ -52,7 +52,20 @@ export const definition: NodeDefinition = {
       description: '生成的随机数'
     } as OutputDefinition
   },
-  // execute 函数已移除，逻辑在前端处理
+  async execute(inputs: Record<string, any>): Promise<Record<string, any>> {
+    // 对于主要在前端执行的节点，后端 execute 主要作为数据通道
+    // 或处理一些后端必要的简单逻辑。
+    // RandomNumberNode 的核心逻辑（生成随机数）在前端。
+    // 后端在这里可以将输入的 'value'（如果提供）作为 'number' 输出，
+    // 否则使用默认值。
+    const mode = inputs.mode || '固定';
+    const outputValue = inputs.value !== undefined ? inputs.value : 0; // 使用输入值或默认值0
+    console.log('[RandomNumberNode] mode :', mode);
+    console.log('[RandomNumberNode] Output value :', outputValue);
+    return {
+      number: outputValue,
+    };
+  },
   clientScriptUrl: 'client-scripts/RandomNumberNode.js' // 指向相对于此定义文件的前端逻辑脚本的 URL
 }
 
