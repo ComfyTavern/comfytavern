@@ -13,7 +13,11 @@ import { useWebSocket } from "@/composables/useWebSocket";
 import { useProjectStore } from '@/stores/projectStore';
 import { useWorkflowData } from './useWorkflowData';
 import { flattenWorkflow } from "@/utils/workflowFlattener";
-import { transformVueFlowToExecutionPayload } from "@/utils/workflowTransformer";
+import {
+  transformVueFlowToExecutionPayload,
+  transformVueFlowToCoreWorkflow, // 咕咕：新增导入
+} from "@/utils/workflowTransformer";
+import type { FlowExportObject } from "@vue-flow/core"; // 咕咕：新增导入
 
 /**
  * Composable for handling workflow execution logic.
@@ -111,19 +115,40 @@ export function useWorkflowExecution() {
     }
     console.info(`[WorkflowExecution:executeWorkflow] Workflow flattened successfully for tab ${internalId}. Nodes: ${flattenedResult.nodes.length}, Edges: ${flattenedResult.edges.length}`);
 
-    // 3. 转换扁平化后的状态为执行载荷
-    // flattenedResult.nodes 和 flattenedResult.edges 应该是转换器期望的类型
-    const payload = transformVueFlowToExecutionPayload({ nodes: flattenedResult.nodes, edges: flattenedResult.edges });
+    // 咕咕：重新引入 transformVueFlowToCoreWorkflow 步骤
+    // 假设 flattenedResult.nodes 和 .edges 是 VueFlowElement 类型或者兼容的
+    // （需要确保 flattenWorkflow 返回的类型与 VueFlowNode/VueFlowEdge 兼容，或者进行适配）
+    const defaultViewport = { x: 0, y: 0, zoom: 1 };
+    const tempFlowExport: FlowExportObject = {
+      nodes: flattenedResult.nodes as VueFlowNode[], // 强制类型转换，需要验证 flattenWorkflow 的输出类型
+      edges: flattenedResult.edges as VueFlowEdge[], // 强制类型转换
+      viewport: defaultViewport, // 使用默认/虚拟视口
+      position: [defaultViewport.x, defaultViewport.y], // 咕咕：补上 position
+      zoom: defaultViewport.zoom, // 咕咕：补上 zoom
+    };
+
+    const coreWorkflowData = transformVueFlowToCoreWorkflow(tempFlowExport);
+    if (!coreWorkflowData || !coreWorkflowData.nodes) {
+      console.error(
+        `[WorkflowExecution:executeWorkflow] Failed to transform flattened workflow to core data for tab ${internalId}. Aborting.`
+      );
+      // TODO: Show user feedback
+      return;
+    }
+    console.info(`[WorkflowExecution:executeWorkflow] Workflow transformed to core data successfully for tab ${internalId}. Nodes: ${coreWorkflowData.nodes.length}, Edges: ${coreWorkflowData.edges.length}`);
+
+    // 3. 使用转换后的核心数据构建执行载荷
+    const payload = transformVueFlowToExecutionPayload({ nodes: coreWorkflowData.nodes, edges: coreWorkflowData.edges });
     if (!payload) {
       console.error(
-        `[WorkflowExecution:executeWorkflow] Failed to create execution payload from flattened state for tab ${internalId}. Aborting.`
+        `[WorkflowExecution:executeWorkflow] Failed to create execution payload from core data for tab ${internalId}. Aborting.`
       );
       // TODO: Show user feedback
       return;
     }
 
-    // 4. 准备执行状态 (在 StatusBar.vue 中，这一步在发送消息之后，但在这里提前似乎也可以)
-    // executionStore.prepareForNewExecution(internalId); // 移动到发送消息后，与 StatusBar.vue 逻辑对齐，确保 QUEUED 状态正确设置
+    // 4. 准备执行状态 (此步骤在原始 StatusBar.vue 中没有，但在旧版 useWorkflowExecution 中有)
+    // executionStore.prepareForNewExecution(internalId); // 暂时注释，以更接近 StatusBar 的成功路径
 
     // 5. 构建 WebSocket 消息
     const message: WebSocketMessage<WorkflowExecutionPayload> = {
