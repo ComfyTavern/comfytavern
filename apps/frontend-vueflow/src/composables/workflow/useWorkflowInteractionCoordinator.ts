@@ -1,5 +1,5 @@
 // apps/frontend-vueflow/src/composables/workflow/useWorkflowInteractionCoordinator.ts
-import { nextTick, computed } from "vue"; // Remove unused Ref import
+import { nextTick, computed } from "vue";
 import { klona } from "klona/full";
 import type { Node as VueFlowNode, Edge } from "@vue-flow/core";
 import type { GroupSlotInfo, HistoryEntry, InputDefinition } from "@comfytavern/types";
@@ -10,15 +10,13 @@ import { useWorkflowViewManagement } from "./useWorkflowViewManagement";
 import { useWorkflowInterfaceManagement } from "./useWorkflowInterfaceManagement";
 import { useTabStore } from "@/stores/tabStore";
 import type { WorkflowStateSnapshot } from "@/types/workflowTypes";
-import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils"; // Import parseSubHandleId, 用于在配置更新中检查 NodeGroup
+import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils";
 import { useWorkflowGrouping } from "../group/useWorkflowGrouping";
-import { useWorkflowPreview } from "./useWorkflowPreview"; // 导入新的预览 composable
-import { useEditorState } from "@/composables/editor/useEditorState"; // 导入 useEditorState
-import type { EditorOpeningContext } from "@/types/editorTypes"; // 导入 EditorOpeningContext
-import { useMultiInputConnectionActions } from "@/composables/node/useMultiInputConnectionActions"; // 导入新的 multi-input actions
+import { useWorkflowPreview } from "./useWorkflowPreview";
+import { useEditorState } from "@/composables/editor/useEditorState";
+import type { EditorOpeningContext } from "@/types/editorTypes";
+import { useMultiInputConnectionActions } from "@/composables/node/useMultiInputConnectionActions";
 
-// Comment about parseSubHandleIdLocal removed as it's no longer relevant.
-// We will now import and use the shared parseSubHandleId from nodeUtils.
 
 /**
  * @module composables/workflow/useWorkflowInteractionCoordinator
@@ -35,7 +33,7 @@ export function useWorkflowInteractionCoordinator() {
   const workflowGrouping = useWorkflowGrouping();
   const tabStore = useTabStore();
   const { requestPreviewExecution, isPreviewEnabled } = useWorkflowPreview(); // 使用新的预览 composable
-  
+
   // 创建一个新的 computed Ref 来包装 tabStore.activeTabId，确保它是一个 Ref 对象
   const coordinatorActiveTabIdRef = computed(() => tabStore.activeTabId);
   const multiInputActions = useMultiInputConnectionActions(coordinatorActiveTabIdRef);
@@ -82,11 +80,11 @@ export function useWorkflowInteractionCoordinator() {
 
   // --- 状态更新与历史记录函数 ---
   // 这些函数遵循一个通用模式：
-  // 1. 获取当前快照 (修改前)。
-  // 2. 准备下一个状态快照 (深拷贝当前快照并应用更改)。
-  // 3. 应用状态更新 (通常通过 workflowManager)。
-  // 4. 记录历史 (使用准备好的下一个状态快照)。
-  // 5. (可选) 触发副作用，例如预览执行。
+  // 获取当前快照 (修改前)。
+  // 准备下一个状态快照 (深拷贝当前快照并应用更改)。
+  // 应用状态更新 (通常通过 workflowManager)。
+  // 记录历史 (使用准备好的下一个状态快照)。
+  // (可选) 触发副作用，例如预览执行。
 
   /**
    * 更新节点输入值，记录历史，并在启用预览时触发预览请求。
@@ -108,7 +106,7 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 1. 获取当前快照
+    // 获取当前快照
     const currentSnapshot = _getCurrentSnapshot(internalId);
     if (!currentSnapshot) {
       console.error(
@@ -117,7 +115,7 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 2. 准备下一个状态快照
+    // 准备下一个状态快照
     const nextSnapshot = klona(currentSnapshot);
     const nodeIndex = nextSnapshot.elements.findIndex(
       (el) => el.id === nodeId && !("source" in el)
@@ -144,14 +142,14 @@ export function useWorkflowInteractionCoordinator() {
       },
     };
 
-    // 3. 应用状态更新
+    // 应用状态更新
     // setElements 内部处理脏状态标记
     await workflowManager.setElements(internalId, nextSnapshot.elements);
 
-    // 4. 记录历史
+    // 记录历史
     _recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
 
-    // 5. 触发预览 (如果启用)
+    // 触发预览 (如果启用)
     requestPreviewExecution(internalId, nodeId, inputKey, value);
   }
 
@@ -176,7 +174,7 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 1. 获取当前快照
+    // 获取当前快照
     const currentSnapshot = _getCurrentSnapshot(internalId);
     if (!currentSnapshot) {
       console.error(
@@ -185,7 +183,7 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 2. 准备下一个状态快照
+    // 准备下一个状态快照
     const nextSnapshot = klona(currentSnapshot);
     const nodeIndex = nextSnapshot.elements.findIndex(
       (el) => el.id === nodeId && !("source" in el)
@@ -198,11 +196,11 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 3. 修改 nextSnapshot 中的目标节点数据和可能的边
+    // 修改 nextSnapshot 中的目标节点数据和可能的边
     const targetNode = nextSnapshot.elements[nodeIndex] as VueFlowNode;
     let finalElements = nextSnapshot.elements; // 从克隆的元素开始
 
-    // 3.1 准备基础的节点数据更新 (configValues)
+    //1 准备基础的节点数据更新 (configValues)
     const baseDataUpdate = {
       ...targetNode.data,
       configValues: {
@@ -212,7 +210,7 @@ export function useWorkflowInteractionCoordinator() {
     };
     targetNode.data = baseDataUpdate; // 在快照中更新数据
 
-    // 3.2 特殊处理：NodeGroup referencedWorkflowId
+    //2 特殊处理：NodeGroup referencedWorkflowId
     const nodeType = getNodeType(targetNode);
     if (nodeType === "core:NodeGroup" && configKey === "referencedWorkflowId") {
       const newWorkflowId = value as string | null;
@@ -250,8 +248,7 @@ export function useWorkflowInteractionCoordinator() {
             );
             nextSnapshot.elements = finalElements; // 更新快照中的元素
             console.debug(
-              `[InteractionCoordinator] 在 NodeGroup ${nodeId} 的 nextSnapshot 中过滤了 ${
-                originalElementCount - finalElements.length
+              `[InteractionCoordinator] 在 NodeGroup ${nodeId} 的 nextSnapshot 中过滤了 ${originalElementCount - finalElements.length
               } 条不兼容的边`
             );
           }
@@ -271,13 +268,13 @@ export function useWorkflowInteractionCoordinator() {
       }
     }
 
-    // 4. 应用状态更新 (使用 nextSnapshot 的最终 elements)
+    // 应用状态更新 (使用 nextSnapshot 的最终 elements)
     await workflowManager.setElements(internalId, finalElements);
 
-    // 5. 记录历史 (使用准备好的 nextSnapshot)
+    // 记录历史 (使用准备好的 nextSnapshot)
     _recordHistory(internalId, entry, nextSnapshot);
 
-    // 6. 触发预览 (如果启用)
+    // 触发预览 (如果启用)
     // 注意：预览通常针对输入值的变化。配置值的变化是否需要触发预览取决于具体情况。
     // 如果配置变化影响输出，则可能需要触发预览。
     // 这里假设配置变化也需要触发预览。
@@ -299,7 +296,7 @@ export function useWorkflowInteractionCoordinator() {
       console.warn("[InteractionCoordinator:updateNodePositionAndRecord] 提供了无效参数。");
       return;
     }
-    // 1. 获取当前快照
+    // 获取当前快照
     const currentSnapshot = _getCurrentSnapshot(internalId);
     if (!currentSnapshot) {
       console.error(
@@ -308,7 +305,7 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 2. 准备下一个状态快照
+    // 准备下一个状态快照
     const nextSnapshot = klona(currentSnapshot);
     // 创建一个节点 ID 到节点对象的映射，方便查找
     const nodeMap = new Map(
@@ -339,13 +336,13 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 3. 应用状态更新
+    // 应用状态更新
     // 注意：workflowManager.updateNodePositions 内部会调用 setElements。
     // 理想情况下，我们应该直接调用 setElements(internalId, nextSnapshot.elements) 以符合模式。
     // 但为了最小化改动，暂时保留 updateNodePositions 调用，假设它只更新位置。
     await workflowManager.updateNodePositions(internalId, updates);
 
-    // 4. 记录历史
+    // 记录历史
     // 传递 nextSnapshot 确保记录的是我们预期的、包含所有位置更新的状态
     _recordHistory(internalId, entry, nextSnapshot);
   }
@@ -367,12 +364,17 @@ export function useWorkflowInteractionCoordinator() {
     newInputs: Record<string, GroupSlotInfo>,
     newOutputs: Record<string, GroupSlotInfo>,
     // 新增参数用于处理普通节点插槽的更新
-    modifiedSlotInfo: { node: VueFlowNode, handleKey: string, newDefinition: GroupSlotInfo, direction: 'inputs' | 'outputs' } | null,
+    modifiedSlotInfo: {
+      node: VueFlowNode;
+      handleKey: string;
+      newDefinition: GroupSlotInfo;
+      direction: "inputs" | "outputs";
+    } | null,
     sourceNodeId: string,
     targetNodeId: string,
     entry: HistoryEntry
   ) {
-    // 1. 获取当前快照
+    // 获取当前快照
     const currentSnapshot = _getCurrentSnapshot(internalId);
     if (!currentSnapshot || !currentSnapshot.workflowData) {
       console.error(
@@ -381,7 +383,7 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 2. 准备下一个状态快照 (深拷贝以确保可变性)
+    // 准备下一个状态快照 (深拷贝以确保可变性)
     const nextSnapshot = klona(currentSnapshot);
     // 使用 nextSnapshot 中的 elements 和 workflowData 进行修改
     // nextSnapshotElements 仍然被非多输入路径使用。
@@ -389,93 +391,79 @@ export function useWorkflowInteractionCoordinator() {
     const nextSnapshotElements = nextSnapshot.elements;
     // const nextWorkflowData = nextSnapshot.workflowData!; // 移除未使用的变量
 
-    // 2a. 处理普通节点插槽更新 (modifiedSlotInfo)
+    //. 处理普通节点插槽更新 (modifiedSlotInfo)
     if (modifiedSlotInfo) {
-      const nodeIndex = nextSnapshotElements.findIndex(el => el.id === modifiedSlotInfo.node.id && !('source' in el));
+      const nodeIndex = nextSnapshotElements.findIndex(
+        (el) => el.id === modifiedSlotInfo.node.id && !("source" in el)
+      );
       if (nodeIndex !== -1) {
         const nodeToUpdate = klona(nextSnapshotElements[nodeIndex]) as VueFlowNode;
         nodeToUpdate.data = nodeToUpdate.data || {};
-        if (modifiedSlotInfo.direction === 'inputs') {
+        if (modifiedSlotInfo.direction === "inputs") {
           nodeToUpdate.data.inputs = nodeToUpdate.data.inputs || {};
-          nodeToUpdate.data.inputs[modifiedSlotInfo.handleKey] = klona(modifiedSlotInfo.newDefinition);
+          nodeToUpdate.data.inputs[modifiedSlotInfo.handleKey] = klona(
+            modifiedSlotInfo.newDefinition
+          );
         } else {
           nodeToUpdate.data.outputs = nodeToUpdate.data.outputs || {};
-          nodeToUpdate.data.outputs[modifiedSlotInfo.handleKey] = klona(modifiedSlotInfo.newDefinition);
+          nodeToUpdate.data.outputs[modifiedSlotInfo.handleKey] = klona(
+            modifiedSlotInfo.newDefinition
+          );
         }
         nextSnapshotElements[nodeIndex] = nodeToUpdate;
       }
     }
 
-    // 2b. 处理连接 (边和相关的节点数据更新)
-    const targetNodeForMultiInputCheck = nextSnapshotElements.find(el => el.id === targetNodeId && !('source' in el)) as VueFlowNode | undefined;
+    //. 处理连接 (边和相关的节点数据更新)
+    const targetNodeForMultiInputCheck = nextSnapshotElements.find(
+      (el) => el.id === targetNodeId && !("source" in el)
+    ) as VueFlowNode | undefined;
     let isMultiInputConnection = false;
 
     if (targetNodeForMultiInputCheck && newEdge.targetHandle) {
-        const { originalKey: targetOriginalKey } = parseSubHandleId(newEdge.targetHandle);
-        const targetInputDef = targetNodeForMultiInputCheck.data?.inputs?.[targetOriginalKey];
+      const { originalKey: targetOriginalKey } = parseSubHandleId(newEdge.targetHandle);
+      const targetInputDef = targetNodeForMultiInputCheck.data?.inputs?.[targetOriginalKey];
 
-        if (targetInputDef?.multi === true) {
-            isMultiInputConnection = true;
-            const targetIndexInOrder = entry.details?.newTargetIndexInOrder as number | undefined;
+      if (targetInputDef?.multi === true) {
+        isMultiInputConnection = true;
+        const targetIndexInOrder = entry.details?.newTargetIndexInOrder as number | undefined;
 
-            if (typeof targetIndexInOrder === 'number') {
-                
-                // 调用 multiInputActions.connectEdgeToMultiInput
-                // 它被修改为 async 并返回 Promise<{ updatedElements, updatedWorkflowData, ... }>
-                // 它会接收可变快照的引用并可能修改它们，或者返回全新的数据结构。
-                const multiInputResult = await multiInputActions.connectEdgeToMultiInput(
-                    nextSnapshot,         // 1. mutableSnapshot
-                    klona(newEdge),       // 2. newEdgeParams
-                    targetIndexInOrder,   // 3. targetIndexInOrder
-                    internalId            // 4. activeTabIdString (using the existing internalId string param from handleConnectionWithInterfaceUpdate)
-                );
-                
-                // 使用 multiInputActions 返回的更新后的数据更新快照
-                // 即使 multiInputActions 修改了引用，显式赋值更安全和清晰
-                nextSnapshot.elements = multiInputResult.modifiedElements;
-                if (multiInputResult.modifiedWorkflowData !== undefined) { // 检查 undefined，因为它可以是 null
-                    nextSnapshot.workflowData = multiInputResult.modifiedWorkflowData;
-                }
-                // 更新本地引用，以防它们在 multiInputResult 中是新对象
-                // nextSnapshotElements = nextSnapshot.elements; // 这行其实不需要，因为后续直接用 nextSnapshot.elements
-                // nextWorkflowData = nextSnapshot.workflowData!; // 这行也不需要，后续直接用 nextSnapshot.workflowData
-
-
-            } else {
-                // 在这种情况下，我们不应尝试添加边，因为 multiInputActions.connectEdgeToMultiInput 未被调用
-                // isMultiInputConnection 仍然是 true，所以下面的 !isMultiInputConnection 分支不会执行
-            }
+        if (typeof targetIndexInOrder === "number") {
+          // 调用 multiInputActions.connectEdgeToMultiInput，它被修改为 async 并返回 Promise<{ updatedElements, updatedWorkflowData, ... }>
+          const multiInputResult = await multiInputActions.connectEdgeToMultiInput(
+            nextSnapshot, // mutableSnapshot
+            klona(newEdge), // newEdgeParams
+            targetIndexInOrder, // targetIndexInOrder
+            internalId // activeTabIdString (using the existing internalId string param from handleConnectionWithInterfaceUpdate)
+          );
+          // 使用 multiInputActions 返回的更新后的数据更新快照
+          // 即使 multiInputActions 修改了引用，显式赋值更安全和清晰
+          nextSnapshot.elements = multiInputResult.modifiedElements;
+          if (multiInputResult.modifiedWorkflowData !== undefined) {
+            // 检查 undefined，因为它可以是 null
+            nextSnapshot.workflowData = multiInputResult.modifiedWorkflowData;
+          }
         }
+      }
     }
 
     if (!isMultiInputConnection) {
-        // 如果不是多输入连接 (例如，目标不是多输入，或者 targetHandle 无效)
-        if (!nextSnapshot.elements.find(el => el.id === newEdge.id)) { // 确保 nextSnapshot.elements 是最新的
-            nextSnapshot.elements.push(klona(newEdge)); // 直接修改 nextSnapshot.elements
-        } else {
-        }
+      // 如果不是多输入连接 (例如，目标不是多输入，或者 targetHandle 无效)
+      if (!nextSnapshot.elements.find((el) => el.id === newEdge.id)) {
+        // 确保 nextSnapshot.elements 是最新的
+        nextSnapshot.elements.push(klona(newEdge)); // 直接修改 nextSnapshot.elements
+      } else {
+      }
     }
 
-
-    // 更新 nextSnapshot 中的 interfaceInputs 和 interfaceOutputs
-    // nextWorkflowData 是 nextSnapshot.workflowData 的引用，所以修改它会直接修改 nextSnapshot
-    // 但如果 multiInputResult.updatedWorkflowData 是一个全新的对象，我们需要确保 nextWorkflowData 指向它
-    // 不过，由于 nextSnapshot.workflowData = multiInputResult.updatedWorkflowData; 已经执行 (如果 multi-input 路径被采用),
-    // nextWorkflowData (如果之前是 nextSnapshot.workflowData 的引用) 现在可能指向旧对象。
-    // 最安全的方式是直接操作 nextSnapshot.workflowData
     if (Object.keys(newInputs).length > 0) {
-        nextSnapshot.workflowData!.interfaceInputs = klona(newInputs);
+      nextSnapshot.workflowData!.interfaceInputs = klona(newInputs);
     }
     if (Object.keys(newOutputs).length > 0) {
-        nextSnapshot.workflowData!.interfaceOutputs = klona(newOutputs);
+      nextSnapshot.workflowData!.interfaceOutputs = klona(newOutputs);
     }
-    // nextSnapshot 已经通过 klona(currentSnapshot) 初始化，并且其 elements 和 workflowData
-    // 已经被修改 (通过 nextSnapshotElements/nextWorkflowData 引用，或通过 multiInputResult 直接赋值)。
-    // 所以，nextSnapshot 此时应该是最终状态。
-    
 
-
-    _recordHistory(internalId, entry, nextSnapshot); // 使用最终的、完整的 nextSnapshot
+    _recordHistory(internalId, entry, nextSnapshot);
 
     await workflowManager.setElementsAndInterface(
       internalId,
@@ -484,12 +472,9 @@ export function useWorkflowInteractionCoordinator() {
       nextSnapshot.workflowData?.interfaceOutputs ?? {}
     );
 
-    // 新增状态日志
-    // 结束新增状态日志
-
     await nextTick(); // 等待下一个 tick，确保响应式更新已传播
 
-    // 5. 触发视图更新 (强制更新连接节点的内部结构)
+    // 触发视图更新 (强制更新连接节点的内部结构)
     const instance = workflowViewManagement.getVueFlowInstance(internalId);
     if (instance) {
       await nextTick(); // Tick 2 (Vue DOM updates based on store changes should start)
@@ -514,7 +499,7 @@ export function useWorkflowInteractionCoordinator() {
       console.warn("[InteractionCoordinator:addNodeAndRecord] 提供了无效参数。");
       return;
     }
-    // 1. 获取当前快照
+    // 获取当前快照
     const currentSnapshot = _getCurrentSnapshot(internalId);
     if (!currentSnapshot) {
       console.error(
@@ -523,17 +508,17 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 2. 准备下一个状态快照 (深拷贝并添加节点)
+    // 准备下一个状态快照 (深拷贝并添加节点)
     const nextSnapshot = klona(currentSnapshot);
     nextSnapshot.elements.push(nodeToAdd);
 
-    // 3. 应用状态更新
+    // 应用状态更新
     // 注意：workflowManager.addNode 内部可能调用 setElements。
     // 理想情况是直接调用 setElements(internalId, nextSnapshot.elements)。
     // 暂时保留 addNode 调用。
     await workflowManager.addNode(internalId, nodeToAdd);
 
-    // 4. 记录历史
+    // 记录历史
     _recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
   }
 
@@ -664,23 +649,23 @@ export function useWorkflowInteractionCoordinator() {
       console.warn("[InteractionCoordinator:addEdgeAndRecord] 提供了无效参数。");
       return;
     }
-    // 1. 获取当前快照
+    // 获取当前快照
     const currentSnapshot = _getCurrentSnapshot(internalId);
     if (!currentSnapshot) {
       console.error(`[addEdgeAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
       return;
     }
 
-    // 2. 准备下一个状态快照 (添加边)
+    // 准备下一个状态快照 (添加边)
     const nextSnapshot: WorkflowStateSnapshot = {
       ...currentSnapshot,
       elements: [...currentSnapshot.elements, edgeToAdd],
     };
 
-    // 3. 应用状态更新
+    // 应用状态更新
     workflowManager.setElements(internalId, nextSnapshot.elements);
 
-    // 4. 记录历史
+    // 记录历史
     _recordHistory(internalId, entry, nextSnapshot);
   }
 
@@ -706,7 +691,7 @@ export function useWorkflowInteractionCoordinator() {
     // 过滤掉要移除的元素
     const remainingElements = currentElements.filter((el) => !elementIdsToRemoveSet.has(el.id));
 
-    // 1. 获取当前快照 (需要完整的快照信息)
+    // 获取当前快照 (需要完整的快照信息)
     const currentSnapshot = _getCurrentSnapshot(internalId);
     if (!currentSnapshot) {
       console.error(
@@ -723,16 +708,16 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 2. 准备下一个状态快照 (使用过滤后的元素)
+    // 准备下一个状态快照 (使用过滤后的元素)
     const nextSnapshot: WorkflowStateSnapshot = {
       ...currentSnapshot, // 保留 viewport 和 workflowData
       elements: remainingElements,
     };
 
-    // 3. 应用状态更新
+    // 应用状态更新
     workflowManager.setElements(internalId, nextSnapshot.elements);
 
-    // 4. 记录历史
+    // 记录历史
     _recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
   }
 
@@ -755,7 +740,7 @@ export function useWorkflowInteractionCoordinator() {
       console.warn("[InteractionCoordinator:removeEdgesByHandleAndRecord] 提供了无效参数。");
       return;
     }
-    // 1. 获取当前快照
+    // 获取当前快照
     const currentSnapshot = _getCurrentSnapshot(internalId);
     if (!currentSnapshot) {
       console.error(`[removeEdgesByHandleAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
@@ -788,16 +773,16 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 2. 准备下一个状态快照
+    // 准备下一个状态快照
     const nextSnapshot: WorkflowStateSnapshot = {
       ...currentSnapshot,
       elements: remainingElements,
     };
 
-    // 3. 应用状态更新
+    // 应用状态更新
     workflowManager.setElements(internalId, remainingElements);
 
-    // 4. 记录历史 (包含移除边的详细信息)
+    // 记录历史 (包含移除边的详细信息)
     const removedEdgeDetails = edgesToRemove.map((edge) => ({
       id: edge.id,
       source: edge.source,
@@ -859,7 +844,7 @@ export function useWorkflowInteractionCoordinator() {
       targetNode.style = { ...(targetNode.style || {}), height: `${dimensions.height}px` };
     }
 
-    // 1. 获取当前快照 (用于比较和记录)
+    // 获取当前快照 (用于比较和记录)
     const currentSnapshot = _getCurrentSnapshot(internalId);
     if (!currentSnapshot) {
       console.error(
@@ -882,16 +867,16 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 2. 准备下一个状态快照 (newElements 已经是修改后的)
+    // 准备下一个状态快照 (newElements 已经是修改后的)
     const nextSnapshot: WorkflowStateSnapshot = {
       ...currentSnapshot,
       elements: newElements,
     };
 
-    // 3. 应用状态更新
+    // 应用状态更新
     await workflowManager.setElements(internalId, nextSnapshot.elements);
 
-    // 4. 记录历史
+    // 记录历史
     _recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
   }
 
@@ -939,7 +924,7 @@ export function useWorkflowInteractionCoordinator() {
     if (stateUpdate.value !== undefined)
       targetNode.data.componentStates[inputKey].value = stateUpdate.value;
 
-    // 1. 获取当前快照 (用于比较和记录)
+    // 获取当前快照 (用于比较和记录)
     const currentSnapshot = _getCurrentSnapshot(internalId);
     if (!currentSnapshot) {
       console.error(
@@ -963,16 +948,16 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 2. 准备下一个状态快照 (newElements 已经是修改后的)
+    // 准备下一个状态快照 (newElements 已经是修改后的)
     const nextSnapshot: WorkflowStateSnapshot = {
       ...currentSnapshot,
       elements: newElements,
     };
 
-    // 3. 应用状态更新
+    // 应用状态更新
     await workflowManager.setElements(internalId, nextSnapshot.elements);
 
-    // 4. 记录历史
+    // 记录历史
     _recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
   }
 
@@ -991,7 +976,7 @@ export function useWorkflowInteractionCoordinator() {
       console.warn("[InteractionCoordinator:updateWorkflowNameAndRecord] 无效参数。");
       return;
     }
-    // 1. 获取当前快照
+    // 获取当前快照
     const currentSnapshot = _getCurrentSnapshot(internalId);
     if (!currentSnapshot || !currentSnapshot.workflowData) {
       console.error(
@@ -1006,17 +991,17 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 2. 准备下一个状态快照
+    // 准备下一个状态快照
     const nextSnapshot = klona(currentSnapshot);
     nextSnapshot.workflowData!.name = newName; // 更新名称
 
-    // 3. 应用状态更新 (使用 applyStateSnapshot 更新 workflowData)
+    // 应用状态更新 (使用 applyStateSnapshot 更新 workflowData)
     const applied = workflowManager.applyStateSnapshot(internalId, nextSnapshot);
 
     if (applied) {
-      // 4. 记录历史
+      // 记录历史
       _recordHistory(internalId, entry, nextSnapshot);
-      // 5. 标记为脏状态并更新标签页标题
+      // 标记为脏状态并更新标签页标题
       workflowManager.markAsDirty(internalId);
       tabStore.updateTab(internalId, { label: newName });
     } else {
@@ -1039,7 +1024,7 @@ export function useWorkflowInteractionCoordinator() {
       console.warn("[InteractionCoordinator:updateWorkflowDescriptionAndRecord] 无效参数。");
       return;
     }
-    // 1. 获取当前快照
+    // 获取当前快照
     const currentSnapshot = _getCurrentSnapshot(internalId);
     if (!currentSnapshot || !currentSnapshot.workflowData) {
       console.error(
@@ -1057,17 +1042,17 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 2. 准备下一个状态快照
+    // 准备下一个状态快照
     const nextSnapshot = klona(currentSnapshot);
     nextSnapshot.workflowData!.description = newDescription; // 更新描述
 
-    // 3. 应用状态更新
+    // 应用状态更新
     const applied = workflowManager.applyStateSnapshot(internalId, nextSnapshot);
 
     if (applied) {
-      // 4. 记录历史
+      // 记录历史
       _recordHistory(internalId, entry, nextSnapshot);
-      // 5. 标记为脏状态
+      // 标记为脏状态
       workflowManager.markAsDirty(internalId);
     } else {
       console.error(`[updateWorkflowDescriptionAndRecord] 应用快照失败 for tab ${internalId}.`);
@@ -1142,7 +1127,7 @@ export function useWorkflowInteractionCoordinator() {
       }
     }
 
-    // 1. 获取当前快照
+    // 获取当前快照
     const currentSnapshot = _getCurrentSnapshot(internalId);
     if (!currentSnapshot || !currentSnapshot.workflowData) {
       console.error(
@@ -1160,21 +1145,21 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 2. 准备下一个状态快照
+    // 准备下一个状态快照
     const nextSnapshot = klona(currentSnapshot);
     if (nextSnapshot.workflowData) {
       // Type guard
       nextSnapshot.workflowData.previewTarget = target ? klona(target) : null;
     }
 
-    // 3. 应用状态更新 (通过 workflowManager)
+    // 应用状态更新 (通过 workflowManager)
     // workflowManager.setPreviewTarget 内部会处理脏状态标记
     await workflowManager.setPreviewTarget(internalId, target);
 
-    // 4. 记录历史
+    // 记录历史
     _recordHistory(internalId, entry, nextSnapshot);
 
-    // 5. 触发预览 (可选，根据需求)
+    // 触发预览 (可选，根据需求)
     // 当前设计是设置目标时不触发，而是后续节点值变化时触发
     // if (isPreviewEnabled.value && target) {
     //   requestPreviewExecution(internalId, target.nodeId, target.slotKey, /* 获取当前值? */);
@@ -1323,26 +1308,30 @@ export function useWorkflowInteractionCoordinator() {
   ) {
     const currentActiveTabId = tabStore.activeTabId;
     if (!currentActiveTabId) {
-      console.error("[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] No active tab ID.");
+      console.error(
+        "[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] No active tab ID."
+      );
       return;
     }
 
     const currentSnapshot = _getCurrentSnapshot(currentActiveTabId);
     if (!currentSnapshot) {
-      console.error(`[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`);
+      console.error(
+        `[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`
+      );
       return;
     }
-    
+
     const nextSnapshot = klona(currentSnapshot); // 准备可变快照
 
     // 调用 action，它将修改 nextSnapshot 或返回要更新的部分
     // updateNodeInputConnectionOrder 期望 (mutableSnapshot, nodeId, handleKey, newOrderedEdgeIds)
     // 并返回 Promise<{ modifiedElements, modifiedWorkflowData }>
     const result = await multiInputActions.updateNodeInputConnectionOrder(
-      nextSnapshot,             // 1. mutableSnapshot
-      nodeId,                   // 2. nodeId
-      handleKey,                // 3. handleKey
-      newOrderedEdgeIds         // 4. newOrderedEdgeIds
+      nextSnapshot, // mutableSnapshot
+      nodeId, // nodeId
+      handleKey, // handleKey
+      newOrderedEdgeIds // newOrderedEdgeIds
     );
 
     // 使用 action 返回的结果更新 nextSnapshot
@@ -1350,10 +1339,11 @@ export function useWorkflowInteractionCoordinator() {
     // 并且返回了这些引用，那么这里的赋值是正确的。
     // 如果 action 返回了全新的对象，这也是正确的。
     nextSnapshot.elements = result.modifiedElements;
-    if (result.modifiedWorkflowData !== undefined) { // 检查 undefined，因为它可以是 null
+    if (result.modifiedWorkflowData !== undefined) {
+      // 检查 undefined，因为它可以是 null
       nextSnapshot.workflowData = result.modifiedWorkflowData;
     }
-    
+
     // 记录历史
     _recordHistory(currentActiveTabId, entry, nextSnapshot);
 
@@ -1361,16 +1351,18 @@ export function useWorkflowInteractionCoordinator() {
     // 使用 applyStateSnapshot 来确保 workflowData (如果被修改) 也被正确应用
     const applied = workflowManager.applyStateSnapshot(currentActiveTabId, nextSnapshot);
     if (!applied) {
-        console.error(`[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] Failed to apply snapshot for tab ${currentActiveTabId}.`);
+      console.error(
+        `[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] Failed to apply snapshot for tab ${currentActiveTabId}.`
+      );
     }
-    
+
     // (可选) 触发视图更新，确保连接的节点正确渲染
     // 对于仅顺序更改，通常不需要 updateNodeInternals，除非它影响了插槽的显示方式
     // 但为了与其他多输入操作保持一致，可以考虑添加
     await nextTick();
     const instance = workflowViewManagement.getVueFlowInstance(currentActiveTabId);
     if (instance) {
-      if (nextSnapshot.elements.find(n => n.id === nodeId && !('source' in n))) {
+      if (nextSnapshot.elements.find((n) => n.id === nodeId && !("source" in n))) {
         await nextTick();
         instance.updateNodeInternals([nodeId]);
         await nextTick();
@@ -1401,10 +1393,12 @@ export function useWorkflowInteractionCoordinator() {
 
     const currentSnapshot = _getCurrentSnapshot(currentActiveTabId);
     if (!currentSnapshot) {
-      console.error(`[InteractionCoordinator:disconnectEdgeFromInputAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`);
+      console.error(
+        `[InteractionCoordinator:disconnectEdgeFromInputAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`
+      );
       return;
     }
-    
+
     const nextSnapshot = klona(currentSnapshot); // Prepare mutable snapshot
 
     // 调用 action，它将修改 nextSnapshot 或返回要更新的部分
@@ -1412,10 +1406,10 @@ export function useWorkflowInteractionCoordinator() {
     // 并且应该返回 { modifiedElements, modifiedWorkflowData }
     // 目前它是一个存根，所以我们先假设它会正确修改 nextSnapshot 并返回结构
     const result = await multiInputActions.disconnectEdgeFromMultiInput(
-      nextSnapshot,             // 1. mutableSnapshot
-      edgeId,                   // 2. edgeId
-      originalTargetNodeId,     // 3. originalTargetNodeId
-      originalTargetHandleId   // 4. originalTargetHandleId
+      nextSnapshot, // mutableSnapshot
+      edgeId, // edgeId
+      originalTargetNodeId, // originalTargetNodeId
+      originalTargetHandleId // originalTargetHandleId
       // currentActiveTabId        // Removed 5th argument (activeTabIdString)
     );
 
@@ -1427,7 +1421,7 @@ export function useWorkflowInteractionCoordinator() {
     if (result.modifiedWorkflowData !== undefined) {
       nextSnapshot.workflowData = result.modifiedWorkflowData;
     }
-    
+
     // 确保边确实从 nextSnapshot.elements 中移除了 (如果 action 应该这样做的话)
     // 这一步的验证依赖于 disconnectEdgeFromMultiInput 的正确实现。
     // 目前，由于它是存根，nextSnapshot.elements 可能没有改变。
@@ -1438,23 +1432,23 @@ export function useWorkflowInteractionCoordinator() {
 
     // 应用状态更新
     if (nextSnapshot.workflowData) {
-        await workflowManager.setElementsAndInterface(
-            currentActiveTabId,
-            nextSnapshot.elements,
-            nextSnapshot.workflowData.interfaceInputs ?? {},
-            nextSnapshot.workflowData.interfaceOutputs ?? {}
-        );
+      await workflowManager.setElementsAndInterface(
+        currentActiveTabId,
+        nextSnapshot.elements,
+        nextSnapshot.workflowData.interfaceInputs ?? {},
+        nextSnapshot.workflowData.interfaceOutputs ?? {}
+      );
     } else {
-        await workflowManager.setElements(currentActiveTabId, nextSnapshot.elements);
+      await workflowManager.setElements(currentActiveTabId, nextSnapshot.elements);
     }
-    
+
     // (可选) 触发视图更新
     await nextTick();
     const instance = workflowViewManagement.getVueFlowInstance(currentActiveTabId);
     if (instance) {
       // 如果原始目标节点存在于更新后的快照中，则更新它
       // (如果节点本身被删除了，则不需要更新)
-      if (nextSnapshot.elements.find(n => n.id === originalTargetNodeId && !('source' in n))) {
+      if (nextSnapshot.elements.find((n) => n.id === originalTargetNodeId && !("source" in n))) {
         await nextTick();
         instance.updateNodeInternals([originalTargetNodeId]);
         await nextTick();
@@ -1482,18 +1476,20 @@ export function useWorkflowInteractionCoordinator() {
 
     const currentSnapshot = _getCurrentSnapshot(currentActiveTabId);
     if (!currentSnapshot) {
-      console.error(`[InteractionCoordinator:connectEdgeToInputAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`);
+      console.error(
+        `[InteractionCoordinator:connectEdgeToInputAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`
+      );
       return;
     }
-    
+
     const nextSnapshot = klona(currentSnapshot); // Prepare mutable snapshot
 
     // 调用 action，它将修改 nextSnapshot 或返回要更新的部分
     const result = await multiInputActions.connectEdgeToMultiInput(
-      nextSnapshot,         // 1. mutableSnapshot
-      klona(newEdgeParams), // 2. newEdgeParams (克隆以防万一)
-      targetIndexInOrder,   // 3. targetIndexInOrder
-      currentActiveTabId    // 4. activeTabIdString
+      nextSnapshot, // mutableSnapshot
+      klona(newEdgeParams), // newEdgeParams (克隆以防万一)
+      targetIndexInOrder, // targetIndexInOrder
+      currentActiveTabId // activeTabIdString
     );
 
     // 使用 action 返回的结果更新 nextSnapshot
@@ -1507,17 +1503,17 @@ export function useWorkflowInteractionCoordinator() {
 
     // 应用状态更新
     if (nextSnapshot.workflowData) {
-        await workflowManager.setElementsAndInterface(
-            currentActiveTabId,
-            nextSnapshot.elements,
-            nextSnapshot.workflowData.interfaceInputs ?? {},
-            nextSnapshot.workflowData.interfaceOutputs ?? {}
-        );
+      await workflowManager.setElementsAndInterface(
+        currentActiveTabId,
+        nextSnapshot.elements,
+        nextSnapshot.workflowData.interfaceInputs ?? {},
+        nextSnapshot.workflowData.interfaceOutputs ?? {}
+      );
     } else {
-        // 万一 workflowData 变为 null (理论上不应该，但作为保险)
-        await workflowManager.setElements(currentActiveTabId, nextSnapshot.elements);
+      // 万一 workflowData 变为 null (理论上不应该，但作为保险)
+      await workflowManager.setElements(currentActiveTabId, nextSnapshot.elements);
     }
-    
+
     // (可选) 触发视图更新，确保连接的节点正确渲染
     await nextTick(); // 等待 DOM 更新
     const instance = workflowViewManagement.getVueFlowInstance(currentActiveTabId);
@@ -1525,15 +1521,20 @@ export function useWorkflowInteractionCoordinator() {
       const sourceNodeId = newEdgeParams.source;
       const targetNodeId = newEdgeParams.target;
       // 确保节点 ID 有效再调用 updateNodeInternals
-      if (sourceNodeId && targetNodeId &&
-          nextSnapshot.elements.find(n => n.id === sourceNodeId) &&
-          nextSnapshot.elements.find(n => n.id === targetNodeId)) {
+      if (
+        sourceNodeId &&
+        targetNodeId &&
+        nextSnapshot.elements.find((n) => n.id === sourceNodeId) &&
+        nextSnapshot.elements.find((n) => n.id === targetNodeId)
+      ) {
         await nextTick(); // 额外的 tick 可能有帮助
         await nextTick();
         instance.updateNodeInternals([sourceNodeId, targetNodeId]);
         await nextTick();
       } else {
-        console.warn(`[InteractionCoordinator:connectEdgeToInputAndRecord] Source or target node for edge ${newEdgeParams.id} not found in snapshot, skipping updateNodeInternals.`);
+        console.warn(
+          `[InteractionCoordinator:connectEdgeToInputAndRecord] Source or target node for edge ${newEdgeParams.id} not found in snapshot, skipping updateNodeInternals.`
+        );
       }
     }
     // console.warn("[InteractionCoordinator:connectEdgeToInputAndRecord] Function has been refactored to align with coordinator pattern.");
@@ -1573,29 +1574,32 @@ export function useWorkflowInteractionCoordinator() {
 
     const currentSnapshot = _getCurrentSnapshot(currentActiveTabId);
     if (!currentSnapshot) {
-      console.error(`[InteractionCoordinator:moveAndReconnectEdgeAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`);
+      console.error(
+        `[InteractionCoordinator:moveAndReconnectEdgeAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`
+      );
       return;
     }
-    
+
     const nextSnapshot = klona(currentSnapshot); // 准备可变快照
 
     // 调用 action，它将修改 nextSnapshot 或返回要更新的部分
     const result = await multiInputActions.moveAndReconnectEdgeMultiInput(
-      nextSnapshot,             // 1. mutableSnapshot
-      edgeToMoveId,             // 2. edgeToMoveId
-      originalTargetNodeId,     // 3. originalTargetNodeId
-      originalTargetHandleId,   // 4. originalTargetHandleId
-      newSourceNodeId,          // 5. newSourceNodeId
-      newSourceHandleId,        // 6. newSourceHandleId
-      newTargetNodeId,          // 7. newTargetNodeId (确保这里是 string)
-      newTargetHandleId,        // 8. newTargetHandleId
-      newTargetIndexInOrder,    // 9. newTargetIndexInOrder
-      currentActiveTabId        // 10. activeTabIdString
+      nextSnapshot, // mutableSnapshot
+      edgeToMoveId, // edgeToMoveId
+      originalTargetNodeId, // originalTargetNodeId
+      originalTargetHandleId, // originalTargetHandleId
+      newSourceNodeId, // newSourceNodeId
+      newSourceHandleId, // newSourceHandleId
+      newTargetNodeId, // newTargetNodeId (确保这里是 string)
+      newTargetHandleId, // newTargetHandleId
+      newTargetIndexInOrder, // newTargetIndexInOrder
+      currentActiveTabId //. activeTabIdString
     );
 
     // 使用 action 返回的结果更新 nextSnapshot
     nextSnapshot.elements = result.modifiedElements;
-    if (result.modifiedWorkflowData !== undefined) { // 检查 undefined，因为它可以是 null
+    if (result.modifiedWorkflowData !== undefined) {
+      // 检查 undefined，因为它可以是 null
       nextSnapshot.workflowData = result.modifiedWorkflowData;
     }
 
@@ -1604,17 +1608,17 @@ export function useWorkflowInteractionCoordinator() {
 
     // 应用状态更新
     if (nextSnapshot.workflowData) {
-        await workflowManager.setElementsAndInterface(
-            currentActiveTabId,
-            nextSnapshot.elements,
-            nextSnapshot.workflowData.interfaceInputs ?? {},
-            nextSnapshot.workflowData.interfaceOutputs ?? {}
-        );
+      await workflowManager.setElementsAndInterface(
+        currentActiveTabId,
+        nextSnapshot.elements,
+        nextSnapshot.workflowData.interfaceInputs ?? {},
+        nextSnapshot.workflowData.interfaceOutputs ?? {}
+      );
     } else {
-        // 万一 workflowData 变为 null (理论上不应该，但作为保险)
-        await workflowManager.setElements(currentActiveTabId, nextSnapshot.elements);
+      // 万一 workflowData 变为 null (理论上不应该，但作为保险)
+      await workflowManager.setElements(currentActiveTabId, nextSnapshot.elements);
     }
-    
+
     // (可选) 触发视图更新，确保连接的节点正确渲染
     await nextTick(); // 等待 DOM 更新
     const instance = workflowViewManagement.getVueFlowInstance(currentActiveTabId);
@@ -1623,9 +1627,9 @@ export function useWorkflowInteractionCoordinator() {
       if (originalTargetNodeId) nodesToUpdate.add(originalTargetNodeId);
       if (newSourceNodeId) nodesToUpdate.add(newSourceNodeId);
       if (newTargetNodeId) nodesToUpdate.add(newTargetNodeId);
-      
-      const validNodesToUpdate = Array.from(nodesToUpdate).filter(nodeId =>
-        nextSnapshot.elements.find(n => n.id === nodeId && !('source' in n))
+
+      const validNodesToUpdate = Array.from(nodesToUpdate).filter((nodeId) =>
+        nextSnapshot.elements.find((n) => n.id === nodeId && !("source" in n))
       );
 
       if (validNodesToUpdate.length > 0) {
@@ -1634,11 +1638,13 @@ export function useWorkflowInteractionCoordinator() {
         instance.updateNodeInternals(validNodesToUpdate);
         await nextTick();
       } else {
-        console.warn(`[InteractionCoordinator:moveAndReconnectEdgeAndRecord] No valid nodes found to update internals for edge ${edgeToMoveId}.`);
+        console.warn(
+          `[InteractionCoordinator:moveAndReconnectEdgeAndRecord] No valid nodes found to update internals for edge ${edgeToMoveId}.`
+        );
       }
     }
   }
-  
+
   // 导出公共接口
   return {
     // --- 核心交互函数 ---
@@ -1661,7 +1667,7 @@ export function useWorkflowInteractionCoordinator() {
     disconnectEdgeFromInputAndRecord,
     connectEdgeToInputAndRecord,
     moveAndReconnectEdgeAndRecord,
-  
+
     // --- 预览相关 (来自 useWorkflowPreview) ---
     isPreviewEnabled, // 导出从 useWorkflowPreview 获取的预览状态
     // requestPreviewExecution 主要由上面的更新函数内部调用，通常不直接从协调器暴露
