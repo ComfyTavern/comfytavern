@@ -26,7 +26,8 @@ export function useNodeClientScript(props: UseNodeClientScriptProps) { // Remove
   const clientScriptLoaded = ref(false);
   const clientScriptError = ref<string | null>(null);
   const clientScriptApi = ref<any>(null); // 用于存储 setupClientNode 返回的接口
-
+  const hasClientScriptDefinition = ref(false); // 新增：标记节点定义中是否有 clientScriptUrl
+ 
   // 加载并执行客户端脚本
   const loadClientScript = async () => {
     let fullScriptUrl = ''; // 在 try 块外部声明
@@ -102,12 +103,16 @@ export function useNodeClientScript(props: UseNodeClientScriptProps) { // Remove
     const currentDef = nodeDefinitions.value.find((def: FrontendNodeDefinition) => def.type === props.data.type);
 
     if (currentDef?.clientScriptUrl && !clientScriptLoaded.value) {
+      hasClientScriptDefinition.value = true; // 节点定义了客户端脚本
       loadClientScript();
     } else if (!currentDef?.clientScriptUrl) {
+      hasClientScriptDefinition.value = false; // 节点未定义客户端脚本
       clientScriptLoaded.value = false;
       clientScriptApi.value = null;
       clientScriptError.value = null;
     } else if (clientScriptLoaded.value) {
+      // 脚本已加载，确保 hasClientScriptDefinition 也为 true
+      hasClientScriptDefinition.value = true;
       // 脚本已加载
     }
   };
@@ -118,6 +123,7 @@ export function useNodeClientScript(props: UseNodeClientScriptProps) { // Remove
       checkAndLoadClientScript();
     } else {
       // 重置状态
+      hasClientScriptDefinition.value = false; // 定义未加载，假设没有客户端脚本
       clientScriptLoaded.value = false;
       clientScriptApi.value = null;
       clientScriptError.value = null;
@@ -127,6 +133,7 @@ export function useNodeClientScript(props: UseNodeClientScriptProps) { // Remove
   // 监听节点类型变化
   watch(() => props.data.type, (newType, oldType) => {
     if (newType !== oldType) {
+      hasClientScriptDefinition.value = false; // 类型变化，重置
       clientScriptLoaded.value = false;
       clientScriptApi.value = null;
       clientScriptError.value = null;
@@ -225,7 +232,10 @@ export function useNodeClientScript(props: UseNodeClientScriptProps) { // Remove
         throw error; // 重新抛出错误，让调用者知道执行失败
       }
     } else {
-      console.debug(`[${props.id}] Client script hook '${hookName}' not found on client API for node type '${props.data.type}' (namespace: '${props.data.namespace}'). API loaded: ${!!clientScriptApi.value}`);
+      // 仅当节点定义了客户端脚本，但API未加载或钩子未找到时，才打印警告
+      if (hasClientScriptDefinition.value) {
+        console.debug(`[${props.id}] Client script hook '${hookName}' not found on client API for node type '${props.data.type}' (namespace: '${props.data.namespace}'). API loaded: ${!!clientScriptApi.value}`);
+      }
       return undefined; // 表示钩子未找到或未执行
     }
   };
