@@ -29,9 +29,9 @@
 
     <!-- 节点右键菜单 (根据选中数量显示不同内容) -->
     <NodeContextMenu :visible="showNodeContextMenu" :position="contextMenuPosition" :nodeId="selectedNodeId"
-      :selected-node-count="currentNodeSelectionCount" @edit="editNode" @duplicate="duplicateNode"
-      @connect="connectNode" @disconnect="disconnectNode" @delete="deleteNode" @copy-selection="handleCopySelection"
-      @create-group-from-selection="handleCreateGroupFromSelection"
+      :nodeType="selectedNodeType" :selected-node-count="currentNodeSelectionCount" @edit="editNode"
+      @duplicate="duplicateNode" @connect="connectNode" @disconnect="disconnectNode" @delete="deleteNode"
+      @copy-selection="handleCopySelection" @create-group-from-selection="handleCreateGroupFromSelection"
       @create-frame-for-selection="handleCreateFrameForSelection" @delete-selection="handleDeleteSelection"
       @close="closeNodeContextMenu" />
 
@@ -219,6 +219,7 @@ const showNodeContextMenu = ref(false);
 const showSlotContextMenu = ref(false); // 添加插槽菜单状态
 // const contextMenuPosition = ref({ x: 0, y: 0 }); // Moved to useContextMenuPositioning
 const selectedNodeId = ref('');
+const selectedNodeType = ref<string | undefined>(undefined); // 用于存储右键点击节点的类型
 const currentNodeSelectionCount = ref(0); // 添加回选中数量的 ref
 const slotContextMenuContext = ref<{ nodeId: string; handleId: string; handleType: 'source' | 'target' } | null>(null); // 插槽菜单上下文
 const copiedNodes = ref<Node[]>([]);
@@ -456,6 +457,7 @@ onNodeContextMenu(({ event, node }) => {
   event.stopPropagation();
 
   selectedNodeId.value = node.id;
+  selectedNodeType.value = node.type; // 获取并存储节点类型
 
   // 计算当前选中的节点数量
   const selectedNodes = getNodes.value.filter(n => n.selected);

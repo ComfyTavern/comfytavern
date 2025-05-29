@@ -263,6 +263,9 @@ watch(activeTarget, (newTarget) => {
 watch(() => workflowManager.showGroupOutputOverview.value, (showGroupOverview) => {
   if (showGroupOverview) {
     panelMode.value = 'groupOverview';
+    if (!panelLayout.value.isExpanded) { // 如果面板当前是收起的
+      panelLayout.value.isExpanded = true; // 则展开面板
+    }
     workflowManager.clearGroupOutputOverviewRequest(); // 重置请求
   }
 });
@@ -492,7 +495,7 @@ onUnmounted(() => {
 .right-preview-panel {
   @apply fixed right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg flex flex-col z-50 rounded-md;
   /* 添加圆角 */
-  transition: width 0.3s ease-in-out, height 0.3s ease-in-out;
+  transition: width 0.2s ease-in-out, height 0.2s ease-in-out;
   /* 对宽度和高度应用过渡，实现展开收起动画 */
   overflow: hidden;
   /* 防止内容在收起时溢出 */
