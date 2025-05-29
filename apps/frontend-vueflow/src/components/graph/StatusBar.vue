@@ -99,80 +99,74 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue"; // <-- Removed onMounted, onUnmounted
-import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core"; // <-- Import VueFlowNode and VueFlowEdge
+import { ref, computed, watch } from "vue";
+// import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core"; // 咕咕：不再直接在此处使用
 import { onClickOutside } from "@vueuse/core";
-import { klona } from "klona/full"; // Roo: Added import for klona
-import { useWorkflowStore } from "@/stores/workflowStore"; // Import workflow store
-import { useTabStore } from "@/stores/tabStore"; // Import tab store
-import { useExecutionStore } from "@/stores/executionStore"; // 导入执行状态存储
-import { useEditorState } from "@/composables/editor/useEditorState"; // <-- 咕咕：导入 editor state
-import { useProjectStore } from "@/stores/projectStore"; // 导入项目状态存储
+// import { klona } from "klona/full"; // 咕咕：已移至 useWorkflowExecution
+import { useWorkflowStore } from "@/stores/workflowStore";
+import { useTabStore } from "@/stores/tabStore";
+import { useExecutionStore } from "@/stores/executionStore";
+import { useEditorState } from "@/composables/editor/useEditorState";
+import { useProjectStore } from "@/stores/projectStore";
 import { storeToRefs } from "pinia";
 import WorkflowMenu from "@/components/graph/menus/WorkflowMenu.vue";
-import TabBar from "@/components/graph/TabBar.vue"; // Import TabBar
-// import Tooltip from '@/components/common/Tooltip.vue'; // 移除未使用的 Tooltip 导入
-import { useWebSocket } from "@/composables/useWebSocket"; // 导入 WebSocket
-// 移除 useVueFlow, 因为我们将从 store 获取数据
+import TabBar from "@/components/graph/TabBar.vue";
+// import { useWebSocket } from "@/composables/useWebSocket"; // 咕咕：已移至 useWorkflowExecution
 import {
   ExecutionStatus,
-  WebSocketMessageType,
-  type ExecuteWorkflowPayload,
-} from "@comfytavern/types"; // 导入消息类型和负载类型
-import {
-  transformVueFlowToExecutionPayload,
-  transformVueFlowToCoreWorkflow, // <-- 新增导入
-} from "@/utils/workflowTransformer";
-import type { FlowExportObject } from "@vue-flow/core"; // <-- 新增导入
-// import EditMenu from './menus/EditMenu.vue';
+  // WebSocketMessageType, // 咕咕：已移至 useWorkflowExecution
+  // type ExecuteWorkflowPayload, // 咕咕：已移至 useWorkflowExecution
+} from "@comfytavern/types";
+// import { // 咕咕：已移至 useWorkflowExecution
+//   transformVueFlowToExecutionPayload,
+//   transformVueFlowToCoreWorkflow,
+// } from "@/utils/workflowTransformer";
+// import type { FlowExportObject } from "@vue-flow/core"; // 咕咕：已移至 useWorkflowExecution
+import { useWorkflowExecution } from "@/composables/workflow/useWorkflowExecution"; // 咕咕：导入新的 composable
 
 const workflowStore = useWorkflowStore();
-// const { currentWorkflow, isDirty } = storeToRefs(workflowStore); // Removed, state is now per-tab
-const tabStore = useTabStore(); // Instantiate tab store
-const { activeTabId } = storeToRefs(tabStore); // Get reactive activeTabId
-const executionStore = useExecutionStore(); // 获取执行状态存储实例
-const { isPreviewEnabled } = storeToRefs(executionStore); // 获取预览状态
-const { togglePreview } = executionStore; // 获取切换 Action
-const { isDockedEditorVisible, toggleDockedEditor } = useEditorState(); // <-- 咕咕：获取编辑器状态和切换函数
+const tabStore = useTabStore();
+const { activeTabId } = storeToRefs(tabStore);
+const executionStore = useExecutionStore();
+const { isPreviewEnabled } = storeToRefs(executionStore);
+const { togglePreview } = executionStore;
+const { isDockedEditorVisible, toggleDockedEditor } = useEditorState();
 const projectStore = useProjectStore();
-const { currentProjectMetadata } = storeToRefs(projectStore); // <-- 修正：使用 currentProjectMetadata
-const projectName = computed(() => currentProjectMetadata.value?.name || "ComfyTavern"); // 提供一个默认名称，以防项目名称为空
-// const { workflowStatus } = storeToRefs(executionStore); // 不再直接解构全局状态
+const { currentProjectMetadata } = storeToRefs(projectStore);
+const projectName = computed(() => currentProjectMetadata.value?.name || "ComfyTavern");
+
 const showWorkflowMenu = ref(false);
 const workflowButtonRef = ref<HTMLButtonElement | null>(null);
-const workflowMenuRef = ref<InstanceType<typeof WorkflowMenu> | null>(null); // Ref for the component instance
-const targetElementRef = ref<HTMLElement | null>(null); // Ref for the actual DOM element
-// const showEditMenu = ref(false);
+const workflowMenuRef = ref<InstanceType<typeof WorkflowMenu> | null>(null);
+const targetElementRef = ref<HTMLElement | null>(null);
 
 // Computed property for the active tab's workflow data
+// 咕咕：保留 activeWorkflowData，因为备用逻辑的讨论还在进行中
 const activeWorkflowData = computed(() => {
   return activeTabId.value ? workflowStore.getWorkflowData(activeTabId.value) : null;
 });
 
-// 计算属性：获取当前活动标签页的工作流状态
 const currentWorkflowStatus = computed(() => {
   if (!activeTabId.value) {
-    return ExecutionStatus.IDLE; // 没有活动标签页，视为空闲
+    return ExecutionStatus.IDLE;
   }
   return executionStore.getWorkflowStatus(activeTabId.value);
 });
 
-// 计算属性：将 ExecutionStatus 枚举映射为用户友好的文本
 const workflowStatusText = computed(() => {
-  // 使用新的计算属性 currentWorkflowStatus
   switch (currentWorkflowStatus.value) {
     case ExecutionStatus.IDLE:
       return "空闲";
     case ExecutionStatus.QUEUED:
-      return "排队中"; // Use QUEUED
+      return "排队中";
     case ExecutionStatus.RUNNING:
       return "运行中...";
     case ExecutionStatus.COMPLETE:
-      return "已完成"; // Use COMPLETE
+      return "已完成";
     case ExecutionStatus.ERROR:
       return "错误";
     case ExecutionStatus.SKIPPED:
-      return "已跳过"; // SKIPPED is correct
+      return "已跳过";
     default:
       return "";
   }
@@ -180,165 +174,55 @@ const workflowStatusText = computed(() => {
 
 const toggleWorkflowMenu = () => {
   showWorkflowMenu.value = !showWorkflowMenu.value;
-  // showEditMenu.value = false; // 关闭其他菜单
 };
 
-// const toggleEditMenu = () => {
-//   showEditMenu.value = !showEditMenu.value;
-//   showWorkflowMenu.value = false; // 关闭其他菜单
-// };
-
-// 点击外部关闭菜单
-// 注意：onClickOutside 需要目标元素的实际 DOM 节点。
-// 由于 WorkflowMenu 使用 v-if，它在隐藏时 DOM 节点不存在。
-// 我们需要确保在 showWorkflowMenu 变为 true 后再获取 workflowMenuRef 的 DOM 元素。
-// Watch the component ref. When the menu component mounts/unmounts (due to v-if),
-// update the targetElementRef with the actual DOM element or null.
 watch(workflowMenuRef, (newVal) => {
-  // Use $el to get the root DOM node of the component instance
   targetElementRef.value = newVal ? (newVal.$el as HTMLElement) : null;
 });
 
-// Now use the targetElementRef (which holds the HTMLElement or null) for onClickOutside
 onClickOutside(
-  targetElementRef, // Pass the ref holding the DOM element
+  targetElementRef,
   (event: PointerEvent) => {
-    // Check if the click target is outside the button
     if (workflowButtonRef.value && !workflowButtonRef.value.contains(event.target as Node)) {
-      // The targetElementRef check is implicitly handled by onClickOutside
       showWorkflowMenu.value = false;
     }
   },
   {
-    // Ignore clicks on the button itself
     ignore: [workflowButtonRef],
-    // Optional: Detect clicks inside iframes if needed
-    // detectIframe: true,
   }
 );
 
 // --- 执行工作流 ---
-const { sendMessage, setInitiatingTabForNextPrompt } = useWebSocket(); // 获取 setInitiatingTabForNextPrompt
-// 移除 toObject
+const { executeWorkflow: executeActiveWorkflow } = useWorkflowExecution(); // 咕咕：从 composable 获取执行函数
 
-const handleExecuteWorkflow = async () => { // 咕咕：将函数设为 async
-  console.log("触发执行工作流...");
+const handleExecuteWorkflow = async () => {
+  console.log("触发执行工作流 (StatusBar)...");
+
   if (!activeTabId.value) {
-    console.error("无法执行：没有活动的标签页。");
+    console.error("[StatusBar] 无法执行：没有活动的标签页。");
     alert("请先选择一个标签页。");
     return;
   }
 
-  // 1. 从 workflowStore (manager) 获取当前活动标签页的最新画布元素
   const currentElements = workflowStore.getElements(activeTabId.value);
   if (!currentElements || currentElements.length === 0) {
-    const currentWorkflowVal = activeWorkflowData.value; // 尝试从 workflowData 获取
-    if (!currentWorkflowVal || !currentWorkflowVal.nodes || currentWorkflowVal.nodes.length === 0) {
-      console.error("无法执行：当前画布元素和工作流数据均为空。");
-      alert("画布上没有元素可执行。");
-      return;
+    // 画布实时元素为空
+    const workflowDataFromStore = activeWorkflowData.value; // activeWorkflowData 是 computed(() => workflowStore.getWorkflowData(...))
+    if (workflowDataFromStore && workflowDataFromStore.nodes && workflowDataFromStore.nodes.length > 0) {
+      // Store 中有数据，说明可能只是画布未同步或未渲染完全
+      console.warn("[StatusBar] 画布当前元素为空，但侦测到已加载的工作流数据。可能画布尚未完全渲染或同步。执行已取消。");
+      alert("画布尚未完全准备就绪，请稍等片刻或尝试重新加载工作流。");
+    } else {
+      // Store 中也无数据，或数据无效
+      console.error("[StatusBar] 无法执行：当前画布元素和工作流存储数据均为空或无效。");
+      alert("画布上没有元素可执行，或画布状态不正确。");
     }
-    // 如果 elements 为空但 workflowData.nodes 存在 (例如刚加载但画布未完全渲染)，则可能需要回退
-    // 但正常情况下，执行时应优先采用画布的实时 elements
-    console.warn("执行时画布元素为空，将尝试使用 workflowData 中的节点和边。这可能不是最新状态。");
-    // 在这种回退情况下，我们仍然使用旧逻辑的数据源，但这是非预期的路径
-    const executionPayloadDataFallback = transformVueFlowToExecutionPayload({
-      nodes: currentWorkflowVal.nodes,
-      edges: currentWorkflowVal.edges as VueFlowEdge[],
-    });
-    const fallbackPayload: ExecuteWorkflowPayload = {
-      nodes: executionPayloadDataFallback.nodes,
-      edges: executionPayloadDataFallback.edges,
-    };
-    console.log("发送 EXECUTE_WORKFLOW 消息 (Fallback), payload:", fallbackPayload);
-    if (activeTabId.value) setInitiatingTabForNextPrompt(activeTabId.value);
-    sendMessage({ type: WebSocketMessageType.PROMPT_REQUEST, payload: fallbackPayload });
-    if (activeTabId.value) executionStore.setWorkflowStatusManually(activeTabId.value, ExecutionStatus.QUEUED);
-    return;
+    return; // 阻止执行
   }
 
-  const vueFlowNodes = currentElements.filter(el => !('source' in el)) as VueFlowNode[];
-  const vueFlowEdges = currentElements.filter(el => 'source' in el) as VueFlowEdge[];
-
-  // 2. 获取当前视口
-  const activeTabState = workflowStore.getActiveTabState(); // 这个方法不接受参数
-  let currentViewport = { x: 0, y: 0, zoom: 1 }; // Default viewport
-  if (activeTabState?.vueFlowInstance) {
-    currentViewport = activeTabState.vueFlowInstance.getViewport();
-  } else if (activeTabState?.viewport) {
-    currentViewport = activeTabState.viewport;
-  } else {
-    // 作为最后的备用，如果 activeTabState.viewport 也不可用，
-    // 尝试从 activeWorkflowData.value (即 workflowManager.getWorkflowData()) 获取
-    const wfData = activeWorkflowData.value;
-    if (wfData?.viewport) {
-      currentViewport = wfData.viewport;
-    }
-  }
-
-  if (activeTabId.value) {
-    setInitiatingTabForNextPrompt(activeTabId.value);
-  }
-
-  // 咕咕：在发送执行请求前，为每个节点触发客户端脚本钩子
-  const clientScriptHookName = 'onWorkflowExecute';
-  if (vueFlowNodes && vueFlowNodes.length > 0) {
-    console.log(`[StatusBar] Attempting to run '${clientScriptHookName}' hook for ${vueFlowNodes.length} nodes.`);
-    for (const node of vueFlowNodes) {
-      const executor = executionStore.getNodeClientScriptExecutor(node.id);
-      if (executor) {
-        try {
-          console.debug(`[StatusBar] Executing client script hook '${clientScriptHookName}' for node ${node.id}`);
-          // 为钩子准备上下文数据，使用 klona 确保数据隔离
-          const hookContext = {
-            nodeId: node.id,
-            workflowContext: {
-              nodes: klona(vueFlowNodes),
-              edges: klona(vueFlowEdges),
-            },
-          };
-          await executor(clientScriptHookName, hookContext);
-        } catch (e) {
-          console.warn(`[StatusBar] Client script hook '${clientScriptHookName}' for node ${node.id} failed:`, e);
-          // 可以选择是否通知用户，或者是否因为钩子失败而中止执行
-          // 目前仅记录警告并继续
-        }
-      }
-    }
-  }
-
-  // 3. 构建临时的 FlowExportObject (在执行完所有客户端脚本后)
-  const tempFlowExport: FlowExportObject = {
-    nodes: vueFlowNodes,
-    edges: vueFlowEdges,
-    viewport: klona(currentViewport), // 使用 klona 确保是深拷贝
-    position: [currentViewport.x, currentViewport.y],
-    zoom: currentViewport.zoom,
-  };
-
-  // 4. 将画布状态转换为核心工作流数据 (StorageNode[], StorageEdge[])
-  const coreWorkflowData = transformVueFlowToCoreWorkflow(tempFlowExport);
-
-  // 5. 使用转换后的核心数据构建执行载荷
-  const executionPayloadData = transformVueFlowToExecutionPayload({
-    nodes: coreWorkflowData.nodes as any, // StorageNode[] as VueFlowNode[] (内部按 StorageNode 处理)
-    edges: coreWorkflowData.edges as any, // StorageEdge[] as VueFlowEdge[] (内部按 StorageEdge 处理)
-  });
-
-  const payload: ExecuteWorkflowPayload = {
-    nodes: executionPayloadData.nodes,
-    edges: executionPayloadData.edges,
-  };
-
-  sendMessage({
-    type: WebSocketMessageType.PROMPT_REQUEST,
-    payload: payload,
-  });
-
-  if (activeTabId.value) {
-    executionStore.setWorkflowStatusManually(activeTabId.value, ExecutionStatus.QUEUED);
-  }
-
+  // 画布元素看起来是存在的，调用 composable 执行
+  // composable 内部也会进行元素检查，作为双重保障
+  await executeActiveWorkflow();
 };
 </script>
 
