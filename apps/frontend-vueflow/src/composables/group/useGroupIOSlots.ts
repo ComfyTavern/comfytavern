@@ -29,7 +29,7 @@ export function useGroupIOSlots(props: NodeProps) {
     const groupInterface = (props.data as any)?.groupInterface; // 显式访问 groupInterface
     const workflow = activeWorkflowOrGroupDef.value;
     // 1. GroupOutput: 使用工作流接口，为 CONVERTIBLE_ANY 提供前端描述
-    if (nodeType === 'core:GroupOutput') { // Roo: 使用带命名空间的类型
+    if (nodeType === 'core:GroupOutput') { // 使用带命名空间的类型
       const interfaceOutputs = workflow?.interfaceOutputs || {};
       return Object.values(interfaceOutputs).map(slot => {
         const typedSlot = slot as GroupSlotInfo;
@@ -47,7 +47,7 @@ export function useGroupIOSlots(props: NodeProps) {
     }
 
     // 2. NodeGroup: 使用节点数据中的 groupInterface
-    if (nodeType === 'core:NodeGroup' && groupInterface?.inputs) { // Roo: 使用带命名空间的类型
+    if (nodeType === 'core:NodeGroup' && groupInterface?.inputs) { // 使用带命名空间的类型
       // Map to ensure a 'description' field exists, prioritizing customDescription
       const groupInputs = Object.values(groupInterface.inputs).map(slot => {
         const typedSlot = slot as GroupSlotInfo;
@@ -62,7 +62,7 @@ export function useGroupIOSlots(props: NodeProps) {
     }
 
     // 3. 普通节点: 使用节点数据中的 inputs
-    // Roo: 更新类型检查以包含命名空间
+    // 更新类型检查以包含命名空间
     if (nodeType !== 'core:GroupInput' && nodeType !== 'core:GroupOutput' && nodeType !== 'core:NodeGroup') {
       // Normal nodes: transformWorkflowToVueFlow already added 'description' to the value object
       const nodeInputs = Object.entries(props.data?.inputs || {}).map(([key, value]) => ({
@@ -82,7 +82,7 @@ export function useGroupIOSlots(props: NodeProps) {
     const groupInterface = (props.data as any)?.groupInterface; // 显式访问 groupInterface
     const workflow = activeWorkflowOrGroupDef.value;
     // 1. GroupInput: 使用工作流接口，为 CONVERTIBLE_ANY 提供前端描述
-    if (nodeType === 'core:GroupInput') { // Roo: 使用带命名空间的类型
+    if (nodeType === 'core:GroupInput') { // 使用带命名空间的类型
       const interfaceInputs = workflow?.interfaceInputs || {};
       return Object.values(interfaceInputs).map(slot => {
         const typedSlot = slot as GroupSlotInfo;
@@ -100,7 +100,7 @@ export function useGroupIOSlots(props: NodeProps) {
     }
 
     // 2. NodeGroup: 使用节点数据中的 groupInterface
-    if (nodeType === 'core:NodeGroup' && groupInterface?.outputs) { // Roo: 使用带命名空间的类型
+    if (nodeType === 'core:NodeGroup' && groupInterface?.outputs) { // 使用带命名空间的类型
       // Map to ensure a 'description' field exists, prioritizing customDescription
       const groupOutputs = Object.values(groupInterface.outputs).map(slot => {
         const typedSlot = slot as GroupSlotInfo;
@@ -115,7 +115,7 @@ export function useGroupIOSlots(props: NodeProps) {
     }
 
     // 3. 普通节点: 使用节点数据中的 outputs
-    // Roo: 更新类型检查以包含命名空间
+    // 更新类型检查以包含命名空间
     if (nodeType !== 'core:GroupInput' && nodeType !== 'core:GroupOutput' && nodeType !== 'core:NodeGroup') {
       // Normal nodes: transformWorkflowToVueFlow already added 'description' to the value object
       const nodeOutputs = Object.entries(props.data?.outputs || {}).map(([key, value]) => ({

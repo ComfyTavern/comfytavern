@@ -38,8 +38,8 @@
 import { ref, watch, nextTick, onMounted, reactive } from 'vue';
 import RichCodeEditor from './RichCodeEditor.vue';
 import type { TabData } from '@/types/editorTypes';
-import { useThemeStore } from '@/stores/theme'; // 咕咕：导入主题存储
-// import { storeToRefs } from 'pinia'; // 咕咕：移除未使用的导入
+import { useThemeStore } from '@/stores/theme'; // 导入主题存储
+// import { storeToRefs } from 'pinia'; // 移除未使用的导入
 
 // Props
 const props = defineProps<{
@@ -59,8 +59,8 @@ const emit = defineEmits<{
 const openTabs = ref<TabData[]>([]);
 const activeTabIdInternal = ref<string | undefined>(undefined);
 const editorRefs = reactive<Record<string, InstanceType<typeof RichCodeEditor> | null>>({});
-const themeStore = useThemeStore(); // 咕咕：获取主题存储实例
-// const { isDark } = storeToRefs(themeStore); // 咕咕：如果需要在模板外使用 isDark，可以解构
+const themeStore = useThemeStore(); // 获取主题存储实例
+// const { isDark } = storeToRefs(themeStore); // 如果需要在模板外使用 isDark，可以解构
 
 // 初始化
 onMounted(() => {
@@ -117,7 +117,7 @@ const handleCloseTab = (tabId: string) => {
   closeEditorTab(tabId);
 };
 
-// 咕咕：获取截断后的标题
+// 获取截断后的标题
 const getTruncatedTitle = (title: string): string => {
   const maxLength = 30;
   if (title.length > maxLength) {
@@ -217,8 +217,8 @@ defineExpose({
   closeEditorTab,
   saveEditorTab,
   getActiveTabId,
-  getTabContent, // 咕咕：暴露新方法
-  updateTabContent, // 咕咕：暴露新方法
+  getTabContent, // 暴露新方法
+  updateTabContent, // 暴露新方法
 });
 </script>
 

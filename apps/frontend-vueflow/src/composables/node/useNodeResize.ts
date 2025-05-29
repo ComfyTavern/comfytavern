@@ -1,17 +1,17 @@
 import { ref, onUnmounted, onMounted } from 'vue'
-// Roo: Import Node and Edge types
+// Import Node and Edge types
 import { useVueFlow, type Node as VueFlowNode, type Edge } from '@vue-flow/core'
 import { measureTextWidth, NODE_TITLE_FONT, NODE_DESC_FONT, NODE_PARAM_FONT } from '../../utils/textUtils'
 import type { UseNodeStateProps } from './useNodeState'
 import { useNodeStore } from '@/stores/nodeStore';
-// Roo: Remove unused workflowStore import
+// Remove unused workflowStore import
 // import { useWorkflowStore } from '@/stores/workflowStore';
 import { useTabStore } from '@/stores/tabStore';
 import { useWorkflowInteractionCoordinator } from '../workflow/useWorkflowInteractionCoordinator';
-// Roo: Import useWorkflowManager
+// Import useWorkflowManager
 import { useWorkflowManager } from '../workflow/useWorkflowManager';
 import type { HistoryEntry, InputDefinition, DataFlowTypeName } from '@comfytavern/types'; // <-- Import HistoryEntry
-import { DataFlowType, BuiltInSocketMatchCategory } from '@comfytavern/types'; // Roo: Import new types
+import { DataFlowType, BuiltInSocketMatchCategory } from '@comfytavern/types'; // Import new types
 import { createHistoryEntry } from '@comfytavern/utils'; // <-- Import createHistoryEntry
 
 // --- 常量定义 ---
@@ -58,11 +58,11 @@ export function useNodeResize(props: Readonly<UseNodeStateProps>) {
   const nodeId = props.id; // 从 props 中获取节点 ID
   const { updateNode, viewport } = useVueFlow()
   const nodeStore = useNodeStore();
-  // Roo: Remove unused workflowStore instance
+  // Remove unused workflowStore instance
   // const workflowStore = useWorkflowStore();
   const tabStore = useTabStore();
   const interactionCoordinator = useWorkflowInteractionCoordinator();
-  // Roo: Get workflowManager instance
+  // Get workflowManager instance
   const workflowManager = useWorkflowManager();
 
   /** 节点的当前宽度，响应式引用 */
@@ -98,9 +98,9 @@ export function useNodeResize(props: Readonly<UseNodeStateProps>) {
       const newWidth = Math.min(MAX_NODE_WIDTH, Math.max(MIN_NODE_WIDTH, startWidth + scaledDiff))
       width.value = newWidth // 更新响应式宽度，实时预览效果
 
-      // Roo: 拖动过程中实时更新 VueFlow 样式，但不更新 store 或记录历史
-      // Roo: 移除无效的第三个参数 { emit: false }
-      // Roo: 暂时注释掉拖动过程中的更新，以隔离问题
+      // 拖动过程中实时更新 VueFlow 样式，但不更新 store 或记录历史
+      // 移除无效的第三个参数 { emit: false }
+      // 暂时注释掉拖动过程中的更新，以隔离问题
       // updateNode(nodeId, { style: { width: `${newWidth}px` } });
 
     }
@@ -126,10 +126,10 @@ export function useNodeResize(props: Readonly<UseNodeStateProps>) {
 
     // 如果确实进行了调整大小操作
     if (isResizing.value) {
-      // Roo: 移除此处的 updateNode 调用，协调器将处理最终状态更新
+      // 移除此处的 updateNode 调用，协调器将处理最终状态更新
       // updateNode(nodeId, { style: { width: `${width.value}px` } })
 
-      // --- Roo: 修改 - 使用协调器更新宽度并记录历史 ---
+      // --- 修改 - 使用协调器更新宽度并记录历史 ---
       const activeId = tabStore.activeTabId;
       if (activeId) {
         // 创建历史记录条目
@@ -161,7 +161,7 @@ export function useNodeResize(props: Readonly<UseNodeStateProps>) {
       } else {
         console.warn("[useNodeResize:stopResize] No active tab ID found, cannot update node width via coordinator.");
       }
-      // --- Roo: 结束修改 ---
+      // --- 结束修改 ---
     }
 
     // 重置状态
@@ -181,7 +181,7 @@ export function useNodeResize(props: Readonly<UseNodeStateProps>) {
   const calculateMinWidth = (
     title: string,
     description: string | undefined,
-    inputs: Record<string, InputDefinition>, // Roo: Updated type to InputDefinition
+    inputs: Record<string, InputDefinition>, // Updated type to InputDefinition
     outputs: Record<string, any> // 待办: 使用更精确的类型 OutputDefinition
   ): number => {
     // 从允许的自动计算最小宽度开始
@@ -209,7 +209,7 @@ export function useNodeResize(props: Readonly<UseNodeStateProps>) {
     if (inputs && Object.keys(inputs).length > 0) {
       for (const key in inputs) {
         const input = inputs[key];
-        if (!input) continue; // Roo: Add check for undefined input
+        if (!input) continue; // Add check for undefined input
 
         const paramName = input.displayName || input.description || key; // 获取参数显示名称
         const paramNameWidth = measureTextWidth(paramName, NODE_PARAM_FONT);
@@ -218,15 +218,15 @@ export function useNodeResize(props: Readonly<UseNodeStateProps>) {
         // --- 计算当前输入行所需的宽度 ---
         let inputLineWidth = 0
         // 判断是否为多行输入类型
-        // Roo: Updated isMultiline logic
+        // Updated isMultiline logic
         const isMultiline = input.config?.multiline === true ||
                             (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)) ||
                             (input.dataFlowType === DataFlowType.ARRAY && input.matchCategories?.includes(BuiltInSocketMatchCategory.CHAT_HISTORY));
         // 判断是否为按钮类型
-        // Roo: Updated isButton logic
+        // Updated isButton logic
         const isButton = input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER);
         // 判断是否有内联输入组件 (排除多行、按钮、CONVERTIBLE_ANY、WILDCARD类型、动态类型，且类型为基础可内联类型)
-        // Roo: Updated hasInlineInput logic
+        // Updated hasInlineInput logic
         const isConvertible = input.dataFlowType === DataFlowType.CONVERTIBLE_ANY || input.matchCategories?.includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
         const isWildcardType = input.dataFlowType === DataFlowType.WILDCARD;
         const basicInlineDataFlowTypes: DataFlowTypeName[] = [DataFlowType.INTEGER, DataFlowType.FLOAT, DataFlowType.BOOLEAN, DataFlowType.STRING];
@@ -305,15 +305,15 @@ export function useNodeResize(props: Readonly<UseNodeStateProps>) {
 
   // --- 在 onMounted 钩子中计算并设置初始宽度 ---
   onMounted(() => {
-    // --- Roo: 读取 workflowStore 中已保存的宽度 ---
+    // --- 读取 workflowStore 中已保存的宽度 ---
     const activeId = tabStore.activeTabId;
     let storedWidth: number | undefined = undefined;
     if (activeId) {
-      // Roo: 修改 - 通过 workflowManager 获取元素列表并查找节点
+      // 修改 - 通过 workflowManager 获取元素列表并查找节点
       const elements = workflowManager.getElements(activeId); // 使用 workflowManager
-      // Roo: 添加类型注解
+      // 添加类型注解
       const node = elements.find((el: VueFlowNode | Edge) => el.id === nodeId && !('source' in el)) as VueFlowNode | undefined;
-      // Roo: 处理 node.width 的多种类型
+      // 处理 node.width 的多种类型
       const rawWidth = node?.width;
       if (typeof rawWidth === 'number') {
         storedWidth = rawWidth;
@@ -325,26 +325,26 @@ export function useNodeResize(props: Readonly<UseNodeStateProps>) {
       }
       // 其他类型 (WidthFunc, undefined, NaN) 会导致 storedWidth 保持 undefined
     }
-    // --- Roo: 结束读取 ---
+    // --- 结束读取 ---
 
     try {
       // 从 nodeStore 中查找当前节点的定义
-      // Roo: 恢复使用 props.data.type 来查找定义
+      // 恢复使用 props.data.type 来查找定义
       const nodeDefinition = nodeStore.nodeDefinitions.find(def => def.type === props.data?.type);
 
       // 检查是否为 GroupInput 或 GroupOutput 节点 (这些是特殊的内部节点)
-      // Roo: 恢复使用 props.data?.type 和带命名空间的类型进行判断
-      // Roo: 使用顶层的 props.type 进行判断，并忽略 TS 错误
+      // 恢复使用 props.data?.type 和带命名空间的类型进行判断
+      // 使用顶层的 props.type 进行判断，并忽略 TS 错误
       // @ts-ignore - UseNodeStateProps type might be inaccurate, props.type exists at runtime
       const actualType = props.type;
       const isGroupIONode = actualType === 'core:GroupInput' || actualType === 'core:GroupOutput';
       const isNodeGroupNode = actualType === 'core:NodeGroup';
 
-      // Roo: 移除调试日志
+      // 移除调试日志
 
       let initialNodeWidth = MIN_NODE_WIDTH; // 默认值
 
-      // --- Roo: 调整优先级 ---
+      // --- 调整优先级 ---
       if (isGroupIONode) {
           // 0. 最高优先级：IO 节点强制使用 AUTO_CALC_MIN_WIDTH
           initialNodeWidth = AUTO_CALC_MIN_WIDTH;
@@ -366,18 +366,18 @@ export function useNodeResize(props: Readonly<UseNodeStateProps>) {
           const minWidth = calculateMinWidth(nodeLabel, nodeDesc, nodeInputs, nodeOutputs);
           initialNodeWidth = Math.max(MIN_NODE_WIDTH, minWidth);
       }
-      // --- Roo: 结束调整优先级 ---
+      // --- 结束调整优先级 ---
 
       // 设置最终的初始宽度
-      // Roo: 移除调试日志
+      // 移除调试日志
       width.value = initialNodeWidth;
-      // Roo: 同时更新 VueFlow 样式，确保初始渲染正确
+      // 同时更新 VueFlow 样式，确保初始渲染正确
       updateNode(nodeId, { style: { width: `${initialNodeWidth}px` } });
 
     } catch (error) {
       console.error(`Error calculating initial node width for ${props.id}:`, error)
       width.value = MIN_NODE_WIDTH;
-      // Roo: 移除无效的第三个参数 { emit: false }
+      // 移除无效的第三个参数 { emit: false }
       updateNode(nodeId, { style: { width: `${MIN_NODE_WIDTH}px` } });
     }
   })

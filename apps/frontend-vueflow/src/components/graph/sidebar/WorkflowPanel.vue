@@ -22,7 +22,7 @@
     </div>
 
     <!-- 工作流列表 -->
-    <!-- Roo: Remove overflow-y-auto, add flex-1 to OverlayScrollbarsComponent -->
+    <!-- Remove overflow-y-auto, add flex-1 to OverlayScrollbarsComponent -->
     <OverlayScrollbarsComponent
       :options="{ scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' } }"
       class="flex-1 border rounded dark:border-gray-600" defer>
@@ -34,7 +34,7 @@
         <li v-for="wf in filteredWorkflows" :key="wf.id"
           class="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center border-b dark:border-gray-700 last:border-b-0"
           @click="handleLoad(wf.id)">
-          <!-- Roo: 分开名称 Tooltip 和 状态 Tooltip -->
+          <!-- 分开名称 Tooltip 和 状态 Tooltip -->
           <div class="flex items-center flex-grow min-w-0 mr-2"> <!-- 包裹名称和图标 -->
             <Tooltip :content="`点击加载 **${wf.name}**\n\n---\n${wf.description || '没有描述'}`" placement="top-start"
               :offsetValue="8" :showDelay="500" triggerClass="truncate flex items-center">
@@ -45,7 +45,7 @@
               </svg>
               <span class="truncate">{{ wf.name }}</span>
             </Tooltip>
-            <!-- Roo: 状态徽章 Tooltip 移到外面 -->
+            <!-- 状态徽章 Tooltip 移到外面 -->
             <Tooltip v-if="wf.isOrphanGroup" content="这是一个由“创建组”产生且当前未被引用的工作流" placement="top">
               <span
                 class="ml-2 text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 dark:bg-gray-900 dark:text-yellow-100 flex-shrink-0">
@@ -86,7 +86,7 @@ import { useTabStore } from '@/stores/tabStore'; // Import tabStore
 import { useProjectStore } from '@/stores/projectStore'; // Import projectStore
 import Tooltip from '@/components/common/Tooltip.vue'; // 导入 Tooltip 组件
 // import { useVueFlow } from '@vue-flow/core'; // Remove unused import
-// Roo: Import OverlayScrollbars and theme
+// Import OverlayScrollbars and theme
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import 'overlayscrollbars/overlayscrollbars.css';
 import { useThemeStore } from "@/stores/theme";
@@ -95,8 +95,8 @@ const workflowStore = useWorkflowStore();
 const tabStore = useTabStore(); // Get tabStore instance
 const projectStore = useProjectStore(); // Get projectStore instance
 const { availableWorkflows } = storeToRefs(workflowStore);
-const themeStore = useThemeStore(); // Roo: Get theme store instance
-const { isDark } = storeToRefs(themeStore); // Roo: Get isDark state
+const themeStore = useThemeStore(); // Get theme store instance
+const { isDark } = storeToRefs(themeStore); // Get isDark state
 // const { activeTabId } = storeToRefs(tabStore); // Removed unused activeTabId
 // const vueFlow = useVueFlow(); // Remove unused variable
 
@@ -105,7 +105,7 @@ const searchTerm = ref('');
 
 // 计算过滤后的工作流列表
 
-// Roo: 计算引用计数和孤儿状态
+// 计算引用计数和孤儿状态
 const workflowsWithStats = computed(() => {
   const referenceCounts = new Map<string, number>();
   const allWorkflows = availableWorkflows.value;
@@ -140,12 +140,12 @@ const workflowsWithStats = computed(() => {
 
 // 计算过滤后的工作流列表 (基于包含统计信息的工作流)
 const filteredWorkflows = computed(() => {
-  const sourceWorkflows = workflowsWithStats.value; // Roo: 使用包含统计信息的数据源
+  const sourceWorkflows = workflowsWithStats.value; // 使用包含统计信息的数据源
   if (!searchTerm.value) {
     return sourceWorkflows;
   }
   const lowerSearchTerm = searchTerm.value.toLowerCase();
-  // Roo: 从 workflowsWithStats 过滤
+  // 从 workflowsWithStats 过滤
   return sourceWorkflows.filter(wf =>
     wf.name.toLowerCase().includes(lowerSearchTerm) ||
     wf.id.toLowerCase().includes(lowerSearchTerm)

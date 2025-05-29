@@ -9,7 +9,7 @@ import { useGroupIOState } from "@/composables/group/useGroupIOState";
 import { useGroupIOActions } from "@/composables/group/useGroupIOActions";
 import Tooltip from "@/components/common/Tooltip.vue";
 import styles from "@/components/graph/nodes/handleStyles.module.css";
-// Roo: Import OverlayScrollbars and theme
+// Import OverlayScrollbars and theme
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
 import { useThemeStore } from "@/stores/theme";
@@ -18,8 +18,8 @@ const workflowStore = useWorkflowStore();
 const tabStore = useTabStore();
 
 const { activeTabId } = storeToRefs(tabStore);
-const themeStore = useThemeStore(); // Roo: Get theme store instance
-const { isDark } = storeToRefs(themeStore); // Roo: Get isDark state
+const themeStore = useThemeStore(); // Get theme store instance
+const { isDark } = storeToRefs(themeStore); // Get isDark state
 // 直接获取响应式的 activeTabState
 const activeState = computed(() => workflowStore.getActiveTabState());
 
@@ -655,7 +655,6 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
           <div v-if="Object.keys(filteredInputs).length === 0" class="text-gray-400 italic text-xs px-1">
             无输入接口
           </div>
-          <!-- Roo: Apply OverlayScrollbars to input list -->
           <OverlayScrollbarsComponent v-else :options="{
             scrollbars: {
               autoHide: 'scroll',
@@ -663,10 +662,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
             },
           }" class="max-h-48 flex-shrink" defer>
             <ul class="space-y-1">
-              <!-- Removed overflow-y-auto and max-h from ul -->
-              <!-- 使用 template 配合 v-for 和 v-if -->
               <template v-for="(input, key) in filteredInputs" :key="String(key)">
-                <!-- 也为 :key 使用 String(key) 以保持一致性 -->
                 <li @click="selectInput(String(key))"
                   class="cursor-pointer px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex justify-between items-center"
                   :class="{ 'bg-blue-100 dark:bg-blue-900': selectedInputKey === key }">
@@ -729,7 +725,6 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
           <div v-if="Object.keys(filteredOutputs).length === 0" class="text-gray-400 italic text-xs px-1">
             无输出接口
           </div>
-          <!-- Roo: Apply OverlayScrollbars to output list -->
           <OverlayScrollbarsComponent v-else :options="{
             scrollbars: {
               autoHide: 'scroll',
@@ -737,10 +732,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
             },
           }" class="max-h-48 flex-shrink" defer>
             <ul class="space-y-1">
-              <!-- Removed overflow-y-auto and max-h from ul -->
-              <!-- 使用 template 配合 v-for 和 v-if -->
               <template v-for="(output, key) in filteredOutputs" :key="String(key)">
-                <!-- 也为 :key 使用 String(key) 以保持一致性 -->
                 <li @click="selectOutput(String(key))"
                   class="cursor-pointer px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex justify-between items-center"
                   :class="{ 'bg-blue-100 dark:bg-blue-900': selectedOutputKey === key }">
@@ -790,7 +782,6 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
       <div class="border-t mx-4 my-4"></div>
 
       <!-- 编辑区域 (底部区域) -->
-      <!-- Roo: Apply OverlayScrollbars to the edit area -->
       <OverlayScrollbarsComponent :options="{
         scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
       }" class="flex-grow flex-shrink-0 px-4 pb-4" defer>

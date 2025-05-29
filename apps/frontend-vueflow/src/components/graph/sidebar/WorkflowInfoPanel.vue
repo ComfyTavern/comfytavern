@@ -2,29 +2,29 @@
 import { ref, computed, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useTabStore } from "@/stores/tabStore";
-// Roo: 移除旧的 workflowManager 导入
+// 移除旧的 workflowManager 导入
 // import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { generateSafeWorkflowFilename } from "@/utils/textUtils";
-import { createHistoryEntry } from "@comfytavern/utils"; // Roo: 导入历史条目创建函数
-import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core"; // Roo: 导入类型
-// Roo: Import OverlayScrollbars
+import { createHistoryEntry } from "@comfytavern/utils"; // 导入历史条目创建函数
+import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core"; // 导入类型
+// Import OverlayScrollbars
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import 'overlayscrollbars/overlayscrollbars.css';
-import { useThemeStore } from "@/stores/theme"; // Roo: Import theme store for dark mode check
+import { useThemeStore } from "@/stores/theme"; // Import theme store for dark mode check
 
 const tabStore = useTabStore();
-// Roo: 移除旧的 workflowManager 实例
+// 移除旧的 workflowManager 实例
 // const workflowManager = useWorkflowManager();
-const workflowStore = useWorkflowStore(); // Roo: 获取 workflowStore 实例
-const themeStore = useThemeStore(); // Roo: 获取 themeStore 实例
+const workflowStore = useWorkflowStore(); // 获取 workflowStore 实例
+const themeStore = useThemeStore(); // 获取 themeStore 实例
 
 const { activeTabId } = storeToRefs(tabStore);
-const { isDark } = storeToRefs(themeStore); // Roo: 获取 isDark 状态
+const { isDark } = storeToRefs(themeStore); // 获取 isDark 状态
 
 // 获取当前活动标签页的工作流状态
 const activeState = computed(() => {
-  // Roo: 使用 workflowStore 获取状态
+  // 使用 workflowStore 获取状态
   return activeTabId.value ? workflowStore.getTabState(activeTabId.value) : undefined;
 });
 
@@ -41,19 +41,19 @@ watch(
   (newData) => {
     editingName.value = newData?.name || "";
     editingDescription.value = newData?.description || "";
-    // Roo: 移除 nameConflictError 重置
+    // 移除 nameConflictError 重置
   },
   { immediate: true }
 ); // 立即执行一次以初始化
 
-// Roo: 辅助函数格式化后缀
+// 辅助函数格式化后缀
 const formatSuffix = (num: number): string => {
   return `.${num.toString().padStart(3, "0")}`;
 };
 
 // 处理名称输入框失焦事件
 const handleNameBlur = async () => {
-  // Roo: 改为 async
+  // 改为 async
   const currentTabId = activeTabId.value;
   if (!currentTabId || !workflowData.value) return;
 
@@ -78,7 +78,7 @@ const handleNameBlur = async () => {
   // 循环检查冲突并添加后缀
   do {
     conflict = workflowStore.availableWorkflows.some(
-      (wf) => wf.id === finalSafeFilename && wf.id !== currentWorkflowId // Roo: 确保比较的是 ID (safe filename)
+      (wf) => wf.id === finalSafeFilename && wf.id !== currentWorkflowId // 确保比较的是 ID (safe filename)
     );
 
     if (conflict) {
@@ -97,7 +97,7 @@ const handleNameBlur = async () => {
 
   console.log(`Coordinating workflow name update for tab ${currentTabId} to: ${finalName}`);
 
-  // Roo: 创建历史记录条目
+  // 创建历史记录条目
   const historyEntry = createHistoryEntry(
     "modify",
     "workflowMetadata",
@@ -110,22 +110,22 @@ const handleNameBlur = async () => {
     }
   );
 
-  // Roo: 调用协调器函数
+  // 调用协调器函数
   try {
     await workflowStore.updateWorkflowNameAndRecord(currentTabId, finalName, historyEntry);
     console.log(`Workflow name update coordinated successfully for tab ${currentTabId}.`);
   } catch (error) {
     console.error(`Error coordinating workflow name update for tab ${currentTabId}:`, error);
-    // Roo: 考虑错误处理，例如恢复原始名称或显示错误消息
+    // 考虑错误处理，例如恢复原始名称或显示错误消息
     editingName.value = originalName; // 发生错误时恢复原始名称
   }
-  // Roo: 移除旧的直接调用
+  // 移除旧的直接调用
   // workflowManager.updateWorkflowName(activeTabId.value, finalName);
 };
 
 // 处理描述文本域失焦事件
 const handleDescriptionBlur = async () => {
-  // Roo: 改为 async
+  // 改为 async
   const currentTabId = activeTabId.value;
   if (!currentTabId || !workflowData.value) return;
 
@@ -135,7 +135,7 @@ const handleDescriptionBlur = async () => {
   if (newDescription !== originalDescription) {
     console.log(`Coordinating workflow description update for tab ${currentTabId}`);
 
-    // Roo: 创建历史记录条目
+    // 创建历史记录条目
     const historyEntry = createHistoryEntry(
       "modify",
       "workflowMetadata",
@@ -151,7 +151,7 @@ const handleDescriptionBlur = async () => {
       }
     );
 
-    // Roo: 调用协调器函数
+    // 调用协调器函数
     try {
       await workflowStore.updateWorkflowDescriptionAndRecord(
         currentTabId,
@@ -164,17 +164,17 @@ const handleDescriptionBlur = async () => {
         `Error coordinating workflow description update for tab ${currentTabId}:`,
         error
       );
-      // Roo: 考虑错误处理
+      // 考虑错误处理
       editingDescription.value = originalDescription; // 发生错误时恢复
     }
-    // Roo: 移除旧的直接调用
+    // 移除旧的直接调用
     // workflowManager.updateWorkflowDescription(activeTabId.value, editingDescription.value);
   }
 };
 
 // 计算节点数量
 const nodeCount = computed(() => {
-  // Roo: 添加类型注解
+  // 添加类型注解
   return (
     activeState.value?.elements?.filter((el: VueFlowNode | VueFlowEdge) => !("source" in el))
       .length ?? 0
@@ -186,7 +186,7 @@ const isNodeListExpanded = ref(false);
 
 // 获取节点列表
 const workflowNodes = computed(() => {
-  // Roo: 添加类型注解
+  // 添加类型注解
   return (
     activeState.value?.elements?.filter((el: VueFlowNode | VueFlowEdge) => !("source" in el)) ?? []
   );
@@ -243,14 +243,13 @@ const workflowNodes = computed(() => {
               工作流节点列表 ({{ nodeCount }})
             </h2>
           </div>
-          <!-- Roo: Apply OverlayScrollbars to the node list as well -->
           <OverlayScrollbarsComponent v-if="isNodeListExpanded"
             :options="{ scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' } }"
             class="mt-2 max-h-60 border rounded dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 p-2 text-xs" defer>
             <div v-if="workflowNodes.length === 0" class="text-gray-400 italic">
               此工作流中没有节点。
             </div>
-            <ul v-else class="space-y-1"> <!-- Removed overflow-y-auto and max-h from ul -->
+            <ul v-else class="space-y-1">
               <li v-for="node in workflowNodes" :key="node.id" class="truncate py-0.5">
                 <span class="font-mono text-gray-500 dark:text-gray-400 mr-1">[{{ node.type }}]</span>
                 {{ node.label || node.id }}

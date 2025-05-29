@@ -15,7 +15,7 @@ import {
   type NanoId, // 导入 NanoId
 } from '@comfytavern/types';
 
-// 咕咕：定义客户端脚本钩子执行器的类型
+// 定义客户端脚本钩子执行器的类型
 export type ClientScriptHookExecutor = (hookName: string, ...args: any[]) => Promise<any>;
 
 // 定义单个标签页的执行状态接口
@@ -39,7 +39,7 @@ export const useExecutionStore = defineStore('execution', () => {
   // 全局预览开关状态
   const isPreviewEnabled = ref(false); // 默认为关闭
 
-  // 咕咕：用于存储节点客户端脚本执行器的 Map
+  // 用于存储节点客户端脚本执行器的 Map
   const nodeClientScriptExecutors = reactive<Map<string, ClientScriptHookExecutor>>(new Map());
 
   // --- Actions ---
@@ -314,7 +314,7 @@ export const useExecutionStore = defineStore('execution', () => {
     isPreviewEnabled, // Expose state
     togglePreview, // Expose action
 
-    // 咕咕：暴露与节点客户端脚本执行器相关的方法
+    // 暴露与节点客户端脚本执行器相关的方法
     registerNodeClientScriptExecutor,
     unregisterNodeClientScriptExecutor,
     getNodeClientScriptExecutor,

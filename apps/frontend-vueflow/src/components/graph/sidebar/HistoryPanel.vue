@@ -1,26 +1,21 @@
 <template>
   <div class="history-panel p-4 h-full flex flex-col">
-    <!-- Use flex column -->
     <div class="flex justify-between items-center mb-4">
-      <!-- Flex container for title and count -->
       <h3 class="text-lg font-semibold text-gray-ID_MAX_LEN00 dark:text-gray-200">操作历史</h3>
       <span v-if="currentHistory" class="text-sm text-gray-500 dark:text-gray-400">
         {{ currentHistory.items.length }} / {{ MAX_HISTORY_LENGTH }}
       </span>
     </div>
     <div v-if="!activeTabId" class="text-gray-500 dark:text-gray-400 text-center mt-4">
-      <!-- Center text -->
       没有活动的标签页。
     </div>
     <div v-else-if="!currentHistory || currentHistory.items.length === 0" class="text-gray-500 dark:text-gray-400">
       当前标签页没有历史记录。
     </div>
-    <!-- Roo: Apply OverlayScrollbars to the history list -->
     <OverlayScrollbarsComponent v-else :options="{
       scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
     }" class="flex-1" defer>
       <ul class="space-y-2">
-        <!-- Removed flex-1 and overflow-y-auto from ul -->
         <Tooltip v-for="item in reversedHistoryItems" :key="item.originalIndex" :content="generateTooltipContent(item)"
           placement="left" :showDelay="100" :offsetValue="10" width="auto" :showCopyButton="true" :interactive="true">
           <li class="history-item p-2 rounded cursor-pointer transition-colors duration-150" :class="{
@@ -28,19 +23,15 @@
               item.originalIndex === currentHistory.currentIndex,
             'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300':
               item.originalIndex !== currentHistory.currentIndex,
-            'opacity-50': item.originalIndex > currentHistory.currentIndex, // 未来状态置灰 (基于原始索引)
+            'opacity-50': item.originalIndex > currentHistory.currentIndex,
           }" @click="handleHistoryClick(item.originalIndex)">
             <span class="mr-2 w-6 text-right text-gray-500 dark:text-gray-400">{{
               item.originalIndex
             }}</span>
-            <!-- Display original index -->
             <span class="mr-2">{{
               item.originalIndex === currentHistory.savedIndex ? "💾" : "•"
             }}</span>
-            <!-- Check savedIndex against originalIndex -->
             <span class="flex-1 truncate">{{ item.entry?.summary || "未命名操作" }}</span>
-            <!-- <-- Use item.entry.summary -->
-            <!-- Allow label to truncate -->
           </li>
         </Tooltip>
       </ul>
@@ -52,7 +43,7 @@
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import Tooltip from "../../common/Tooltip.vue";
-// Roo: Import OverlayScrollbars and theme
+// Import OverlayScrollbars and theme
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
 import { useThemeStore } from "@/stores/theme";
@@ -69,8 +60,8 @@ const workflowHistory = useWorkflowHistory();
 const workflowStore = useWorkflowStore(); // 获取 workflowStore 实例
 
 const { activeTabId } = storeToRefs(tabStore);
-const themeStore = useThemeStore(); // Roo: Get theme store instance
-const { isDark } = storeToRefs(themeStore); // Roo: Get isDark state
+const themeStore = useThemeStore(); // Get theme store instance
+const { isDark } = storeToRefs(themeStore); // Get isDark state
 // useWorkflowHistory 不直接暴露 historyMap，需要通过 getHistoryState 获取
 
 // 获取当前活动标签页的历史记录对象

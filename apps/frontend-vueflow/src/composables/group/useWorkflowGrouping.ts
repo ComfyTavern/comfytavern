@@ -581,17 +581,17 @@ async function createGroupFromSelectionLogic(
   const groupOutputNodeId = generateUniqueNodeId(currentTabId, "GroupOutput");
   const groupInputNodeDef: WorkflowNode = {
     id: groupInputNodeId,
-    type: "core:GroupInput", // Roo: 使用带命名空间的类型
+    type: "core:GroupInput", // 使用带命名空间的类型
     position: { x: groupInputPosX, y: groupIOPosY - 50 },
-    data: { nodeType: "core:GroupInput", label: "组输入", outputs: {} }, // Roo: 同步更新 data.nodeType
+    data: { nodeType: "core:GroupInput", label: "组输入", outputs: {} }, // 同步更新 data.nodeType
   };
   newWorkflowNodes.push(groupInputNodeDef);
 
   const groupOutputNodeDef: WorkflowNode = {
     id: groupOutputNodeId,
-    type: "core:GroupOutput", // Roo: 使用带命名空间的类型
+    type: "core:GroupOutput", // 使用带命名空间的类型
     position: { x: groupOutputPosX, y: groupIOPosY - 50 },
-    data: { nodeType: "core:GroupOutput", label: "组输出", inputs: {} }, // Roo: 同步更新 data.nodeType
+    data: { nodeType: "core:GroupOutput", label: "组输出", inputs: {} }, // 同步更新 data.nodeType
   };
   newWorkflowNodes.push(groupOutputNodeDef);
 
@@ -719,7 +719,7 @@ async function createGroupFromSelectionLogic(
   });
 
   // 6. 组装最终的新工作流对象（用于保存）
-  // Roo: 显式声明类型以包含新字段
+  // 显式声明类型以包含新字段
   const newWorkflowObjectToSave: Omit<WorkflowObject, "id" | "createdAt" | "updatedAt" | "version" | "referencedWorkflows"> & { creationMethod?: string } = {
     name: `分组_${uuidv4().substring(0, 6)}`,
     nodes: newWorkflowNodes,
@@ -727,7 +727,7 @@ async function createGroupFromSelectionLogic(
     viewport: { x: 0, y: 0, zoom: 1 },
     interfaceInputs: newWorkflowInterfaceInputs,
     interfaceOutputs: newWorkflowInterfaceOutputs,
-    // Roo: 添加 creationMethod 字段
+    // 添加 creationMethod 字段
     creationMethod: 'group',
   };
 
@@ -789,11 +789,11 @@ async function createGroupFromSelectionLogic(
 
   const nodeGroupInstance: VueFlowNode = {
     id: nodeGroupNodeId,
-    type: "core:NodeGroup", // Roo: 使用带命名空间的类型
+    type: "core:NodeGroup", // 使用带命名空间的类型
     position: { x: selectionCenterX, y: selectionCenterY },
     data: {
       ...baseNodeData,
-      nodeType: "core:NodeGroup", // Roo: 同步更新 data.nodeType
+      nodeType: "core:NodeGroup", // 同步更新 data.nodeType
       label: savedWorkflowData.name || `分组 ${newWorkflowId}`,
       configValues: {
         ...(baseNodeData.configValues || {}),

@@ -88,7 +88,7 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
           let valueToSave = currentValue;
           let valueToCompare = currentValue;
 
-          // --- Roo: Attempt type coercion for comparison and saving ---
+          // --- Attempt type coercion for comparison and saving ---
           try {
             if (inputDef.dataFlowType === 'INTEGER') {
               const parsedInt = parseInt(String(currentValue), 10);
@@ -122,7 +122,7 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
               e
             );
           }
-          // --- End Roo: Type Coercion ---
+          // --- End Type Coercion ---
 
           // Compare potentially coerced value with the default
           if (!isEqual(valueToCompare, effectiveDefault)) {
@@ -417,14 +417,14 @@ export function transformWorkflowToVueFlow(
         // 检查是否为 NodeGroup (其输出定义在 data.groupInterface.outputs)
         else if (sourceNode.type === "core:NodeGroup" && sourceNode.data?.groupInterface?.outputs) {
           const outputDef = sourceNode.data.groupInterface.outputs[storageEdge.sourceHandle];
-          if (outputDef) sourceType = outputDef.dataFlowType || "any"; // <--- Roo: 修正属性名
+          if (outputDef) sourceType = outputDef.dataFlowType || "any"; // <--- 修正属性名
         }
         // 检查是否为普通节点 (其输出定义在 data.outputs)
         // 注意：现在 data.outputs[handle] 存储的是包含类型的对象
         else if (sourceNode.data?.outputs?.[storageEdge.sourceHandle]) {
           const outputData = sourceNode.data.outputs[storageEdge.sourceHandle];
           // 从 outputData 对象中获取类型
-          if (outputData && typeof outputData === "object" && outputData.dataFlowType) { // <--- Roo: 修正属性名
+          if (outputData && typeof outputData === "object" && outputData.dataFlowType) { // <--- 修正属性名
             sourceType = outputData.dataFlowType;
           }
         }
@@ -448,7 +448,7 @@ export function transformWorkflowToVueFlow(
         else if (targetNode.type === "core:NodeGroup" && targetNode.data?.groupInterface?.inputs) {
           const inputDef = targetNode.data.groupInterface.inputs[storageEdge.targetHandle];
           if (inputDef) {
-            targetType = inputDef.dataFlowType || "any"; // <--- Roo: 修正属性名
+            targetType = inputDef.dataFlowType || "any"; // <--- 修正属性名
           }
         }
         // 检查是否为普通节点 (其输入定义在 data.inputs)

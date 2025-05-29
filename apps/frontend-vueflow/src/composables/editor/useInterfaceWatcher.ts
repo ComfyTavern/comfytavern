@@ -31,7 +31,7 @@ export function useInterfaceWatcher(
       const currentElementsValue = currentElements.value;
       let elementsChanged = false;
 
-      // Roo: 重构 elementsChanged 的计算逻辑，避免创建未使用的 updatedElements 数组
+      // 重构 elementsChanged 的计算逻辑，避免创建未使用的 updatedElements 数组
       for (const el of currentElementsValue) {
         if (elementsChanged) break; // 如果已经检测到更改，则无需继续检查
 
@@ -63,7 +63,7 @@ export function useInterfaceWatcher(
         //   `[useInterfaceWatcher] Interface change detected for tab ${internalId}. elementsChanged: ${elementsChanged}. Updating GroupIO nodes directly.`
         // );
 
-        // Roo: 诊断日志 - 检查 watch 回调执行时 workflowManager 内部的原始状态和快照状态
+        // 诊断日志 - 检查 watch 回调执行时 workflowManager 内部的原始状态和快照状态
         // const directAccessState = workflowManager.getAllTabStates.value.get(internalId);
         // const directAccessElements = directAccessState?.elements;
         // console.log(`[DEBUG useInterfaceWatcher] Watch triggered for tab ${internalId}.`);
@@ -81,7 +81,7 @@ export function useInterfaceWatcher(
           return;
         }
 
-        // Roo: 遍历最新的元素快照，并使用 updateNodeInternalData 更新 GroupInput/Output 节点的 data
+        // 遍历最新的元素快照，并使用 updateNodeInternalData 更新 GroupInput/Output 节点的 data
         // newInterface 包含最新的顶层接口定义
         latestElementsSnapshot.forEach(el => {
           if (isNode(el)) {

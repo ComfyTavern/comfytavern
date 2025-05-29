@@ -4,8 +4,8 @@ import {
   type WebSocketMessage,
   ExecutionStatus,
 } from "@comfytavern/types";
-import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core"; // 咕咕：新增导入
-import { klona } from "klona/full"; // 咕咕：新增导入
+import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core"; // 新增导入
+import { klona } from "klona/full"; // 新增导入
 import { useWorkflowManager } from "./useWorkflowManager";
 import { useTabStore } from "@/stores/tabStore";
 import { useExecutionStore } from "@/stores/executionStore";
@@ -15,9 +15,9 @@ import { useWorkflowData } from './useWorkflowData';
 import { flattenWorkflow } from "@/utils/workflowFlattener";
 import {
   transformVueFlowToExecutionPayload,
-  transformVueFlowToCoreWorkflow, // 咕咕：新增导入
+  transformVueFlowToCoreWorkflow, // 新增导入
 } from "@/utils/workflowTransformer";
-import type { FlowExportObject } from "@vue-flow/core"; // 咕咕：新增导入
+import type { FlowExportObject } from "@vue-flow/core"; // 新增导入
 
 /**
  * Composable for handling workflow execution logic.
@@ -27,7 +27,7 @@ export function useWorkflowExecution() {
   const tabStore = useTabStore();
   const projectStore = useProjectStore();
   const executionStore = useExecutionStore();
-  const { sendMessage, setInitiatingTabForNextPrompt } = useWebSocket(); // 咕咕：获取 setInitiatingTabForNextPrompt
+  const { sendMessage, setInitiatingTabForNextPrompt } = useWebSocket(); // 获取 setInitiatingTabForNextPrompt
   const workflowDataHandler = useWorkflowData();
 
   /**
@@ -37,7 +37,7 @@ export function useWorkflowExecution() {
     const internalId = tabStore.activeTabId;
     if (!internalId) {
       console.error("[WorkflowExecution:executeWorkflow] No active tab found.");
-      alert("请先选择一个标签页。"); // 咕咕：与 StatusBar.vue 保持一致
+      alert("请先选择一个标签页。"); // 与 StatusBar.vue 保持一致
       return;
     }
 
@@ -54,7 +54,7 @@ export function useWorkflowExecution() {
     }
 
     console.info(`[WorkflowExecution:executeWorkflow] Initiating execution for tab ${internalId}...`);
-    setInitiatingTabForNextPrompt(internalId); // 咕咕：设置发起标签页
+    setInitiatingTabForNextPrompt(internalId); // 设置发起标签页
 
     // 1. 获取初始的当前元素
     const initialElements = workflowManager.getElements(internalId);
@@ -120,7 +120,7 @@ export function useWorkflowExecution() {
     }
     console.info(`[WorkflowExecution:executeWorkflow] Workflow flattened successfully for tab ${internalId}. Nodes: ${flattenedResult.nodes.length}, Edges: ${flattenedResult.edges.length}`);
 
-    // 咕咕：重新引入 transformVueFlowToCoreWorkflow 步骤
+    // 重新引入 transformVueFlowToCoreWorkflow 步骤
     // 假设 flattenedResult.nodes 和 .edges 是 VueFlowElement 类型或者兼容的
     // （需要确保 flattenWorkflow 返回的类型与 VueFlowNode/VueFlowEdge 兼容，或者进行适配）
     const defaultViewport = { x: 0, y: 0, zoom: 1 };
@@ -128,8 +128,8 @@ export function useWorkflowExecution() {
       nodes: flattenedResult.nodes as VueFlowNode[], // 强制类型转换，需要验证 flattenWorkflow 的输出类型
       edges: flattenedResult.edges as VueFlowEdge[], // 强制类型转换
       viewport: defaultViewport, // 使用默认/虚拟视口
-      position: [defaultViewport.x, defaultViewport.y], // 咕咕：补上 position
-      zoom: defaultViewport.zoom, // 咕咕：补上 zoom
+      position: [defaultViewport.x, defaultViewport.y], // 补上 position
+      zoom: defaultViewport.zoom, // 补上 zoom
     };
 
     const coreWorkflowData = transformVueFlowToCoreWorkflow(tempFlowExport);

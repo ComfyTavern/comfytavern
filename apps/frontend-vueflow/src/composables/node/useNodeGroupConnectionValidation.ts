@@ -27,7 +27,7 @@ export function useNodeGroupConnectionValidation({
   const invalidEdgeIds = computed(() => {
     const currentNodes = nodes.value;
     const currentEdges = edges.value;
-    // Roo: 使用 n.type 和带命名空间的类型
+    // 使用 n.type 和带命名空间的类型
     const nodeGroups = currentNodes.filter(n => n.type === 'core:NodeGroup');
     const edgesToRemove: string[] = [];
 

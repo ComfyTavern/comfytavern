@@ -305,7 +305,7 @@ export default function useDragAndDrop() {
         // style: { ... }
       };
 
-      // Roo: Initialize GroupInput/Output node data with current workflow interface
+      // Initialize GroupInput/Output node data with current workflow interface
       if (currentTabId) {
         const workflowData = workflowStore.getWorkflowData(currentTabId);
         if (workflowData) {

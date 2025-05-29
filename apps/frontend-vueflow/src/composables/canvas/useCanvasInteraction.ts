@@ -6,10 +6,10 @@ import { useTabStore } from '@/stores/tabStore';
 // import { useUniqueNodeId } from '../node/useUniqueNodeId'; // 不再需要
 // import { storeToRefs } from 'pinia'; // Removed unused import
 import type Canvas from '@/components/graph/Canvas.vue';
-// --- Roo: Added missing type imports ---
+// --- Added missing type imports ---
 import type { HistoryEntry } from '@comfytavern/types';
 import { nanoid } from 'nanoid'; // <-- 导入 nanoid
-// --- Roo: Added missing function import ---
+// --- Added missing function import ---
 import { createHistoryEntry, getEffectiveDefaultValue } from '@comfytavern/utils';
 
 /**
@@ -56,7 +56,7 @@ export function useCanvasInteraction(
     // 初始化 inputs
     if (nodeDef.inputs) {
       Object.entries(nodeDef.inputs).forEach(([inputName, inputDef]) => {
-        const effectiveDefault = getEffectiveDefaultValue(inputDef); // Roo: Ensure getEffectiveDefaultValue is imported
+        const effectiveDefault = getEffectiveDefaultValue(inputDef); // Ensure getEffectiveDefaultValue is imported
         const defaultDesc = inputDef.description || "";
         nodeData.inputs[inputName] = {
           value: effectiveDefault, // 使用有效默认值
@@ -66,7 +66,7 @@ export function useCanvasInteraction(
         };
       });
     } else if (!nodeDef.outputs) { // 如果没有输入和输出，添加默认的
-        // Roo: Removed unnecessary spread operator
+        // Removed unnecessary spread operator
         nodeData.inputs = { input: { type: "any", displayName: "输入", value: null, description: "", defaultDescription: "" } };
     }
 
@@ -82,14 +82,14 @@ export function useCanvasInteraction(
         };
       });
     } else if (!nodeDef.inputs) { // 如果没有输入和输出，添加默认的
-        // Roo: Removed unnecessary spread operator
+        // Removed unnecessary spread operator
         nodeData.outputs = { output: { type: "any", displayName: "输出", description: "", defaultDescription: "" } };
     }
 
     // 初始化 configValues 的默认值
     if (nodeDef.configSchema && nodeData.configValues) {
         Object.entries(nodeDef.configSchema).forEach(([configName, configDef]) => {
-            nodeData.configValues[configName] = getEffectiveDefaultValue(configDef); // Roo: Ensure getEffectiveDefaultValue is imported
+            nodeData.configValues[configName] = getEffectiveDefaultValue(configDef); // Ensure getEffectiveDefaultValue is imported
         });
     }
     // --- 初始化结束 ---
@@ -138,7 +138,7 @@ export function useCanvasInteraction(
       data: nodeData, // nodeData is derived from nodeDef
     };
 
-    // Roo: Initialize GroupInput/Output node data with current workflow interface
+    // Initialize GroupInput/Output node data with current workflow interface
     const currentTabForInit = activeTabId.value; // Use a separate variable for clarity
     if (currentTabForInit) {
       const workflowData = workflowStore.getWorkflowData(currentTabForInit);

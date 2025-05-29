@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core";
-import type { WorkflowStateSnapshot, TabWorkflowState } from "../types/workflowTypes"; // Roo: 导入 TabWorkflowState
+import type { WorkflowStateSnapshot, TabWorkflowState } from "../types/workflowTypes"; // 导入 TabWorkflowState
 import type { HistoryEntry } from "@comfytavern/types"; // <-- Import HistoryEntry
 import { useTabStore } from "./tabStore";
 import { ref, nextTick, watch, computed } from "vue";
@@ -24,8 +24,8 @@ export const useWorkflowStore = defineStore("workflow", () => {
       id: string;
       name: string;
       description?: string;
-      creationMethod?: string; // Roo: 添加 creationMethod
-      referencedWorkflows?: string[]; // Roo: 添加 referencedWorkflows
+      creationMethod?: string; // 添加 creationMethod
+      referencedWorkflows?: string[]; // 添加 referencedWorkflows
     }>
   >([]);
 
@@ -173,7 +173,7 @@ export const useWorkflowStore = defineStore("workflow", () => {
         const nodes = targetSnapshot.elements.filter(
           (el: VueFlowNode | VueFlowEdge): el is VueFlowNode => !("source" in el)
         );
-        // Roo: Enhanced log to show target node dimensions
+        // Enhanced log to show target node dimensions
         // const targetNodeUndo = nodes.find((n) => n.id === "TestWidgets_1"); // Adjust ID if needed
         // console.log(
         //   `[DEBUG Undo ${idToUndo}] Extracted nodes before setNodes. Target Node (TestWidgets_1):`,
@@ -205,7 +205,7 @@ export const useWorkflowStore = defineStore("workflow", () => {
         // console.log(`[DEBUG Undo ${idToUndo}] AFTER instance.setEdges(edges)`);
 
         // console.log(`[DEBUG Undo ${idToUndo}] AFTER instance.setViewport(viewport)`);
-        // Roo: Temporarily remove updateNodeInternals call to isolate the issue
+        // Temporarily remove updateNodeInternals call to isolate the issue
         // const nodeIds = nodes.map((n) => n.id);
         // if (nodeIds.length > 0) {
         //   await nextTick(); // 等待节点基本渲染
@@ -301,7 +301,7 @@ export const useWorkflowStore = defineStore("workflow", () => {
           const nodes = targetSnapshot.elements.filter(
             (el): el is VueFlowNode => !("source" in el)
           );
-          // Roo: Enhanced log to show target node dimensions
+          // Enhanced log to show target node dimensions
           // const targetNodeRedo = nodes.find((n) => n.id === "TestWidgets_1"); // Adjust ID if needed
           // console.log(
           //   `[DEBUG Redo ${idToRedo}] Extracted nodes before setNodes. Target Node (TestWidgets_1):`,
@@ -319,7 +319,7 @@ export const useWorkflowStore = defineStore("workflow", () => {
           // 直接将快照应用于实例
           // console.log(`[DEBUG Redo ${idToRedo}] BEFORE instance.setNodes([])`);
           // console.debug(`[WorkflowStore 重做 ${idToRedo}] 设置实例状态之前（简化）。`);
-          // Roo: Unify redo logic with undo logic (clear -> nextTick -> set -> nextTick -> updateInternals)
+          // Unify redo logic with undo logic (clear -> nextTick -> set -> nextTick -> updateInternals)
           instance.setNodes([]);
           instance.setEdges([]);
           // console.log(`[DEBUG Redo ${idToRedo}] AFTER instance.setNodes([]) and BEFORE nextTick`);
@@ -334,7 +334,7 @@ export const useWorkflowStore = defineStore("workflow", () => {
           // console.log(`[DEBUG Redo ${idToRedo}] AFTER instance.setEdges(edges)`);
           // console.log(`[DEBUG Redo ${idToRedo}] AFTER instance.setViewport(viewport)`);
 
-          // Roo: Temporarily remove updateNodeInternals call to isolate the issue
+          // Temporarily remove updateNodeInternals call to isolate the issue
           // const nodeIds = nodes.map((n) => n.id);
           // if (nodeIds.length > 0) {
           //   await nextTick(); // 等待节点基本渲染

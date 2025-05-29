@@ -26,11 +26,11 @@ const emit = defineEmits<Emits>();
 
 const workflowManager = useWorkflowManager();
 const interactionCoordinator = useWorkflowInteractionCoordinator();
-const themeStore = useThemeStore(); // 咕咕：获取主题存储实例
+const themeStore = useThemeStore(); // 获取主题存储实例
 
 // == UI State Management ==
 const editorHeight = useStorage("docked-editor-height", 300); // 默认高度 300px
-const { toggleDockedEditor, isDockedEditorVisible } = useEditorState(); // <-- 咕咕：使用全局状态
+const { toggleDockedEditor, isDockedEditorVisible } = useEditorState(); // <-- 使用全局状态
 const isMaximized = ref(false);
 const previousHeightBeforeMaximize = ref(editorHeight.value);
 
@@ -222,7 +222,7 @@ async function handleSave(content: string) {
       contextOnSave(content);
     }
 
-    // 咕咕：单页模式下，保存后总是关闭，除非未来有更复杂的逻辑
+    // 单页模式下，保存后总是关闭，除非未来有更复杂的逻辑
     if (currentEditorMode.value === "single") {
       closeEditorPanel();
     }
@@ -272,7 +272,7 @@ function handleTabbedEditorSave(tab: TabData, newContent: string) {
         inputDef?.displayName ||
         parsedInputNameFromTabTitle ||
         breadcrumbData?.inputName ||
-        inputKey; // 咕咕：调整优先级，加入从 tabTitle 解析的名称
+        inputKey; // 调整优先级，加入从 tabTitle 解析的名称
     } else if (inputPath.startsWith("config.")) {
       const configKey = inputPath.substring("config.".length);
       const configDef = node?.data?.configSchema?.[configKey];
@@ -340,18 +340,18 @@ function openEditor(context: EditorOpeningContext) {
     // 如果全局状态是不可见，则通过切换使其可见
     toggleDockedEditor();
   }
-  // isVisible.value = true; // <-- 咕咕：移除，依赖全局状态
+  // isVisible.value = true; // <-- 移除，依赖全局状态
   emit("editorOpened");
 
   nextTick(() => {
-    // 咕咕：准备传递给编辑器的配置，包含从全局主题派生的 theme 属性
+    // 准备传递给编辑器的配置，包含从全局主题派生的 theme 属性
     const editorConfigWithTheme: EditorInstanceConfig = {
       ...(context.config || {}), // 保留 context 中可能已有的其他配置
       theme: themeStore.isDark ? "dark" : "light",
     };
 
     if (currentEditorMode.value === "single" && richCodeEditorRef.value) {
-      // 咕咕：在单页模式下，直接更新 currentEditorContext 的 config，RichCodeEditor 会通过 prop 接收
+      // 在单页模式下，直接更新 currentEditorContext 的 config，RichCodeEditor 会通过 prop 接收
       currentEditorContext.value = {
         ...context,
         config: editorConfigWithTheme,
@@ -372,7 +372,7 @@ function openEditor(context: EditorOpeningContext) {
         initialContent: context.initialContent || "",
         languageHint: context.languageHint,
         breadcrumbData: context.breadcrumbData,
-        config: editorConfigWithTheme, // 咕咕：传递包含主题的配置
+        config: editorConfigWithTheme, // 传递包含主题的配置
         nodeId: context.nodeId,
         inputPath: context.inputPath,
       };
@@ -403,16 +403,16 @@ function handleTabSavedEvent(payload: { tabId: string; editorId: string; content
 
 function handleTabClosedEvent(payload: { tabId: string; editorId: string }) {
   openTabsMap.value.delete(payload.tabId);
-  // 咕咕：所有标签关闭后总是关闭编辑器
+  // 所有标签关闭后总是关闭编辑器
   if (openTabsMap.value.size === 0) {
     closeEditorPanel();
   }
 }
 
-// 咕咕：现在总是应该在所有标签关闭时关闭
+// 现在总是应该在所有标签关闭时关闭
 const shouldCloseOnAllTabsClosed = computed(() => openTabsMap.value.size === 0);
 
-// 咕咕：处理编辑器获得焦点时的同步逻辑
+// 处理编辑器获得焦点时的同步逻辑
 async function handleFocusIn() {
   if (!isDockedEditorVisible.value) return; // 编辑器不可见时不做任何事
 
@@ -427,20 +427,20 @@ async function handleFocusIn() {
       const { nodeId, inputPath } = currentEditorContext.value;
       const node = activeWorkflow.elements.find((el) => el.id === nodeId && !("source" in el));
       if (node && node.data) {
-        // let latestValue: any; // 咕咕：移除未使用的 latestValue
+        // let latestValue: any; // 移除未使用的 latestValue
         let actualStringValue: string | undefined;
-        // 咕咕：从节点数据中安全地提取值
+        // 从节点数据中安全地提取值
         const rawNodeData = toRaw(node.data); // 使用 toRaw 获取原始对象，避免潜在的 Proxy 问题
         if (inputPath.startsWith("inputs.")) {
           const inputKey = inputPath.substring("inputs.".length);
           const inputValueObject = rawNodeData.inputs?.[inputKey];
-          // 咕咕：输入值通常是一个对象，实际的文本在 .value 属性
+          // 输入值通常是一个对象，实际的文本在 .value 属性
           if (
             typeof inputValueObject === "object" &&
             inputValueObject !== null &&
             "value" in inputValueObject
           ) {
-            // 咕咕：如果 inputValueObject.value 是对象，尝试 JSON.stringify
+            // 如果 inputValueObject.value 是对象，尝试 JSON.stringify
             if (typeof inputValueObject.value === "object" && inputValueObject.value !== null) {
               try {
                 actualStringValue = JSON.stringify(inputValueObject.value, null, 2);
@@ -461,7 +461,7 @@ async function handleFocusIn() {
           }
         } else if (inputPath.startsWith("config.")) {
           const configKey = inputPath.substring("config.".length);
-          // 咕咕：配置值通常直接是字符串或其他原始类型
+          // 配置值通常直接是字符串或其他原始类型
           const configVal = rawNodeData.config?.[configKey];
           if (typeof configVal === "object" && configVal !== null) {
             try {
@@ -496,7 +496,7 @@ async function handleFocusIn() {
         }
 
         if (actualStringValue !== undefined) {
-          // 咕咕：现在判断 actualStringValue
+          // 现在判断 actualStringValue
           const currentEditorContent = richCodeEditorRef.value.getContent();
           if (currentEditorContent !== actualStringValue) {
             richCodeEditorRef.value.setContent(actualStringValue);
@@ -513,7 +513,7 @@ async function handleFocusIn() {
           const { nodeId, inputPath } = tabData;
           const node = activeWorkflow.elements.find((el) => el.id === nodeId && !("source" in el));
           if (node && node.data) {
-            // let latestValue: any; // 咕咕：移除未使用的 latestValue 声明
+            // let latestValue: any; // 移除未使用的 latestValue 声明
             let actualStringValue: string | undefined;
             const rawNodeData = toRaw(node.data);
             if (inputPath.startsWith("inputs.")) {
@@ -591,9 +591,9 @@ async function handleFocusIn() {
 
 defineExpose({
   openEditor,
-  // toggleVisibility, // <-- 咕咕：移除
-  // isVisible, // <-- 咕咕：移除
-  // isResident, // 咕咕：移除常驻按钮相关逻辑
+  // toggleVisibility, // <-- 移除
+  // isVisible, // <-- 移除
+  // isResident, // 移除常驻按钮相关逻辑
 });
 
 onMounted(() => {
@@ -613,7 +613,7 @@ onMounted(() => {
   <!-- v-if="isVisible" 已被移除，因为父组件 EditorView.vue 会通过 v-if="isDockedEditorVisible" 控制此组件的挂载 -->
   <div class="docked-editor-wrapper-root" :style="panelStyle" :class="{ dark: themeStore.isDark }"
     @focusin="handleFocusIn">
-    <!-- 咕咕：resizer 覆盖在顶部，并添加拖拽图标 -->
+    <!-- resizer 覆盖在顶部，并添加拖拽图标 -->
     <div class="editor-resizer" @mousedown="startResize">
       <div class="drag-handle-icon">
         <span class="drag-dot"></span>

@@ -100,9 +100,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-// import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core"; // 咕咕：不再直接在此处使用
+// import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core"; // 不再直接在此处使用
 import { onClickOutside } from "@vueuse/core";
-// import { klona } from "klona/full"; // 咕咕：已移至 useWorkflowExecution
+// import { klona } from "klona/full"; // 已移至 useWorkflowExecution
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useExecutionStore } from "@/stores/executionStore";
@@ -111,18 +111,18 @@ import { useProjectStore } from "@/stores/projectStore";
 import { storeToRefs } from "pinia";
 import WorkflowMenu from "@/components/graph/menus/WorkflowMenu.vue";
 import TabBar from "@/components/graph/TabBar.vue";
-// import { useWebSocket } from "@/composables/useWebSocket"; // 咕咕：已移至 useWorkflowExecution
+// import { useWebSocket } from "@/composables/useWebSocket"; // 已移至 useWorkflowExecution
 import {
   ExecutionStatus,
-  // WebSocketMessageType, // 咕咕：已移至 useWorkflowExecution
-  // type ExecuteWorkflowPayload, // 咕咕：已移至 useWorkflowExecution
+  // WebSocketMessageType, // 已移至 useWorkflowExecution
+  // type ExecuteWorkflowPayload, // 已移至 useWorkflowExecution
 } from "@comfytavern/types";
-// import { // 咕咕：已移至 useWorkflowExecution
+// import { // 已移至 useWorkflowExecution
 //   transformVueFlowToExecutionPayload,
 //   transformVueFlowToCoreWorkflow,
 // } from "@/utils/workflowTransformer";
-// import type { FlowExportObject } from "@vue-flow/core"; // 咕咕：已移至 useWorkflowExecution
-import { useWorkflowExecution } from "@/composables/workflow/useWorkflowExecution"; // 咕咕：导入新的 composable
+// import type { FlowExportObject } from "@vue-flow/core"; // 已移至 useWorkflowExecution
+import { useWorkflowExecution } from "@/composables/workflow/useWorkflowExecution"; // 导入新的 composable
 
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore();
@@ -141,7 +141,7 @@ const workflowMenuRef = ref<InstanceType<typeof WorkflowMenu> | null>(null);
 const targetElementRef = ref<HTMLElement | null>(null);
 
 // Computed property for the active tab's workflow data
-// 咕咕：保留 activeWorkflowData，因为备用逻辑的讨论还在进行中
+// 保留 activeWorkflowData，因为备用逻辑的讨论还在进行中
 const activeWorkflowData = computed(() => {
   return activeTabId.value ? workflowStore.getWorkflowData(activeTabId.value) : null;
 });
@@ -193,7 +193,7 @@ onClickOutside(
 );
 
 // --- 执行工作流 ---
-const { executeWorkflow: executeActiveWorkflow } = useWorkflowExecution(); // 咕咕：从 composable 获取执行函数
+const { executeWorkflow: executeActiveWorkflow } = useWorkflowExecution(); // 从 composable 获取执行函数
 
 const handleExecuteWorkflow = async () => {
   console.log("触发执行工作流 (StatusBar)...");

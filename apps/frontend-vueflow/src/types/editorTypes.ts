@@ -1,6 +1,6 @@
 // apps/frontend-vueflow/src/types/editorTypes.ts
 
-// 咕咕：直接在此处定义共享的编辑器相关类型
+// 直接在此处定义共享的编辑器相关类型
 
 export interface BreadcrumbData {
   workflowName?: string;

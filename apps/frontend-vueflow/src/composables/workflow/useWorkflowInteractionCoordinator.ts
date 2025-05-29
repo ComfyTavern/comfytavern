@@ -1,5 +1,5 @@
 // apps/frontend-vueflow/src/composables/workflow/useWorkflowInteractionCoordinator.ts
-import { nextTick, computed } from "vue"; // Roo: Remove unused Ref import
+import { nextTick, computed } from "vue"; // Remove unused Ref import
 import { klona } from "klona/full";
 import type { Node as VueFlowNode, Edge } from "@vue-flow/core";
 import type { GroupSlotInfo, HistoryEntry, InputDefinition } from "@comfytavern/types";
@@ -15,7 +15,7 @@ import { useWorkflowGrouping } from "../group/useWorkflowGrouping";
 import { useWorkflowPreview } from "./useWorkflowPreview"; // 导入新的预览 composable
 import { useEditorState } from "@/composables/editor/useEditorState"; // 导入 useEditorState
 import type { EditorOpeningContext } from "@/types/editorTypes"; // 导入 EditorOpeningContext
-import { useMultiInputConnectionActions } from "@/composables/node/useMultiInputConnectionActions"; // Roo: 导入新的 multi-input actions
+import { useMultiInputConnectionActions } from "@/composables/node/useMultiInputConnectionActions"; // 导入新的 multi-input actions
 
 // Comment about parseSubHandleIdLocal removed as it's no longer relevant.
 // We will now import and use the shared parseSubHandleId from nodeUtils.
@@ -36,7 +36,7 @@ export function useWorkflowInteractionCoordinator() {
   const tabStore = useTabStore();
   const { requestPreviewExecution, isPreviewEnabled } = useWorkflowPreview(); // 使用新的预览 composable
   
-  // Roo: 创建一个新的 computed Ref 来包装 tabStore.activeTabId，确保它是一个 Ref 对象
+  // 创建一个新的 computed Ref 来包装 tabStore.activeTabId，确保它是一个 Ref 对象
   const coordinatorActiveTabIdRef = computed(() => tabStore.activeTabId);
   const multiInputActions = useMultiInputConnectionActions(coordinatorActiveTabIdRef);
 
@@ -366,7 +366,7 @@ export function useWorkflowInteractionCoordinator() {
     newEdge: Edge,
     newInputs: Record<string, GroupSlotInfo>,
     newOutputs: Record<string, GroupSlotInfo>,
-    // Roo: 新增参数用于处理普通节点插槽的更新
+    // 新增参数用于处理普通节点插槽的更新
     modifiedSlotInfo: { node: VueFlowNode, handleKey: string, newDefinition: GroupSlotInfo, direction: 'inputs' | 'outputs' } | null,
     sourceNodeId: string,
     targetNodeId: string,
@@ -487,7 +487,7 @@ export function useWorkflowInteractionCoordinator() {
     // 新增状态日志
     // 结束新增状态日志
 
-    await nextTick(); // Roo: 等待下一个 tick，确保响应式更新已传播
+    await nextTick(); // 等待下一个 tick，确保响应式更新已传播
 
     // 5. 触发视图更新 (强制更新连接节点的内部结构)
     const instance = workflowViewManagement.getVueFlowInstance(internalId);
@@ -1316,7 +1316,7 @@ export function useWorkflowInteractionCoordinator() {
    * @param entry - 接收一个已创建的 HistoryEntry 对象。
    */
   async function updateNodeInputConnectionOrderAndRecord(
-    // internalId: string, // Roo: internalId is now derived from activeTabId in multiInputActions
+    // internalId: string, // internalId is now derived from activeTabId in multiInputActions
     nodeId: string,
     handleKey: string,
     newOrderedEdgeIds: string[],
@@ -1341,7 +1341,7 @@ export function useWorkflowInteractionCoordinator() {
    * @param entry - 描述此操作的历史记录条目。
    */
   async function disconnectEdgeFromInputAndRecord(
-    // internalId: string, // Roo: internalId is now derived from activeTabId in multiInputActions
+    // internalId: string, // internalId is now derived from activeTabId in multiInputActions
     edgeId: string,
     originalTargetNodeId: string,
     originalTargetHandleId: string,
@@ -1370,7 +1370,7 @@ export function useWorkflowInteractionCoordinator() {
       edgeId,                   // 2. edgeId
       originalTargetNodeId,     // 3. originalTargetNodeId
       originalTargetHandleId   // 4. originalTargetHandleId
-      // currentActiveTabId        // Roo: Removed 5th argument (activeTabIdString)
+      // currentActiveTabId        // Removed 5th argument (activeTabIdString)
     );
 
     // 使用 action 返回的结果更新 nextSnapshot
@@ -1508,7 +1508,7 @@ export function useWorkflowInteractionCoordinator() {
    * @param entry - 描述此操作的历史记录条目。
    */
   async function moveAndReconnectEdgeAndRecord(
-    // internalId: string, // Roo: internalId is now derived from activeTabId in multiInputActions
+    // internalId: string, // internalId is now derived from activeTabId in multiInputActions
     edgeToMoveId: string,
     originalTargetNodeId: string,
     originalTargetHandleId: string,

@@ -8,7 +8,7 @@ import {
   type ConnectingHandle,
 } from "@vue-flow/core"; // 从 @vue-flow/core 导入核心类型
 import { getEdgeStyleProps } from "./useEdgeStyles";
-import { useGroupInterfaceSync } from "../group/useGroupInterfaceSync"; // Roo: 重新引入
+import { useGroupInterfaceSync } from "../group/useGroupInterfaceSync"; // 重新引入
 import {
   type GroupSlotInfo,
   type DataFlowTypeName,
@@ -22,7 +22,7 @@ import { useNodeStore } from "@/stores/nodeStore"; // 新增导入
 import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils"; // Import parseSubHandleId
 import { klona } from 'klona/json';
 import { nanoid } from 'nanoid';
-import type { Node as VueFlowNode } from '@vue-flow/core'; // Roo: 明确导入 VueFlow Node 类型
+import type { Node as VueFlowNode } from '@vue-flow/core'; // 明确导入 VueFlow Node 类型
 
 // DraggingState 定义保持不变
 export interface DraggingState {
@@ -55,7 +55,7 @@ export function useCanvasConnections({
   const tabStore = useTabStore();
   const workflowStore = useWorkflowStore();
   const nodeStore = useNodeStore(); // 确保 nodeStore 在这里正确初始化
-  const { syncInterfaceSlotFromConnection } = useGroupInterfaceSync(); // Roo: 获取同步函数
+  const { syncInterfaceSlotFromConnection } = useGroupInterfaceSync(); // 获取同步函数
 
   // vueFlowInstance 的类型现在是 VueFlowStore
   const vueFlowInstance: VueFlowStore = useVueFlow();
@@ -386,7 +386,7 @@ export function useCanvasConnections({
     };
   };
 
-  // Roo: 辅助函数，用于创建同步插槽信息，复制相关属性，修复被弄丢的属性获取功能
+  // 辅助函数，用于创建同步插槽信息，复制相关属性，修复被弄丢的属性获取功能
   const createSyncSlotInfo = (
     baseSlot: GroupSlotInfo, // The CONVERTIBLE_ANY slot that is being transformed
     newDft: DataFlowTypeName,
@@ -443,7 +443,7 @@ export function useCanvasConnections({
       return null;
     }
 
-    // Roo: 获取源和目标插槽的完整定义
+    // 获取源和目标插槽的完整定义
     const { originalKey: parsedSourceHandleKey } = parseSubHandleId(sourceHandle);
     const { originalKey: parsedTargetHandleKey } = parseSubHandleId(targetHandle);
 
@@ -470,11 +470,11 @@ export function useCanvasConnections({
     if (!sourceOutputDef || !targetInputDef) {
       return null;
     }
-    // Roo: 深拷贝插槽定义，以便安全修改
+    // 深拷贝插槽定义，以便安全修改
     const originalSourceOutputDef = klona(sourceOutputDef);
     const originalTargetInputDef = klona(targetInputDef);
 
-    // Roo: 如果目标是单输入插槽且已被连接，则先移除旧连接
+    // 如果目标是单输入插槽且已被连接，则先移除旧连接
     let oldEdgeToReplace: Edge | undefined = undefined;
     if (targetInputDef && targetInputDef.multi !== true) {
       const existingEdgesToTargetHandle = getEdges.value.filter(
@@ -539,7 +539,7 @@ export function useCanvasConnections({
     // 所以，上面的 sourceNames 和 targetNames 应该基于 params 来获取，因为它们用于用户可读的日志。
     // 而 newEdgeParamsForCoordinator.targetHandle 必须是修正后的。
 
-    // Roo: <<<< START CONVERTIBLE_ANY LOGIC >>>>
+    // <<<< START CONVERTIBLE_ANY LOGIC >>>>
     let finalSourceDefForEdge = klona(originalSourceOutputDef); // 用于边的data和样式
     let finalTargetDefForEdge = klona(originalTargetInputDef); // 用于边的data和样式
 
@@ -583,7 +583,7 @@ export function useCanvasConnections({
       finalSourceDefForEdge.dataFlowType = originalTargetInputDef.dataFlowType;
       finalSourceDefForEdge.matchCategories = [...(originalTargetInputDef.matchCategories || [])];
     }
-    // Roo: <<<< END CONVERTIBLE_ANY LOGIC >>>>
+    // <<<< END CONVERTIBLE_ANY LOGIC >>>>
 
     // 更新边的样式和数据属性，使用转换后的类型
     const { animated, style, markerEnd } = getEdgeStyleProps(finalSourceDefForEdge.dataFlowType, finalTargetDefForEdge.dataFlowType, isDark.value);
@@ -626,7 +626,7 @@ export function useCanvasConnections({
       data: newEdgeParamsForCoordinator.data,
       modifiedSlotInfo: modifiedSlotInfo ? { nodeId: modifiedSlotInfo.node.id, handleKey: modifiedSlotInfo.handleKey, direction: modifiedSlotInfo.direction, newDefinition: klona(modifiedSlotInfo.newDefinition) } : undefined,
       interfaceUpdateResult: interfaceUpdateResult ? klona(interfaceUpdateResult) : undefined,
-      replacedEdgeId: oldEdgeToReplace?.id // Roo: 记录被替换的边ID (如果发生替换)
+      replacedEdgeId: oldEdgeToReplace?.id // 记录被替换的边ID (如果发生替换)
     };
 
     if (newTargetIndexInOrderForHistory !== undefined) {
@@ -640,7 +640,7 @@ export function useCanvasConnections({
       historyEntryDetails
     );
 
-    // Roo: 调用扩展后的 handleConnectionWithInterfaceUpdate 协调器函数
+    // 调用扩展后的 handleConnectionWithInterfaceUpdate 协调器函数
     // 注意：targetIndexInOrder 在此模型中不直接传递给 handleConnectionWithInterfaceUpdate，
     // 它应该在 newEdgeParamsForCoordinator.targetHandle 中通过子句柄ID体现，
     // 或者由 multiInputActions 内部处理（如果适用）。
@@ -651,7 +651,7 @@ export function useCanvasConnections({
       newEdgeParamsForCoordinator, // newEdge
       interfaceUpdateResult?.inputs ?? {}, // newInputs
       interfaceUpdateResult?.outputs ?? {}, // newOutputs
-      modifiedSlotInfo, // Roo: new parameter for modified normal node slot
+      modifiedSlotInfo, // new parameter for modified normal node slot
       sourceNode.id, // sourceNodeId
       targetNode.id, // targetNodeId
       historyEntry
@@ -1002,7 +1002,7 @@ export function useCanvasConnections({
             // 边已经存在于 store 中，并且其属性没有改变，所以不需要调用 store action。
             // VueFlow 应该已经正确处理了视觉上的拖拽和释放。
           } else {
-            // Roo: <<<< START CONVERTIBLE_ANY LOGIC FOR EDGE UPDATE >>>>
+            // <<<< START CONVERTIBLE_ANY LOGIC FOR EDGE UPDATE >>>>
             const newSourceNode = findNode(newConnectionParams.source);
             const newTargetNode = findNode(newConnectionParams.target);
 
@@ -1080,7 +1080,7 @@ export function useCanvasConnections({
               finalSourceDefForEdgeOnUpdate.dataFlowType = originalNewTargetInputDef.dataFlowType;
               finalSourceDefForEdgeOnUpdate.matchCategories = [...(originalNewTargetInputDef.matchCategories || [])];
             }
-            // Roo: <<<< END CONVERTIBLE_ANY LOGIC FOR EDGE UPDATE >>>>
+            // <<<< END CONVERTIBLE_ANY LOGIC FOR EDGE UPDATE >>>>
 
             const oldSourceForSummary = getReadableNames(originalEdge.source, originalEdge.sourceHandle, 'source');
             const oldTargetForSummary = getReadableNames(activeDraggingState.originalTargetNodeId, activeDraggingState.originalTargetHandleId, 'target');
@@ -1102,10 +1102,10 @@ export function useCanvasConnections({
                 newTargetNodeId: newConnectionParams.target,
                 newTargetHandleId: newConnectionParams.targetHandle, // Will be string | null
                 newTargetIndexInOrder: newTargetIndexInOrder,
-                // Roo: Add information about slot/interface modifications for history/undo
+                // Add information about slot/interface modifications for history/undo
                 modifiedSlotInfo: modifiedSlotInfoOnUpdate ? { nodeId: modifiedSlotInfoOnUpdate.node.id, handleKey: modifiedSlotInfoOnUpdate.handleKey, direction: modifiedSlotInfoOnUpdate.direction, newDefinition: klona(modifiedSlotInfoOnUpdate.newDefinition) } : undefined,
                 interfaceUpdateResult: interfaceUpdateResultOnUpdate ? klona(interfaceUpdateResultOnUpdate) : undefined,
-                // Roo: Add new edge data based on potential type conversion
+                // Add new edge data based on potential type conversion
                 newEdgeData: {
                   sourceType: finalSourceDefForEdgeOnUpdate.dataFlowType,
                   targetType: finalTargetDefForEdgeOnUpdate.dataFlowType,

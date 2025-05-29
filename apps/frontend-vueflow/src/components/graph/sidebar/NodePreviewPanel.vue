@@ -14,7 +14,6 @@
     <OverlayScrollbarsComponent
       :options="{ scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' } }"
       class="details-content-scrollable flex-grow" defer>
-      <!-- 添加节点类型显示 -->
       <div class="details-nodetype">
         {{ selectedNode.namespace ? `${selectedNode.namespace}:${selectedNode.type}` : selectedNode.type }}
       </div>
@@ -26,17 +25,14 @@
         <div class="details-section-title">输入参数</div>
         <div v-for="(input, key) in selectedNode.inputs" :key="`input-${key}`" class="details-param">
           <div class="param-header">
-            <!-- 优先使用 displayName，然后是 key -->
             <div class="param-name">{{ input.displayName || key }}</div>
             <div class="param-type">{{ input.dataFlowType }}</div>
           </div>
-          <!-- 显示输入参数的 matchCategories -->
           <div v-if="input.matchCategories && input.matchCategories.length > 0" class="param-categories">
             <span v-for="category in input.matchCategories" :key="`input-${key}-${category}`" class="category-tag">
               {{ category }}
             </span>
           </div>
-          <!-- 如果 description 存在，则显示 -->
           <div v-if="input.description" class="param-description">
             <MarkdownRenderer :markdown-content="input.description" />
           </div>
@@ -47,25 +43,19 @@
         <div class="details-section-title">输出参数</div>
         <div v-for="(output, key) in selectedNode.outputs" :key="`output-${key}`" class="details-param">
           <div class="param-header">
-            <!-- 优先使用 displayName，然后是 key -->
             <div class="param-name">{{ output.displayName || key }}</div>
             <div class="param-type">{{ output.dataFlowType }}</div>
           </div>
-          <!-- 显示输出参数的 matchCategories -->
           <div v-if="output.matchCategories && output.matchCategories.length > 0" class="param-categories">
             <span v-for="category in output.matchCategories" :key="`output-${key}-${category}`" class="category-tag">
               {{ category }}
             </span>
           </div>
-          <!-- 如果 description 存在，则显示 -->
           <div v-if="output.description" class="param-description">
             <MarkdownRenderer :markdown-content="output.description" />
           </div>
         </div>
       </div>
-
-      <!-- 特别为 NodeGroup 显示工作流选择器信息 -->
-      <!-- Roo: 使用带命名空间的类型 -->
       <div v-if="selectedNode.type === 'core:NodeGroup'" class="details-section">
         <div class="details-section-title">内部组件</div>
         <div class="details-param">

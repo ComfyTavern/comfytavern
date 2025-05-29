@@ -11,7 +11,7 @@ export function useNodeActions(props: Readonly<UseNodeStateProps>) {
   const workflowStore = useWorkflowStore(); // <-- 新增：获取工作流 store 实例
 
   // 计算属性：判断当前节点是否为 NodeGroup (editNodeGroup 需要)
-  // Roo: 使用带命名空间的类型
+  // 使用带命名空间的类型
   const isNodeGroup = computed(() => props.data?.type === 'core:NodeGroup');
 
   // 处理按钮点击事件 - 改为调用 store action

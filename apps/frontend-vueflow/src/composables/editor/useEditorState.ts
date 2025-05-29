@@ -1,12 +1,12 @@
 import { ref, shallowRef, computed } from 'vue';
 import type { FrontendNodeDefinition } from '@/stores/nodeStore';
 import type { TabData, EditorOpeningContext } from '@/types/editorTypes';
-import { klona } from 'klona/full'; // 咕咕：确保导入 klona
+import { klona } from 'klona/full'; // 确保导入 klona
 
 // 辅助函数：生成唯一ID
 const generateUniqueId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
 
-// 咕咕：将状态移到函数外部，使其成为模块级单例状态
+// 将状态移到函数外部，使其成为模块级单例状态
 const loading = ref(false); // 初始节点定义获取的加载状态
 const selectedNodeForPreview = ref<FrontendNodeDefinition | null>(null);
 // const isSidebarReady = ref(false); // 此状态已由 EditorView.vue 中的 v-if="sidebarManagerRef" 替代
@@ -23,7 +23,7 @@ const sidebarManagerRef = shallowRef<SidebarManagerInstance | null>(null); // Si
 const isDockedEditorVisible = ref(false); // 控制 DockedEditorWrapper 的可见性
 const editorTabs = ref<TabData[]>([]); // 存储当前打开的编辑器标签页数组
 const activeEditorTabId = ref<string | null>(null); // 当前激活的编辑器标签页的 ID
-const requestedContextToOpen = ref<EditorOpeningContext | null>(null); // 咕咕：新增，用于存储请求打开的上下文
+const requestedContextToOpen = ref<EditorOpeningContext | null>(null); // 新增，用于存储请求打开的上下文
 
 // 计算属性，获取当前激活的标签页数据
 const activeEditorTab = computed(() => {
@@ -112,11 +112,11 @@ export function useEditorState() {
     if (!isDockedEditorVisible.value) {
       isDockedEditorVisible.value = true;
     }
-    // 咕咕：存储请求的上下文
+    // 存储请求的上下文
     requestedContextToOpen.value = klona(context);
   };
 
-  const clearRequestedContext = () => { // 咕咕：新增方法
+  const clearRequestedContext = () => { // 新增方法
     requestedContextToOpen.value = null;
   };
 
@@ -177,7 +177,7 @@ export function useEditorState() {
     editorTabs,
     activeEditorTabId,
     activeEditorTab, // 导出计算属性
-    requestedContextToOpen, // 咕咕：导出新状态
+    requestedContextToOpen, // 导出新状态
     // 方法
     handleNodeSelected,
     handleError,
@@ -186,6 +186,6 @@ export function useEditorState() {
     closeEditorTab,
     setActiveEditorTab,
     markTabAsDirty,
-    clearRequestedContext, // 咕咕：导出新方法
+    clearRequestedContext, // 导出新方法
   };
 }

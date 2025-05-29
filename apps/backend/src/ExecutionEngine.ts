@@ -47,7 +47,7 @@ export class ExecutionEngine {
   ) {
     this.promptId = promptId;
     this.payload = payload;
-    // Roo: 打印构造函数接收到的完整 payload
+    // 打印构造函数接收到的完整 payload
     // console.log(`%%%%%%% Engine Constructor: Received payload: %%%%%%%`, JSON.parse(JSON.stringify(this.payload)));
     this.wsManager = wsManager;
     // this.outputManager = outputManager;
@@ -277,7 +277,7 @@ export class ExecutionEngine {
     const inputs: Record<string, any> = {};
     const node = this.nodes[nodeId];
 
-    // Roo: 添加日志 - 方法入口
+    // 添加日志 - 方法入口
     console.log(`[Engine-${this.promptId}] prepareNodeInputs for ${nodeId}. Node config inputs: ${JSON.stringify(node?.inputs)}, inputConnectionOrders: ${JSON.stringify((node as any)?.inputConnectionOrders)}`);
 
     if (!node) {
@@ -339,7 +339,7 @@ export class ExecutionEngine {
       }
     });
 
-    // Roo: 添加日志 - 步骤1之后
+    // 添加日志 - 步骤1之后
     console.log(`[Engine-${this.promptId}] After collecting connected inputs for ${nodeId}:`);
     console.log(`  multiInputBuffer: ${JSON.stringify(multiInputBuffer)}`);
     console.log(`  inputs (from single connections): ${JSON.stringify(inputs)}`);
@@ -372,7 +372,7 @@ export class ExecutionEngine {
     // 可以考虑使用 buffer 中的值（顺序不定）。但更推荐的是确保前端数据一致性。
     // 当前选择：严格依赖 inputConnectionOrders 来构建多输入数组。
 
-    // Roo: 添加日志 - 步骤2之后
+    // 添加日志 - 步骤2之后
     console.log(`[Engine-${this.promptId}] After processing multi-input orders for ${nodeId}:`);
     console.log(`  inputs: ${JSON.stringify(inputs)}`);
 
@@ -404,7 +404,7 @@ export class ExecutionEngine {
       }
     }
 
-    // Roo: 添加日志 - 步骤3之后
+    // 添加日志 - 步骤3之后
     console.log(`[Engine-${this.promptId}] After applying node preset inputs for ${nodeId}:`);
     console.log(`  inputs: ${JSON.stringify(inputs)}`);
 
@@ -440,7 +440,7 @@ export class ExecutionEngine {
       }
     }
 
-    // Roo: 添加日志 - 步骤4之后 (返回之前)
+    // 添加日志 - 步骤4之后 (返回之前)
     console.log(`[Engine-${this.promptId}] Final prepared inputs for ${nodeId} (before required check): ${JSON.stringify(inputs)}`);
 
     return inputs;

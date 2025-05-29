@@ -121,8 +121,8 @@ export async function flattenWorkflow(
 
       // 找到内部的 GroupInput 和 GroupOutput 节点 (假设类型固定)
       // 注意：需要使用 getNodeType 辅助函数
-      const internalGroupInput = flattenedSubWorkflow.nodes.find(n => getNodeType(n) === 'core:GroupInput'); // Roo: 使用带命名空间的类型
-      const internalGroupOutput = flattenedSubWorkflow.nodes.find(n => getNodeType(n) === 'core:GroupOutput'); // Roo: 使用带命名空间的类型
+      const internalGroupInput = flattenedSubWorkflow.nodes.find(n => getNodeType(n) === 'core:GroupInput'); // 使用带命名空间的类型
+      const internalGroupOutput = flattenedSubWorkflow.nodes.find(n => getNodeType(n) === 'core:GroupOutput'); // 使用带命名空间的类型
 
       // 映射连接到 NodeGroup 输入的边
       const incomingEdges = edgeQueue.filter(edge => edge.target === node.id);
@@ -189,16 +189,16 @@ export async function flattenWorkflow(
       }
 
       // 将子流的扁平化节点（除IO节点）和边添加到结果中
-      // Roo: 使用带命名空间的类型
+      // 使用带命名空间的类型
       flattenedNodes.push(...flattenedSubWorkflow.nodes.filter(n => getNodeType(n) !== 'core:GroupInput' && getNodeType(n) !== 'core:GroupOutput'));
       // 子流内部的边（不涉及IO节点的）也需要添加
       flattenedEdges.push(...flattenedSubWorkflow.edges.filter(
           edge => {
               const sourceNode = internalNodesMap.get(edge.source);
               const targetNode = internalNodesMap.get(edge.target);
-              // Roo: 使用带命名空间的类型
+              // 使用带命名空间的类型
               const sourceIsIO = sourceNode && (getNodeType(sourceNode) === 'core:GroupInput' || getNodeType(sourceNode) === 'core:GroupOutput');
-              // Roo: 使用带命名空间的类型
+              // 使用带命名空间的类型
               const targetIsIO = targetNode && (getNodeType(targetNode) === 'core:GroupInput' || getNodeType(targetNode) === 'core:GroupOutput');
               return !sourceIsIO && !targetIsIO; // 只保留完全在内部的边
           }
