@@ -189,9 +189,6 @@ export function useWorkflowLifecycleCoordinator() {
         });
         // console.info(`[LifecycleCoordinator] Workflow saved successfully for tab ${activeTabId}. State and tab updated.`);
 
-        // 标记历史记录中的当前状态为已保存点
-        historyManager.markAsSaved(activeTabId);
-
         // 记录保存操作的历史快照
         const saveEntry: HistoryEntry = createHistoryEntry(
           'save',
@@ -200,6 +197,10 @@ export function useWorkflowLifecycleCoordinator() {
           { workflowId: savedData.id, workflowName: savedData.name }
         );
         _recordHistory(activeTabId, saveEntry); // 使用内部辅助函数
+
+        // 在记录完“保存工作流”快照之后，标记当前状态为已保存点
+        // 这样 savedIndex 就会指向包含“保存工作流”操作的那个历史记录项
+        historyManager.markAsSaved(activeTabId);
         return true;
       } else {
         // 这理论上不应该发生，因为我们之前检查过 activeTabState
