@@ -56,6 +56,48 @@
           </div>
         </div>
       </div>
+
+      <!-- 节点配置项预览区域 -->
+      <div v-if="selectedNode.configSchema && Object.keys(selectedNode.configSchema).length > 0"
+        class="details-section">
+        <div class="details-section-title">配置项</div>
+        <div v-for="configKey in Object.keys(selectedNode.configSchema)" :key="`config-${configKey}`">
+          <div v-if="selectedNode.configSchema && selectedNode.configSchema[configKey]" class="details-param">
+            <div class="param-header">
+              <div class="param-name">{{ selectedNode.configSchema[configKey]!.displayName || configKey }}</div>
+              <div class="param-type">{{ selectedNode.configSchema[configKey]!.dataFlowType }}</div>
+            </div>
+            <div v-if="selectedNode.configSchema[configKey]!.description" class="param-description">
+              <MarkdownRenderer :markdown-content="selectedNode.configSchema[configKey]!.description!" />
+            </div>
+            <div
+              v-if="selectedNode.configSchema[configKey]!.matchCategories && selectedNode.configSchema[configKey]!.matchCategories!.length > 0"
+              class="param-categories">
+              <span v-for="category in selectedNode.configSchema[configKey]!.matchCategories"
+                :key="`config-${configKey}-${category}`" class="category-tag">
+                {{ category }}
+              </span>
+            </div>
+            <!-- 显示配置项的接受类型或占位符 -->
+            <div
+              v-if="selectedNode.configSchema[configKey]!.config?.acceptedTypes && selectedNode.configSchema[configKey]!.config!.acceptedTypes!.length > 0"
+              class="param-value-preview mt-1">
+              <span class="text-xs text-gray-500 dark:text-gray-400 mr-1">接受类型:</span>
+              <span v-for="accType in selectedNode.configSchema[configKey]!.config!.acceptedTypes" :key="accType.value"
+                class="category-tag !bg-green-100 dark:!bg-green-700 !text-green-700 dark:!text-green-200 mr-1">
+                {{ accType.label || accType.value }}
+              </span>
+            </div>
+            <div v-else-if="selectedNode.configSchema[configKey]!.config?.placeholder" class="param-value-preview mt-1">
+              <span class="text-xs text-gray-500 dark:text-gray-400">占位提示: </span>
+              <span class="text-xs italic p-1 text-gray-400 dark:text-gray-500">
+                {{ selectedNode.configSchema[configKey]!.config?.placeholder }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div v-if="selectedNode.type === 'core:NodeGroup'" class="details-section">
         <div class="details-section-title">内部组件</div>
         <div class="details-param">
@@ -72,8 +114,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue"; // 移除未使用的 nextTick
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import type { FrontendNodeDefinition } from "../../../stores/nodeStore"; // 确保路径正确
+// import type { InputDefinition } from "@comfytavern/types"; // InputDefinition 未在此处直接使用，移除以避免警告
 import { useThemeStore } from "../../../stores/theme"; // 确保路径正确
 import { storeToRefs } from "pinia";
 import MarkdownRenderer from "../../common/MarkdownRenderer.vue"; // 导入 Markdown 渲染器
@@ -160,6 +203,10 @@ onUnmounted(() => {
 const closePanel = () => {
   emit("close");
 };
+
+// InputDefinition 类型现在已从 @comfytavern/types 导入，如果需要可以在这里使用
+// 例如，如果需要访问 configDef.config.acceptedTypes 的具体类型
+// const configDef = selectedNode.value?.configSchema?.[configKey] as InputDefinition | undefined;
 </script>
 
 <style scoped>
