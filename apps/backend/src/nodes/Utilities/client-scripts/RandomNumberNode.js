@@ -65,17 +65,15 @@ export function setupClientNode(vueFlow, node, context) { // 'node' 参数本身
     if (newMode !== undefined && newMode !== currentMode.value) {
       // console.log(`[Client ${node.id}] Mode changed to: ${newMode}`); // 清理日志
       currentMode.value = newMode;
-      // 如果模式变为 '随机'，立即生成新值
-      if (newMode === '随机') {
-        updateValue(generateRandom24BitInt());
-      } else if (newMode === '增加') {
-        // 当模式更改为“增加”时，立即将当前值加1
-        updateValue(currentValue.value + 1);
-      } else if (newMode === '减少') {
-        // 当模式更改为“减少”时，立即将当前值减1
-        updateValue(currentValue.value - 1);
-      }
-      // 对于“固定”模式，值保持不变，除非通过 reroll 按钮或外部 value 输入更改
+      // 当模式切换时，不再立即更新数值。
+      // 数值的更新将由 onWorkflowExecute 钩子或按钮点击（如 reroll）处理。
+      // 如果产品设计要求模式切换到“随机”时立即更新（目前看不需要），
+      // 可以取消注释并调整下面的 if 块。
+      // if (newMode === '随机') {
+      //   updateValue(generateRandom24BitInt());
+      // }
+      // 对于“固定”、“增加”、“减少”等模式，切换模式本身不应立即改变值。
+      // 值的改变将由 onWorkflowExecute 钩子或特定按钮（如 reroll）处理。
     }
   }, { immediate: false }); // 不需要立即执行，等待用户交互或连接
 
