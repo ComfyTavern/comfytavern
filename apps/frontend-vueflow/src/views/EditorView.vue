@@ -22,57 +22,72 @@
           <div class="canvas-container flex-1 relative">
             <!-- 添加相对定位，用于可能的绝对定位子元素 -->
             <!-- 根据活动标签页类型条件渲染 Canvas 或 GroupEditor -->
-            <Canvas
-              ref="canvasRef"
-              :model-value="currentElements"
-              @update:model-value="updateElements"
-              @node-click="handleNodeClick"
-              @pane-ready="handlePaneReady"
-              @connect="handleConnect"
-              @node-drag-stop="handleNodesDragStop"
-              @elements-remove="handleElementsRemove"
-              @request-add-node-to-workflow="handleRequestAddNodeFromCanvas"
-              :node-types="nodeTypes"
+              <Canvas
+                ref="canvasRef"
+                :model-value="currentElements"
+                @update:model-value="updateElements"
+                @node-click="handleNodeClick"
+                @pane-ready="handlePaneReady"
+                @connect="handleConnect"
+                @node-drag-stop="handleNodesDragStop"
+                @elements-remove="handleElementsRemove"
+                @request-add-node-to-workflow="handleRequestAddNodeFromCanvas"
+                :node-types="nodeTypes"
+                @open-node-search-panel="handleOpenNodeSearchPanel"
+              />
+              <!-- 传递 nodeTypes, 添加 key 绑定, 添加 nodes-drag-stop 和 elements-remove 监听 -->
+  
+              <!-- 节点搜索面板 - 放置在 canvas-container 内部以实现相对定位 -->
+              <div v-if="showNodeSearchPanel" class="modal-overlay-canvas" @click="showNodeSearchPanel = false"></div>
+              <HierarchicalMenu
+                v-if="showNodeSearchPanel"
+                :sections="hierarchicalNodeMenuSections"
+                :loading="loading"
+                @select="handleHierarchicalNodeSelect"
+                class="node-search-panel-canvas"
+                :search-placeholder="'搜索节点...'"
+                :no-results-text="'未找到节点'"
+              />
+            </div>
+            <!-- 可停靠编辑器 -->
+            <DockedEditorWrapper
+              v-if="isDockedEditorVisible"
+              ref="dockedEditorWrapperRef"
+              class="docked-editor-wrapper"
             />
-            <!-- 传递 nodeTypes, 添加 key 绑定, 添加 nodes-drag-stop 和 elements-remove 监听 -->
           </div>
-          <!-- 可停靠编辑器 -->
-          <DockedEditorWrapper
-            v-if="isDockedEditorVisible"
-            ref="dockedEditorWrapperRef"
-            class="docked-editor-wrapper"
-          />
         </div>
+        <div v-else class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+          正在加载节点定义...
+        </div>
+  
+        <!-- 节点预览面板 - 仅在侧边栏准备好后渲染 -->
+        <!-- 调试信息显示面板已帮助定位问题 (isSidebarReady)，现将其移除。 -->
+  
+        <!-- 修改 v-if 条件，直接判断 sidebarManagerRef 是否已挂载并可用 -->
+        <template v-if="sidebarManagerRef">
+          <NodePreviewPanel
+            :selected-node="selectedNodeForPreview"
+            :is-sidebar-visible="sidebarManagerRef.isSidebarVisible"
+            @close="selectedNodeForPreview = null"
+            @add-node="handleAddNodeFromPanel"
+          />
+        </template>
+  
       </div>
-      <div v-else class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-        正在加载节点定义...
-      </div>
-
-      <!-- 节点预览面板 - 仅在侧边栏准备好后渲染 -->
-      <!-- 调试信息显示面板已帮助定位问题 (isSidebarReady)，现将其移除。 -->
-
-      <!-- 修改 v-if 条件，直接判断 sidebarManagerRef 是否已挂载并可用 -->
-      <template v-if="sidebarManagerRef">
-        <NodePreviewPanel
-          :selected-node="selectedNodeForPreview"
-          :is-sidebar-visible="sidebarManagerRef.isSidebarVisible"
-          @close="selectedNodeForPreview = null"
-          @add-node="handleAddNodeFromPanel"
-        />
-      </template>
-
+  
+      <!-- 底部状态栏 -->
+      <StatusBar class="editor-statusbar" />
+      <!-- 右侧专用预览面板 - 移动到 editor-container 的直接子节点，以确保正确的悬浮行为 -->
+      <RightPreviewPanel />
     </div>
-
-    <!-- 底部状态栏 -->
-    <StatusBar class="editor-statusbar" />
-    <!-- 右侧专用预览面板 - 移动到 editor-container 的直接子节点，以确保正确的悬浮行为 -->
-    <RightPreviewPanel />
-  </div>
-</template>
-
+  </template>
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, markRaw, watch, nextTick, provide } from "vue"; // watch 已经存在，无需重复导入
 import Canvas from "../components/graph/Canvas.vue";
+import HierarchicalMenu from '../components/common/HierarchicalMenu.vue';
+import type { MenuItem as HierarchicalMenuItem } from '../components/common/HierarchicalMenu.vue';
+import type { FrontendNodeDefinition } from '../stores/nodeStore'; // 确保导入
 import BaseNode from "../components/graph/nodes/BaseNode.vue";
 import SidebarManager from "../components/graph/sidebar/SidebarManager.vue";
 import NodePreviewPanel from "../components/graph/sidebar/NodePreviewPanel.vue";
@@ -122,6 +137,58 @@ const {
   handleNodeSelected,
   handleError,
 } = useEditorState();
+
+const showNodeSearchPanel = ref(false);
+
+// 为 HierarchicalMenu 准备节点数据
+const hierarchicalNodeMenuSections = computed(() => {
+  const sections: Record<string, any> = {};
+  if (!nodeDefinitions.value) return sections;
+
+  nodeDefinitions.value
+    .filter((node: FrontendNodeDefinition) => {
+      const fullType = `${node.namespace || 'core'}:${node.type}`;
+      return !fullType.includes('io:GroupInput') && !fullType.includes('io:GroupOutput');
+    })
+    .forEach((node: FrontendNodeDefinition) => {
+      const namespace = node.namespace || 'core';
+      const category = node.category || '未分类';
+
+      if (!sections[namespace]) {
+        sections[namespace] = {
+          label: namespace,
+          categories: {}
+        };
+      }
+      if (!sections[namespace].categories[category]) {
+        sections[namespace].categories[category] = {
+          label: category,
+          items: []
+        };
+      }
+      sections[namespace].categories[category].items.push({
+        id: `${namespace}:${node.type}`,
+        label: node.displayName || node.type,
+        // icon: '🔌', // 可以根据节点类型设置不同图标，但是当前还没设计节点的图标，暂时用不上
+        description: node.description,
+        category: category, // 用于搜索结果中的分类显示
+        data: node
+      });
+    });
+  return sections;
+});
+
+const handleOpenNodeSearchPanel = () => {
+  showNodeSearchPanel.value = true;
+};
+
+const handleHierarchicalNodeSelect = async (item: HierarchicalMenuItem) => {
+  if (item.id) {
+    // item.id 已经是 fullNodeType
+    await handleAddNodeFromPanel(item.id); // handleAddNodeFromPanel 来自 useCanvasInteraction
+  }
+  showNodeSearchPanel.value = false;
+};
 
 // 之前的 selectedNodeForPreview watch 已帮助定位问题 (isSidebarReady)，现将其移除。
 
@@ -217,6 +284,11 @@ const handleRequestAddNodeFromCanvas = async (payload: { fullNodeType: string; f
   // payload.flowPosition 在这里暂时不使用，以保持与面板添加行为一致。
   await handleAddNodeFromPanel(payload.fullNodeType);
 };
+
+
+// 在 Canvas 组件上监听 open-node-search-panel 事件
+// (注意：这应该在 <Canvas ... @open-node-search-panel="handleOpenNodeSearchPanel" /> 模板中完成)
+// 此处仅为逻辑占位，实际绑定在 template 中。
 
 // 提供 sidebarRef 给子组件
 provide('sidebarRef', {
@@ -355,5 +427,30 @@ onUnmounted(() => {
   100% {
     transform: rotate(360deg);
   }
+}
+
+.modal-overlay-canvas {
+  position: absolute; /* 相对于 canvas-container 定位 */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.3); /* 较浅的遮罩 */
+  z-index: 1040;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.node-search-panel-canvas {
+  position: absolute; /* 相对于 canvas-container 定位 */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 500px;
+  max-width: 80%; /* 相对于画布容器的宽度 */
+  max-height: 70%; /* 相对于画布容器的高度 */
+  z-index: 1050;
+  /* HierarchicalMenu 组件内部已包含背景、阴影、圆角和滚动条样式 */
 }
 </style>

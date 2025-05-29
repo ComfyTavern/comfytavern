@@ -136,7 +136,6 @@ const nodeMenuSections = computed(() => {
       sections[namespace].categories[category].items.push({
         id: `${namespace}:${node.type}`,
         label: node.displayName || node.type,
-        icon: '🔌', // 使用默认图标
         description: node.description,
         category: category,
         data: node
@@ -162,7 +161,7 @@ const cascadingMenuItems = computed((): CascadingMenuItemType[] => {
       const nodeItems: CascadingMenuItemType[] = category.items.map((node: any) => ({
         id: node.id,
         label: node.label,
-        icon: node.icon || '🔌',
+        icon: node.icon,
         data: node.data,
       }));
       if (nodeItems.length > 0) {
@@ -181,7 +180,6 @@ const cascadingMenuItems = computed((): CascadingMenuItemType[] => {
         const nodeItems: CascadingMenuItemType[] = category.items.map((node: any) => ({
           id: node.id,
           label: node.label,
-          icon: node.icon || '🔌',
           data: node.data,
         }));
         if (nodeItems.length > 0) {

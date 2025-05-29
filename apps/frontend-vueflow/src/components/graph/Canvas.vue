@@ -24,7 +24,8 @@
     <!-- 画布右键菜单 -->
     <ContextMenu :visible="showPaneContextMenu" :position="contextMenuPosition" :has-selected-nodes="hasSelectedNodes"
       :has-copied-nodes="hasCopiedNodes" @request-add-node="forwardRequestAddNode" @add-group="addGroup" @copy="copySelected" @paste="paste"
-      @delete="deleteSelected" @select-all="onSelectAll" @reset-view="resetView" @close="closePaneContextMenu" />
+      @delete="deleteSelected" @select-all="onSelectAll" @reset-view="resetView" @close="closePaneContextMenu"
+      @open-node-search-panel="() => emit('open-node-search-panel')" />
 
     <!-- 节点右键菜单 (根据选中数量显示不同内容) -->
     <NodeContextMenu :visible="showNodeContextMenu" :position="contextMenuPosition" :nodeId="selectedNodeId"
@@ -82,7 +83,8 @@ const emit = defineEmits<{
   'node-click': [node: Node]
   'pane-ready': [instance: any] // Revert to emitting the hook instance, use 'any' for now
   'connect': [connection: Connection],
-  'request-add-node-to-workflow': [payload: { fullNodeType: string; flowPosition: XYPosition }] // +++ 新的 emit
+  'request-add-node-to-workflow': [payload: { fullNodeType: string; flowPosition: XYPosition }], // +++ 新的 emit
+  'open-node-search-panel': [] // 新增：向上层传递打开节点搜索面板的事件
 }>();
 
 // 使用计算属性处理双向绑定

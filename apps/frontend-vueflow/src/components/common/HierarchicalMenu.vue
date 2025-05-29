@@ -88,7 +88,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
 
-interface MenuItem {
+export interface MenuItem {
   id: string;
   label: string;
   icon?: string;
@@ -194,7 +194,7 @@ const onItemSelect = (item: MenuItem) => {
 
 <style scoped>
 .hierarchical-menu {
-  @apply flex flex-col bg-white dark:bg-gray-800 rounded-lg shadow-lg;
+  @apply flex flex-col bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-300 dark:border-gray-600;
 }
 
 .menu-search {
