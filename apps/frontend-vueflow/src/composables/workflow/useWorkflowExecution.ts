@@ -56,62 +56,67 @@ export function useWorkflowExecution() {
     console.info(`[WorkflowExecution:executeWorkflow] Initiating execution for tab ${internalId}...`);
     setInitiatingTabForNextPrompt(internalId); // 咕咕：设置发起标签页
 
-    // 1. 获取当前元素
-    let currentElements = workflowManager.getElements(internalId); // 咕咕：设为 let 以便可能被修改
-    if (!currentElements || currentElements.length === 0) {
-        console.error(`[WorkflowExecution:executeWorkflow] No elements found for tab ${internalId}. Aborting.`);
-        alert("画布上没有元素可执行。"); // 咕咕：与 StatusBar.vue 保持一致
-        return;
+    // 1. 获取初始的当前元素
+    const initialElements = workflowManager.getElements(internalId);
+    if (!initialElements || initialElements.length === 0) {
+      console.error(`[WorkflowExecution:executeWorkflow] No initial elements found for tab ${internalId}. Aborting.`);
+      alert("画布上没有元素可执行。");
+      return;
     }
 
-    // 咕咕：在扁平化之前，为每个节点触发客户端脚本钩子 (逻辑从 StatusBar.vue 迁移)
-    const vueFlowNodes = currentElements.filter(el => !('source' in el)) as VueFlowNode[];
-    const vueFlowEdges = currentElements.filter(el => 'source' in el) as VueFlowEdge[]; // 虽然未使用，但保持结构完整
+    // 2. 从初始元素派生出 VueFlow 节点和边，用于客户端脚本上下文
+    const initialVueFlowNodes = initialElements.filter(el => !('source' in el)) as VueFlowNode[];
+    const initialVueFlowEdges = initialElements.filter(el => 'source' in el) as VueFlowEdge[];
 
+    // 3. 执行客户端脚本钩子 (这些脚本会通过 workflowManager.updateNodeData 更新 store)
     const clientScriptHookName = 'onWorkflowExecute';
-    if (vueFlowNodes && vueFlowNodes.length > 0) {
-      console.log(`[WorkflowExecution] Attempting to run '${clientScriptHookName}' hook for ${vueFlowNodes.length} nodes.`);
-      for (const node of vueFlowNodes) {
+    if (initialVueFlowNodes.length > 0) {
+      console.log(`[WorkflowExecution] Attempting to run '${clientScriptHookName}' hook for ${initialVueFlowNodes.length} nodes.`);
+      for (const node of initialVueFlowNodes) { // 迭代初始快照
         const executor = executionStore.getNodeClientScriptExecutor(node.id);
         if (executor) {
           try {
             console.debug(`[WorkflowExecution] Executing client script hook '${clientScriptHookName}' for node ${node.id}`);
+            // hookContext 使用克隆的初始状态，避免脚本间意外串改传递的上下文对象本身
             const hookContext = {
               nodeId: node.id,
               workflowContext: {
-                nodes: klona(vueFlowNodes), // 传递整个画布的节点快照
-                edges: klona(vueFlowEdges), // 传递整个画布的边快照
+                nodes: klona(initialVueFlowNodes),
+                edges: klona(initialVueFlowEdges),
               },
             };
-            await executor(clientScriptHookName, hookContext);
-            // 假设 executor 修改了 node.data 或其他属性，这些修改会反映在 vueFlowNodes 中的对应节点上
-            // 并因此反映在 currentElements 中的对应节点上，因为它们是引用相同的对象
+            await executor(clientScriptHookName, hookContext); // executor 内部调用 setNodeOutputValue -> workflowManager.updateNodeData
           } catch (e) {
             console.warn(`[WorkflowExecution] Client script hook '${clientScriptHookName}' for node ${node.id} failed:`, e);
-            // 决定仅记录警告并继续，与 StatusBar.vue 行为一致
           }
         }
       }
-      // 客户端脚本执行后，currentElements 中的节点可能已被修改
-      // 无需显式更新 currentElements，因为 vueFlowNodes 中的对象是 currentElements 中对象的引用
     }
 
+    // 4. 在所有客户端脚本执行完毕后，从 store 重新获取最新的元素状态
+    // 这是为了确保 flattenWorkflow 处理的是包含了所有脚本更新的最终状态
+    const elementsAfterClientScripts = workflowManager.getElements(internalId);
+    if (!elementsAfterClientScripts || elementsAfterClientScripts.length === 0) {
+      console.error(`[WorkflowExecution:executeWorkflow] Elements became empty or invalid after client scripts for tab ${internalId}. Aborting.`);
+      alert("执行客户端脚本后画布状态错误。");
+      return;
+    }
+    console.info(`[WorkflowExecution:executeWorkflow] Fetched ${elementsAfterClientScripts.length} elements after client scripts.`);
 
-    // 2. 扁平化工作流 (处理 NodeGroup) - 使用导入的函数
-    // currentElements 可能已被客户端脚本修改
-    console.info(`[WorkflowExecution:executeWorkflow] Flattening workflow for tab ${internalId}...`);
+    // 5. 使用更新后的元素进行扁平化工作流
+    console.info(`[WorkflowExecution:executeWorkflow] Flattening workflow for tab ${internalId} using elements after client scripts...`);
     const flattenedResult = await flattenWorkflow(
-        internalId,
-        currentElements, // 使用可能已被客户端脚本修改的 currentElements
-        workflowDataHandler,
-        projectStore,
-        workflowManager
+      internalId,
+      elementsAfterClientScripts, // 使用执行完客户端脚本后的最新元素
+      workflowDataHandler,
+      projectStore,
+      workflowManager
     );
 
     if (!flattenedResult) {
-        console.error(`[WorkflowExecution:executeWorkflow] Failed to flatten workflow for tab ${internalId}. Aborting.`);
-        // TODO: Show user feedback
-        return;
+      console.error(`[WorkflowExecution:executeWorkflow] Failed to flatten workflow for tab ${internalId}. Aborting.`);
+      // TODO: Show user feedback
+      return;
     }
     console.info(`[WorkflowExecution:executeWorkflow] Workflow flattened successfully for tab ${internalId}. Nodes: ${flattenedResult.nodes.length}, Edges: ${flattenedResult.edges.length}`);
 
