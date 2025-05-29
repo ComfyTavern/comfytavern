@@ -1,11 +1,10 @@
 <template>
-  <div ref="canvasContainerRef" class="canvas-container h-full w-full" @dragover.prevent="onDragOver"
+  <div ref="canvasContainerRef" class="canvas-container h-full w-full" tabindex="-1" @dragover.prevent="onDragOver"
     @dragleave="onDragLeave" @drop.prevent="onDrop" @dragenter.prevent>
-    <VueFlow v-bind="$attrs" ref="vueFlowRef" v-model="internalElements" :node-types="props.nodeTypes" :edge-types="edgeTypes"
-      :default-viewport="{ x: 0, y: 0, zoom: 1 }" :min-zoom="0.2" :max-zoom="4" fit-view-on-init
-      :connect-on-drop="true" :edges-updatable="true" :edge-updater-radius="15"
-      :snap-to-grid="true" :snapping-tolerance="10" :selectionMode="SelectionMode.Partial"
-      :connection-line-component="UnplugConnectionLine"
+    <VueFlow v-bind="$attrs" ref="vueFlowRef" v-model="internalElements" :node-types="props.nodeTypes"
+      :edge-types="edgeTypes" :default-viewport="{ x: 0, y: 0, zoom: 1 }" :min-zoom="0.2" :max-zoom="4" fit-view-on-init
+      :connect-on-drop="true" :edges-updatable="true" :edge-updater-radius="15" :snap-to-grid="true"
+      :snapping-tolerance="10" :selectionMode="SelectionMode.Partial" :connection-line-component="UnplugConnectionLine"
       @edges-change="handleEdgesChange" :panOnDrag="true" :zoomOnScroll="true">
       <!-- 背景 -->
       <Background :pattern-color="isDark ? '#555' : '#aaa'" :gap="16" />
@@ -25,7 +24,7 @@
     <!-- 画布右键菜单 -->
     <ContextMenu :visible="showPaneContextMenu" :position="contextMenuPosition" :has-selected-nodes="hasSelectedNodes"
       :has-copied-nodes="hasCopiedNodes" @add-node="addNode" @add-group="addGroup" @copy="copySelected" @paste="paste"
-      @delete="deleteSelected" @select-all="selectAllNodes" @reset-view="resetView" @close="closePaneContextMenu" />
+      @delete="deleteSelected" @select-all="onSelectAll" @reset-view="resetView" @close="closePaneContextMenu" />
 
     <!-- 节点右键菜单 (根据选中数量显示不同内容) -->
     <NodeContextMenu :visible="showNodeContextMenu" :position="contextMenuPosition" :nodeId="selectedNodeId"
@@ -49,10 +48,8 @@ import { watch, nextTick } from 'vue'
 import { VueFlow, useVueFlow, SelectionMode, type NodeTypesObject, type EdgeTypesObject } from '@vue-flow/core' // 导入 NodeTypesObject 和 EdgeTypesObject
 import UnplugConnectionLine from './edges/UnplugConnectionLine.vue';
 import { useNodeStore } from '../../stores/nodeStore'
-// workflowStore is needed by the composable, ensure it's available or imported if not already
 import { useWorkflowStore } from '../../stores/workflowStore'; // 导入 WorkflowStore
 import { useTabStore } from '../../stores/tabStore'; // 导入 TabStore
-// import { useWorkflowStore } from '../../stores/workflowStore'
 import useDragAndDrop from '../../composables/canvas/useDnd'
 import { useCanvasKeyboardShortcuts } from '../../composables/canvas/useCanvasKeyboardShortcuts' // <-- Import the composable
 import { useContextMenuPositioning } from '../../composables/canvas/useContextMenuPositioning'; // <-- Import the new composable
@@ -68,7 +65,6 @@ import SortedMultiTargetEdge from './edges/SortedMultiTargetEdge.vue'; // 导入
 import { useThemeStore } from '../../stores/theme'
 import { storeToRefs } from 'pinia'
 import { useCanvasConnections } from '../../composables/canvas/useCanvasConnections'
-// import { useWorkflowGrouping, areTypesCompatible } from '../../composables/useWorkflowGrouping'; // 不再需要导入
 import { useNodeGroupConnectionValidation } from '../../composables/node/useNodeGroupConnectionValidation'; // 导入新的 Composable
 import { useWorkflowGrouping } from '@/composables/group/useWorkflowGrouping';
 import { createHistoryEntry } from '@comfytavern/utils'; // <-- 导入 createHistoryEntry
@@ -171,12 +167,11 @@ const {
   onPaneContextMenu,
   project,
   getNodes,
+  addSelectedNodes, // 添加这个
+  addSelectedEdges, // 添加这个
   removeEdges, // Keep this for direct VueFlow operations if needed, e.g., invalidNodeGroupEdgeIds
-  // addEdges,    // Keep this for direct VueFlow operations if needed
   getEdges,
-  // instance, // The instance is directly available in vueFlowInstance
   onMoveEnd,
-  // onNodeDragStop, // REMOVED: No longer used in Canvas.vue
 } = vueFlowInstance;
 
 // 获取拖拽相关函数
@@ -188,30 +183,34 @@ const { nodeDefinitions } = storeToRefs(nodeStore); // 从 nodeStore 获取响�
 const workflowStore = useWorkflowStore(); // 实例化 WorkflowStore
 const tabStore = useTabStore(); // 实例化 TabStore
 const activeTabId = computed(() => tabStore.activeTabId); // 获取活动标签页 ID
-// const workflowStore = useWorkflowStore() // Ensure this is available if needed by the composable indirectly
 
 // 初始化连线逻辑
 const {
   removeNodeConnections,
-  // setupConnectionHandlers 已移除，无需解构
 } = useCanvasConnections({
   getNodes,
   isDark,
-  // removeEdges and addEdges are no longer passed if useCanvasConnections doesn't expect them
-  getEdges     // 传递 getEdges
-  // elements: internalElements // elements 选项已移除，无需传递
+  getEdges
 });
 
-// 设置连线处理函数
-// setupConnectionHandlers(); // 调用已移除
-
-// Initialize keyboard shortcuts
 // Initialize keyboard shortcuts and get needed methods
-const { deleteSelectedElements, selectAllElements } = useCanvasKeyboardShortcuts(); // <-- Use the composable and get functions
+const { deleteSelectedElements } = useCanvasKeyboardShortcuts(); // <-- selectAllElements 不再需要从这里解构
 
 // Assign to names expected by the template for context menu
 const deleteSelected = deleteSelectedElements;
-const selectAllNodes = selectAllElements;
+// 处理全选事件
+const onSelectAll = () => {
+  // 直接调用 useVueFlow 的选择方法
+  const nodesToSelect = getNodes.value;
+  const edgesToSelect = getEdges.value;
+  if (nodesToSelect.length > 0) {
+    addSelectedNodes(nodesToSelect);
+  }
+  if (edgesToSelect.length > 0) {
+    addSelectedEdges(edgesToSelect);
+  }
+  closePaneContextMenu();
+};
 
 // 右键菜单状态
 const showPaneContextMenu = ref(false);
