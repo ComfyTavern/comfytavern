@@ -829,7 +829,8 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
               @focus="oldInputDisplayName = editingDisplayName" @blur="handleInputNameBlur" />
 
             <label class="col-span-1 text-right">类型:</label>
-            <select :value="selectedInputData?.dataFlowType" class="col-span-2 input-xs" @change="handleInputTypeChange">
+            <select :value="selectedInputData?.dataFlowType" class="col-span-2 input-xs"
+              @change="handleInputTypeChange">
               <option v-for="t in availableTypes" :key="t" :value="t">{{ t }}</option>
             </select>
 
@@ -840,8 +841,18 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
             <!-- 默认值输入 -->
             <label class="col-span-1 text-right">默认值:</label>
             <div class="col-span-2">
-              <!-- 根据类型渲染不同输入 -->
-              <input v-if="
+              <!-- 优先检查 suggestions -->
+              <select
+                v-if="selectedInputData.config && Array.isArray(selectedInputData.config.suggestions) && selectedInputData.config.suggestions.length > 0"
+                v-model="editingDefaultValue" class="input-xs" @change="handleInputDefaultValueChange">
+                <option v-for="suggestion in selectedInputData.config.suggestions"
+                  :key="typeof suggestion === 'object' ? String(suggestion.value) : String(suggestion)"
+                  :value="typeof suggestion === 'object' ? suggestion.value : suggestion">
+                  {{ typeof suggestion === 'object' ? suggestion.label : suggestion }}
+                </option>
+              </select>
+              <!-- 根据类型渲染不同输入 (回退逻辑) -->
+              <input v-else-if="
                 selectedInputData.dataFlowType === DataFlowType.INTEGER ||
                 selectedInputData.dataFlowType === DataFlowType.FLOAT
               " v-model.number="editingDefaultValue" type="number" class="input-xs" placeholder="默认数值"
@@ -853,7 +864,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
                 type="checkbox"
                 class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:focus:ring-indigo-600 dark:ring-offset-gray-800"
                 @change="handleInputDefaultValueChange" />
-              <!-- TODO: 添加对 COMBO, CODE 等类型的默认值支持 -->
+              <!-- TODO: 添加对 CODE 等类型的默认值支持 (COMBO 已通过 suggestions 处理) -->
               <span v-else class="text-gray-400 italic text-xs">不支持此类型的默认值</span>
             </div>
 
@@ -924,7 +935,8 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
               @focus="oldOutputDisplayName = editingDisplayName" @blur="handleOutputNameBlur" />
 
             <label class="col-span-1 text-right">类型:</label>
-            <select :value="selectedOutputData?.dataFlowType" class="col-span-2 input-xs" @change="handleOutputTypeChange">
+            <select :value="selectedOutputData?.dataFlowType" class="col-span-2 input-xs"
+              @change="handleOutputTypeChange">
               <option v-for="t in availableTypes" :key="t" :value="t">{{ t }}</option>
             </select>
 
