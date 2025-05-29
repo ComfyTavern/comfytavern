@@ -23,18 +23,21 @@ function generateRandom24BitInt() {
  * @param {function} context.ref - Vue 的 ref 函数
  * @param {function} context.watch - Vue 的 watch 函数
  */
-export function setupClientNode(vueFlow, node, context) {
+export function setupClientNode(vueFlow, node, context) { // 'node' 参数本身就是 props 对象
+  // 移除错误的解构：const { props } = node;
+  // console.log(`[Client ${node.id}] setupClientNode: node.data.inputs object is:`, node.data.inputs ? JSON.parse(JSON.stringify(node.data.inputs)) : undefined); // 清理：移除此日志
   // 解构时获取 updateInputValue，移除 updateNodeData
   const { updateInputValue, getNodeInputValue, setNodeOutputValue, ref, watch } = context;
 
   // --- 状态管理 ---
   // 使用 context 提供的 ref 创建响应式状态
   // 初始值：尝试从节点数据获取，否则生成新的随机数
-  const initialValue = getNodeInputValue(node.id, 'value') ?? generateRandom24BitInt();
+  const initialValue = getNodeInputValue('value') ?? generateRandom24BitInt();
   const currentValue = ref(initialValue);
   // 初始模式：尝试从节点数据获取，否则使用默认值 '固定'
-  const initialMode = getNodeInputValue(node.id, 'mode') ?? '固定';
+  const initialMode = getNodeInputValue('mode') ?? '固定';
   const currentMode = ref(initialMode);
+  console.log(`[Client ${node.id}] setupClientNode: initialMode is '${initialMode}', currentMode.value is '${currentMode.value}' (based on getNodeInputValue: '${getNodeInputValue('mode')}')`);
 
   // --- 核心逻辑 ---
   // 更新节点内部数据和输出值
@@ -45,7 +48,7 @@ export function setupClientNode(vueFlow, node, context) {
       // 使用 context.updateInputValue 更新输入值 'value'
       updateInputValue('value', clampedValue);
       // 更新节点的输出值 'number'
-      setNodeOutputValue(node.id, 'number', clampedValue);
+      setNodeOutputValue('number', clampedValue);
       // console.log(`[Client ${node.id}] Value updated to: ${clampedValue}`); // 清理日志
     }
   };
@@ -58,7 +61,7 @@ export function setupClientNode(vueFlow, node, context) {
 
   // --- 监听器 ---
   // 监听模式输入变化 (来自下拉框或连接)
-  watch(() => getNodeInputValue(node.id, 'mode'), (newMode) => {
+  watch(() => getNodeInputValue('mode'), (newMode) => {
     if (newMode !== undefined && newMode !== currentMode.value) {
       // console.log(`[Client ${node.id}] Mode changed to: ${newMode}`); // 清理日志
       currentMode.value = newMode;
@@ -77,7 +80,7 @@ export function setupClientNode(vueFlow, node, context) {
   }, { immediate: false }); // 不需要立即执行，等待用户交互或连接
 
   // 监听 value 输入变化 (来自手动输入或连接)
-  watch(() => getNodeInputValue(node.id, 'value'), (newValue) => {
+  watch(() => getNodeInputValue('value'), (newValue) => {
     // 只有当输入值与当前内部值不同时才更新，避免循环
     if (newValue !== undefined && typeof newValue === 'number' && newValue !== currentValue.value) {
       // console.log(`[Client ${node.id}] Value input changed externally to: ${newValue}`); // 清理日志
@@ -102,6 +105,41 @@ export function setupClientNode(vueFlow, node, context) {
         handleRerollClick();
       } else {
         console.warn(`[Client ${node.id}] Unknown button clicked: ${buttonName}`);
+      }
+    },
+    // 咕咕：新增 onWorkflowExecute 钩子
+    onWorkflowExecute: (context) => {
+      // context 参数包含 { nodeId, workflowContext }
+      // nodeId 应该与当前脚本的 node.id 相同
+      // workflowContext 包含 { nodes, edges } (这是从 StatusBar 传递的)
+      // console.log(`[Client ${node.id}] 'onWorkflowExecute' hook triggered. Context received:`, context); // 日志已在调用处打印，此处简化
+
+      // 优先从输入端口获取最新的模式值，如果未连接或无值，则使用内部维护的 currentMode
+      // 注意：getNodeInputValue 获取的是节点 *输入数据* 的值，通常是连接上游节点的值或用户在UI上为该输入设置的值
+      // currentMode.value 是通过 watch(getNodeInputValue('mode'), ...) 更新的内部响应式状态
+      const modeFromInput = getNodeInputValue('mode');
+      // console.log(`[Client ${node.id}] onWorkflowExecute: Value directly from getNodeInputValue('mode') is:`, modeFromInput); // 清理：移除此日志
+      // console.log(`[Client ${node.id}] onWorkflowExecute: currentMode.value (internal ref before logic) is:`, currentMode.value); // 清理：移除此日志
+      const effectiveMode = modeFromInput !== undefined ? modeFromInput : currentMode.value;
+
+      console.log(`[Client ${node.id}] onWorkflowExecute: Mode='${effectiveMode}', Value=${currentValue.value}.`); // 保留关键执行信息
+
+      if (effectiveMode === '随机') {
+        // console.log(`[Client ${node.id}] Mode is '随机', rerolling number.`); // 日志已包含在上一条
+        handleRerollClick(); // 重新生成随机数
+      } else if (effectiveMode === '增加') {
+        // console.log(`[Client ${node.id}] Mode is '增加', incrementing number from ${currentValue.value}.`); // 日志已包含
+        updateValue(currentValue.value + 1);
+      } else if (effectiveMode === '减少') {
+        // console.log(`[Client ${node.id}] Mode is '减少', decrementing number from ${currentValue.value}.`); // 日志已包含
+        updateValue(currentValue.value - 1);
+      } else if (effectiveMode === '固定') {
+        // console.log(`[Client ${node.id}] Mode is '固定', value (${currentValue.value}) remains unchanged by onWorkflowExecute.`); // 日志已包含
+        // 对于固定模式，可以选择不执行任何操作，或者确保输出与当前值一致
+        // setNodeOutputValue('number', currentValue.value); // 如果需要强制刷新输出
+      } else {
+        console.warn(`[Client ${node.id}] Unknown mode '${effectiveMode}' in onWorkflowExecute. Defaulting to reroll.`);
+        handleRerollClick(); // 对于未知或未定义的模式，选择一个默认行为
       }
     },
     // 可以暴露其他需要从 BaseNode 调用的方法或状态

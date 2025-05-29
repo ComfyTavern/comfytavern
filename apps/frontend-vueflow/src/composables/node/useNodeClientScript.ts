@@ -52,7 +52,7 @@ export function useNodeClientScript(props: UseNodeClientScriptProps) { // Remove
       // apiBaseUrl already includes '/api'
       fullScriptUrl = `${apiBaseUrl}/nodes/${nodeNamespace}/${nodeType}/client-script/${clientScriptRelativePath}`;
       // Example: http://localhost:3233/api/nodes/core/RandomNumber/client-script/client-scripts/RandomNumberNode.js
-      console.log(`[${props.id}] Attempting to load client script from: ${fullScriptUrl}`);
+      // console.log(`[${props.id}] Attempting to load client script from: ${fullScriptUrl}`); // 清理：移除加载尝试日志
 
       const scriptModule = await import(/* @vite-ignore */ fullScriptUrl);
 
@@ -158,9 +158,9 @@ export function useNodeClientScript(props: UseNodeClientScriptProps) { // Remove
     if (clientScriptApi.value && typeof clientScriptApi.value.onButtonClick === 'function') {
       try {
         clientScriptApi.value.onButtonClick(inputKey);
-        console.debug(`[${props.id}] Called client script onButtonClick for ${inputKey}`);
+        // console.debug(`[${props.id}] Called client script onButtonClick for ${inputKey}`); // 清理：移除此日志
       } catch (e) {
-        console.error(`[${props.id}] Error calling client script onButtonClick for ${inputKey}:`, e);
+        console.error(`[${props.id}] Error calling client script onButtonClick for ${inputKey}:`, e); // 保留错误日志
         // 可以选择性地设置 clientScriptError
       }
     } else {
@@ -199,14 +199,43 @@ export function useNodeClientScript(props: UseNodeClientScriptProps) { // Remove
       type: WebSocketMessageType.BUTTON_CLICK,
       payload: payload,
     });
-    console.debug(`[${props.id}] Sent BUTTON_CLICK message for ${inputKey}`);
+    // console.debug(`[${props.id}] Sent BUTTON_CLICK message for ${inputKey}`); // 清理：移除发送消息日志
+  };
+
+  // 新增：执行客户端脚本上指定钩子函数的方法
+  const executeClientHook = async (hookName: string, ...args: any[]): Promise<any> => {
+    if (clientScriptApi.value && typeof clientScriptApi.value[hookName] === 'function') {
+      try {
+        console.debug(`[${props.id}] Attempting to execute client script hook: '${hookName}' with args:`, args);
+        // 客户端脚本的钩子可能是同步或异步的
+        const result = clientScriptApi.value[hookName](...args);
+        let finalResult;
+        // 如果返回的是 Promise，则 await 它
+        if (result && typeof result.then === 'function') {
+          finalResult = await result;
+        } else {
+          finalResult = result;
+        }
+        // console.debug(`[${props.id}] Successfully executed client script hook: '${hookName}'. Result:`, finalResult); // 清理：移除成功执行的冗余日志
+        return finalResult;
+      } catch (error) {
+        console.error(`[${props.id}] Error executing client script hook '${hookName}':`, error); // 保留错误日志
+        // 更新错误状态，以便UI可以显示
+        clientScriptError.value = `Error in hook ${hookName}: ${error instanceof Error ? error.message : String(error)}`;
+        throw error; // 重新抛出错误，让调用者知道执行失败
+      }
+    } else {
+      console.debug(`[${props.id}] Client script hook '${hookName}' not found on client API for node type '${props.data.type}' (namespace: '${props.data.namespace}'). API loaded: ${!!clientScriptApi.value}`);
+      return undefined; // 表示钩子未找到或未执行
+    }
   };
 
   // 返回状态和方法
   return {
     clientScriptLoaded,
     clientScriptError,
-    clientScriptApi,
+    clientScriptApi, // 保持暴露，以防其他地方直接使用
     handleButtonClick,
+    executeClientHook, // 暴露新方法
   };
 }

@@ -221,7 +221,7 @@ onClickOutside(
 const { sendMessage, setInitiatingTabForNextPrompt } = useWebSocket(); // 获取 setInitiatingTabForNextPrompt
 // 移除 toObject
 
-const handleExecuteWorkflow = () => {
+const handleExecuteWorkflow = async () => { // 咕咕：将函数设为 async
   console.log("触发执行工作流...");
   if (!activeTabId.value) {
     console.error("无法执行：没有活动的标签页。");
@@ -305,6 +305,33 @@ const handleExecuteWorkflow = () => {
 
   if (activeTabId.value) {
     setInitiatingTabForNextPrompt(activeTabId.value);
+  }
+
+  // 咕咕：在发送执行请求前，为每个节点触发客户端脚本钩子
+  const clientScriptHookName = 'onWorkflowExecute';
+  if (vueFlowNodes && vueFlowNodes.length > 0) {
+    console.log(`[StatusBar] Attempting to run '${clientScriptHookName}' hook for ${vueFlowNodes.length} nodes.`);
+    for (const node of vueFlowNodes) {
+      const executor = executionStore.getNodeClientScriptExecutor(node.id);
+      if (executor) {
+        try {
+          console.debug(`[StatusBar] Executing client script hook '${clientScriptHookName}' for node ${node.id}`);
+          // 为钩子准备上下文数据，使用 klona 确保数据隔离
+          const hookContext = {
+            nodeId: node.id,
+            workflowContext: {
+              nodes: klona(payload.nodes),
+              edges: klona(payload.edges),
+            },
+          };
+          await executor(clientScriptHookName, hookContext);
+        } catch (e) {
+          console.warn(`[StatusBar] Client script hook '${clientScriptHookName}' for node ${node.id} failed:`, e);
+          // 可以选择是否通知用户，或者是否因为钩子失败而中止执行
+          // 目前仅记录警告并继续
+        }
+      }
+    }
   }
 
   sendMessage({

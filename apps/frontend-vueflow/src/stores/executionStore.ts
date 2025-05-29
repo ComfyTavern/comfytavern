@@ -15,6 +15,9 @@ import {
   type NanoId, // 导入 NanoId
 } from '@comfytavern/types';
 
+// 咕咕：定义客户端脚本钩子执行器的类型
+export type ClientScriptHookExecutor = (hookName: string, ...args: any[]) => Promise<any>;
+
 // 定义单个标签页的执行状态接口
 interface TabExecutionState {
   promptId: NanoId | null; // 当前执行的 ID
@@ -35,6 +38,9 @@ export const useExecutionStore = defineStore('execution', () => {
 
   // 全局预览开关状态
   const isPreviewEnabled = ref(false); // 默认为关闭
+
+  // 咕咕：用于存储节点客户端脚本执行器的 Map
+  const nodeClientScriptExecutors = reactive<Map<string, ClientScriptHookExecutor>>(new Map());
 
   // --- Actions ---
 
@@ -211,6 +217,27 @@ export const useExecutionStore = defineStore('execution', () => {
     }
   };
 
+  // --- Actions for Node Client Script Executors ---
+  /**
+   * 注册节点的客户端脚本执行器。
+   * @param nodeId 节点ID
+   * @param executor 执行器函数
+   */
+  const registerNodeClientScriptExecutor = (nodeId: string, executor: ClientScriptHookExecutor) => {
+    nodeClientScriptExecutors.set(nodeId, executor);
+    // console.log(`[ExecutionStore] Registered client script executor for node ${nodeId}`);
+  };
+
+  /**
+   * 注销节点的客户端脚本执行器。
+   * @param nodeId 节点ID
+   */
+  const unregisterNodeClientScriptExecutor = (nodeId: string) => {
+    nodeClientScriptExecutors.delete(nodeId);
+    // console.log(`[ExecutionStore] Unregistered client script executor for node ${nodeId}`);
+  };
+
+
   // --- Getters (需要 internalId) ---
   const getWorkflowStatus = (internalId: string): ExecutionStatus => {
     return tabExecutionStates.get(internalId)?.workflowStatus ?? ExecutionStatus.IDLE;
@@ -250,6 +277,15 @@ export const useExecutionStore = defineStore('execution', () => {
       return tabExecutionStates.get(internalId)?.nodePreviewOutputs[nodeId];
   };
 
+  // --- Getter for Node Client Script Executor ---
+  /**
+   * 获取指定节点的客户端脚本执行器。
+   * @param nodeId 节点ID
+   * @returns 对应的执行器或 undefined
+   */
+  const getNodeClientScriptExecutor = (nodeId: string): ClientScriptHookExecutor | undefined => {
+    return nodeClientScriptExecutors.get(nodeId);
+  };
 
   return {
     // Expose tab-specific states and actions
@@ -277,5 +313,10 @@ export const useExecutionStore = defineStore('execution', () => {
     // Preview Toggle
     isPreviewEnabled, // Expose state
     togglePreview, // Expose action
+
+    // 咕咕：暴露与节点客户端脚本执行器相关的方法
+    registerNodeClientScriptExecutor,
+    unregisterNodeClientScriptExecutor,
+    getNodeClientScriptExecutor,
   };
 });

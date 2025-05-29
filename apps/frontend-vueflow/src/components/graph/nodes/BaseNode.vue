@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 第 1 部分：导入
 // Vue 和 VueFlow 核心
-import { computed, ref, watch, nextTick } from "vue";
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from "vue"; // 咕咕：添加 onMounted, onUnmounted
 import { useVueFlow, Handle, Position, type NodeProps } from "@vue-flow/core";
 
 // Pinia 和状态存储
@@ -81,11 +81,11 @@ const { getInputProps: calculateInputProps, getConfigProps: calculateConfigProps
 const { editNodeGroup, isNodeGroup } = useNodeActions(props); // 使用节点操作 Composable
 // 使用重构后的 useGroupIOSlots，它现在接收完整 props 并返回 finalInputs/finalOutputs
 const { finalInputs, finalOutputs } = useGroupIOSlots(props);
-const { clientScriptError, handleButtonClick } = useNodeClientScript({ // 使用客户端脚本 Composable
+const { clientScriptError, handleButtonClick, executeClientHook } = useNodeClientScript({ // 使用客户端脚本 Composable
   ...props,
   updateInputValue,
   getInputValue,
-}); // 传入 props 和需要的函数
+}); // 咕咕：添加 executeClientHook，并传入 props 和需要的函数
 const { updateNodeInternals } = vueFlowInstance; // 从 useVueFlow 获取更新函数
 
 // 第 5 部分：计算属性
@@ -533,6 +533,20 @@ watch(
   },
   { flush: "post" } // 使用 'post' flush 在 DOM 更新后运行
 );
+
+// 第 8 部分：生命周期钩子
+onMounted(() => {
+  if (executeClientHook) {
+    // 咕咕：将节点的客户端钩子执行器注册到 store
+    // 类型断言为 any 是为了简化，理想情况下 ClientScriptHookExecutor 类型应该从 store 或 types 包导入
+    executionStore.registerNodeClientScriptExecutor(props.id, executeClientHook as any);
+  }
+});
+
+onUnmounted(() => {
+  // 咕咕：当节点卸载时，从 store 中注销其执行器
+  executionStore.unregisterNodeClientScriptExecutor(props.id);
+});
 </script>
 
 <template>
