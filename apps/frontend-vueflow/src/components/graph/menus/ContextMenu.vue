@@ -1,50 +1,24 @@
 <template>
-  <div v-if="visible" class="context-menu context-menu-base" :style="{ left: `${position.x}px`, top: `${position.y}px` }" @click.stop @mousedown.stop>
-    <!-- 搜索框 -->
-    <div class="context-menu-search">
-      <input
-        type="text"
-        v-model="searchQuery"
-        placeholder="搜索节点..."
-        class="context-menu-search-input"
-        @input="onSearch"
-        ref="searchInputRef"
-        @keydown.enter="onAddNodeFromSearch"
-      />
-    </div>
-
-    <!-- 加载状态 -->
-    <div v-if="loading" class="context-menu-loading">
-      <span>正在加载节点类型...</span>
-    </div>
-
-    <!-- 搜索结果 -->
-    <div v-else-if="searchQuery && filteredNodeTypes.length > 0" class="context-menu-search-results">
+  <div v-if="visible"
+       class="context-menu context-menu-base"
+       :style="{ left: `${position.x}px`, top: `${position.y}px` }"
+       @click.stop
+       @mousedown.stop
+       @mouseleave="handleMouseLeaveBaseMenu"
+       ref="baseMenuRef">
+    <!-- 常规菜单选项 -->
+    <div class="context-menu-items">
       <div
-        v-for="nodeType in filteredNodeTypes"
-        :key="nodeType.type"
-        class="context-menu-item search-result"
-        @click="onAddNodeWithType(nodeType.type)"
+        class="context-menu-item"
+        @mouseenter="handleShowNodeSubMenu"
+        @mouseleave="handleHideNodeSubMenuDelayed"
+        ref="addNodeMenuItemRef"
       >
-        <span class="icon">{{nodeType.icon}}</span>
-        <span class="flex flex-col">
-          <span>{{nodeType.label}}</span>
-          <span v-if="nodeType.category" class="text-xs text-gray-500">{{nodeType.category}}</span>
-        </span>
+        <span class="icon">+</span> 添加节点 <span class="submenu-arrow-static">▶</span>
       </div>
-    </div>
-    
-    <!-- 无搜索结果 -->
-    <div v-else-if="searchQuery && filteredNodeTypes.length === 0" class="context-menu-no-results">
-      <span>没有找到匹配的节点类型</span>
-    </div>
-
-    <!-- 菜单选项 -->
-    <div class="context-menu-items" v-else>
-      <div class="context-menu-item" @click="onAddNode">
-        <span class="icon">+</span> 添加节点
+      <div class="context-menu-item" @click="handleOpenSearchPanel">
+        <span class="icon">🔍</span> 查找节点...
       </div>
-      <!-- 添加节点组创建视觉分组框 -->
       <div class="context-menu-item" @click="onAddGroup">
         <span class="icon">⊞</span> 添加分组框
       </div>
@@ -66,43 +40,34 @@
         <span class="icon">⟲</span> 重置视图
       </div>
     </div>
+
+    <!-- 节点添加菜单 - 新的级联菜单 (作为子菜单显示) -->
+    <CascadingMenu
+      v-if="isAddNodeSubMenuOpen"
+      :items="cascadingMenuItems"
+      :level="1"
+      :parent-rect="addNodeMenuItemRef?.getBoundingClientRect()"
+      @select-item="onCascadingNodeSelect"
+      @close-all="closeAllContextMenus"
+      @mouseenter="cancelHideNodeSubMenu"
+      @mouseleave="handleHideNodeSubMenuDelayed"
+      class="context-submenu"
+    />
+    
+    <!-- HierarchicalMenu is now handled by parent component -->
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, watch, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import type { XYPosition } from '@vue-flow/core';
 import { useNodeStore } from '../../../stores/nodeStore';
-import { storeToRefs } from 'pinia'; // 导入 storeToRefs
+import { storeToRefs } from 'pinia';
+// import HierarchicalMenu from '@/components/common/HierarchicalMenu.vue'; // 不再直接使用
+import CascadingMenu, { type MenuItem as CascadingMenuItemType } from '@/components/common/CascadingMenu.vue';
+import type { FrontendNodeDefinition } from '../../../stores/nodeStore';
 
-// 使用节点存储
-const nodeStore = useNodeStore();
-const { nodeDefinitions } = storeToRefs(nodeStore); // 从 nodeStore 获取响应式引用
-const loading = ref(false);
-
-// 节点类型列表，从后端获取
-const nodeTypes = computed(() => {
-  // 使用从 storeToRefs 获取的响应式 nodeDefinitions
-  if (!nodeDefinitions.value) return [];
-
-  // 过滤掉 isGroupInternal 为 true 的节点定义
-  return nodeDefinitions.value
-    .filter((nodeDef: any) => !nodeDef.isGroupInternal) // 添加过滤条件
-    .map((node: any) => ({ // 使用 any 避免复杂的类型定义，或者需要从 types 包导入 NodeDefinition
-      type: node.type,
-      label: node.displayName || node.type, // 确认使用 displayName
-      icon: node.icon || '🔌', // 保留默认图标
-      category: node.category
-    }));
-});
-
-// 组件挂载时加载节点定义
-onMounted(async () => {
-  loading.value = true;
-  await nodeStore.fetchAllNodeDefinitions();
-  loading.value = false;
-});
-
+// Props & Emits
 const props = defineProps<{
   visible: boolean;
   position: XYPosition;
@@ -111,7 +76,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'add-node', nodeType?: string): void;
+  (e: 'request-add-node', payload: { fullNodeType: string; screenPosition: XYPosition }): void; // 修改事件定义
   (e: 'add-group'): void;
   (e: 'copy'): void;
   (e: 'paste'): void;
@@ -119,125 +84,256 @@ const emit = defineEmits<{
   (e: 'select-all'): void;
   (e: 'reset-view'): void;
   (e: 'close'): void;
+  (e: 'open-node-search-panel'): void; // 新增事件
 }>();
 
-const searchQuery = ref('');
-const searchInputRef = ref<HTMLInputElement | null>(null);
+// Store
+const nodeStore = useNodeStore();
+const { nodeDefinitions } = storeToRefs(nodeStore);
+const loading = ref(false);
 
-// 过滤节点类型
-const filteredNodeTypes = computed(() => {
-  if (!searchQuery.value) return [];
-  const query = searchQuery.value.toLowerCase();
-  
-  return nodeTypes.value.filter((type: {
-    label: string;
-    type: string;
-    category?: string;
-  }) =>
-    type.label.toLowerCase().includes(query) ||
-    type.type.toLowerCase().includes(query) ||
-    (type.category && type.category.toLowerCase().includes(query))
-  );
-});
+// Refs for Blender-style submenu interaction
+const baseMenuRef = ref<HTMLElement | null>(null);
+const addNodeMenuItemRef = ref<HTMLElement | null>(null);
+const isAddNodeSubMenuOpen = ref(false);
+let hideSubMenuTimer: number | null = null;
+const SUBMENU_DELAY = 150; // ms, for both open and close to feel natural
 
-// 搜索框自动聚焦
-watch(() => props.visible, (isVisible) => {
-  if (isVisible) {
-    nextTick(() => {
-      searchInputRef.value?.focus();
+// 节点菜单数据
+const nodeMenuSections = computed(() => {
+  const sections: Record<string, any> = {};
+
+  if (!nodeDefinitions.value) return sections;
+
+  // 按命名空间和分类组织节点
+  nodeDefinitions.value
+    .filter((node: FrontendNodeDefinition) => {
+      // 不显示内部节点
+      const fullType = `${node.namespace || 'core'}:${node.type}`;
+      return !fullType.includes('io:GroupInput') && !fullType.includes('io:GroupOutput');
+    })
+    .forEach((node: FrontendNodeDefinition) => {
+      const namespace = node.namespace || 'core';
+      const category = node.category || '未分类';
+
+      // 初始化命名空间
+      if (!sections[namespace]) {
+        sections[namespace] = {
+          label: namespace,
+          categories: {}
+        };
+      }
+
+      // 初始化分类
+      if (!sections[namespace].categories[category]) {
+        sections[namespace].categories[category] = {
+          label: category,
+          items: []
+        };
+      }
+
+      // 添加节点
+      sections[namespace].categories[category].items.push({
+        id: `${namespace}:${node.type}`,
+        label: node.displayName || node.type,
+        icon: '🔌', // 使用默认图标
+        description: node.description,
+        category: category,
+        data: node
+      });
     });
-  } else {
-    searchQuery.value = '';
-  }
+
+  return sections;
 });
 
-const onSearch = () => {
-  // 搜索逻辑已通过 computed 属性实现
-};
+// 为 CascadingMenu 准备数据
+const cascadingMenuItems = computed((): CascadingMenuItemType[] => {
+  const transformedItems: CascadingMenuItemType[] = [];
+  if (!nodeDefinitions.value) return transformedItems;
 
-const onAddNode = () => {
-  emit('add-node');
-  emit('close');
-};
+  const sections = nodeMenuSections.value;
+  const namespaceKeys = Object.keys(sections);
 
-const onAddNodeWithType = (nodeType: string) => {
-  emit('add-node', nodeType);
-  emit('close');
-};
-
-const onAddNodeFromSearch = () => {
-  if (filteredNodeTypes.value.length > 0) {
-    const nodeType = filteredNodeTypes.value[0];
-    if (nodeType && nodeType.type) {
-      onAddNodeWithType(nodeType.type);
-    } else {
-      onAddNode();
+  // 处理单 'core' 命名空间的情况
+  if (namespaceKeys.length === 1 && namespaceKeys[0] && namespaceKeys[0].toLowerCase() === 'core') {
+    const coreNamespace = sections[namespaceKeys[0]!]; // namespaceKeys[0] is now guaranteed to be a string
+    for (const catKey in coreNamespace.categories) {
+      const category = coreNamespace.categories[catKey];
+      const nodeItems: CascadingMenuItemType[] = category.items.map((node: any) => ({
+        id: node.id,
+        label: node.label,
+        icon: node.icon || '🔌',
+        data: node.data,
+      }));
+      if (nodeItems.length > 0) {
+        transformedItems.push({
+          label: category.label,
+          children: nodeItems,
+        });
+      }
     }
-  } else {
-    onAddNode();
+  } else { // 多个命名空间或非 'core' 的单个命名空间
+    for (const nsKey in sections) {
+      const namespace = sections[nsKey];
+      const categoryItems: CascadingMenuItemType[] = [];
+      for (const catKey in namespace.categories) {
+        const category = namespace.categories[catKey];
+        const nodeItems: CascadingMenuItemType[] = category.items.map((node: any) => ({
+          id: node.id,
+          label: node.label,
+          icon: node.icon || '🔌',
+          data: node.data,
+        }));
+        if (nodeItems.length > 0) {
+          categoryItems.push({
+            label: category.label,
+            children: nodeItems,
+          });
+        }
+      }
+      if (categoryItems.length > 0) {
+        transformedItems.push({
+          label: namespace.label,
+          children: categoryItems,
+        });
+      }
+    }
   }
+  return transformedItems;
+});
+
+
+// 组件挂载时加载节点定义
+onMounted(async () => {
+  loading.value = true;
+  await nodeStore.fetchAllNodeDefinitions();
+  loading.value = false;
+});
+// Blender-style submenu logic
+const handleShowNodeSubMenu = () => {
+  if (hideSubMenuTimer) clearTimeout(hideSubMenuTimer);
+  // Small delay to ensure parent-rect is available if menu just appeared
+  nextTick(() => {
+    if (addNodeMenuItemRef.value?.getBoundingClientRect()) {
+      isAddNodeSubMenuOpen.value = true;
+    }
+  });
 };
 
-// onAddGroup 函数
+const handleHideNodeSubMenuDelayed = () => {
+  if (hideSubMenuTimer) clearTimeout(hideSubMenuTimer);
+  hideSubMenuTimer = window.setTimeout(() => {
+    isAddNodeSubMenuOpen.value = false;
+  }, SUBMENU_DELAY);
+};
+
+const cancelHideNodeSubMenu = () => {
+  if (hideSubMenuTimer) clearTimeout(hideSubMenuTimer);
+};
+
+const handleMouseLeaveBaseMenu = (event: MouseEvent) => {
+  // If mouse leaves the base menu and not moving towards an open submenu, close submenu
+  if (isAddNodeSubMenuOpen.value && baseMenuRef.value && !baseMenuRef.value.contains(event.relatedTarget as Node)) {
+     // Check if relatedTarget is part of the CascadingMenu. This is tricky.
+     // A simpler approach: CascadingMenu itself handles mouseleave to call handleHideNodeSubMenuDelayed.
+     // If mouse leaves base menu entirely, and also leaves the submenu, it will close.
+  }
+   // For now, rely on CascadingMenu's own mouseleave and the item's mouseleave
+};
+
+
+// 处理来自 CascadingMenu 的节点选择
+const onCascadingNodeSelect = (item: CascadingMenuItemType) => {
+  if (item.id) {
+    // emit('add-node', item.id); // 旧的 emit
+    emit('request-add-node', { fullNodeType: item.id, screenPosition: props.position }); // 新的 emit
+  }
+  closeAllContextMenus(); // This will emit 'close'
+};
+
+
+const closeAllContextMenus = () => {
+  isAddNodeSubMenuOpen.value = false; // Hide submenu first
+  emit('close'); // This will set props.visible to false, hiding everything
+};
+
+const handleOpenSearchPanel = () => {
+  closeAllContextMenus(); // 关闭当前右键菜单
+  // 延迟发出事件，确保 'close' 事件先生效，避免潜在的竞争条件
+  nextTick(() => {
+    emit('open-node-search-panel');
+  });
+};
+
+// 基础菜单操作
+// 基础菜单操作
 const onAddGroup = () => {
   emit('add-group');
-  emit('close');
+  closeAllContextMenus();
 };
 
 const onCopy = () => {
   if (!props.hasSelectedNodes) return;
   emit('copy');
-  emit('close');
+  closeAllContextMenus();
 };
 
 const onPaste = () => {
   if (!props.hasCopiedNodes) return;
   emit('paste');
-  emit('close');
+  closeAllContextMenus();
 };
 
 const onDelete = () => {
   if (!props.hasSelectedNodes) return;
   emit('delete');
-  emit('close');
+  closeAllContextMenus();
 };
 
 const onSelectAll = () => {
   emit('select-all');
-  emit('close');
+  closeAllContextMenus();
 };
 
 const onResetView = () => {
   emit('reset-view');
-  emit('close');
+  closeAllContextMenus();
 };
 </script>
 
 <style scoped>
-.context-menu-loading,
-.context-menu-no-results {
-  @apply p-3 text-center text-gray-500 dark:text-gray-400 text-sm;
-}
-
 .context-menu {
-  position: fixed; /* 改为 fixed 定位，避免影响画布布局 */
-  min-width: 200px;
-  max-height: 400px; /* 与定位逻辑中的 MENU_MAX_HEIGHT 保持一致 */
-  overflow-y: auto; /* 内容超出时显示滚动条 */
-  z-index: 1000; /* 确保菜单显示在最上层 */
-  /* 移除重复的样式定义，保留 shared.css 中的基础样式 */
-}
-
-.context-menu-search {
-  @apply sticky top-0 p-2 border-b border-gray-200 dark:border-gray-700 bg-inherit;
-}
-
-.context-menu-search-input {
-  @apply w-full px-3 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 outline-none placeholder-gray-400 dark:placeholder-gray-500;
+  position: fixed;
+  min-width: 250px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 1000;
 }
 
 .context-menu-items {
   @apply max-h-[calc(400px-3rem)] overflow-y-auto;
 }
 
+.context-menu-item {
+  @apply flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer;
+}
+
+.context-menu-item.disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+.context-menu-item .icon {
+  @apply mr-2 text-gray-500 dark:text-gray-400;
+}
+.submenu-arrow-static {
+  @apply ml-auto pl-2 text-xs text-gray-400 dark:text-gray-500;
+}
+
+.context-menu-separator {
+  @apply my-1 border-t border-gray-200 dark:border-gray-700;
+}
+
+.context-menu-footer {
+  @apply border-t border-gray-200 dark:border-gray-700 mt-auto sticky bottom-0 bg-inherit;
+}
 </style>

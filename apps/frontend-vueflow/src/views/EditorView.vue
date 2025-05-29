@@ -31,6 +31,7 @@
               @connect="handleConnect"
               @node-drag-stop="handleNodesDragStop"
               @elements-remove="handleElementsRemove"
+              @request-add-node-to-workflow="handleRequestAddNodeFromCanvas"
               :node-types="nodeTypes"
             />
             <!-- 传递 nodeTypes, 添加 key 绑定, 添加 nodes-drag-stop 和 elements-remove 监听 -->
@@ -78,7 +79,7 @@ import NodePreviewPanel from "../components/graph/sidebar/NodePreviewPanel.vue";
 import RightPreviewPanel from "../components/graph/sidebar/RightPreviewPanel.vue";
 import DockedEditorWrapper from "../components/graph/editor/DockedEditorWrapper.vue";
 import StatusBar from "../components/graph/StatusBar.vue";
-import { type Node, type Edge } from "@vue-flow/core";
+import { type Node, type Edge, type XYPosition } from "@vue-flow/core"; // +++ 导入 XYPosition
 import { useNodeStore } from "../stores/nodeStore";
 import { useWorkflowStore } from "../stores/workflowStore";
 import { useTabStore } from "../stores/tabStore";
@@ -202,6 +203,19 @@ const handlePaneReady = async (instance: any) => {
   } else {
     console.warn("EditorView (handlePaneReady): Pane ready but no active tab ID yet.");
   }
+};
+
+// 处理来自 Canvas (通过右键菜单触发) 的节点添加请求
+const handleRequestAddNodeFromCanvas = async (payload: { fullNodeType: string; flowPosition: XYPosition }) => {
+  console.debug(`[EditorView] handleRequestAddNodeFromCanvas received payload:`, payload);
+  if (!payload || !payload.fullNodeType) {
+    console.error('[EditorView] Invalid payload for request-add-node-to-workflow:', payload);
+    return;
+  }
+  // handleAddNodeFromPanel (来自 useCanvasInteraction) 目前不接受外部位置参数来覆盖其内部中心定位。
+  // 因此，我们只传递 fullNodeType，节点将由 handleAddNodeFromPanel 的内部逻辑定位。
+  // payload.flowPosition 在这里暂时不使用，以保持与面板添加行为一致。
+  await handleAddNodeFromPanel(payload.fullNodeType);
 };
 
 // 提供 sidebarRef 给子组件

@@ -23,7 +23,7 @@
     </VueFlow>
     <!-- 画布右键菜单 -->
     <ContextMenu :visible="showPaneContextMenu" :position="contextMenuPosition" :has-selected-nodes="hasSelectedNodes"
-      :has-copied-nodes="hasCopiedNodes" @add-node="addNode" @add-group="addGroup" @copy="copySelected" @paste="paste"
+      :has-copied-nodes="hasCopiedNodes" @request-add-node="forwardRequestAddNode" @add-group="addGroup" @copy="copySelected" @paste="paste"
       @delete="deleteSelected" @select-all="onSelectAll" @reset-view="resetView" @close="closePaneContextMenu" />
 
     <!-- 节点右键菜单 (根据选中数量显示不同内容) -->
@@ -82,6 +82,7 @@ const emit = defineEmits<{
   'node-click': [node: Node]
   'pane-ready': [instance: any] // Revert to emitting the hook instance, use 'any' for now
   'connect': [connection: Connection],
+  'request-add-node-to-workflow': [payload: { fullNodeType: string; flowPosition: XYPosition }] // +++ 新的 emit
 }>();
 
 // 使用计算属性处理双向绑定
@@ -252,46 +253,25 @@ const closeNodeContextMenu = () => closeContextMenu(showNodeContextMenu);
 // 关闭插槽右键菜单
 const closeSlotContextMenu = () => closeContextMenu(showSlotContextMenu);
 
-// 添加节点
-const addNode = (nodeType?: string) => {
-  const position = project(contextMenuPosition.value) as XYPosition;
-
-  // 如果没有指定节点类型，创建一个基础节点
-  if (!nodeType) {
-    const basicNode: Node = {
-      id: `node-${Date.now()}`,
-      type: 'default',
-      position,
-      data: { label: '新节点' }
-    };
-    internalElements.value = [...internalElements.value, basicNode];
+// 转发来自 ContextMenu 的节点添加请求给父组件 (EditorView)
+const forwardRequestAddNode = (payload: { fullNodeType: string; screenPosition: XYPosition }) => {
+  console.debug(`[Canvas] forwardRequestAddNode received payload:`, payload);
+  if (!payload || !payload.fullNodeType || !payload.screenPosition) {
+    console.error('[Canvas] Invalid payload for forwarding request-add-node:', payload);
     return;
   }
 
-  // 获取节点定义 (使用 find)
-  // 使用从 storeToRefs 获取的响应式 nodeDefinitions
-  const nodeDefinition = nodeDefinitions.value.find(def => def.type === nodeType);
-  if (!nodeDefinition) {
-    console.error(`Node definition not found for type: ${nodeType}`);
-    return;
-  }
+  // `project` 函数将屏幕坐标转换为流程图坐标
+  const flowPosition = project(payload.screenPosition);
+  console.debug(`[Canvas] Calculated flowPosition for context menu add:`, flowPosition);
 
-  // 创建新节点
-  const newNode: Node = {
-    id: `node-${Date.now()}`,
-    type: nodeType, // 使用传入的节点类型
-    position,
-    data: {
-      nodeType, // 实际的节点类型
-      label: nodeDefinition.displayName || nodeDefinition.type,
-      inputs: nodeDefinition.inputs || {},
-      outputs: nodeDefinition.outputs || {},
-      category: nodeDefinition.category
-    }
-  };
-
-  internalElements.value = [...internalElements.value, newNode];
+  emit('request-add-node-to-workflow', {
+    fullNodeType: payload.fullNodeType,
+    flowPosition: flowPosition
+  });
+  closeAllContextMenus(); // 添加节点后关闭菜单
 };
+
 
 // 添加节点组
 const addGroup = () => {
