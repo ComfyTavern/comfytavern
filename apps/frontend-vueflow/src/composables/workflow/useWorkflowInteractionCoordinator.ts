@@ -45,38 +45,40 @@ export function useWorkflowInteractionCoordinator() {
    * @param internalId - 可选的标签页内部 ID。如果未提供，则使用活动标签页的 ID。
    * @returns 当前工作流状态快照，如果找不到或没有活动标签页则返回 undefined。
    */
-  function _getCurrentSnapshot(internalId?: string): WorkflowStateSnapshot | undefined {
+  // 内部工具函数
+  function getCurrentSnapshot(internalId?: string): WorkflowStateSnapshot | undefined {
     const idToUse = internalId ?? tabStore.activeTabId;
-    if (!idToUse) {
-      console.warn("[InteractionCoordinator] 无法获取快照：没有活动标签页或未提供 ID。");
-      return undefined;
-    }
-    // workflowManager.getCurrentSnapshot 在找不到时会返回 undefined
-    return workflowManager.getCurrentSnapshot(idToUse);
+    return idToUse ? workflowManager.getCurrentSnapshot(idToUse) : undefined;
   }
 
-  /**
-   * 记录历史快照的辅助函数。
-   * @param internalId - 标签页的内部 ID。
-   * @param entry - 要记录的历史条目信息。
-   * @param snapshotToRecord - 可选的快照对象。如果提供，则记录此快照；否则，从管理器获取当前快照。
-   */
-  function _recordHistory(
-    internalId: string,
-    entry: HistoryEntry,
-    snapshotToRecord?: WorkflowStateSnapshot
-  ) {
-    const snapshot = snapshotToRecord ?? _getCurrentSnapshot(internalId);
+  function validateAndGetSnapshot(internalId: string | undefined, action: string): { snapshot?: WorkflowStateSnapshot; error?: string } {
+    if (!internalId) {
+      return { error: `[${action}] 无效的标签页ID` };
+    }
+    const snapshot = getCurrentSnapshot(internalId);
+    if (!snapshot) {
+      return { error: `[${action}] 无法获取标签页 ${internalId} 的快照` };
+    }
+    return { snapshot };
+  }
+
+  function recordHistory(internalId: string, entry: HistoryEntry, snapshotToRecord?: WorkflowStateSnapshot) {
+    const snapshot = snapshotToRecord ?? getCurrentSnapshot(internalId);
     if (snapshot) {
-      // 将完整的 entry 对象传递给 historyManager
       historyManager.recordSnapshot(internalId, entry, snapshot);
-      // console.debug(`[InteractionCoordinator] 已记录标签页 ${internalId} 的快照: "${entry.summary}"`);
-    } else {
-      console.warn(
-        `[InteractionCoordinator] 无法获取或使用提供的快照为标签页 ${internalId} 记录历史: "${entry.summary}"`
-      );
     }
   }
+
+  async function updateNodeInternals(internalId: string, nodeIds: string[]) {
+    const instance = workflowViewManagement.getVueFlowInstance(internalId);
+    if (instance) {
+      await nextTick();
+      await nextTick();
+      instance.updateNodeInternals(nodeIds);
+      await nextTick();
+    }
+  }
+
 
   // --- 状态更新与历史记录函数 ---
   // 这些函数遵循一个通用模式：
@@ -101,17 +103,14 @@ export function useWorkflowInteractionCoordinator() {
     value: any,
     entry: HistoryEntry
   ) {
-    if (!internalId || !nodeId || inputKey === undefined) {
+    if (!nodeId || inputKey === undefined) {
       console.warn("[InteractionCoordinator:updateNodeInputValueAndRecord] 无效参数。");
       return;
     }
 
-    // 获取当前快照
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot) {
-      console.error(
-        `[InteractionCoordinator:updateNodeInputValueAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
-      );
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(internalId, "updateNodeInputValueAndRecord");
+    if (snapshotError || !currentSnapshot) {
+      console.error(snapshotError || `[InteractionCoordinator:updateNodeInputValueAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
       return;
     }
 
@@ -147,7 +146,7 @@ export function useWorkflowInteractionCoordinator() {
     await workflowManager.setElements(internalId, nextSnapshot.elements);
 
     // 记录历史
-    _recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
+    recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
 
     // 触发预览 (如果启用)
     requestPreviewExecution(internalId, nodeId, inputKey, value);
@@ -169,17 +168,14 @@ export function useWorkflowInteractionCoordinator() {
     value: any,
     entry: HistoryEntry
   ) {
-    if (!internalId || !nodeId || configKey === undefined) {
+    if (!nodeId || configKey === undefined) {
       console.warn("[InteractionCoordinator:updateNodeConfigValueAndRecord] 无效参数。");
       return;
     }
 
-    // 获取当前快照
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot) {
-      console.error(
-        `[InteractionCoordinator:updateNodeConfigValueAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
-      );
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(internalId, "updateNodeConfigValueAndRecord");
+    if (snapshotError || !currentSnapshot) {
+      console.error(snapshotError || `[InteractionCoordinator:updateNodeConfigValueAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
       return;
     }
 
@@ -272,7 +268,7 @@ export function useWorkflowInteractionCoordinator() {
     await workflowManager.setElements(internalId, finalElements);
 
     // 记录历史 (使用准备好的 nextSnapshot)
-    _recordHistory(internalId, entry, nextSnapshot);
+    recordHistory(internalId, entry, nextSnapshot);
 
     // 触发预览 (如果启用)
     // 注意：预览通常针对输入值的变化。配置值的变化是否需要触发预览取决于具体情况。
@@ -292,16 +288,13 @@ export function useWorkflowInteractionCoordinator() {
     updates: { nodeId: string; position: { x: number; y: number } }[],
     entry: HistoryEntry
   ) {
-    if (!internalId || !updates || updates.length === 0) {
+    if (!updates || updates.length === 0) {
       console.warn("[InteractionCoordinator:updateNodePositionAndRecord] 提供了无效参数。");
       return;
     }
-    // 获取当前快照
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot) {
-      console.error(
-        `[InteractionCoordinator:updateNodePositionAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
-      );
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(internalId, "updateNodePositionAndRecord");
+    if (snapshotError || !currentSnapshot) {
+      console.error(snapshotError || `[InteractionCoordinator:updateNodePositionAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
       return;
     }
 
@@ -344,7 +337,7 @@ export function useWorkflowInteractionCoordinator() {
 
     // 记录历史
     // 传递 nextSnapshot 确保记录的是我们预期的、包含所有位置更新的状态
-    _recordHistory(internalId, entry, nextSnapshot);
+    recordHistory(internalId, entry, nextSnapshot);
   }
 
   /**
@@ -374,12 +367,9 @@ export function useWorkflowInteractionCoordinator() {
     targetNodeId: string,
     entry: HistoryEntry
   ) {
-    // 获取当前快照
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot || !currentSnapshot.workflowData) {
-      console.error(
-        `[handleConnectionWithInterfaceUpdate] 无法获取标签页 ${internalId} 的当前快照或缺少 workflowData。`
-      );
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(internalId, "handleConnectionWithInterfaceUpdate");
+    if (snapshotError || !currentSnapshot || !currentSnapshot.workflowData) {
+      console.error(snapshotError || `[handleConnectionWithInterfaceUpdate] 无法获取标签页 ${internalId} 的当前快照或缺少 workflowData。`);
       return;
     }
 
@@ -453,6 +443,7 @@ export function useWorkflowInteractionCoordinator() {
         // 确保 nextSnapshot.elements 是最新的
         nextSnapshot.elements.push(klona(newEdge)); // 直接修改 nextSnapshot.elements
       } else {
+        console.warn(`[InteractionCoordinator] Edge ${newEdge.id} already exists in elements`);
       }
     }
 
@@ -463,7 +454,7 @@ export function useWorkflowInteractionCoordinator() {
       nextSnapshot.workflowData!.interfaceOutputs = klona(newOutputs);
     }
 
-    _recordHistory(internalId, entry, nextSnapshot);
+    recordHistory(internalId, entry, nextSnapshot);
 
     await workflowManager.setElementsAndInterface(
       internalId,
@@ -475,17 +466,7 @@ export function useWorkflowInteractionCoordinator() {
     await nextTick(); // 等待下一个 tick，确保响应式更新已传播
 
     // 触发视图更新 (强制更新连接节点的内部结构)
-    const instance = workflowViewManagement.getVueFlowInstance(internalId);
-    if (instance) {
-      await nextTick(); // Tick 2 (Vue DOM updates based on store changes should start)
-      await nextTick(); // Tick 3 (Give more time for DOM to settle from BaseNode's v-for re-render)
-      instance.updateNodeInternals([sourceNodeId, targetNodeId]); // 更新节点内部
-      await nextTick(); // 确保 updateNodeInternals 完成后的更新生效
-    } else {
-      console.warn(
-        `[InteractionCoordinator] 无法获取标签页 ${internalId} 的 VueFlow 实例以强制 updateNodeInternals。`
-      );
-    }
+    await updateNodeInternals(internalId, [sourceNodeId, targetNodeId]);
   }
 
   /**
@@ -495,16 +476,13 @@ export function useWorkflowInteractionCoordinator() {
    * @param entry - 描述此操作的历史记录条目。
    */
   async function addNodeAndRecord(internalId: string, nodeToAdd: VueFlowNode, entry: HistoryEntry) {
-    if (!internalId || !nodeToAdd) {
+    if (!nodeToAdd) {
       console.warn("[InteractionCoordinator:addNodeAndRecord] 提供了无效参数。");
       return;
     }
-    // 获取当前快照
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot) {
-      console.error(
-        `[InteractionCoordinator:addNodeAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
-      );
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(internalId, "addNodeAndRecord");
+    if (snapshotError || !currentSnapshot) {
+      console.error(snapshotError || `[InteractionCoordinator:addNodeAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
       return;
     }
 
@@ -519,7 +497,7 @@ export function useWorkflowInteractionCoordinator() {
     await workflowManager.addNode(internalId, nodeToAdd);
 
     // 记录历史
-    _recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
+    recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
   }
 
   /**
@@ -554,7 +532,7 @@ export function useWorkflowInteractionCoordinator() {
         `[InteractionCoordinator] 更新接口后无法获取标签页 ${internalId} 的状态。无法过滤边。`
       );
       // 尝试记录历史，但可能不包含边的更改
-      _recordHistory(internalId, entry);
+      recordHistory(internalId, entry);
       return;
     }
 
@@ -630,12 +608,12 @@ export function useWorkflowInteractionCoordinator() {
         `[InteractionCoordinator] 接口更新后无法获取标签页 ${internalId} 的最终状态。无法准确记录历史。`
       );
       // 尝试使用 stateAfter 作为回退，但不保证完全准确
-      _recordHistory(internalId, entry, stateAfter);
+      recordHistory(internalId, entry, stateAfter);
       return;
     }
 
     // 记录最终的历史快照
-    _recordHistory(internalId, entry, finalSnapshot);
+    recordHistory(internalId, entry, finalSnapshot);
   }
 
   /**
@@ -645,14 +623,13 @@ export function useWorkflowInteractionCoordinator() {
    * @param entry - 描述此操作的历史记录条目。
    */
   async function addEdgeAndRecord(internalId: string, edgeToAdd: Edge, entry: HistoryEntry) {
-    if (!internalId || !edgeToAdd) {
+    if (!edgeToAdd) {
       console.warn("[InteractionCoordinator:addEdgeAndRecord] 提供了无效参数。");
       return;
     }
-    // 获取当前快照
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot) {
-      console.error(`[addEdgeAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(internalId, "addEdgeAndRecord");
+    if (snapshotError || !currentSnapshot) {
+      console.error(snapshotError || `[addEdgeAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
       return;
     }
 
@@ -666,7 +643,7 @@ export function useWorkflowInteractionCoordinator() {
     workflowManager.setElements(internalId, nextSnapshot.elements);
 
     // 记录历史
-    _recordHistory(internalId, entry, nextSnapshot);
+    recordHistory(internalId, entry, nextSnapshot);
   }
 
   /**
@@ -680,25 +657,21 @@ export function useWorkflowInteractionCoordinator() {
     elementsToRemove: (VueFlowNode | Edge)[],
     entry: HistoryEntry
   ) {
-    if (!internalId || !elementsToRemove || elementsToRemove.length === 0) {
+    if (!elementsToRemove || elementsToRemove.length === 0) {
       console.warn("[InteractionCoordinator:removeElementsAndRecord] 提供了无效参数。");
+      return;
+    }
+
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(internalId, "removeElementsAndRecord");
+    if (snapshotError || !currentSnapshot) {
+      console.error(snapshotError || `[InteractionCoordinator:removeElementsAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
       return;
     }
 
     // 获取当前元素和要移除元素的 ID 集合
     const elementIdsToRemoveSet = new Set(elementsToRemove.map((el) => el.id));
-    const currentElements = workflowManager.getElements(internalId);
-    // 过滤掉要移除的元素
-    const remainingElements = currentElements.filter((el) => !elementIdsToRemoveSet.has(el.id));
-
-    // 获取当前快照 (需要完整的快照信息)
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot) {
-      console.error(
-        `[InteractionCoordinator:removeElementsAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
-      );
-      return;
-    }
+    // 使用快照中的元素进行过滤，以确保一致性
+    const remainingElements = currentSnapshot.elements.filter((el) => !elementIdsToRemoveSet.has(el.id));
 
     // 检查是否真的有元素被移除，避免无效的历史记录
     if (remainingElements.length === currentSnapshot.elements.length) {
@@ -718,7 +691,7 @@ export function useWorkflowInteractionCoordinator() {
     workflowManager.setElements(internalId, nextSnapshot.elements);
 
     // 记录历史
-    _recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
+    recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
   }
 
   /**
@@ -736,14 +709,13 @@ export function useWorkflowInteractionCoordinator() {
     handleType: "source" | "target",
     entry: HistoryEntry
   ) {
-    if (!internalId || !nodeId || !handleId || !handleType) {
+    if (!nodeId || !handleId || !handleType) {
       console.warn("[InteractionCoordinator:removeEdgesByHandleAndRecord] 提供了无效参数。");
       return;
     }
-    // 获取当前快照
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot) {
-      console.error(`[removeEdgesByHandleAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(internalId, "removeEdgesByHandleAndRecord");
+    if (snapshotError || !currentSnapshot) {
+      console.error(snapshotError || `[removeEdgesByHandleAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
       return;
     }
 
@@ -797,7 +769,7 @@ export function useWorkflowInteractionCoordinator() {
       handleType,
       removedEdges: removedEdgeDetails,
     };
-    _recordHistory(internalId, entry, nextSnapshot);
+    recordHistory(internalId, entry, nextSnapshot);
   }
 
   /**
@@ -813,14 +785,19 @@ export function useWorkflowInteractionCoordinator() {
     dimensions: { width?: number; height?: number },
     entry: HistoryEntry
   ) {
-    if (!internalId || !nodeId || (!dimensions.width && !dimensions.height)) {
+    if (!nodeId || (!dimensions.width && !dimensions.height)) {
       console.warn("[InteractionCoordinator:updateNodeDimensionsAndRecord] 无效参数。");
       return;
     }
 
-    // 获取当前元素并找到目标节点索引
-    const currentElements = workflowManager.getElements(internalId);
-    const nodeIndex = currentElements.findIndex(
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(internalId, "updateNodeDimensionsAndRecord");
+    if (snapshotError || !currentSnapshot) {
+      console.error(snapshotError || `[InteractionCoordinator:updateNodeDimensionsAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
+      return;
+    }
+
+    const nextSnapshot = klona(currentSnapshot);
+    const nodeIndex = nextSnapshot.elements.findIndex(
       (el: VueFlowNode | Edge) => el.id === nodeId && !("source" in el)
     );
     if (nodeIndex === -1) {
@@ -829,10 +806,7 @@ export function useWorkflowInteractionCoordinator() {
       );
       return;
     }
-
-    // 创建元素的深拷贝以进行修改
-    const newElements = klona(currentElements);
-    const targetNode = newElements[nodeIndex] as VueFlowNode;
+    const targetNode = nextSnapshot.elements[nodeIndex] as VueFlowNode;
 
     // 更新目标节点的宽度和/或高度及其样式
     if (dimensions.width !== undefined) {
@@ -844,17 +818,13 @@ export function useWorkflowInteractionCoordinator() {
       targetNode.style = { ...(targetNode.style || {}), height: `${dimensions.height}px` };
     }
 
-    // 获取当前快照 (用于比较和记录)
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot) {
-      console.error(
-        `[InteractionCoordinator:updateNodeDimensionsAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
-      );
+    // 检查尺寸是否真的发生了变化
+    const originalNode = currentSnapshot.elements.find(el => el.id === nodeId && !("source" in el)) as VueFlowNode | undefined;
+    if (!originalNode) {
+      // This case should ideally not happen if nodeIndex was found
+      console.error(`[InteractionCoordinator:updateNodeDimensionsAndRecord] Original node ${nodeId} not found in current snapshot for comparison.`);
       return;
     }
-
-    // 检查尺寸是否真的发生了变化
-    const originalNode = currentSnapshot.elements[nodeIndex] as VueFlowNode;
     const hasChanged =
       (dimensions.width !== undefined && originalNode.width !== dimensions.width) ||
       (dimensions.height !== undefined && originalNode.height !== dimensions.height);
@@ -867,17 +837,11 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 准备下一个状态快照 (newElements 已经是修改后的)
-    const nextSnapshot: WorkflowStateSnapshot = {
-      ...currentSnapshot,
-      elements: newElements,
-    };
-
     // 应用状态更新
     await workflowManager.setElements(internalId, nextSnapshot.elements);
 
     // 记录历史
-    _recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
+    recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
   }
 
   /**
@@ -896,24 +860,26 @@ export function useWorkflowInteractionCoordinator() {
     stateUpdate: { height?: number; value?: string },
     entry: HistoryEntry
   ) {
-    if (!internalId || !nodeId || !inputKey || !stateUpdate) {
+    if (!nodeId || !inputKey || !stateUpdate) {
       console.warn("[InteractionCoordinator:updateNodeComponentStateAndRecord] 无效参数。");
       return;
     }
 
-    // 获取当前元素并找到目标节点索引
-    const currentElements = workflowManager.getElements(internalId);
-    const nodeIndex = currentElements.findIndex((el) => el.id === nodeId && !("source" in el));
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(internalId, "updateNodeComponentStateAndRecord");
+    if (snapshotError || !currentSnapshot) {
+      console.error(snapshotError || `[InteractionCoordinator:updateNodeComponentStateAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
+      return;
+    }
+
+    const nextSnapshot = klona(currentSnapshot);
+    const nodeIndex = nextSnapshot.elements.findIndex((el) => el.id === nodeId && !("source" in el));
     if (nodeIndex === -1) {
       console.error(
         `[InteractionCoordinator:updateNodeComponentStateAndRecord] 在标签页 ${internalId} 中未找到节点 ${nodeId}。`
       );
       return;
     }
-
-    // 创建元素的深拷贝以进行修改
-    const newElements = klona(currentElements);
-    const targetNode = newElements[nodeIndex] as VueFlowNode;
+    const targetNode = nextSnapshot.elements[nodeIndex] as VueFlowNode;
 
     // 更新目标节点 data 中的 componentStates
     targetNode.data = targetNode.data || {};
@@ -924,17 +890,12 @@ export function useWorkflowInteractionCoordinator() {
     if (stateUpdate.value !== undefined)
       targetNode.data.componentStates[inputKey].value = stateUpdate.value;
 
-    // 获取当前快照 (用于比较和记录)
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot) {
-      console.error(
-        `[InteractionCoordinator:updateNodeComponentStateAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
-      );
+    // 检查状态是否真的发生了变化
+    const originalNode = currentSnapshot.elements.find(el => el.id === nodeId && !("source" in el)) as VueFlowNode | undefined;
+    if (!originalNode) {
+      console.error(`[InteractionCoordinator:updateNodeComponentStateAndRecord] Original node ${nodeId} not found in current snapshot for comparison.`);
       return;
     }
-
-    // 检查状态是否真的发生了变化
-    const originalNode = currentSnapshot.elements[nodeIndex] as VueFlowNode;
     const originalComponentState = originalNode.data?.componentStates?.[inputKey] || {};
     const hasChanged =
       (stateUpdate.height !== undefined && originalComponentState.height !== stateUpdate.height) ||
@@ -948,17 +909,11 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 准备下一个状态快照 (newElements 已经是修改后的)
-    const nextSnapshot: WorkflowStateSnapshot = {
-      ...currentSnapshot,
-      elements: newElements,
-    };
-
     // 应用状态更新
     await workflowManager.setElements(internalId, nextSnapshot.elements);
 
     // 记录历史
-    _recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
+    recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
   }
 
   /**
@@ -972,16 +927,13 @@ export function useWorkflowInteractionCoordinator() {
     newName: string,
     entry: HistoryEntry
   ) {
-    if (!internalId || newName === undefined) {
+    if (newName === undefined) {
       console.warn("[InteractionCoordinator:updateWorkflowNameAndRecord] 无效参数。");
       return;
     }
-    // 获取当前快照
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot || !currentSnapshot.workflowData) {
-      console.error(
-        `[updateWorkflowNameAndRecord] 无法获取标签页 ${internalId} 的当前快照或 workflowData。`
-      );
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(internalId, "updateWorkflowNameAndRecord");
+    if (snapshotError || !currentSnapshot || !currentSnapshot.workflowData) {
+      console.error(snapshotError || `[updateWorkflowNameAndRecord] 无法获取标签页 ${internalId} 的当前快照或 workflowData。`);
       return;
     }
 
@@ -1000,7 +952,7 @@ export function useWorkflowInteractionCoordinator() {
 
     if (applied) {
       // 记录历史
-      _recordHistory(internalId, entry, nextSnapshot);
+      recordHistory(internalId, entry, nextSnapshot);
       // 标记为脏状态并更新标签页标题
       workflowManager.markAsDirty(internalId);
       tabStore.updateTab(internalId, { label: newName });
@@ -1020,16 +972,13 @@ export function useWorkflowInteractionCoordinator() {
     newDescription: string,
     entry: HistoryEntry
   ) {
-    if (!internalId || newDescription === undefined) {
+    if (newDescription === undefined) {
       console.warn("[InteractionCoordinator:updateWorkflowDescriptionAndRecord] 无效参数。");
       return;
     }
-    // 获取当前快照
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot || !currentSnapshot.workflowData) {
-      console.error(
-        `[updateWorkflowDescriptionAndRecord] 无法获取标签页 ${internalId} 的当前快照或 workflowData。`
-      );
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(internalId, "updateWorkflowDescriptionAndRecord");
+    if (snapshotError || !currentSnapshot || !currentSnapshot.workflowData) {
+      console.error(snapshotError || `[updateWorkflowDescriptionAndRecord] 无法获取标签页 ${internalId} 的当前快照或 workflowData。`);
       return;
     }
 
@@ -1051,7 +1000,7 @@ export function useWorkflowInteractionCoordinator() {
 
     if (applied) {
       // 记录历史
-      _recordHistory(internalId, entry, nextSnapshot);
+      recordHistory(internalId, entry, nextSnapshot);
       // 标记为脏状态
       workflowManager.markAsDirty(internalId);
     } else {
@@ -1070,11 +1019,6 @@ export function useWorkflowInteractionCoordinator() {
     target: { nodeId: string; slotKey: string } | null,
     entry: HistoryEntry
   ) {
-    if (!internalId) {
-      console.warn("[InteractionCoordinator:setPreviewTargetAndRecord] 无效的 internalId。");
-      return;
-    }
-
     // 如果正在尝试设置目标 (而不是清除)
     if (target) {
       const currentWorkflowState = workflowManager.getCurrentSnapshot(internalId); // 修正：使用 getCurrentSnapshot
@@ -1127,12 +1071,9 @@ export function useWorkflowInteractionCoordinator() {
       }
     }
 
-    // 获取当前快照
-    const currentSnapshot = _getCurrentSnapshot(internalId);
-    if (!currentSnapshot || !currentSnapshot.workflowData) {
-      console.error(
-        `[setPreviewTargetAndRecord] 无法获取标签页 ${internalId} 的当前快照或 workflowData。`
-      );
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(internalId, "setPreviewTargetAndRecord");
+    if (snapshotError || !currentSnapshot || !currentSnapshot.workflowData) {
+      console.error(snapshotError || `[setPreviewTargetAndRecord] 无法获取标签页 ${internalId} 的当前快照或 workflowData。`);
       return;
     }
 
@@ -1157,7 +1098,7 @@ export function useWorkflowInteractionCoordinator() {
     await workflowManager.setPreviewTarget(internalId, target);
 
     // 记录历史
-    _recordHistory(internalId, entry, nextSnapshot);
+    recordHistory(internalId, entry, nextSnapshot);
 
     // 触发预览 (可选，根据需求)
     // 当前设计是设置目标时不触发，而是后续节点值变化时触发
@@ -1304,21 +1245,16 @@ export function useWorkflowInteractionCoordinator() {
     nodeId: string,
     handleKey: string,
     newOrderedEdgeIds: string[],
-    entry: HistoryEntry // entry is for _recordHistory
+    entry: HistoryEntry // entry is for recordHistory
   ) {
     const currentActiveTabId = tabStore.activeTabId;
     if (!currentActiveTabId) {
-      console.error(
-        "[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] No active tab ID."
-      );
+      console.error("[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] No active tab ID.");
       return;
     }
-
-    const currentSnapshot = _getCurrentSnapshot(currentActiveTabId);
-    if (!currentSnapshot) {
-      console.error(
-        `[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`
-      );
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(currentActiveTabId, "updateNodeInputConnectionOrderAndRecord");
+    if (snapshotError || !currentSnapshot) {
+      console.error(snapshotError || `[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`);
       return;
     }
 
@@ -1345,7 +1281,7 @@ export function useWorkflowInteractionCoordinator() {
     }
 
     // 记录历史
-    _recordHistory(currentActiveTabId, entry, nextSnapshot);
+    recordHistory(currentActiveTabId, entry, nextSnapshot);
 
     // 应用状态更新
     // 使用 applyStateSnapshot 来确保 workflowData (如果被修改) 也被正确应用
@@ -1359,14 +1295,8 @@ export function useWorkflowInteractionCoordinator() {
     // (可选) 触发视图更新，确保连接的节点正确渲染
     // 对于仅顺序更改，通常不需要 updateNodeInternals，除非它影响了插槽的显示方式
     // 但为了与其他多输入操作保持一致，可以考虑添加
-    await nextTick();
-    const instance = workflowViewManagement.getVueFlowInstance(currentActiveTabId);
-    if (instance) {
-      if (nextSnapshot.elements.find((n) => n.id === nodeId && !("source" in n))) {
-        await nextTick();
-        instance.updateNodeInternals([nodeId]);
-        await nextTick();
-      }
+    if (nextSnapshot.elements.find((n) => n.id === nodeId && !("source" in n))) {
+      await updateNodeInternals(currentActiveTabId, [nodeId]);
     }
   }
 
@@ -1383,19 +1313,16 @@ export function useWorkflowInteractionCoordinator() {
     edgeId: string,
     originalTargetNodeId: string,
     originalTargetHandleId: string,
-    entry: HistoryEntry // This entry is for _recordHistory
+    entry: HistoryEntry // This entry is for recordHistory
   ) {
     const currentActiveTabId = tabStore.activeTabId;
     if (!currentActiveTabId) {
       console.error("[InteractionCoordinator:disconnectEdgeFromInputAndRecord] No active tab ID.");
       return;
     }
-
-    const currentSnapshot = _getCurrentSnapshot(currentActiveTabId);
-    if (!currentSnapshot) {
-      console.error(
-        `[InteractionCoordinator:disconnectEdgeFromInputAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`
-      );
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(currentActiveTabId, "disconnectEdgeFromInputAndRecord");
+    if (snapshotError || !currentSnapshot) {
+      console.error(snapshotError || `[InteractionCoordinator:disconnectEdgeFromInputAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`);
       return;
     }
 
@@ -1428,7 +1355,7 @@ export function useWorkflowInteractionCoordinator() {
     // 当 disconnectEdgeFromMultiInput 实现后，它应该负责从 elements 中移除边。
 
     // 记录历史
-    _recordHistory(currentActiveTabId, entry, nextSnapshot);
+    recordHistory(currentActiveTabId, entry, nextSnapshot);
 
     // 应用状态更新
     if (nextSnapshot.workflowData) {
@@ -1443,16 +1370,8 @@ export function useWorkflowInteractionCoordinator() {
     }
 
     // (可选) 触发视图更新
-    await nextTick();
-    const instance = workflowViewManagement.getVueFlowInstance(currentActiveTabId);
-    if (instance) {
-      // 如果原始目标节点存在于更新后的快照中，则更新它
-      // (如果节点本身被删除了，则不需要更新)
-      if (nextSnapshot.elements.find((n) => n.id === originalTargetNodeId && !("source" in n))) {
-        await nextTick();
-        instance.updateNodeInternals([originalTargetNodeId]);
-        await nextTick();
-      }
+    if (nextSnapshot.elements.find((n) => n.id === originalTargetNodeId && !("source" in n))) {
+      await updateNodeInternals(currentActiveTabId, [originalTargetNodeId]);
     }
   }
 
@@ -1466,19 +1385,16 @@ export function useWorkflowInteractionCoordinator() {
   async function connectEdgeToInputAndRecord(
     newEdgeParams: Edge,
     targetIndexInOrder: number | undefined,
-    entry: HistoryEntry // entry is for _recordHistory
+    entry: HistoryEntry // entry is for recordHistory
   ) {
     const currentActiveTabId = tabStore.activeTabId;
     if (!currentActiveTabId) {
       console.error("[InteractionCoordinator:connectEdgeToInputAndRecord] No active tab ID.");
       return;
     }
-
-    const currentSnapshot = _getCurrentSnapshot(currentActiveTabId);
-    if (!currentSnapshot) {
-      console.error(
-        `[InteractionCoordinator:connectEdgeToInputAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`
-      );
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(currentActiveTabId, "connectEdgeToInputAndRecord");
+    if (snapshotError || !currentSnapshot) {
+      console.error(snapshotError || `[InteractionCoordinator:connectEdgeToInputAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`);
       return;
     }
 
@@ -1499,7 +1415,7 @@ export function useWorkflowInteractionCoordinator() {
     }
 
     // 记录历史
-    _recordHistory(currentActiveTabId, entry, nextSnapshot);
+    recordHistory(currentActiveTabId, entry, nextSnapshot);
 
     // 应用状态更新
     if (nextSnapshot.workflowData) {
@@ -1512,32 +1428,22 @@ export function useWorkflowInteractionCoordinator() {
     } else {
       // 万一 workflowData 变为 null (理论上不应该，但作为保险)
       await workflowManager.setElements(currentActiveTabId, nextSnapshot.elements);
-    }
-
-    // (可选) 触发视图更新，确保连接的节点正确渲染
-    await nextTick(); // 等待 DOM 更新
-    const instance = workflowViewManagement.getVueFlowInstance(currentActiveTabId);
-    if (instance) {
+      // (可选) 触发视图更新，确保连接的节点正确渲染
       const sourceNodeId = newEdgeParams.source;
       const targetNodeId = newEdgeParams.target;
-      // 确保节点 ID 有效再调用 updateNodeInternals
       if (
         sourceNodeId &&
         targetNodeId &&
         nextSnapshot.elements.find((n) => n.id === sourceNodeId) &&
         nextSnapshot.elements.find((n) => n.id === targetNodeId)
       ) {
-        await nextTick(); // 额外的 tick 可能有帮助
-        await nextTick();
-        instance.updateNodeInternals([sourceNodeId, targetNodeId]);
-        await nextTick();
+        await updateNodeInternals(currentActiveTabId, [sourceNodeId, targetNodeId]);
       } else {
         console.warn(
           `[InteractionCoordinator:connectEdgeToInputAndRecord] Source or target node for edge ${newEdgeParams.id} not found in snapshot, skipping updateNodeInternals.`
         );
       }
     }
-    // console.warn("[InteractionCoordinator:connectEdgeToInputAndRecord] Function has been refactored to align with coordinator pattern.");
   }
 
   /**
@@ -1571,12 +1477,9 @@ export function useWorkflowInteractionCoordinator() {
       console.error("[InteractionCoordinator:moveAndReconnectEdgeAndRecord] No active tab ID.");
       return;
     }
-
-    const currentSnapshot = _getCurrentSnapshot(currentActiveTabId);
-    if (!currentSnapshot) {
-      console.error(
-        `[InteractionCoordinator:moveAndReconnectEdgeAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`
-      );
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(currentActiveTabId, "moveAndReconnectEdgeAndRecord");
+    if (snapshotError || !currentSnapshot) {
+      console.error(snapshotError || `[InteractionCoordinator:moveAndReconnectEdgeAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`);
       return;
     }
 
@@ -1604,7 +1507,7 @@ export function useWorkflowInteractionCoordinator() {
     }
 
     // 记录历史
-    _recordHistory(currentActiveTabId, entry, nextSnapshot);
+    recordHistory(currentActiveTabId, entry, nextSnapshot);
 
     // 应用状态更新
     if (nextSnapshot.workflowData) {
@@ -1617,12 +1520,7 @@ export function useWorkflowInteractionCoordinator() {
     } else {
       // 万一 workflowData 变为 null (理论上不应该，但作为保险)
       await workflowManager.setElements(currentActiveTabId, nextSnapshot.elements);
-    }
-
-    // (可选) 触发视图更新，确保连接的节点正确渲染
-    await nextTick(); // 等待 DOM 更新
-    const instance = workflowViewManagement.getVueFlowInstance(currentActiveTabId);
-    if (instance) {
+      // (可选) 触发视图更新，确保连接的节点正确渲染
       const nodesToUpdate = new Set<string>();
       if (originalTargetNodeId) nodesToUpdate.add(originalTargetNodeId);
       if (newSourceNodeId) nodesToUpdate.add(newSourceNodeId);
@@ -1633,10 +1531,7 @@ export function useWorkflowInteractionCoordinator() {
       );
 
       if (validNodesToUpdate.length > 0) {
-        await nextTick();
-        await nextTick();
-        instance.updateNodeInternals(validNodesToUpdate);
-        await nextTick();
+        await updateNodeInternals(currentActiveTabId, validNodesToUpdate);
       } else {
         console.warn(
           `[InteractionCoordinator:moveAndReconnectEdgeAndRecord] No valid nodes found to update internals for edge ${edgeToMoveId}.`
