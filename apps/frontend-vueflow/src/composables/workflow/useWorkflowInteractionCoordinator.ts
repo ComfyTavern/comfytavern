@@ -1316,20 +1316,66 @@ export function useWorkflowInteractionCoordinator() {
    * @param entry - 接收一个已创建的 HistoryEntry 对象。
    */
   async function updateNodeInputConnectionOrderAndRecord(
-    // internalId: string, // internalId is now derived from activeTabId in multiInputActions
     nodeId: string,
     handleKey: string,
     newOrderedEdgeIds: string[],
-    entry: HistoryEntry
+    entry: HistoryEntry // entry is for _recordHistory
   ) {
-    // 调用新的 composable 中的方法
-    // internalId 将由 multiInputActions 内部通过 activeTabId.value 获取
-    await multiInputActions.updateNodeInputConnectionOrder(
-      nodeId,
-      handleKey,
-      newOrderedEdgeIds,
-      entry
+    const currentActiveTabId = tabStore.activeTabId;
+    if (!currentActiveTabId) {
+      console.error("[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] No active tab ID.");
+      return;
+    }
+
+    const currentSnapshot = _getCurrentSnapshot(currentActiveTabId);
+    if (!currentSnapshot) {
+      console.error(`[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] Cannot get snapshot for tab ${currentActiveTabId}`);
+      return;
+    }
+    
+    const nextSnapshot = klona(currentSnapshot); // 准备可变快照
+
+    // 调用 action，它将修改 nextSnapshot 或返回要更新的部分
+    // updateNodeInputConnectionOrder 期望 (mutableSnapshot, nodeId, handleKey, newOrderedEdgeIds)
+    // 并返回 Promise<{ modifiedElements, modifiedWorkflowData }>
+    const result = await multiInputActions.updateNodeInputConnectionOrder(
+      nextSnapshot,             // 1. mutableSnapshot
+      nodeId,                   // 2. nodeId
+      handleKey,                // 3. handleKey
+      newOrderedEdgeIds         // 4. newOrderedEdgeIds
     );
+
+    // 使用 action 返回的结果更新 nextSnapshot
+    // 即使 action 直接修改了 nextSnapshot.elements 和 nextSnapshot.workflowData，
+    // 并且返回了这些引用，那么这里的赋值是正确的。
+    // 如果 action 返回了全新的对象，这也是正确的。
+    nextSnapshot.elements = result.modifiedElements;
+    if (result.modifiedWorkflowData !== undefined) { // 检查 undefined，因为它可以是 null
+      nextSnapshot.workflowData = result.modifiedWorkflowData;
+    }
+    
+    // 记录历史
+    _recordHistory(currentActiveTabId, entry, nextSnapshot);
+
+    // 应用状态更新
+    // 使用 applyStateSnapshot 来确保 workflowData (如果被修改) 也被正确应用
+    const applied = workflowManager.applyStateSnapshot(currentActiveTabId, nextSnapshot);
+    if (!applied) {
+        console.error(`[InteractionCoordinator:updateNodeInputConnectionOrderAndRecord] Failed to apply snapshot for tab ${currentActiveTabId}.`);
+    }
+    
+    // (可选) 触发视图更新，确保连接的节点正确渲染
+    // 对于仅顺序更改，通常不需要 updateNodeInternals，除非它影响了插槽的显示方式
+    // 但为了与其他多输入操作保持一致，可以考虑添加
+    await nextTick();
+    const instance = workflowViewManagement.getVueFlowInstance(currentActiveTabId);
+    if (instance) {
+      if (nextSnapshot.elements.find(n => n.id === nodeId && !('source' in n))) {
+        await nextTick();
+        instance.updateNodeInternals([nodeId]);
+        await nextTick();
+      }
+    }
   }
 
   /**

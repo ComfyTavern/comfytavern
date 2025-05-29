@@ -1,7 +1,6 @@
 import { type Ref } from "vue";
 import { klona } from "klona/full";
 import {
-  type HistoryEntry,
   type GroupSlotInfo,
   DataFlowType,
   BuiltInSocketMatchCategory,
@@ -130,14 +129,50 @@ export function useMultiInputConnectionActions(
    * 请使用 reorderMultiInputConnections。
    */
   async function updateNodeInputConnectionOrder(
-    _nodeId: string,
-    _handleKey: string,
-    _newOrderedEdgeIds: string[],
-    _entry: HistoryEntry // 调用者 (协调器) 准备完整的条目
-  ) {
-    // 此函数依赖于 getCurrentSnapshotLocal 和直接的 store 访问。待重构。
-    console.error(`[MultiInputActions] Function 'updateNodeInputConnectionOrder' is pending full refactoring.`);
-    return Promise.resolve();
+    mutableSnapshot: WorkflowStateSnapshot,
+    nodeId: string,
+    handleKey: string,
+    newOrderedEdgeIds: string[]
+  ): Promise<{ modifiedElements: (VueFlowNode | Edge)[]; modifiedWorkflowData: (WorkflowObject & { id: string }) | null }> {
+    const elements = mutableSnapshot.elements;
+    const workflowData = mutableSnapshot.workflowData; // 可能为 null
+
+    const targetNode = elements.find(el => el.id === nodeId && !('source' in el)) as VueFlowNode | undefined;
+
+    if (!targetNode) {
+      console.warn(`[MultiInputActions:updateNodeInputConnectionOrder] Target node ${nodeId} not found. Skipping.`);
+      return { modifiedElements: elements, modifiedWorkflowData: workflowData };
+    }
+
+    const targetNodeData = targetNode.data as NodeInstanceData;
+    if (!targetNodeData) {
+      // 理论上，如果节点存在，它应该有 data 对象，但为了安全起见进行检查
+      console.warn(`[MultiInputActions:updateNodeInputConnectionOrder] Target node ${nodeId} has no data. Skipping.`);
+      return { modifiedElements: elements, modifiedWorkflowData: workflowData };
+    }
+
+    // 确保 inputConnectionOrders 对象存在
+    targetNodeData.inputConnectionOrders = targetNodeData.inputConnectionOrders || {};
+
+    if (newOrderedEdgeIds.length > 0) {
+      targetNodeData.inputConnectionOrders[handleKey] = [...newOrderedEdgeIds]; // 更新顺序
+      console.debug(`[MultiInputActions:updateNodeInputConnectionOrder] Updated order for ${handleKey} on node ${nodeId}:`, newOrderedEdgeIds);
+    } else {
+      // 如果 newOrderedEdgeIds 为空，则表示此多输入插槽不再有连接
+      if (targetNodeData.inputConnectionOrders && targetNodeData.inputConnectionOrders[handleKey]) {
+        delete targetNodeData.inputConnectionOrders[handleKey];
+        console.debug(`[MultiInputActions:updateNodeInputConnectionOrder] Removed empty order for ${handleKey} on node ${nodeId}.`);
+        if (Object.keys(targetNodeData.inputConnectionOrders).length === 0) {
+          delete targetNodeData.inputConnectionOrders; // 如果没有其他顺序，则删除整个对象
+          console.debug(`[MultiInputActions:updateNodeInputConnectionOrder] inputConnectionOrders object removed from node ${nodeId} as it became empty.`);
+        }
+      }
+      // 注意：此函数不直接处理 targetNode.data.inputs[handleKey].value 的清理。
+      // reorderMultiInputConnections 包含更全面的清理逻辑，包括 .value 数组。
+      // 如果需要，可以在协调器层面或通过调用 reorderMultiInputConnections(..., []) 来处理。
+    }
+
+    return { modifiedElements: elements, modifiedWorkflowData: workflowData };
   }
 
   /**

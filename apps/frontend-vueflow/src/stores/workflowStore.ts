@@ -483,47 +483,6 @@ export const useWorkflowStore = defineStore("workflow", () => {
     // console.debug(`[WorkflowStore:updateMultiInputConnectionsAndRecord] 已为节点 ${nodeId} 输入 ${inputKey} 更新连接并记录历史。`);
   }
 
-  // --- 新增：仅更新节点输入连接顺序并记录历史 ---
-  async function updateNodeInputConnectionOrderAndRecordOnly(
-    internalId: string,
-    nodeId: string,
-    handleKey: string,
-    newOrderedEdgeIds: string[],
-    entry: HistoryEntry
-  ): Promise<void> {
-    const currentSnapshot = workflowManager.getCurrentSnapshot(internalId);
-    if (!currentSnapshot) {
-      console.error(
-        `[WorkflowStore:updateNodeInputConnectionOrderAndRecordOnly] 无法获取标签页 ${internalId} 的当前快照。`
-      );
-      return;
-    }
-
-    const nextSnapshot = klona(currentSnapshot);
-    const nodeToUpdate = nextSnapshot.elements.find(
-      (el) => el.id === nodeId && !("source" in el)
-    ) as VueFlowNode | undefined;
-
-    if (!nodeToUpdate) {
-      console.error(
-        `[WorkflowStore:updateNodeInputConnectionOrderAndRecordOnly] 在 nextSnapshot 中未找到节点 ${nodeId}。`
-      );
-      return;
-    }
-
-    nodeToUpdate.data = nodeToUpdate.data || {};
-    nodeToUpdate.data.inputConnectionOrders = nodeToUpdate.data.inputConnectionOrders || {};
-    nodeToUpdate.data.inputConnectionOrders[handleKey] = newOrderedEdgeIds;
-
-    // 应用状态更新
-    await workflowManager.setElements(internalId, nextSnapshot.elements);
-    
-    // 记录历史
-    // entry 应该由调用者准备好
-    historyManager.recordSnapshot(internalId, entry, nextSnapshot);
-    // console.debug(`[WorkflowStore:updateNodeInputConnectionOrderAndRecordOnly] 已为节点 ${nodeId} 句柄 ${handleKey} 更新连接顺序并记录历史。`);
-  }
-
   // --- 新增：应用元素更改并记录历史的通用 Action ---
   async function applyElementChangesAndRecordHistory(
     internalId: string,
@@ -767,7 +726,6 @@ export const useWorkflowStore = defineStore("workflow", () => {
     promptAndSaveWorkflow, // 导出用于提示名称的新操作
     getEdgeById, // <-- 导出新方法
     updateMultiInputConnectionsAndRecord, // <-- 导出新 action
-    updateNodeInputConnectionOrderAndRecordOnly, // <-- 导出新 action
     applyElementChangesAndRecordHistory, // <-- 导出新 action
     updateNodePositionAndRecord: workflowInteractionCoordinator.updateNodePositionAndRecord, // 使用协调器的函数
     addNodeAndRecord: workflowInteractionCoordinator.addNodeAndRecord, // 使用协调器的函数
