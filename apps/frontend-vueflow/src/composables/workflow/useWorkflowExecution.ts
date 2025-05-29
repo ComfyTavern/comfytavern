@@ -3,6 +3,7 @@ import {
   WebSocketMessageType,
   type WebSocketMessage,
   ExecutionStatus,
+  DataFlowType, // 新增导入 DataFlowType
 } from "@comfytavern/types";
 import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core"; // 新增导入
 import { klona } from "klona/full"; // 新增导入
@@ -178,7 +179,16 @@ export function useWorkflowExecution() {
               sourceSlotKey: edgeConnectedToGroupOutputSlot.sourceHandle,
             };
           } else {
-            console.warn(`[WorkflowExecution:executeWorkflow] No valid edge found connecting to GroupOutput node's slot '${interfaceKey}' for workflow ${internalId}. This interface output will not be mapped and will likely be undefined.`);
+            const slotInfo = activeWorkflowData.interfaceOutputs[interfaceKey];
+            if (slotInfo) {
+              if (slotInfo.dataFlowType !== DataFlowType.CONVERTIBLE_ANY) {
+                console.debug(`[WorkflowExecution:executeWorkflow] No valid edge found connecting to GroupOutput node's slot '${interfaceKey}' (type: ${slotInfo.dataFlowType}) for workflow ${internalId}. This interface output will not be mapped and will likely be undefined.`);
+              }
+              // 对于 CONVERTIBLE_ANY 类型，如果未连接，则不发出警告或日志
+            } else {
+              // 如果 slotInfo 未定义，这可能是一个潜在问题，可以保留一个警告
+              console.warn(`[WorkflowExecution:executeWorkflow] Slot info for interfaceKey '${interfaceKey}' not found in activeWorkflowData.interfaceOutputs for workflow ${internalId}. Cannot determine if it's CONVERTIBLE_ANY.`);
+            }
             // 不为没有有效连接的 interfaceKey 创建映射
             // outputInterfaceMappings[interfaceKey] = { sourceNodeId: '', sourceSlotKey: '' };
           }
