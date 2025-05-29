@@ -1,6 +1,13 @@
 import type { NodeDefinition } from '@comfytavern/types'
 // Removed: import { nodeManager } from './NodeManager'
 
+// 处理转义字符，将形如 \n 的字符串转换为实际的换行符
+function unescapeString(str: string): string {
+  return str.replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\r')
+    .replace(/\\t/g, '\t');
+}
+
 export class TextMergeNodeImpl {
   static async execute(inputs: Record<string, any>): Promise<Record<string, any>> {
     const { text_inputs = [], separator = '\n' } = inputs
@@ -8,10 +15,14 @@ export class TextMergeNodeImpl {
     console.log(`[TextMergeNode] text_inputs: ${JSON.stringify(text_inputs)}, type: ${typeof text_inputs}, isArray: ${Array.isArray(text_inputs)}`);
     console.log(`[TextMergeNode] separator: ${JSON.stringify(separator)}`);
 
+    // 处理分隔符中的转义字符
+    const processedSeparator = unescapeString(separator);
+    console.log(`[TextMergeNode] Processed separator: ${JSON.stringify(processedSeparator)}`);
+
     // 确保所有输入都是字符串类型，不需要转换因为已经限制了只接受STRING类型
     const values = Array.isArray(text_inputs) ? text_inputs : [text_inputs]
     console.log(`[TextMergeNode] Values to join: ${JSON.stringify(values)}`);
-    const result = values.join(separator)
+    const result = values.join(processedSeparator)
 
     return {
       merged_text: result
@@ -34,7 +45,7 @@ export const definition: NodeDefinition = {
       required: false,
       // acceptTypes is handled by dataFlowType and matchCategories
       config: {
-        default: '\n',
+        default: '\\n',
         multiline: false,
         placeholder: '输入分隔符',
         label: '分隔符'
