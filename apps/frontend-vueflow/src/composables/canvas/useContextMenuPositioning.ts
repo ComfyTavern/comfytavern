@@ -42,21 +42,41 @@ export function useContextMenuPositioning(canvasContainerRef: Ref<HTMLElement | 
     // 获取画布容器边界
     const canvasRect = canvasContainerRef.value?.getBoundingClientRect();
 
-    if (canvasRect) {
-      // 计算相对于画布的坐标
-      const relativePosition = {
-        x: rawPosition.x - canvasRect.left,
-        y: rawPosition.y - canvasRect.top
-      };
-      contextMenuPosition.value = relativePosition;
-      return relativePosition;
-    } else {
+    if (!canvasRect) {
       console.warn("Canvas container ref not found, cannot calculate relative position.");
-      // 可以选择返回原始坐标或 null
-      // contextMenuPosition.value = rawPosition; // 使用原始坐标作为后备
-      // return rawPosition;
-      return null; // 表示无法计算相对位置
+      return null;
     }
+
+    // 获取视口尺寸
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // 假设菜单的最小宽度为 200px（来自 CSS）
+    const MENU_MIN_WIDTH = 200;
+    // 假设菜单的最大高度（可以根据实际内容调整）
+    const MENU_MAX_HEIGHT = 400;
+
+    // 计算相对于画布的初始坐标
+    let x = rawPosition.x - canvasRect.left;
+    let y = rawPosition.y - canvasRect.top;
+
+    // 检查右边界
+    if (rawPosition.x + MENU_MIN_WIDTH > viewportWidth) {
+      x = x - MENU_MIN_WIDTH;
+    }
+
+    // 检查底部边界
+    if (rawPosition.y + MENU_MAX_HEIGHT > viewportHeight) {
+      y = y - MENU_MAX_HEIGHT;
+    }
+
+    // 确保不会出现负值
+    x = Math.max(0, x);
+    y = Math.max(0, y);
+
+    const position = { x, y };
+    contextMenuPosition.value = position;
+    return position;
   };
 
   return {

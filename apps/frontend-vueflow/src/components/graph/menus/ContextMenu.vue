@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="context-menu context-menu-base" :style="{ left: `${position.x}px`, top: `${position.y}px` }" @click.stop>
+  <div v-if="visible" class="context-menu context-menu-base" :style="{ left: `${position.x}px`, top: `${position.y}px` }" @click.stop @mousedown.stop>
     <!-- 搜索框 -->
     <div class="context-menu-search">
       <input
@@ -218,17 +218,26 @@ const onResetView = () => {
 .context-menu-no-results {
   @apply p-3 text-center text-gray-500 dark:text-gray-400 text-sm;
 }
+
 .context-menu {
-  /* Base styles are now applied directly via class="context-menu-base" */
+  position: fixed; /* 改为 fixed 定位，避免影响画布布局 */
   min-width: 200px;
+  max-height: 400px; /* 与定位逻辑中的 MENU_MAX_HEIGHT 保持一致 */
+  overflow-y: auto; /* 内容超出时显示滚动条 */
+  z-index: 1000; /* 确保菜单显示在最上层 */
+  /* 移除重复的样式定义，保留 shared.css 中的基础样式 */
 }
 
 .context-menu-search {
-  @apply p-2 border-b border-gray-200 dark:border-gray-700;
+  @apply sticky top-0 p-2 border-b border-gray-200 dark:border-gray-700 bg-inherit;
 }
 
 .context-menu-search-input {
   @apply w-full px-3 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 outline-none placeholder-gray-400 dark:placeholder-gray-500;
+}
+
+.context-menu-items {
+  @apply max-h-[calc(400px-3rem)] overflow-y-auto;
 }
 
 </style>
