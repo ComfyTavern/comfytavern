@@ -16,6 +16,10 @@
       <div class="context-menu-item" @click="onDisconnect">
         <span class="icon">✂️</span> 断开所有连接
       </div>
+      <div v-if="isGroupOutputNode" class="context-menu-separator"></div>
+      <div v-if="isGroupOutputNode" class="context-menu-item" @click="onViewGroupOutput">
+        <span class="icon">📊</span> 查看组输出
+      </div>
       <div class="context-menu-separator"></div>
       <div class="context-menu-item" @click="onDelete"><span class="icon">🗑</span> 删除节点</div>
     </div>
@@ -41,11 +45,15 @@
 
 <script setup lang="ts">
 import type { XYPosition } from "@vue-flow/core";
+import { computed } from 'vue';
+import { useWorkflowManager } from '@/composables/workflow/useWorkflowManager';
+// import { useVueFlow } from '@vue-flow/core'; // Alternative if nodeType is not passed as prop
 
 const props = defineProps<{
   visible: boolean;
   position: XYPosition;
   nodeId: string; // 仍然需要 nodeId 用于单选操作
+  nodeType?: string; // 新增：被右键点击的节点类型
   selectedNodeCount: number; // 新增：选中的节点数量
 }>();
 
@@ -64,6 +72,24 @@ const emit = defineEmits<{
   // 关闭事件
   (e: "close"): void;
 }>();
+
+const workflowManager = useWorkflowManager();
+// const { getNode } = useVueFlow(); // Alternative: const node = computed(() => getNode.value(props.nodeId));
+
+const isGroupOutputNode = computed(() => {
+  // If nodeType is passed as a prop:
+  return props.nodeType === 'core:GroupOutput';
+  // Alternative if using useVueFlow():
+  // const nodeInstance = getNode.value(props.nodeId);
+  // return nodeInstance?.type === 'core:GroupOutput';
+});
+
+const onViewGroupOutput = () => {
+  if (isGroupOutputNode.value) {
+    workflowManager.switchToGroupOutputPreviewMode();
+    emit("close");
+  }
+};
 
 // --- 单选操作处理 ---
 const onEdit = () => {

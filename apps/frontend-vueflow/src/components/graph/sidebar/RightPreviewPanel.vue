@@ -13,20 +13,45 @@
     <!-- 拖拽调整停靠位置 (顶部) 的 Handle | 多余了 -->
     <!--<div v-if="panelLayout.isExpanded" class="resize-handle-top" @mousedown.stop.prevent="startDragTop"></div>-->
 
-    <!-- 面板头部，包含标题和切换按钮 -->
+    <!-- 面板头部，包含标题、模式切换和展开/收起按钮 -->
     <div class="panel-header" :class="{ 'collapsed': !panelLayout.isExpanded }" @mousedown.stop.prevent="startDragTop">
-      <h3 v-if="panelLayout.isExpanded" class="panel-title truncate"
-        :title="activeTarget ? `${nodeDisplayName} (ID: ${activeTarget.nodeId})` : '预览'">
-        <template v-if="activeTarget">
-          {{ nodeDisplayName }} <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(ID: {{ activeTarget.nodeId
-          }})</span>
-        </template>
-        <template v-else>
-          <span class="text-gray-700 dark:text-gray-300">预览面板 
-            <span class="text-gray-400 dark:text-gray-500">（未设置目标）</span>
-          </span>
-        </template>
-      </h3>
+      <div v-if="panelLayout.isExpanded" class="flex items-center space-x-2 flex-grow min-w-0">
+        <h3 class="panel-title truncate flex-shrink"
+          :title="panelMode === 'singlePreview' && activeTarget ? `${nodeDisplayName} (ID: ${activeTarget.nodeId})` : (panelMode === 'groupOverview' && activeTabId ? `组输出 (工作流: ${activeWorkflowName})` : '预览')">
+          <template v-if="panelMode === 'singlePreview'">
+            <template v-if="activeTarget">
+              {{ nodeDisplayName }} <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(ID: {{
+                activeTarget.nodeId }})</span>
+            </template>
+            <template v-else>
+              <span class="text-gray-700 dark:text-gray-300">单一预览 <span
+                  class="text-gray-400 dark:text-gray-500">（未选目标）</span></span>
+            </template>
+          </template>
+          <template v-else-if="panelMode === 'groupOverview'">
+            <template v-if="activeTabId && groupOutputs">
+              组输出总览 <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">({{ activeWorkflowName }})</span>
+            </template>
+            <template v-else>
+              <span class="text-gray-700 dark:text-gray-300">组输出总览 <span
+                  class="text-gray-400 dark:text-gray-500">（无可用工作流）</span></span>
+            </template>
+          </template>
+        </h3>
+      </div>
+      <div v-if="panelLayout.isExpanded"
+        class="mode-switcher flex-shrink-0 flex items-center space-x-1 p-1 bg-gray-100 dark:bg-gray-700 rounded-md mx-2">
+        <button @click="panelMode = 'singlePreview'"
+          :class="['px-2 py-0.5 text-xs rounded-md transition-colors', panelMode === 'singlePreview' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600']"
+          title="单一插槽预览模式">
+          单一
+        </button>
+        <button @click="panelMode = 'groupOverview'"
+          :class="['px-2 py-0.5 text-xs rounded-md transition-colors', panelMode === 'groupOverview' ? 'bg-green-500 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600']"
+          title="组输出总览模式">
+          组总览
+        </button>
+      </div>
       <button class="toggle-button" @click="togglePanelExpansion">
         <!-- 收起状态显示放大镜图标 -->
         <svg v-if="!panelLayout.isExpanded" class="icon" viewBox="0 0 1024 1024" version="1.1"
@@ -46,49 +71,114 @@
 
     <!-- 面板内容区域 -->
     <div v-if="panelLayout.isExpanded" class="panel-content">
-      <template v-if="activeTarget">
-        <div class="p-4 space-y-2">
-          <div>
-            <p class="text-sm mb-2">
-              <span class="font-semibold text-gray-500 dark:text-gray-400">插槽: </span>
-              <span class="text-gray-800 dark:text-gray-100">{{ slotDisplayName }}</span>
-              <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(Key: {{ activeTarget.slotKey }})</span>
-              <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase ml-2">- 输出</span>
-            </p>
-            <div class="p-2 border rounded bg-gray-50 dark:bg-gray-700/50 max-h-96 overflow-y-auto"> <!-- 输出内容 -->
-              <template v-if="previewData !== null && previewData !== undefined">
-                <MarkdownRenderer v-if="isMarkdownSlot && typeof previewData === 'string'"
-                  :markdown-content="previewData" />
-                <pre v-else-if="typeof previewData === 'object' || Array.isArray(previewData)"
-                  class="text-xs whitespace-pre-wrap break-all">{{ JSON.stringify(previewData, null, 2) }}</pre>
-                <p v-else class="text-xs whitespace-pre-wrap break-all">{{ String(previewData) }}</p>
-              </template>
-              <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">
-                无可用预览数据或插槽未产生输出。
+      <!-- 单一预览模式 -->
+      <template v-if="panelMode === 'singlePreview'">
+        <template v-if="activeTarget">
+          <div class="p-4 space-y-2">
+            <div>
+              <p class="text-sm mb-2">
+                <span class="font-semibold text-gray-500 dark:text-gray-400">插槽: </span>
+                <span class="text-gray-800 dark:text-gray-100">{{ slotDisplayName }}</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(Key: {{ activeTarget.slotKey }})</span>
+                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase ml-2">- 输出</span>
               </p>
+              <div class="p-2 border rounded bg-gray-50 dark:bg-gray-700/50 max-h-96 overflow-y-auto"> <!-- 输出内容 -->
+                <template v-if="previewData !== null && previewData !== undefined">
+                  <MarkdownRenderer v-if="isMarkdownSlot && typeof previewData === 'string'"
+                    :markdown-content="previewData" />
+                  <pre v-else-if="typeof previewData === 'object' || Array.isArray(previewData)"
+                    class="text-xs whitespace-pre-wrap break-all">{{ JSON.stringify(previewData, null, 2) }}</pre>
+                  <p v-else class="text-xs whitespace-pre-wrap break-all">{{ String(previewData) }}</p>
+                </template>
+                <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">
+                  无可用预览数据或插槽未产生输出。
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        </template>
+        <template v-else>
+          <p class="p-4 text-sm text-gray-500 dark:text-gray-400">
+            无预览目标被选中。右键点击节点输出桩或连线以预览。
+          </p>
+        </template>
       </template>
-      <template v-else>
-        <p class="p-4 text-sm text-gray-500 dark:text-gray-400">
-          无预览目标被选中。右键点击节点输出桩或连线以预览。
-        </p>
+
+      <!-- 组输出总览模式 -->
+      <template v-else-if="panelMode === 'groupOverview'">
+        <template v-if="activeTabId && groupOutputs && Object.keys(groupOutputs).length > 0">
+          <div class="p-2 space-y-2">
+            <template v-for="(outputDef, key) in groupOutputs" :key="key">
+              <template v-if="outputDef.dataFlowType !== DataFlowType.CONVERTIBLE_ANY">
+                <div class="border border-gray-200 dark:border-gray-600 rounded-md overflow-hidden">
+                  <div @click="toggleGroupOutputCollapse(String(key))"
+                    class="flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors">
+                    <span class="font-medium text-sm text-gray-700 dark:text-gray-200">{{ outputDef.displayName || key
+                      }}</span>
+                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform duration-200"
+                      :class="{ 'rotate-180': !isGroupOutputCollapsed(String(key)) }" viewBox="0 0 20 20"
+                      fill="currentColor">
+                      <path fill-rule="evenodd"
+                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                  <div v-show="!isGroupOutputCollapsed(String(key))"
+                    class="p-2 border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800">
+                    <template
+                      v-if="groupPreviewData && groupPreviewData[key] !== null && groupPreviewData[key] !== undefined">
+                      <MarkdownRenderer v-if="isMarkdownContent(groupPreviewData[key])"
+                        :markdown-content="groupPreviewData[key] as string" />
+                      <pre v-else-if="typeof groupPreviewData[key] === 'object' || Array.isArray(groupPreviewData[key])"
+                        class="text-xs whitespace-pre-wrap break-all">{{ JSON.stringify(groupPreviewData[key], null, 2) }}</pre>
+                      <p v-else class="text-xs whitespace-pre-wrap break-all">{{ String(groupPreviewData[key]) }}</p>
+                    </template>
+                    <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">
+                      无可用预览数据。
+                    </p>
+                  </div>
+                </div>
+              </template>
+            </template>
+          </div>
+        </template>
+        <template v-else-if="!activeTabId">
+          <p class="p-4 text-sm text-gray-500 dark:text-gray-400">
+            没有活动的工作流。
+          </p>
+        </template>
+        <template v-else-if="!groupOutputs || Object.keys(groupOutputs).length === 0">
+          <p class="p-4 text-sm text-gray-500 dark:text-gray-400">
+            当前工作流没有定义组输出接口。
+          </p>
+        </template>
+        <template v-else>
+          <p class="p-4 text-sm text-gray-500 dark:text-gray-400">
+            未能加载组输出数据。
+          </p>
+        </template>
       </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, type Ref, computed } from 'vue';
+import { ref, onUnmounted, type Ref, computed, watch } from 'vue'; // Added watch
 import { useLocalStorage } from '@vueuse/core';
+import { DataFlowType } from '@comfytavern/types'; // Added DataFlowType import
 import { useWorkflowManager } from '@/composables/workflow/useWorkflowManager';
 import { useExecutionStore } from '@/stores/executionStore';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import { useNodeStore } from '@/stores/nodeStore';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
-import type { Node as VueFlowNode } from "@vue-flow/core"; // 导入 VueFlowNode
-import type { OutputDefinition } from '@comfytavern/types'; // 修正：导入 OutputDefinition
+import type { Node as VueFlowNode } from "@vue-flow/core";
+import type { OutputDefinition } from '@comfytavern/types';
+
+// 新增：面板模式状态
+const panelMode = ref<'singlePreview' | 'groupOverview'>('singlePreview');
+
+// 新增：组输出项的折叠状态 (使用 activeTabId 作为 key)
+const groupOutputItemCollapseState = useLocalStorage('groupOutputItemCollapseStatePerWorkflow', {} as Record<string, Record<string, boolean>>);
 
 const workflowManager = useWorkflowManager();
 const executionStore = useExecutionStore();
@@ -99,6 +189,83 @@ const panelElementRef: Ref<HTMLElement | null> = ref(null);
 
 const activeTarget = computed(() => workflowManager.activePreviewTarget.value);
 const activeTabId = computed(() => workflowManager.activeTabId.value);
+
+// 获取当前工作流数据
+const activeWorkflowData = computed(() => {
+  if (!activeTabId.value) return null;
+  return workflowStore.getWorkflowData(activeTabId.value);
+});
+
+// 新增：获取当前活动工作流的名称
+const activeWorkflowName = computed(() => {
+  return activeWorkflowData.value?.name || activeTabId.value; // 如果 name 不存在，则回退到显示 id
+});
+
+// 获取当前工作流的 interfaceOutputs 定义
+const groupOutputs = computed(() => {
+  if (!activeWorkflowData.value?.interfaceOutputs) return null; // 直接从 activeWorkflowData 访问
+  return activeWorkflowData.value.interfaceOutputs; // 直接从 activeWorkflowData 访问
+});
+
+// 获取组输出的预览数据 (运行时值)
+const WORKFLOW_INTERFACE_OUTPUT_ID = '__WORKFLOW_INTERFACE_OUTPUTS__'; // 特殊ID，需要与执行引擎约定
+
+const groupPreviewData = computed(() => {
+  if (!activeTabId.value || !groupOutputs.value) return null;
+  const tabState = executionStore.tabExecutionStates.get(activeTabId.value);
+
+  if (!tabState || !tabState.nodeOutputs || !tabState.nodeOutputs[WORKFLOW_INTERFACE_OUTPUT_ID]) {
+    return null;
+  }
+  const outputs = tabState.nodeOutputs[WORKFLOW_INTERFACE_OUTPUT_ID];
+  if (!outputs) return null;
+
+  return Object.keys(groupOutputs.value).reduce((acc, key) => {
+    const outputDefinition = groupOutputs.value![key];
+    if (outputDefinition && outputDefinition.dataFlowType !== DataFlowType.CONVERTIBLE_ANY) {
+      acc[key] = outputs && key in outputs ? outputs[key] : null;
+    }
+    return acc;
+  }, {} as Record<string, any>);
+});
+
+// 处理组输出项的折叠状态
+const toggleGroupOutputCollapse = (outputKey: string) => {
+  if (!activeTabId.value) return;
+  const workflowId = activeTabId.value;
+  if (!groupOutputItemCollapseState.value[workflowId]) {
+    groupOutputItemCollapseState.value[workflowId] = {};
+  }
+  groupOutputItemCollapseState.value[workflowId][outputKey] = !(groupOutputItemCollapseState.value[workflowId][outputKey] ?? true);
+};
+
+const isGroupOutputCollapsed = (outputKey: string) => {
+  if (!activeTabId.value) return true;
+  const workflowId = activeTabId.value;
+  // 默认折叠 (返回 true)
+  return groupOutputItemCollapseState.value[workflowId]?.[outputKey] ?? true;
+};
+
+// 简单的 Markdown 内容检测
+const isMarkdownContent = (content: unknown): content is string => {
+  if (typeof content !== 'string') return false;
+  return /^#|^\*\*|^-\s|^```|\[.*\]\(.*\)|!\[.*\]\(.*\)/.test(content);
+};
+
+// 监听 activeTarget 的变化，如果设置了新的单一预览目标，则切换回单一预览模式
+watch(activeTarget, (newTarget) => {
+  if (newTarget && panelMode.value === 'groupOverview') {
+    panelMode.value = 'singlePreview';
+  }
+});
+
+// 监听来自 workflowManager 的请求，切换到组输出总览模式
+watch(() => workflowManager.showGroupOutputOverview.value, (showGroupOverview) => {
+  if (showGroupOverview) {
+    panelMode.value = 'groupOverview';
+    workflowManager.clearGroupOutputOverviewRequest(); // 重置请求
+  }
+});
 
 const previewData = computed(() => {
   if (!activeTarget.value || !activeTabId.value) return null;

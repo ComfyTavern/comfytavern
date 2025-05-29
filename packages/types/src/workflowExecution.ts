@@ -59,6 +59,12 @@ export interface WorkflowExecutionPayload {
   clientId?: string;
   /** (可选) 附加的元数据 */
   metadata?: Record<string, any>;
+  /**
+   * (可选) 工作流的输出接口到内部节点输出的映射。
+   * key: interfaceOutput 的 key (例如 "output_0", "summary_text")
+   * value: { sourceNodeId: NanoId, sourceSlotKey: string }
+   */
+  outputInterfaceMappings?: Record<string, { sourceNodeId: NanoId, sourceSlotKey: string }>;
 }
 
 // --- WebSocket 消息 Payload ---

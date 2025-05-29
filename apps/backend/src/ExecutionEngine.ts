@@ -129,6 +129,29 @@ export class ExecutionEngine {
       }
 
       console.log(`[Engine-${this.promptId}] Workflow execution completed successfully.`);
+
+      // 收集并发送工作流的 interfaceOutputs
+      if (this.payload.outputInterfaceMappings && Object.keys(this.payload.outputInterfaceMappings).length > 0) {
+        const finalWorkflowOutputs: Record<string, any> = {};
+        for (const interfaceOutputKey in this.payload.outputInterfaceMappings) {
+          const mapping = this.payload.outputInterfaceMappings[interfaceOutputKey];
+          if (mapping) {
+            const { sourceNodeId, sourceSlotKey } = mapping;
+            const sourceNodeResult = this.nodeResults[sourceNodeId];
+            if (sourceNodeResult && sourceSlotKey in sourceNodeResult) {
+              finalWorkflowOutputs[interfaceOutputKey] = sourceNodeResult[sourceSlotKey];
+            } else {
+              // 如果源节点结果或特定槽位不存在，则该输出接口的值为 undefined
+              finalWorkflowOutputs[interfaceOutputKey] = undefined;
+              console.warn(`[Engine-${this.promptId}] Could not find result for interfaceOutput '${interfaceOutputKey}' (sourceNode: ${sourceNodeId}, sourceSlot: ${sourceSlotKey})`);
+            }
+          }
+        }
+        // 使用特殊 ID 发送聚合后的工作流输出
+        this.sendNodeComplete('__WORKFLOW_INTERFACE_OUTPUTS__', finalWorkflowOutputs, 'full');
+        console.log(`[Engine-${this.promptId}] Sent aggregated workflow interface outputs:`, finalWorkflowOutputs);
+      }
+
       // TODO: 调用 HistoryService 记录成功
       return { status: ExecutionStatus.COMPLETE };
 

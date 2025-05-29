@@ -152,6 +152,43 @@ export function useWorkflowExecution() {
       return;
     }
 
+    // 新增：构建 outputInterfaceMappings
+    const outputInterfaceMappings: Record<string, { sourceNodeId: string, sourceSlotKey: string }> = {};
+    const activeWorkflowData = workflowManager.getWorkflowData(internalId);
+
+    if (activeWorkflowData && activeWorkflowData.interfaceOutputs && Object.keys(activeWorkflowData.interfaceOutputs).length > 0) {
+      const groupOutputNode = (elementsAfterClientScripts as VueFlowNode[]).find(
+        (el): el is VueFlowNode => {
+          if ('source' in el) return false; // 确保是节点
+          return el.type === 'core:GroupOutput';
+        }
+      );
+
+      if (groupOutputNode) {
+        for (const interfaceKey in activeWorkflowData.interfaceOutputs) {
+          const edgeConnectedToGroupOutputSlot = (elementsAfterClientScripts as VueFlowEdge[]).find(
+            (edge): edge is VueFlowEdge =>
+              edge.target === groupOutputNode.id &&
+              edge.targetHandle === interfaceKey
+          );
+
+          if (edgeConnectedToGroupOutputSlot && edgeConnectedToGroupOutputSlot.source && edgeConnectedToGroupOutputSlot.sourceHandle) {
+            outputInterfaceMappings[interfaceKey] = {
+              sourceNodeId: edgeConnectedToGroupOutputSlot.source,
+              sourceSlotKey: edgeConnectedToGroupOutputSlot.sourceHandle,
+            };
+          } else {
+            console.warn(`[WorkflowExecution:executeWorkflow] No valid edge found connecting to GroupOutput node's slot '${interfaceKey}' for workflow ${internalId}. This interface output will not be mapped and will likely be undefined.`);
+            // 不为没有有效连接的 interfaceKey 创建映射
+            // outputInterfaceMappings[interfaceKey] = { sourceNodeId: '', sourceSlotKey: '' };
+          }
+        }
+      } else {
+        console.warn(`[WorkflowExecution:executeWorkflow] No GroupOutput node found in workflow ${internalId} to map interfaceOutputs.`);
+      }
+    }
+    // 结束新增
+
     // 4. 准备执行状态 (此步骤在原始 StatusBar.vue 中没有，但在旧版 useWorkflowExecution 中有)
     // executionStore.prepareForNewExecution(internalId); // 暂时注释，以更接近 StatusBar 的成功路径
 
@@ -159,7 +196,8 @@ export function useWorkflowExecution() {
     const message: WebSocketMessage<WorkflowExecutionPayload> = {
       type: WebSocketMessageType.PROMPT_REQUEST,
       payload: {
-        ...payload,
+        ...payload, // 包含扁平化后的 nodes 和 edges
+        ...(Object.keys(outputInterfaceMappings).length > 0 && { outputInterfaceMappings }), // 条件性添加
         metadata: { internalId: internalId },
       },
     };

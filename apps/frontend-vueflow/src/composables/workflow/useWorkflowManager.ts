@@ -1,4 +1,4 @@
-import { reactive, computed, watch } from "vue";
+import { reactive, computed, watch, ref } from "vue"; // Added ref
 import { klona } from "klona";
 import { DataFlowType, type GroupSlotInfo, type WorkflowNode as StorageNode, type WorkflowEdge as StorageEdge } from "@comfytavern/types"; // Import StorageNode/Edge aliases
 import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core";
@@ -64,6 +64,18 @@ function createWorkflowManager() {
     // Make sure to access previewTarget from workflowData
     return state?.workflowData?.previewTarget ?? null;
   });
+
+  // 新增：用于请求组输出总览模式的状态
+  const _showGroupOutputOverview = ref(false);
+  const showGroupOutputOverview = computed(() => _showGroupOutputOverview.value);
+
+  function switchToGroupOutputPreviewMode() {
+    _showGroupOutputOverview.value = true;
+  }
+
+  function clearGroupOutputOverviewRequest() {
+    _showGroupOutputOverview.value = false;
+  }
 
   // 监视活动标签页的 elements 变化
   watch(() => {
@@ -1130,6 +1142,7 @@ function createWorkflowManager() {
     getAllTabStates, // 指向响应式 Map 的计算属性引用
     getCurrentSnapshot, // <-- 添加新方法
     activePreviewTarget, // <-- 添加新的计算属性
+    showGroupOutputOverview, // <-- 新增：用于组输出总览模式
     // 移除了 getHistoryState 和 historyActionCounter
 
     // 状态操作
@@ -1150,6 +1163,8 @@ function createWorkflowManager() {
     setPreviewTarget, // <-- 导出新方法
     clearPreviewTarget, // <-- 导出新方法
     updateNodeInternalData, // <-- 导出新方法
+    switchToGroupOutputPreviewMode, // <-- 新增
+    clearGroupOutputOverviewRequest, // <-- 新增
 
     // 移除了 undo 和 redo
 
