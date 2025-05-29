@@ -276,33 +276,6 @@ const handleExecuteWorkflow = async () => { // 咕咕：将函数设为 async
     }
   }
 
-
-  // 3. 构建临时的 FlowExportObject
-  const tempFlowExport: FlowExportObject = {
-    nodes: vueFlowNodes,
-    edges: vueFlowEdges,
-    viewport: klona(currentViewport), // 使用 klona 确保是深拷贝
-    position: [currentViewport.x, currentViewport.y],
-    zoom: currentViewport.zoom,
-  };
-
-  // 4. 将画布状态转换为核心工作流数据 (StorageNode[], StorageEdge[])
-  const coreWorkflowData = transformVueFlowToCoreWorkflow(tempFlowExport);
-
-  // 5. 使用转换后的核心数据构建执行载荷
-  // transformVueFlowToExecutionPayload 期望的参数类型是 { nodes: VueFlowNode[], edges: VueFlowEdge[] }
-  // 但我们第一次修复后，它内部实际处理的是 StorageNode 结构。
-  // 所以这里传递 coreWorkflowData.nodes (StorageNode[]) 和 coreWorkflowData.edges (StorageEdge[]) 是正确的。
-  const executionPayloadData = transformVueFlowToExecutionPayload({
-    nodes: coreWorkflowData.nodes as any, // StorageNode[] as VueFlowNode[] (内部按 StorageNode 处理)
-    edges: coreWorkflowData.edges as any, // StorageEdge[] as VueFlowEdge[] (内部按 StorageEdge 处理)
-  });
-
-  const payload: ExecuteWorkflowPayload = {
-    nodes: executionPayloadData.nodes,
-    edges: executionPayloadData.edges,
-  };
-
   if (activeTabId.value) {
     setInitiatingTabForNextPrompt(activeTabId.value);
   }
@@ -320,8 +293,8 @@ const handleExecuteWorkflow = async () => { // 咕咕：将函数设为 async
           const hookContext = {
             nodeId: node.id,
             workflowContext: {
-              nodes: klona(payload.nodes),
-              edges: klona(payload.edges),
+              nodes: klona(vueFlowNodes),
+              edges: klona(vueFlowEdges),
             },
           };
           await executor(clientScriptHookName, hookContext);
@@ -333,6 +306,29 @@ const handleExecuteWorkflow = async () => { // 咕咕：将函数设为 async
       }
     }
   }
+
+  // 3. 构建临时的 FlowExportObject (在执行完所有客户端脚本后)
+  const tempFlowExport: FlowExportObject = {
+    nodes: vueFlowNodes,
+    edges: vueFlowEdges,
+    viewport: klona(currentViewport), // 使用 klona 确保是深拷贝
+    position: [currentViewport.x, currentViewport.y],
+    zoom: currentViewport.zoom,
+  };
+
+  // 4. 将画布状态转换为核心工作流数据 (StorageNode[], StorageEdge[])
+  const coreWorkflowData = transformVueFlowToCoreWorkflow(tempFlowExport);
+
+  // 5. 使用转换后的核心数据构建执行载荷
+  const executionPayloadData = transformVueFlowToExecutionPayload({
+    nodes: coreWorkflowData.nodes as any, // StorageNode[] as VueFlowNode[] (内部按 StorageNode 处理)
+    edges: coreWorkflowData.edges as any, // StorageEdge[] as VueFlowEdge[] (内部按 StorageEdge 处理)
+  });
+
+  const payload: ExecuteWorkflowPayload = {
+    nodes: executionPayloadData.nodes,
+    edges: executionPayloadData.edges,
+  };
 
   sendMessage({
     type: WebSocketMessageType.PROMPT_REQUEST,
