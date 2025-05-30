@@ -109,8 +109,8 @@ export function useCanvasKeyboardShortcuts() {
   const groupSelectedNodes = () => {
     const selectedNodes = getNodes.value.filter((node) => node.selected);
 
-    if (selectedNodes.length <= 1) {
-      console.log("Need to select more than one node to create a group.");
+    if (selectedNodes.length < 1) { // 修改：允许单个节点创建组
+      console.log("Need to select at least one node to create a group."); // 修改：更新提示信息
       // TODO: 可以添加用户提示，例如使用 Toast 通知
       return;
     }

@@ -579,9 +579,9 @@ const handleCreateGroupFromSelection = () => {
   const selectedNodeIds = selectedNodes.map(n => n.id);
   // console.debug('[Canvas] Handling create-group-from-selection event from context menu for nodes:', selectedNodeIds);
 
-  if (selectedNodeIds.length <= 1) {
-    console.log("Need to select more than one node to create a group.");
-    alert("请选择多个节点来创建节点组。"); // 用户提示
+  if (selectedNodeIds.length < 1) { // 修改：允许单个节点创建组
+    console.log("Need to select at least one node to create a group."); // 修改：更新提示信息
+    alert("请选择至少一个节点来创建节点组。"); // 修改：更新用户提示
     return;
   }
 
