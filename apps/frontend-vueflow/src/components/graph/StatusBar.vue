@@ -1,31 +1,20 @@
 <template>
   <div
     class="status-bar bg-gray-100 dark:bg-gray-800 border-t border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm flex items-center justify-between shadow-inner">
-    <div class="flex items-center space-x-4 flex-grow">
+    <div class="flex items-center space-x-4 flex-grow min-w-0">
       <!-- Added flex-grow -->
-      <div class="text-blue-500 dark:text-blue-400 font-semibold">{{ projectName }}</div>
+      <div class="text-blue-500 dark:text-blue-400 font-semibold flex-shrink-0">{{ projectName }}</div>
       <!-- 工作流菜单触发器 -->
-      <div class="relative">
+      <div class="relative flex-shrink-0">
         <button ref="workflowButtonRef" @click="toggleWorkflowMenu" class="status-bar-button">
           工作流
         </button>
         <WorkflowMenu ref="workflowMenuRef" v-if="showWorkflowMenu" @close="showWorkflowMenu = false" />
       </div>
-      <!-- Added TabBar and flex-grow -->
-
-      <!-- 编辑菜单触发器 (如果需要) -->
-      <!--
-      <div class="relative">
-        <button @click="toggleEditMenu" class="status-bar-button">编辑</button>
-        <EditMenu v-if="showEditMenu" @close="showEditMenu = false" />
-      </div>
-      -->
-      <!-- 可以添加其他菜单项，如视图、帮助等 -->
-      <!-- 标签栏 -->
-      <TabBar class="flex-grow" />
+      <TabBar class="flex-grow px-2" />
     </div>
 
-    <div class="flex items-center space-x-4">
+    <div class="flex items-center space-x-2 flex-shrink-0">
       <!-- 可停靠编辑器切换按钮 -->
       <button @click="toggleDockedEditor" :title="isDockedEditorVisible ? '隐藏编辑器面板' : '显示编辑器面板'"
         class="px-2 py-1 rounded border border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none transition-all duration-150"
@@ -93,7 +82,6 @@
         }"></span>
         <span>{{ workflowStatusText }}</span>
       </span>
-      <!-- 也许可以添加 Zoom 控制等 -->
     </div>
   </div>
 </template>
