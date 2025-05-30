@@ -557,8 +557,31 @@ watch(invalidNodeGroupEdgeIds, (newInvalidIds, oldInvalidIds) => {
     // console.debug('[Canvas] Detected incompatible NodeGroup edges:', newInvalidIds);
     // 使用 nextTick 确保在 DOM 更新后执行移除操作，避免潜在的冲突
     nextTick(() => {
+      const allCurrentEdges = getEdges.value;
+      const allCurrentNodes = getNodes.value;
+      console.groupCollapsed(`[Canvas_EdgeRemovalDebug] Preparing to remove ${newInvalidIds.length} incompatible edges.`);
+      newInvalidIds.forEach(edgeIdToRemove => {
+        const edgeToRemove = allCurrentEdges.find(e => e.id === edgeIdToRemove);
+        if (edgeToRemove) {
+          console.debug(`[Canvas_EdgeRemovalDebug] Details of edge to be removed (ID: ${edgeIdToRemove}):`, JSON.parse(JSON.stringify(edgeToRemove)));
+          const sourceNode = allCurrentNodes.find(n => n.id === edgeToRemove.source);
+          const targetNode = allCurrentNodes.find(n => n.id === edgeToRemove.target);
+
+          if (sourceNode?.type === 'core:NodeGroup') {
+            console.debug(`[Canvas_EdgeRemovalDebug] Source Node (${sourceNode.id}) is a NodeGroup. Current interface:`, JSON.parse(JSON.stringify(sourceNode.data?.groupInterface)));
+          }
+          if (targetNode?.type === 'core:NodeGroup') {
+            console.debug(`[Canvas_EdgeRemovalDebug] Target Node (${targetNode.id}) is a NodeGroup. Current interface:`, JSON.parse(JSON.stringify(targetNode.data?.groupInterface)));
+          }
+        } else {
+          console.warn(`[Canvas_EdgeRemovalDebug] Could not find details for edge ID to be removed: ${edgeIdToRemove}`);
+        }
+      });
+      console.groupEnd();
+
       removeEdges(newInvalidIds); // This removeEdges is from useVueFlow, for direct instance manipulation
       // 可选：通知用户
+      console.log(`[Canvas] 因节点组接口变更或连接类型不兼容，已移除 ${newInvalidIds.length} 条连接。 Removed ${newInvalidIds.length} incompatible NodeGroup edges.`);
       alert(`因节点组接口变更或连接类型不兼容，已移除 ${newInvalidIds.length} 条连接。`);
       // removeEdges 会触发 getEdges 更新，进而可能重新计算 invalidNodeGroupEdgeIds
       // Composable 内部的 computed 会处理依赖更新，无需担心无限循环

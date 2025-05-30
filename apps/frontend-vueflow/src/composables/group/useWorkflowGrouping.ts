@@ -11,8 +11,8 @@ import { storeToRefs } from "pinia"; // 导入 storeToRefs
 import { useUniqueNodeId } from "@/composables/node/useUniqueNodeId";
 import type {
   WorkflowObject,
-  WorkflowNode,
-  WorkflowEdge,
+  // WorkflowNode, // Removed as it's no longer directly used here
+  // WorkflowEdge, // Removed as it's no longer directly used here
   GroupInterfaceInfo,
   GroupSlotInfo,
   HistoryEntry, // <-- Import HistoryEntry
@@ -27,8 +27,9 @@ import { useProjectStore } from "@/stores/projectStore"; // <-- 导入 Project S
 import { useThemeStore } from "@/stores/theme"; // 导入主题 Store
 import { useEdgeStyles } from "../canvas/useEdgeStyles"; // 导入边样式 Composable
 import { getNodeType } from "@/utils/nodeUtils"; // 导入节点类型辅助函数
+import { transformVueFlowToCoreWorkflow } from "@/utils/workflowTransformer"; // <--- 导入转换函数
 import { useWorkflowViewManagement } from "../workflow/useWorkflowViewManagement"; // ADDED: Import view management
-import { nextTick, type Ref } from "vue"; // 导入 Ref 类型
+import { nextTick, type Ref, toRaw } from "vue"; // 导入 Ref 类型, toRaw
 
 // New isTypeCompatible function, logic copied from useCanvasConnections.ts
 export function isTypeCompatible(sourceSlot: GroupSlotInfo, targetSlot: GroupSlotInfo): boolean { // Added export
@@ -362,16 +363,19 @@ async function updateNodeGroupWorkflowReferenceLogic(
     // }
 
     // Display alert if edges were incompatible (still useful feedback)
-    if (incompatibleEdges.length > 0) {
+    const numIncompatible = incompatibleEdges.length;
+    if (numIncompatible > 0) {
       const message =
-        incompatibleEdges.length === 1
+        numIncompatible === 1
           ? `已断开 1 个不兼容的连接`
-          : `已断开 ${incompatibleEdges.length} 个不兼容的连接`;
+          : `已断开 ${numIncompatible} 个不兼容的连接`;
 
+      // 添加日志显示断开数量
+      console.info(`[updateNodeGroupWorkflowReferenceLogic] ${message}`);
       alert(`节点组接口已更新。${message}。`);
     } else {
       console.debug(
-        `[updateNodeGroupWorkflowReferenceLogic] All connections compatible with the new interface`
+        `[updateNodeGroupWorkflowReferenceLogic] 所有连接均与新接口兼容` // 保持与中文环境一致
       );
     }
 
@@ -412,6 +416,7 @@ async function createGroupFromSelectionLogic(
   // ADDED Dependency:
   workflowViewManagement: ReturnType<typeof import('../workflow/useWorkflowViewManagement').useWorkflowViewManagement>
 ) {
+  console.debug(`[GROUPING_LOGIC_START] Called createGroupFromSelectionLogic for tab ${currentTabId} with selected nodes:`, selectedNodeIds);
   const allNodes = state.elements.filter(
     (el: VueFlowNode | VueFlowEdge) => !("source" in el)
   ) as VueFlowNode[];
@@ -431,6 +436,7 @@ async function createGroupFromSelectionLogic(
       dataFlowType: DataFlowTypeName; // Changed from type: string
       name: string;
       description?: string;
+      matchCategories?: string[]; // 添加 matchCategories 类型
     }
   >();
   const groupOutputsMap = new Map<
@@ -441,6 +447,7 @@ async function createGroupFromSelectionLogic(
       dataFlowType: DataFlowTypeName; // Changed from type: string
       name: string;
       description?: string;
+      matchCategories?: string[]; // 添加 matchCategories 类型
     }
   >();
   const externalToGroupNodeConnections: {
@@ -476,10 +483,17 @@ async function createGroupFromSelectionLogic(
       const groupSlotKey = `${edge.target}_${targetHandleId}`;
 
       if (!groupInputsMap.has(groupSlotKey) && targetNode) {
-        const internalTargetNodeType = getNodeType(targetNode);
-        const internalTargetNodeDef = nodeDefinitions.value.find(
-          (def: any) => def.type === internalTargetNodeType
-        );
+        const fullTargetNodeType = getNodeType(targetNode); // 例如 "core:TestWidgets"
+        const targetTypeParts = fullTargetNodeType.split(':');
+        let internalTargetNodeDef;
+        if (targetTypeParts.length === 2) {
+          const [namespace, baseType] = targetTypeParts;
+          internalTargetNodeDef = nodeDefinitions.value.find(def => def.namespace === namespace && def.type === baseType);
+        } else if (targetTypeParts.length === 1 && fullTargetNodeType.trim() !== '') {
+          // 回退：如果只有基础类型名，则尝试在 'core' 命名空间或任何命名空间中查找
+          internalTargetNodeDef = nodeDefinitions.value.find(def => def.namespace === 'core' && def.type === fullTargetNodeType) ||
+            nodeDefinitions.value.find(def => def.type === fullTargetNodeType);
+        }
         const internalInputDef = internalTargetNodeDef?.inputs?.[targetHandleId];
         const externalSourceNode = allNodes.find((n) => n.id === edge.source);
         const externalSourceNodeType = getNodeType(externalSourceNode);
@@ -489,12 +503,17 @@ async function createGroupFromSelectionLogic(
         const externalSourceHandleId = edge.sourceHandle || "default_source";
         const externalOutputDef = externalSourceNodeDef?.outputs?.[externalSourceHandleId];
 
+        console.debug(
+          `[GROUPING_INPUT_LOG] Edge ${edge.id}: External Source (${edge.source}:${externalSourceHandleId}, DefType: ${externalOutputDef?.dataFlowType}) -> Internal Target (${edge.target}:${targetHandleId}, DefType: ${internalInputDef?.dataFlowType}). Assigning to Group Input Slot ${groupSlotKey} with Type: ${internalInputDef?.dataFlowType || DataFlowType.CONVERTIBLE_ANY}`
+        );
+
         groupInputsMap.set(groupSlotKey, {
           originalTargetNodeId: edge.target,
           originalTargetHandle: targetHandleId,
           dataFlowType: internalInputDef?.dataFlowType || DataFlowType.CONVERTIBLE_ANY, // Use dataFlowType
           name: internalInputDef?.displayName || targetHandleId,
           description: internalInputDef?.description || externalOutputDef?.description,
+          matchCategories: internalInputDef?.matchCategories || [], // 确保复制 matchCategories
         });
       }
       externalToGroupNodeConnections.push({
@@ -511,11 +530,31 @@ async function createGroupFromSelectionLogic(
       const groupSlotKey = `${edge.source}_${sourceHandleId}`;
 
       if (!groupOutputsMap.has(groupSlotKey) && sourceNode) {
-        const internalSourceNodeType = getNodeType(sourceNode);
-        const internalSourceNodeDef = nodeDefinitions.value.find(
-          (def: any) => def.type === internalSourceNodeType
-        );
+        const fullSourceNodeType = getNodeType(sourceNode); // 例如 "core:TestWidgets"
+        const sourceTypeParts = fullSourceNodeType.split(':');
+        let internalSourceNodeDef;
+        if (sourceTypeParts.length === 2) {
+          const [namespace, baseType] = sourceTypeParts;
+          internalSourceNodeDef = nodeDefinitions.value.find(def => def.namespace === namespace && def.type === baseType);
+        } else if (sourceTypeParts.length === 1 && fullSourceNodeType.trim() !== '') {
+          // 回退：如果只有基础类型名，则尝试在 'core' 命名空间或任何命名空间中查找
+          internalSourceNodeDef = nodeDefinitions.value.find(def => def.namespace === 'core' && def.type === fullSourceNodeType) ||
+            nodeDefinitions.value.find(def => def.type === fullSourceNodeType);
+        }
         const internalOutputDef = internalSourceNodeDef?.outputs?.[sourceHandleId];
+
+        // 获取外部目标节点的输入插槽定义以供记录
+        const externalTargetNode = allNodes.find((n) => n.id === edge.target);
+        const externalTargetNodeType = getNodeType(externalTargetNode);
+        const externalTargetNodeDef = externalTargetNode
+          ? nodeDefinitions.value.find((def: any) => def.type === externalTargetNodeType)
+          : undefined;
+        const externalTargetHandleId = edge.targetHandle || "default_target";
+        const externalTargetInputDef = externalTargetNodeDef?.inputs?.[externalTargetHandleId];
+
+        console.debug(
+          `[GROUPING_OUTPUT_LOG] Edge ${edge.id}: Internal Source (${edge.source}:${sourceHandleId}, DefType: ${internalOutputDef?.dataFlowType}) -> External Target (${edge.target}:${externalTargetHandleId}, DefType: ${externalTargetInputDef?.dataFlowType}). Assigning to Group Output Slot ${groupSlotKey} with Type: ${internalOutputDef?.dataFlowType || DataFlowType.CONVERTIBLE_ANY}`
+        );
 
         groupOutputsMap.set(groupSlotKey, {
           originalSourceNodeId: edge.source,
@@ -523,6 +562,7 @@ async function createGroupFromSelectionLogic(
           dataFlowType: internalOutputDef?.dataFlowType || DataFlowType.CONVERTIBLE_ANY, // Use dataFlowType
           name: internalOutputDef?.displayName || sourceHandleId,
           description: internalOutputDef?.description,
+          matchCategories: internalOutputDef?.matchCategories || [], // 确保复制 matchCategories
         });
       }
       externalToGroupNodeConnections.push({
@@ -572,69 +612,60 @@ async function createGroupFromSelectionLogic(
   const groupOutputPosX = groupOriginX + selectionWidth + phantomNodeSpacing;
   const groupIOPosY = groupOriginY + selectionHeight / 2;
 
-  // --- 构建新的工作流对象 ---
-  const newWorkflowNodes: WorkflowNode[] = [];
-  const newWorkflowEdges: WorkflowEdge[] = [];
+  // --- 构建新的工作流对象 (运行时格式 VueFlowNode, VueFlowEdge) ---
+  const tempRuntimeNodes: VueFlowNode[] = [];
+  const tempRuntimeEdges: VueFlowEdge[] = [];
 
-  // 1. 创建 GroupInput 和 GroupOutput 幻影节点
+  // 1. 创建 GroupInput 和 GroupOutput 幻影节点 (VueFlowNode格式)
   const groupInputNodeId = generateUniqueNodeId(currentTabId, "GroupInput");
   const groupOutputNodeId = generateUniqueNodeId(currentTabId, "GroupOutput");
-  const groupInputNodeDef: WorkflowNode = {
+
+  const groupInputVueNode: VueFlowNode = {
     id: groupInputNodeId,
-    type: "core:GroupInput", // 使用带命名空间的类型
+    type: "core:GroupInput",
     position: { x: groupInputPosX, y: groupIOPosY - 50 },
-    data: { nodeType: "core:GroupInput", label: "组输入", outputs: {} }, // 同步更新 data.nodeType
+    data: { nodeType: "core:GroupInput", label: "组输入" }, // 保持 data 简洁
+    // width, height 等可以从定义或默认值获取
   };
-  newWorkflowNodes.push(groupInputNodeDef);
+  tempRuntimeNodes.push(groupInputVueNode);
 
-  const groupOutputNodeDef: WorkflowNode = {
+  const groupOutputVueNode: VueFlowNode = {
     id: groupOutputNodeId,
-    type: "core:GroupOutput", // 使用带命名空间的类型
+    type: "core:GroupOutput",
     position: { x: groupOutputPosX, y: groupIOPosY - 50 },
-    data: { nodeType: "core:GroupOutput", label: "组输出", inputs: {} }, // 同步更新 data.nodeType
+    data: { nodeType: "core:GroupOutput", label: "组输出" }, // 保持 data 简洁
   };
-  newWorkflowNodes.push(groupOutputNodeDef);
+  tempRuntimeNodes.push(groupOutputVueNode);
 
-  // 2. 添加选中的节点到新工作流（调整位置）
+  // 2. 添加选中的节点到新工作流（调整位置, VueFlowNode格式）
   nodesToGroup.forEach((originalNode) => {
-    const nodeCopy = JSON.parse(JSON.stringify(originalNode)) as VueFlowNode;
+    // 使用 toRaw 获取原始对象，避免 Vue 的响应式代理带来的问题，然后深拷贝
+    const rawNode = toRaw(originalNode);
+    const nodeCopy = JSON.parse(JSON.stringify(rawNode)) as VueFlowNode;
+
     nodeCopy.position = {
       x: originalNode.position.x - selectionCenterX + groupOriginX + selectionWidth / 2,
       y: originalNode.position.y - selectionCenterY + groupOriginY + selectionHeight / 2,
     };
-    nodeCopy.data = nodeCopy.data ?? {};
-    const workflowNode: WorkflowNode = {
-      id: nodeCopy.id,
-      type: nodeCopy.type || "unknown",
-      position: nodeCopy.position,
-      data: nodeCopy.data,
-      width: typeof nodeCopy.width === "number" ? nodeCopy.width : undefined,
-      height: typeof nodeCopy.height === "number" ? nodeCopy.height : undefined,
-      zIndex: nodeCopy.zIndex,
-      label: typeof nodeCopy.label === "string" ? nodeCopy.label : undefined,
-    };
-    newWorkflowNodes.push(workflowNode);
+    // 清理运行时状态，确保 data 是干净的，或者只包含应该传递给 transformVueFlowToCoreWorkflow 的部分
+    // nodeCopy.selected = false; // Removed: VueFlowNode base type doesn't have 'selected'
+    // nodeCopy.dragging = false; // Removed: VueFlowNode base type doesn't have 'dragging'
+    nodeCopy.parentNode = undefined; // 组内节点不应有父节点
+    // vueNode.data.inputs 结构在 transformVueFlowToCoreWorkflow 中有特殊处理
+    // 确保 nodeCopy.data 结构与 transformVueFlowToCoreWorkflow 的期望一致
+    // 通常，原始节点的 data 已经包含了 inputValues 等信息，可以直接传递
+    tempRuntimeNodes.push(nodeCopy);
   });
 
-  // 3. 添加内部边到新工作流
+  // 3. 添加内部边到新工作流 (VueFlowEdge格式)
   internalEdges.forEach((originalEdge) => {
-    const edgeCopy = JSON.parse(JSON.stringify(originalEdge)) as VueFlowEdge;
-    edgeCopy.data = edgeCopy.data ?? {};
-    const workflowEdge: WorkflowEdge = {
-      id: edgeCopy.id,
-      source: edgeCopy.source,
-      target: edgeCopy.target,
-      sourceHandle: edgeCopy.sourceHandle,
-      targetHandle: edgeCopy.targetHandle,
-      type: edgeCopy.type,
-      label: typeof edgeCopy.label === "string" ? edgeCopy.label : undefined,
-      markerEnd: edgeCopy.markerEnd,
-      data: edgeCopy.data,
-    };
-    newWorkflowEdges.push(workflowEdge);
+    const rawEdge = toRaw(originalEdge);
+    const edgeCopy = JSON.parse(JSON.stringify(rawEdge)) as VueFlowEdge;
+    // 可以根据需要清理或调整 edgeCopy.data
+    tempRuntimeEdges.push(edgeCopy);
   });
 
-  // 4. Connect internal nodes to phantom IO nodes based on boundary edges
+  // 4. Connect internal nodes to phantom IO nodes based on boundary edges (VueFlowEdge格式)
   boundaryEdges.forEach((originalBoundaryEdge) => {
     const isSourceSelected = selectedNodeIdSet.has(originalBoundaryEdge.source);
 
@@ -651,15 +682,12 @@ async function createGroupFromSelectionLogic(
         const edgeSourceType = inputSlotInfo.dataFlowType || DataFlowType.CONVERTIBLE_ANY; // type here is actually dataFlowType from map
         const edgeTargetType = inputSlotInfo.dataFlowType || DataFlowType.CONVERTIBLE_ANY; // type here is actually dataFlowType from map
         const styleProps = getEdgeStyleProps(edgeSourceType, edgeTargetType, isDark.value);
-
-        newWorkflowEdges.push({
+        tempRuntimeEdges.push({
           id: uuidv4(), // Use UUID for unique ID
           source: groupInputNodeId,
           sourceHandle: groupSlotKey, // Use the derived slot key as the handle on GroupInput
           target: originalBoundaryEdge.target, // The internal node
           targetHandle: targetHandleId, // The handle on the internal node
-          // type: "default", // Replaced by dynamic style
-          // markerEnd: { type: MarkerType.ArrowClosed, color: "#9CA3AF" }, // Replaced by dynamic style
           ...styleProps, // Apply dynamic styles
           data: { sourceType: edgeSourceType, targetType: edgeTargetType }, // Store types in data
         });
@@ -674,20 +702,16 @@ async function createGroupFromSelectionLogic(
       // Ensure the corresponding slot exists in the map
       const outputSlotInfo = groupOutputsMap.get(groupSlotKey);
       if (outputSlotInfo) {
-        // Determine types for styling. Internal node is the source.
-        // Use the slot's dataFlowType as both source and target for styling consistency within the group.
-        const edgeSourceType = outputSlotInfo.dataFlowType || DataFlowType.CONVERTIBLE_ANY; // type here is actually dataFlowType from map
-        const edgeTargetType = outputSlotInfo.dataFlowType || DataFlowType.CONVERTIBLE_ANY; // type here is actually dataFlowType from map
+        const edgeSourceType = outputSlotInfo.dataFlowType || DataFlowType.CONVERTIBLE_ANY;
+        const edgeTargetType = outputSlotInfo.dataFlowType || DataFlowType.CONVERTIBLE_ANY;
         const styleProps = getEdgeStyleProps(edgeSourceType, edgeTargetType, isDark.value);
 
-        newWorkflowEdges.push({
+        tempRuntimeEdges.push({
           id: uuidv4(), // Use UUID for unique ID
           source: originalBoundaryEdge.source, // The internal node
           sourceHandle: sourceHandleId, // The handle on the internal node
           target: groupOutputNodeId,
           targetHandle: groupSlotKey, // Use the derived slot key as the handle on GroupOutput
-          // type: "default", // Replaced by dynamic style
-          // markerEnd: { type: MarkerType.ArrowClosed, color: "#9CA3AF" }, // Replaced by dynamic style
           ...styleProps, // Apply dynamic styles
           data: { sourceType: edgeSourceType, targetType: edgeTargetType }, // Store types in data
         });
@@ -697,7 +721,9 @@ async function createGroupFromSelectionLogic(
     }
   });
 
+  // 5. 定义新工作流的接口 (这部分逻辑不变)
   // 5. 定义新工作流的接口
+  console.debug('[GROUPING_LOGIC_INTERFACE] Group Inputs Map:', JSON.parse(JSON.stringify(Object.fromEntries(groupInputsMap))));
   const newWorkflowInterfaceInputs: Record<string, GroupSlotInfo> = {};
   groupInputsMap.forEach((info, key) => {
     newWorkflowInterfaceInputs[key] = {
@@ -705,9 +731,11 @@ async function createGroupFromSelectionLogic(
       displayName: info.name,
       dataFlowType: info.dataFlowType as DataFlowTypeName, // Changed info.type to info.dataFlowType
       customDescription: info.description, // Assign original description to customDescription
+      matchCategories: info.matchCategories, // 确保从 info 对象中获取 matchCategories
     };
   });
 
+  console.debug('[GROUPING_LOGIC_INTERFACE] Group Outputs Map:', JSON.parse(JSON.stringify(Object.fromEntries(groupOutputsMap))));
   const newWorkflowInterfaceOutputs: Record<string, GroupSlotInfo> = {};
   groupOutputsMap.forEach((info, key) => {
     newWorkflowInterfaceOutputs[key] = {
@@ -715,21 +743,36 @@ async function createGroupFromSelectionLogic(
       displayName: info.name,
       dataFlowType: info.dataFlowType as DataFlowTypeName, // Changed info.type to info.dataFlowType
       customDescription: info.description, // Assign original description to customDescription
+      matchCategories: info.matchCategories, // 确保从 info 对象中获取 matchCategories
     };
   });
 
-  // 6. 组装最终的新工作流对象（用于保存）
-  // 显式声明类型以包含新字段
-  const newWorkflowObjectToSave: Omit<WorkflowObject, "id" | "createdAt" | "updatedAt" | "version" | "referencedWorkflows"> & { creationMethod?: string } = {
-    name: `分组_${uuidv4().substring(0, 6)}`,
-    nodes: newWorkflowNodes,
-    edges: newWorkflowEdges,
-    viewport: { x: 0, y: 0, zoom: 1 },
-    interfaceInputs: newWorkflowInterfaceInputs,
-    interfaceOutputs: newWorkflowInterfaceOutputs,
-    // 添加 creationMethod 字段
-    creationMethod: 'group',
+  // 6. 将运行时的节点和边转换为存储格式 (WorkflowStorageObject)
+  const tempFlowExportObject: import('@vue-flow/core').FlowExportObject = {
+    nodes: tempRuntimeNodes,
+    edges: tempRuntimeEdges,
+    viewport: { // Corrected to use viewport object
+      x: 0,       // Default viewport x
+      y: 0,       // Default viewport y
+      zoom: 1,      // Default viewport zoom
+    },
+    position: [0, 0], // Added to satisfy FlowExportObject type
+    zoom: 1,          // Added to satisfy FlowExportObject type
   };
+
+  // 调用转换函数，它内部会处理节点数据的差异化存储
+  const coreWorkflowData = transformVueFlowToCoreWorkflow(tempFlowExportObject);
+
+  // 7. 组装最终的 WorkflowStorageObject 用于保存
+  const finalWorkflowToSave: Omit<WorkflowObject, "id" | "createdAt" | "updatedAt" | "version" | "referencedWorkflows" | "projectId"> = {
+    name: `分组_${uuidv4().substring(0, 6)}`,
+    nodes: coreWorkflowData.nodes, // 使用转换后的差异化节点数据
+    edges: coreWorkflowData.edges, // 使用转换后的边数据
+    viewport: coreWorkflowData.viewport, // 使用转换后的视口数据
+    interfaceInputs: newWorkflowInterfaceInputs, // 接口定义仍然需要
+    interfaceOutputs: newWorkflowInterfaceOutputs,
+  };
+
 
   // --- 保存新工作流 ---
   const projectId = projectStore.currentProjectId; // 使用 projectStore 实例
@@ -745,7 +788,7 @@ async function createGroupFromSelectionLogic(
   try {
     savedWorkflowData = await workflowDataHandler.saveWorkflowAsNew(
       projectId,
-      newWorkflowObjectToSave
+      finalWorkflowToSave // 保存最终处理过的对象
     ); // 使用 workflowDataHandler 实例
     if (!savedWorkflowData || !savedWorkflowData.id) {
       throw new Error("Failed to save the new workflow file or received invalid data.");
@@ -790,11 +833,12 @@ async function createGroupFromSelectionLogic(
   const nodeGroupInstance: VueFlowNode = {
     id: nodeGroupNodeId,
     type: "core:NodeGroup", // 使用带命名空间的类型
+    label: savedWorkflowData.name || `分组 ${newWorkflowId}`, // 设置顶层 label
     position: { x: selectionCenterX, y: selectionCenterY },
     data: {
       ...baseNodeData,
       nodeType: "core:NodeGroup", // 同步更新 data.nodeType
-      label: savedWorkflowData.name || `分组 ${newWorkflowId}`,
+      label: savedWorkflowData.name || `分组 ${newWorkflowId}`, // 同时保留 data.label
       configValues: {
         ...(baseNodeData.configValues || {}),
         groupMode: "referenced",
@@ -805,6 +849,12 @@ async function createGroupFromSelectionLogic(
     },
     width: nodeGroupDef.width || 250,
   };
+  console.debug(
+    `[GROUPING_LOGIC_INSTANCE] Created NodeGroup instance ${nodeGroupNodeId} with interface:`,
+    JSON.parse(JSON.stringify(nodeGroupInterfaceSnapshot)),
+    "Full instance data:",
+    JSON.parse(JSON.stringify(nodeGroupInstance))
+  );
 
   // --- 修改主画布元素 ---
   const nodeIdsToRemove = new Set(selectedNodeIds);
@@ -863,6 +913,23 @@ async function createGroupFromSelectionLogic(
       ...styleProps,
       data: { sourceType, targetType },
     };
+    console.debug('[GROUPING_NEW_EDGE_INFO] Attempting to create edge:', {
+      id: newEdge.id,
+      source: newEdge.source,
+      sourceHandle: newEdge.sourceHandle,
+      target: newEdge.target,
+      targetHandle: newEdge.targetHandle,
+      type: newEdge.type,
+      style: newEdge.style,
+      markerEnd: newEdge.markerEnd,
+      data: newEdge.data,
+    });
+    console.debug(
+      `[GROUPING_LOGIC_RECONNECT] Creating edge for NodeGroup ${nodeGroupInstance.id}: `,
+      `Source: ${newEdge.source} (Handle: ${newEdge.sourceHandle}, Type: ${sourceType}), `,
+      `Target: ${newEdge.target} (Handle: ${newEdge.targetHandle}, Type: ${targetType}), `,
+      `Original External Node: ${conn.externalNodeId}, Original External Handle: ${conn.externalHandle}, IsInputToGroup: ${isInput}`
+    );
     remainingElements.push(newEdge);
   });
 

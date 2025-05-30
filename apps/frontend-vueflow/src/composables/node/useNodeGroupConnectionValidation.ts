@@ -55,8 +55,18 @@ export function useNodeGroupConnectionValidation({
               // 检查类型
               const sourceNode = currentNodes.find(n => n.id === edge.source);
               const sourceHandleId = edge.sourceHandle || 'default'; // 假设默认句柄 ID
-              const sourceNodeDef = nodeDefinitions.value.find(def => def.type === sourceNode?.data?.nodeType);
-              // 处理源节点或定义不存在的情况，以及句柄不存在的情况
+              // --- MODIFIED START: Correctly find sourceNodeDef using namespace and base type ---
+              let sourceNodeDef: NodeDefinition | undefined;
+              const fullSourceNodeType = sourceNode?.data?.nodeType || sourceNode?.type;
+              if (fullSourceNodeType) {
+                const typeParts = fullSourceNodeType.split(':');
+                const baseType = typeParts.length > 1 ? typeParts[1] : typeParts[0];
+                const namespace = typeParts.length > 1 ? typeParts[0] : 'core'; // Default to 'core' or handle as needed
+                sourceNodeDef = nodeDefinitions.value.find(
+                  (def) => def.type === baseType && def.namespace === namespace
+                );
+              }
+              // --- MODIFIED END ---
               const sourceOutputDef = sourceNodeDef?.outputs?.[sourceHandleId];
               if (!sourceOutputDef) {
                 isCompatible = false;
@@ -90,7 +100,18 @@ export function useNodeGroupConnectionValidation({
               // 检查类型
               const targetNode = currentNodes.find(n => n.id === edge.target);
               const targetHandleId = edge.targetHandle || 'default'; // 假设默认句柄 ID
-              const targetNodeDef = nodeDefinitions.value.find(def => def.type === targetNode?.data?.nodeType);
+              // --- MODIFIED START: Correctly find targetNodeDef using namespace and base type ---
+              let targetNodeDef: NodeDefinition | undefined;
+              const fullTargetNodeType = targetNode?.data?.nodeType || targetNode?.type;
+              if (fullTargetNodeType) {
+                const typeParts = fullTargetNodeType.split(':');
+                const baseType = typeParts.length > 1 ? typeParts[1] : typeParts[0];
+                const namespace = typeParts.length > 1 ? typeParts[0] : 'core'; // Default to 'core' or handle as needed
+                targetNodeDef = nodeDefinitions.value.find(
+                  (def) => def.type === baseType && def.namespace === namespace
+                );
+              }
+              // --- MODIFIED END ---
               const targetInputDef = targetNodeDef?.inputs?.[targetHandleId];
 
               if (!targetInputDef) {
