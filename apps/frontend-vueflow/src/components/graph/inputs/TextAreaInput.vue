@@ -76,7 +76,7 @@ const stopWheelPropagation = (event: WheelEvent) => {
 onMounted(() => {
   const el = textareaRef.value;
   if (el) {
-    el.addEventListener("wheel", stopWheelPropagation, { passive: false });
+    el.addEventListener("wheel", stopWheelPropagation, { passive: true });
   }
 });
 

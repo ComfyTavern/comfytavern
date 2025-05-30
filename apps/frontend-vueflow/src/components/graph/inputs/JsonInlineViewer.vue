@@ -3,7 +3,7 @@
     <div v-if="!hasItems && !editableItems.length" class="empty-state">
       点击下方按钮添加键值对
     </div>
-    <div class="kv-list-scroll-container" @wheel.stop>
+    <div class="kv-list-scroll-container" @wheel.stop.passive>
       <div v-for="(item, index) in editableItems" :key="item.id" class="kv-pair">
         <input
           type="text"
