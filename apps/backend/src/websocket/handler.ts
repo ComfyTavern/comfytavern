@@ -17,9 +17,8 @@ export const websocketSchema = {
     type: t.Enum(WebSocketMessageType, { error: "Invalid WebSocket message type" }),
     payload: t.Any(),
   }),
-  // 添加 context decorator 来获取 clientId (Elysia v1.x 方式)
-  // 这需要在 index.ts 的 .ws() 调用中配置
-  // context: ws => ({ clientId: ws.data.clientId }) // 假设 clientId 在 data 中
+  response: t.Any(),
+  error: t.Any(),
 };
 
 // 工厂函数，创建 WebSocket 处理器对象
@@ -40,15 +39,16 @@ export function createWebsocketHandler(
       console.log(`[Handler] WebSocket connection opened. Client ID: ${clientId} assigned to ws.data. Total clients: ${wsManager.getAllClientIds().length}`);
     },
 
-    close(ws: any, code: number, message: ArrayBuffer | undefined) {
+    close(ws: any, code: number, reason: string) {
       const clientId = ws.data?.clientId; // 从 ws.data 获取 clientId
       // WebSocketManager 处理断开连接
       wsManager.removeClient(ws);
-      console.log(`[Handler] WebSocket connection closed. Client ID: ${clientId || 'unknown'}. Code: ${code}. Total clients: ${wsManager.getAllClientIds().length}`);
+      console.log(`[Handler] WebSocket connection closed. Client ID: ${clientId || 'unknown'}. Code: ${code}. Reason: ${reason}. Total clients: ${wsManager.getAllClientIds().length}`);
     },
 
-    error(ws: any, error: Error) {
-      const clientId = ws.data?.clientId; // 从 ws.data 获取 clientId
+    error(context: any) {
+      const { ws, error } = context;
+      const clientId = ws?.data?.clientId; // 从 ws.data 获取 clientId
       console.error(`[Handler] WebSocket error for client ${clientId || 'unknown'}:`, error);
       // WebSocketManager 应该也处理错误时的客户端移除
       wsManager.handleError(ws, error); // 确保 wsManager 也知道错误并可能移除客户端
@@ -82,23 +82,23 @@ export function createWebsocketHandler(
             // TODO: 将预览请求传递给合适的处理程序
             // 这可能需要调度器或执行引擎提供专门的预览方法
             // scheduler.submitPreview(payload, clientId); // 假设有此方法
-             ws.send(JSON.stringify({
-               type: WebSocketMessageType.ERROR,
-               payload: { message: 'Preview execution not yet implemented.' } as ErrorPayload,
-             }));
+            ws.send(JSON.stringify({
+              type: WebSocketMessageType.ERROR,
+              payload: { message: 'Preview execution not yet implemented.' } as ErrorPayload,
+            }));
             break;
           }
 
           case WebSocketMessageType.INTERRUPT_REQUEST: {
-             const payload = message.payload as { promptId: NanoId };
-             console.log(`[Handler] Received INTERRUPT_REQUEST from ${clientId} for prompt ${payload.promptId}`);
-             const success = scheduler.interruptExecution(payload.promptId);
-             if (!success) {
-                 console.warn(`[Handler] Failed to interrupt prompt ${payload.promptId} (not found or already finished).`);
-                 // 可以选择性地向客户端发送一个错误或确认信息
-             }
-             // 调度器会在中断成功时发送 INTERRUPTED 状态更新
-             break;
+            const payload = message.payload as { promptId: NanoId };
+            console.log(`[Handler] Received INTERRUPT_REQUEST from ${clientId} for prompt ${payload.promptId}`);
+            const success = scheduler.interruptExecution(payload.promptId);
+            if (!success) {
+              console.warn(`[Handler] Failed to interrupt prompt ${payload.promptId} (not found or already finished).`);
+              // 可以选择性地向客户端发送一个错误或确认信息
+            }
+            // 调度器会在中断成功时发送 INTERRUPTED 状态更新
+            break;
           }
 
           // 保留其他可能的消息类型处理逻辑 (如果需要)
