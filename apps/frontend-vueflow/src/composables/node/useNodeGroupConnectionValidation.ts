@@ -1,8 +1,9 @@
 import { computed } from 'vue';
 import type { Ref, ComputedRef } from 'vue';
 import type { Node, Edge } from '@vue-flow/core';
-import type { NodeDefinition, GroupInterfaceInfo, GroupSlotInfo, DataFlowTypeName } from '@comfytavern/types'; // Removed unused InputDefinition, OutputDefinition
-import { isTypeCompatible } from '../group/useWorkflowGrouping'; // Changed areTypesCompatible to isTypeCompatible
+import type { NodeDefinition, GroupInterfaceInfo, GroupSlotInfo, DataFlowTypeName } from '@comfytavern/types';
+// 注意: isTypeCompatible 函数已替代旧的 areTypesCompatible 函数
+import { isTypeCompatible } from '../group/useWorkflowGrouping';
 
 // 定义 Composable 函数的选项接口
 interface UseNodeGroupConnectionValidationOptions {
@@ -14,7 +15,7 @@ interface UseNodeGroupConnectionValidationOptions {
 
 /**
  * Composable 用于验证 NodeGroup 节点的连接是否与其接口快照兼容。
- * @param options - 包含节点、边、节点定义和类型兼容性检查函数的选项对象。
+ * @param options - 包含节点、边和节点定义的选项对象。
  * @returns 一个计算属性，包含所有无效连接边的 ID 数组。
  */
 export function useNodeGroupConnectionValidation({
@@ -45,43 +46,43 @@ export function useNodeGroupConnectionValidation({
           const slotKey = edge.targetHandle;
           if (typeof slotKey !== 'string' || !slotKey) {
             isCompatible = false;
-            // reason = `Invalid target handle on edge ${edge.id}`;
+            // 原因 = `边 ${edge.id} 上的目标句柄无效`;
           } else {
             const inputSlot = groupInterface.inputs?.[slotKey];
             if (!inputSlot) {
               isCompatible = false;
-              // reason = `Input slot '${slotKey}' not found in NodeGroup ${nodeGroup.id}`;
+              // 原因 = `在节点组 ${nodeGroup.id} 中未找到输入插槽 '${slotKey}'`;
             } else {
               // 检查类型
               const sourceNode = currentNodes.find(n => n.id === edge.source);
               const sourceHandleId = edge.sourceHandle || 'default'; // 假设默认句柄 ID
-              // --- MODIFIED START: Correctly find sourceNodeDef using namespace and base type ---
+              // 使用命名空间和基础类型正确查找 sourceNodeDef ---
               let sourceNodeDef: NodeDefinition | undefined;
               const fullSourceNodeType = sourceNode?.data?.nodeType || sourceNode?.type;
               if (fullSourceNodeType) {
                 const typeParts = fullSourceNodeType.split(':');
                 const baseType = typeParts.length > 1 ? typeParts[1] : typeParts[0];
-                const namespace = typeParts.length > 1 ? typeParts[0] : 'core'; // Default to 'core' or handle as needed
+                const namespace = typeParts.length > 1 ? typeParts[0] : 'core'; // 默认为 'core' 或根据需要处理
                 sourceNodeDef = nodeDefinitions.value.find(
                   (def) => def.type === baseType && def.namespace === namespace
                 );
               }
-              // --- MODIFIED END ---
               const sourceOutputDef = sourceNodeDef?.outputs?.[sourceHandleId];
               if (!sourceOutputDef) {
                 isCompatible = false;
-                // reason = `Source output definition '${sourceHandleId}' not found on node ${sourceNode?.id}`;
+                // 原因 = `在节点 ${sourceNode?.id} 上未找到源输出定义 '${sourceHandleId}'`;
               } else {
                 const sourceSlotInfo: GroupSlotInfo = {
                   key: sourceHandleId,
                   displayName: sourceOutputDef.displayName || sourceHandleId,
-                  dataFlowType: sourceOutputDef.dataFlowType as DataFlowTypeName, // Cast as it comes from NodeDefinition
+                  dataFlowType: sourceOutputDef.dataFlowType as DataFlowTypeName, // 类型断言，因为它来自 NodeDefinition
                   matchCategories: sourceOutputDef.matchCategories,
-                  // other fields from GroupSlotInfo can be undefined or default
+                  // GroupSlotInfo 中的其他字段可以是 undefined 或默认值
                 };
-                if (!isTypeCompatible(sourceSlotInfo, inputSlot)) {
+                const compatibleResultInput = isTypeCompatible(sourceSlotInfo, inputSlot);
+                if (!compatibleResultInput) {
                   isCompatible = false;
-                  // reason = `Type mismatch: Source (${sourceSlotInfo.dataFlowType}) -> NodeGroup Input '${slotKey}' (${inputSlot.dataFlowType})`;
+                  // 原因 = `类型不匹配：源 (${sourceSlotInfo.dataFlowType}) -> 节点组输入 '${slotKey}' (${inputSlot.dataFlowType})`;
                 }
               }
             }
@@ -90,44 +91,47 @@ export function useNodeGroupConnectionValidation({
           const slotKey = edge.sourceHandle;
           if (typeof slotKey !== 'string' || !slotKey) {
             isCompatible = false;
-            // reason = `Invalid source handle on edge ${edge.id}`;
+            // 原因 = `边 ${edge.id} 上的源句柄无效`;
           } else {
             const outputSlot = groupInterface.outputs?.[slotKey];
             if (!outputSlot) {
               isCompatible = false;
-              // reason = `Output slot '${slotKey}' not found in NodeGroup ${nodeGroup.id}`;
+              // 原因 = `在节点组 ${nodeGroup.id} 中未找到输出插槽 '${slotKey}'`;
             } else {
               // 检查类型
               const targetNode = currentNodes.find(n => n.id === edge.target);
               const targetHandleId = edge.targetHandle || 'default'; // 假设默认句柄 ID
-              // --- MODIFIED START: Correctly find targetNodeDef using namespace and base type ---
-              let targetNodeDef: NodeDefinition | undefined;
+              // 使用命名空间和基础类型正确查找 targetNodeDef ---
+              let targetInputDef: GroupSlotInfo | undefined; // 类型改为 GroupSlotInfo | undefined
               const fullTargetNodeType = targetNode?.data?.nodeType || targetNode?.type;
-              if (fullTargetNodeType) {
+
+              if (targetNode?.type === 'core:GroupOutput' && targetNode.data?.inputs?.[targetHandleId]) {
+                targetInputDef = targetNode.data.inputs[targetHandleId] as GroupSlotInfo;
+              } else if (fullTargetNodeType) {
                 const typeParts = fullTargetNodeType.split(':');
                 const baseType = typeParts.length > 1 ? typeParts[1] : typeParts[0];
-                const namespace = typeParts.length > 1 ? typeParts[0] : 'core'; // Default to 'core' or handle as needed
-                targetNodeDef = nodeDefinitions.value.find(
+                const namespace = typeParts.length > 1 ? typeParts[0] : 'core';
+                const staticTargetNodeDef = nodeDefinitions.value.find(
                   (def) => def.type === baseType && def.namespace === namespace
                 );
+                targetInputDef = staticTargetNodeDef?.inputs?.[targetHandleId] as GroupSlotInfo | undefined; // 从静态定义获取
               }
-              // --- MODIFIED END ---
-              const targetInputDef = targetNodeDef?.inputs?.[targetHandleId];
 
               if (!targetInputDef) {
                 isCompatible = false;
-                // reason = `Target input definition '${targetHandleId}' not found on node ${targetNode?.id}`;
+                // 原因 = `在节点 ${targetNode?.id} 上未找到目标输入定义 '${targetHandleId}'`;
               } else {
                 const targetSlotInfo: GroupSlotInfo = {
                   key: targetHandleId,
                   displayName: targetInputDef.displayName || targetHandleId,
-                  dataFlowType: targetInputDef.dataFlowType as DataFlowTypeName, // Cast as it comes from NodeDefinition
+                  dataFlowType: targetInputDef.dataFlowType as DataFlowTypeName, // 类型断言，因为它来自 NodeDefinition
                   matchCategories: targetInputDef.matchCategories,
-                  // other fields from GroupSlotInfo can be undefined or default
+                  // GroupSlotInfo 中的其他字段可以是 undefined 或默认值
                 };
-                if (!isTypeCompatible(outputSlot, targetSlotInfo)) {
+                const compatibleResultOutput = isTypeCompatible(outputSlot, targetSlotInfo);
+                if (!compatibleResultOutput) {
                   isCompatible = false;
-                  // reason = `Type mismatch: NodeGroup Output '${slotKey}' (${outputSlot.dataFlowType}) -> Target (${targetSlotInfo.dataFlowType})`;
+                  // 原因 = `类型不匹配：节点组输出 '${slotKey}' (${outputSlot.dataFlowType}) -> 目标 (${targetSlotInfo.dataFlowType})`;
                 }
               }
             }
