@@ -9,6 +9,7 @@ import { storeToRefs } from "pinia";
 import { useThemeStore } from "../../../stores/theme";
 import { useTabStore } from "../../../stores/tabStore";
 import { useExecutionStore } from "../../../stores/executionStore";
+import { useProjectStore } from '@/stores/projectStore'; // 新增 (useTabManagement 移除)
 
 // 项目类型和工具函数
 import {
@@ -58,6 +59,8 @@ const { isDark } = storeToRefs(themeStore);
 const executionStore = useExecutionStore(); // 获取执行状态 Store 实例
 const tabStore = useTabStore();
 const { activeTabId } = storeToRefs(tabStore);
+const projectStore = useProjectStore();
+const { currentProjectId } = storeToRefs(projectStore); // 只解构 currentProjectId
 
 // VueFlow 和工作流管理器
 const vueFlowInstance = useVueFlow(); // 确保 vueFlowInstance 在此作用域
@@ -78,7 +81,7 @@ const {
 // 重命名导入的函数以避免与计算属性映射冲突
 const { getInputProps: calculateInputProps, getConfigProps: calculateConfigProps } =
   useNodePropsComposable(props);
-const { editNodeGroup, isNodeGroup } = useNodeActions(props); // 使用节点操作 Composable
+const { isNodeGroup } = useNodeActions(props); // 使用节点操作 Composable (移除了未使用的 editNodeGroup)
 // 使用重构后的 useGroupIOSlots，它现在接收完整 props 并返回 finalInputs/finalOutputs
 const { finalInputs, finalOutputs } = useGroupIOSlots(props);
 const { clientScriptError, handleButtonClick, executeClientHook } = useNodeClientScript({ // 使用客户端脚本 Composable
@@ -125,6 +128,17 @@ const nodeGroupInfo = computed(() => {
     inputCount: props.data.groupInfo.inputCount ?? "?",
     outputCount: props.data.groupInfo.outputCount ?? "?",
   };
+});
+
+const referencedWorkflowId = computed(() => {
+  if (isNodeGroup.value) { // 使用现有的 isNodeGroup 计算属性
+    const refId = getConfigValue('referencedWorkflowId') as string | undefined;
+    // 确保返回的是真值字符串
+    if (refId && typeof refId === 'string' && refId.trim() !== '') {
+      return refId;
+    }
+  }
+  return undefined;
 });
 
 // 动态组件的 Props 映射
@@ -519,6 +533,20 @@ const openEditorForInput = (input: InputDefinition) => {
   );
 };
 
+const openReferencedWorkflow = () => {
+  const id = referencedWorkflowId.value;
+  if (id) {
+    const projId = currentProjectId.value;
+    if (!projId) {
+      console.error('无法打开引用的工作流：当前项目 ID 未找到。');
+      return;
+    }
+    // 调用 tabStore 的 action 来打开或激活对应的 groupEditor 标签页
+    // openGroupEditorTab 内部会处理标签页的创建、命名和激活逻辑
+    tabStore.openGroupEditorTab(id, projId);
+  }
+};
+
 // 第 7 部分：Watchers (侦听器)
 watch(
   [inputOrderKey, outputOrderKey],
@@ -602,20 +630,31 @@ onUnmounted(() => {
         <!-- 最后，如果不需要 Tooltip，直接显示普通标题 -->
         <span v-else class="node-title truncate">{{ label || "未命名节点" }}</span>
       </div>
-      <!-- 头部右侧：节点组编辑按钮和分类 -->
+      <!-- 头部右侧：跳转按钮和分类 -->
       <div class="flex items-center gap-1">
-        <Tooltip v-if="isNodeGroup" content="编辑节点组定义" placement="top" :maxWidth="400">
-          <!-- 编辑节点组按钮 -->
-          <button @click.stop="editNodeGroup"
-            class="edit-group-button p-0.5 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-              stroke="currentColor" class="w-3.5 h-3.5">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-            </svg>
+        <!-- 跳转到引用的工作流按钮 -->
+        <Tooltip v-if="referencedWorkflowId" content="跳转到引用的工作流" placement="top" :maxWidth="400">
+          <button
+            @click.stop="openReferencedWorkflow"
+            class="p-0.5 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
           </button>
         </Tooltip>
         <span v-if="data.category" class="node-category">{{ data.category }}</span>
+      </div>
+    </div>
+
+    <!-- 节点配置项区域 -->
+    <div v-if="data.configSchema && Object.keys(data.configSchema).length > 0" class="node-configs">
+      <div v-for="configKeyName in Object.keys(data.configSchema)" :key="`config-${configKeyName}`"
+        class="node-config-item">
+        <div v-if="configPropsMap[String(configKeyName)]?.component" class="config-content" @mousedown.stop>
+          <!-- 阻止 mousedown 冒泡 -->
+          <component :is="configPropsMap[String(configKeyName)]?.component"
+            :model-value="getConfigValue(String(configKeyName))" v-bind="configPropsMap[String(configKeyName)]?.props"
+            @update:modelValue="updateConfigValue(String(configKeyName), $event)" />
+        </div>
       </div>
     </div>
 
@@ -698,18 +737,6 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- 节点配置项区域 -->
-      <div v-if="data.configSchema && Object.keys(data.configSchema).length > 0" class="node-configs">
-        <div v-for="configKeyName in Object.keys(data.configSchema)" :key="`config-${configKeyName}`"
-          class="node-config-item">
-          <div v-if="configPropsMap[String(configKeyName)]?.component" class="config-content" @mousedown.stop>
-            <!-- 阻止 mousedown 冒泡 -->
-            <component :is="configPropsMap[String(configKeyName)]?.component"
-              :model-value="getConfigValue(String(configKeyName))" v-bind="configPropsMap[String(configKeyName)]?.props"
-              @update:modelValue="updateConfigValue(String(configKeyName), $event)" />
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- 节点组信息区域 (仅节点组显示) -->
