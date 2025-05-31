@@ -248,13 +248,21 @@ export function useWorkflowInteractionCoordinator() {
 
         if (groupUpdateResult.success && groupUpdateResult.updatedNodeData) {
           // 将更新的数据合并到 nextSnapshot 中的节点
+          const baseLabel = groupUpdateResult.updatedNodeData.label;
+          // 如果 baseLabel 存在 (即成功引用了工作流名称)，则添加 emoji 前缀
+          // 否则，理论上 groupUpdateResult.updatedNodeData.label 不会为空（会回退到 "分组_id"），但为保险起见，可以加个默认值
+          const finalDisplayLabel = baseLabel ? `📦 ${baseLabel}` : `📦 节点组`;
+
           targetNode.data = {
             ...targetNode.data, // 保留 configValue 更新
             groupInterface: groupUpdateResult.updatedNodeData.groupInterface,
-            label: groupUpdateResult.updatedNodeData.label,
+            label: finalDisplayLabel, // 更新 data.label
           };
+          // 同时更新顶层 label 属性，以便 VueFlow 正确显示
+          targetNode.label = finalDisplayLabel;
+
           console.debug(
-            `[InteractionCoordinator] 已将 NodeGroup 数据更新合并到 ${nodeId} 的 nextSnapshot`
+            `[InteractionCoordinator] 已将 NodeGroup 数据更新 (包括顶层 label: ${targetNode.label}) 合并到 ${nodeId} 的 nextSnapshot`
           );
 
           // 如果需要，在 nextSnapshot 中过滤边
@@ -278,11 +286,40 @@ export function useWorkflowInteractionCoordinator() {
       } else {
         // 清空引用的工作流 ID
         console.warn(
-          `[InteractionCoordinator] NodeGroup ${nodeId} 的 referencedWorkflowId 已清除。接口清除逻辑尚未实现。`
+          `[InteractionCoordinator] NodeGroup ${nodeId} 的 referencedWorkflowId 已清除。正在清除接口、标签和连接数据。`
         );
-        // 此处可能需要在 nextSnapshot 中清除 groupInterface 和 label
-        // targetNode.data.groupInterface = {};
-        // targetNode.data.label = 'NodeGroup'; // 或默认标签
+        targetNode.data.groupInterface = undefined; // 清除接口定义
+        targetNode.data.inputs = {}; // 恢复到节点定义中的默认空输入
+        targetNode.data.outputs = {}; // 恢复到节点定义中的默认空输出
+        targetNode.data.inputConnectionOrders = {}; // 清除连接顺序
+        targetNode.data.label = "📦节点组"; // 恢复 data.label
+        targetNode.label = "📦节点组";      // 恢复顶层 label
+
+        // 查找并准备移除所有连接到此节点组的边
+        const edgesConnectedToNodeGroup = currentSnapshot.elements.filter(
+          (el): el is Edge => "source" in el && (el.source === nodeId || el.target === nodeId)
+        );
+
+        if (edgesConnectedToNodeGroup.length > 0) {
+          const removedEdgeIds = new Set(edgesConnectedToNodeGroup.map(edge => edge.id));
+          // 从 finalElements (它是 nextSnapshot.elements 的一个可变副本或初始引用) 中过滤掉这些边
+          finalElements = finalElements.filter(
+            (el) => !("source" in el) || !removedEdgeIds.has(el.id)
+          );
+          // 确保 nextSnapshot.elements 也得到更新，因为它是用于历史记录的
+          nextSnapshot.elements = finalElements;
+          console.debug(
+            `[InteractionCoordinator] 在 NodeGroup ${nodeId} 清除引用时，移除了 ${removedEdgeIds.size} 条相关边。`
+          );
+
+          // 存储被移除边的完整信息，以便撤销操作可以恢复它们
+          const removedEdgesData = edgesConnectedToNodeGroup.map(edge => klona(edge));
+          if (entry.details) {
+            entry.details.removedEdgesOnClearReference = removedEdgesData;
+          } else {
+            entry.details = { removedEdgesOnClearReference: removedEdgesData };
+          }
+        }
       }
     }
 

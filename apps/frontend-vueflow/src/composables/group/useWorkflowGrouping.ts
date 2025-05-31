@@ -830,15 +830,18 @@ async function createGroupFromSelectionLogic(
   delete baseNodeData.outputs;
   delete baseNodeData.type;
 
+  const referencedWorkflowBaseName = savedWorkflowData.name; // savedWorkflowData.name 已经是 "分组_xxxxxx" 格式
+  const groupDisplayLabel = `📦 ${referencedWorkflowBaseName}`;
+
   const nodeGroupInstance: VueFlowNode = {
     id: nodeGroupNodeId,
     type: "core:NodeGroup", // 使用带命名空间的类型
-    label: savedWorkflowData.name || `分组 ${newWorkflowId}`, // 设置顶层 label
+    label: groupDisplayLabel, // 设置顶层 label
     position: { x: selectionCenterX, y: selectionCenterY },
     data: {
       ...baseNodeData,
       nodeType: "core:NodeGroup", // 同步更新 data.nodeType
-      label: savedWorkflowData.name || `分组 ${newWorkflowId}`, // 同时保留 data.label
+      label: groupDisplayLabel, // 同时保留 data.label
       configValues: {
         ...(baseNodeData.configValues || {}),
         groupMode: "referenced",
