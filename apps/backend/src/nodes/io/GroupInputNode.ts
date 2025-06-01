@@ -1,11 +1,37 @@
-import type { NodeDefinition } from '@comfytavern/types'
+import type { NodeDefinition, GroupSlotInfo } from '@comfytavern/types' // 导入 GroupSlotInfo
 // Removed: import { nodeManager } from '../NodeManager'
 
 export class GroupInputNodeImpl {
-  static async execute(inputs: Record<string, any>, context: any): Promise<Record<string, any>> {
-    // 执行逻辑：从执行上下文 (context) 中获取整个节点组 (NodeGroup) 的输入值。
-    // 这些输入值是由外部连接到 NodeGroup 节点的输入端口提供的。
+  static async execute(
+    _inputs: Record<string, any>, // GroupInputNode 通常没有自己的输入，值来自工作流接口
+    context: { // 为 context 添加更具体的类型提示
+      promptId: string;
+      workflowInterfaceInputs?: Record<string, GroupSlotInfo>;
+      workflowInterfaceOutputs?: Record<string, GroupSlotInfo>; // 虽然 GroupInput 用不到这个
+    }
+  ): Promise<Record<string, any>> {
     const outputs: Record<string, any> = {};
+
+    if (context.workflowInterfaceInputs) {
+      for (const key in context.workflowInterfaceInputs) {
+        const slotInfo = context.workflowInterfaceInputs[key];
+        // GroupInputNode 的输出值应该直接取自 interfaceInputs 的配置值 (通常是 default)
+        // 因为这些值代表了工作流执行时顶层输入的值
+        if (slotInfo && slotInfo.config && slotInfo.config.default !== undefined) {
+          outputs[key] = slotInfo.config.default;
+        } else if (slotInfo) {
+          // 如果 slotInfo 存在但没有 config.default，则该接口输入可能没有提供值
+          // 根据设计，GroupInputNode 的输出应该反映 interfaceInputs 的状态
+          // 如果 interfaceInput 没有值，则对应输出也应该是 undefined
+          outputs[key] = undefined;
+        }
+        // 如果 slotInfo 不存在 (理论上不应该，因为 key 来自 workflowInterfaceInputs)，
+        // 则 outputs[key] 不会被设置，保持 undefined
+      }
+    }
+    console.log(`[GroupInputNode DEBUG] Executing node. Received context:`, JSON.stringify(context, null, 2));
+    console.log(`[GroupInputNode DEBUG] workflowInterfaceInputs from context:`, JSON.stringify(context.workflowInterfaceInputs, null, 2));
+    console.log(`[GroupInputNode DEBUG] Produced outputs:`, JSON.stringify(outputs, null, 2));
     return outputs;
   }
 }

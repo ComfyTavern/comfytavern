@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { DataFlowTypeName } from "./schemas";
+import type { DataFlowTypeName, GroupSlotInfo } from "./schemas"; // 导入 GroupSlotInfo
 import { BuiltInSocketMatchCategory, DataFlowType } from "./schemas";
 
 // 基础输入选项
@@ -326,20 +326,8 @@ export interface WorkflowStorageEdge {
   label?: string; // (可选) 边的标签
 }
 
-// 根据 schemas.ts 中的 Zod schema 定义 GroupSlotInfo
-export interface GroupSlotInfo {
-  key: string; // 唯一键
-  displayName?: string; // 显示名称
-  dataFlowType: DataFlowTypeName; // 数据流类型 (例如: 'DATA_FLOW_STRING', 'DATA_FLOW_IMAGE')
-  customDescription?: string; // (可选) 用户为此特定组接口插槽定义的描述
-  required?: boolean; // 是否必需
-  config?: Record<string, any>; // 配置项
-  matchCategories?: string[]; // (可选) 对于输入插槽，指定兼容的数据类型类别。对于输出，声明其类别。
-  multi?: boolean; // 是否支持多连接
-  allowDynamicType?: boolean; // 是否允许动态类型
-  min?: number; // 最小值 (如果适用)
-  max?: number; // 最大值 (如果适用)
-}
+// GroupSlotInfo 接口已从 schemas.ts 导入，此处移除重复定义。
+// 原定义从 line 330 到 342。
 
 /**
  * 表示用于存储的完整工作流结构。

@@ -82,6 +82,8 @@ export const GroupSlotInfoSchema = z.object({
   matchCategories: z.array(z.string()).optional(),
   allowDynamicType: z.boolean().optional(),
 }));
+/** 类型推断：节点组插槽的详细信息 */
+export type GroupSlotInfo = z.infer<typeof GroupSlotInfoSchema>;
 
 /**
  * Schema 定义：节点组的接口信息，包含输入和输出插槽。
@@ -449,6 +451,17 @@ export const WorkflowExecutionPayloadSchema = z.object({
   nodes: z.array(ExecutionNodeSchema),
   /** 用于执行的边列表 */
   edges: z.array(ExecutionEdgeSchema),
+  /** 工作流的外部输入接口定义 (来自 WorkflowObjectSchema) */
+  interfaceInputs: z.record(GroupSlotInfoSchema).optional(),
+  /** 工作流的外部输出接口定义 (来自 WorkflowObjectSchema) */
+  interfaceOutputs: z.record(GroupSlotInfoSchema).optional(),
+  /**
+   * 工作流的输出接口到内部节点输出的映射。
+   * key: interfaceOutput 的 key (例如 "output_0", "summary_text")
+   * value: { sourceNodeId: string, sourceSlotKey: string }
+   * 这个字段之前在 workflowExecution.ts 的接口中有，现在统一到这里。
+   */
+  outputInterfaceMappings: z.record(z.object({ sourceNodeId: z.string(), sourceSlotKey: z.string() })).optional(),
   // metadata: z.record(z.any()).optional(), // 可选的元数据（例如客户端 ID、用户信息）
 });
 // 类型 WorkflowExecutionPayload 在 workflowExecution.ts 中定义，此处不导出推断类型。

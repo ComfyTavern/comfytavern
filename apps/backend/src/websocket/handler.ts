@@ -68,7 +68,13 @@ export function createWebsocketHandler(
       try {
         switch (message.type) {
           case WebSocketMessageType.PROMPT_REQUEST: {
+            console.log(`[Handler DEBUG] Raw message.payload for PROMPT_REQUEST from ${clientId}:`, JSON.stringify(message.payload, null, 2));
             const payload = message.payload as WorkflowExecutionPayload;
+            if (payload.interfaceInputs) {
+              console.log(`[Handler DEBUG] PROMPT_REQUEST payload from ${clientId} CONTAINS interfaceInputs AFTER type assertion.`);
+            } else {
+              console.log(`[Handler DEBUG] PROMPT_REQUEST payload from ${clientId} DOES NOT CONTAIN interfaceInputs AFTER type assertion.`);
+            }
             console.log(`[Handler] Received PROMPT_REQUEST from ${clientId}`);
             // 将请求提交给调度器
             scheduler.submitExecution(payload, 'websocket', clientId);

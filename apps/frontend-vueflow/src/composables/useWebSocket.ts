@@ -415,6 +415,28 @@ const disconnect = () => {
 export const sendMessage = (message: WebSocketMessage) => {
   if (ws.value && ws.value.readyState === WebSocket.OPEN) {
     try {
+      // --- DEBUG START ---
+      // 使用深拷贝打印，避免意外修改原始对象或日志中显示不准确
+      const messageCopyForLog = JSON.parse(JSON.stringify(message));
+      console.log("[WebSocket SEND DEBUG] Message before stringify:", messageCopyForLog);
+      if (message.type === WebSocketMessageType.PROMPT_REQUEST && message.payload) {
+        const payloadForLog = JSON.parse(JSON.stringify(message.payload));
+        console.log("[WebSocket SEND DEBUG] PROMPT_REQUEST payload before stringify:", payloadForLog);
+        // 检查 interfaceInputs 和 interfaceOutputs 是否存在于 payload 副本中
+        if ('interfaceInputs' in payloadForLog) {
+          console.log("[WebSocket SEND DEBUG] interfaceInputs in payload before stringify:", payloadForLog.interfaceInputs);
+        } else {
+          console.warn("[WebSocket SEND DEBUG] interfaceInputs NOT FOUND in payload before stringify. Original payload object:", message.payload);
+        }
+        if ('interfaceOutputs' in payloadForLog) {
+          console.log("[WebSocket SEND DEBUG] interfaceOutputs in payload before stringify:", payloadForLog.interfaceOutputs);
+        } else {
+          console.warn("[WebSocket SEND DEBUG] interfaceOutputs NOT FOUND in payload before stringify. Original payload object:", message.payload);
+        }
+        console.log("[WebSocket SEND DEBUG] Type of original message.payload.interfaceInputs:", typeof message.payload.interfaceInputs);
+        console.log("[WebSocket SEND DEBUG] Type of original message.payload.interfaceOutputs:", typeof message.payload.interfaceOutputs);
+      }
+      // --- DEBUG END ---
       ws.value.send(JSON.stringify(message));
       console.debug("WebSocket message sent:", message);
     } catch (e) {

@@ -2,6 +2,7 @@
  * @fileoverview 定义工作流执行相关的共享 TypeScript 类型。
  * 参考设计文档: docs/architecture/workflow-execution-plan.md
  */
+import type { GroupSlotInfo } from './schemas'; // 导入 GroupSlotInfo 类型
 
 /**
  * Nano ID 的类型别名，通常是字符串。
@@ -64,7 +65,11 @@ export interface WorkflowExecutionPayload {
    * key: interfaceOutput 的 key (例如 "output_0", "summary_text")
    * value: { sourceNodeId: NanoId, sourceSlotKey: string }
    */
-  outputInterfaceMappings?: Record<string, { sourceNodeId: NanoId, sourceSlotKey: string }>;
+ outputInterfaceMappings?: Record<string, { sourceNodeId: NanoId, sourceSlotKey: string }>;
+ /** (可选) 工作流的输入接口定义 */
+ interfaceInputs?: Record<string, GroupSlotInfo>;
+ /** (可选) 工作流的输出接口定义 (主要供参考，实际输出通过 mappings 处理) */
+ interfaceOutputs?: Record<string, GroupSlotInfo>;
 }
 
 // --- WebSocket 消息 Payload ---

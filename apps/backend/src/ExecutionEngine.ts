@@ -48,7 +48,12 @@ export class ExecutionEngine {
     this.promptId = promptId;
     this.payload = payload;
     // 打印构造函数接收到的完整 payload
-    // console.log(`%%%%%%% Engine Constructor: Received payload: %%%%%%%`, JSON.parse(JSON.stringify(this.payload)));
+    console.log(`[ExecutionEngine CONSTRUCTOR DEBUG] Received payload for prompt ${promptId}:`, JSON.stringify(payload, null, 2));
+    if (payload.interfaceInputs) {
+      console.log(`[ExecutionEngine CONSTRUCTOR DEBUG] Payload for prompt ${promptId} CONTAINS interfaceInputs.`);
+    } else {
+      console.log(`[ExecutionEngine CONSTRUCTOR DEBUG] Payload for prompt ${promptId} DOES NOT CONTAIN interfaceInputs.`);
+    }
     this.wsManager = wsManager;
     // this.outputManager = outputManager;
     // this.historyService = historyService;
@@ -541,7 +546,16 @@ export class ExecutionEngine {
       // NodeGroup 逻辑已移至前端进行扁平化处理
 
       // TODO: 传递更丰富的上下文，包括 promptId, engine 实例等
-      const context = { promptId: this.promptId };
+      const context = {
+        promptId: this.promptId,
+        // 将工作流的 interfaceInputs 传递给节点执行上下文
+        // GroupInputNode 将使用它来获取其输出值
+        // GroupOutputNode 可能也需要 interfaceOutputs 定义 (暂未实现相关逻辑)
+        workflowInterfaceInputs: this.payload.interfaceInputs,
+        workflowInterfaceOutputs: this.payload.interfaceOutputs, // 以备 GroupOutputNode 将来使用
+        // 如果节点需要访问整个工作流定义，可以传递 this.payload
+        // currentWorkflow: this.payload,
+      };
       // 实际执行节点逻辑
       const outputs = await definition.execute(inputs, context);
 
