@@ -40,8 +40,11 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
   nodes: WorkflowStorageNode[];
   edges: WorkflowStorageEdge[];
   viewport: SharedViewport;
+  referencedWorkflows: string[]; // <-- 新增：引用的工作流 ID 列表
 } {
   const nodeStore = useNodeStore(); // 获取 Node Store 实例
+  const referencedWorkflowIds = new Set<string>(); // <-- 新增：用于收集引用的工作流 ID
+
   // 使用完整的类型标识符 (namespace:type) 作为 Map 的键
   const nodeDefinitionsMap = new Map<string, NodeDefinition>(
     nodeStore.nodeDefinitions?.map((def) => [`${def.namespace}:${def.type}`, def]) ?? []
@@ -224,6 +227,10 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
       storageNode.inputConnectionOrders = vueNode.data.inputConnectionOrders;
     }
 
+    // 如果是 NodeGroup 并且有引用的工作流 ID，则收集它
+    if (nodeType === "core:NodeGroup" && vueNode.data?.configValues?.referencedWorkflowId) {
+      referencedWorkflowIds.add(vueNode.data.configValues.referencedWorkflowId as string);
+    }
 
     return storageNode;
   });
@@ -251,6 +258,7 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
     nodes,
     edges,
     viewport,
+    referencedWorkflows: Array.from(referencedWorkflowIds), // <-- 新增：返回收集到的 ID
   };
 }
 

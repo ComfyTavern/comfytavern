@@ -133,6 +133,7 @@ export function useWorkflowData() {
         viewport: coreWorkflowData.viewport,
         interfaceInputs: state.workflowData?.interfaceInputs || {},
         interfaceOutputs: state.workflowData?.interfaceOutputs || {},
+        referencedWorkflows: coreWorkflowData.referencedWorkflows, // <-- 新增
         version: import.meta.env.VITE_APP_VERSION || "unknown",
       };
       try {
@@ -184,6 +185,7 @@ export function useWorkflowData() {
         viewport: coreWorkflowData.viewport,
         interfaceInputs: currentData.interfaceInputs || {},
         interfaceOutputs: currentData.interfaceOutputs || {},
+        referencedWorkflows: coreWorkflowData.referencedWorkflows, // <-- 新增
         version: import.meta.env.VITE_APP_VERSION || "unknown",
       };
       const workflowIdToUpdate = currentData.id; // 使用现有的相对 ID
