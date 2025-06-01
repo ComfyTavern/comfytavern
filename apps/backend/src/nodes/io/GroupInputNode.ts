@@ -29,9 +29,9 @@ export class GroupInputNodeImpl {
         // 则 outputs[key] 不会被设置，保持 undefined
       }
     }
-    console.log(`[GroupInputNode DEBUG] Executing node. Received context:`, JSON.stringify(context, null, 2));
-    console.log(`[GroupInputNode DEBUG] workflowInterfaceInputs from context:`, JSON.stringify(context.workflowInterfaceInputs, null, 2));
-    console.log(`[GroupInputNode DEBUG] Produced outputs:`, JSON.stringify(outputs, null, 2));
+    // console.log(`[GroupInputNode DEBUG] Executing node. Received context:`, JSON.stringify(context, null, 2));
+    // console.log(`[GroupInputNode DEBUG] workflowInterfaceInputs from context:`, JSON.stringify(context.workflowInterfaceInputs, null, 2));
+    // console.log(`[GroupInputNode DEBUG] Produced outputs:`, JSON.stringify(outputs, null, 2));
     return outputs;
   }
 }

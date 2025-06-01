@@ -68,7 +68,7 @@ export function createWebsocketHandler(
       try {
         switch (message.type) {
           case WebSocketMessageType.PROMPT_REQUEST: {
-            console.log(`[Handler DEBUG] Raw message.payload for PROMPT_REQUEST from ${clientId}:`, JSON.stringify(message.payload, null, 2));
+            // console.log(`[Handler DEBUG] Raw message.payload for PROMPT_REQUEST from ${clientId}:`, JSON.stringify(message.payload, null, 2));
             const payload = message.payload as WorkflowExecutionPayload;
             if (payload.interfaceInputs) {
               console.log(`[Handler DEBUG] PROMPT_REQUEST payload from ${clientId} CONTAINS interfaceInputs AFTER type assertion.`);

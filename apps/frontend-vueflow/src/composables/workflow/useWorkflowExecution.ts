@@ -36,8 +36,6 @@ export function useWorkflowExecution() {
    */
   async function executeWorkflow() {
     const internalId = tabStore.activeTabId;
-    // DEBUG: Log active tab ID
-    console.log(`[WorkflowExecution:executeWorkflow] DEBUG: Starting execution for internalId: ${internalId}`);
     if (!internalId) {
       console.error("[WorkflowExecution:executeWorkflow] No active tab found.");
       alert("请先选择一个标签页。"); // 与 StatusBar.vue 保持一致
@@ -122,8 +120,6 @@ export function useWorkflowExecution() {
       return;
     }
     console.info(`[WorkflowExecution:executeWorkflow] Workflow flattened successfully for tab ${internalId}. Nodes: ${flattenedResult.nodes.length}, Edges: ${flattenedResult.edges.length}`);
-    // DEBUG: Log flattenedResult
-    console.log('[WorkflowExecution:executeWorkflow] DEBUG: flattenedResult:', klona(flattenedResult));
 
     // 重新引入 transformVueFlowToCoreWorkflow 步骤
     // 假设 flattenedResult.nodes 和 .edges 是 VueFlowElement 类型或者兼容的
@@ -146,8 +142,6 @@ export function useWorkflowExecution() {
       return;
     }
     console.info(`[WorkflowExecution:executeWorkflow] Workflow transformed to core data successfully for tab ${internalId}. Nodes: ${coreWorkflowData.nodes.length}, Edges: ${coreWorkflowData.edges.length}`);
-    // DEBUG: Log coreWorkflowData (especially nodes and edges)
-    console.log('[WorkflowExecution:executeWorkflow] DEBUG: coreWorkflowData (after transformVueFlowToCoreWorkflow):', klona(coreWorkflowData));
 
     // 3. 使用转换后的核心数据构建执行载荷
     const payload = transformVueFlowToExecutionPayload({ nodes: coreWorkflowData.nodes, edges: coreWorkflowData.edges });
@@ -162,9 +156,6 @@ export function useWorkflowExecution() {
     // 新增：构建 outputInterfaceMappings
     const outputInterfaceMappings: Record<string, { sourceNodeId: string, sourceSlotKey: string }> = {};
     const activeWorkflowData = workflowManager.getWorkflowData(internalId);
-    // DEBUG: Log data used for outputInterfaceMappings
-    console.log('[WorkflowExecution:executeWorkflow] DEBUG: activeWorkflowData.interfaceOutputs for mappings:', klona(activeWorkflowData?.interfaceOutputs));
-    console.log('[WorkflowExecution:executeWorkflow] DEBUG: elementsAfterClientScripts (edges) for mappings:', klona((elementsAfterClientScripts as VueFlowEdge[]).filter(el => 'source' in el)));
 
 
     if (activeWorkflowData && activeWorkflowData.interfaceOutputs && Object.keys(activeWorkflowData.interfaceOutputs).length > 0) {
@@ -173,13 +164,9 @@ export function useWorkflowExecution() {
       const groupOutputNode = coreWorkflowData.nodes.find(
         (node) => node.type === 'core:GroupOutput'
       );
-      // DEBUG: Log found groupOutputNode
-      console.log('[WorkflowExecution:executeWorkflow] DEBUG: Found groupOutputNode (from coreWorkflowData.nodes) for mappings:', groupOutputNode ? klona(groupOutputNode) : 'NOT FOUND');
 
       if (groupOutputNode) {
         for (const interfaceKey in activeWorkflowData.interfaceOutputs) {
-          // DEBUG: Log current interfaceKey being processed
-          console.log(`[WorkflowExecution:executeWorkflow] DEBUG: Processing interfaceKey "${interfaceKey}" for output mapping.`);
           // 在扁平化后的边列表 (coreWorkflowData.edges) 中查找
           // 假设 coreWorkflowData.edges 中的边有 target, targetHandle, source, sourceHandle 属性
           const edgeConnectedToGroupOutputSlot = coreWorkflowData.edges.find(
@@ -187,8 +174,6 @@ export function useWorkflowExecution() {
               edge.target === groupOutputNode.id && // 使用扁平化图中 GroupOutput 节点的 ID
               edge.targetHandle === interfaceKey
           );
-          // DEBUG: Log found edge for this interfaceKey
-          console.log(`[WorkflowExecution:executeWorkflow] DEBUG: Edge (from coreWorkflowData.edges) connected to groupOutputNode.id "${groupOutputNode.id}" and targetHandle "${interfaceKey}":`, edgeConnectedToGroupOutputSlot ? klona(edgeConnectedToGroupOutputSlot) : 'NOT FOUND');
 
           if (edgeConnectedToGroupOutputSlot && edgeConnectedToGroupOutputSlot.source && edgeConnectedToGroupOutputSlot.sourceHandle) {
             outputInterfaceMappings[interfaceKey] = {
@@ -214,8 +199,8 @@ export function useWorkflowExecution() {
         console.warn(`[WorkflowExecution:executeWorkflow] No GroupOutput node found in coreWorkflowData.nodes for workflow ${internalId} to map interfaceOutputs.`);
       }
     }
-    // DEBUG: Log final outputInterfaceMappings
-    console.log('[WorkflowExecution:executeWorkflow] DEBUG: Final generated outputInterfaceMappings (after proposed fix):', klona(outputInterfaceMappings));
+    // 保留这个关键日志，但改为 console.debug，如果 outputInterfaceMappings 不大，可以接受
+    console.debug('[WorkflowExecution:executeWorkflow] Final generated outputInterfaceMappings:', klona(outputInterfaceMappings));
     // 结束新增
 
     // 4. 准备执行状态 (此步骤在原始 StatusBar.vue 中没有，但在旧版 useWorkflowExecution 中有)
@@ -239,9 +224,6 @@ export function useWorkflowExecution() {
         },
       },
     };
-    // DEBUG: Log the entire message payload before sending
-    console.log('[WorkflowExecution:executeWorkflow] DEBUG: Full PROMPT_REQUEST message to be sent:', klona(message));
-
     // 6. 发送消息
     sendMessage(message);
     console.debug("[WorkflowExecution:executeWorkflow] PROMPT_REQUEST sent.", message); // Original debug, good to keep

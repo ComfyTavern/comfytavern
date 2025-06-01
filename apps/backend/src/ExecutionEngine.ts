@@ -48,7 +48,7 @@ export class ExecutionEngine {
     this.promptId = promptId;
     this.payload = payload;
     // 打印构造函数接收到的完整 payload
-    console.log(`[ExecutionEngine CONSTRUCTOR DEBUG] Received payload for prompt ${promptId}:`, JSON.stringify(payload, null, 2));
+    // console.log(`[ExecutionEngine CONSTRUCTOR DEBUG] Received payload for prompt ${promptId}:`, JSON.stringify(payload, null, 2));
     if (payload.interfaceInputs) {
       console.log(`[ExecutionEngine CONSTRUCTOR DEBUG] Payload for prompt ${promptId} CONTAINS interfaceInputs.`);
     } else {
