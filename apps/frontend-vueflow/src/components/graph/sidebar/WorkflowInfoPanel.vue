@@ -6,6 +6,7 @@ import { useTabStore } from "@/stores/tabStore";
 // import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { generateSafeWorkflowFilename } from "@/utils/textUtils";
+import { transformVueFlowToCoreWorkflow } from "@/utils/workflowTransformer"; // 更正导入的函数名
 import { createHistoryEntry } from "@comfytavern/utils"; // 导入历史条目创建函数
 import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core"; // 导入类型
 // Import OverlayScrollbars
@@ -191,6 +192,48 @@ const workflowNodes = computed(() => {
     activeState.value?.elements?.filter((el: VueFlowNode | VueFlowEdge) => !("source" in el)) ?? []
   );
 });
+
+const logWorkflowJson = () => {
+  if (activeState.value && activeState.value.elements && activeState.value.workflowData) {
+    const workflowMeta = activeState.value.workflowData; // 这是 WorkflowStorageObject
+
+    // 构造 FlowExportObject 给 transformVueFlowToCoreWorkflow
+    // 需要 VueFlowNode 和 VueFlowEdge 类型断言
+    const flowExportForTransform: import("@vue-flow/core").FlowExportObject = {
+      nodes: activeState.value.elements.filter(
+        (el): el is VueFlowNode => !("source" in el)
+      ),
+      edges: activeState.value.elements.filter(
+        (el): el is VueFlowEdge => "source" in el
+      ),
+      position: [
+        workflowMeta.viewport?.x ?? 0,
+        workflowMeta.viewport?.y ?? 0,
+      ],
+      zoom: workflowMeta.viewport?.zoom ?? 1,
+      viewport: workflowMeta.viewport || { x: 0, y: 0, zoom: 1 }, // 使用 workflowMeta 中的 viewport
+    };
+
+    // 使用 transformVueFlowToCoreWorkflow 从最新的 elements 和 viewport 生成核心数据
+    const {
+      nodes: currentNodes,
+      edges: currentEdges,
+      viewport: currentViewport,
+    } = transformVueFlowToCoreWorkflow(flowExportForTransform);
+
+    // 创建最终的日志对象，基于 workflowMeta 并更新 nodes, edges, viewport
+    const currentWorkflowForLog: import("@comfytavern/types").WorkflowStorageObject = {
+      ...workflowMeta, // 复制所有元数据
+      nodes: currentNodes, // 使用最新的节点
+      edges: currentEdges, // 使用最新的边
+      viewport: currentViewport, // 使用最新的视口
+    };
+
+    console.debug("当前工作流 JSON (从 elements 构建):", JSON.stringify(currentWorkflowForLog, null, 2));
+  } else {
+    console.warn("没有活动的 activeState、elements 或 workflowData 可供输出。");
+  }
+};
 </script>
 
 <template>
@@ -230,6 +273,15 @@ const workflowNodes = computed(() => {
           <p v-if="workflowData.version"><strong>版本:</strong> {{ workflowData.version }}</p>
           <p><strong>节点数量:</strong> {{ nodeCount }}</p>
           <!-- 添加节点数量显示 -->
+
+          <div class="mt-3">
+            <button
+              @click="logWorkflowJson"
+              class="w-full px-3 py-1.5 text-xs font-medium text-center text-sky-600 bg-transparent border border-sky-600 rounded-md hover:bg-sky-100 dark:text-sky-400 dark:border-sky-400 dark:hover:bg-sky-700/30 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-sky-500 dark:focus:ring-offset-gray-800"
+            >
+              输出工作流 JSON 到控制台 (Debug)
+            </button>
+          </div>
         </div>
 
         <!-- 节点列表 (可收起/展开) -->
