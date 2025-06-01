@@ -1,5 +1,6 @@
 import type { WorkflowObject } from '@comfytavern/types' // 使用共享类型
 import { useApi } from '@/utils/api' // 导入封装好的 API 工具
+import { deepClone } from '@/utils/deepClone' // 导入 deepClone
 
 // 获取 API 调用函数
 const { get, post, put, del } = useApi()
@@ -61,6 +62,35 @@ export const saveWorkflowApi = async (projectId: string, data: Omit<WorkflowObje
     : `/projects/${encodeURIComponent(projectId)}/workflows`
   const method = workflowId ? 'PUT' : 'POST'
   console.log(`API: ${method} workflow to project ${projectId}...`, url, data) // Keep as log - important action start
+
+  if (method === 'POST') {
+    // 类型断言，因为在 POST 时，data 应该是 Omit<WorkflowObject, 'id'>
+    const workflowToLog = data as Omit<WorkflowObject, 'id'>
+    console.log('[workflowApi:saveWorkflowApi POST] About to send workflow data for creation (cloned):', deepClone(workflowToLog))
+    if (workflowToLog.nodes) {
+      // 尝试找到特定的问题节点 ID 'bzMrNqWPTZ'。
+      // 注意：这个 ID 源自父工作流。当它成为新组内部工作流的一部分时，其 ID 可能会被保留或重新映射。
+      // 此处假设它在复制到新工作流时被保留。
+      const problematicNode = workflowToLog.nodes.find(n => n.id === 'bzMrNqWPTZ')
+      if (problematicNode) {
+        console.log('[workflowApi:saveWorkflowApi POST] Data for node bzMrNqWPTZ before sending to backend (cloned):', deepClone(problematicNode.data))
+      } else {
+        // 如果未找到特定 ID，则回退记录所有 core:NodeGroup 类型节点的数据，以帮助识别。
+        let foundNodeGroup = false
+        workflowToLog.nodes.forEach(node => {
+          if (node.type === 'core:NodeGroup') {
+            console.log(`[workflowApi:saveWorkflowApi POST] Data for NodeGroup ${node.id} (type: ${node.type}) before sending (cloned):`, deepClone(node.data))
+            foundNodeGroup = true
+          }
+        })
+        if (!foundNodeGroup && problematicNode === undefined) { // problematicNode is undefined if not found by ID
+          console.log('[workflowApi:saveWorkflowApi POST] No node with ID bzMrNqWPTZ found, and no other core:NodeGroup nodes found in this payload.')
+        }
+      }
+    } else {
+      console.log('[workflowApi:saveWorkflowApi POST] No nodes found in the workflow data to log.')
+    }
+  }
 
   try {
     let responseData: WorkflowObject

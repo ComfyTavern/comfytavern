@@ -39,7 +39,7 @@ export function useWorkflowInteractionCoordinator() {
   const multiInputActions = useMultiInputConnectionActions(coordinatorActiveTabIdRef);
 
   // --- 内部辅助函数 ---
-  
+
   /**
    * 获取当前活动标签页或指定标签页的最新状态快照
    * @param internalId - 可选的标签页内部 ID，未提供时使用活动标签页ID
@@ -253,16 +253,22 @@ export function useWorkflowInteractionCoordinator() {
           // 否则，理论上 groupUpdateResult.updatedNodeData.label 不会为空（会回退到 "分组_id"），但为保险起见，可以加个默认值
           const finalDisplayLabel = baseLabel ? `📦 ${baseLabel}` : `📦 节点组`;
 
+          // 新增：从 groupInterface 更新 inputs 和 outputs
+          const newInputs = groupUpdateResult.updatedNodeData.groupInterface?.inputs || {};
+          const newOutputs = groupUpdateResult.updatedNodeData.groupInterface?.outputs || {};
+
           targetNode.data = {
             ...targetNode.data, // 保留 configValue 更新
             groupInterface: groupUpdateResult.updatedNodeData.groupInterface,
             label: finalDisplayLabel, // 更新 data.label
+            inputs: newInputs, // 更新节点的输入插槽定义
+            outputs: newOutputs, // 更新节点的输出插槽定义
           };
           // 同时更新顶层 label 属性，以便 VueFlow 正确显示
           targetNode.label = finalDisplayLabel;
 
           console.debug(
-            `[InteractionCoordinator] 已将 NodeGroup 数据更新 (包括顶层 label: ${targetNode.label}) 合并到 ${nodeId} 的 nextSnapshot`
+            `[InteractionCoordinator] 已将 NodeGroup 数据更新 (包括顶层 label: ${targetNode.label}, inputs/outputs from groupInterface) 合并到 ${nodeId} 的 nextSnapshot`
           );
 
           // 如果需要，在 nextSnapshot 中过滤边
@@ -325,6 +331,16 @@ export function useWorkflowInteractionCoordinator() {
 
     // 应用状态更新 (使用 nextSnapshot 的最终 elements)
     await workflowManager.setElements(internalId, finalElements);
+
+    // 特殊处理 NodeGroup 的视图更新
+    if (nodeType === "core:NodeGroup" && configKey === "referencedWorkflowId") {
+      // 无论 referencedWorkflowId 是被设置还是被清除，都尝试更新节点内部结构，
+      // 因为插槽定义发生了变化。
+      await updateNodeInternals(internalId, [nodeId]);
+      console.debug(
+        `[InteractionCoordinator] Called updateNodeInternals for NodeGroup ${nodeId} after referencedWorkflowId change (new value: ${value}).`
+      );
+    }
 
     // 记录历史 (使用准备好的 nextSnapshot)
     recordHistory(internalId, entry, nextSnapshot);

@@ -372,7 +372,7 @@ async function updateNodeGroupWorkflowReferenceLogic(
 
       // 添加日志显示断开数量
       console.info(`[updateNodeGroupWorkflowReferenceLogic] ${message}`);
-      alert(`节点组接口已更新。${message}。`);
+      // alert(`节点组接口已更新。${message}。`); // 移除阻塞UI的alert
     } else {
       console.debug(
         `[updateNodeGroupWorkflowReferenceLogic] 所有连接均与新接口兼容` // 保持与中文环境一致
@@ -483,37 +483,55 @@ async function createGroupFromSelectionLogic(
       const groupSlotKey = `${edge.target}_${targetHandleId}`;
 
       if (!groupInputsMap.has(groupSlotKey) && targetNode) {
-        const fullTargetNodeType = getNodeType(targetNode); // 例如 "core:TestWidgets"
-        const targetTypeParts = fullTargetNodeType.split(':');
-        let internalTargetNodeDef;
-        if (targetTypeParts.length === 2) {
-          const [namespace, baseType] = targetTypeParts;
-          internalTargetNodeDef = nodeDefinitions.value.find(def => def.namespace === namespace && def.type === baseType);
-        } else if (targetTypeParts.length === 1 && fullTargetNodeType.trim() !== '') {
-          // 回退：如果只有基础类型名，则尝试在 'core' 命名空间或任何命名空间中查找
-          internalTargetNodeDef = nodeDefinitions.value.find(def => def.namespace === 'core' && def.type === fullTargetNodeType) ||
-            nodeDefinitions.value.find(def => def.type === fullTargetNodeType);
+        let slotDefinitionForGroupMap: GroupSlotInfo | undefined;
+        if (targetNode.type === 'core:NodeGroup' && targetNode.data?.groupInterface?.inputs && targetNode.data.groupInterface.inputs[targetHandleId]) {
+          slotDefinitionForGroupMap = targetNode.data.groupInterface.inputs[targetHandleId];
+        } else {
+          const fullTargetNodeType = getNodeType(targetNode);
+          const targetTypeParts = fullTargetNodeType.split(':');
+          let staticNodeDef;
+          if (targetTypeParts.length === 2) {
+            const [namespace, baseType] = targetTypeParts;
+            staticNodeDef = nodeDefinitions.value.find(def => def.namespace === namespace && def.type === baseType);
+          } else if (targetTypeParts.length === 1 && fullTargetNodeType.trim() !== '') {
+            staticNodeDef = nodeDefinitions.value.find(def => def.namespace === 'core' && def.type === fullTargetNodeType) ||
+              nodeDefinitions.value.find(def => def.type === fullTargetNodeType);
+          }
+          const staticInputDef = staticNodeDef?.inputs?.[targetHandleId];
+          if (staticInputDef) {
+            slotDefinitionForGroupMap = {
+              key: targetHandleId,
+              displayName: staticInputDef.displayName || staticInputDef.name || targetHandleId,
+              dataFlowType: staticInputDef.dataFlowType,
+              matchCategories: staticInputDef.matchCategories || [],
+              customDescription: staticInputDef.description,
+              required: staticInputDef.required,
+              config: staticInputDef.config,
+              allowDynamicType: staticInputDef.allowDynamicType,
+            };
+          }
         }
-        const internalInputDef = internalTargetNodeDef?.inputs?.[targetHandleId];
+
+        // For logging external source info (remains the same)
         const externalSourceNode = allNodes.find((n) => n.id === edge.source);
-        const externalSourceNodeType = getNodeType(externalSourceNode);
+        // const externalSourceNodeType = getNodeType(externalSourceNode); // Not strictly needed for log
         const externalSourceNodeDef = externalSourceNode
-          ? nodeDefinitions.value.find((def: any) => def.type === externalSourceNodeType)
+          ? nodeDefinitions.value.find((def: any) => def.type === getNodeType(externalSourceNode)) // getNodeType here
           : undefined;
         const externalSourceHandleId = edge.sourceHandle || "default_source";
         const externalOutputDef = externalSourceNodeDef?.outputs?.[externalSourceHandleId];
 
         console.debug(
-          `[GROUPING_INPUT_LOG] Edge ${edge.id}: External Source (${edge.source}:${externalSourceHandleId}, DefType: ${externalOutputDef?.dataFlowType}) -> Internal Target (${edge.target}:${targetHandleId}, DefType: ${internalInputDef?.dataFlowType}). Assigning to Group Input Slot ${groupSlotKey} with Type: ${internalInputDef?.dataFlowType || DataFlowType.CONVERTIBLE_ANY}`
+          `[GROUPING_INPUT_LOG] Edge ${edge.id}: External Source (${edge.source}:${externalSourceHandleId}, DefType: ${externalOutputDef?.dataFlowType}) -> Internal Target (${edge.target}:${targetHandleId}, DefType: ${slotDefinitionForGroupMap?.dataFlowType}). Assigning to Group Input Slot ${groupSlotKey} with Type: ${slotDefinitionForGroupMap?.dataFlowType || DataFlowType.CONVERTIBLE_ANY}`
         );
 
         groupInputsMap.set(groupSlotKey, {
           originalTargetNodeId: edge.target,
           originalTargetHandle: targetHandleId,
-          dataFlowType: internalInputDef?.dataFlowType || DataFlowType.CONVERTIBLE_ANY, // Use dataFlowType
-          name: internalInputDef?.displayName || targetHandleId,
-          description: internalInputDef?.description || externalOutputDef?.description,
-          matchCategories: internalInputDef?.matchCategories || [], // 确保复制 matchCategories
+          dataFlowType: slotDefinitionForGroupMap?.dataFlowType || DataFlowType.CONVERTIBLE_ANY,
+          name: slotDefinitionForGroupMap?.displayName || targetHandleId,
+          description: slotDefinitionForGroupMap?.customDescription, // Primarily use internal slot's description
+          matchCategories: slotDefinitionForGroupMap?.matchCategories || [],
         });
       }
       externalToGroupNodeConnections.push({
@@ -530,39 +548,55 @@ async function createGroupFromSelectionLogic(
       const groupSlotKey = `${edge.source}_${sourceHandleId}`;
 
       if (!groupOutputsMap.has(groupSlotKey) && sourceNode) {
-        const fullSourceNodeType = getNodeType(sourceNode); // 例如 "core:TestWidgets"
-        const sourceTypeParts = fullSourceNodeType.split(':');
-        let internalSourceNodeDef;
-        if (sourceTypeParts.length === 2) {
-          const [namespace, baseType] = sourceTypeParts;
-          internalSourceNodeDef = nodeDefinitions.value.find(def => def.namespace === namespace && def.type === baseType);
-        } else if (sourceTypeParts.length === 1 && fullSourceNodeType.trim() !== '') {
-          // 回退：如果只有基础类型名，则尝试在 'core' 命名空间或任何命名空间中查找
-          internalSourceNodeDef = nodeDefinitions.value.find(def => def.namespace === 'core' && def.type === fullSourceNodeType) ||
-            nodeDefinitions.value.find(def => def.type === fullSourceNodeType);
+        let slotDefinitionForGroupMap: GroupSlotInfo | undefined;
+        if (sourceNode.type === 'core:NodeGroup' && sourceNode.data?.groupInterface?.outputs && sourceNode.data.groupInterface.outputs[sourceHandleId]) {
+          slotDefinitionForGroupMap = sourceNode.data.groupInterface.outputs[sourceHandleId];
+        } else {
+          const fullSourceNodeType = getNodeType(sourceNode);
+          const sourceTypeParts = fullSourceNodeType.split(':');
+          let staticNodeDef;
+          if (sourceTypeParts.length === 2) {
+            const [namespace, baseType] = sourceTypeParts;
+            staticNodeDef = nodeDefinitions.value.find(def => def.namespace === namespace && def.type === baseType);
+          } else if (sourceTypeParts.length === 1 && fullSourceNodeType.trim() !== '') {
+            staticNodeDef = nodeDefinitions.value.find(def => def.namespace === 'core' && def.type === fullSourceNodeType) ||
+              nodeDefinitions.value.find(def => def.type === fullSourceNodeType);
+          }
+          const staticOutputDef = staticNodeDef?.outputs?.[sourceHandleId];
+          if (staticOutputDef) {
+            slotDefinitionForGroupMap = {
+              key: sourceHandleId,
+              displayName: staticOutputDef.displayName || staticOutputDef.name || sourceHandleId,
+              dataFlowType: staticOutputDef.dataFlowType,
+              matchCategories: staticOutputDef.matchCategories || [],
+              customDescription: staticOutputDef.description,
+              required: staticOutputDef.required,
+              config: staticOutputDef.config,
+              allowDynamicType: staticOutputDef.allowDynamicType,
+            };
+          }
         }
-        const internalOutputDef = internalSourceNodeDef?.outputs?.[sourceHandleId];
 
-        // 获取外部目标节点的输入插槽定义以供记录
+        // For logging external target info (remains the same)
         const externalTargetNode = allNodes.find((n) => n.id === edge.target);
-        const externalTargetNodeType = getNodeType(externalTargetNode);
+        // const externalTargetNodeType = getNodeType(externalTargetNode); // Not strictly needed for log
         const externalTargetNodeDef = externalTargetNode
-          ? nodeDefinitions.value.find((def: any) => def.type === externalTargetNodeType)
+          ? nodeDefinitions.value.find((def: any) => def.type === getNodeType(externalTargetNode)) // getNodeType here
           : undefined;
         const externalTargetHandleId = edge.targetHandle || "default_target";
         const externalTargetInputDef = externalTargetNodeDef?.inputs?.[externalTargetHandleId];
 
         console.debug(
-          `[GROUPING_OUTPUT_LOG] Edge ${edge.id}: Internal Source (${edge.source}:${sourceHandleId}, DefType: ${internalOutputDef?.dataFlowType}) -> External Target (${edge.target}:${externalTargetHandleId}, DefType: ${externalTargetInputDef?.dataFlowType}). Assigning to Group Output Slot ${groupSlotKey} with Type: ${internalOutputDef?.dataFlowType || DataFlowType.CONVERTIBLE_ANY}`
+          `[GROUPING_OUTPUT_LOG] Edge ${edge.id}: Internal Source (${edge.source}:${sourceHandleId}, DefType: ${slotDefinitionForGroupMap?.dataFlowType}) -> External Target (${edge.target}:${externalTargetHandleId}, DefType: ${externalTargetInputDef?.dataFlowType}). Assigning to Group Output Slot ${groupSlotKey} with Type: ${slotDefinitionForGroupMap?.dataFlowType || DataFlowType.CONVERTIBLE_ANY}`
         );
 
         groupOutputsMap.set(groupSlotKey, {
           originalSourceNodeId: edge.source,
           originalSourceHandle: sourceHandleId,
-          dataFlowType: internalOutputDef?.dataFlowType || DataFlowType.CONVERTIBLE_ANY, // Use dataFlowType
-          name: internalOutputDef?.displayName || sourceHandleId,
-          description: internalOutputDef?.description,
-          matchCategories: internalOutputDef?.matchCategories || [], // 确保复制 matchCategories
+          dataFlowType: slotDefinitionForGroupMap?.dataFlowType || DataFlowType.CONVERTIBLE_ANY,
+          name: slotDefinitionForGroupMap?.displayName || sourceHandleId,
+          description: slotDefinitionForGroupMap?.customDescription, // Primarily use internal slot's description
+          matchCategories: slotDefinitionForGroupMap?.matchCategories || [],
         });
       }
       externalToGroupNodeConnections.push({
@@ -639,6 +673,27 @@ async function createGroupFromSelectionLogic(
 
   // 2. 添加选中的节点到新工作流（调整位置, VueFlowNode格式）
   nodesToGroup.forEach((originalNode) => {
+    // --- START DIAGNOSTIC LOGS for NodeGroup data V3 ---
+    // 检查 Ba-fAru2l7 或任何 core:NodeGroup 类型的节点
+    // 注意：'Ba-fAru2l7' 是示例 ID，实际场景中可能是其他 ID
+    if (originalNode.type === 'core:NodeGroup') {
+      try {
+        // 记录进入循环时 originalNode.data 的状态
+        const dataSnapshot = originalNode.data ? JSON.parse(JSON.stringify(originalNode.data)) : undefined;
+        console.log(`[GROUPING_LOGIC_COPY_V3] Node ${originalNode.id} (type: ${originalNode.type}) - IN LOOP START - originalNode.data (snapshot):`, dataSnapshot);
+        if (originalNode.data === undefined) {
+          console.warn(`[GROUPING_LOGIC_COPY_V3] Node ${originalNode.id} (type: ${originalNode.type}) - originalNode.data is ALREADY UNDEFINED upon entering forEach loop.`);
+        } else if (originalNode.data && dataSnapshot.groupInterface === undefined && originalNode.data.referencedWorkflowId) {
+          // 如果 data 存在，但 groupInterface 缺失，且它是一个已引用的节点组
+          console.warn(`[GROUPING_LOGIC_COPY_V3] Node ${originalNode.id} (type: ${originalNode.type}) - originalNode.data exists BUT groupInterface is UNDEFINED. ReferencedWorkflowId: ${originalNode.data.referencedWorkflowId}`);
+        }
+      } catch (e) {
+        console.error(`[GROUPING_LOGIC_COPY_V3] Error stringifying originalNode.data for ${originalNode.id} at loop start:`, e);
+        console.log(`[GROUPING_LOGIC_COPY_V3] Node ${originalNode.id} (type: ${originalNode.type}) - originalNode.data (raw, at loop start):`, originalNode.data);
+      }
+    }
+    // --- END DIAGNOSTIC LOGS V3 ---
+
     // 使用 toRaw 获取原始对象，避免 Vue 的响应式代理带来的问题，然后深拷贝
     const rawNode = toRaw(originalNode);
     const nodeCopy = JSON.parse(JSON.stringify(rawNode)) as VueFlowNode;

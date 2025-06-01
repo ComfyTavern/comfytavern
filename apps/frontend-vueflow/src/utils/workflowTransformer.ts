@@ -71,7 +71,8 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
       nodeDef.inputs &&
       vueNode.data?.inputs &&
       nodeType !== "core:GroupInput" &&
-      nodeType !== "core:GroupOutput"
+      nodeType !== "core:GroupOutput" &&
+      nodeType !== "core:NodeGroup" // 阻止为 NodeGroup 提取 inputValues
     ) {
       Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
         // inputData is now an object { value: ..., description: ..., ... }
@@ -152,7 +153,7 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
     const customOutputSlotDescriptions: Record<string, string> = {};
 
     // Check input slot descriptions
-    if (nodeDef.inputs && vueNode.data?.inputs) {
+    if (nodeDef.inputs && vueNode.data?.inputs && nodeType !== "core:NodeGroup") { // 阻止为 NodeGroup 提取 customSlotDescriptions
       Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
         // inputData now contains the description object
         if (typeof inputData === "object" && inputData !== null && "description" in inputData) {
@@ -170,7 +171,7 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
     }
 
     // Check output slot descriptions
-    if (nodeDef.outputs && vueNode.data?.outputs) {
+    if (nodeDef.outputs && vueNode.data?.outputs && nodeType !== "core:NodeGroup") { // 阻止为 NodeGroup 提取 customSlotDescriptions
       Object.entries(vueNode.data.outputs).forEach(([outputName, outputData]) => {
         // outputData now contains the description object
         if (typeof outputData === "object" && outputData !== null && "description" in outputData) {
@@ -253,23 +254,30 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
 /**
  * 将从后端加载的 WorkflowObject 转换为 Vue Flow 可以直接使用的格式。
  * @param workflow 从后端加载的工作流对象
+ * @param projectId 当前项目的 ID
  * @param isDark 当前是否为暗黑模式
  * @param getEdgeStylePropsFunc 用于获取边样式的函数
- * @returns 包含 flowData 和 viewport 的对象
+ * @param loadWorkflowByIdFunc 一个函数，用于根据 projectId 和 workflowId 加载工作流数据
+ * @returns 包含 flowData 和 viewport 的对象 Promise
  */
-export function transformWorkflowToVueFlow(
-  workflow: WorkflowStorageObject, // <-- 接收 Storage 类型
+export async function transformWorkflowToVueFlow( // <--- 标记为 async
+  workflow: WorkflowStorageObject,
+  projectId: string, // <--- 新增 projectId
   isDark: boolean,
-  getEdgeStylePropsFunc: GetEdgeStylePropsFunc
-): { flowData: FlowExportObject; viewport: SharedViewport } {
-  const nodeStore = useNodeStore(); // 获取 Node Store 实例
-  // 使用完整的类型标识符 (namespace:type) 作为 Map 的键
+  getEdgeStylePropsFunc: GetEdgeStylePropsFunc,
+  loadWorkflowByIdFunc: ( // <--- 新增加载函数参数
+    pId: string,
+    wfId: string
+  ) => Promise<WorkflowStorageObject | null>
+): Promise<{ flowData: FlowExportObject; viewport: SharedViewport }> { // <--- 返回 Promise
+  const nodeStore = useNodeStore();
   const nodeDefinitionsMap = new Map<string, NodeDefinition>(
     nodeStore.nodeDefinitions?.map((def) => [`${def.namespace}:${def.type}`, def]) ?? []
   );
 
-  const nodes: VueFlowNode[] = workflow.nodes.map(
-    (storageNode: WorkflowStorageNode): VueFlowNode => {
+  // 阶段 1: 处理节点并异步加载 NodeGroup 接口
+  const nodes: VueFlowNode[] = await Promise.all( // <--- await Promise.all
+    workflow.nodes.map(async (storageNode: WorkflowStorageNode): Promise<VueFlowNode> => { // <--- async map callback, returns Promise<VueFlowNode>
       const nodeDef = nodeDefinitionsMap.get(storageNode.type);
       if (!nodeDef) {
         console.error(
@@ -283,120 +291,106 @@ export function transformWorkflowToVueFlow(
         } as VueFlowNode;
       }
 
-      // 初始化 VueFlow 节点数据，包含定义中的 inputs 和 outputs
       const vueFlowData: Record<string, any> = {
-        ...nodeDef, // 复制基础定义属性 (包括默认 description)
-        inputs: {}, // 初始化为空对象，稍后填充值和描述
-        outputs: {}, // 初始化为空对象，稍后填充描述
-        configValues: storageNode.configValues || {}, // 应用存储的配置值
-        // 确定节点描述
+        ...nodeDef,
+        inputs: {},
+        outputs: {},
+        configValues: storageNode.configValues || {},
         defaultDescription: nodeDef.description || "",
-        description: storageNode.customDescription || nodeDef.description || "", // 最终显示的描述
+        description: storageNode.customDescription || nodeDef.description || "",
       };
 
-      // 填充 input 值
       if (nodeDef.inputs) {
         Object.entries(nodeDef.inputs).forEach(([inputName, inputDef]) => {
           const effectiveDefault = getEffectiveDefaultValue(inputDef);
           const storedValue = storageNode.inputValues?.[inputName];
-          // 如果存储了值，则使用存储的值；否则使用有效默认值
           const finalValue = storedValue !== undefined ? storedValue : effectiveDefault;
-          // 注意：这里我们直接将最终值赋给 vueFlowData.inputs[inputName]
-          // Vue Flow 节点组件内部（例如 useNodeState）会处理这个 data.inputs
-          // vueFlowData.inputs[inputName] = finalValue; // 旧的赋值方式
-          // 创建包含值和描述的对象
           const defaultSlotDesc = inputDef.description || "";
           const customSlotDesc = storageNode.customSlotDescriptions?.inputs?.[inputName];
           const displaySlotDesc = customSlotDesc || defaultSlotDesc;
           vueFlowData.inputs[inputName] = {
-            value: finalValue, // 存储最终值
-            description: displaySlotDesc, // 存储最终显示的描述
-            defaultDescription: defaultSlotDesc, // 存储默认描述
-            // 保留原始定义中的其他属性，以便 BaseNode 访问 (如 type, config 等)
+            value: finalValue,
+            description: displaySlotDesc,
+            defaultDescription: defaultSlotDesc,
             ...inputDef,
           };
         });
       }
 
-      // NodeGroup 的接口处理：NodeGroup 组件自身会处理接口加载和同步
-      // 我们只需要确保 configValues 中的 referencedWorkflowId 被传递
-      if (vueFlowData.type === "core:NodeGroup") {
-        const referencedWorkflowId = vueFlowData.configValues?.referencedWorkflowId;
-        if (referencedWorkflowId) {
-          console.debug(
-            `[transformWorkflowToVueFlow] NodeGroup ${storageNode.id} references workflow ${referencedWorkflowId}. Interface will be handled by the component.`
-          );
-        } else {
-          console.warn(
-            `[transformWorkflowToVueFlow] NodeGroup ${storageNode.id} is missing referencedWorkflowId in configValues.`
-          );
-        }
-      }
-
-      // 填充 output 描述 (Outputs 通常没有值，只有定义和描述)
       if (nodeDef.outputs) {
         Object.entries(nodeDef.outputs).forEach(([outputName, outputDef]) => {
           const defaultSlotDesc = outputDef.description || "";
           const customSlotDesc = storageNode.customSlotDescriptions?.outputs?.[outputName];
           const displaySlotDesc = customSlotDesc || defaultSlotDesc;
           vueFlowData.outputs[outputName] = {
-            description: displaySlotDesc, // 存储最终显示的描述
-            defaultDescription: defaultSlotDesc, // 存储默认描述
-            // 保留原始定义中的其他属性
+            description: displaySlotDesc,
+            defaultDescription: defaultSlotDesc,
             ...outputDef,
           };
         });
       }
 
-      // NodeGroup 的接口处理：NodeGroup 组件自身会处理接口加载和同步
-      // 我们只需要确保 configValues 中的 referencedWorkflowId 被传递
-      if (vueFlowData.type === "core:NodeGroup") {
-        const referencedWorkflowId = vueFlowData.configValues?.referencedWorkflowId;
+      // NodeGroup 的接口处理：异步加载并填充 groupInterface
+      if (storageNode.type === "core:NodeGroup") {
+        const referencedWorkflowId = vueFlowData.configValues?.referencedWorkflowId as string | undefined;
         if (referencedWorkflowId) {
           console.debug(
-            `[transformWorkflowToVueFlow] NodeGroup ${storageNode.id} references workflow ${referencedWorkflowId}. Interface will be handled by the component.`
+            `[transformWorkflowToVueFlow] NodeGroup ${storageNode.id} references workflow ${referencedWorkflowId}. Attempting to load its interface...`
           );
+          try {
+            const referencedWorkflowData = await loadWorkflowByIdFunc(projectId, referencedWorkflowId);
+            if (referencedWorkflowData) {
+              const groupInterface = extractGroupInterface(referencedWorkflowData);
+              vueFlowData.groupInterface = groupInterface; // 填充 groupInterface
+              console.debug(
+                `[transformWorkflowToVueFlow] NodeGroup ${storageNode.id} interface loaded and applied:`,
+                JSON.parse(JSON.stringify(groupInterface))
+              );
+            } else {
+              console.warn(
+                `[transformWorkflowToVueFlow] NodeGroup ${storageNode.id}: Referenced workflow ${referencedWorkflowId} could not be loaded. Interface will be empty.`
+              );
+              vueFlowData.groupInterface = { inputs: {}, outputs: {} }; // 设置空接口以避免后续错误
+            }
+          } catch (error) {
+            console.error(
+              `[transformWorkflowToVueFlow] NodeGroup ${storageNode.id}: Error loading referenced workflow ${referencedWorkflowId}:`,
+              error
+            );
+            vueFlowData.groupInterface = { inputs: {}, outputs: {} }; // 设置空接口
+          }
         } else {
           console.warn(
-            `[transformWorkflowToVueFlow] NodeGroup ${storageNode.id} is missing referencedWorkflowId in configValues.`
+            `[transformWorkflowToVueFlow] NodeGroup ${storageNode.id} is missing referencedWorkflowId in configValues. Interface will be empty.`
           );
+          vueFlowData.groupInterface = { inputs: {}, outputs: {} }; // 设置空接口
         }
       }
 
-      // 确定默认标签 (使用不同的变量名以避免冲突)
       const nodeDefaultLabel = nodeDef.displayName || storageNode.type;
-      // 确定最终显示的标签 (优先使用自定义标签)
       const nodeDisplayLabel = storageNode.customLabel || nodeDefaultLabel;
-
-      // 将默认标签存入 data 以便 tooltip 使用
       vueFlowData.defaultLabel = nodeDefaultLabel;
 
       const vueFlowNodeObject: VueFlowNode = {
-        id: storageNode.id, // <-- 使用 storageNode 的 ID
+        id: storageNode.id,
         type: storageNode.type,
         position: storageNode.position,
-        data: vueFlowData, // <-- 使用填充好的数据 (现在包含 defaultLabel, defaultDescription, 以及插槽的描述)
-        width: storageNode.size?.width, // 应用存储的大小
+        data: vueFlowData,
+        width: storageNode.size?.width,
         height: storageNode.size?.height,
-        // zIndex is not part of WorkflowStorageNode, removed assignment
-        label: nodeDisplayLabel, // 应用最终确定的显示标签
+        label: nodeDisplayLabel,
       };
 
-
-      // 处理 inputConnectionOrders
       if (storageNode.inputConnectionOrders) {
-        // vueFlowData 应该总是被初始化的，但为了安全起见，我们检查一下
-        if (!vueFlowNodeObject.data) {
-          vueFlowNodeObject.data = {};
-        }
+        if (!vueFlowNodeObject.data) vueFlowNodeObject.data = {};
         vueFlowNodeObject.data.inputConnectionOrders = storageNode.inputConnectionOrders;
       }
 
       return vueFlowNodeObject;
-    }
+    })
   );
 
-  // 创建一个节点 ID 到 VueFlowNode 的映射，方便查找边连接的节点
+  // 阶段 2: 处理边 (此时 NodeGroup 的 groupInterface 应该已填充)
   const vueFlowNodesMap = new Map<string, VueFlowNode>(nodes.map((n) => [n.id, n]));
 
   const edges: VueFlowEdge[] = workflow.edges.map(
@@ -409,87 +403,86 @@ export function transformWorkflowToVueFlow(
 
       // 确定源类型
       if (sourceNode && storageEdge.sourceHandle) {
-        // 检查是否为 GroupInput (其输出定义在 workflow.interfaceInputs)
         if (sourceNode.type === "core:GroupInput") {
           const interfaceInputDef = workflow.interfaceInputs?.[storageEdge.sourceHandle];
           if (interfaceInputDef) sourceType = interfaceInputDef.dataFlowType || "any";
-        }
-        // 检查是否为 NodeGroup (其输出定义在 data.groupInterface.outputs)
-        else if (sourceNode.type === "core:NodeGroup" && sourceNode.data?.groupInterface?.outputs) {
-          const outputDef = sourceNode.data.groupInterface.outputs[storageEdge.sourceHandle];
-          if (outputDef) sourceType = outputDef.dataFlowType || "any"; // <--- 修正属性名
-        }
-        // 检查是否为普通节点 (其输出定义在 data.outputs)
-        // 注意：现在 data.outputs[handle] 存储的是包含类型的对象
-        else if (sourceNode.data?.outputs?.[storageEdge.sourceHandle]) {
+        } else if (sourceNode.type === "core:NodeGroup") {
+          // 现在 sourceNode.data.groupInterface 应该存在了
+          if (sourceNode.data?.groupInterface?.outputs) {
+            const outputDef = sourceNode.data.groupInterface.outputs[storageEdge.sourceHandle];
+            if (outputDef && outputDef.dataFlowType) {
+              sourceType = outputDef.dataFlowType;
+            } else if (outputDef) {
+              console.warn(`[transformWorkflowToVueFlow] NodeGroup ${sourceNode.id} (source for edge ${storageEdge.id}) output handle '${storageEdge.sourceHandle}' found in groupInterface.outputs, but 'dataFlowType' is missing or invalid. Defaulting to 'any'. OutputDef:`, JSON.stringify(outputDef));
+              sourceType = "any";
+            } else {
+              console.warn(`[transformWorkflowToVueFlow] NodeGroup ${sourceNode.id} (source for edge ${storageEdge.id}) has 'groupInterface.outputs', but handle '${storageEdge.sourceHandle}' not found. Available output handles: ${sourceNode.data.groupInterface.outputs ? Object.keys(sourceNode.data.groupInterface.outputs).join(', ') : 'outputs not available'}. Defaulting to 'any'.`);
+              sourceType = "any";
+            }
+          } else {
+            console.warn(`[transformWorkflowToVueFlow] NodeGroup ${sourceNode.id} (source for edge ${storageEdge.id}) is missing 'data.groupInterface.outputs' or 'data.groupInterface' itself after async load. Data:`, JSON.stringify(sourceNode.data), `. Defaulting to 'any'.`);
+            sourceType = "any";
+          }
+        } else if (sourceNode.data?.outputs?.[storageEdge.sourceHandle]) {
           const outputData = sourceNode.data.outputs[storageEdge.sourceHandle];
-          // 从 outputData 对象中获取类型
-          if (outputData && typeof outputData === "object" && outputData.dataFlowType) { // <--- 修正属性名
+          if (outputData && typeof outputData === "object" && outputData.dataFlowType) {
             sourceType = outputData.dataFlowType;
           }
         }
       }
-      if (sourceType === "any") {
+      if (sourceType === "any" && sourceNode && storageEdge.sourceHandle) {
         console.warn(
-          `[transformWorkflowToVueFlow] Cannot determine specific source type for edge ${storageEdge.id} (source: ${storageEdge.source}::${storageEdge.sourceHandle}). Defaulting to 'any'.`
+          `[transformWorkflowToVueFlow] FINAL CHECK: Cannot determine specific source type for edge ${storageEdge.id} (source: ${storageEdge.source}::${storageEdge.sourceHandle}). Defaulting to 'any'.`
         );
       }
 
       // 确定目标类型
       if (targetNode && storageEdge.targetHandle) {
-        // 检查是否为 GroupOutput (其输入定义在 workflow.interfaceOutputs)
         if (targetNode.type === "core:GroupOutput") {
           const interfaceOutputDef = workflow.interfaceOutputs?.[storageEdge.targetHandle];
-          if (interfaceOutputDef) {
-            targetType = interfaceOutputDef.dataFlowType || "any";
+          if (interfaceOutputDef && interfaceOutputDef.dataFlowType) {
+            targetType = interfaceOutputDef.dataFlowType;
+          } else if (interfaceOutputDef) {
+            console.warn(`[transformWorkflowToVueFlow] GroupOutput ${targetNode.id} (target for edge ${storageEdge.id}) input handle '${storageEdge.targetHandle}' found in workflow.interfaceOutputs, but 'dataFlowType' is missing or invalid. Defaulting to 'any'. InterfaceOutputDef:`, JSON.stringify(interfaceOutputDef));
+            targetType = "any";
+          } else {
+            targetType = "any";
           }
-        }
-        // 检查是否为 NodeGroup (其输入定义在 data.groupInterface.inputs)
-        else if (targetNode.type === "core:NodeGroup" && targetNode.data?.groupInterface?.inputs) {
-          const inputDef = targetNode.data.groupInterface.inputs[storageEdge.targetHandle];
-          if (inputDef) {
-            targetType = inputDef.dataFlowType || "any"; // <--- 修正属性名
-          }
-        }
-        // 检查是否为普通节点 (其输入定义在 data.inputs)
-        else if (targetNode.data?.inputs) {
-          const fullTargetHandle = storageEdge.targetHandle; // targetHandle is a string, can be ""
-          const handleParts = fullTargetHandle.split('__');
-          const baseHandleName = handleParts[0]; // baseHandleName can be "" if fullTargetHandle is "" or starts with "__"
-
-          // 确保 baseHandleName 非空，并且是 targetNode.data.inputs 的一个实际键
-          if (baseHandleName && Object.prototype.hasOwnProperty.call(targetNode.data.inputs, baseHandleName)) {
-            const inputData = targetNode.data.inputs[baseHandleName]; // 类型安全访问
-
-            // 此处 inputData 不会是 undefined，因为 hasOwnProperty.call 保证了键的存在
-            // 并且 inputData 也不会是 null，因为它是从 nodeDef.inputs 构建的，其中每个条目都是一个对象
-            if (typeof inputData === "object" && inputData.dataFlowType) { // 检查 inputData 是否是我们期望的结构
-              targetType = inputData.dataFlowType;
+        } else if (targetNode.type === "core:NodeGroup") {
+          // 现在 targetNode.data.groupInterface 应该存在了
+          if (targetNode.data?.groupInterface?.inputs) {
+            const inputDef = targetNode.data.groupInterface.inputs[storageEdge.targetHandle];
+            if (inputDef && inputDef.dataFlowType) {
+              targetType = inputDef.dataFlowType;
+            } else if (inputDef) {
+              console.warn(`[transformWorkflowToVueFlow] NodeGroup ${targetNode.id} (target for edge ${storageEdge.id}) input handle '${storageEdge.targetHandle}' found in groupInterface.inputs, but 'dataFlowType' is missing or invalid. Defaulting to 'any'. InputDef:`, JSON.stringify(inputDef));
+              targetType = "any";
             } else {
-              // console.warn(`[Roo Debug Edge Target Type - Normal Node] inputData for '${baseHandleName}' does not have dataFlowType or is not a valid object. inputData:`, JSON.parse(JSON.stringify(inputData)));
+              console.warn(`[transformWorkflowToVueFlow] NodeGroup ${targetNode.id} (target for edge ${storageEdge.id}) has 'groupInterface.inputs', but handle '${storageEdge.targetHandle}' not found. Available input handles: ${targetNode.data.groupInterface.inputs ? Object.keys(targetNode.data.groupInterface.inputs).join(', ') : 'inputs not available'}. Defaulting to 'any'.`);
+              targetType = "any";
             }
           } else {
-            // let reason = "";
-            // if (!baseHandleName) {
-            //   reason = `baseHandleName is empty (derived from fullTargetHandle: '${fullTargetHandle}')`;
-            // } else if (!targetNode.data.inputs) { // 防御性检查，尽管外层 if 应该已经处理了
-            //   reason = `targetNode.data.inputs is null or undefined for node ${targetNode.id}`;
-            // } else {
-            //   reason = `key '${baseHandleName}' not found in targetNode.data.inputs`;
-            // }
-            // console.warn(`[Roo Debug Edge Target Type - Normal Node] No inputData found or key invalid. Reason: ${reason}. Available keys in targetNode.data.inputs: ${targetNode.data?.inputs ? Object.keys(targetNode.data.inputs).join(', ') : 'targetNode.data.inputs is not available'}`);
+            console.warn(`[transformWorkflowToVueFlow] NodeGroup ${targetNode.id} (target for edge ${storageEdge.id}) is missing 'data.groupInterface.inputs' or 'data.groupInterface' itself after async load. Data:`, JSON.stringify(targetNode.data), `. Defaulting to 'any'.`);
+            targetType = "any";
+          }
+        } else if (targetNode.data?.inputs) {
+          const fullTargetHandle = storageEdge.targetHandle;
+          const handleParts = fullTargetHandle.split('__');
+          const baseHandleName = handleParts[0];
+          if (baseHandleName && Object.prototype.hasOwnProperty.call(targetNode.data.inputs, baseHandleName)) {
+            const inputData = targetNode.data.inputs[baseHandleName];
+            if (typeof inputData === "object" && inputData.dataFlowType) {
+              targetType = inputData.dataFlowType;
+            }
           }
         }
       }
-
-      if (targetType === "any") {
-        // 这个警告现在会在上面的逻辑中更早地被特定情况的 warn 覆盖（如果适用），但保留它作为最终的捕获
+      if (targetType === "any" && targetNode && storageEdge.targetHandle) {
         console.warn(
           `[transformWorkflowToVueFlow] FINAL CHECK: Cannot determine specific target type for edge ${storageEdge.id} (target: ${storageEdge.target}::${storageEdge.targetHandle}). Defaulting to 'any'. Source Type: ${sourceType}`
         );
       }
 
-      // 使用传入的函数获取样式
       const {
         animated: edgeAnimated,
         style: edgeStyle,
@@ -497,15 +490,14 @@ export function transformWorkflowToVueFlow(
       } = getEdgeStylePropsFunc(sourceType, targetType, isDark);
 
       return {
-        id: storageEdge.id, // <-- 使用 storageEdge 的 ID
+        id: storageEdge.id,
         source: storageEdge.source,
         target: storageEdge.target,
-        sourceHandle: storageEdge.sourceHandle, // <-- 使用 storageEdge 的 handle
-        targetHandle: storageEdge.targetHandle, // <-- 使用 storageEdge 的 handle
-        type: "default", // 默认边类型，可以根据需要调整
-        label: storageEdge.label, // 应用存储的标签
+        sourceHandle: storageEdge.sourceHandle,
+        targetHandle: storageEdge.targetHandle,
+        type: "default",
+        label: storageEdge.label,
         data: {
-          // 存储推断出的类型信息，可能有用
           sourceType: sourceType,
           targetType: targetType,
         },
@@ -516,7 +508,6 @@ export function transformWorkflowToVueFlow(
     }
   );
 
-  // Add null check for viewport
   const viewport: SharedViewport = {
     x: workflow.viewport?.x ?? 0,
     y: workflow.viewport?.y ?? 0,
@@ -524,12 +515,11 @@ export function transformWorkflowToVueFlow(
   };
 
   const flowData: FlowExportObject = {
-    nodes: nodes,
+    nodes: nodes, // nodes is now an array of resolved VueFlowNode objects
     edges: edges,
-    position: [viewport.x, viewport.y], // 保持兼容性
+    position: [viewport.x, viewport.y],
     zoom: viewport.zoom,
     viewport: {
-      // 使用标准 viewport 结构
       x: viewport.x,
       y: viewport.y,
       zoom: viewport.zoom,

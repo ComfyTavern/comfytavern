@@ -23,9 +23,9 @@
     </VueFlow>
     <!-- 画布右键菜单 -->
     <ContextMenu :visible="showPaneContextMenu" :position="contextMenuPosition" :has-selected-nodes="hasSelectedNodes"
-      :has-copied-nodes="hasCopiedNodes" @request-add-node="forwardRequestAddNode" @add-group="addGroup" @copy="copySelected" @paste="paste"
-      @delete="deleteSelected" @select-all="onSelectAll" @reset-view="resetView" @close="closePaneContextMenu"
-      @open-node-search-panel="() => emit('open-node-search-panel')" />
+      :has-copied-nodes="hasCopiedNodes" @request-add-node="forwardRequestAddNode" @add-group="addGroup"
+      @copy="copySelected" @paste="paste" @delete="deleteSelected" @select-all="onSelectAll" @reset-view="resetView"
+      @close="closePaneContextMenu" @open-node-search-panel="() => emit('open-node-search-panel')" />
 
     <!-- 节点右键菜单 (根据选中数量显示不同内容) -->
     <NodeContextMenu :visible="showNodeContextMenu" :position="contextMenuPosition" :nodeId="selectedNodeId"
@@ -44,116 +44,136 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, type PropType } from 'vue' // 导入 PropType
-import { watch, nextTick } from 'vue'
-import { VueFlow, useVueFlow, SelectionMode, type NodeTypesObject, type EdgeTypesObject } from '@vue-flow/core' // 导入 NodeTypesObject 和 EdgeTypesObject
-import UnplugConnectionLine from './edges/UnplugConnectionLine.vue';
-import { useNodeStore } from '../../stores/nodeStore'
-import { useWorkflowStore } from '../../stores/workflowStore'; // 导入 WorkflowStore
-import { useTabStore } from '../../stores/tabStore'; // 导入 TabStore
-import useDragAndDrop from '../../composables/canvas/useDnd'
-import { useCanvasKeyboardShortcuts } from '../../composables/canvas/useCanvasKeyboardShortcuts' // <-- Import the composable
-import { useContextMenuPositioning } from '../../composables/canvas/useContextMenuPositioning'; // <-- Import the new composable
-import { Background } from '@vue-flow/background'
-import { Controls } from '@vue-flow/controls'
-import { MiniMap } from '@vue-flow/minimap'
-import type { Node, Edge, Connection, XYPosition } from '@vue-flow/core'
-import ContextMenu from './menus/ContextMenu.vue'
-import NodeContextMenu from './menus/NodeContextMenu.vue'
-import SlotContextMenu from './menus/SlotContextMenu.vue'; // 导入插槽右键菜单
-import BaseNode from './nodes/BaseNode.vue'
-import SortedMultiTargetEdge from './edges/SortedMultiTargetEdge.vue'; // 导入自定义边组件
-import { useThemeStore } from '../../stores/theme'
-import { storeToRefs } from 'pinia'
-import { useCanvasConnections } from '../../composables/canvas/useCanvasConnections'
-import { useNodeGroupConnectionValidation } from '../../composables/node/useNodeGroupConnectionValidation'; // 导入新的 Composable
-import { useWorkflowGrouping } from '@/composables/group/useWorkflowGrouping';
-import { createHistoryEntry } from '@comfytavern/utils'; // <-- 导入 createHistoryEntry
+import { ref, computed, onMounted, onUnmounted, type PropType } from "vue"; // 导入 PropType
+import { watch, nextTick } from "vue";
+import {
+  VueFlow,
+  useVueFlow,
+  SelectionMode,
+  type NodeTypesObject,
+  type EdgeTypesObject,
+} from "@vue-flow/core"; // 导入 NodeTypesObject 和 EdgeTypesObject
+import UnplugConnectionLine from "./edges/UnplugConnectionLine.vue";
+import { useNodeStore } from "../../stores/nodeStore";
+import { useWorkflowStore } from "../../stores/workflowStore"; // 导入 WorkflowStore
+import { useTabStore } from "../../stores/tabStore"; // 导入 TabStore
+import useDragAndDrop from "../../composables/canvas/useDnd";
+import { useCanvasKeyboardShortcuts } from "../../composables/canvas/useCanvasKeyboardShortcuts"; // <-- Import the composable
+import { useContextMenuPositioning } from "../../composables/canvas/useContextMenuPositioning"; // <-- Import the new composable
+import { Background } from "@vue-flow/background";
+import { Controls } from "@vue-flow/controls";
+import { MiniMap } from "@vue-flow/minimap";
+import type { Node, Edge, Connection, XYPosition } from "@vue-flow/core";
+import ContextMenu from "./menus/ContextMenu.vue";
+import NodeContextMenu from "./menus/NodeContextMenu.vue";
+import SlotContextMenu from "./menus/SlotContextMenu.vue"; // 导入插槽右键菜单
+import BaseNode from "./nodes/BaseNode.vue";
+import SortedMultiTargetEdge from "./edges/SortedMultiTargetEdge.vue"; // 导入自定义边组件
+import { useThemeStore } from "../../stores/theme";
+import { storeToRefs } from "pinia";
+import { useCanvasConnections } from "../../composables/canvas/useCanvasConnections";
+import { useNodeGroupConnectionValidation } from "../../composables/node/useNodeGroupConnectionValidation"; // 导入新的 Composable
+import { useWorkflowGrouping } from "@/composables/group/useWorkflowGrouping";
+import { createHistoryEntry } from "@comfytavern/utils"; // <-- 导入 createHistoryEntry
+
 // 定义props和emits
 const props = defineProps({
   modelValue: { type: Array as PropType<Array<Node | Edge>>, required: true },
-  nodeTypes: { type: Object as PropType<NodeTypesObject>, required: true }
+  nodeTypes: { type: Object as PropType<NodeTypesObject>, required: true },
 });
 const edgeTypes: EdgeTypesObject = {
-  'sorted-multi-target': SortedMultiTargetEdge, // 使用导入的自定义边组件
+  "sorted-multi-target": SortedMultiTargetEdge, // 使用导入的自定义边组件
 };
 
 const emit = defineEmits<{
-  'update:modelValue': [value: Array<Node | Edge>]
-  'node-click': [node: Node]
-  'pane-ready': [instance: any] // Revert to emitting the hook instance, use 'any' for now
-  'connect': [connection: Connection],
-  'request-add-node-to-workflow': [payload: { fullNodeType: string; flowPosition: XYPosition }], // +++ 新的 emit
-  'open-node-search-panel': [] // 新增：向上层传递打开节点搜索面板的事件
+  "update:modelValue": [value: Array<Node | Edge>];
+  "node-click": [node: Node];
+  "pane-ready": [instance: any]; // Revert to emitting the hook instance, use 'any' for now
+  connect: [connection: Connection];
+  "request-add-node-to-workflow": [payload: { fullNodeType: string; flowPosition: XYPosition }]; // +++ 新的 emit
+  "open-node-search-panel": []; // 新增：向上层传递打开节点搜索面板的事件
 }>();
 
 // 使用计算属性处理双向绑定
 const internalElements = computed({
   get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
+  set: (value) => emit("update:modelValue", value),
 });
 
 // 监听画布元素变化并打印日志
-watch(internalElements, (newElements, oldElements) => {
-  const oldNodes = oldElements?.filter(el => {
-    if (typeof el !== 'object' || el === null) {
-      // console.warn(`[Canvas] watch internalElements: Found non-object element in oldElements (for oldNodes):`, el); // 更详细的日志可选
-      return false;
+watch(
+  internalElements,
+  (newElements, oldElements) => {
+    const oldNodes =
+      (oldElements?.filter((el) => {
+        if (typeof el !== "object" || el === null) {
+          // console.warn(`[Canvas] watch internalElements: Found non-object element in oldElements (for oldNodes):`, el); // 更详细的日志可选
+          return false;
+        }
+        return "position" in el;
+      }) as Node[]) || []; // 类型断言为 Node[]
+    const newNodes =
+      (newElements?.filter((el) => {
+        if (typeof el !== "object" || el === null) {
+          console.warn(
+            `[Canvas] watch internalElements: Found non-object element in newElements (for newNodes):`,
+            el
+          );
+          return false;
+        }
+        return "position" in el;
+      }) as Node[]) || []; // 类型断言为 Node[]
+    const oldEdges =
+      oldElements?.filter((el) => {
+        if (typeof el !== "object" || el === null) {
+          // console.warn(`[Canvas] watch internalElements: Found non-object element in oldElements (for oldEdges):`, el); // 更详细的日志可选
+          return false;
+        }
+        return "source" in el;
+      }) || [];
+    const newEdges =
+      newElements?.filter((el) => {
+        if (typeof el !== "object" || el === null) {
+          console.warn(
+            `[Canvas] watch internalElements: Found non-object element in newElements (for newEdges):`,
+            el
+          );
+          return false;
+        }
+        return "source" in el;
+      }) || [];
+
+    const totalNodes = newNodes.length; // 获取当前节点总数
+
+    if (totalNodes !== oldNodes.length || newEdges.length !== oldEdges.length) {
+      // 节点或边数量发生变化
+      // console.debug(`[Canvas] Elements updated. Total Nodes: ${totalNodes}, Edges: ${oldEdges.length} -> ${newEdges.length}`);
+    } else {
+      // 如果数量没变，检查是否有节点位置变化
+      const changedNodeInData = newNodes.find((newNode, index) => {
+        const oldNode = oldNodes[index];
+        // 确保 oldNode 存在且位置确实改变
+        return (
+          oldNode &&
+          (newNode.position.x !== oldNode.position.x || newNode.position.y !== oldNode.position.y)
+        );
+      });
+      if (changedNodeInData) {
+        // 尝试从 Vue Flow 实例获取节点，它可能包含渲染后的 dimensions
+        // 需要使用 .value 访问 ComputedRef 中的函数
+        // const nodeFromInstance = vueFlowInstance.getNode.value(changedNodeInData.id);
+        // 安全地访问 dimensions，提供默认值
+        // const dimensions = {
+        //   width: nodeFromInstance?.dimensions?.width ?? 'N/A',
+        //   height: nodeFromInstance?.dimensions?.height ?? 'N/A'
+        // };
+        // console.debug(`[Canvas] Node position updated. Total Nodes: ${totalNodes}. Node ID: ${changedNodeInData.id}, New Position: ${JSON.stringify(changedNodeInData.position)}, Dimensions: ${JSON.stringify(dimensions)}`);
+      }
+      // 可以添加更详细的边变化检测，但暂时省略以保持简洁
     }
-    return 'position' in el;
-  }) as Node[] || []; // 类型断言为 Node[]
-  const newNodes = newElements?.filter(el => {
-    if (typeof el !== 'object' || el === null) {
-      console.warn(`[Canvas] watch internalElements: Found non-object element in newElements (for newNodes):`, el);
-      return false;
-    }
-    return 'position' in el;
-  }) as Node[] || []; // 类型断言为 Node[]
-  const oldEdges = oldElements?.filter(el => {
-    if (typeof el !== 'object' || el === null) {
-      // console.warn(`[Canvas] watch internalElements: Found non-object element in oldElements (for oldEdges):`, el); // 更详细的日志可选
-      return false;
-    }
-    return 'source' in el;
-  }) || [];
-  const newEdges = newElements?.filter(el => {
-    if (typeof el !== 'object' || el === null) {
-      console.warn(`[Canvas] watch internalElements: Found non-object element in newElements (for newEdges):`, el);
-      return false;
-    }
-    return 'source' in el;
-  }) || [];
-
-
-  const totalNodes = newNodes.length; // 获取当前节点总数
-
-  if (totalNodes !== oldNodes.length || newEdges.length !== oldEdges.length) {
-    // 节点或边数量发生变化
-    // console.debug(`[Canvas] Elements updated. Total Nodes: ${totalNodes}, Edges: ${oldEdges.length} -> ${newEdges.length}`);
-  } else {
-    // 如果数量没变，检查是否有节点位置变化
-    const changedNodeInData = newNodes.find((newNode, index) => {
-      const oldNode = oldNodes[index];
-      // 确保 oldNode 存在且位置确实改变
-      return oldNode && (newNode.position.x !== oldNode.position.x || newNode.position.y !== oldNode.position.y);
-    });
-
-    if (changedNodeInData) {
-      // 尝试从 Vue Flow 实例获取节点，它可能包含渲染后的 dimensions
-      // 需要使用 .value 访问 ComputedRef 中的函数
-      // const nodeFromInstance = vueFlowInstance.getNode.value(changedNodeInData.id);
-      // 安全地访问 dimensions，提供默认值
-      // const dimensions = {
-      //   width: nodeFromInstance?.dimensions?.width ?? 'N/A',
-      //   height: nodeFromInstance?.dimensions?.height ?? 'N/A'
-      // };
-      // console.debug(`[Canvas] Node position updated. Total Nodes: ${totalNodes}. Node ID: ${changedNodeInData.id}, New Position: ${JSON.stringify(changedNodeInData.position)}, Dimensions: ${JSON.stringify(dimensions)}`);
-    }
-    // 可以添加更详细的边变化检测，但暂时省略以保持简洁
-  }
-}, { deep: true }); // 使用 deep watch 来检测内部变化，例如 position
-
-
+  },
+  { deep: true }
+); // 使用 deep watch 来检测内部变化，例如 position
 
 // 获取 VueFlow 组件的引用
 const vueFlowRef = ref<any | null>(null);
@@ -179,21 +199,32 @@ const {
 
 // 获取拖拽相关函数
 const { onDragOver, onDragLeave, onDrop } = useDragAndDrop();
-const themeStore = useThemeStore()
-const { isDark } = storeToRefs(themeStore)
-const nodeStore = useNodeStore()
+const themeStore = useThemeStore();
+const { isDark } = storeToRefs(themeStore);
+const nodeStore = useNodeStore();
 const { nodeDefinitions } = storeToRefs(nodeStore); // 从 nodeStore 获取响应式引用
 const workflowStore = useWorkflowStore(); // 实例化 WorkflowStore
 const tabStore = useTabStore(); // 实例化 TabStore
 const activeTabId = computed(() => tabStore.activeTabId); // 获取活动标签页 ID
+const currentWorkflowInterface = computed(() => {
+  if (activeTabId.value) {
+    // 使用 getTabState 方法获取特定标签页的状态
+    const state = workflowStore.getTabState(activeTabId.value);
+    if (state && state.workflowData) {
+      return {
+        inputs: state.workflowData.interfaceInputs || {},
+        outputs: state.workflowData.interfaceOutputs || {},
+      };
+    }
+  }
+  return undefined;
+});
 
 // 初始化连线逻辑
-const {
-  removeNodeConnections,
-} = useCanvasConnections({
+const { removeNodeConnections } = useCanvasConnections({
   getNodes,
   isDark,
-  getEdges
+  getEdges,
 });
 
 // Initialize keyboard shortcuts and get needed methods
@@ -220,16 +251,20 @@ const showPaneContextMenu = ref(false);
 const showNodeContextMenu = ref(false);
 const showSlotContextMenu = ref(false); // 添加插槽菜单状态
 // const contextMenuPosition = ref({ x: 0, y: 0 }); // Moved to useContextMenuPositioning
-const selectedNodeId = ref('');
+const selectedNodeId = ref("");
 const selectedNodeType = ref<string | undefined>(undefined); // 用于存储右键点击节点的类型
 const currentNodeSelectionCount = ref(0); // 添加回选中数量的 ref
-const slotContextMenuContext = ref<{ nodeId: string; handleId: string; handleType: 'source' | 'target' } | null>(null); // 插槽菜单上下文
+const slotContextMenuContext = ref<{
+  nodeId: string;
+  handleId: string;
+  handleType: "source" | "target";
+} | null>(null); // 插槽菜单上下文
 const copiedNodes = ref<Node[]>([]);
 
 // 计算属性
 const hasSelectedNodes = computed(() => {
   const nodes = getNodes.value;
-  return nodes.some(node => node.selected);
+  return nodes.some((node) => node.selected);
 });
 
 const hasCopiedNodes = computed(() => copiedNodes.value.length > 0);
@@ -259,7 +294,7 @@ const closeSlotContextMenu = () => closeContextMenu(showSlotContextMenu);
 const forwardRequestAddNode = (payload: { fullNodeType: string; screenPosition: XYPosition }) => {
   console.debug(`[Canvas] forwardRequestAddNode received payload:`, payload);
   if (!payload || !payload.fullNodeType || !payload.screenPosition) {
-    console.error('[Canvas] Invalid payload for forwarding request-add-node:', payload);
+    console.error("[Canvas] Invalid payload for forwarding request-add-node:", payload);
     return;
   }
 
@@ -267,13 +302,12 @@ const forwardRequestAddNode = (payload: { fullNodeType: string; screenPosition: 
   const flowPosition = project(payload.screenPosition);
   console.debug(`[Canvas] Calculated flowPosition for context menu add:`, flowPosition);
 
-  emit('request-add-node-to-workflow', {
+  emit("request-add-node-to-workflow", {
     fullNodeType: payload.fullNodeType,
-    flowPosition: flowPosition
+    flowPosition: flowPosition,
   });
   closeAllContextMenus(); // 添加节点后关闭菜单
 };
-
 
 // 添加节点组
 const addGroup = () => {
@@ -282,17 +316,17 @@ const addGroup = () => {
   // 创建一个组节点
   const groupNode: Node = {
     id: `group-${Date.now()}`,
-    type: 'group',
+    type: "group",
     position,
     style: {
       width: 300,
       height: 200,
-      backgroundColor: isDark.value ? 'rgba(55, 65, 81, 0.7)' : 'rgba(240, 240, 240, 0.7)', // gray-700 with opacity
-      border: `1px dashed ${isDark.value ? '#4B5563' : '#ccc'}`, // gray-600 for dark mode
-      borderRadius: '8px',
-      padding: '10px'
+      backgroundColor: isDark.value ? "rgba(55, 65, 81, 0.7)" : "rgba(240, 240, 240, 0.7)", // gray-700 with opacity
+      border: `1px dashed ${isDark.value ? "#4B5563" : "#ccc"}`, // gray-600 for dark mode
+      borderRadius: "8px",
+      padding: "10px",
     },
-    data: { label: '新节点组' }
+    data: { label: "新节点组" },
   };
 
   internalElements.value = [...internalElements.value, groupNode];
@@ -301,7 +335,7 @@ const addGroup = () => {
 // 复制选中节点
 const copySelected = () => {
   const nodes = getNodes.value;
-  copiedNodes.value = nodes.filter(node => node.selected);
+  copiedNodes.value = nodes.filter((node) => node.selected);
   // TODO: Also copy edges between selected nodes?
 };
 
@@ -313,21 +347,21 @@ const paste = () => {
   // Calculate average position of copied nodes to paste relative to context menu
   let avgX = 0;
   let avgY = 0;
-  copiedNodes.value.forEach(n => {
+  copiedNodes.value.forEach((n) => {
     avgX += n.position.x;
     avgY += n.position.y;
   });
   avgX /= copiedNodes.value.length;
   avgY /= copiedNodes.value.length;
 
-  const newNodes = copiedNodes.value.map(node => ({
+  const newNodes = copiedNodes.value.map((node) => ({
     ...node,
     id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     position: {
       x: position.x + (node.position.x - avgX), // Paste relative to original structure
-      y: position.y + (node.position.y - avgY)
+      y: position.y + (node.position.y - avgY),
     },
-    selected: false // Deselect after pasting
+    selected: false, // Deselect after pasting
   }));
 
   internalElements.value = [...internalElements.value, ...newNodes];
@@ -344,12 +378,14 @@ const resetView = () => {
 
 // 节点相关操作
 const editNode = (nodeId: string) => {
-  console.debug('编辑节点:', nodeId);
+  console.debug("编辑节点:", nodeId);
   // 这里添加编辑节点的逻辑
 };
 
 const duplicateNode = (nodeId: string) => {
-  const nodeToDuplicate = internalElements.value.find(el => 'id' in el && el.id === nodeId) as Node;
+  const nodeToDuplicate = internalElements.value.find(
+    (el) => "id" in el && el.id === nodeId
+  ) as Node;
   if (!nodeToDuplicate) return;
 
   const newNode: Node = {
@@ -357,15 +393,15 @@ const duplicateNode = (nodeId: string) => {
     id: `node-${Date.now()}`,
     position: {
       x: nodeToDuplicate.position.x + 50,
-      y: nodeToDuplicate.position.y + 50
-    }
+      y: nodeToDuplicate.position.y + 50,
+    },
   };
 
   internalElements.value = [...internalElements.value, newNode];
 };
 
 const connectNode = (nodeId: string) => {
-  console.debug('连接节点:', nodeId);
+  console.debug("连接节点:", nodeId);
   // 这里添加连接节点的逻辑
 };
 
@@ -374,8 +410,9 @@ const disconnectNode = (nodeId: string) => {
   removeNodeConnections(nodeId);
 };
 
-const deleteNode = async (nodeId: string) => { // 标记为 async
-  const nodeToRemove = getNodes.value.find(n => n.id === nodeId);
+const deleteNode = async (nodeId: string) => {
+  // 标记为 async
+  const nodeToRemove = getNodes.value.find((n) => n.id === nodeId);
   if (!nodeToRemove) {
     console.warn(`[Canvas] Node with id ${nodeId} not found for deletion.`);
     return;
@@ -388,22 +425,28 @@ const deleteNode = async (nodeId: string) => { // 标记为 async
   }
 
   // 查找并准备删除与该节点相关的边
-  const edgesToRemove = getEdges.value.filter(edge => edge.source === nodeId || edge.target === nodeId);
+  const edgesToRemove = getEdges.value.filter(
+    (edge) => edge.source === nodeId || edge.target === nodeId
+  );
   const elementsToRemove: (Node | Edge)[] = [nodeToRemove, ...edgesToRemove];
 
-  const nodeDisplayName = nodeToRemove.data?.label || nodeToRemove.data?.defaultLabel || nodeToRemove.id;
+  const nodeDisplayName =
+    nodeToRemove.data?.label || nodeToRemove.data?.defaultLabel || nodeToRemove.id;
   const entry = createHistoryEntry(
-    'delete',
-    'node', // 更具体的操作对象类型
+    "delete",
+    "node", // 更具体的操作对象类型
     `删除节点 ${nodeDisplayName}`, // 使用显示名称
     {
-      deletedNodes: [{ // 保持数组结构，即使只有一个节点
-        nodeId: nodeToRemove.id,
-        nodeName: nodeDisplayName,
-        nodeType: nodeToRemove.type, // type 已经是 namespace:type 格式
-      }],
+      deletedNodes: [
+        {
+          // 保持数组结构，即使只有一个节点
+          nodeId: nodeToRemove.id,
+          nodeName: nodeDisplayName,
+          nodeType: nodeToRemove.type, // type 已经是 namespace:type 格式
+        },
+      ],
       // 确保边信息包含句柄
-      deletedEdges: edgesToRemove.map(e => ({
+      deletedEdges: edgesToRemove.map((e) => ({
         edgeId: e.id,
         sourceNodeId: e.source,
         sourceHandle: e.sourceHandle,
@@ -419,19 +462,21 @@ const deleteNode = async (nodeId: string) => { // 标记为 async
 
 // 节点点击事件
 onNodeClick(({ node }) => {
-  console.debug('Node clicked:', node);
-  emit('node-click', node);
+  console.debug("Node clicked:", node);
+  emit("node-click", node);
 });
 
 // 画布准备完成事件
-onPaneReady((instance) => { // The hook receives the instance
+onPaneReady((instance) => {
+  // The hook receives the instance
   // Emit the instance received from the hook
-  emit('pane-ready', instance);
+  emit("pane-ready", instance);
 });
 
 // 节点右键菜单事件
 // 使用新的 Composable
-const { contextMenuPosition, calculateContextMenuPosition } = useContextMenuPositioning(canvasContainerRef);
+const { contextMenuPosition, calculateContextMenuPosition } =
+  useContextMenuPositioning(canvasContainerRef);
 
 onNodeContextMenu(({ event, node }) => {
   event.preventDefault();
@@ -441,17 +486,16 @@ onNodeContextMenu(({ event, node }) => {
   selectedNodeType.value = node.type; // 获取并存储节点类型
 
   // 计算当前选中的节点数量
-  const selectedNodes = getNodes.value.filter(n => n.selected);
+  const selectedNodes = getNodes.value.filter((n) => n.selected);
   // 如果被右键点击的节点当前未被选中，但存在其他选中节点，则只考虑被点击的节点（表现为单选菜单）
   // 只有当被右键点击的节点本身就在多选集合中时，才真正按多选处理
-  const isClickedNodeSelected = selectedNodes.some(n => n.id === node.id);
+  const isClickedNodeSelected = selectedNodes.some((n) => n.id === node.id);
   if (selectedNodes.length > 1 && isClickedNodeSelected) {
     currentNodeSelectionCount.value = selectedNodes.length;
   } else {
     currentNodeSelectionCount.value = 1; // 视为单选操作
   }
   // console.debug(`[Canvas] Node context menu on ${node.id}. Effective selection count: ${currentNodeSelectionCount.value}`);
-
 
   const position = calculateContextMenuPosition(event);
   if (position) {
@@ -521,9 +565,18 @@ const handleSlotContextMenu = (event: CustomEvent) => {
 };
 
 // 处理插槽断开连接
-const handleSlotDisconnect = (context: { nodeId: string; handleId: string; handleType: 'source' | 'target' }) => {
+const handleSlotDisconnect = (context: {
+  nodeId: string;
+  handleId: string;
+  handleType: "source" | "target";
+}) => {
   if (activeTabId.value) {
-    workflowStore.removeEdgesForHandle(activeTabId.value, context.nodeId, context.handleId, context.handleType);
+    workflowStore.removeEdgesForHandle(
+      activeTabId.value,
+      context.nodeId,
+      context.handleId,
+      context.handleType
+    );
   }
   closeSlotContextMenu();
 };
@@ -547,47 +600,38 @@ const invalidNodeGroupEdgeIds = useNodeGroupConnectionValidation({
   nodes: getNodes, // 传递响应式引用
   edges: getEdges, // 传递响应式引用
   nodeDefinitions, // 传递响应式引用
+  currentWorkflowInterface, // 传递当前工作流的接口信息
   // areTypesCompatible, // 不再需要传递，Composable 会直接导入
 });
 
 // 监听无效边 ID 列表的变化
-watch(invalidNodeGroupEdgeIds, (newInvalidIds, oldInvalidIds) => {
-  // 仅在列表非空且发生变化时执行
-  if (newInvalidIds.length > 0 && JSON.stringify(newInvalidIds) !== JSON.stringify(oldInvalidIds)) {
-    // console.debug('[Canvas] Detected incompatible NodeGroup edges:', newInvalidIds);
-    // 使用 nextTick 确保在 DOM 更新后执行移除操作，避免潜在的冲突
-    nextTick(() => {
-      const allCurrentEdges = getEdges.value;
-      const allCurrentNodes = getNodes.value;
-      console.groupCollapsed(`[Canvas_EdgeRemovalDebug] Preparing to remove ${newInvalidIds.length} incompatible edges.`);
-      newInvalidIds.forEach(edgeIdToRemove => {
-        const edgeToRemove = allCurrentEdges.find(e => e.id === edgeIdToRemove);
-        if (edgeToRemove) {
-          console.debug(`[Canvas_EdgeRemovalDebug] Details of edge to be removed (ID: ${edgeIdToRemove}):`, JSON.parse(JSON.stringify(edgeToRemove)));
-          const sourceNode = allCurrentNodes.find(n => n.id === edgeToRemove.source);
-          const targetNode = allCurrentNodes.find(n => n.id === edgeToRemove.target);
+watch(
+  invalidNodeGroupEdgeIds,
+  async (newInvalidIdsFromWatcher, oldInvalidIds) => {
+    // 标记为 async
+    // newInvalidIdsFromWatcher 是 watch 触发时的快照值，可能基于 updateNodeInternals 生效前的数据
+    if (
+      newInvalidIdsFromWatcher.length > 0 &&
+      JSON.stringify(newInvalidIdsFromWatcher) !== JSON.stringify(oldInvalidIds)
+    ) {
+      // 等待，让 BaseNode 中的 updateNodeInternals (也在 nextTick 中) 有机会执行并传播效果
+      await nextTick();
 
-          if (sourceNode?.type === 'core:NodeGroup') {
-            console.debug(`[Canvas_EdgeRemovalDebug] Source Node (${sourceNode.id}) is a NodeGroup. Current interface:`, JSON.parse(JSON.stringify(sourceNode.data?.groupInterface)));
-          }
-          if (targetNode?.type === 'core:NodeGroup') {
-            console.debug(`[Canvas_EdgeRemovalDebug] Target Node (${targetNode.id}) is a NodeGroup. Current interface:`, JSON.parse(JSON.stringify(targetNode.data?.groupInterface)));
-          }
-        } else {
-          console.warn(`[Canvas_EdgeRemovalDebug] Could not find details for edge ID to be removed: ${edgeIdToRemove}`);
-        }
-      });
-      console.groupEnd();
+      // 在等待之后，重新获取最新的 invalidNodeGroupEdgeIds 值
+      const currentInvalidIds = invalidNodeGroupEdgeIds.value;
 
-      removeEdges(newInvalidIds); // This removeEdges is from useVueFlow, for direct instance manipulation
-      // 可选：通知用户
-      console.log(`[Canvas] 因节点组接口变更或连接类型不兼容，已移除 ${newInvalidIds.length} 条连接。 Removed ${newInvalidIds.length} incompatible NodeGroup edges.`);
-      alert(`因节点组接口变更或连接类型不兼容，已移除 ${newInvalidIds.length} 条连接。`);
-      // removeEdges 会触发 getEdges 更新，进而可能重新计算 invalidNodeGroupEdgeIds
-      // Composable 内部的 computed 会处理依赖更新，无需担心无限循环
-    });
-  }
-}, { immediate: false }); // 不需要立即执行，等待 elements 初始化
+      if (currentInvalidIds.length > 0) {
+        removeEdges(currentInvalidIds);
+        console.log(
+          `[Canvas] 因节点组接口变更或连接类型不兼容，已移除 ${currentInvalidIds.length} 条连接。 Removed ${currentInvalidIds.length} incompatible NodeGroup edges.`
+        );
+      } else {
+        // console.log('[Canvas] Incompatible edges were resolved after waiting for ticks. No removal needed.');
+      }
+    }
+  },
+  { immediate: false, flush: "post" }
+); // flush: 'post' 确保在DOM更新后
 // --- 结束 连接兼容性检查 ---
 
 // --- 处理 NodeContextMenu 发出的多选事件 ---
@@ -598,11 +642,12 @@ const handleCopySelection = () => {
 };
 
 const handleCreateGroupFromSelection = () => {
-  const selectedNodes = getNodes.value.filter(n => n.selected);
-  const selectedNodeIds = selectedNodes.map(n => n.id);
+  const selectedNodes = getNodes.value.filter((n) => n.selected);
+  const selectedNodeIds = selectedNodes.map((n) => n.id);
   // console.debug('[Canvas] Handling create-group-from-selection event from context menu for nodes:', selectedNodeIds);
 
-  if (selectedNodeIds.length < 1) { // 修改：允许单个节点创建组
+  if (selectedNodeIds.length < 1) {
+    // 修改：允许单个节点创建组
     console.log("Need to select at least one node to create a group."); // 修改：更新提示信息
     alert("请选择至少一个节点来创建节点组。"); // 修改：更新用户提示
     return;
@@ -622,12 +667,12 @@ const handleCreateGroupFromSelection = () => {
     console.log(`[Canvas] Grouping action dispatched for tab ${activeTabId.value}.`);
   } catch (error) {
     console.error("Error during grouping from context menu:", error);
-    alert(`创建节点组失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    alert(`创建节点组失败: ${error instanceof Error ? error.message : "未知错误"}`);
   }
 };
 
 const handleCreateFrameForSelection = () => {
-  const selectedNodes = getNodes.value.filter(n => n.selected);
+  const selectedNodes = getNodes.value.filter((n) => n.selected);
   // console.debug('[Canvas] Handling create-frame-for-selection event for nodes:', selectedNodes.map(n => n.id));
 
   if (selectedNodes.length === 0) return;
@@ -639,12 +684,18 @@ const handleCreateFrameForSelection = () => {
   let maxY = -Infinity;
   const padding = 40; // 边框与节点之间的间距
 
-  selectedNodes.forEach(node => {
+  selectedNodes.forEach((node) => {
     // 确保节点有位置和尺寸信息
-    const widthSource = node.dimensions?.width ?? (typeof node.style === 'object' ? node.style.width : undefined) ?? 150;
-    const heightSource = node.dimensions?.height ?? (typeof node.style === 'object' ? node.style.height : undefined) ?? 50;
-    const nodeWidth = typeof widthSource === 'string' ? parseFloat(widthSource) : widthSource;
-    const nodeHeight = typeof heightSource === 'string' ? parseFloat(heightSource) : heightSource;
+    const widthSource =
+      node.dimensions?.width ??
+      (typeof node.style === "object" ? node.style.width : undefined) ??
+      150;
+    const heightSource =
+      node.dimensions?.height ??
+      (typeof node.style === "object" ? node.style.height : undefined) ??
+      50;
+    const nodeWidth = typeof widthSource === "string" ? parseFloat(widthSource) : widthSource;
+    const nodeHeight = typeof heightSource === "string" ? parseFloat(heightSource) : heightSource;
     const x = node.position.x;
     const y = node.position.y;
 
@@ -654,7 +705,9 @@ const handleCreateFrameForSelection = () => {
       maxX = Math.max(maxX, x + nodeWidth);
       maxY = Math.max(maxY, y + nodeHeight);
     } else {
-      console.warn(`[Canvas] Node ${node.id} has invalid dimensions, using fallback for frame calculation.`);
+      console.warn(
+        `[Canvas] Node ${node.id} has invalid dimensions, using fallback for frame calculation.`
+      );
       minX = Math.min(minX, x);
       minY = Math.min(minY, y);
       maxX = Math.max(maxX, x + 150);
@@ -677,16 +730,16 @@ const handleCreateFrameForSelection = () => {
   // 3. 创建 Frame 节点
   const frameNode: Node = {
     id: `frame-${Date.now()}`,
-    type: 'group',
+    type: "group",
     position: { x: frameX, y: frameY },
     style: {
       width: frameWidth,
       height: frameHeight,
-      backgroundColor: isDark.value ? 'rgba(60, 70, 90, 0.3)' : 'rgba(220, 220, 240, 0.4)',
-      border: `2px dotted ${isDark.value ? '#6B7280' : '#9CA3AF'}`,
-      borderRadius: '12px',
+      backgroundColor: isDark.value ? "rgba(60, 70, 90, 0.3)" : "rgba(220, 220, 240, 0.4)",
+      border: `2px dotted ${isDark.value ? "#6B7280" : "#9CA3AF"}`,
+      borderRadius: "12px",
     },
-    data: { label: '分组框' },
+    data: { label: "分组框" },
     selectable: true,
     draggable: true,
     zIndex: -1000,
@@ -703,10 +756,9 @@ const handleDeleteSelection = () => {
 };
 // --- 结束 多选事件处理 ---
 
-
 // 暴露方法给父组件
 defineExpose({
-  vueFlowRef
+  vueFlowRef,
 });
 
 // 添加全局点击事件监听 (用于关闭菜单)
@@ -718,7 +770,8 @@ onMounted(() => {
   // console.debug('[Canvas] onNodeDragStop hook registered.');
 
   // 监听视口移动结束事件并更新 Store
-  onMoveEnd(({ flowTransform }) => { // 使用 flowTransform
+  onMoveEnd(({ flowTransform }) => {
+    // 使用 flowTransform
     if (activeTabId.value) {
       const newViewport = { x: flowTransform.x, y: flowTransform.y, zoom: flowTransform.zoom };
       // console.log('Canvas Move/Zoom End - Zoom Value:', newViewport.zoom); // 移除调试打印
@@ -728,17 +781,17 @@ onMounted(() => {
   });
 
   // onZoomEnd 不存在，移除相关代码
-  document.addEventListener('click', closeAllContextMenus);
+  document.addEventListener("click", closeAllContextMenus);
   // 监听来自子组件的插槽右键菜单事件
-  vueFlowRef.value?.$el.addEventListener('slot-contextmenu', handleSlotContextMenu);
+  vueFlowRef.value?.$el.addEventListener("slot-contextmenu", handleSlotContextMenu);
 });
 
 onUnmounted(() => {
   // Keyboard listeners are now handled by useCanvasKeyboardShortcuts
-  document.removeEventListener('click', closeAllContextMenus);
+  document.removeEventListener("click", closeAllContextMenus);
   // 移除事件监听器
   if (vueFlowRef.value?.$el) {
-    vueFlowRef.value.$el.removeEventListener('slot-contextmenu', handleSlotContextMenu);
+    vueFlowRef.value.$el.removeEventListener("slot-contextmenu", handleSlotContextMenu);
   }
 });
 </script>

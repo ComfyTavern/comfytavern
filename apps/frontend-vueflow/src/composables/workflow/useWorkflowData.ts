@@ -13,6 +13,7 @@ import type {
   GroupSlotInfo,
   WorkflowViewport as SharedViewport,
   WorkflowStorageObject, // <-- Import WorkflowStorageObject
+  WorkflowStorageEdge, // 导入 WorkflowStorageEdge 以便转换
 } from "@comfytavern/types";
 import { useThemeStore } from "@/stores/theme";
 // import { useTabStore } from '@/stores/tabStore'; // 移除，不再直接更新 Tab
@@ -35,6 +36,33 @@ export function useWorkflowData() {
   // const api = useApi(); // 移除
 
   // --- 类型转换函数已被移动到 utils/workflowTransformer.ts ---
+
+  /**
+   * 加载工作流并适配其边句柄类型以符合 WorkflowStorageObject。
+   * @param projectId 项目 ID
+   * @param workflowId 工作流 ID
+   * @returns 适配后的 WorkflowStorageObject 或 null
+   */
+  async function loadAndAdaptWorkflowApi(
+    projectId: string,
+    workflowId: string
+  ): Promise<WorkflowStorageObject | null> {
+    const workflow = await loadWorkflowApi(projectId, workflowId);
+    if (!workflow) {
+      return null;
+    }
+    // 确保 workflow.edges 存在且是数组
+    const adaptedEdges = (workflow.edges || []).map((edge) => ({
+      ...edge,
+      sourceHandle: edge.sourceHandle ?? "",
+      targetHandle: edge.targetHandle ?? "",
+    })) as WorkflowStorageEdge[]; // 类型断言为 WorkflowStorageEdge[]
+
+    return {
+      ...workflow,
+      edges: adaptedEdges,
+    } as WorkflowStorageObject; // 最终断言为 WorkflowStorageObject
+  }
 
   // --- API 交互 ---
   async function saveWorkflow(
@@ -207,16 +235,8 @@ export function useWorkflowData() {
     internalId: string,
     projectId: string, // 接收 projectId
     workflowId: string
-  ): Promise<{ success: boolean; loadedData?: WorkflowStorageObject; flowToLoad?: FlowExportObject }> { // <-- Change loadedData type
-    // 不再需要 tabStore
-    // const tab = tabStore.tabs.find(t => t.internalId === internalId);
-    // if (!tab) {
-    //   console.error(`[loadWorkflow] Cannot load workflow, tab not found: ${internalId}`);
-    //   return { success: false };
-    // }
-    // const projectId = tab.projectId; // 使用传入的 projectId
-
-    const state = await workflowStore.ensureTabState(internalId); // 添加 await // 使用 store 的方法
+  ): Promise<{ success: boolean; loadedData?: WorkflowStorageObject; flowToLoad?: FlowExportObject }> {
+    const state = await workflowStore.ensureTabState(internalId);
     const instance = state.vueFlowInstance;
     if (!instance) {
       console.warn(
@@ -224,27 +244,24 @@ export function useWorkflowData() {
       );
     }
     try {
-      // 传递 projectId 和相对 workflowId
-      // Cast to WorkflowStorageObject as this is the expected format from the API and for the transformer
-      const loadedWorkflowObject = (await loadWorkflowApi(projectId, workflowId)) as WorkflowStorageObject;
+      // 使用新的适配器函数加载工作流
+      const loadedWorkflowObject = await loadAndAdaptWorkflowApi(projectId, workflowId);
       if (loadedWorkflowObject) {
-        // 使用新的转换函数
         const isDark = themeStore.isDark;
-        const { flowData: flowToLoad } = transformWorkflowToVueFlow(
+        // 调用已修改的 transformWorkflowToVueFlow，并传递适配后的加载函数
+        const { flowData: flowToLoad } = await transformWorkflowToVueFlow(
           loadedWorkflowObject,
+          projectId, // 传递 projectId
           isDark,
-          getEdgeStyleProps
+          getEdgeStyleProps,
+          loadAndAdaptWorkflowApi // 传递适配后的 API 函数作为加载器
         );
         console.info(
           `[loadWorkflow] Workflow loaded (tab ${internalId}, project ${projectId}, workflow ${workflowId}):`,
           loadedWorkflowObject
         );
-        // Remove assignment to 'id' as WorkflowStorageObject does not have a top-level id
-        // The ID is implicitly the one used to load it (workflowId)
-        // loadedWorkflowObject.id = workflowId;
         return { success: true, loadedData: loadedWorkflowObject, flowToLoad };
       } else {
-        // API 应处理未找到错误，这可能表示其他问题
         console.error(
           `[loadWorkflow] Load workflow API call succeeded but returned no data for project ${projectId}, workflow ${workflowId} (tab ${internalId}).`
         );
@@ -264,14 +281,12 @@ export function useWorkflowData() {
   async function fetchAvailableWorkflows(): Promise<
     Array<{ id: string; name: string; description?: string }>
   > {
-    // 添加 description
     const projectId = projectStore.currentProjectId;
     if (!projectId) {
       console.warn("[fetchAvailableWorkflows] Cannot fetch workflows, project ID is missing.");
-      return []; // 如果未选择项目，则返回空
+      return [];
     }
     try {
-      // 将 projectId 传递给 API 调用
       const workflows = await listWorkflowsApi(projectId);
       console.debug(
         `[fetchAvailableWorkflows] Available workflows fetched for project ${projectId}:`,
@@ -294,14 +309,10 @@ export function useWorkflowData() {
       alert("无法删除工作流：未选择项目。");
       return false;
     }
-    // 确认逻辑可能保留在 store 中或移至调用此函数的 UI 组件
     try {
-      // 传递 projectId 和相对 workflowId
       await deleteWorkflowApi(projectId, workflowId);
       console.info(`[deleteWorkflow] Workflow ${workflowId} deleted from project ${projectId}.`);
-      // 不再在此处触发刷新，让调用者处理
-      // await workflowStore.fetchAvailableWorkflows();
-      return true; // 返回 true 表示 API 调用成功
+      return true;
     } catch (error) {
       console.error(
         `[deleteWorkflow] Failed to delete workflow ${workflowId} from project ${projectId}:`,
@@ -327,13 +338,10 @@ export function useWorkflowData() {
       workflowObject.name
     );
     try {
-      // 调用 API，不传递 workflowId (第三个参数)
       const savedWorkflow = (await saveWorkflowApi(projectId, workflowObject)) as WorkflowData;
       console.info(
         `[saveWorkflowAsNew] Successfully saved new workflow with ID: ${savedWorkflow.id}`
-      ); // 改为 info
-      // 可以在这里触发列表刷新，或者让调用者处理
-      // await fetchAvailableWorkflows(); // 考虑这应该在此处完成还是由调用者完成
+      );
       return savedWorkflow;
     } catch (error) {
       console.error(
@@ -346,40 +354,48 @@ export function useWorkflowData() {
   }
 
   // --- 默认工作流加载 ---
-  function loadDefaultWorkflow(internalId: string): {
-    // 添加 internalId 参数
-    elements: Array<Node | Edge>; // 使用正确的类型
+  async function loadDefaultWorkflow(internalId: string): Promise<{ // <-- 变为 async, 返回 Promise
+    elements: Array<Node | Edge>;
     viewport: SharedViewport;
     interfaceInputs: Record<string, GroupSlotInfo>;
     interfaceOutputs: Record<string, GroupSlotInfo>;
-  } {
+  }> {
     console.debug(`[useWorkflowData] Attempting to load default workflow for tab ${internalId}.`);
     try {
-      // 确保导入的数据符合 WorkflowStorageObject 格式 (可能需要类型断言)
       const defaultStorageObject = defaultWorkflowData as WorkflowStorageObject;
-
-      // 使用转换函数处理默认数据
       const isDark = themeStore.isDark;
-      const { flowData: defaultFlowData } = transformWorkflowToVueFlow(
+
+      // Mock loader for default workflow, as it shouldn't reference other API-loaded workflows
+      const mockLoadWorkflowById = async (
+        _pId: string,
+        _wfId: string
+      ): Promise<WorkflowStorageObject | null> => {
+        console.warn(
+          `[loadDefaultWorkflow] Attempted to load referenced workflow '${_wfId}' from default workflow. This is not supported for static default workflows. Returning null.`
+        );
+        return null;
+      };
+
+      const { flowData: defaultFlowData } = await transformWorkflowToVueFlow( // <-- await
         defaultStorageObject,
+        "", // Placeholder projectId, not expected to be used for default workflow's internal refs
         isDark,
-        getEdgeStyleProps
+        getEdgeStyleProps,
+        mockLoadWorkflowById // Pass the mock loader
       );
 
-      // 从原始数据中提取接口信息
       const interfaceInputs = defaultStorageObject.interfaceInputs || {};
       const interfaceOutputs = defaultStorageObject.interfaceOutputs || {};
 
       console.info(`[useWorkflowData] Successfully loaded and transformed default workflow for tab ${internalId}.`);
       return {
-        elements: [...defaultFlowData.nodes, ...defaultFlowData.edges], // 使用扩展运算符合并节点和边
-        viewport: defaultFlowData.viewport, // 使用转换后的视口
+        elements: [...defaultFlowData.nodes, ...defaultFlowData.edges],
+        viewport: defaultFlowData.viewport,
         interfaceInputs,
         interfaceOutputs,
       };
     } catch (error) {
       console.error(`[useWorkflowData] Failed to load or transform default workflow for tab ${internalId}. Returning blank structure. Error:`, error);
-      // Fallback: 返回空白结构
       const elements: Array<Node | Edge> = [];
       const viewport: SharedViewport = { x: 0, y: 0, zoom: 1 };
       const interfaceInputs: Record<string, GroupSlotInfo> = {};
