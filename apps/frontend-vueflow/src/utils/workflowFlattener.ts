@@ -22,7 +22,7 @@ export async function flattenWorkflow(
   workflowManager: ReturnType<typeof useWorkflowManager>, // 添加 workflowManager 依赖
   processedGroupIds: Set<string> = new Set()
 ): Promise<{ nodes: VueFlowNode[], edges: Edge[] } | null> {
-  console.debug(`[Flatten START] internalId: ${internalId}, processing ${initialElements.length} elements. Initial node IDs: ${initialElements.filter(el => !('source'in el)).map(n => n.id + '(' + getNodeType(n as VueFlowNode) + ')').join(', ')}. ProcessedGroupIds: ${Array.from(processedGroupIds).join(', ')}`);
+  console.debug(`[Flatten START] internalId: ${internalId}, processing ${initialElements.length} elements. Initial node IDs: ${initialElements.filter(el => !('source' in el)).map(n => n.id + '(' + getNodeType(n as VueFlowNode) + ')').join(', ')}. ProcessedGroupIds: ${Array.from(processedGroupIds).join(', ')}`);
   const flattenedNodes: VueFlowNode[] = [];
   const flattenedEdges: Edge[] = [];
   const nodeMap = new Map<string, VueFlowNode>(); // 存储所有遇到的节点（包括内部的）
@@ -86,24 +86,24 @@ export async function flattenWorkflow(
       // 准备子工作流元素 (需要转换)
       const subWorkflowElements: (VueFlowNode | Edge)[] = [];
       if (loadedData.nodes) {
-          for (const storageNode of loadedData.nodes) {
-              // 使用 workflowManager 实例进行转换
-              const vueNode = workflowManager.storageNodeToVueFlowNode(storageNode);
-              subWorkflowElements.push(vueNode);
-          }
+        for (const storageNode of loadedData.nodes) {
+          // 使用 workflowManager 实例进行转换
+          const vueNode = workflowManager.storageNodeToVueFlowNode(storageNode);
+          subWorkflowElements.push(vueNode);
+        }
       }
       if (loadedData.edges) {
-          for (const storageEdge of loadedData.edges) {
-               // 使用 workflowManager 实例进行转换
-              const vueEdge = workflowManager.storageEdgeToVueFlowEdge(storageEdge);
-              subWorkflowElements.push(vueEdge);
-          }
+        for (const storageEdge of loadedData.edges) {
+          // 使用 workflowManager 实例进行转换
+          const vueEdge = workflowManager.storageEdgeToVueFlowEdge(storageEdge);
+          subWorkflowElements.push(vueEdge);
+        }
       }
 
 
       // 递归处理子工作流
       // 注意：这里调用自身 flattenWorkflow
-      console.debug(`[Flatten NodeGroup ${node.id}] Recursively calling flattenWorkflow for sub-workflow ${referencedWorkflowId} with ${subWorkflowElements.length} elements. Sub-workflow node IDs: ${subWorkflowElements.filter(el => !('source'in el)).map(n => n.id + '(' + getNodeType(n as VueFlowNode) + ')').join(', ')}`);
+      console.debug(`[Flatten NodeGroup ${node.id}] Recursively calling flattenWorkflow for sub-workflow ${referencedWorkflowId} with ${subWorkflowElements.length} elements. Sub-workflow node IDs: ${subWorkflowElements.filter(el => !('source' in el)).map(n => n.id + '(' + getNodeType(n as VueFlowNode) + ')').join(', ')}`);
       const flattenedSubWorkflow = await flattenWorkflow(
         internalId,
         subWorkflowElements,
@@ -156,8 +156,8 @@ export async function flattenWorkflow(
           // 获取内部目标节点
           const internalTargetNode = internalNodesMap.get(internalEdge.target);
           if (!internalTargetNode) {
-              console.warn(`[Flatten] Internal target node ${internalEdge.target} not found for edge ${internalEdge.id}`);
-              continue;
+            console.warn(`[Flatten] Internal target node ${internalEdge.target} not found for edge ${internalEdge.id}`);
+            continue;
           }
           // 创建新的扁平化边：外部源 -> 内部目标
           flattenedEdges.push({
@@ -167,11 +167,11 @@ export async function flattenWorkflow(
             targetHandle: internalEdge.targetHandle, // 使用内部节点的句柄
           });
           console.debug(`[Flatten NodeGroup ${node.id}] Mapping incoming edge ${incomingEdge.id} (targetHandle: ${targetHandle}) to internal edge ${internalEdge.id} (target: ${internalEdge.target}, targetHandle: ${internalEdge.targetHandle}). New flat edge ID: ${incomingEdge.id}_flat_${internalEdge.target}`);
-           // 从队列中移除已处理的边
-           const index = edgeQueue.findIndex(e => e.id === incomingEdge.id);
-           if (index > -1) edgeQueue.splice(index, 1);
+          // 从队列中移除已处理的边
+          const index = edgeQueue.findIndex(e => e.id === incomingEdge.id);
+          if (index > -1) edgeQueue.splice(index, 1);
         } else {
-           console.warn(`[Flatten NodeGroup ${node.id}] No internal edge found originating from GroupInput ${internalGroupInput?.id} handle ${targetHandle} for NodeGroup ${node.id} input ${targetHandle}`);
+          console.warn(`[Flatten NodeGroup ${node.id}] No internal edge found originating from GroupInput ${internalGroupInput?.id} handle ${targetHandle} for NodeGroup ${node.id} input ${targetHandle}`);
         }
       }
 
@@ -186,11 +186,11 @@ export async function flattenWorkflow(
           subEdge => subEdge.target === internalGroupOutput.id && subEdge.targetHandle === sourceHandle
         );
         if (internalEdge) {
-           // 获取内部源节点
+          // 获取内部源节点
           const internalSourceNode = internalNodesMap.get(internalEdge.source);
           if (!internalSourceNode) {
-              console.warn(`[Flatten] Internal source node ${internalEdge.source} not found for edge ${internalEdge.id}`);
-              continue;
+            console.warn(`[Flatten] Internal source node ${internalEdge.source} not found for edge ${internalEdge.id}`);
+            continue;
           }
           // 创建新的扁平化边：内部源 -> 外部目标
           flattenedEdges.push({
@@ -200,11 +200,11 @@ export async function flattenWorkflow(
             sourceHandle: internalEdge.sourceHandle, // 使用内部节点的句柄
           });
           console.debug(`[Flatten NodeGroup ${node.id}] Mapping outgoing edge ${outgoingEdge.id} (sourceHandle: ${sourceHandle}) to internal edge ${internalEdge.id} (source: ${internalEdge.source}, sourceHandle: ${internalEdge.sourceHandle}). New flat edge ID: ${outgoingEdge.id}_flat_${internalEdge.source}`);
-           // 从队列中移除已处理的边
-           const index = edgeQueue.findIndex(e => e.id === outgoingEdge.id);
-           if (index > -1) edgeQueue.splice(index, 1);
+          // 从队列中移除已处理的边
+          const index = edgeQueue.findIndex(e => e.id === outgoingEdge.id);
+          if (index > -1) edgeQueue.splice(index, 1);
         } else {
-           console.warn(`[Flatten NodeGroup ${node.id}] No internal edge found targeting GroupOutput ${internalGroupOutput?.id} handle ${sourceHandle} for NodeGroup ${node.id} output ${sourceHandle}`);
+          console.warn(`[Flatten NodeGroup ${node.id}] No internal edge found targeting GroupOutput ${internalGroupOutput?.id} handle ${sourceHandle} for NodeGroup ${node.id} output ${sourceHandle}`);
         }
       }
 
@@ -213,15 +213,15 @@ export async function flattenWorkflow(
       flattenedNodes.push(...flattenedSubWorkflow.nodes.filter(n => getNodeType(n) !== 'core:GroupInput' && getNodeType(n) !== 'core:GroupOutput'));
       // 子流内部的边（不涉及IO节点的）也需要添加
       flattenedEdges.push(...flattenedSubWorkflow.edges.filter(
-          edge => {
-              const sourceNode = internalNodesMap.get(edge.source);
-              const targetNode = internalNodesMap.get(edge.target);
-              // 使用带命名空间的类型
-              const sourceIsIO = sourceNode && (getNodeType(sourceNode) === 'core:GroupInput' || getNodeType(sourceNode) === 'core:GroupOutput');
-              // 使用带命名空间的类型
-              const targetIsIO = targetNode && (getNodeType(targetNode) === 'core:GroupInput' || getNodeType(targetNode) === 'core:GroupOutput');
-              return !sourceIsIO && !targetIsIO; // 只保留完全在内部的边
-          }
+        edge => {
+          const sourceNode = internalNodesMap.get(edge.source);
+          const targetNode = internalNodesMap.get(edge.target);
+          // 使用带命名空间的类型
+          const sourceIsIO = sourceNode && (getNodeType(sourceNode) === 'core:GroupInput' || getNodeType(sourceNode) === 'core:GroupOutput');
+          // 使用带命名空间的类型
+          const targetIsIO = targetNode && (getNodeType(targetNode) === 'core:GroupInput' || getNodeType(targetNode) === 'core:GroupOutput');
+          return !sourceIsIO && !targetIsIO; // 只保留完全在内部的边
+        }
       ));
 
 
