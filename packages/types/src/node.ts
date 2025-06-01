@@ -300,7 +300,7 @@ export interface WorkflowStorageNode {
   type: string; // 节点类型标识符 (例如: 'RandomNumberNode')
   position: { x: number; y: number }; // 在画布上的位置
   size?: { width: number; height: number }; // (可选) 尺寸覆盖
-  customLabel?: string; // (可选) 用户为节点定义的标签，覆盖默认显示名称
+  displayName?: string; // (可选) 用户为节点定义的标签，覆盖默认显示名称
   customDescription?: string; // (可选) 用户为节点定义的描述，覆盖默认描述
   customSlotDescriptions?: { inputs?: Record<string, string>; outputs?: Record<string, string> }; // (可选) 用户为此节点实例上特定插槽定义的描述
   inputValues?: Record<string, any>; // 输入插槽的存储值 (仅当与有效默认值不同时)

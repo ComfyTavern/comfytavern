@@ -63,33 +63,30 @@ export const saveWorkflowApi = async (projectId: string, data: Omit<WorkflowObje
   const method = workflowId ? 'PUT' : 'POST'
   console.log(`API: ${method} workflow to project ${projectId}...`, url, data) // Keep as log - important action start
 
-  if (method === 'POST') {
-    // 类型断言，因为在 POST 时，data 应该是 Omit<WorkflowObject, 'id'>
-    const workflowToLog = data as Omit<WorkflowObject, 'id'>
-    console.log('[workflowApi:saveWorkflowApi POST] About to send workflow data for creation (cloned):', deepClone(workflowToLog))
-    if (workflowToLog.nodes) {
-      // 尝试找到特定的问题节点 ID 'bzMrNqWPTZ'。
-      // 注意：这个 ID 源自父工作流。当它成为新组内部工作流的一部分时，其 ID 可能会被保留或重新映射。
-      // 此处假设它在复制到新工作流时被保留。
-      const problematicNode = workflowToLog.nodes.find(n => n.id === 'bzMrNqWPTZ')
-      if (problematicNode) {
-        console.log('[workflowApi:saveWorkflowApi POST] Data for node bzMrNqWPTZ before sending to backend (cloned):', deepClone(problematicNode.data))
-      } else {
-        // 如果未找到特定 ID，则回退记录所有 core:NodeGroup 类型节点的数据，以帮助识别。
-        let foundNodeGroup = false
-        workflowToLog.nodes.forEach(node => {
-          if (node.type === 'core:NodeGroup') {
-            console.log(`[workflowApi:saveWorkflowApi POST] Data for NodeGroup ${node.id} (type: ${node.type}) before sending (cloned):`, deepClone(node.data))
-            foundNodeGroup = true
-          }
-        })
-        if (!foundNodeGroup && problematicNode === undefined) { // problematicNode is undefined if not found by ID
-          console.log('[workflowApi:saveWorkflowApi POST] No node with ID bzMrNqWPTZ found, and no other core:NodeGroup nodes found in this payload.')
-        }
+  // 通用日志记录：记录即将发送的 NodeGroup 数据，无论 POST 还是 PUT
+  // 类型 Omit<WorkflowObject, 'id'> | WorkflowObject 都有 'nodes' 属性
+  // 'nodes' 数组的元素类型是 WorkflowNode，它现在包含了可选的 displayName
+  if (data.nodes && Array.isArray(data.nodes)) {
+    let foundNodeGroupForGeneralLog = false;
+    data.nodes.forEach(node => {
+      if (node.type === 'core:NodeGroup') {
+        const nodeInfoForLog = {
+          id: node.id,
+          type: node.type,
+          displayName: node.displayName,
+          configValues: node.configValues,
+          inputValues: node.inputValues,
+          // 可以根据需要添加更多希望在日志中看到的属性
+        };
+        console.log(`[workflowApi:saveWorkflowApi ${method}] Relevant data for NodeGroup ${node.id} before sending (cloned):`, deepClone(nodeInfoForLog));
+        foundNodeGroupForGeneralLog = true;
       }
-    } else {
-      console.log('[workflowApi:saveWorkflowApi POST] No nodes found in the workflow data to log.')
+    });
+    if (!foundNodeGroupForGeneralLog) {
+      console.log(`[workflowApi:saveWorkflowApi ${method}] No core:NodeGroup nodes found in the payload to log detailed info for.`);
     }
+  } else {
+    console.log(`[workflowApi:saveWorkflowApi ${method}] No nodes array found in the data payload, or it's not an array.`);
   }
 
   try {

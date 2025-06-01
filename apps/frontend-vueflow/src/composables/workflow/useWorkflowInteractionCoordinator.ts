@@ -261,6 +261,7 @@ export function useWorkflowInteractionCoordinator() {
             ...targetNode.data, // 保留 configValue 更新
             groupInterface: groupUpdateResult.updatedNodeData.groupInterface,
             label: finalDisplayLabel, // 更新 data.label
+            displayName: finalDisplayLabel, // 更新 displayName
             inputs: newInputs, // 更新节点的输入插槽定义
             outputs: newOutputs, // 更新节点的输出插槽定义
           };
@@ -268,7 +269,7 @@ export function useWorkflowInteractionCoordinator() {
           targetNode.label = finalDisplayLabel;
 
           console.debug(
-            `[InteractionCoordinator] 已将 NodeGroup 数据更新 (包括顶层 label: ${targetNode.label}, inputs/outputs from groupInterface) 合并到 ${nodeId} 的 nextSnapshot`
+            `[InteractionCoordinator] 已将 NodeGroup 数据更新 (包括顶层 label: ${targetNode.label}, displayName: ${targetNode.data.displayName}, inputs/outputs from groupInterface) 合并到 ${nodeId} 的 nextSnapshot`
           );
 
           // 如果需要，在 nextSnapshot 中过滤边
@@ -299,6 +300,7 @@ export function useWorkflowInteractionCoordinator() {
         targetNode.data.outputs = {}; // 恢复到节点定义中的默认空输出
         targetNode.data.inputConnectionOrders = {}; // 清除连接顺序
         targetNode.data.label = "📦节点组"; // 恢复 data.label
+        targetNode.data.displayName = "📦节点组"; // 恢复 displayName
         targetNode.label = "📦节点组";      // 恢复顶层 label
 
         // 查找并准备移除所有连接到此节点组的边

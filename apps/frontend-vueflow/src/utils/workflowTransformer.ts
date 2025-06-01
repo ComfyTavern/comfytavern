@@ -202,9 +202,11 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
       // 保存 size (如果存在)
       ...(vueNode.width !== undefined &&
         vueNode.height !== undefined && { size: { width: vueNode.width, height: vueNode.height } }),
-      // 保存 customLabel (如果存在且非默认)
-      ...(vueNode.label &&
-        vueNode.label !== (nodeDef.displayName || nodeDef.type) && { customLabel: vueNode.label }),
+      // 保存 displayName (如果存在且非默认)
+      // 优先使用 vueNode.data.displayName，然后是 vueNode.data.label，最后是 vueNode.label
+      // 确保 displayName 存储的是字符串类型
+      ...(((vueNode.data?.displayName || vueNode.data?.label || vueNode.label) &&
+        String(vueNode.data?.displayName || vueNode.data?.label || vueNode.label) !== String(nodeDef.displayName)) && { displayName: String(vueNode.data?.displayName || vueNode.data?.label || vueNode.label) }),
       // 保存 customDescription (如果存在且非默认)
       ...(vueNode.data?.description &&
         vueNode.data.description !== (nodeDef.description || "") && {
@@ -368,8 +370,12 @@ export async function transformWorkflowToVueFlow( // <--- 标记为 async
       }
 
       const nodeDefaultLabel = nodeDef.displayName || storageNode.type;
-      const nodeDisplayLabel = storageNode.customLabel || nodeDefaultLabel;
+      // 如果存储中有 displayName，则使用它，否则使用默认标签
+      const nodeDisplayLabel = storageNode.displayName || nodeDefaultLabel;
       vueFlowData.defaultLabel = nodeDefaultLabel;
+      // 同时将 displayName 设置到 data 中，以便在画布上正确显示
+      vueFlowData.displayName = nodeDisplayLabel;
+
 
       const vueFlowNodeObject: VueFlowNode = {
         id: storageNode.id,
@@ -378,7 +384,7 @@ export async function transformWorkflowToVueFlow( // <--- 标记为 async
         data: vueFlowData,
         width: storageNode.size?.width,
         height: storageNode.size?.height,
-        label: nodeDisplayLabel,
+        label: nodeDisplayLabel, // 顶层 label 使用 displayName
       };
 
       if (storageNode.inputConnectionOrders) {

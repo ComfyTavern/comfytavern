@@ -182,7 +182,9 @@ export const WorkflowNodeSchema = z.object({
    * 节点的标签。
    * 可能在前端根据节点类型或数据派生，但也允许直接存储。
    */
-  label: z.string().optional(),
+  label: z.string().optional(), // 旧的标签，可能仍用于某些向后兼容或特定场景
+  /** 节点在界面上显示的名称，优先于 label */
+  displayName: z.string().optional(),
   /** 节点的配置值 */
   configValues: z.record(z.any()).optional(),
   /** 节点的输入值（通常由连接或用户输入提供） */

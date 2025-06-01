@@ -897,6 +897,7 @@ async function createGroupFromSelectionLogic(
       ...baseNodeData,
       nodeType: "core:NodeGroup", // 同步更新 data.nodeType
       label: groupDisplayLabel, // 同时保留 data.label
+      displayName: groupDisplayLabel, // 更新 displayName
       configValues: {
         ...(baseNodeData.configValues || {}),
         groupMode: "referenced",
