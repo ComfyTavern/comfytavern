@@ -16,6 +16,7 @@ import { useWorkflowPreview } from "./useWorkflowPreview";
 import { useEditorState } from "@/composables/editor/useEditorState";
 import type { EditorOpeningContext } from "@/types/editorTypes";
 import { useMultiInputConnectionActions } from "@/composables/node/useMultiInputConnectionActions";
+import { useSlotDefinitionHelper } from "@/composables/node/useSlotDefinitionHelper"; // 导入 useSlotDefinitionHelper
 
 
 /**
@@ -37,6 +38,7 @@ export function useWorkflowInteractionCoordinator() {
   // 创建一个新的 computed Ref 来包装 tabStore.activeTabId，确保它是一个 Ref 对象
   const coordinatorActiveTabIdRef = computed(() => tabStore.activeTabId);
   const multiInputActions = useMultiInputConnectionActions(coordinatorActiveTabIdRef);
+  const { getSlotDefinition } = useSlotDefinitionHelper(); // 实例化 getSlotDefinition
 
   // --- 内部辅助函数 ---
 
@@ -742,28 +744,95 @@ export function useWorkflowInteractionCoordinator() {
 
     // 获取当前元素和要移除元素的 ID 集合
     const elementIdsToRemoveSet = new Set(elementsToRemove.map((el) => el.id));
-    // 使用快照中的元素进行过滤，以确保一致性
-    const remainingElements = currentSnapshot.elements.filter((el) => !elementIdsToRemoveSet.has(el.id));
+    const removedEdgesFromInput: Edge[] = []; // 存储从输入端移除的边
+
+    // 使用快照中的元素进行过滤，并准备更新 inputConnectionOrders
+    const nextSnapshot = klona(currentSnapshot); // 深拷贝以进行修改
+
+    const nodesToUpdateInternals = new Set<string>();
+
+    // 筛选出要移除的边，并处理其目标节点的 inputConnectionOrders
+    const edgesBeingRemoved = elementsToRemove.filter(el => "source" in el) as Edge[];
+    for (const edgeToRemove of edgesBeingRemoved) {
+      const targetNodeIndex = nextSnapshot.elements.findIndex(n => n.id === edgeToRemove.target && !("source" in n));
+      if (targetNodeIndex !== -1) {
+        const targetNode = nextSnapshot.elements[targetNodeIndex] as VueFlowNode;
+        nodesToUpdateInternals.add(targetNode.id); // 标记目标节点需要更新视图
+        if (targetNode.data?.inputConnectionOrders && edgeToRemove.targetHandle) {
+          const { originalKey: targetOriginalKey } = parseSubHandleId(edgeToRemove.targetHandle);
+          if (targetNode.data.inputConnectionOrders[targetOriginalKey]) {
+            const currentOrder: string[] = targetNode.data.inputConnectionOrders[targetOriginalKey]; // 显式指定类型
+            const newOrder = currentOrder.filter((id: string) => id !== edgeToRemove.id); // 为 id 指定类型
+            if (newOrder.length !== currentOrder.length) {
+              targetNode.data.inputConnectionOrders[targetOriginalKey] = newOrder;
+              if (newOrder.length === 0) {
+                delete targetNode.data.inputConnectionOrders[targetOriginalKey];
+              }
+              console.debug(`[InteractionCoordinator:removeElementsAndRecord] Updated inputConnectionOrders for node ${targetNode.id}, handle ${targetOriginalKey}. Removed edge ${edgeToRemove.id}`);
+              removedEdgesFromInput.push(edgeToRemove);
+            }
+          }
+        }
+      }
+      // 同时标记源节点，以防万一其视图也受影响
+      if (edgeToRemove.source) {
+        nodesToUpdateInternals.add(edgeToRemove.source);
+      }
+    }
+
+    // 更新 nextSnapshot.elements
+    nextSnapshot.elements = nextSnapshot.elements.filter((el) => !elementIdsToRemoveSet.has(el.id));
+
 
     // 检查是否真的有元素被移除，避免无效的历史记录
-    if (remainingElements.length === currentSnapshot.elements.length) {
+    if (nextSnapshot.elements.length === currentSnapshot.elements.length && removedEdgesFromInput.length === 0) {
       console.warn(
-        "[InteractionCoordinator:removeElementsAndRecord] 没有元素被实际移除。跳过历史记录。"
+        "[InteractionCoordinator:removeElementsAndRecord] 没有元素被实际移除或 inputConnectionOrders 未改变。跳过历史记录。"
       );
       return;
     }
+    
+    // 将移除的边的信息添加到历史记录条目的 details 中
+    if (removedEdgesFromInput.length > 0 && entry.details) {
+        entry.details.removedEdgesFromInputOnElementRemove = removedEdgesFromInput.map(e => ({
+            id: e.id,
+            source: e.source,
+            sourceHandle: e.sourceHandle,
+            target: e.target,
+            targetHandle: e.targetHandle,
+        }));
+    } else if (removedEdgesFromInput.length > 0) {
+        entry.details = {
+            removedEdgesFromInputOnElementRemove: removedEdgesFromInput.map(e => ({
+                id: e.id,
+                source: e.source,
+                sourceHandle: e.sourceHandle,
+                target: e.target,
+                targetHandle: e.targetHandle,
+            }))
+        };
+    }
 
-    // 准备下一个状态快照 (使用过滤后的元素)
-    const nextSnapshot: WorkflowStateSnapshot = {
-      ...currentSnapshot, // 保留 viewport 和 workflowData
-      elements: remainingElements,
-    };
 
-    // 应用状态更新
-    workflowManager.setElements(internalId, nextSnapshot.elements);
+    // 应用状态更新 (setElements 会处理 workflowData 的部分，但 applyStateSnapshot 更全面)
+    // workflowManager.setElements(internalId, nextSnapshot.elements);
+    // 使用 applyStateSnapshot 来确保 workflowData (如果被修改) 也被正确应用
+    const applied = workflowManager.applyStateSnapshot(internalId, nextSnapshot);
+    if (!applied) {
+        console.error(`[InteractionCoordinator:removeElementsAndRecord] Failed to apply snapshot for tab ${internalId}.`);
+        // 根据需要处理错误，例如恢复到 currentSnapshot
+        return;
+    }
+
 
     // 记录历史
     recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
+
+    // 更新受影响节点的内部视图
+    if (nodesToUpdateInternals.size > 0) {
+      await updateNodeInternals(internalId, Array.from(nodesToUpdateInternals));
+      console.debug(`[InteractionCoordinator:removeElementsAndRecord] Called updateNodeInternals for nodes:`, Array.from(nodesToUpdateInternals));
+    }
   }
 
   /**
@@ -1108,7 +1177,9 @@ export function useWorkflowInteractionCoordinator() {
             // GroupInput 节点的输出 Handle (source handle) 对应于 interfaceInputs
             if (workflowData?.interfaceInputs) {
               // 确保 interfaceInputs 存在
-              slotType = workflowData.interfaceInputs[target.slotKey]?.dataFlowType; // 使用可选链
+              // slotType = workflowData.interfaceInputs[target.slotKey]?.dataFlowType; // 使用可选链
+              const slotDef = getSlotDefinition(targetNode, target.slotKey, 'source', workflowData);
+              slotType = slotDef?.dataFlowType;
             }
           } else if (targetNode.type === "core:GroupOutput") {
             // GroupOutput 节点在画布上没有直接的输出句柄 (source handle) 可供用户点击选择预览。
@@ -1119,7 +1190,9 @@ export function useWorkflowInteractionCoordinator() {
             const workflowData = currentWorkflowState.workflowData;
             if (workflowData?.interfaceOutputs) {
               // 确保 interfaceOutputs 存在
-              slotType = workflowData.interfaceOutputs[target.slotKey]?.dataFlowType; // 使用可选链
+              // slotType = workflowData.interfaceOutputs[target.slotKey]?.dataFlowType; // 使用可选链
+              const slotDef = getSlotDefinition(targetNode, target.slotKey, 'target', workflowData);
+              slotType = slotDef?.dataFlowType;
             }
           } else {
             // 普通节点的输出插槽

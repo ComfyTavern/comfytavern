@@ -47,6 +47,9 @@ export const BuiltInSocketMatchCategory = {
 
 export type BuiltInSocketMatchCategoryName = (typeof BuiltInSocketMatchCategory)[keyof typeof BuiltInSocketMatchCategory];
 
+
+// ... (其他不变的导入和类型定义)
+
 /**
  * 定义节点插槽（Socket）的类型。
  * 使用常量对象模拟枚举，以便在 Zod Schema 中使用。
@@ -56,15 +59,11 @@ export type BuiltInSocketMatchCategoryName = (typeof BuiltInSocketMatchCategory)
 
 /**
  * Schema 定义：节点组插槽（输入/输出）的详细信息。
+ * 继承 SlotDefinitionBase 的属性。
  */
 export const GroupSlotInfoSchema = z.object({
   /** 插槽的唯一标识符 */
   key: z.string(),
-  /** 插槽在界面上显示的名称 */
-  displayName: z.string(),
-  /** 插槽的数据类型，使用 SocketType 中的值 */
-  dataFlowType: z.enum(Object.values(DataFlowType) as [DataFlowTypeName, ...DataFlowTypeName[]]).describe('插槽的数据流类型 (例如：input, output)'),
-  matchCategories: z.array(z.string()).optional().describe('用于连接验证的匹配类别数组'),
   /** 自定义描述信息 */
   customDescription: z.string().optional(),
   /** 是否为必需插槽 */
@@ -73,13 +72,16 @@ export const GroupSlotInfoSchema = z.object({
   config: z.record(z.any()).optional(),
   /** 是否允许多个连接（仅用于输入插槽） */
   multi: z.boolean().optional(),
-  /** 是否允许动态类型（例如 CONVERTIBLE_ANY） */
-  allowDynamicType: z.boolean().optional(),
   /** 数值类型的最小值 */
   min: z.number().optional(),
   /** 数值类型的最大值 */
   max: z.number().optional(),
-});
+}).merge(z.object({
+  displayName: z.string().optional(),
+  dataFlowType: z.enum(Object.values(DataFlowType) as [DataFlowTypeName, ...DataFlowTypeName[]]),
+  matchCategories: z.array(z.string()).optional(),
+  allowDynamicType: z.boolean().optional(),
+}));
 
 /**
  * Schema 定义：节点组的接口信息，包含输入和输出插槽。

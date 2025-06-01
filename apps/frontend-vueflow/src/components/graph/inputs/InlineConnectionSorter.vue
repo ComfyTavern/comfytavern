@@ -30,7 +30,7 @@
 import { ref, watch, type PropType, computed } from 'vue';
 import draggable from 'vuedraggable';
 import type { Edge, Node as VueFlowNode } from '@vue-flow/core'; // Renamed Node to VueFlowNode to avoid conflict
-import type { InputDefinition, OutputDefinition, HistoryEntry } from '@comfytavern/types';
+import type { InputDefinition, HistoryEntry } from '@comfytavern/types';
 import { createHistoryEntry } from '@comfytavern/utils';
 import { klona } from 'klona/full';
 import { useMultiInputConnectionActions } from '@/composables/node/useMultiInputConnectionActions';
@@ -38,6 +38,8 @@ import { useTabStore } from '@/stores/tabStore';
 import { useWorkflowManager } from '@/composables/workflow/useWorkflowManager'; // 导入 useWorkflowManager
 import { useWorkflowHistory } from '@/composables/workflow/useWorkflowHistory'; // 导入 useWorkflowHistory
 import Tooltip from '@/components/common/Tooltip.vue';
+import { useSlotDefinitionHelper } from '@/composables/node/useSlotDefinitionHelper'; // 导入插槽定义辅助函数
+import { useWorkflowStore } from '@/stores/workflowStore'; // 导入工作流存储
 
 interface DraggableConnectionItem {
   id: string; // Edge ID
@@ -65,6 +67,8 @@ const activeTabIdRef = computed(() => tabStore.activeTabId);
 const workflowManager = useWorkflowManager(); // 获取 workflowManager 实例
 const workflowHistory = useWorkflowHistory(); // 获取 workflowHistory 实例
 const { reorderMultiInputConnections, disconnectEdgeFromMultiInput } = useMultiInputConnectionActions(activeTabIdRef);
+const { getSlotDefinition } = useSlotDefinitionHelper(); // 实例化辅助函数
+const workflowStore = useWorkflowStore(); // 获取工作流存储实例
 
 const draggableConnections = ref<DraggableConnectionItem[]>([]);
 
@@ -73,6 +77,7 @@ const mapEdgeIdsToDraggableItems = () => {
   if (!props.currentOrderedEdgeIds || !props.findNode || !props.allEdges || !props.getNodeLabel) {
     return items;
   }
+  const currentWorkflowData = workflowStore.getActiveTabState()?.workflowData;
 
   for (const edgeId of props.currentOrderedEdgeIds) {
     const edge = props.allEdges.find(e => e.id === edgeId); // 简化查找：只通过 edgeId
@@ -81,10 +86,11 @@ const mapEdgeIdsToDraggableItems = () => {
       let sourceHandleLabel = edge.sourceHandle || '默认输出'; // 如果句柄ID为空，则使用默认文本
 
       // 尝试获取源节点上输出槽的 displayName
-      if (sourceNode?.data?.outputs && edge.sourceHandle) {
-        const outputDef: OutputDefinition | undefined = sourceNode.data.outputs[edge.sourceHandle];
-        if (outputDef?.displayName) {
-          sourceHandleLabel = outputDef.displayName;
+      if (sourceNode && edge.sourceHandle) {
+        // 使用辅助函数获取插槽定义
+        const slotDef = getSlotDefinition(sourceNode, edge.sourceHandle, 'source', currentWorkflowData);
+        if (slotDef?.displayName) {
+          sourceHandleLabel = slotDef.displayName;
         }
       }
 

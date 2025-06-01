@@ -16,6 +16,7 @@ import type {
 } from "@comfytavern/types";
 import { getEffectiveDefaultValue } from "@comfytavern/utils"; // <-- 导入默认值工具
 import { useNodeStore } from "@/stores/nodeStore"; // <-- 导入 Node Store
+import { useSlotDefinitionHelper } from "@/composables/node/useSlotDefinitionHelper"; // 导入插槽定义辅助函数
 import isEqual from "lodash-es/isEqual"; // <-- 导入深比较函数
 
 // 辅助函数类型定义 (从 useEdgeStyles.ts 导入)
@@ -398,6 +399,7 @@ export async function transformWorkflowToVueFlow( // <--- 标记为 async
 
   // 阶段 2: 处理边 (此时 NodeGroup 的 groupInterface 应该已填充)
   const vueFlowNodesMap = new Map<string, VueFlowNode>(nodes.map((n) => [n.id, n]));
+  const { getSlotDefinition } = useSlotDefinitionHelper(); // 获取辅助函数
 
   const edges: VueFlowEdge[] = workflow.edges.map(
     (storageEdge: WorkflowStorageEdge): VueFlowEdge => {
@@ -407,86 +409,38 @@ export async function transformWorkflowToVueFlow( // <--- 标记为 async
       let sourceType = "any";
       let targetType = "any";
 
+      // 准备 workflowData 参数给 getSlotDefinition
+      // 因为 getSlotDefinition 期望的 workflowData 包含 interfaceInputs/Outputs
+      // 而这里的 workflow 是 WorkflowStorageObject，它直接在顶层有这些属性
+      const workflowDataForSlotHelper = {
+        interfaceInputs: workflow.interfaceInputs,
+        interfaceOutputs: workflow.interfaceOutputs,
+        // 其他 workflowData 属性如果 getSlotDefinition 需要的话，也应添加
+        // 但目前 getSlotDefinition 主要依赖 interfaceInputs/Outputs
+      };
+
       // 确定源类型
       if (sourceNode && storageEdge.sourceHandle) {
-        if (sourceNode.type === "core:GroupInput") {
-          const interfaceInputDef = workflow.interfaceInputs?.[storageEdge.sourceHandle];
-          if (interfaceInputDef) sourceType = interfaceInputDef.dataFlowType || "any";
-        } else if (sourceNode.type === "core:NodeGroup") {
-          // 现在 sourceNode.data.groupInterface 应该存在了
-          if (sourceNode.data?.groupInterface?.outputs) {
-            const outputDef = sourceNode.data.groupInterface.outputs[storageEdge.sourceHandle];
-            if (outputDef && outputDef.dataFlowType) {
-              sourceType = outputDef.dataFlowType;
-            } else if (outputDef) {
-              console.warn(`[transformWorkflowToVueFlow] NodeGroup ${sourceNode.id} (source for edge ${storageEdge.id}) output handle '${storageEdge.sourceHandle}' found in groupInterface.outputs, but 'dataFlowType' is missing or invalid. Defaulting to 'any'. OutputDef:`, JSON.stringify(outputDef));
-              sourceType = "any";
-            } else {
-              console.warn(`[transformWorkflowToVueFlow] NodeGroup ${sourceNode.id} (source for edge ${storageEdge.id}) has 'groupInterface.outputs', but handle '${storageEdge.sourceHandle}' not found. Available output handles: ${sourceNode.data.groupInterface.outputs ? Object.keys(sourceNode.data.groupInterface.outputs).join(', ') : 'outputs not available'}. Defaulting to 'any'.`);
-              sourceType = "any";
-            }
-          } else {
-            console.warn(`[transformWorkflowToVueFlow] NodeGroup ${sourceNode.id} (source for edge ${storageEdge.id}) is missing 'data.groupInterface.outputs' or 'data.groupInterface' itself after async load. Data:`, JSON.stringify(sourceNode.data), `. Defaulting to 'any'.`);
-            sourceType = "any";
-          }
-        } else if (sourceNode.data?.outputs?.[storageEdge.sourceHandle]) {
-          const outputData = sourceNode.data.outputs[storageEdge.sourceHandle];
-          if (outputData && typeof outputData === "object" && outputData.dataFlowType) {
-            sourceType = outputData.dataFlowType;
-          }
+        const sourceSlotDef = getSlotDefinition(sourceNode, storageEdge.sourceHandle, 'source', workflowDataForSlotHelper as any); // 使用 as any 临时解决类型问题
+        if (sourceSlotDef?.dataFlowType) {
+          sourceType = sourceSlotDef.dataFlowType;
+        } else if (sourceSlotDef) {
+          console.warn(`[transformWorkflowToVueFlow] Node ${sourceNode.id} (source for edge ${storageEdge.id}) output handle '${storageEdge.sourceHandle}' found, but 'dataFlowType' is missing or invalid. Defaulting to 'any'. SlotDef:`, JSON.stringify(sourceSlotDef));
+        } else {
+          console.warn(`[transformWorkflowToVueFlow] Node ${sourceNode.id} (source for edge ${storageEdge.id}) output handle '${storageEdge.sourceHandle}' not found. Defaulting to 'any'.`);
         }
-      }
-      if (sourceType === "any" && sourceNode && storageEdge.sourceHandle) {
-        console.warn(
-          `[transformWorkflowToVueFlow] FINAL CHECK: Cannot determine specific source type for edge ${storageEdge.id} (source: ${storageEdge.source}::${storageEdge.sourceHandle}). Defaulting to 'any'.`
-        );
       }
 
       // 确定目标类型
       if (targetNode && storageEdge.targetHandle) {
-        if (targetNode.type === "core:GroupOutput") {
-          const interfaceOutputDef = workflow.interfaceOutputs?.[storageEdge.targetHandle];
-          if (interfaceOutputDef && interfaceOutputDef.dataFlowType) {
-            targetType = interfaceOutputDef.dataFlowType;
-          } else if (interfaceOutputDef) {
-            console.warn(`[transformWorkflowToVueFlow] GroupOutput ${targetNode.id} (target for edge ${storageEdge.id}) input handle '${storageEdge.targetHandle}' found in workflow.interfaceOutputs, but 'dataFlowType' is missing or invalid. Defaulting to 'any'. InterfaceOutputDef:`, JSON.stringify(interfaceOutputDef));
-            targetType = "any";
-          } else {
-            targetType = "any";
-          }
-        } else if (targetNode.type === "core:NodeGroup") {
-          // 现在 targetNode.data.groupInterface 应该存在了
-          if (targetNode.data?.groupInterface?.inputs) {
-            const inputDef = targetNode.data.groupInterface.inputs[storageEdge.targetHandle];
-            if (inputDef && inputDef.dataFlowType) {
-              targetType = inputDef.dataFlowType;
-            } else if (inputDef) {
-              console.warn(`[transformWorkflowToVueFlow] NodeGroup ${targetNode.id} (target for edge ${storageEdge.id}) input handle '${storageEdge.targetHandle}' found in groupInterface.inputs, but 'dataFlowType' is missing or invalid. Defaulting to 'any'. InputDef:`, JSON.stringify(inputDef));
-              targetType = "any";
-            } else {
-              console.warn(`[transformWorkflowToVueFlow] NodeGroup ${targetNode.id} (target for edge ${storageEdge.id}) has 'groupInterface.inputs', but handle '${storageEdge.targetHandle}' not found. Available input handles: ${targetNode.data.groupInterface.inputs ? Object.keys(targetNode.data.groupInterface.inputs).join(', ') : 'inputs not available'}. Defaulting to 'any'.`);
-              targetType = "any";
-            }
-          } else {
-            console.warn(`[transformWorkflowToVueFlow] NodeGroup ${targetNode.id} (target for edge ${storageEdge.id}) is missing 'data.groupInterface.inputs' or 'data.groupInterface' itself after async load. Data:`, JSON.stringify(targetNode.data), `. Defaulting to 'any'.`);
-            targetType = "any";
-          }
-        } else if (targetNode.data?.inputs) {
-          const fullTargetHandle = storageEdge.targetHandle;
-          const handleParts = fullTargetHandle.split('__');
-          const baseHandleName = handleParts[0];
-          if (baseHandleName && Object.prototype.hasOwnProperty.call(targetNode.data.inputs, baseHandleName)) {
-            const inputData = targetNode.data.inputs[baseHandleName];
-            if (typeof inputData === "object" && inputData.dataFlowType) {
-              targetType = inputData.dataFlowType;
-            }
-          }
+        const targetSlotDef = getSlotDefinition(targetNode, storageEdge.targetHandle, 'target', workflowDataForSlotHelper as any); // 使用 as any 临时解决类型问题
+        if (targetSlotDef?.dataFlowType) {
+          targetType = targetSlotDef.dataFlowType;
+        } else if (targetSlotDef) {
+          console.warn(`[transformWorkflowToVueFlow] Node ${targetNode.id} (target for edge ${storageEdge.id}) input handle '${storageEdge.targetHandle}' found, but 'dataFlowType' is missing or invalid. Defaulting to 'any'. SlotDef:`, JSON.stringify(targetSlotDef));
+        } else {
+          console.warn(`[transformWorkflowToVueFlow] Node ${targetNode.id} (target for edge ${storageEdge.id}) input handle '${storageEdge.targetHandle}' not found. Defaulting to 'any'.`);
         }
-      }
-      if (targetType === "any" && targetNode && storageEdge.targetHandle) {
-        console.warn(
-          `[transformWorkflowToVueFlow] FINAL CHECK: Cannot determine specific target type for edge ${storageEdge.id} (target: ${storageEdge.target}::${storageEdge.targetHandle}). Defaulting to 'any'. Source Type: ${sourceType}`
-        );
       }
 
       const {

@@ -14,14 +14,16 @@ import {
   type DataFlowTypeName,
   DataFlowType,
   BuiltInSocketMatchCategory,
+  type InputDefinition, // 导入 InputDefinition
+  type OutputDefinition, // 导入 OutputDefinition
 } from "@comfytavern/types";
 import { createHistoryEntry } from "@comfytavern/utils";
 import { useTabStore } from "@/stores/tabStore";
 import { useWorkflowStore } from "@/stores/workflowStore";
-import { useNodeStore } from "@/stores/nodeStore"; // 新增导入
 import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils"; // Import parseSubHandleId
 import { klona } from 'klona/json';
 import { nanoid } from 'nanoid';
+import { useSlotDefinitionHelper } from "../node/useSlotDefinitionHelper"; // 导入 useSlotDefinitionHelper
 import type { Node as VueFlowNode } from '@vue-flow/core'; // 明确导入 VueFlow Node 类型
 
 // DraggingState 定义保持不变
@@ -54,8 +56,8 @@ export function useCanvasConnections({
 }: UseCanvasConnectionsOptions) {
   const tabStore = useTabStore();
   const workflowStore = useWorkflowStore();
-  const nodeStore = useNodeStore(); // 确保 nodeStore 在这里正确初始化
   const { syncInterfaceSlotFromConnection } = useGroupInterfaceSync(); // 获取同步函数
+  const { getSlotDefinition } = useSlotDefinitionHelper(); // 获取 getSlotDefinition 函数
 
   // vueFlowInstance 的类型现在是 VueFlowStore
   const vueFlowInstance: VueFlowStore = useVueFlow();
@@ -88,32 +90,17 @@ export function useCanvasConnections({
     const actualHandleIdForLog = rawHandleId || 'UNKNOWN_HANDLE_ID'; // 用于日志，避免 null
 
     if (node && parsedHandleKey) {
-      let slotDef: GroupSlotInfo | undefined;
-      const nType = getNodeType(node);
+      let slotDef: InputDefinition | OutputDefinition | GroupSlotInfo | undefined;
 
-      if (handleType === 'source') {
-        if (nType === 'core:GroupInput') {
-          slotDef = workflowStore.getActiveTabState()?.workflowData?.interfaceInputs?.[parsedHandleKey];
-        } else if (nType === 'core:NodeGroup') {
-          slotDef = (node.data as any)?.groupInterface?.outputs?.[parsedHandleKey];
-        } else {
-          slotDef = (node.data as any)?.outputs?.[parsedHandleKey];
-        }
-      } else if (handleType === 'target') {
-        if (nType === 'core:GroupOutput') {
-          slotDef = workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[parsedHandleKey];
-        } else if (nType === 'core:NodeGroup') {
-          slotDef = (node.data as any)?.groupInterface?.inputs?.[parsedHandleKey];
-        } else {
-          slotDef = (node.data as any)?.inputs?.[parsedHandleKey];
-        }
-      } else { // 如果没有提供 handleType，尝试同时检查 inputs 和 outputs
-        slotDef = (node.data as any)?.inputs?.[parsedHandleKey] || (node.data as any)?.outputs?.[parsedHandleKey] || (node.data as any)?.groupInterface?.inputs?.[parsedHandleKey] || (node.data as any)?.groupInterface?.outputs?.[parsedHandleKey];
-        if (!slotDef) { // 尝试检查工作流级别的接口定义
-          const activeState = workflowStore.getActiveTabState()?.workflowData;
-          if (activeState) {
-            slotDef = activeState.interfaceInputs?.[parsedHandleKey] || activeState.interfaceOutputs?.[parsedHandleKey];
-          }
+      const currentWorkflowData = workflowStore.getActiveTabState()?.workflowData;
+      // 尝试根据 handleType 获取插槽定义，如果 handleType 未明确，则尝试作为 source 或 target
+      if (handleType === 'source' || handleType === 'target') {
+        slotDef = getSlotDefinition(node, parsedHandleKey, handleType, currentWorkflowData);
+      } else {
+        // 如果 handleType 未明确，则尝试作为 source 获取，如果失败则尝试作为 target
+        slotDef = getSlotDefinition(node, parsedHandleKey, 'source', currentWorkflowData);
+        if (!slotDef) {
+          slotDef = getSlotDefinition(node, parsedHandleKey, 'target', currentWorkflowData);
         }
       }
 
@@ -223,37 +210,32 @@ export function useCanvasConnections({
       return false;
     }
 
-    let sourceOutput: GroupSlotInfo | undefined;
-    if (getNodeType(sourceNode) === 'core:GroupInput') {
-      const activeState = workflowStore.getActiveTabState();
-      sourceOutput = activeState?.workflowData?.interfaceInputs?.[sourceKey];
-    } else if (getNodeType(sourceNode) === 'core:NodeGroup') {
-      sourceOutput = (sourceNode.data as any)?.groupInterface?.outputs?.[sourceKey];
-    } else {
-      sourceOutput = (sourceNode.data as any)?.outputs?.[sourceKey];
-    }
+    const currentWorkflowData = workflowStore.getActiveTabState()?.workflowData;
+    let sourceOutput = sourceKey ? getSlotDefinition(sourceNode, sourceKey, 'source', currentWorkflowData) : undefined;
 
-    let targetInput: GroupSlotInfo | undefined;
-    if (getNodeType(targetNode) === 'core:GroupOutput') {
-      const activeState = workflowStore.getActiveTabState();
-      targetInput = activeState?.workflowData?.interfaceOutputs?.[targetKey];
-    } else if (getNodeType(targetNode) === 'core:NodeGroup') {
-      targetInput = (targetNode.data as any)?.groupInterface?.inputs?.[targetKey];
-    } else {
-      targetInput = (targetNode.data as any)?.inputs?.[targetKey];
-    }
+    let targetInput = targetKey ? getSlotDefinition(targetNode, targetKey, 'target', currentWorkflowData) : undefined;
 
     if (!sourceOutput || !targetInput) {
       return false;
     }
-    const compatible = isTypeCompatible(sourceOutput, targetInput);
+    // 确保 sourceOutput 和 targetInput 是 GroupSlotInfo 类型，以便传递给 isTypeCompatible
+    // getSlotDefinition 返回的类型是联合类型，需要进一步细化或断言
+    // 考虑到 isTypeCompatible 的签名，它期望 GroupSlotInfo。
+    // 如果 getSlotDefinition 返回的是 OutputDefinition 或 ComfyInputDefinition，
+    // 并且它们没有 GroupSlotInfo 的所有属性（特别是 key），isTypeCompatible 会报错。
+    // 检查 GroupSlotInfo 的定义，它包含了 key, dataFlowType, matchCategories, multi 等。
+    // OutputDefinition 和 InputDefinition 也有这些属性。
+    // 这里的兼容性检查应该适用于所有插槽定义类型。
+    // 暂时保留 isTypeCompatible 的签名，并假设返回的定义包含了必要属性。
+    // 如果后续出现运行时错误，可能需要调整 isTypeCompatible 的签名或在调用前进行类型断言/细化。
+    const compatible = isTypeCompatible(sourceOutput as GroupSlotInfo, targetInput as GroupSlotInfo);
 
     if (compatible) {
       // 首先，获取目标输入定义，以检查其是否为 multi:true
       // targetNode 和 targetKey 已经在此函数前面部分获取和验证过
-      // targetInput (GroupSlotInfo) 也已获取
+      // targetInput (GroupSlotInfo | ComfyInputDefinition | OutputDefinition | undefined) 已获取
 
-      if (targetInput && targetInput.multi === true) {
+      if (targetInput && 'multi' in targetInput && targetInput.multi === true) {
         // 目标是一个 multi:true 的输入插槽
         const parsedTargetHandleInfo = parseSubHandleId(rawTargetHandle);
         if (!parsedTargetHandleInfo.isSubHandle) {
@@ -273,7 +255,7 @@ export function useCanvasConnections({
         const isNewConnection = !updatingEdgeId;
 
         // targetInput (正确的变量名) 应该在此函数的前面部分已经基于 originalKey 获取了
-        if (targetInput && targetInput.multi === true && isNewConnection) {
+        if (targetInput && 'multi' in targetInput && targetInput.multi === true && isNewConnection) {
           // 对于新的连接到多输入插槽：
           // 即使视觉上指向的子句柄 (connection.targetHandle) 当前已被连接，我们也允许它通过此检查。
           // 实际的插入索引将由 reorderPreviewIndex 决定，并且 connectEdgeToMultiInput 会处理现有连接的顺延。
@@ -295,7 +277,7 @@ export function useCanvasConnections({
             if (updatingEdgeId && singleOccupyingEdge && singleOccupyingEdge.id === updatingEdgeId) {
               // 正在更新同一条边，这是允许的
             } else { // 被不同的边或多个边占用
-              if (targetInput && targetInput.multi === true) {
+              if (targetInput && 'multi' in targetInput && targetInput.multi === true) {
                 // 对于多输入插槽，当被其他边占用时，不在此处返回 false。
                 // 类型兼容性 (由 `compatible` 变量检查) 和其他通用规则仍然适用。
                 // 重排逻辑会处理实际的放置。
@@ -329,19 +311,12 @@ export function useCanvasConnections({
     const sourceNode = getNodes.value.find((node) => node.id === params.source)!;
     const targetNode = getNodes.value.find((node) => node.id === params.target)!;
 
-    let sourceOutputDef: GroupSlotInfo | undefined;
-    if (getNodeType(sourceNode) === 'core:GroupInput') { sourceOutputDef = workflowStore.getActiveTabState()?.workflowData?.interfaceInputs?.[params.sourceHandle!]; }
-    else if (getNodeType(sourceNode) === 'core:NodeGroup') { sourceOutputDef = (sourceNode.data as any)?.groupInterface?.outputs?.[params.sourceHandle!]; }
-    else { sourceOutputDef = (sourceNode.data as any)?.outputs?.[params.sourceHandle!]; }
+    const { originalKey: sourceKey } = parseSubHandleId(params.sourceHandle!);
+    const currentWorkflowData = workflowStore.getActiveTabState()?.workflowData;
+    let sourceOutputDef = sourceKey ? getSlotDefinition(sourceNode, sourceKey, 'source', currentWorkflowData) : undefined;
 
-    // params.targetHandle 可能是子句柄ID (e.g., "key__0") 或普通句柄ID
-    const { originalKey: parsedTargetHandleKey } = parseSubHandleId(params.targetHandle); // 移除了未使用的 isTargetSubHandle
-
-    let targetInputDef: GroupSlotInfo | undefined;
-    // 使用 parsedTargetHandleKey 来获取插槽定义
-    if (getNodeType(targetNode) === 'core:GroupOutput') { targetInputDef = workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[parsedTargetHandleKey]; }
-    else if (getNodeType(targetNode) === 'core:NodeGroup') { targetInputDef = (targetNode.data as any)?.groupInterface?.inputs?.[parsedTargetHandleKey]; }
-    else { targetInputDef = (targetNode.data as any)?.inputs?.[parsedTargetHandleKey]; }
+    const { originalKey: targetKey } = parseSubHandleId(params.targetHandle);
+    let targetInputDef = targetKey ? getSlotDefinition(targetNode, targetKey, 'target', currentWorkflowData) : undefined;
 
     if (!sourceOutputDef || !targetInputDef) {
       return null;
@@ -364,12 +339,12 @@ export function useCanvasConnections({
     let edgeType = 'default'; // 始终使用默认边类型
     let finalTargetHandleForEdge = params.targetHandle; // 始终使用 Vue Flow 提供的实际连接句柄 (即子句柄 ID)
 
-    if (targetInputDef.multi) {
+    if (targetInputDef && 'multi' in targetInputDef && targetInputDef.multi) {
       // 即便对于多输入，我们也希望使用 'default' 边类型，
-      // 并且 finalTargetHandleForEdge 应该保持为 params.targetHandle (子句柄 ID)。
-      // 如果标准边正确连接到各个子句柄，就不再需要 'sortedMultiTargetEdge' 及其连接到主键的逻辑。
+      // 并且 finalTargetHandleForEdge should remain params.targetHandle (sub-handle ID).
+      // If standard edges connect correctly to individual sub-handles, we no longer need 'sortedMultiTargetEdge' and its logic connecting to the main key.
     } else {
-      // 单输入目标，标准边，连接到特定句柄。
+      // Single input target, standard edge, connects to specific handle.
     }
 
     return {
@@ -447,25 +422,10 @@ export function useCanvasConnections({
     const { originalKey: parsedSourceHandleKey } = parseSubHandleId(sourceHandle);
     const { originalKey: parsedTargetHandleKey } = parseSubHandleId(targetHandle);
 
-    let sourceOutputDef: GroupSlotInfo | undefined;
-    const sourceNodeType = getNodeType(sourceNode);
-    if (sourceNodeType === 'core:GroupInput') {
-      sourceOutputDef = workflowStore.getActiveTabState()?.workflowData?.interfaceInputs?.[parsedSourceHandleKey];
-    } else if (sourceNodeType === 'core:NodeGroup') {
-      sourceOutputDef = (sourceNode.data as any)?.groupInterface?.outputs?.[parsedSourceHandleKey];
-    } else {
-      sourceOutputDef = (sourceNode.data as any)?.outputs?.[parsedSourceHandleKey];
-    }
+    const currentWorkflowData = workflowStore.getActiveTabState()?.workflowData;
+    let sourceOutputDef = parsedSourceHandleKey ? getSlotDefinition(sourceNode, parsedSourceHandleKey, 'source', currentWorkflowData) as GroupSlotInfo | undefined : undefined;
 
-    let targetInputDef: GroupSlotInfo | undefined;
-    const targetNodeType = getNodeType(targetNode);
-    if (targetNodeType === 'core:GroupOutput') {
-      targetInputDef = workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[parsedTargetHandleKey];
-    } else if (targetNodeType === 'core:NodeGroup') {
-      targetInputDef = (targetNode.data as any)?.groupInterface?.inputs?.[parsedTargetHandleKey];
-    } else {
-      targetInputDef = (targetNode.data as any)?.inputs?.[parsedTargetHandleKey];
-    }
+    let targetInputDef = parsedTargetHandleKey ? getSlotDefinition(targetNode, parsedTargetHandleKey, 'target', currentWorkflowData) as GroupSlotInfo | undefined : undefined;
 
     if (!sourceOutputDef || !targetInputDef) {
       return null;
@@ -557,7 +517,7 @@ export function useCanvasConnections({
       finalSourceDefForEdge.matchCategories = [...(originalTargetInputDef.matchCategories || [])];
 
       const newSourceSlotDef = createSyncSlotInfo(originalSourceOutputDef, originalTargetInputDef.dataFlowType, originalTargetInputDef.matchCategories || [], originalTargetInputDef);
-      if (sourceNodeType === 'core:GroupInput') {
+      if (getNodeType(sourceNode) === 'core:GroupInput') { // 使用 getNodeType(sourceNode)
         interfaceUpdateResult = syncInterfaceSlotFromConnection(currentTabId, sourceNode.id, parsedSourceHandleKey, newSourceSlotDef, 'inputs');
       } else {
         modifiedSlotInfo = { node: sourceNode, handleKey: parsedSourceHandleKey, newDefinition: newSourceSlotDef, direction: 'outputs' };
@@ -568,9 +528,9 @@ export function useCanvasConnections({
       finalTargetDefForEdge.matchCategories = [...(originalSourceOutputDef.matchCategories || [])];
 
       const newTargetSlotDef = createSyncSlotInfo(originalTargetInputDef, originalSourceOutputDef.dataFlowType, originalSourceOutputDef.matchCategories || [], originalSourceOutputDef);
-      if (targetNodeType === 'core:GroupOutput') {
+      if (getNodeType(targetNode) === 'core:GroupOutput') { // 使用 getNodeType(targetNode)
         interfaceUpdateResult = syncInterfaceSlotFromConnection(currentTabId, targetNode.id, parsedTargetHandleKey, newTargetSlotDef, 'outputs');
-      } else if (targetNodeType === 'core:GroupInput') { // Should not happen if target is GroupInput and CONVERTIBLE_ANY (GroupInput outputs)
+      } else if (getNodeType(targetNode) === 'core:GroupInput') { // 使用 getNodeType(targetNode)
         // This case might need review, typically GroupInput outputs are CONVERTIBLE_ANY
       }
       else {
@@ -779,18 +739,10 @@ export function useCanvasConnections({
     if (originalTargetNode) {
       const originalTargetHandleId = edge.targetHandle;
       if (originalTargetHandleId) {
-        let targetInputDef: GroupSlotInfo | undefined;
-        const nodeType = getNodeType(originalTargetNode);
+        const currentWorkflowData = workflowStore.getActiveTabState()?.workflowData;
+        let targetInputDef = originalTargetHandleId ? getSlotDefinition(originalTargetNode, originalTargetHandleId, 'target', currentWorkflowData) : undefined;
 
-        if (nodeType === 'core:GroupOutput') {
-          targetInputDef = workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[originalTargetHandleId];
-        } else if (nodeType === 'core:NodeGroup') {
-          targetInputDef = (originalTargetNode.data as any)?.groupInterface?.inputs?.[originalTargetHandleId];
-        } else {
-          targetInputDef = (originalTargetNode.data as any)?.inputs?.[originalTargetHandleId];
-        }
-
-        if (targetInputDef) {
+        if (targetInputDef && 'multi' in targetInputDef) {
           isOriginalTargetMulti = targetInputDef.multi === true;
         }
       }
@@ -943,18 +895,10 @@ export function useCanvasConnections({
           const targetNode = findNode(newConnectionParams.target);
           // 从 newConnectionParams.targetHandle 解析原始键
           const { originalKey: newTargetOriginalKeyFromParams } = parseSubHandleId(newConnectionParams.targetHandle);
-          let targetInputDef: GroupSlotInfo | undefined;
+          const currentWorkflowData = workflowStore.getActiveTabState()?.workflowData;
+          let targetInputDef = newTargetOriginalKeyFromParams && targetNode ? getSlotDefinition(targetNode, newTargetOriginalKeyFromParams, 'target', currentWorkflowData) : undefined;
 
-          if (targetNode && newTargetOriginalKeyFromParams) {
-            // 使用原始键获取输入定义
-            const nodeDefinition = nodeStore.getNodeDefinitionByFullType(targetNode.type || '');
-            targetInputDef = nodeDefinition?.inputs?.[newTargetOriginalKeyFromParams] ||
-              (targetNode.data as any)?.inputs?.[newTargetOriginalKeyFromParams] ||
-              (getNodeType(targetNode) === 'core:NodeGroup' ? (targetNode.data as any)?.groupInterface?.inputs?.[newTargetOriginalKeyFromParams] : undefined) ||
-              (getNodeType(targetNode) === 'core:GroupOutput' ? workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[newTargetOriginalKeyFromParams] : undefined);
-          }
-
-          const isNewTargetMultiInput = targetInputDef?.multi === true;
+          const isNewTargetMultiInput = targetInputDef && 'multi' in targetInputDef && targetInputDef.multi === true;
           let newTargetIndexInOrder: number | undefined = undefined; // 维持 number | undefined
 
           if (isNewTargetMultiInput && newTargetOriginalKeyFromParams && targetNode) { // 确保 targetNode 和 originalKey 有效
@@ -1015,26 +959,11 @@ export function useCanvasConnections({
 
             const { originalKey: parsedNewSourceHandleKey } = parseSubHandleId(newConnectionParams.sourceHandle);
             const { originalKey: parsedNewTargetHandleKey } = parseSubHandleId(newConnectionParams.targetHandle);
+            const currentWorkflowDataForUpdate = workflowStore.getActiveTabState()?.workflowData;
 
-            let newSourceOutputDef: GroupSlotInfo | undefined;
-            const newSourceNodeType = getNodeType(newSourceNode);
-            if (newSourceNodeType === 'core:GroupInput') {
-              newSourceOutputDef = workflowStore.getActiveTabState()?.workflowData?.interfaceInputs?.[parsedNewSourceHandleKey];
-            } else if (newSourceNodeType === 'core:NodeGroup') {
-              newSourceOutputDef = (newSourceNode.data as any)?.groupInterface?.outputs?.[parsedNewSourceHandleKey];
-            } else {
-              newSourceOutputDef = (newSourceNode.data as any)?.outputs?.[parsedNewSourceHandleKey];
-            }
+            let newSourceOutputDef = parsedNewSourceHandleKey ? getSlotDefinition(newSourceNode, parsedNewSourceHandleKey, 'source', currentWorkflowDataForUpdate) : undefined;
 
-            let newTargetInputDef: GroupSlotInfo | undefined;
-            const newTargetNodeType = getNodeType(newTargetNode);
-            if (newTargetNodeType === 'core:GroupOutput') {
-              newTargetInputDef = workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[parsedNewTargetHandleKey];
-            } else if (newTargetNodeType === 'core:NodeGroup') {
-              newTargetInputDef = (newTargetNode.data as any)?.groupInterface?.inputs?.[parsedNewTargetHandleKey];
-            } else {
-              newTargetInputDef = (newTargetNode.data as any)?.inputs?.[parsedNewTargetHandleKey];
-            }
+            let newTargetInputDef = parsedNewTargetHandleKey ? getSlotDefinition(newTargetNode, parsedNewTargetHandleKey, 'target', currentWorkflowDataForUpdate) : undefined;
 
             if (!newSourceOutputDef || !newTargetInputDef) {
               console.error(`[onEdgeUpdateEnd] Failed to find slot definitions for new connection: ${parsedNewSourceHandleKey}@${newSourceNode.id} or ${parsedNewTargetHandleKey}@${newTargetNode.id}`);
@@ -1058,8 +987,8 @@ export function useCanvasConnections({
             if (isNewSourceConv && !isNewTargetConv && !isNewTargetWild) {
               finalSourceDefForEdgeOnUpdate.dataFlowType = originalNewTargetInputDef.dataFlowType;
               finalSourceDefForEdgeOnUpdate.matchCategories = [...(originalNewTargetInputDef.matchCategories || [])];
-              const newSourceSlotDefConverted = createSyncSlotInfo(originalNewSourceOutputDef, originalNewTargetInputDef.dataFlowType, originalNewTargetInputDef.matchCategories || [], originalNewTargetInputDef);
-              if (newSourceNodeType === 'core:GroupInput') {
+              const newSourceSlotDefConverted = createSyncSlotInfo(originalNewSourceOutputDef as GroupSlotInfo, originalNewTargetInputDef.dataFlowType, originalNewTargetInputDef.matchCategories || [], originalNewTargetInputDef as GroupSlotInfo);
+              if (getNodeType(newSourceNode) === 'core:GroupInput') {
                 interfaceUpdateResultOnUpdate = syncInterfaceSlotFromConnection(currentTabId, newSourceNode.id, parsedNewSourceHandleKey, newSourceSlotDefConverted, 'inputs');
               } else {
                 modifiedSlotInfoOnUpdate = { node: newSourceNode, handleKey: parsedNewSourceHandleKey, newDefinition: newSourceSlotDefConverted, direction: 'outputs' };
@@ -1067,8 +996,8 @@ export function useCanvasConnections({
             } else if (isNewTargetConv && !isNewSourceConv && !isNewSourceWild) {
               finalTargetDefForEdgeOnUpdate.dataFlowType = originalNewSourceOutputDef.dataFlowType;
               finalTargetDefForEdgeOnUpdate.matchCategories = [...(originalNewSourceOutputDef.matchCategories || [])];
-              const newTargetSlotDefConverted = createSyncSlotInfo(originalNewTargetInputDef, originalNewSourceOutputDef.dataFlowType, originalNewSourceOutputDef.matchCategories || [], originalNewSourceOutputDef);
-              if (newTargetNodeType === 'core:GroupOutput') {
+              const newTargetSlotDefConverted = createSyncSlotInfo(originalNewTargetInputDef as GroupSlotInfo, originalNewSourceOutputDef.dataFlowType, originalNewSourceOutputDef.matchCategories || [], originalNewSourceOutputDef as GroupSlotInfo);
+              if (getNodeType(newTargetNode) === 'core:GroupOutput') {
                 interfaceUpdateResultOnUpdate = syncInterfaceSlotFromConnection(currentTabId, newTargetNode.id, parsedNewTargetHandleKey, newTargetSlotDefConverted, 'outputs');
               } else {
                 modifiedSlotInfoOnUpdate = { node: newTargetNode, handleKey: parsedNewTargetHandleKey, newDefinition: newTargetSlotDefConverted, direction: 'inputs' };
@@ -1242,17 +1171,10 @@ export function useCanvasConnections({
         const targetNode = findNode(newEndHandle.nodeId);
         if (targetNode && newEndHandle.id) { // 确保 newEndHandle.id 不是 null
           const { originalKey: currentOriginalHandleKey } = parseSubHandleId(newEndHandle.id);
-          let targetInputDef: GroupSlotInfo | undefined;
+          const currentWorkflowDataForWatch = workflowStore.getActiveTabState()?.workflowData;
+          let targetInputDef = currentOriginalHandleKey && targetNode ? getSlotDefinition(targetNode, currentOriginalHandleKey, 'target', currentWorkflowDataForWatch) : undefined;
 
-          if (currentOriginalHandleKey) {
-            const nodeDefinition = nodeStore.getNodeDefinitionByFullType(targetNode.type || '');
-            targetInputDef = nodeDefinition?.inputs?.[currentOriginalHandleKey] ||
-              (targetNode.data as any)?.inputs?.[currentOriginalHandleKey] ||
-              (getNodeType(targetNode) === 'core:NodeGroup' ? (targetNode.data as any)?.groupInterface?.inputs?.[currentOriginalHandleKey] : undefined) ||
-              (getNodeType(targetNode) === 'core:GroupOutput' ? workflowStore.getActiveTabState()?.workflowData?.interfaceOutputs?.[currentOriginalHandleKey] : undefined);
-          }
-
-          if (targetInputDef && targetInputDef.multi === true && currentOriginalHandleKey) {
+          if (targetInputDef && 'multi' in targetInputDef && targetInputDef.multi === true && currentOriginalHandleKey) {
             // newEndHandle.id 是鼠标当前悬停的句柄ID，例如 "text_inputs__0"
             // currentIsSubHandle 和 subHandleIndexOfHovered 是从 newEndHandle.id 解析出来的
             const { isSubHandle: currentIsSubHandle, index: subHandleIndexOfHovered } = parseSubHandleId(newEndHandle.id);

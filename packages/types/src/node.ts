@@ -53,25 +53,25 @@ export const zButtonInputOptions = zBaseInputOptions.extend({
 // 自定义类型选项 (保持基础，用于未知或特殊类型)
 export const zCustomInputOptions = zBaseInputOptions;
 
-// 输入定义
-export interface InputDefinition {
+// 基础插槽定义接口，包含所有插槽类型共有的属性
+export interface SlotDefinitionBase {
   displayName?: string; // UI 显示名称 (优先用于前端展示)
+  dataFlowType: DataFlowTypeName; // 数据流类型
+  matchCategories?: string[]; // 匹配类别，用于类型检查和连接建议
+  allowDynamicType?: boolean; // 标记该插槽是否支持从 'ANY' 动态变为具体类型
+}
+
+// 输入定义
+export interface InputDefinition extends SlotDefinitionBase {
   description?: string; // 插槽详细描述 (用于tooltip等)
   required?: boolean | ((configValues: Record<string, any>) => boolean); // 是否必需 (可为布尔值或函数，用于条件性必需)
   config?: Record<string, any>; // 输入控件的特定配置 (例如 min, max, step for number)
   multi?: boolean; // 标记是否支持多输入连接
-  allowDynamicType?: boolean; // 标记该插槽是否支持从 'ANY' 动态变为具体类型
-  dataFlowType: DataFlowTypeName; // 数据流类型
-  matchCategories?: string[]; // 匹配类别，用于类型检查和连接建议
 }
 
 // 输出定义
-export interface OutputDefinition {
-  displayName?: string; // UI 显示名称 (优先用于前端展示)
+export interface OutputDefinition extends SlotDefinitionBase {
   description?: string; // 插槽详细描述 (用于tooltip等)
-  allowDynamicType?: boolean; // 标记该插槽是否支持从 'ANY' 动态变为具体类型
-  dataFlowType: DataFlowTypeName; // 数据流类型
-  matchCategories?: string[]; // 匹配类别，用于类型检查和连接建议
 }
 
 /**
@@ -329,7 +329,7 @@ export interface WorkflowStorageEdge {
 // 根据 schemas.ts 中的 Zod schema 定义 GroupSlotInfo
 export interface GroupSlotInfo {
   key: string; // 唯一键
-  displayName: string; // 显示名称
+  displayName?: string; // 显示名称
   dataFlowType: DataFlowTypeName; // 数据流类型 (例如: 'DATA_FLOW_STRING', 'DATA_FLOW_IMAGE')
   customDescription?: string; // (可选) 用户为此特定组接口插槽定义的描述
   required?: boolean; // 是否必需

@@ -13,6 +13,7 @@ import {
 import type { Edge, Node as VueFlowNode } from '@vue-flow/core';
 import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils"; // 导入 parseSubHandleId
 import { useGroupInterfaceSync } from "@/composables/group/useGroupInterfaceSync";
+import { useSlotDefinitionHelper } from "@/composables/node/useSlotDefinitionHelper"; // 导入 useSlotDefinitionHelper
 import type { WorkflowStateSnapshot } from "@/types/workflowTypes";
 
 
@@ -32,6 +33,7 @@ interface NodeInstanceData {
 export function useMultiInputConnectionActions(
   _activeTabId: Ref<string | null> // 由于函数待重构，标记为未使用
 ) {
+  const { getSlotDefinition } = useSlotDefinitionHelper();
 
   /**
    * 为多输入插槽重新排序连接，并更新该插槽的所有边的 targetHandles。
@@ -593,41 +595,6 @@ export function useMultiInputConnectionActions(
   }
 
 
-  // 获取插槽定义的辅助函数
-  function getSlotDefinition(
-    node: VueFlowNode,
-    handleId: string | null | undefined,
-    handleType: 'source' | 'target',
-    currentWorkflowData?: WorkflowObject | undefined // 已更改类型
-  ): ComfyInputDefinition | OutputDefinition | GroupSlotInfo | undefined { // 已更改返回类型
-    if (!handleId) return undefined;
-
-    const { originalKey: slotKey } = parseSubHandleId(handleId); // 使用导入的 parseSubHandleId
-    if (!slotKey) return undefined;
-
-    const nodeType = getNodeType(node);
-    const nodeData = node.data as NodeInstanceData; // 使用本地 NodeInstanceData 类型
-
-    if (handleType === 'source') { // 输出插槽
-      if (nodeType === 'core:GroupInput') {
-        // GroupInput 的输出在工作流的 interfaceInputs 中定义
-        return currentWorkflowData?.interfaceInputs?.[slotKey];
-      } else if (nodeType === 'core:NodeGroup') {
-        return nodeData?.groupInterface?.outputs?.[slotKey];
-      } else {
-        return nodeData?.outputs?.[slotKey] as OutputDefinition | undefined; // 为清晰起见进行类型转换
-      }
-    } else { // 输入插槽
-      if (nodeType === 'core:GroupOutput') {
-        // GroupOutput 的输入在工作流的 interfaceOutputs 中定义
-        return currentWorkflowData?.interfaceOutputs?.[slotKey];
-      } else if (nodeType === 'core:NodeGroup') {
-        return nodeData?.groupInterface?.inputs?.[slotKey];
-      } else {
-        return nodeData?.inputs?.[slotKey] as ComfyInputDefinition | undefined; // 为清晰起见进行类型转换
-      }
-    }
-  }
 
   // handleConvertibleAnyTypeChange 现在应该是同步的，或者其异步性由调用者处理
   // 它应该直接修改传入的 elementsCopy 和 workflowDataCopy (如果是引用的话)
