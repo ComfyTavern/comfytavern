@@ -79,6 +79,7 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
       nodeType !== "core:NodeGroup" // 阻止为 NodeGroup 提取 inputValues
     ) {
       // --- 诊断日志开始 ---
+      /*
       console.log(
         `[DEBUG_TRANSFORM] Node ${vueNode.id} (${nodeType}): Entering input processing. vueNode.data && nodeDef && vueNode.data.inputs === nodeDef.inputs:`, vueNode.data && nodeDef && vueNode.data.inputs === nodeDef.inputs
       );
@@ -117,6 +118,7 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
           `"value" in string_input: ${"value" in specificInputData}`
         );
       }
+      */
       // --- 诊断日志结束 ---
       Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
         // inputData is now an object { value: ..., description: ..., ... }
