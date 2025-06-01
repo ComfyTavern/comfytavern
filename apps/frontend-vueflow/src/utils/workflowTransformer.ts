@@ -78,6 +78,46 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
       nodeType !== "core:GroupOutput" &&
       nodeType !== "core:NodeGroup" // 阻止为 NodeGroup 提取 inputValues
     ) {
+      // --- 诊断日志开始 ---
+      console.log(
+        `[DEBUG_TRANSFORM] Node ${vueNode.id} (${nodeType}): Entering input processing. vueNode.data && nodeDef && vueNode.data.inputs === nodeDef.inputs:`, vueNode.data && nodeDef && vueNode.data.inputs === nodeDef.inputs
+      );
+      try {
+        console.log(
+          `[DEBUG_TRANSFORM] Node ${vueNode.id} (${nodeType}): vueNode.data.inputs structure:`,
+          JSON.parse(JSON.stringify(vueNode.data && vueNode.data.inputs))
+        );
+      } catch (e) {
+        console.error(
+          `[DEBUG_TRANSFORM] Node ${vueNode.id} (${nodeType}): Error stringifying vueNode.data.inputs:`,
+          e,
+          vueNode.data && vueNode.data.inputs
+        );
+      }
+      if (nodeDef && nodeDef.inputs) { // 确保 nodeDef.inputs 存在才打印
+        try {
+          console.log(
+            `[DEBUG_TRANSFORM] Node ${vueNode.id} (${nodeType}): nodeDef.inputs structure:`,
+            JSON.parse(JSON.stringify(nodeDef.inputs))
+          );
+        } catch (e) {
+          console.error(
+            `[DEBUG_TRANSFORM] Node ${vueNode.id} (${nodeType}): Error stringifying nodeDef.inputs:`,
+            e,
+            nodeDef.inputs
+          );
+        }
+      }
+      // 检查特定问题键 'string_input' (如果节点是 'core:TestWidgets')
+      if (vueNode.type === 'core:TestWidgets' && vueNode.data && vueNode.data.inputs && vueNode.data.inputs['string_input']) {
+        const specificInputData = vueNode.data.inputs['string_input'];
+        console.log(
+          `[DEBUG_TRANSFORM] Node ${vueNode.id} (core:TestWidgets): string_input details:`,
+          JSON.parse(JSON.stringify(specificInputData)),
+          `"value" in string_input: ${"value" in specificInputData}`
+        );
+      }
+      // --- 诊断日志结束 ---
       Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
         // inputData is now an object { value: ..., description: ..., ... }
         const inputDef = nodeDef.inputs?.[inputName];

@@ -1,7 +1,8 @@
 import { reactive, computed, watch, ref } from "vue"; // Added ref
 import { klona } from "klona";
-import { DataFlowType, type GroupSlotInfo, type WorkflowNode as StorageNode, type WorkflowEdge as StorageEdge } from "@comfytavern/types"; // Import StorageNode/Edge aliases
+import { DataFlowType, type GroupSlotInfo, type WorkflowNode as StorageNode, type WorkflowEdge as StorageEdge, type InputDefinition, type OutputDefinition } from "@comfytavern/types"; // Import StorageNode/Edge aliases & Input/OutputDefinition
 import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core";
+import { getEffectiveDefaultValue } from "@comfytavern/utils"; // <-- 导入默认值工具
 import type {
   WorkflowData,
   TabWorkflowState,
@@ -126,17 +127,75 @@ function createWorkflowManager() {
       id: storageNode.id,
       type: storageNode.type, // 保留完整类型
       position: storageNode.position,
-      label: storageNode.label || nodeDef?.displayName || storageNode.type,
-      // 合并节点定义和存储数据
-      data: nodeDef ? { ...nodeDef, ...(storageNode.data || {}) } : { ...(storageNode.data || {}) },
-      width: storageNode.width, // 从存储中获取宽度
-      height: storageNode.height, // 从存储中获取高度
+      label: storageNode.displayName || nodeDef?.displayName || storageNode.type, // 优先使用 storageNode.displayName
+      data: {}, // 将在下面填充
+      width: storageNode.width,
+      height: storageNode.height,
       style: { // 根据存储的宽高设置样式
         ...(storageNode.width && { width: `${storageNode.width}px` }),
         ...(storageNode.height && { height: `${storageNode.height}px` }),
       },
       // 其他 VueFlowNode 可能需要的属性...
     };
+
+    // --- 正确构建 vueNode.data ---
+    const vueFlowData: Record<string, any> = {
+      // 从 nodeDef 复制一些基础属性 (如果需要，例如 category, icon)
+      // category: nodeDef?.category,
+      // icon: nodeDef?.icon,
+      configValues: klona(storageNode.configValues || {}), // 直接使用存储的配置值，并深拷贝
+      defaultDescription: nodeDef?.description || "",
+      description: storageNode.customDescription || nodeDef?.description || "",
+      inputs: {},
+      outputs: {},
+    };
+
+    if (nodeDef?.inputs) {
+      Object.entries(nodeDef.inputs).forEach(([inputName, inputDefUntyped]) => {
+        const inputDef = inputDefUntyped as InputDefinition; // 类型断言
+        const effectiveDefault = getEffectiveDefaultValue(inputDef);
+        const storedValue = storageNode.inputValues?.[inputName];
+        const finalValue = storedValue !== undefined ? storedValue : effectiveDefault;
+        const defaultSlotDesc = inputDef.description || "";
+        const customSlotDesc = storageNode.customSlotDescriptions?.inputs?.[inputName];
+        const displaySlotDesc = customSlotDesc || defaultSlotDesc;
+
+        vueFlowData.inputs[inputName] = {
+          value: klona(finalValue), // 深拷贝 finalValue
+          description: displaySlotDesc,
+          defaultDescription: defaultSlotDesc,
+          ...klona(inputDef), // 深拷贝 inputDef
+        };
+      });
+    }
+
+    if (nodeDef?.outputs) {
+      Object.entries(nodeDef.outputs).forEach(([outputName, outputDefUntyped]) => {
+        const outputDef = outputDefUntyped as OutputDefinition; // 类型断言
+        const defaultSlotDesc = outputDef.description || "";
+        const customSlotDesc = storageNode.customSlotDescriptions?.outputs?.[outputName];
+        const displaySlotDesc = customSlotDesc || defaultSlotDesc;
+        vueFlowData.outputs[outputName] = {
+          description: displaySlotDesc,
+          defaultDescription: defaultSlotDesc,
+          ...klona(outputDef), // 深拷贝 outputDef
+        };
+      });
+    }
+
+    // 处理 displayName (已在 vueNode.label 中初步处理，这里确保 data 中也有一致的 displayName)
+    const nodeDefaultLabel = nodeDef?.displayName || storageNode.type;
+    vueFlowData.defaultLabel = nodeDefaultLabel; // 保留原始默认标签
+    vueFlowData.displayName = storageNode.displayName || nodeDefaultLabel; // 最终显示名称
+
+    // 处理 inputConnectionOrders
+    if (storageNode.inputConnectionOrders) {
+      vueFlowData.inputConnectionOrders = klona(storageNode.inputConnectionOrders);
+    }
+    
+    // 将构建好的 vueFlowData 赋值给 vueNode.data
+    vueNode.data = vueFlowData;
+
     return vueNode;
   }
 

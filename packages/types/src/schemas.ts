@@ -158,6 +158,15 @@ export type NodeGroupData = z.infer<typeof NodeGroupDataSchema>;
 
 
 /**
+ * Schema 定义：自定义插槽描述。
+ */
+export const CustomSlotDescriptionsSchema = z.object({
+  inputs: z.record(z.string()).optional(),
+  outputs: z.record(z.string()).optional(),
+}).optional();
+export type CustomSlotDescriptions = z.infer<typeof CustomSlotDescriptionsSchema>;
+
+/**
  * Schema 定义：工作流中的节点。
  */
 export const WorkflowNodeSchema = z.object({
@@ -193,6 +202,10 @@ export const WorkflowNodeSchema = z.object({
   inputValues: z.record(z.any()).optional(),
   /** 存储多输入插槽的连接顺序，键为插槽的 key，值为连接到该插槽的边 ID 数组 */
   inputConnectionOrders: z.record(z.array(z.string())).optional().describe('多输入插槽的连接顺序'),
+  /** 节点的自定义描述，会覆盖节点定义中的默认描述 */
+  customDescription: z.string().optional(),
+  /** 节点插槽的自定义描述，键为插槽名，值为描述文本 */
+  customSlotDescriptions: CustomSlotDescriptionsSchema, // 使用上面定义的 schema
 });
 /** 类型推断：工作流节点 */
 export type WorkflowNode = z.infer<typeof WorkflowNodeSchema>;

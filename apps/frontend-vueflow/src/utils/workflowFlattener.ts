@@ -22,6 +22,7 @@ export async function flattenWorkflow(
   workflowManager: ReturnType<typeof useWorkflowManager>, // 添加 workflowManager 依赖
   processedGroupIds: Set<string> = new Set()
 ): Promise<{ nodes: VueFlowNode[], edges: Edge[] } | null> {
+  console.debug(`[Flatten START] internalId: ${internalId}, processing ${initialElements.length} elements. Initial node IDs: ${initialElements.filter(el => !('source'in el)).map(n => n.id + '(' + getNodeType(n as VueFlowNode) + ')').join(', ')}. ProcessedGroupIds: ${Array.from(processedGroupIds).join(', ')}`);
   const flattenedNodes: VueFlowNode[] = [];
   const flattenedEdges: Edge[] = [];
   const nodeMap = new Map<string, VueFlowNode>(); // 存储所有遇到的节点（包括内部的）
@@ -47,7 +48,8 @@ export async function flattenWorkflow(
     const nodeType = getNodeType(node); // 使用导入的辅助函数
 
     if (nodeType === 'core:NodeGroup') { // 假设 NodeGroup 类型以 :NodeGroup 结尾
-      const referencedWorkflowId = node.data?.referencedWorkflowId as string | undefined;
+      const referencedWorkflowId = node.data?.configValues?.referencedWorkflowId as string | undefined; // Corrected path
+      console.debug(`[Flatten NodeGroup] Expanding NodeGroup ${node.id} (type: ${nodeType}), referencedWorkflowId: ${referencedWorkflowId}`);
       if (!referencedWorkflowId) {
         console.warn(`[Flatten] NodeGroup ${node.id} is missing referencedWorkflowId. Skipping expansion.`);
         // 将其视为普通节点（虽然可能不正确，但避免执行中断）
@@ -101,6 +103,7 @@ export async function flattenWorkflow(
 
       // 递归处理子工作流
       // 注意：这里调用自身 flattenWorkflow
+      console.debug(`[Flatten NodeGroup ${node.id}] Recursively calling flattenWorkflow for sub-workflow ${referencedWorkflowId} with ${subWorkflowElements.length} elements. Sub-workflow node IDs: ${subWorkflowElements.filter(el => !('source'in el)).map(n => n.id + '(' + getNodeType(n as VueFlowNode) + ')').join(', ')}`);
       const flattenedSubWorkflow = await flattenWorkflow(
         internalId,
         subWorkflowElements,
@@ -115,6 +118,10 @@ export async function flattenWorkflow(
         processedGroupIds.delete(referencedWorkflowId); // 回溯时移除标记
         return null; // 递归失败
       }
+      console.debug(`[Flatten NodeGroup ${node.id}] Returned from recursive call for ${referencedWorkflowId}. Flattened sub-workflow has ${flattenedSubWorkflow.nodes.length} nodes and ${flattenedSubWorkflow.edges.length} edges.`);
+      console.debug(`[Flatten NodeGroup ${node.id}] Sub-workflow nodes: ${flattenedSubWorkflow.nodes.map(n => `${n.id}(${getNodeType(n)})`).join(', ')}`);
+      // console.debug(`[Flatten NodeGroup ${node.id}] Sub-workflow edges: ${flattenedSubWorkflow.edges.map(e => `${e.id} (${e.sourceHandle} -> ${e.targetHandle})`).join(', ')}`);
+
 
       // --- 核心：I/O 映射 ---
       const internalNodesMap = new Map(flattenedSubWorkflow.nodes.map(n => [n.id, n])); // 子流扁平化后的节点
@@ -123,6 +130,17 @@ export async function flattenWorkflow(
       // 注意：需要使用 getNodeType 辅助函数
       const internalGroupInput = flattenedSubWorkflow.nodes.find(n => getNodeType(n) === 'core:GroupInput'); // 使用带命名空间的类型
       const internalGroupOutput = flattenedSubWorkflow.nodes.find(n => getNodeType(n) === 'core:GroupOutput'); // 使用带命名空间的类型
+
+      if (internalGroupInput) {
+        console.debug(`[Flatten NodeGroup ${node.id}] Found internalGroupInput: ${internalGroupInput.id} for sub-workflow ${referencedWorkflowId}`);
+      } else {
+        console.warn(`[Flatten NodeGroup ${node.id}] Did NOT find internalGroupInput for sub-workflow ${referencedWorkflowId}. This might be an issue if it's not a deeply nested group or if the sub-workflow is empty.`);
+      }
+      if (internalGroupOutput) {
+        console.debug(`[Flatten NodeGroup ${node.id}] Found internalGroupOutput: ${internalGroupOutput.id} for sub-workflow ${referencedWorkflowId}`);
+      } else {
+        console.warn(`[Flatten NodeGroup ${node.id}] Did NOT find internalGroupOutput for sub-workflow ${referencedWorkflowId}. This might be an issue if it's not a deeply nested group or if the sub-workflow is empty.`);
+      }
 
       // 映射连接到 NodeGroup 输入的边
       const incomingEdges = edgeQueue.filter(edge => edge.target === node.id);
@@ -148,11 +166,12 @@ export async function flattenWorkflow(
             target: internalEdge.target, // 重定向到内部节点 ID
             targetHandle: internalEdge.targetHandle, // 使用内部节点的句柄
           });
+          console.debug(`[Flatten NodeGroup ${node.id}] Mapping incoming edge ${incomingEdge.id} (targetHandle: ${targetHandle}) to internal edge ${internalEdge.id} (target: ${internalEdge.target}, targetHandle: ${internalEdge.targetHandle}). New flat edge ID: ${incomingEdge.id}_flat_${internalEdge.target}`);
            // 从队列中移除已处理的边
            const index = edgeQueue.findIndex(e => e.id === incomingEdge.id);
            if (index > -1) edgeQueue.splice(index, 1);
         } else {
-           console.warn(`[Flatten] No internal edge found originating from GroupInput ${internalGroupInput.id} handle ${targetHandle} for NodeGroup ${node.id} input ${targetHandle}`);
+           console.warn(`[Flatten NodeGroup ${node.id}] No internal edge found originating from GroupInput ${internalGroupInput?.id} handle ${targetHandle} for NodeGroup ${node.id} input ${targetHandle}`);
         }
       }
 
@@ -180,11 +199,12 @@ export async function flattenWorkflow(
             source: internalEdge.source, // 重定向到内部节点 ID
             sourceHandle: internalEdge.sourceHandle, // 使用内部节点的句柄
           });
+          console.debug(`[Flatten NodeGroup ${node.id}] Mapping outgoing edge ${outgoingEdge.id} (sourceHandle: ${sourceHandle}) to internal edge ${internalEdge.id} (source: ${internalEdge.source}, sourceHandle: ${internalEdge.sourceHandle}). New flat edge ID: ${outgoingEdge.id}_flat_${internalEdge.source}`);
            // 从队列中移除已处理的边
            const index = edgeQueue.findIndex(e => e.id === outgoingEdge.id);
            if (index > -1) edgeQueue.splice(index, 1);
         } else {
-           console.warn(`[Flatten] No internal edge found targeting GroupOutput ${internalGroupOutput.id} handle ${sourceHandle} for NodeGroup ${node.id} output ${sourceHandle}`);
+           console.warn(`[Flatten NodeGroup ${node.id}] No internal edge found targeting GroupOutput ${internalGroupOutput?.id} handle ${sourceHandle} for NodeGroup ${node.id} output ${sourceHandle}`);
         }
       }
 
@@ -218,5 +238,8 @@ export async function flattenWorkflow(
   flattenedEdges.push(...edgeQueue);
 
 
+  console.debug(`[Flatten END] internalId: ${internalId}. Returning ${flattenedNodes.length} nodes and ${flattenedEdges.length} edges.`);
+  console.debug(`[Flatten END] Final nodes: ${flattenedNodes.map(n => `${n.id}(${getNodeType(n)})`).join(', ')}`);
+  // console.debug(`[Flatten END] Final edges: ${flattenedEdges.map(e => `${e.id} (${e.source}:${e.sourceHandle} -> ${e.target}:${e.targetHandle})`).join(', ')}`);
   return { nodes: flattenedNodes, edges: flattenedEdges };
 }
