@@ -1,5 +1,5 @@
 import type { NodeDefinition } from '@comfytavern/types';
-import type { NodeManager } from '../nodes/NodeManager';
+import type { NodeManager } from '../services/NodeManager';
 
 /**
  * 创建一个节点注册器，可以为一组节点设置默认命名空间。

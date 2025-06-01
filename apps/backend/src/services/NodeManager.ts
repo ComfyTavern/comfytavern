@@ -1,8 +1,12 @@
 import type { NodeDefinition } from '@comfytavern/types';
 import path from 'node:path'; // 导入 path 模块
+import { fileURLToPath } from 'node:url'; // 导入 fileURLToPath
 
 // 定义核心/内置节点的基础路径
-const baseNodesPath = path.resolve(__dirname);
+// NodeManager.ts 已移动到 services 目录，但 baseNodesPath 仍应指向原始的 nodes 目录
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const baseNodesPath = path.resolve(__dirname, '../nodes');
 
 export class NodeManager {
   // 使用 fullType (namespace:type) 作为键

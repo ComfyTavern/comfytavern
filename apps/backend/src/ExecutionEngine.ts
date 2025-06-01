@@ -12,7 +12,7 @@ import {
   ExecutionType,
   ExecutePreviewRequestPayload,
 } from '@comfytavern/types';
-import { nodeManager } from './nodes/NodeManager'; // 用于获取节点定义
+import { nodeManager } from './services/NodeManager'; // 用于获取节点定义
 import { WebSocketManager } from './websocket/WebSocketManager';
 import { DataFlowType, BuiltInSocketMatchCategory } from '@comfytavern/types';
 import { parseSubHandleId } from './utils/helpers'; //  InputDefinition导入解析函数

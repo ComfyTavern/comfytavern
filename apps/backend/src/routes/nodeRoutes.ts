@@ -2,8 +2,8 @@ import { Elysia, t } from 'elysia';
 import { promises as fs } from 'node:fs';
 import path, { join, basename, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { nodeManager } from '../nodes/NodeManager';
-import { NodeLoader } from '../nodes/NodeLoader'; // 导入 NodeLoader
+import { nodeManager } from '../services/NodeManager';
+import { NodeLoader } from '../services/NodeLoader'; // 导入 NodeLoader
 import { wsManager } from '../index'; // 导入 wsManager
 import { WebSocketMessageType, type NodesReloadedPayload } from '@comfytavern/types'; // 导入 WebSocket 类型
 

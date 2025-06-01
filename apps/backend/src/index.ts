@@ -4,7 +4,7 @@ import { PORT, FRONTEND_URL, WORKFLOWS_DIR } from "./config"; // 移除未使用
 import { promises as fs } from "node:fs";
 import path, { join, dirname } from "node:path"; // 移除未使用的 basename, extname
 import { fileURLToPath } from "node:url";
-import { NodeLoader } from "./nodes/NodeLoader";
+import { NodeLoader } from "./services/NodeLoader";
 import { nodeApiRoutes, clientScriptRoutes } from "./routes/nodeRoutes";
 import { globalWorkflowRoutes } from "./routes/workflowRoutes";
 import { addProjectRoutes } from "./routes/projectRoutes";
