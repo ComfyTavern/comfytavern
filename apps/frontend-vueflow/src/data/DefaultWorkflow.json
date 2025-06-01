@@ -6,7 +6,7 @@
       "id": "default-group-input",
       "type": "core:GroupInput",
       "position": {
-        "x": 96,
+        "x": 0,
         "y": 150
       }
     },
@@ -14,7 +14,7 @@
       "id": "default-group-output",
       "type": "core:GroupOutput",
       "position": {
-        "x": 768,
+        "x": 1280,
         "y": 150
       }
     }

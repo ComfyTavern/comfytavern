@@ -136,6 +136,7 @@ export function useWorkflowData() {
         referencedWorkflows: coreWorkflowData.referencedWorkflows, // <-- 新增
         version: import.meta.env.VITE_APP_VERSION || "unknown",
       };
+      // console.debug(`[saveWorkflow] Saving new workflow. Payload:`, workflowToSave); // <-- 修改为直接打印对象
       try {
         // 将 projectId 传递给 API 调用
         const savedWorkflow = (await saveWorkflowApi(projectId, workflowToSave)) as WorkflowData;
@@ -189,6 +190,7 @@ export function useWorkflowData() {
         version: import.meta.env.VITE_APP_VERSION || "unknown",
       };
       const workflowIdToUpdate = currentData.id; // 使用现有的相对 ID
+      console.debug(`[saveWorkflow] Updating workflow ${workflowIdToUpdate}. Payload:`, workflowToUpdate); // <-- 修改为直接打印对象
       try {
         // 将 projectId 和相对 workflowId 传递给 API 调用
         const updatedWorkflow = (await saveWorkflowApi(
