@@ -11,6 +11,7 @@ coverage
 *.lcov
 *.code-workspace
 .vscode
+.VSCodeCounter
 
 # logs
 logs
