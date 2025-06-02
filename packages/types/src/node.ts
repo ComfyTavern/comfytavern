@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { DataFlowTypeName, GroupSlotInfo } from "./schemas"; // 导入 GroupSlotInfo
+import type { DataFlowTypeName, GroupSlotInfo, NodeInputAction } from "./schemas"; // 导入 GroupSlotInfo 和 NodeInputAction
 import { BuiltInSocketMatchCategory, DataFlowType } from "./schemas";
 
 // 基础输入选项
@@ -67,6 +67,7 @@ export interface InputDefinition extends SlotDefinitionBase {
   required?: boolean | ((configValues: Record<string, any>) => boolean); // 是否必需 (可为布尔值或函数，用于条件性必需)
   config?: Record<string, any>; // 输入控件的特定配置 (例如 min, max, step for number)
   multi?: boolean; // 标记是否支持多输入连接
+  actions?: NodeInputAction[]; // 定义输入槽旁边的操作按钮
 }
 
 // 输出定义

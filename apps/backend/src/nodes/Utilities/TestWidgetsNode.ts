@@ -58,7 +58,7 @@ export const definition: NodeDefinition = {
       displayName: 'Markdown文本',
       description: 'Markdown 内容输入测试',
       required: false,
-      matchCategories: ['Markdown'], // 明确是 Markdown
+      matchCategories: ['Markdown', "CanPreview"], // 明确是 Markdown
       config: {
         default: '# 标题\n\n这是一段*Markdown*文本，包含一个[链接](https://example.com)。\n\n```python\nprint("Hello")\n```',
         multiline: true, // 确保前端识别为多行处理
@@ -115,7 +115,7 @@ export const definition: NodeDefinition = {
       displayName: 'JSON对象',
       description: 'JSON对象输入测试 (内联查看器)',
       required: false,
-      matchCategories: ['Json'], // 确保前端能识别
+      matchCategories: ['Json', "CanPreview"], // 确保前端能识别
       config: {
         default: { "name": "咕咕", "type": "猫头鹰娘", "skill": "卖萌" }, // 对象形式
         placeholder: '请输入或编辑JSON对象'
@@ -126,7 +126,7 @@ export const definition: NodeDefinition = {
       displayName: 'JS代码片段',
       description: 'JavaScript代码片段输入测试 (按钮触发编辑器)。\n\n例如：\n```javascript\nfunction greet(name) {\n  console.log(`Hello, ${name}!`);\n}\ngreet("Test Node");\n```',
       required: false,
-      matchCategories: ['Code', 'JavaScript'], // 明确是代码和JS
+      matchCategories: ['Code', 'JavaScript', "CanPreview"], // 明确是代码和JS
       config: {
         default: 'function greet(name) {\n  console.log(`Hello, ${name}!`);\n}\ngreet("World");',
         languageHint: 'javascript' // 辅助前端编辑器和Tooltip高亮

@@ -18,6 +18,7 @@ import {
   type InputDefinition,
   BuiltInSocketMatchCategory,
   ExecutionStatus,
+  type NodeInputAction, // + 导入 NodeInputAction
 } from "@comfytavern/types";
 import { createHistoryEntry } from "@comfytavern/utils";
 
@@ -34,8 +35,9 @@ import { useWorkflowManager } from "../../../composables/workflow/useWorkflowMan
 // 组件
 import { getInputComponent } from "../inputs";
 import Tooltip from "../../common/Tooltip.vue";
-import MarkdownRenderer from "../../common/MarkdownRenderer.vue";
+// import MarkdownRenderer from "../../common/MarkdownRenderer.vue"; // - 移除未使用的导入
 import InlineConnectionSorter from '../inputs/InlineConnectionSorter.vue';
+import NodeInputActionsBar from "./NodeInputActionsBar.vue"; // + 导入新组件
 
 // 常量和样式
 import {
@@ -252,14 +254,7 @@ const isSimpleInlineInput = (input: InputDefinition): boolean => {
   );
 };
 
-const showActionButtonsForInput = (input: InputDefinition): boolean => {
-  return (
-    (input.dataFlowType === DataFlowType.STRING && input.config?.multiline) ||
-    (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.MARKDOWN)) ||
-    (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON)) ||
-    (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE))
-  );
-};
+// showActionButtonsForInput 函数已移除，其逻辑由 NodeInputActionsBar 处理
 
 const getLanguageHintForInput = (input: InputDefinition): string | undefined => {
   if (input.config?.languageHint) return input.config.languageHint;
@@ -297,41 +292,7 @@ const formatOutputValueForTooltip = (value: any): string => {
   return String(value);
 };
 
-const getFormattedPreviewString = (value: any, inputDef: InputDefinition): string => {
-  const langHint = getLanguageHintForInput(inputDef);
-
-  if (value === undefined || value === null) return "无内容";
-
-  let strValue = "";
-  let processedValue = value;
-
-  if (langHint === 'json' && typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      if (typeof parsed === 'object' && parsed !== null) {
-        processedValue = parsed;
-      }
-    } catch (e) { /* 解析失败，使用原始字符串 */ }
-  }
-
-  if (typeof processedValue === 'object' && processedValue !== null) {
-    try {
-      strValue = JSON.stringify(processedValue, null, 2); // JSON 美化
-    } catch {
-      strValue = "[无法序列化的对象]";
-    }
-  } else {
-    strValue = String(processedValue);
-  }
-
-  if (strValue.trim() === "") {
-    if (langHint === 'json') return "空JSON内容";
-    if (langHint === 'markdown') return "空Markdown内容";
-    if (langHint) return `空 ${langHint} 内容`;
-    return "无内容";
-  }
-  return strValue;
-};
+// - 移除未使用的 getFormattedPreviewString 函数
 
 // Handle 样式和布局计算器
 const getHandleTypeClass = (type: string | undefined): string | null => {
@@ -575,6 +536,86 @@ onUnmounted(() => {
   // 当节点卸载时，从 store 中注销其执行器
   executionStore.unregisterNodeClientScriptExecutor(props.id);
 });
+
+// 新增：处理来自 NodeInputActionsBar 的事件
+const handleActionTriggered = (payload: {
+  handlerType: NodeInputAction['handlerType']; // 使用 NodeInputAction['handlerType']
+  handlerArgs?: any;
+  inputKey: string;
+  actionId?: string;
+}) => {
+  const inputDefinition = finalInputs.value.find(i => String(i.key) === payload.inputKey);
+  if (!inputDefinition) {
+    console.warn(`[BaseNode ${props.id}] Action triggered for unknown inputKey: ${payload.inputKey}`);
+    return;
+  }
+
+  // console.log(`[BaseNode ${props.id}] Action triggered:`, payload); // 初始日志
+
+  switch (payload.handlerType) {
+    case 'builtin_editor':
+      openEditorForInput(inputDefinition);
+      break;
+    case 'builtin_preview':
+      // TODO: 实现 BaseNode 级别的预览逻辑，可能涉及动态 Tooltip 或面板
+      console.log(`[BaseNode ${props.id}] Preview action triggered for input:`, payload.inputKey, "Value:", getInputValue(payload.inputKey));
+      // 暂时让 NodeInputActionsBar 内部的 Tooltip (如果有) 处理简单预览
+      break;
+    case 'emit_event':
+      if (payload.handlerArgs?.eventName && nodeRootRef.value) {
+        const eventDetail = {
+          ...(payload.handlerArgs.eventPayload || {}),
+          nodeId: props.id,
+          inputKey: payload.inputKey,
+          actionId: payload.actionId,
+        };
+        const customEvent = new CustomEvent(payload.handlerArgs.eventName, {
+          detail: eventDetail,
+          bubbles: true,
+          composed: true,
+        });
+        nodeRootRef.value.dispatchEvent(customEvent);
+        // console.log(`[BaseNode ${props.id}] Emitted event '${payload.handlerArgs.eventName}'`, eventDetail);
+      } else {
+        console.warn(`[BaseNode ${props.id}] 'emit_event' action missing eventName or nodeRootRef.`, payload.handlerArgs);
+      }
+      break;
+    case 'client_script_hook':
+      if (payload.handlerArgs?.hookName) {
+        const inputValue = getInputValue(payload.inputKey);
+        // 确保 executeClientHook 存在 (已在 setup 中解构)
+        executeClientHook(payload.handlerArgs.hookName, inputDefinition, inputValue, payload.handlerArgs.hookPayload);
+      } else {
+        console.warn(`[BaseNode ${props.id}] 'client_script_hook' action missing hookName.`, payload.handlerArgs);
+      }
+      break;
+    case 'open_panel':
+      // TODO: 确认打开侧边栏面板的正确方法
+      // if (payload.handlerArgs?.panelId && activeTabId.value) {
+      //   const currentInputValue = getInputValue(payload.inputKey);
+      //   // tabStore.openSidePanel( // tabStore 中没有 openSidePanel 方法
+      //   //   activeTabId.value,
+      //   //   payload.handlerArgs.panelId,
+      //   //   {
+      //   //     title: payload.handlerArgs.panelTitle || `${inputDefinition.displayName || payload.inputKey} 设置`,
+      //   //     nodeId: props.id,
+      //   //     inputKey: payload.inputKey,
+      //   //     initialValue: payload.handlerArgs.initialValue !== undefined
+      //   //       ? payload.handlerArgs.initialValue
+      //   //       : currentInputValue,
+      //   //     inputDefinition: inputDefinition,
+      //   //     context: payload.handlerArgs.context,
+      //   //   }
+      //   // );
+      // } else {
+      //   console.warn(`[BaseNode ${props.id}] 'open_panel' action missing panelId, activeTabId, or inputDefinition.`, payload.handlerArgs);
+      // }
+      console.warn(`[BaseNode ${props.id}] 'open_panel' action received, but the method to open side panel needs to be confirmed/implemented. Payload:`, payload);
+      break;
+    default:
+      console.warn(`[BaseNode ${props.id}] Unknown action handlerType: ${payload.handlerType}`);
+  }
+};
 </script>
 
 <template>
@@ -880,61 +921,33 @@ onUnmounted(() => {
               props.type !== 'core:GroupOutput' &&
               !(input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)) && // 不是按钮类型
               (!isInputConnected(String(input.key)) || isMultiInput(input)) // 未连接或允许多重连接
-            " class="flex items-center h-full col-span-3 pr-2 justify-end"
-              :class="{ 'h-auto py-0.5': showActionButtonsForInput(input) }" @mousedown.stop>
+            "
+                  class="flex items-center h-full col-span-3 pr-2 justify-end"
+                  :class="{ 'h-auto py-0.5': !isSimpleInlineInput(input) }" @mousedown.stop
+            >
               <!-- 情况1: 简单内联输入 -->
-              <template
-                v-if="isSimpleInlineInput(input) && getInputComponent(input.dataFlowType, input.config, input.matchCategories) && !shouldShowSorter(input)">
-                <component :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
+              <template v-if="isSimpleInlineInput(input) && getInputComponent(input.dataFlowType, input.config, input.matchCategories) && !shouldShowSorter(input)">
+                <component
+                  :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
                   :model-value="getInputValue(String((input as any).key))"
-                  v-bind="inputPropsMap[String((input as any).key)]?.props" :node-id="props.id"
-                  :input-key="String((input as any).key)" :input-definition="input"
+                  v-bind="inputPropsMap[String((input as any).key)]?.props"
+                  :node-id="props.id"
+                  :input-key="String((input as any).key)"
+                  :input-definition="input"
                   @update:modelValue="updateInputValue(String((input as any).key), $event)"
                   @blur="($event: any) => handleComponentBlur(String((input as any).key), String($event))"
-                  class="w-full max-w-full" />
+                  class="w-full max-w-full"
+                />
               </template>
-              <!-- 情况2: 显示动作按钮 (预览/编辑) - 仅当不显示 Sorter 时 -->
-              <template v-else-if="showActionButtonsForInput(input) && !shouldShowSorter(input)">
-                <div class="flex items-center space-x-1">
-                  <!-- 预览按钮 (Tooltip) -->
-                  <Tooltip
-                    v-if="!(input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON) && input.config?.preferFloatingEditor)"
-                    placement="top" :maxWidth="600" :showDelay="300" :interactive="true"
-                    :allowHtml="getLanguageHintForInput(input) === 'markdown'">
-                    <template #content>
-                      <div class="max-h-96 overflow-auto text-sm text-gray-100">
-                        <template v-if="getLanguageHintForInput(input) === 'markdown'">
-                          <MarkdownRenderer
-                            :markdownContent="getFormattedPreviewString(getInputValue(String(input.key)), input)" />
-                        </template>
-                        <template
-                          v-else-if="getLanguageHintForInput(input) === 'json' || (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE))">
-                          <MarkdownRenderer
-                            :markdownContent="'**' + input.displayName + '**' + '\n' + '```' + (getLanguageHintForInput(input) || 'text') + '\n' + getFormattedPreviewString(getInputValue(String(input.key)), input) + '\n' + '```'" />
-                        </template>
-                        <pre v-else class="whitespace-pre-wrap break-all">{{ getFormattedPreviewString(getInputValue(String(input.key)),
-                          input) }}</pre>
-                      </div>
-                    </template>
-                    <button class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                        stroke="currentColor" class="w-4 h-4 text-gray-500 dark:text-gray-400">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                          d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                      </svg>
-                    </button>
-                  </Tooltip>
-                  <!-- 编辑按钮 -->
-                  <button @click="openEditorForInput(input)"
-                    class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                      stroke="currentColor" class="w-4 h-4 text-gray-500 dark:text-gray-400">
-                      <path stroke-linecap="round" stroke-linejoin="round"
-                        d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                    </svg>
-                  </button>
-                </div>
+              <!-- 情况2: 显示 NodeInputActionsBar (如果不是简单内联输入且不显示 Sorter) -->
+              <template v-else-if="!isSimpleInlineInput(input) && !shouldShowSorter(input)">
+                <NodeInputActionsBar
+                  :node-id="props.id"
+                  :input-key="String(input.key)"
+                  :input-definition="input"
+                  :input-value="getInputValue(String(input.key))"
+                  @action-triggered="handleActionTriggered"
+                />
               </template>
               <!-- 其他情况，例如已连接且非多输入，则不显示控件 -->
               <div v-else class="h-4"></div>

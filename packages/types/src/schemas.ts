@@ -40,6 +40,12 @@ export const BuiltInSocketMatchCategory = {
   STREAM_CHUNK: "StreamChunk",
   COMBO_OPTION: "ComboOption",
 
+  // 新增用于操作提示的类别
+  /** 标记此输入支持标准的内联预览操作按钮 */
+  CanPreview: "CanPreview",
+  /** 标记此输入不应显示其类型的默认编辑操作按钮 (如果其类型通常有默认编辑按钮) */
+  NoDefaultEdit: "NoDefaultEdit",
+
   // 行为标签
   BEHAVIOR_WILDCARD: "BehaviorWildcard",
   BEHAVIOR_CONVERTIBLE: "BehaviorConvertible",
@@ -49,6 +55,49 @@ export type BuiltInSocketMatchCategoryName = (typeof BuiltInSocketMatchCategory)
 
 
 // ... (其他不变的导入和类型定义)
+
+/**
+ * Schema 定义：节点输入操作按钮的配置
+ */
+export const NodeInputActionSchema = z.object({
+  /**
+   * 唯一ID，用于标识操作。
+   * 也用于覆盖标准操作，例如，如果此ID为 'standard_preview'，则此定义将覆盖默认的预览按钮。
+   */
+  id: z.string(),
+  /**
+   * 图标名称 (推荐使用 Heroicons v2 outline 样式的图标名称，小驼峰格式, e.g., 'eye', 'pencilSquare', 'codeBracket')。
+   * 可选。如果未提供，新组件 NodeInputActionsBar.vue 会尝试根据 handlerType 或 id 提供一个默认图标。
+   */
+  icon: z.string().optional(),
+  /** 按钮上显示的文本标签，与 icon 二选一或共存 */
+  label: z.string().optional(),
+  /** 按钮的 Tooltip 提示文本 */
+  tooltip: z.string().optional(),
+  /**
+   * 操作的处理方式:
+   * - 'builtin_preview': 使用 BaseNode 内置的 Tooltip 预览逻辑。
+   * - 'builtin_editor': 使用 BaseNode 内置的 openEditorForInput 方法打开编辑器。
+   * - 'emit_event': BaseNode 会发出一个自定义事件，由外部处理。
+   * - 'client_script_hook': 调用节点客户端脚本中定义的特定钩子函数。
+   * - 'open_panel': 触发打开一个指定的侧边栏面板或弹窗。
+   */
+  handlerType: z.enum(['builtin_preview', 'builtin_editor', 'emit_event', 'client_script_hook', 'open_panel']),
+  /**
+   * 传递给处理程序的参数，具体结构取决于 handlerType。例如：
+   * - for 'builtin_editor': { editorType?: 'default' | 'json' | 'markdown' | 'code' | string (custom_id), languageHint?: string, preferFloatingEditor?: boolean }
+   * - for 'open_panel': { panelId: string, panelTitle?: string, initialValue?: any, context?: any }
+   * - for 'emit_event': { eventName: string, eventPayload?: any }
+   * - for 'client_script_hook': { hookName: string, hookPayload?: any }
+   */
+  handlerArgs: z.record(z.any()).optional(),
+  /**
+   * 控制按钮显示条件的预定义键 (e.g., 'always', 'ifNotConnected', 'ifHasValue', 'never')。
+   * BaseNode.vue (或其子组件) 将实现这些条件的判断逻辑。默认为 'always'。
+   */
+  showConditionKey: z.string().optional().default('always'),
+});
+export type NodeInputAction = z.infer<typeof NodeInputActionSchema>;
 
 /**
  * 定义节点插槽（Socket）的类型。
