@@ -45,12 +45,7 @@ export const NodeInputActionSchema = z.object({
    * - for 'emit_event': { eventName: string, eventPayload?: any }
    * - for 'client_script_hook': { hookName: string, hookPayload?: any }
    */
-  handlerArgs: z.record(z.any()).optional(),
-  /** 
-   * 控制按钮显示条件的预定义键 (e.g., 'always', 'ifNotConnected', 'ifHasValue', 'never')。
-   * BaseNode.vue (或其子组件) 将实现这些条件的判断逻辑。默认为 'always'。
-   */
-  showConditionKey: z.string().optional().default('always'),
+  handlerArgs: z.record(z.any()).optional()
 });
 export type NodeInputAction = z.infer<typeof NodeInputActionSchema>;
 ```
