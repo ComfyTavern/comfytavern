@@ -6,6 +6,7 @@
       <Tooltip content="返回主页" triggerClass="w-full">
         <RouterLink to="/" class="icon-button">
           <span class="text-xl">🏠</span>
+          <span class="tab-label">返回</span>
         </RouterLink>
       </Tooltip>
 
@@ -167,12 +168,12 @@ defineExpose({
 }
 
 .sidebar-icon-bar {
-  @apply flex flex-col w-12 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 items-center py-2 transition-all duration-300 ease-in-out;
+  @apply flex flex-col w-12 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 items-center py-1 transition-all duration-300 ease-in-out; /* py-2 -> py-1 */
   /* 添加过渡 */
 }
 
 .icon-button {
-  @apply flex flex-col items-center justify-center w-full py-3 px-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer;
+  @apply flex flex-col items-center justify-center w-full py-1 px-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer; /* py-2 -> py-1 */
   /* 调整内边距 */
 }
 
@@ -189,7 +190,7 @@ defineExpose({
 
 
 .tab-icon {
-  @apply text-xl mb-1;
+  @apply text-lg mb-1;
 }
 
 .tab-label {
@@ -198,12 +199,12 @@ defineExpose({
 }
 
 .tab-buttons-container {
-  @apply flex-1 flex flex-col items-center w-full overflow-y-auto;
+  @apply flex-1 flex flex-col items-center w-full overflow-y-auto gap-y-2 mt-6; /* Added mt-4 for separation */
   /* 允许标签按钮滚动 */
 }
 
 .bottom-buttons-container {
-  @apply mt-auto flex flex-col items-center w-full border-t border-gray-200 dark:border-gray-700 pt-2;
+  @apply mt-auto flex flex-col items-center w-full border-t border-gray-200 dark:border-gray-700 pt-1; /* pt-2 -> pt-1 */
   /* 底部按钮容器 */
 }
 

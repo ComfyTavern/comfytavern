@@ -72,7 +72,7 @@
             <div class="node-actions">
               <Tooltip content="点击或拖拽添加到画布">
                 <div class="node-drag-handle" @click.stop="addNodeToCanvas(node.type)">
-                  <span>+</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                 </div>
               </Tooltip>
             </div>
@@ -141,7 +141,7 @@
                           class="node-drag-handle"
                           @click.stop="addNodeToCanvas(`${namespace}:${node.type}`)"
                         >
-                          <span>+</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                         </div>
                       </Tooltip>
                     </div>
@@ -527,7 +527,7 @@ onMounted(() => {
 }
 
 .node-drag-handle {
-  @apply w-8 h-8 flex text-3xl items-center justify-center text-gray-400 dark:text-gray-500 rounded hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer ml-1;
+  @apply w-8 h-8 flex text-3xl items-center justify-center text-gray-400 dark:text-gray-500 rounded hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer ml-1 border border-gray-100 dark:border-gray-700;
   transition: background-color 0.2s;
 }
 
