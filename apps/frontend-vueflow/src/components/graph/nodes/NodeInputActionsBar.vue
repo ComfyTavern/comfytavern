@@ -6,12 +6,25 @@ import Tooltip from "../../common/Tooltip.vue"; // + 导入 Tooltip
 // - 移除 MarkdownRenderer 的直接导入，因为 Tooltip 内部会处理
 // import { useNodeState } from "@/composables/useNodeState"; // 稍后用于 showConditionKey
 
-// 图标 (可以后续替换为更合适的图标库或SVG组件)
-const IconEye = "👁️";
-const IconEdit = "✏️";
-// const IconMore = "..."; // 未使用
-const IconChevronDown = "🔽";
-const IconChevronUp = "🔼";
+// 导入 Heroicons
+import {
+  EyeIcon,
+  PencilSquareIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ListBulletIcon,
+  QuestionMarkCircleIcon, // 作为备用图标
+} from '@heroicons/vue/24/outline';
+
+// 图标组件映射
+const iconComponents: Record<string, any> = {
+  EyeIcon,
+  PencilSquareIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ListBulletIcon,
+  QuestionMarkCircleIcon,
+};
 
 interface Props {
   nodeId: string;
@@ -124,10 +137,9 @@ const standardActions = computed<NodeInputAction[]>(() => {
   if (categories.includes(BuiltInSocketMatchCategory.CanPreview)) {
     actions.push({
       id: "builtin_preview",
-      icon: IconEye,
+      icon: "EyeIcon", // 使用 Heroicon 名称
       tooltip: "预览",
       handlerType: "builtin_preview",
-      showConditionKey: "always", // 显式提供，符合 schema default
     });
   }
 
@@ -137,10 +149,9 @@ const standardActions = computed<NodeInputAction[]>(() => {
     // 或者可以根据 dataFlowType 进一步判断
     actions.push({
       id: "builtin_editor",
-      icon: IconEdit,
+      icon: "PencilSquareIcon", // 使用 Heroicon 名称
       tooltip: "编辑",
       handlerType: "builtin_editor",
-      showConditionKey: "always", // 显式提供，符合 schema default
     });
   }
   return actions;
@@ -153,16 +164,11 @@ const allAvailableActions = computed<NodeInputAction[]>(() => {
   return [...standardActions.value, ...customActions];
 });
 
-// 根据 showConditionKey 过滤操作
+// 由于 showConditionKey 已从 NodeInputAction 类型中移除，
+// visibleActions 现在直接返回所有可用的 actions。
+// 如果将来需要其他过滤条件，可以在这里添加。
 const visibleActions = computed<NodeInputAction[]>(() => {
-  return allAvailableActions.value.filter((action) => {
-    if (action.showConditionKey) {
-      // const conditionMet = getNodeStateValue(action.showConditionKey, false);
-      // return !!conditionMet;
-      return true; // 暂时总是显示，待实现 useNodeState
-    }
-    return true;
-  });
+  return allAvailableActions.value;
 });
 
 const displayedActions = computed(() => {
@@ -209,7 +215,12 @@ const handleActionClick = (action: NodeInputAction) => {
           :title="action.tooltip"
           @click="handleActionClick(action)"
         >
-          <span v-if="action.icon" class="icon">{{ action.icon }}</span>
+          <component
+            :is="iconComponents[action.icon] || iconComponents.QuestionMarkCircleIcon"
+            v-if="action.icon"
+            class="icon heroicon h-4 w-4 text-current"
+            aria-hidden="true"
+          />
           <span v-else-if="action.label" class="label">{{ action.label }}</span>
         </button>
       </Tooltip>
@@ -220,7 +231,12 @@ const handleActionClick = (action: NodeInputAction) => {
         :title="action.tooltip"
         @click="handleActionClick(action)"
       >
-        <span v-if="action.icon" class="icon">{{ action.icon }}</span>
+        <component
+          :is="iconComponents[action.icon] || iconComponents.QuestionMarkCircleIcon"
+          v-if="action.icon"
+          class="icon heroicon h-4 w-4 text-current"
+          aria-hidden="true"
+        />
         <span v-else-if="action.label" class="label">{{ action.label }}</span>
       </button>
     </template>
@@ -230,7 +246,11 @@ const handleActionClick = (action: NodeInputAction) => {
       :title="isExpanded ? '收起' : '更多操作'"
       @click="toggleExpand"
     >
-      <span class="icon">{{ isExpanded ? IconChevronUp : IconChevronDown }}</span>
+      <component
+        :is="isExpanded ? iconComponents.ChevronUpIcon : iconComponents.ChevronDownIcon"
+        class="icon heroicon h-4 w-4 text-current"
+        aria-hidden="true"
+      />
     </button>
   </div>
 </template>
@@ -261,9 +281,13 @@ const handleActionClick = (action: NodeInputAction) => {
 }
 
 .icon {
-  font-size: 0.9em; /* 稍微缩小图标 */
+  /* font-size removed as SVG size is controlled by h/w classes */
+  display: inline-block; /* Ensures proper alignment and sizing */
+  vertical-align: middle;
 }
 
+.heroicon { /* Specific class for heroicons if needed, for now covered by .icon and h-X w-X */
+}
 
 .label {
   font-size: 0.8em;

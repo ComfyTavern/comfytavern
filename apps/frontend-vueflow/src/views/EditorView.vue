@@ -80,6 +80,17 @@
       <StatusBar class="editor-statusbar" />
       <!-- 右侧专用预览面板 - 移动到 editor-container 的直接子节点，以确保正确的悬浮行为 -->
       <RightPreviewPanel />
+
+      <!-- 正则表达式规则编辑器模态框 -->
+      <RegexEditorModal
+        v-if="isRegexEditorModalVisible"
+        :visible="isRegexEditorModalVisible"
+        :model-value="regexEditorModalData?.rules || []"
+        :node-id="regexEditorModalData?.nodeId"
+        :input-key="regexEditorModalData?.inputKey"
+        @update:visible="handleModalVisibleUpdate"
+        @save="handleModalSave"
+      />
     </div>
   </template>
 <script setup lang="ts">
@@ -105,6 +116,8 @@ import { useTabManagement } from "../composables/editor/useTabManagement";
 import { useInterfaceWatcher } from "../composables/editor/useInterfaceWatcher";
 import { useKeyboardShortcuts } from "../composables/editor/useKeyboardShortcuts";
 import { useEditorState } from "../composables/editor/useEditorState";
+import RegexEditorModal from '../components/modals/RegexEditorModal.vue'; // ++ 导入模态框
+import { useUiStore } from '../stores/uiStore'; // ++ 导入 UI store
 
 // 组件实例引用
 // 定义 SidebarManager 的类型
@@ -122,7 +135,9 @@ const sidebarManagerRef = ref<SidebarManagerInstance | null>(null);
 const nodeStore = useNodeStore();
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore();
+const uiStore = useUiStore(); // ++ 获取 UI store 实例
 const { nodeDefinitions } = storeToRefs(nodeStore);
+const { isRegexEditorModalVisible, regexEditorModalData } = storeToRefs(uiStore); // ++ 解构 UI store state
 const nodeDefinitionsLoaded = computed(
   () => !!nodeDefinitions.value && nodeDefinitions.value.length > 0
 );
@@ -332,6 +347,20 @@ onUnmounted(() => {
     workflowStore.setVueFlowInstance(activeTabId.value, null);
   }
 });
+
+// ++ 处理模态框事件
+const handleModalVisibleUpdate = (isVisible: boolean) => {
+  if (!isVisible) {
+    uiStore.closeRegexEditorModal();
+  }
+};
+
+const handleModalSave = (updatedRules: any /* RegexRule[] */) => {
+  if (uiStore.regexEditorModalData?.onSave) {
+    uiStore.regexEditorModalData.onSave(updatedRules);
+  }
+  uiStore.closeRegexEditorModal(); // 保存后也关闭模态框
+};
 </script>
 
 <style scoped>

@@ -39,6 +39,7 @@ export const BuiltInSocketMatchCategory = {
   TRIGGER: "Trigger",
   STREAM_CHUNK: "StreamChunk",
   COMBO_OPTION: "ComboOption",
+  REGEX_RULE_ARRAY: "RegexRuleArray", // ++ 新增，用于标记 RegexRule[] 类型
 
   // 新增用于操作提示的类别
   /** 标记此输入支持标准的内联预览操作按钮 */
@@ -52,6 +53,27 @@ export const BuiltInSocketMatchCategory = {
 } as const;
 
 export type BuiltInSocketMatchCategoryName = (typeof BuiltInSocketMatchCategory)[keyof typeof BuiltInSocketMatchCategory];
+
+// RegexRule 相关的类型和 Schema
+export interface RegexRule {
+  name: string; // 规则名称，用于显示、排序和去重
+  pattern: string; // 正则表达式字符串
+  replacement: string; // 替换字符串
+  flags?: string; // 正则标志 (e.g., 'g', 'i', 'm')
+  description?: string; // 规则描述 (可选)
+  enabled?: boolean; // 规则是否启用
+}
+
+export const RegexRuleSchema = z.object({
+  name: z.string().min(1, { message: "规则名称不能为空" }),
+  pattern: z.string().min(1, { message: "正则表达式不能为空" }),
+  replacement: z.string(), // 替换字符串允许为空
+  flags: z.string().optional(),
+  description: z.string().optional(),
+  enabled: z.boolean().optional().default(true), // 默认为 true
+});
+
+export const RegexRuleArraySchema = z.array(RegexRuleSchema);
 
 
 // ... (其他不变的导入和类型定义)
@@ -91,11 +113,6 @@ export const NodeInputActionSchema = z.object({
    * - for 'client_script_hook': { hookName: string, hookPayload?: any }
    */
   handlerArgs: z.record(z.any()).optional(),
-  /**
-   * 控制按钮显示条件的预定义键 (e.g., 'always', 'ifNotConnected', 'ifHasValue', 'never')。
-   * BaseNode.vue (或其子组件) 将实现这些条件的判断逻辑。默认为 'always'。
-   */
-  showConditionKey: z.string().optional().default('always'),
 });
 export type NodeInputAction = z.infer<typeof NodeInputActionSchema>;
 

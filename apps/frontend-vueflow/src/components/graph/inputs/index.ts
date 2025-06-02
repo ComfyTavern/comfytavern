@@ -9,6 +9,7 @@ import TextDisplay from './TextDisplay.vue'
 import ButtonInput from './ButtonInput.vue' // 新增 ButtonInput 导入
 import ResourceSelectorInput from './ResourceSelectorInput.vue' // 导入资源选择器
 import JsonInlineViewer from './JsonInlineViewer.vue' // 导入 JSON 内联查看器
+import InlineRegexRuleDisplay from './InlineRegexRuleDisplay.vue'; // ++ 导入内联正则规则显示组件
 import { DataFlowType, BuiltInSocketMatchCategory } from '@comfytavern/types'; // 新增导入
 
 // 导出组件
@@ -23,6 +24,7 @@ export {
   ButtonInput, // 新增 ButtonInput 导出
   ResourceSelectorInput, // 导出资源选择器
   JsonInlineViewer, // 导出 JSON 内联查看器
+  InlineRegexRuleDisplay, // ++ 导出内联正则规则显示组件
 }
 
 // 导出类型定义
@@ -97,6 +99,11 @@ export const getInputComponent = (type: string, config?: any, matchCategories?: 
     return getter ? getter(config) : null;
   }
 
+  // ++ 新增：根据 matchCategories 处理 InlineRegexRuleDisplay
+  if (type === DataFlowType.ARRAY && matchCategories?.includes(BuiltInSocketMatchCategory.REGEX_RULE_ARRAY)) {
+    return InlineRegexRuleDisplay;
+  }
+
   // 使用修改后的 inputComponentMap
   if (type in inputComponentMap) {
     const getter = inputComponentMap[type]; // 直接使用 type 作为 key
@@ -131,6 +138,7 @@ export default {
     app.component('ButtonInput', ButtonInput) // 新增 ButtonInput 注册
     app.component('ResourceSelectorInput', ResourceSelectorInput) // 新增 ResourceSelectorInput 注册
     app.component('JsonInlineViewer', JsonInlineViewer) // 新增 JsonInlineViewer 注册
+    app.component('InlineRegexRuleDisplay', InlineRegexRuleDisplay) // ++ 新增 InlineRegexRuleDisplay 注册
     // app.component('EmbeddedGroupSelectorInput', EmbeddedGroupSelectorInput) // Removed: Obsolete component registration
   }
 }

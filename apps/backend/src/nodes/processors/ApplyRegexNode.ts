@@ -1,65 +1,84 @@
-import type { NodeDefinition } from '@comfytavern/types';
-
-// 更新后的正则规则结构 (包含 replacement)
-interface RegexRule {
-  pattern: string;
-  replacement: string; // 用于替换匹配项的字符串
-  flags?: string; // e.g., 'g', 'i', 'm' (通常需要 'g' 来全局替换)
-  target?: string; // 应用目标标识 (可选, 此节点暂不使用)
-  description?: string;
-}
-
-// 更新后的验证函数 (检查 pattern 和 replacement)
-function isValidRegexRuleArray(data: any): data is RegexRule[] {
-  if (!Array.isArray(data)) {
-    return false;
-  }
-  // 检查每个规则是否至少有 pattern 和 replacement 字符串
-  return data.every(item =>
-    typeof item === 'object' &&
-    item !== null &&
-    typeof item.pattern === 'string' &&
-    typeof item.replacement === 'string' // 确保有 replacement
-  );
-}
+import { z } from "zod"; // z 仍然需要，因为 NodeDefinition 可能间接使用
+import type { NodeDefinition, NodeExecutionContext, RegexRule } from "@comfytavern/types"; // 导入 RegexRule 类型
+import { RegexRuleSchema, RegexRuleArraySchema, DataFlowType, BuiltInSocketMatchCategory } from "@comfytavern/types"; // 导入 Zod schemas 和类型
 
 
 class ApplyRegexNodeImpl {
-  static async execute(inputs: Record<string, any>, context: any): Promise<Record<string, any>> {
-    const inputText = inputs?.inputText;
-    const regexRules = inputs?.regexRules;
+  static async execute(inputs: Record<string, any>, context: NodeExecutionContext): Promise<Record<string, any>> {
+    const inputText = inputs?.inputText as string | undefined;
+    const inlineRulesInput = inputs?.inlineRegexRules;
+    const loadedRulesInput = inputs?.regexRules;
 
     if (typeof inputText !== 'string') {
-      // Throw error instead of returning
-      throw new Error('Input text is missing or not a string.');
-    }
-    if (!isValidRegexRuleArray(regexRules)) {
-      // Throw error instead of returning
-      throw new Error('Input regex rules are missing or invalid.');
+      throw new Error('输入文本缺失或非字符串。');
     }
 
-    console.log(`ApplyRegex (${context?.nodeId}): Applying ${regexRules.length} rules to input text.`);
+    // 1. 获取规则
+    const inlineRules: RegexRule[] = Array.isArray(inlineRulesInput) ? inlineRulesInput : [];
+    const loadedRules: RegexRule[] = Array.isArray(loadedRulesInput) ? loadedRulesInput : [];
+
+    // 2. 校验规则 (直接使用导入的 RegexRuleArraySchema)
+    if (inlineRules.length > 0 && !RegexRuleArraySchema.safeParse(inlineRules).success) {
+      console.warn(`ApplyRegex (${context?.nodeId}): 内联正则规则校验失败，将尝试过滤有效规则。详情:`, RegexRuleArraySchema.safeParse(inlineRules).error?.format());
+      // 不直接抛出错误，而是尝试在合并时过滤掉无效的
+    }
+    if (loadedRules.length > 0 && !RegexRuleArraySchema.safeParse(loadedRules).success) {
+      console.warn(`ApplyRegex (${context?.nodeId}): 加载的正则规则校验失败，将尝试过滤有效规则。详情:`, RegexRuleArraySchema.safeParse(loadedRules).error?.format());
+      // 不直接抛出错误
+    }
+
+    // 3. 合并与去重 (内联规则优先, 基于 name 去重)
+    const finalRules: RegexRule[] = [];
+    const ruleNames = new Set<string>();
+
+    // 首先处理内联规则，并确保每个规则都通过 RegexRuleSchema 校验
+    for (const rule of inlineRules) {
+      const parsedRule = RegexRuleSchema.safeParse(rule);
+      if (parsedRule.success && !ruleNames.has(parsedRule.data.name)) {
+        finalRules.push(parsedRule.data);
+        ruleNames.add(parsedRule.data.name);
+      } else if (!parsedRule.success) {
+        console.warn(`ApplyRegex (${context?.nodeId}): 跳过无效的内联规则 (校验失败):`, rule, parsedRule.error.format());
+      }
+    }
+
+    // 然后处理加载的规则，并确保每个规则都通过 RegexRuleSchema 校验
+    for (const rule of loadedRules) {
+      const parsedRule = RegexRuleSchema.safeParse(rule);
+      if (parsedRule.success && !ruleNames.has(parsedRule.data.name)) {
+        finalRules.push(parsedRule.data);
+        ruleNames.add(parsedRule.data.name);
+      } else if (!parsedRule.success) {
+        console.warn(`ApplyRegex (${context?.nodeId}): 跳过无效的加载规则 (校验失败):`, rule, parsedRule.error.format());
+      }
+    }
+
+    if (finalRules.length === 0) {
+      console.log(`ApplyRegex (${context?.nodeId}): 没有可应用的有效正则规则。返回原始文本。`);
+      return { outputText: inputText };
+    }
+
+    console.log(`ApplyRegex (${context?.nodeId}): 应用 ${finalRules.length} 条合并后的规则到输入文本。`);
 
     let currentText = inputText;
     try {
-      for (const rule of regexRules) {
-        // 创建正则表达式对象
-        // 注意：flags 默认为空，如果需要全局替换等，规则中应包含 'g'
+      for (const rule of finalRules) {
+        // 检查规则是否启用 (enabled 默认为 true，如果字段不存在也视为启用)
+        if (rule.enabled === false) {
+          console.log(`ApplyRegex (${context?.nodeId}): 跳过已禁用的规则 "${rule.name}"`);
+          continue;
+        }
+        // 确保 rule.pattern 和 rule.replacement 是字符串，Zod schema 应该已经保证了
         const regex = new RegExp(rule.pattern, rule.flags || '');
-        // 应用替换
         currentText = currentText.replace(regex, rule.replacement);
-        // 注意: .replace() 默认只替换第一个匹配项，除非 flags 包含 'g'
-        // 如果需要所有匹配项都被替换，规则的 flags 必须包含 'g'
-        // 或者使用 currentText = currentText.replaceAll(regex, rule.replacement); (需要 ES2021+)
       }
 
-      console.log(`ApplyRegex (${context?.nodeId}): Regex rules applied successfully.`);
+      console.log(`ApplyRegex (${context?.nodeId}): 正则规则应用成功。`);
       return { outputText: currentText };
 
     } catch (error: any) {
-      console.error(`ApplyRegex (${context?.nodeId}): Error applying regex rule - ${error.message}`);
-      // Re-throw the error or throw a new one
-      throw new Error(`Error applying regex: ${error.message}`);
+      console.error(`ApplyRegex (${context?.nodeId}): 应用正则规则时出错 - ${error.message}`);
+      throw new Error(`应用正则时出错: ${error.message}`);
     }
   }
 }
@@ -75,12 +94,41 @@ export const definition: NodeDefinition = {
     inputText: {
       dataFlowType: 'STRING',
       displayName: '输入文本',
-      description: '需要应用正则表达式的文本'
+      description: '需要应用正则表达式的文本',
+      required: true, // inputText 通常是必需的
+    },
+    inlineRegexRules: {
+      displayName: '内联正则规则',
+      dataFlowType: DataFlowType.ARRAY, // 存储 RegexRule 对象的数组
+      matchCategories: [BuiltInSocketMatchCategory.REGEX_RULE_ARRAY], // ++ 新增，用于前端识别
+      description: '直接在节点上编辑的正则表达式规则列表。如果此输入槽连接了数据，则使用连接的值；如果未连接，则可以使用下方按钮编辑并使用此处存储的值。规则将按顺序应用，并与 `加载的正则规则` 输入槽加载的规则合并（内联规则优先，同名去重）。',
+      required: false,
+      config: { // 保留 config 用于 actions 和 defaultValue
+        defaultValue: [],
+        // isEditableInline: true, // 这个属性可以移除，由前端根据 matchCategory 判断
+      },
+      actions: [
+        {
+          id: 'edit_inline_rules', // 唯一的 action，用于打开 RegexEditorModal
+          icon: 'ListBulletIcon', // 前端应映射为实际图标
+          tooltip: '编辑内联正则规则',
+          handlerType: 'open_panel',
+          handlerArgs: {
+            panelId: 'RegexEditorModal', // 前端将注册此 ID 的模态框
+            panelTitle: '编辑内联正则规则',
+            // 上下文将由 BaseNode 传递: { nodeId, inputKey, currentValue }
+          }
+          // 移除了 showConditionKey，因为当输入槽连接时，actions 按钮默认不显示
+        }
+        // 移除了内置 JSON 编辑器的 action
+      ]
     },
     regexRules: {
-      dataFlowType: 'ARRAY',
-      displayName: '正则规则',
-      description: '从 RegexRuleLoader 加载的规则数组'
+      displayName: '正则规则输入',
+      dataFlowType: DataFlowType.ARRAY, // 存储 RegexRule 对象的数组
+      matchCategories: [BuiltInSocketMatchCategory.REGEX_RULE_ARRAY], // ++ 新增，保持一致性
+      description: '通过连接加载的正则表达式规则列表。将与内联规则合并（内联规则优先，同名去重）。',
+      required: false,
     }
   },
   outputs: {

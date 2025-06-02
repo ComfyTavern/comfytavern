@@ -10,6 +10,7 @@ import { useThemeStore } from "../../../stores/theme";
 import { useTabStore } from "../../../stores/tabStore";
 import { useExecutionStore } from "../../../stores/executionStore";
 import { useProjectStore } from '@/stores/projectStore'; // 新增 (useTabManagement 移除)
+import { useUiStore } from "../../../stores/uiStore"; // +++ 导入 UI Store
 
 // 项目类型和工具函数
 import {
@@ -19,6 +20,7 @@ import {
   BuiltInSocketMatchCategory,
   ExecutionStatus,
   type NodeInputAction, // + 导入 NodeInputAction
+  type RegexRule, // +++ 导入 RegexRule 类型
 } from "@comfytavern/types";
 import { createHistoryEntry } from "@comfytavern/utils";
 
@@ -38,7 +40,6 @@ import Tooltip from "../../common/Tooltip.vue";
 // import MarkdownRenderer from "../../common/MarkdownRenderer.vue"; // - 移除未使用的导入
 import InlineConnectionSorter from '../inputs/InlineConnectionSorter.vue';
 import NodeInputActionsBar from "./NodeInputActionsBar.vue"; // + 导入新组件
-
 // 常量和样式
 import {
   HANDLE_LINE_HEIGHT,
@@ -68,6 +69,7 @@ const { currentProjectId } = storeToRefs(projectStore); // 只解构 currentProj
 const vueFlowInstance = useVueFlow(); // 确保 vueFlowInstance 在此作用域
 const interactionCoordinator = useWorkflowInteractionCoordinator(); // 获取工作流交互协调器实例
 const workflowManager = useWorkflowManager(); // 获取工作流管理器实例
+const uiStore = useUiStore(); // +++ 获取 UI Store 实例
 
 // 节点特定的 Composables
 const { width, isResizing, startResize } = useNodeResize(props); // 使用节点宽度调整 Composable
@@ -238,6 +240,9 @@ const shouldShowSorter = (input: (typeof finalInputs.value)[0]): boolean => {
 };
 
 const isSimpleInlineInput = (input: InputDefinition): boolean => {
+  // 如果后端指定了特定的内联组件，则它不是“简单”内联输入
+  if (input.config?.component) return false;
+
   if (input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)) return false;
   if (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)) return false;
   if (input.dataFlowType === DataFlowType.STRING && input.config?.multiline) return false;
@@ -590,27 +595,60 @@ const handleActionTriggered = (payload: {
       }
       break;
     case 'open_panel':
-      // TODO: 确认打开侧边栏面板的正确方法
-      // if (payload.handlerArgs?.panelId && activeTabId.value) {
-      //   const currentInputValue = getInputValue(payload.inputKey);
-      //   // tabStore.openSidePanel( // tabStore 中没有 openSidePanel 方法
-      //   //   activeTabId.value,
-      //   //   payload.handlerArgs.panelId,
-      //   //   {
-      //   //     title: payload.handlerArgs.panelTitle || `${inputDefinition.displayName || payload.inputKey} 设置`,
-      //   //     nodeId: props.id,
-      //   //     inputKey: payload.inputKey,
-      //   //     initialValue: payload.handlerArgs.initialValue !== undefined
-      //   //       ? payload.handlerArgs.initialValue
-      //   //       : currentInputValue,
-      //   //     inputDefinition: inputDefinition,
-      //   //     context: payload.handlerArgs.context,
-      //   //   }
-      //   // );
-      // } else {
-      //   console.warn(`[BaseNode ${props.id}] 'open_panel' action missing panelId, activeTabId, or inputDefinition.`, payload.handlerArgs);
-      // }
-      console.warn(`[BaseNode ${props.id}] 'open_panel' action received, but the method to open side panel needs to be confirmed/implemented. Payload:`, payload);
+      if (payload.handlerArgs?.panelId === 'RegexEditorModal') {
+        if (!activeTabId.value) {
+          console.warn(`[BaseNode ${props.id}] 无法打开 Regex 编辑器：无活动标签页 ID。`);
+          return;
+        }
+        const currentRules = (getInputValue(payload.inputKey) as RegexRule[] | undefined) || [];
+        const nodeDisplayName = props.data.displayName || props.label || "未命名节点";
+        const inputDisplayName = inputDefinition.displayName || payload.inputKey;
+
+        const onSaveCallback = (updatedRules: RegexRule[]) => {
+          if (!activeTabId.value) {
+            console.warn(`[BaseNode ${props.id}] 无法保存 Regex 规则：无活动标签页 ID。`);
+            return;
+          }
+          // 1. 更新节点内部值
+          // updateInputValue 会自动处理深拷贝和响应式更新
+          updateInputValue(payload.inputKey, updatedRules);
+
+          // 2. 记录历史
+          // 创建一个更简洁的摘要，例如规则数量的变化
+          let rulesSummary = `更新了 ${updatedRules.length} 条规则。`;
+          if (updatedRules.length > 0 && updatedRules.length <= 3) {
+            rulesSummary = `规则: ${updatedRules.map(r => `"${r.name}"`).join(', ')}`;
+          } else if (updatedRules.length > 3) {
+            rulesSummary = `规则: ${updatedRules.slice(0, 2).map(r => `"${r.name}"`).join(', ')} 等 (${updatedRules.length}条)`;
+          }
+
+          const summary = `编辑 ${nodeDisplayName} - ${inputDisplayName}: ${rulesSummary}`;
+          const entry: HistoryEntry = createHistoryEntry(
+            "update",
+            "nodeInputValue", // 或者一个更特定的 "nodeRegexRules"
+            summary,
+            // 存储整个规则数组的副本以用于撤销/重做
+            { inputKey: payload.inputKey, value: JSON.parse(JSON.stringify(updatedRules)) }
+          );
+          interactionCoordinator.updateNodeInputValueAndRecord(
+            activeTabId.value,
+            props.id,
+            payload.inputKey,
+            updatedRules, // 传递更新后的规则 (updateInputValue 内部已处理响应式)
+            entry
+          );
+        };
+
+        uiStore.openRegexEditorModal({
+          nodeId: props.id,
+          inputKey: payload.inputKey,
+          rules: JSON.parse(JSON.stringify(currentRules)), // 传递深拷贝的规则给模态框
+          onSave: onSaveCallback,
+        });
+
+      } else {
+        console.warn(`[BaseNode ${props.id}] 'open_panel' action received for unhandled panelId '${payload.handlerArgs?.panelId}'. Payload:`, payload);
+      }
       break;
     default:
       console.warn(`[BaseNode ${props.id}] Unknown action handlerType: ${payload.handlerType}`);
@@ -978,24 +1016,27 @@ const handleActionTriggered = (payload: {
         <!-- 多行文本/JSON查看器等特殊输入组件 (根据条件显示) -->
         <!-- 注意：CodeInput 不会在这里渲染，它只在 param-header 中显示按钮 -->
         <div v-if="
-          (
-            props.type !== 'core:GroupInput' &&
-            props.type !== 'core:GroupOutput' &&
-            getInputComponent(input.dataFlowType, input.config, input.matchCategories) &&
-            // 条件1: 类型是 HISTORY, 多行 STRING/MARKDOWN, 或 JSON
+          !shouldShowSorter(input) &&
+          props.type !== 'core:GroupInput' &&
+          props.type !== 'core:GroupOutput' &&
+          getInputComponent(input.dataFlowType, input.config, input.matchCategories) &&
+          // ( // 条件 A 已移除，因为 getInputComponent 会处理 InlineRegexRuleDisplay
+            // 条件 B: 已知的“大块”组件 (HISTORY, 多行 STRING/MARKDOWN, JSON, REGEX_RULE_ARRAY)
             (
-              (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.CHAT_HISTORY)) || // HISTORY
-              (input.dataFlowType === DataFlowType.STRING && input.config?.multiline) || // 多行 STRING (TextAreaInput)
-              (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.MARKDOWN)) || // MARKDOWN (TextAreaInput)
-              (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON)) // JSON (JsonInlineViewer)
-            ) &&
-            // 条件2: 连接状态判断
-            (
-              (input.dataFlowType === DataFlowType.STRING && input.config?.display_only) ||
-              !isInputConnected(String(input.key)) ||
-              (isInputConnected(String(input.key)) && input.config?.showReceivedValue)
-            )
-          ) && !shouldShowSorter(input)
+              (
+                (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.CHAT_HISTORY)) ||
+                (input.dataFlowType === DataFlowType.STRING && input.config?.multiline) ||
+                (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.MARKDOWN)) ||
+                (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON)) ||
+                (input.dataFlowType === DataFlowType.ARRAY && input.matchCategories?.includes(BuiltInSocketMatchCategory.REGEX_RULE_ARRAY)) // ++ 新增对 REGEX_RULE_ARRAY 的判断
+              ) &&
+              ( // 这些组件的连接状态判断
+                (input.dataFlowType === DataFlowType.STRING && input.config?.display_only) ||
+                !isInputConnected(String(input.key)) ||
+                (isInputConnected(String(input.key)) && input.config?.showReceivedValue)
+              )
+            // ) // 移除的条件 A 的闭合括号
+          )
         " class="param-content" @mousedown.stop>
           <component :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
             :model-value="getInputValue(String((input as any).key))"
