@@ -173,15 +173,23 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
 
 // State for collapsed sections
+const LOCAL_STORAGE_KEY = "nodePanelCollapsedStates";
 const collapsedStates = ref<Record<string, boolean>>({});
 
 // Function to toggle collapse state
 const toggleCollapse = (key: string) => {
   // Initialize if key doesn't exist (default to expanded)
   if (collapsedStates.value[key] === undefined) {
-    collapsedStates.value[key] = false; // Start expanded
+    collapsedStates.value[key] = false; // Initialize as expanded
   }
-  collapsedStates.value[key] = !collapsedStates.value[key];
+  collapsedStates.value[key] = !collapsedStates.value[key]; // Toggle the state
+
+  // Save to localStorage
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(collapsedStates.value));
+  } catch (error) {
+    console.error("无法保存节点面板折叠状态到 localStorage:", error);
+  }
 };
 
 const emit = defineEmits<{
@@ -377,6 +385,24 @@ const addNodeToCanvas = (fullNodeType: string) => {
 // 移除了 manualRefresh 方法
 
 onMounted(() => {
+  try {
+    const savedStates = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (savedStates) {
+      const parsedStates = JSON.parse(savedStates);
+      // 确保 parsedStates 是一个对象，防止 localStorage 中存了非对象类型的值
+      if (typeof parsedStates === 'object' && parsedStates !== null) {
+        collapsedStates.value = parsedStates;
+      } else {
+        // 如果解析出来不是对象，或者为 null，则不使用，并可以考虑清除
+        console.warn("localStorage 中的节点面板折叠状态格式不正确，已忽略。");
+        // localStorage.removeItem(LOCAL_STORAGE_KEY); // 可选：清除无效数据
+      }
+    }
+  } catch (error) {
+    console.error("无法从 localStorage 加载或解析节点面板折叠状态:", error);
+    // localStorage.removeItem(LOCAL_STORAGE_KEY); // 可选：清除无效数据
+  }
+
   if (!definitionsLoaded.value) {
     fetchNodes(); // 初始加载节点
   }
