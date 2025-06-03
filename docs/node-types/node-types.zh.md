@@ -52,6 +52,8 @@
 *   `StreamChunk`: 数据流块
 *   `ComboOption`: 用于标记来源于或适用于 COMBO (下拉建议) 选择的值
 *   `UI_BLOCK`: (UI渲染提示) 标记此输入组件应作为“大块”或“块级”元素渲染，而不是行内紧凑型。
+*   `CanPreview`: (操作提示) 标记此输入支持标准的内联预览操作按钮。
+*   `NoDefaultEdit`: (操作提示) 标记此输入不应显示其类型的默认编辑操作按钮 (如果其类型通常有默认编辑按钮)。
 
 **行为标签:**
 
@@ -97,6 +99,7 @@
 *   `multi: boolean`: (仅输入) 如果为 `true`，该输入插槽可以接受多个连接。
     *   `acceptTypes: string[]`: (仅当 `multi: true` 时) 定义此多输入插槽接受的 `DataFlowType` 或 `SocketMatchCategory` 列表。连接时进行精确匹配。
 *   `hideHandle: boolean`: (可选) 如果为 `true`，则在前端 UI 中隐藏该插槽的连接点 (Handle)。
+*   `actions: NodeInputAction[]`: (可选) 定义一个操作按钮数组，显示在输入槽旁边，用于提供如预览、编辑等快捷操作。详见下文“输入操作按钮 (`actions`)”章节。
 
 ### 2.2. Tooltip 信息
 
@@ -113,7 +116,23 @@
 *   `dataFlowType: 'INTEGER'`, `config: { suggestions: [1, 2, 3], default: 1 }` -> 带建议的整数输入或下拉选择。
 *   `dataFlowType: 'WILDCARD'`, `matchCategories: ['Trigger']`, `config: { label: '执行' }` -> 一个显示为 "执行" 的按钮。
 
-### 2.4. 示例插槽定义 (参考 `TestWidgetsNode.ts`)
+### 2.4. 输入操作按钮 (`actions`)
+
+`InputDefinition` 中的 `actions` 属性允许为输入槽定义一组自定义操作按钮。每个操作按钮由一个 `NodeInputAction` 对象定义，其结构如下：
+
+| 属性名             | 类型                                                                                             | 描述                                                                                                                                                                                             |
+| :----------------- | :----------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`               | `string`                                                                                         | 唯一ID，用于标识操作。也用于覆盖标准操作，例如，如果此ID为 `'builtin_preview'`，则此定义将覆盖默认的预览按钮。                                                                                   |
+| `icon`             | `string` (可选)                                                                                  | 图标名称 (推荐使用 Heroicons v2 outline 样式的图标名称，小驼峰格式, e.g., `'eye'`, `'pencilSquare'`)。如果未提供，`NodeInputActionsBar.vue` 组件会尝试根据 `handlerType` 或 `id` 提供一个默认图标。 |
+| `label`            | `string` (可选)                                                                                  | 按钮上显示的文本标签，与 `icon` 二选一或共存。                                                                                                                                                     |
+| `tooltip`          | `string` (可选)                                                                                  | 按钮的 Tooltip 提示文本。                                                                                                                                                                        |
+| `handlerType`      | `'builtin_preview'`, `'builtin_editor'`, `'emit_event'`, `'client_script_hook'`, `'open_panel'` | 操作的处理方式：<br> - `'builtin_preview'`: 使用内置的 Tooltip 预览逻辑。<br> - `'builtin_editor'`: 使用内置方法打开编辑器。<br> - `'emit_event'`: 发出一个自定义事件。<br> - `'client_script_hook'`: 调用节点客户端脚本中定义的钩子函数。<br> - `'open_panel'`: 触发打开指定的侧边栏面板或弹窗。 |
+| `handlerArgs`      | `Record<string, any>` (可选)                                                                     | 传递给处理程序的参数，具体结构取决于 `handlerType`。例如：<br> - for `'builtin_editor'`: `{ editorType?: string, languageHint?: string, preferFloatingEditor?: boolean }`<br> - for `'open_panel'`: `{ panelId: string, panelTitle?: string, ... }`<br> - for `'emit_event'`: `{ eventName: string, eventPayload?: any }`<br> - for `'client_script_hook'`: `{ hookName: string, hookPayload?: any }` |
+| `showConditionKey` | `string` (可选, 默认 `'always'`)                                                                 | 控制按钮显示条件的预定义键 (e.g., `'always'`, `'ifNotConnected'`, `'ifHasValue'`, `'never'`)。前端组件将实现这些条件的判断逻辑。                                                                 |
+
+这些操作按钮由前端组件 `NodeInputActionsBar.vue` 负责渲染和管理。语义标签 `CanPreview` 和 `NoDefaultEdit` 可以影响默认预览和编辑按钮的显示，而 `actions` 数组则提供了更细致的控制能力。
+
+### 2.5. 示例插槽定义 (参考 `TestWidgetsNode.ts`)
 
 ```typescript
 // 示例: Markdown 输入插槽

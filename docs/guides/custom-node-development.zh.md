@@ -8,7 +8,7 @@
 
 *   **后端定义**: 如何使用 TypeScript 定义节点的属性、输入、输出和配置。
 *   **执行逻辑**: 如何实现节点的后端处理逻辑，以及如何集成前端客户端脚本以实现更丰富的交互。
-*   **前端渲染**: 节点定义如何影响其在前端编辑器中的视觉表现和用户交互（主要通过通用的 [`BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue:1) 组件）。
+*   **前端渲染**: 节点定义如何影响其在前端编辑器中的视觉表现和用户交互（主要通过通用的 [`BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue) 组件）。
 
 理解并遵循本指南中的规范，将帮助你创建出功能强大、易于维护且与 ComfyTavern 系统良好集成的自定义节点。
 
@@ -85,12 +85,13 @@ interface SlotDefinitionBase {
 ```
 
 *   `dataFlowType: DataFlowTypeName`: **必需。** 输入端口的核心数据类型。例如 `DataFlowType.STRING`, `DataFlowType.INTEGER`, `DataFlowType.OBJECT`。详细类型请参考 `docs/node-types` 文档。
-*   `matchCategories?: string[]`: 可选。用于更精确描述端口语义或行为的标签数组。例如 `[BuiltInSocketMatchCategory.CODE]`, `['MyCustomDataFormat']`。这些标签会影响连接兼容性判断和前端UI的某些行为。详细请参考 `docs/node-types` 文档。
+*   `matchCategories?: string[]`: 可选。用于更精确描述端口语义或行为的标签数组。例如 `[BuiltInSocketMatchCategory.CODE]`, `['MyCustomDataFormat']`。这些标签会影响连接兼容性判断和前端UI的某些行为，包括默认操作按钮的显示（如通过 `CanPreview` 提示可预览，通过 `NoDefaultEdit` 禁止默认编辑）。详细请参考 `docs/node-types` 文档。
 *   `displayName?: string`: 可选。输入端口在UI中显示的名称。如果未提供，前端可能会使用端口的键名或 `description`。
 *   `description?: string`: 可选。输入端口的详细描述，用于Tooltip。
 *   `required?: boolean | ((configValues: Record<string, any>) => boolean)`: 可选。指示此输入是否为必需。可以是一个布尔值，或一个接收节点当前配置值并返回布尔值的函数，以实现条件性必需。默认为 `false`。
 *   `multi?: boolean`: 可选。如果为 `true`，此输入端口可以接受多个连接。后端 `execute` 方法中对应的输入值将是一个数组。默认为 `false`。示例参考 [`apps/backend/src/nodes/Utilities/MergeNode.ts`](apps/backend/src/nodes/Utilities/MergeNode.ts:1) 中的 `text_inputs`。
 *   `config?: Record<string, any>`: **核心配置对象**。此对象中的属性直接影响前端未连接时该输入端口对应的UI控件的类型和行为。这些属性应与 [`packages/types/src/node.ts`](packages/types/src/node.ts:1) 中定义的各种输入选项Zod Schema（如 [`zNumericInputOptions`](packages/types/src/node.ts:13), [`zStringInputOptions`](packages/types/src/node.ts:22) 等）兼容。
+*   `actions?: NodeInputAction[]`: 可选。定义一组显示在输入槽旁边的操作按钮。每个按钮由 `NodeInputAction` 对象定义，包含 `id`, `icon`, `label`, `tooltip`, `handlerType` (如 `'builtin_preview'`, `'builtin_editor'`), `handlerArgs` 和 `showConditionKey` 等属性。这些按钮由前端的 `NodeInputActionsBar.vue` 组件渲染和管理，允许实现预览、编辑、自定义事件等交互。详细定义请参考 `docs/node-types` 文档中关于 `NodeInputAction` 的部分。
 
     *   **常用 `config` 属性 (参考 [`TestWidgetsNode.ts`](apps/backend/src/nodes/Utilities/TestWidgetsNode.ts:1) 和 [`BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue:1) 的渲染逻辑):**
         *   `default: any`: 输入控件的默认值。
@@ -280,9 +281,11 @@ async execute(
     *   因此，正确配置 `InputDefinition` 中的这些属性对于前端UI的正确显示至关重要。
 *   **Handle (连接点) 样式**: Handle的颜色和样式会根据其 `dataFlowType` 动态改变，以提供视觉提示。
 *   **多输入渲染**: `multi: true` 的输入端口在前端会有特殊的“跑道式”渲染效果，允许连接多条线。
-*   **按钮和复杂输入的联动**:
-    *   `WILDCARD` 类型且 `matchCategories` 包含 `TRIGGER` 的输入会渲染成按钮，点击事件由客户端脚本或 `BaseNode.vue` 内部逻辑处理。
-    *   对于代码、Markdown、JSON等复杂输入，`BaseNode.vue` 通常会显示一个“编辑”按钮，点击后会调用 `interactionCoordinator.openDockedEditorForNodeInput` 方法，在底部的停靠编辑器中打开对应内容的编辑器。
+*   **操作按钮和复杂输入的联动**:
+    *   输入槽旁边的操作按钮（如预览、编辑、自定义按钮）现在由 [`apps/frontend-vueflow/src/components/graph/nodes/NodeInputActionsBar.vue`](apps/frontend-vueflow/src/components/graph/nodes/NodeInputActionsBar.vue:1) 组件根据 `InputDefinition` 中的 `actions` 数组和 `matchCategories` (如 `CanPreview`) 动态生成和管理。
+    *   例如，一个标记了 `CanPreview` 的输入或在 `actions` 中定义了 `'builtin_preview'` 操作的输入，会显示一个预览按钮。点击此按钮会触发内置的 Tooltip 预览逻辑。
+    *   类似地，可编辑的输入（未被 `NoDefaultEdit` 标记，或在 `actions` 中定义了 `'builtin_editor'` 操作）会显示编辑按钮。点击后，`BaseNode.vue` (通过 `NodeInputActionsBar.vue` 触发的事件) 会调用 `interactionCoordinator.openDockedEditorForNodeInput` 方法，在底部的停靠编辑器中打开对应内容的编辑器。`handlerArgs` 中可以指定编辑器类型等参数。
+    *   `WILDCARD` 类型且 `matchCategories` 包含 `TRIGGER` 的输入仍然会渲染成按钮 (ButtonInput)，其点击事件通常由客户端脚本处理，或者通过 `actions` 定义更具体的行为。
 *   **Tooltip 和执行状态**: `BaseNode.vue` 负责显示节点和端口的 `description` 作为Tooltip，并根据从 `executionStore` 获取的执行状态（`RUNNING`, `COMPLETED`, `ERROR` 等）为节点添加高亮等视觉反馈。
 
 ## 6. 节点注册与加载

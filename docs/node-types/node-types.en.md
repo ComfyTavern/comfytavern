@@ -52,6 +52,8 @@ Here are some built-in recommended tags:
 *   `StreamChunk`: Data stream chunk
 *   `ComboOption`: Used to mark values originating from or applicable to COMBO (dropdown suggestion) selections
 *   `UI_BLOCK`: (UI Rendering Hint) Marks this input component to be rendered as a "block" or "block-level" element, rather than an inline compact widget.
+*   `CanPreview`: (Action Hint) Marks this input to support the standard inline preview action button.
+*   `NoDefaultEdit`: (Action Hint) Marks this input to not display its type's default edit action button (if its type normally has one).
 
 **Behavioral Tags:**
 
@@ -97,6 +99,7 @@ The following are commonly used configuration items within an `InputDefinition`'
 *   `multi: boolean`: (Input only) If `true`, this input slot can accept multiple connections.
     *   `acceptTypes: string[]`: (Only when `multi: true`) Defines a list of `DataFlowType` or `SocketMatchCategory` tags that this multi-input slot accepts. Exact matching is performed during connection.
 *   `hideHandle: boolean`: (Optional) If `true`, the connection point (Handle) for this slot will be hidden in the frontend UI.
+*   `actions: NodeInputAction[]`: (Optional) Defines an array of action buttons displayed next to the input slot, used for providing quick actions like preview, edit, etc. See the "Input Action Buttons (`actions`)" section below for details.
 
 ### 2.2. Tooltip Information
 
@@ -113,7 +116,23 @@ For example:
 *   `dataFlowType: 'INTEGER'`, `config: { suggestions: [1, 2, 3], default: 1 }` -> Integer input with suggestions or a dropdown.
 *   `dataFlowType: 'WILDCARD'`, `matchCategories: ['Trigger']`, `config: { label: 'Execute' }` -> A button displaying "Execute".
 
-### 2.4. Example Slot Definition (referencing `TestWidgetsNode.ts`)
+### 2.4. Input Action Buttons (`actions`)
+
+The `actions` property in `InputDefinition` allows defining a set of custom action buttons for an input slot. Each action button is defined by a `NodeInputAction` object with the following structure:
+
+| Property Name      | Type                                                                                             | Description                                                                                                                                                                                                |
+| :----------------- | :----------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`               | `string`                                                                                         | Unique ID to identify the action. Also used to override standard actions; e.g., if this ID is `'builtin_preview'`, this definition will override the default preview button.                               |
+| `icon`             | `string` (optional)                                                                              | Icon name (Heroicons v2 outline style names in camelCase are recommended, e.g., `'eye'`, `'pencilSquare'`). If not provided, the `NodeInputActionsBar.vue` component will try to provide a default icon based on `handlerType` or `id`. |
+| `label`            | `string` (optional)                                                                              | Text label displayed on the button, can be used with or instead of an `icon`.                                                                                                                            |
+| `tooltip`          | `string` (optional)                                                                              | Tooltip text for the button.                                                                                                                                                                             |
+| `handlerType`      | `'builtin_preview'`, `'builtin_editor'`, `'emit_event'`, `'client_script_hook'`, `'open_panel'` | How the action is handled:<br> - `'builtin_preview'`: Uses built-in Tooltip preview logic.<br> - `'builtin_editor'`: Uses a built-in method to open an editor.<br> - `'emit_event'`: Emits a custom event.<br> - `'client_script_hook'`: Calls a defined hook function in the node's client script.<br> - `'open_panel'`: Triggers opening a specified sidebar panel or modal. |
+| `handlerArgs`      | `Record<string, any>` (optional)                                                                 | Arguments passed to the handler, structure depends on `handlerType`. Examples:<br> - for `'builtin_editor'`: `{ editorType?: string, languageHint?: string, preferFloatingEditor?: boolean }`<br> - for `'open_panel'`: `{ panelId: string, panelTitle?: string, ... }`<br> - for `'emit_event'`: `{ eventName: string, eventPayload?: any }`<br> - for `'client_script_hook'`: `{ hookName: string, hookPayload?: any }` |
+| `showConditionKey` | `string` (optional, defaults to `'always'`)                                                      | Predefined key to control button visibility (e.g., `'always'`, `'ifNotConnected'`, `'ifHasValue'`, `'never'`). The frontend component will implement the logic for these conditions.                   |
+
+These action buttons are rendered and managed by the frontend component `NodeInputActionsBar.vue`. Semantic tags `CanPreview` and `NoDefaultEdit` can influence the display of default preview and edit buttons, while the `actions` array provides finer-grained control.
+
+### 2.5. Example Slot Definition (referencing `TestWidgetsNode.ts`)
 
 ```typescript
 // Example: Markdown input slot
