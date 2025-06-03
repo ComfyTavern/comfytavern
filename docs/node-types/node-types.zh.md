@@ -51,6 +51,7 @@
 *   `Trigger`: 触发信号 (常用于按钮类交互)
 *   `StreamChunk`: 数据流块
 *   `ComboOption`: 用于标记来源于或适用于 COMBO (下拉建议) 选择的值
+*   `UI_BLOCK`: (UI渲染提示) 标记此输入组件应作为“大块”或“块级”元素渲染，而不是行内紧凑型。
 
 **行为标签:**
 
@@ -95,6 +96,7 @@
 *   `required: boolean | ((inputs: Record<string, any>, configValues: Record<string, any>) => boolean)`: (仅输入) 定义该输入是否为必需。
 *   `multi: boolean`: (仅输入) 如果为 `true`，该输入插槽可以接受多个连接。
     *   `acceptTypes: string[]`: (仅当 `multi: true` 时) 定义此多输入插槽接受的 `DataFlowType` 或 `SocketMatchCategory` 列表。连接时进行精确匹配。
+*   `hideHandle: boolean`: (可选) 如果为 `true`，则在前端 UI 中隐藏该插槽的连接点 (Handle)。
 
 ### 2.2. Tooltip 信息
 
