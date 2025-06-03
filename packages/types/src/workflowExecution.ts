@@ -142,8 +142,6 @@ export interface NodeProgressPayload {
  * 节点执行类型：完整执行或预览执行。
  * 参考: workflow-execution-plan.md 第 36 行
  */
-export type ExecutionType = 'full' | 'preview';
-
 /**
  * 通知节点执行完成的载荷。
  * 参考: workflow-execution-plan.md 第 36 行
@@ -155,8 +153,6 @@ export interface NodeCompletePayload {
   nodeId: NanoId;
   /** 节点的输出数据 */
   output: any; // 或者更具体的类型，取决于节点输出
-  /** 执行类型 (完整或预览) */
-  executionType: ExecutionType;
 }
 
 /**
@@ -184,22 +180,7 @@ export interface NodeBypassedPayload {
   pseudoOutputs: Record<string, any>;
 }
 
-/**
- * 请求执行下游节点预览的载荷。
- * 参考: workflow-execution-plan.md 第 25 行
- */
-export interface ExecutePreviewRequestPayload {
-  /** (可选) 预览请求的唯一 ID，用于关联响应 */
-  previewRequestId?: string;
-  /** (可选) 关联的工作流 ID (如果适用) */
-  workflowId?: NanoId;
-  /** 发生变更的节点 ID (Nano ID) */
-  changedNodeId: NanoId;
-  /** 发生变更的输入键名 */
-  inputKey: string;
-  /** 输入的新值 */
-  newValue: any;
-}
+
 
 // --- HTTP API 相关类型 ---
 

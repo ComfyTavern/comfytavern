@@ -34,6 +34,8 @@ import { useWorkflowInteractionCoordinator } from "../../../composables/workflow
 import { useNodeClientScript } from "../../../composables/node/useNodeClientScript";
 import { useWorkflowManager } from "../../../composables/workflow/useWorkflowManager";
 
+import { useWorkflowPreview } from "../../../composables/workflow/useWorkflowPreview"; // 清理：保留一个导入，移除 type NodePreviewStatus
+
 // 组件
 import { getInputComponent } from "../inputs";
 import Tooltip from "../../common/Tooltip.vue";
@@ -94,6 +96,8 @@ const { clientScriptError, handleButtonClick, executeClientHook } = useNodeClien
   getInputValue,
 }); // 添加 executeClientHook，并传入 props 和需要的函数
 const { updateNodeInternals } = vueFlowInstance; // 从 useVueFlow 获取更新函数
+
+const { nodePreviewStates, isPreviewEnabled } = useWorkflowPreview(); // 清理：保留一个调用
 
 // 第 5 部分：计算属性
 
@@ -223,6 +227,19 @@ const multiInputSlotContainerStyle = computed(() => {
     }
   }
   return stylesMap;
+});
+
+const previewStatusClass = computed(() => { // 清理：保留一个定义
+  if (!isPreviewEnabled.value || !activeTabId.value) {
+    return null;
+  }
+  const status = nodePreviewStates.value[props.id];
+  // 仅当状态有效且不是 'unknown' 时应用特定类
+  if (status && status !== 'unknown') {
+    // 将下划线替换为短横线以匹配 CSS 类命名约定
+    return `preview-${status.replace(/_/g, '-')}`;
+  }
+  return null;
 });
 
 // 第 6 部分：辅助函数
@@ -657,18 +674,21 @@ const handleActionTriggered = (payload: {
 </script>
 
 <template>
-  <div ref="nodeRootRef" class="custom-node" :class="{
-    selected,
-    'pointer-events-none': isResizing,
-    'cursor-move': !isResizing,
-    dark: isDark, // 暗色模式类
-    // 执行状态相关的类
-    'node-running': nodeExecutionStatus === ExecutionStatus.RUNNING,
-    'node-completed': nodeExecutionStatus === ExecutionStatus.COMPLETE, // Use COMPLETE
-    'node-error': nodeExecutionStatus === ExecutionStatus.ERROR,
-    'node-skipped': nodeExecutionStatus === ExecutionStatus.SKIPPED, // SKIPPED should be correct now
-    'has-client-script-error': !!clientScriptError, // 保留错误状态类
-  }" :style="{ width: `${width}px` }">
+  <div ref="nodeRootRef" class="custom-node" :class="[
+    {
+      selected,
+      'pointer-events-none': isResizing,
+      'cursor-move': !isResizing,
+      dark: isDark, // 暗色模式类
+      // 执行状态相关的类
+      'node-running': nodeExecutionStatus === ExecutionStatus.RUNNING,
+      'node-completed': nodeExecutionStatus === ExecutionStatus.COMPLETE, // Use COMPLETE
+      'node-error': nodeExecutionStatus === ExecutionStatus.ERROR,
+      'node-skipped': nodeExecutionStatus === ExecutionStatus.SKIPPED, // SKIPPED should be correct now
+      'has-client-script-error': !!clientScriptError, // 保留错误状态类
+    },
+    previewStatusClass // 修复：直接将计算属性放入数组，Vue 会处理 null/undefined
+  ]" :style="{ width: `${width}px` }">
     <!-- 节点宽度拖拽调整区域 -->
     <!-- 拖拽响应区域 (父元素，透明，宽度比手柄大) -->
     <div class="resize-area resize-area-left" @mousedown="startResize">
@@ -1273,6 +1293,31 @@ export default {
 .node-skipped {
   @apply opacity-60 border-dashed border-gray-400 dark:border-gray-500;
 }
+
+/* --- 预览状态样式 --- */
+.custom-node.preview-newly-computed {
+  /* 青色环，与 node-completed (绿色) 区分 */
+  @apply ring-2 ring-teal-500 dark:ring-teal-400 ring-offset-2 dark:ring-offset-gray-800 z-10;
+}
+
+.custom-node.preview-clean-reused {
+  @apply opacity-75; /* 降低透明度表示复用 */
+}
+/* 如果 clean_reused 也被选中，确保选中效果依然明显 */
+.custom-node.selected.preview-clean-reused {
+    @apply opacity-100 ring-2 ring-blue-500 dark:ring-blue-400;
+}
+
+.custom-node.preview-stale-unsafe-reused {
+  /* 橙色环 */
+  @apply ring-2 ring-orange-500 dark:ring-orange-400 ring-offset-2 dark:ring-offset-gray-800 z-10;
+}
+
+.custom-node.preview-error {
+  /* 粉色/品红色环，与 node-error (红色) 区分 */
+  @apply ring-2 ring-pink-600 dark:ring-pink-500 ring-offset-2 dark:ring-offset-gray-800 z-10;
+}
+
 
 /* 优先显示选中状态 */
 .custom-node.selected {

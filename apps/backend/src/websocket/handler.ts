@@ -3,7 +3,6 @@ import {
   WebSocketMessageType,
   type WebSocketMessage,
   type WorkflowExecutionPayload, // Use the correct payload type
-  type ExecutePreviewRequestPayload, // Import preview payload type
   type ButtonClickPayload, // <-- Import ButtonClickPayload
   type ErrorPayload,
   NanoId, // Import NanoId
@@ -82,18 +81,7 @@ export function createWebsocketHandler(
             break;
           }
 
-          case WebSocketMessageType.EXECUTE_PREVIEW_REQUEST: {
-            const payload = message.payload as ExecutePreviewRequestPayload;
-            console.log(`[Handler] Received EXECUTE_PREVIEW_REQUEST from ${clientId} for node ${payload.changedNodeId}`);
-            // TODO: 将预览请求传递给合适的处理程序
-            // 这可能需要调度器或执行引擎提供专门的预览方法
-            // scheduler.submitPreview(payload, clientId); // 假设有此方法
-            ws.send(JSON.stringify({
-              type: WebSocketMessageType.ERROR,
-              payload: { message: 'Preview execution not yet implemented.' } as ErrorPayload,
-            }));
-            break;
-          }
+
 
           case WebSocketMessageType.INTERRUPT_REQUEST: {
             const payload = message.payload as { promptId: NanoId };

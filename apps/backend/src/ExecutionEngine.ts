@@ -9,8 +9,7 @@ import {
   NodeExecutingPayload,
   NodeCompletePayload,
   NodeErrorPayload,
-  ExecutionType,
-  ExecutePreviewRequestPayload,
+  // ExecutionType, // No longer needed
 } from '@comfytavern/types';
 import { nodeManager } from './services/NodeManager'; // 用于获取节点定义
 import { WebSocketManager } from './websocket/WebSocketManager';
@@ -114,13 +113,13 @@ export class ExecutionEngine {
           } catch (error: any) {
             console.error(`[Engine-${this.promptId}] Error processing bypassed node ${nodeId}:`, error);
             // 发送错误消息并终止工作流执行
-            this.sendNodeError(nodeId, `Error in bypass processing: ${error.message}`, 'full');
+            this.sendNodeError(nodeId, `Error in bypass processing: ${error.message}`);
             return { status: ExecutionStatus.ERROR, error: error.message || String(error) };
           }
         }
 
         const inputs = this.prepareNodeInputs(nodeId);
-        const result = await this.executeNode(nodeId, inputs, 'full');
+        const result = await this.executeNode(nodeId, inputs);
 
         if (result.status === ExecutionStatus.ERROR) {
           console.error(`[Engine-${this.promptId}] Workflow execution stopped due to error in node ${nodeId}`);
@@ -153,7 +152,7 @@ export class ExecutionEngine {
           }
         }
         // 使用特殊 ID 发送聚合后的工作流输出
-        this.sendNodeComplete('__WORKFLOW_INTERFACE_OUTPUTS__', finalWorkflowOutputs, 'full');
+        this.sendNodeComplete('__WORKFLOW_INTERFACE_OUTPUTS__', finalWorkflowOutputs);
         console.log(`[Engine-${this.promptId}] Sent aggregated workflow interface outputs:`, finalWorkflowOutputs);
       }
 
@@ -169,46 +168,7 @@ export class ExecutionEngine {
     }
   }
 
-  /**
-   * 执行工作流的实时预览部分。
-   * @param previewRequest 预览请求的载荷
-   */
-  public async runPreview(previewRequest: ExecutePreviewRequestPayload): Promise<void> {
-    console.log(`[Engine-${this.promptId}]----- Starting preview execution for node ${previewRequest.changedNodeId} | 开始执行实时预览 -----`);
-    const { changedNodeId, inputKey, newValue } = previewRequest;
 
-    // 1. 更新变更节点的输入值 (临时，只为预览计算)
-    //    注意：这需要一种方式来存储或访问节点的当前（可能已预览的）输入/输出状态
-    //    这部分逻辑比较复杂，暂时简化处理或跳过
-
-    // 2. 确定需要重新计算的下游节点
-    const downstreamNodes = this.getDownstreamNodes(changedNodeId);
-    console.log(`[Engine-${this.promptId}] Downstream nodes for preview:`, downstreamNodes);
-
-    // 3. 遍历下游节点并执行预览
-    for (const nodeId of downstreamNodes) {
-      const node = this.nodes[nodeId];
-      if (!node) continue;
-
-      const definition = nodeManager.getNode(node.fullType);
-      if (definition?.isPreviewUnsafe) {
-        console.log(`[Engine-${this.promptId}] Skipping preview for unsafe node ${nodeId} (${node.fullType}).`);
-        // TODO: 可能需要发送一个特定消息表示预览被跳过？
-        continue; // 跳过不安全的节点及其下游 (简化处理)
-      }
-
-      // 准备预览输入 (需要使用上游节点的预览输出)
-      // 这需要一个更复杂的预览状态管理机制，暂时简化
-      const inputs = this.prepareNodeInputs(nodeId); // 使用当前结果模拟
-
-      // 执行预览逻辑 (如果节点有特殊预览逻辑，否则执行完整逻辑)
-      // 注意：executeNode 需要调整以支持 preview 类型
-      await this.executeNode(nodeId, inputs, 'preview');
-      // 预览不需要处理错误中断整个流程，单个节点失败不影响其他预览
-    }
-
-    console.log(`[Engine-${this.promptId}] Preview execution finished for change on ${changedNodeId}.`);
-  }
 
   /**
    * 中断当前执行。
@@ -488,7 +448,7 @@ export class ExecutionEngine {
    * @param errorDetails 错误详情
    * @param executionType 执行类型
    */
-  private sendNodeError(nodeId: NanoId, errorDetails: any, executionType: ExecutionType): void {
+  private sendNodeError(nodeId: NanoId, errorDetails: any): void {
     // 对于预览错误，我们可能不想广播给所有人，或者使用不同的消息类型
     // 但当前设计是统一处理
     const payload: NodeErrorPayload = {
@@ -509,37 +469,32 @@ export class ExecutionEngine {
    */
   private async executeNode(
     nodeId: NanoId,
-    inputs: Record<string, any>,
-    executionType: ExecutionType
+    inputs: Record<string, any>
   ): Promise<{ status: ExecutionStatus; error?: any }> {
     const node = this.nodes[nodeId];
     if (!node) {
       const errorMsg = `Node with ID ${nodeId} not found in engine.`;
-      this.sendNodeError(nodeId, errorMsg, executionType);
+      this.sendNodeError(nodeId, errorMsg);
       return { status: ExecutionStatus.ERROR, error: errorMsg };
     }
     const definition = nodeManager.getNode(node.fullType);
 
     if (!definition || !definition.execute) {
       const errorMsg = `Node type ${node.fullType} not found or not executable.`;
-      this.sendNodeError(nodeId, errorMsg, executionType);
+      this.sendNodeError(nodeId, errorMsg);
       return { status: ExecutionStatus.ERROR, error: errorMsg };
     }
 
-    // 发送节点开始执行状态 (仅完整执行需要？预览可能不需要)
-    if (executionType === 'full') {
-      this.nodeStates[nodeId] = ExecutionStatus.RUNNING;
-      const executingPayload: NodeExecutingPayload = { promptId: this.promptId, nodeId };
-      this.wsManager.broadcast('NODE_EXECUTING', executingPayload); // 或者只发给相关 client?
-      console.log(`[Engine-${this.promptId}] Executing node ${nodeId} (${node.fullType})...`);
-    } else {
-      console.log(`[Engine-${this.promptId}] Executing preview for node ${nodeId} (${node.fullType})...`);
-    }
+    // 发送节点开始执行状态
+    this.nodeStates[nodeId] = ExecutionStatus.RUNNING;
+    const executingPayload: NodeExecutingPayload = { promptId: this.promptId, nodeId };
+    this.wsManager.broadcast('NODE_EXECUTING', executingPayload); // 或者只发给相关 client?
+    console.log(`[Engine-${this.promptId}] Executing node ${nodeId} (${node.fullType})...`);
 
 
     try {
       // 检查中断标志
-      if (this.isInterrupted && executionType === 'full') {
+      if (this.isInterrupted) {
         throw new Error('Execution interrupted by user.');
       }
 
@@ -560,7 +515,7 @@ export class ExecutionEngine {
       const outputs = await definition.execute(inputs, context);
 
       // 检查中断标志 (执行后)
-      if (this.isInterrupted && executionType === 'full') {
+      if (this.isInterrupted) {
         throw new Error('Execution interrupted by user.');
       }
 
@@ -574,12 +529,8 @@ export class ExecutionEngine {
       // }
 
       // 发送节点完成状态
-      this.sendNodeComplete(nodeId, outputs, executionType);
-      if (executionType === 'full') {
-        console.log(`[Engine-${this.promptId}] Node ${nodeId} completed.`);
-      } else {
-        console.log(`[Engine-${this.promptId}] Node ${nodeId} preview completed.`);
-      }
+      this.sendNodeComplete(nodeId, outputs);
+      console.log(`[Engine-${this.promptId}] Node ${nodeId} completed.`);
       return { status: ExecutionStatus.COMPLETE };
 
     } catch (error: any) {
@@ -588,66 +539,18 @@ export class ExecutionEngine {
       this.nodeStates[nodeId] = this.isInterrupted ? ExecutionStatus.INTERRUPTED : ExecutionStatus.ERROR;
 
       // 发送节点错误状态
-      this.sendNodeError(nodeId, errorMessage, executionType);
+      this.sendNodeError(nodeId, errorMessage);
       return { status: this.nodeStates[nodeId], error: errorMessage };
     }
   }
 
-  /**
-   * 获取指定节点的所有下游节点 ID (递归)
-   * @param nodeId 起始节点 ID
-   * @returns 下游节点 ID 数组 (按拓扑顺序)
-   */
-  private getDownstreamNodes(nodeId: NanoId): NanoId[] {
-    const downstream: NanoId[] = [];
-    const visited: Set<NanoId> = new Set();
-    const queue: NanoId[] = [nodeId]; // 从变更的节点开始
-
-    // 重新进行一次拓扑排序以确保顺序正确
-    const fullOrder = this.topologicalSort(this.nodes, this.edges);
-    const startIndex = fullOrder.indexOf(nodeId);
-    if (startIndex === -1) return []; // 节点不在图中
-
-    // 使用队列进行广度优先搜索来查找所有可达的下游节点
-    const reachable: Set<NanoId> = new Set();
-    const searchQueue: NanoId[] = [nodeId];
-    visited.add(nodeId);
-
-    while (searchQueue.length > 0) {
-      const currentId = searchQueue.shift()!;
-      // 找到所有从 currentId 出发的边
-      this.edges.forEach(edge => {
-        if (edge.sourceNodeId === currentId) {
-          const targetId = edge.targetNodeId;
-          if (!visited.has(targetId)) {
-            visited.add(targetId);
-            reachable.add(targetId);
-            searchQueue.push(targetId);
-          }
-        }
-      });
-    }
-
-    // 从完整拓扑排序中筛选出可达的下游节点
-    for (let i = startIndex + 1; i < fullOrder.length; i++) {
-      const downstreamNodeId = fullOrder[i];
-      if (reachable.has(downstreamNodeId)) {
-        downstream.push(downstreamNodeId);
-      }
-    }
-
-    return downstream;
-  }
-
-
   // --- WebSocket 发送辅助方法 ---
 
-  private sendNodeComplete(nodeId: NanoId, output: any, executionType: ExecutionType): void {
+  private sendNodeComplete(nodeId: NanoId, output: any): void {
     const payload: NodeCompletePayload = {
       promptId: this.promptId,
       nodeId,
       output,
-      executionType,
     };
     this.wsManager.broadcast('NODE_COMPLETE', payload); // 考虑是否只发给相关 client
   }

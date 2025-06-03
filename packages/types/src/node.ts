@@ -226,7 +226,6 @@ export interface WorkflowExecutionStatus {
 export enum WebSocketMessageType {
   // 客户端 -> 服务端 (根据 workflow-execution-plan.md V3 调整)
   PROMPT_REQUEST = "PROMPT_REQUEST", // 提交完整工作流执行
-  EXECUTE_PREVIEW_REQUEST = "EXECUTE_PREVIEW_REQUEST", // 请求预览执行
   BUTTON_CLICK = "button_click", // 通过按钮小部件触发操作
   LOAD_WORKFLOW = "load_workflow", // 请求加载特定工作流
   SAVE_WORKFLOW = "save_workflow", // 请求保存当前工作流

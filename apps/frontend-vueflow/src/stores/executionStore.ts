@@ -152,26 +152,37 @@ export const useExecutionStore = defineStore('execution', () => {
   };
 
   // 更新节点执行结果 (完成)
+  // 更新节点执行结果 (完成)
   const updateNodeExecutionResult = (internalId: string, payload: NodeCompletePayload) => {
       const state = ensureTabExecutionState(internalId);
+      // payload.promptId 是消息中携带的 promptId
+      // state.promptId 是当前标签页激活的主工作流的 promptId
+
+      // 检查消息是否与当前活动的主工作流相关
       if (payload.promptId === state.promptId) {
-          console.debug(`[ExecutionStore] Node complete for tab ${internalId}, node ${payload.nodeId}. Type: ${payload.executionType}`, payload.output);
+          console.debug(`[ExecutionStore] Node complete for tab ${internalId} (Main Workflow: ${state.promptId}), node ${payload.nodeId}. Output:`, payload.output);
           state.nodeStates[payload.nodeId] = ExecutionStatus.COMPLETE;
-          delete state.nodeErrors[payload.nodeId]; // 清除错误
+          delete state.nodeErrors[payload.nodeId];
+          delete state.nodeProgress[payload.nodeId];
+
+          // 这是主工作流的结果
+          state.nodeOutputs[payload.nodeId] = payload.output;
+          // 清除该节点的预览输出，因为现在有了最终的、权威的结果
+          delete state.nodePreviewOutputs[payload.nodeId];
+      } else {
+          // 如果 promptId 不匹配主工作流的 promptId，则假定它是预览工作流的结果
+          // 注意：这依赖于预览工作流使用与主工作流不同的 promptId
+          console.debug(`[ExecutionStore] Node complete for tab ${internalId} (Preview Workflow: ${payload.promptId}), node ${payload.nodeId}. Output:`, payload.output);
+          // 即使是预览，也应该更新节点状态，但可能需要区分
+          // 暂时也设置为 COMPLETE，UI层面可以根据是否在 G' 中来决定如何显示
+          state.nodeStates[payload.nodeId] = ExecutionStatus.COMPLETE; // 或者一个特殊的 PREVIEW_COMPLETE? 目前类型不支持
+          delete state.nodeErrors[payload.nodeId]; // 清除错误 (预览也可能出错后成功)
           delete state.nodeProgress[payload.nodeId]; // 清除进度
 
-          if (payload.executionType === 'full') {
-              state.nodeOutputs[payload.nodeId] = payload.output;
-              // 清除该节点的预览输出，因为现在有了最终结果
-              delete state.nodePreviewOutputs[payload.nodeId];
-          } else if (payload.executionType === 'preview') {
-              state.nodePreviewOutputs[payload.nodeId] = payload.output;
-          }
-      } else {
-          console.warn(`[ExecutionStore] Received NODE_COMPLETE for prompt ${payload.promptId} which does not match tab ${internalId}'s current prompt ${state.promptId}. Ignoring node ${payload.nodeId}.`);
+          // 这是预览工作流的结果
+          state.nodePreviewOutputs[payload.nodeId] = payload.output;
       }
   };
-
   // 更新节点错误状态
   const updateNodeError = (internalId: string, payload: NodeErrorPayload) => {
       const state = ensureTabExecutionState(internalId);
