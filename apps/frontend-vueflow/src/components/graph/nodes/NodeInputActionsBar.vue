@@ -161,7 +161,7 @@ const standardActions = computed<NodeInputAction[]>(() => {
 const allAvailableActions = computed<NodeInputAction[]>(() => {
   const customActions = inputDefinition.value.actions || [];
   // 简单合并，后续可以考虑去重或更复杂的合并逻辑
-  return [...standardActions.value, ...customActions];
+  return [...customActions, ...standardActions.value];
 });
 
 // 由于 showConditionKey 已从 NodeInputAction 类型中移除，
