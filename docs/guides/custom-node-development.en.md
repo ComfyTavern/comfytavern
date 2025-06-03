@@ -25,8 +25,9 @@ Ensure your development environment is configured with the following tools:
 
 The main code for custom nodes is typically located in the following directories:
 
-*   **Backend Node Definitions and Logic**: `apps/backend/src/nodes/`
-    *   You can create subdirectories based on node categories, e.g., `apps/backend/src/nodes/MyCustomNodes/`.
+*   **Built-in Node Definitions and Logic**: `apps/backend/src/nodes/` (This is where the project's core built-in nodes are stored).
+*   **Custom/Third-Party Nodes**: It's recommended to place them in the `plugins/nodes/` directory in the project root. You can also configure other paths in the `customNodePaths` array in the [`config.json`](config.json:1) file at the project root to load your nodes. After modifying the configuration or adding new nodes, please restart the backend service.
+    *   Within these paths, you can create subdirectories based on node categories, e.g., `plugins/nodes/MyCustomNodes/`.
     *   Each node usually corresponds to a `.ts` file, e.g., `MyCustomNode.ts`.
 *   **Client Scripts (if needed)**: Typically placed in a `client-scripts/` subdirectory within the node definition file's directory, e.g., `apps/backend/src/nodes/MyCustomNodes/client-scripts/MyCustomNode.js`.
 *   **Frontend Base Node Component**: The frontend rendering and basic interaction logic for all nodes are handled uniformly by the component located at `apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue`. In most cases, you do not need to modify this file, but understanding how it works will help you better design the node's `config` object to control the frontend UI.
@@ -314,13 +315,13 @@ To ensure that the ComfyTavern system can recognize and use your custom nodes, y
           // ... Other node definitions
         ];
         ```
-*   **Node Loader (`NodeLoader.ts`)**: The project's backend includes a node loader (roughly located at `apps/backend/src/nodes/NodeLoader.ts`) that scans specified node directories (e.g., subdirectories under `apps/backend/src/nodes/`), looks for `index.ts` files that export a `definitions` array, and thus loads all custom nodes. `NodeManager.ts` is responsible for managing these loaded node definitions.
+*   **Node Loader (`NodeLoader.ts`)**: The project's backend includes a node loader (roughly located at `apps/backend/src/nodes/NodeLoader.ts`). It first loads built-in node directories (e.g., subdirectories under `apps/backend/src/nodes/`). Then, it reads the `customNodePaths` configuration item (defaults to `["plugins/nodes"]`) from the [`config.json`](config.json:1) file in the project root and scans these paths for nodes. The loader looks for `index.ts` files that export a `definitions` array in these directories to load all custom nodes. `NodeManager.ts` is responsible for managing these loaded node definitions.
 
 ## 7. A Complete Example
 
 Let's conceive a simple "String Reverse" node as an example.
 
-**`apps/backend/src/nodes/MyCustomNodes/StringReverseNode.ts`**:
+**`plugins/nodes/MyCustomNodes/StringReverseNode.ts`**:
 ```typescript
 import type { NodeDefinition, InputDefinition, OutputDefinition, NodeExecutionContext } from '@comfytavern/types';
 import { DataFlowType } from '@comfytavern/types';
@@ -364,7 +365,7 @@ export const definition: NodeDefinition = {
 };
 ```
 
-**`apps/backend/src/nodes/MyCustomNodes/index.ts`**:
+**`plugins/nodes/MyCustomNodes/index.ts`**:
 ```typescript
 import type { NodeDefinition } from '@comfytavern/types';
 import { definition as StringReverseNodeDefinition } from './StringReverseNode';
@@ -375,7 +376,7 @@ export const definitions: NodeDefinition[] = [
   // ... Other node definitions
 ];
 ```
-Add the `MyCustomNodes` directory to the scan path of `NodeLoader.ts` (if needed). After restarting the system, this "String Reverse" node should appear under the "Text Processing" category in the frontend node panel.
+Ensure that a path like `plugins/nodes/MyCustomNodes/` aligns with the `customNodePaths` configuration in [`config.json`](config.json:1) (or simply use the default `plugins/nodes/` directory). After restarting the system, this "String Reverse" node should appear under the "Text Processing" category in the frontend node panel.
 
 ## 8. Best Practices
 

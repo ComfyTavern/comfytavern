@@ -25,8 +25,9 @@
 
 自定义节点的主要代码通常位于以下目录：
 
-*   **后端节点定义和逻辑**: `apps/backend/src/nodes/`
-    *   你可以根据节点的类别创建子目录，例如 `apps/backend/src/nodes/MyCustomNodes/`。
+*   **内置节点定义和逻辑**: `apps/backend/src/nodes/` (这里存放项目内置的核心节点)。
+*   **自定义/第三方节点**: 默认推荐放置在项目根目录下的 `plugins/nodes/` 目录中。你也可以在项目根目录的 [`config.json`](config.json:1) 文件中的 `customNodePaths` 数组中配置其他路径来加载你的节点。修改配置或添加新节点后，请重启后端服务。
+    *   在这些路径下，你可以根据节点的类别创建子目录，例如 `plugins/nodes/MyCustomNodes/`。
     *   每个节点通常对应一个 `.ts` 文件，例如 `MyCustomNode.ts`。
 *   **客户端脚本 (如果需要)**: 通常放置在节点定义文件所在目录下的 `client-scripts/` 子目录中，例如 `apps/backend/src/nodes/MyCustomNodes/client-scripts/MyCustomNode.js`。
 *   **前端基础节点组件**: 所有节点的前端渲染和基础交互逻辑由位于 `apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue` 的组件统一处理。通常情况下，你不需要修改此文件，但理解其工作原理有助于你更好地设计节点的 `config` 对象以控制前端UI。
@@ -314,13 +315,13 @@ async execute(
           { ...MyCustomNodeTwoDefinition, namespace: 'myCustomNamespace' },
         ];
         ```
-*   **节点加载器 (`NodeLoader.ts`)**: 项目的后端包含一个节点加载器 (大致路径 `apps/backend/src/nodes/NodeLoader.ts`)，它会扫描指定的节点目录（例如 `apps/backend/src/nodes/` 下的各个子目录），查找这些导出了 `definitions` 数组的 `index.ts` 文件，从而加载所有自定义节点。`NodeManager.ts` 则负责管理这些加载到的节点定义。
+*   **节点加载器 (`NodeLoader.ts`)**: 项目的后端包含一个节点加载器 (大致路径 `apps/backend/src/nodes/NodeLoader.ts`)。它首先会加载内置节点目录（例如 `apps/backend/src/nodes/` 下的各个子目录）。然后，它会读取项目根目录 [`config.json`](config.json:1) 文件中的 `customNodePaths` 配置项（默认为 `["plugins/nodes"]`），并扫描这些路径下的节点。加载器会查找这些目录中导出了 `definitions` 数组的 `index.ts` 文件，从而加载所有自定义节点。`NodeManager.ts` 则负责管理这些加载到的节点定义。
 
 ## 7. 一个完整的示例
 
 让我们构思一个简单的“字符串反转”节点作为示例。
 
-**`apps/backend/src/nodes/MyCustomNodes/StringReverseNode.ts`**:
+**`plugins/nodes/MyCustomNodes/StringReverseNode.ts`**:
 ```typescript
 import type { NodeDefinition, InputDefinition, OutputDefinition, NodeExecutionContext } from '@comfytavern/types';
 import { DataFlowType } from '@comfytavern/types';
@@ -364,7 +365,7 @@ export const definition: NodeDefinition = {
 };
 ```
 
-**`apps/backend/src/nodes/MyCustomNodes/index.ts`**:
+**`plugins/nodes/MyCustomNodes/index.ts`**:
 ```typescript
 import type { NodeDefinition } from '@comfytavern/types';
 import { definition as StringReverseNodeDefinition } from './StringReverseNode';
@@ -375,7 +376,7 @@ export const definitions: NodeDefinition[] = [
   // ... 其他节点定义
 ];
 ```
-将 `MyCustomNodes` 目录添加到 `NodeLoader.ts` 的扫描路径中（如果需要），系统重启后，这个“字符串反转”节点就应该会出现在前端节点面板的“文本处理”分类下了。
+确保 `plugins/nodes/MyCustomNodes/` 这样的路径符合 [`config.json`](config.json:1) 中 `customNodePaths` 的配置（或者直接使用默认的 `plugins/nodes/` 目录）。系统重启后，这个“字符串反转”节点就应该会出现在前端节点面板的“文本处理”分类下了。
 
 ## 8. 最佳实践
 
