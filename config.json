@@ -9,5 +9,8 @@
   },
   "execution": {
     "max_concurrent_workflows": 5
-  }
+  },
+  "customNodePaths": [
+    "plugins/nodes"
+  ]
 }

@@ -1,6 +1,6 @@
 import { Elysia } from "elysia"; // 移除未使用的 t
 import { cors } from "@elysiajs/cors";
-import { PORT, FRONTEND_URL, WORKFLOWS_DIR } from "./config"; // 移除未使用的 PROJECTS_BASE_DIR
+import { PORT, FRONTEND_URL, WORKFLOWS_DIR, CUSTOM_NODE_PATHS } from "./config"; // 导入 CUSTOM_NODE_PATHS
 import { promises as fs } from "node:fs";
 import path, { join, dirname } from "node:path"; // 移除未使用的 basename, extname
 import { fileURLToPath } from "node:url";
@@ -19,14 +19,28 @@ import { characterApiRoutes } from "./routes/characterRoutes"; // 导入角色�
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename); // This will be apps/backend/src when running src/index.ts
 
-// Since we'll run src/index.ts directly, __dirname is already the correct base for src/nodes
-const nodesPath = join(__dirname, "nodes");
-
 // 保留一些日志以供确认，但可以简化
 console.log(`[ComfyTavern Backend] NODE_ENV (for informational purposes): ${process.env.NODE_ENV}`);
 console.log(`[ComfyTavern Backend] Running from __dirname: ${__dirname}`);
-console.log(`[ComfyTavern Backend] Path for NodeLoader.loadNodes: ${nodesPath}`);
-await NodeLoader.loadNodes(nodesPath);
+
+// 1. 加载内置节点
+const builtInNodesPath = join(__dirname, "nodes");
+console.log(`[ComfyTavern Backend] Loading built-in nodes from: ${builtInNodesPath}`);
+await NodeLoader.loadNodes(builtInNodesPath);
+
+// 2. 加载自定义节点路径 (从 config.json 读取)
+if (CUSTOM_NODE_PATHS && CUSTOM_NODE_PATHS.length > 0) {
+  console.log(`[ComfyTavern Backend] Loading custom nodes from paths specified in config.json: ${CUSTOM_NODE_PATHS.join(', ')}`);
+  for (const customPath of CUSTOM_NODE_PATHS) {
+    // NodeLoader.loadNodes 期望的路径是相对于项目根目录的字符串，
+    // 或者可以由 path.resolve 正确解析的路径。
+    // CUSTOM_NODE_PATHS 中的路径 (如 "plugins/nodes") 已经是相对于项目根目录的。
+    console.log(`[ComfyTavern Backend] Attempting to load nodes from custom path: ${customPath}`);
+    await NodeLoader.loadNodes(customPath);
+  }
+} else {
+  console.log("[ComfyTavern Backend] No custom node paths configured in config.json.");
+}
 // 工作流和项目目录从 config.ts 导入
 // const workflowsDir = WORKFLOWS_DIR; // 使用导入的常量
 // const projectsBaseDir = PROJECTS_BASE_DIR; // 使用导入的常量
