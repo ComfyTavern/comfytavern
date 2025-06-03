@@ -57,13 +57,7 @@ export const definition: NodeDefinition = {
       description: '要合并的文本输入',
       required: true,
       multi: true,
-      // acceptTypes is handled by dataFlowType and matchCategories
-      config: {
-        multiline: true,
-        placeholder: '文本内容将在这里显示',
-        default: '',
-        label: '文本输入'
-      }
+      matchCategories: ['UiBlock'], // 添加 UiBlock
     }
   },
 

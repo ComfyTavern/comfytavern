@@ -47,6 +47,7 @@ export const definition: NodeDefinition = {
       displayName: '多行文本',
       description: '多行文本输入测试',
       required: true,
+      matchCategories: ['UiBlock'], // 添加 UiBlock
       config: {
         default: '这是默认的\n多行文本',
         multiline: true,
@@ -58,7 +59,7 @@ export const definition: NodeDefinition = {
       displayName: 'Markdown文本',
       description: 'Markdown 内容输入测试',
       required: false,
-      matchCategories: ['Markdown', "CanPreview"], // 明确是 Markdown
+      matchCategories: ['Markdown', "CanPreview", 'UiBlock'], // 明确是 Markdown, 添加 UiBlock
       config: {
         default: '# 标题\n\n这是一段*Markdown*文本，包含一个[链接](https://example.com)。\n\n```python\nprint("Hello")\n```',
         multiline: true, // 确保前端识别为多行处理
@@ -115,7 +116,7 @@ export const definition: NodeDefinition = {
       displayName: 'JSON对象',
       description: 'JSON对象输入测试 (内联查看器)',
       required: false,
-      matchCategories: ['Json', "CanPreview"], // 确保前端能识别
+      matchCategories: ['Json', "CanPreview", 'UiBlock'], // 确保前端能识别, 添加 UiBlock
       config: {
         default: { "name": "咕咕", "type": "猫头鹰娘", "skill": "卖萌" }, // 对象形式
         placeholder: '请输入或编辑JSON对象'

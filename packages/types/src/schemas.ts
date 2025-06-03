@@ -40,13 +40,15 @@ export const BuiltInSocketMatchCategory = {
   STREAM_CHUNK: "StreamChunk",
   COMBO_OPTION: "ComboOption",
   REGEX_RULE_ARRAY: "RegexRuleArray", // ++ 新增，用于标记 RegexRule[] 类型
-
+  /** 标记此输入组件应作为“大块”或“块级”元素渲染，而不是行内紧凑型 */
+  UI_BLOCK: "UiBlock",
+ 
   // 新增用于操作提示的类别
   /** 标记此输入支持标准的内联预览操作按钮 */
   CanPreview: "CanPreview",
   /** 标记此输入不应显示其类型的默认编辑操作按钮 (如果其类型通常有默认编辑按钮) */
   NoDefaultEdit: "NoDefaultEdit",
-
+ 
   // 行为标签
   BEHAVIOR_WILDCARD: "BehaviorWildcard",
   BEHAVIOR_CONVERTIBLE: "BehaviorConvertible",
@@ -147,6 +149,7 @@ export const GroupSlotInfoSchema = z.object({
   dataFlowType: z.enum(Object.values(DataFlowType) as [DataFlowTypeName, ...DataFlowTypeName[]]),
   matchCategories: z.array(z.string()).optional(),
   allowDynamicType: z.boolean().optional(),
+  hideHandle: z.boolean().optional(), // 是否隐藏连接点 (Handle)
 }));
 /** 类型推断：节点组插槽的详细信息 */
 export type GroupSlotInfo = z.infer<typeof GroupSlotInfoSchema>;

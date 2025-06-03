@@ -796,7 +796,7 @@ const handleActionTriggered = (payload: {
                   </div>
                 </template>
                 <!-- Tooltip 的触发器是 Handle -->
-                <Handle :id="String(output.key)" type="source" :position="Position.Right" :class="[
+                <Handle v-if="output.hideHandle !== true" :id="String(output.key)" type="source" :position="Position.Right" :class="[
                   styles.handle,
                   styles.handleRight,
                   getHandleTypeClass(output.dataFlowType),
@@ -859,7 +859,8 @@ const handleActionTriggered = (payload: {
           <!-- 输入连接点 Handle，并添加右键菜单事件 -->
           <!-- 条件：如果不是按钮类型，则显示 Handle -->
           <div v-if="
-            !(
+            input.hideHandle !== true && // 新增：如果 hideHandle 不为 true
+            !( // 且不是触发器类型
               input.dataFlowType === DataFlowType.WILDCARD &&
               input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)
             )
@@ -1019,23 +1020,15 @@ const handleActionTriggered = (payload: {
           !shouldShowSorter(input) &&
           props.type !== 'core:GroupInput' &&
           props.type !== 'core:GroupOutput' &&
-          getInputComponent(input.dataFlowType, input.config, input.matchCategories) &&
-          // ( // 条件 A 已移除，因为 getInputComponent 会处理 InlineRegexRuleDisplay
-            // 条件 B: 已知的“大块”组件 (HISTORY, 多行 STRING/MARKDOWN, JSON, REGEX_RULE_ARRAY)
-            (
-              (
-                (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.CHAT_HISTORY)) ||
-                (input.dataFlowType === DataFlowType.STRING && input.config?.multiline) ||
-                (input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.MARKDOWN)) ||
-                (input.dataFlowType === DataFlowType.OBJECT && input.matchCategories?.includes(BuiltInSocketMatchCategory.JSON)) ||
-                (input.dataFlowType === DataFlowType.ARRAY && input.matchCategories?.includes(BuiltInSocketMatchCategory.REGEX_RULE_ARRAY)) // ++ 新增对 REGEX_RULE_ARRAY 的判断
-              ) &&
-              ( // 这些组件的连接状态判断
-                (input.dataFlowType === DataFlowType.STRING && input.config?.display_only) ||
-                !isInputConnected(String(input.key)) ||
-                (isInputConnected(String(input.key)) && input.config?.showReceivedValue)
-              )
-            // ) // 移除的条件 A 的闭合括号
+          getInputComponent(input.dataFlowType, input.config, input.matchCategories) && // 确保有组件可渲染
+          // 新的条件：检查 UI_BLOCK 分类，并保留原有的连接状态和显示策略判断
+          (
+            input.matchCategories?.includes(BuiltInSocketMatchCategory.UI_BLOCK) &&
+            ( // 保留的连接状态和显示策略判断
+              (input.dataFlowType === DataFlowType.STRING && input.config?.display_only) ||
+              !isInputConnected(String(input.key)) ||
+              (isInputConnected(String(input.key)) && input.config?.showReceivedValue)
+            )
           )
         " class="param-content" @mousedown.stop>
           <component :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"

@@ -28,8 +28,6 @@ export const definition: NodeDefinition = {
       displayName: '当前值',
       description: '当前内部存储的数值',
       config: {
-        // 这个值通常由节点内部管理，但允许显示
-        // 可以考虑设为 display_only 或根据需要调整
         default: 0, // 初始值将在 execute 中设置
         min: 0,
         max: 4294967295 // 2^32 - 1

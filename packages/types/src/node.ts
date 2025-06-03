@@ -59,6 +59,7 @@ export interface SlotDefinitionBase {
   dataFlowType: DataFlowTypeName; // 数据流类型
   matchCategories?: string[]; // 匹配类别，用于类型检查和连接建议
   allowDynamicType?: boolean; // 标记该插槽是否支持从 'ANY' 动态变为具体类型
+  hideHandle?: boolean; // 是否隐藏连接点 (Handle)
 }
 
 // 输入定义
