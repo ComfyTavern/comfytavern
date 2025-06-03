@@ -51,6 +51,7 @@ Here are some built-in recommended tags:
 *   `Trigger`: Trigger signal (often used for button-like interactions)
 *   `StreamChunk`: Data stream chunk
 *   `ComboOption`: Used to mark values originating from or applicable to COMBO (dropdown suggestion) selections
+*   `UI_BLOCK`: (UI Rendering Hint) Marks this input component to be rendered as a "block" or "block-level" element, rather than an inline compact widget.
 
 **Behavioral Tags:**
 
@@ -95,6 +96,7 @@ The following are commonly used configuration items within an `InputDefinition`'
 *   `required: boolean | ((inputs: Record<string, any>, configValues: Record<string, any>) => boolean)`: (Input only) Defines if this input is mandatory.
 *   `multi: boolean`: (Input only) If `true`, this input slot can accept multiple connections.
     *   `acceptTypes: string[]`: (Only when `multi: true`) Defines a list of `DataFlowType` or `SocketMatchCategory` tags that this multi-input slot accepts. Exact matching is performed during connection.
+*   `hideHandle: boolean`: (Optional) If `true`, the connection point (Handle) for this slot will be hidden in the frontend UI.
 
 ### 2.2. Tooltip Information
 
