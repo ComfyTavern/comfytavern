@@ -19,7 +19,7 @@
 *   **提升可维护性与灵活性**：使添加新输入UI或调整现有行为变得更容易、更安全。
 *   **`BaseNode.vue` 瘦身**：使其模板更简洁，职责更单一。
 
-## 2. 核心架构方案：`SlotUIDescriptorFactory` + `SlotRenderer`
+## 2. 核心架构方案：`SlotUIDescriptorFactory` 与 `BaseNode.vue` 模板优化
 
 我们将采用一种工厂模式结合通用渲染组件的架构：
 
@@ -33,7 +33,7 @@
         *   `componentName: string | null`：要渲染的主输入组件的名称 (如 'StringInput', 'InlineRegexRuleDisplay', 'CodeEditor')，或者由 `config.component` 指定的自定义组件名。如果为 `null`，则不渲染主输入组件。
         *   `componentProps: Record<string, any>`：传递给主输入组件的 props。
         *   `showLabel: boolean`：是否显示标签。
-        *   `labelText: string`：标签的文本。
+        *   `labelText: string`：标签的文本 (通常来源于 `inputDefinition.displayName`；对于按钮类输入，可能来源于 `inputDefinition.config.label`)。
         *   `showHandle: boolean`：是否显示连接 Handle。
         *   `handleType: 'target' | 'source'` (对于输入总是 'target')。
         *   `handleId: string`。
@@ -41,16 +41,13 @@
         *   `layoutHints: string[]`：可选的布局提示 (如 'compact', 'full-width')。
         *   其他必要的UI控制标志。
 
-*   **`SlotRenderer.vue`** (Vue 组件):
-    *   **职责**：接收一个 `SlotUIDescriptor` 对象作为 prop。
-    *   其模板根据 `descriptor` 的属性来动态渲染插槽的完整UI，包括 Handle、标签、主输入组件 (使用动态组件 `<component :is="descriptor.componentName" ... />`)、以及 `NodeInputActionsBar`。
-    *   此组件内部的模板逻辑将相对简单，主要是数据绑定和少数结构性 `v-if` (例如，`v-if="descriptor.showLabel"`）。
 
 *   **`BaseNode.vue` 的改造**:
-    *   其模板中渲染输入插槽的部分将大幅简化。它不再包含复杂的 `v-if`/`v-else-if` 链来选择组件。
+    *   其模板中渲染输入插槽的部分将进行优化。虽然渲染逻辑仍在 `BaseNode.vue` 中，但条件判断将基于 `SlotUIDescriptor`，而不是直接解析 `inputDefinition` 中的多个离散属性。
     *   对于每个输入插槽，它将：
         1.  调用 `SlotUIDescriptorFactory` (或 `useSlotUIDescriptor` Composable) 并传入该插槽的 `inputDefinition`，以获取对应的 `SlotUIDescriptor`。
-        2.  将得到的 `SlotUIDescriptor` 传递给 `<SlotRenderer :descriptor="slotUIDescriptor" />` 组件进行渲染。
+        2.  `BaseNode.vue` 的模板将直接使用这个 `SlotUIDescriptor` 的属性来决定如何渲染UI元素（如Handle、标签、主输入组件、动作按钮等），通过 `v-if` 和动态组件 `<component :is="slotUIDescriptor.componentName" ... />` 实现。
+    *   目标是使 `BaseNode.vue` 内部的渲染逻辑更加清晰和结构化，减少直接依赖 `inputDefinition` 原始字段的复杂判断。
 
 ## 3. UI决策原则与输入源
 
@@ -61,8 +58,8 @@
         *   `component: string` (直接指定组件名，具有最高优先级)。
         *   `multiline: boolean` (**核心标志**，用于区分“大块”组件和“小巧”控件)。
         *   `suggestions: any[]` (用于下拉/自动完成)。
-        *   `languageHint: string` (用于代码/Markdown等编辑器)。
-        *   `defaultValue`, `placeholder`, `label` 等。
+        *   `languageHint: string` (用于代码/Markdown等编辑器，是前端组件如 `RichCodeEditor` 期望的 prop 名称)。
+        *   `default`, `placeholder`, `label` (主要用于按钮类型输入的显示文本) 等。
         *   *未来可在此处添加更多精细的UI控制配置。*
     2.  `inputDefinition.dataFlowType: DataFlowTypeName`。
     3.  `inputDefinition.matchCategories: string[]` (使用现有为主，如 `CODE`, `JSON`, `MARKDOWN`, `REGEX_RULE_ARRAY`, `CanPreview`, `NoDefaultEdit`, `TRIGGER`)。
@@ -104,15 +101,14 @@
 *   **节点定义**:
     *   需要审查并修改部分现有节点的输入定义，确保所有期望渲染为“大块”内联组件的输入都在其 `config` 中添加 `multiline: true`。例如，[`ApplyRegexNode.ts`](apps/backend/src/nodes/processors/ApplyRegexNode.ts:1) 中的 `inlineRegexRules` 输入。
 *   **前端组件**:
-    *   [`BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue:1) 将进行较大规模的重构，移除大部分输入渲染相关的 `v-if` 逻辑。
+    *   [`BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue:1) 将进行重构，其模板中的输入渲染条件判断将基于 `SlotUIDescriptor`。
     *   需要创建新的 `SlotUIDescriptorFactory` (或 Vue Composable `useSlotUIDescriptor`)。
-    *   需要创建新的 `SlotRenderer.vue` 组件。
-    *   现有的具体输入组件 (如 [`StringInput.vue`](apps/frontend-vueflow/src/components/graph/inputs/StringInput.vue:1), [`InlineRegexRuleDisplay.vue`](apps/frontend-vueflow/src/components/graph/inputs/InlineRegexRuleDisplay.vue:1) 等) 基本保持不变，它们将被 `SlotRenderer.vue` 动态加载。
+    *   现有的具体输入组件 (如 [`StringInput.vue`](apps/frontend-vueflow/src/components/graph/inputs/StringInput.vue:1), [`InlineRegexRuleDisplay.vue`](apps/frontend-vueflow/src/components/graph/inputs/InlineRegexRuleDisplay.vue:1) 等) 基本保持不变，它们将由 `BaseNode.vue` 根据 `SlotUIDescriptor` 动态加载。
     *   [`getInputComponent`](apps/frontend-vueflow/src/components/graph/inputs/index.ts) 函数的职责可能会被 `SlotUIDescriptorFactory` 吸收或调整。
 
 ## 5. 预期收益
 
-*   **大幅降低 `BaseNode.vue` 的模板复杂度和维护成本。**
+*   **优化 `BaseNode.vue` 的模板结构，使其条件渲染逻辑更清晰，降低维护成本。**
 *   **UI渲染决策逻辑高度集中和内聚**，更易于理解、测试和扩展。
 *   **节点输入UI的行为定义更加清晰、声明式和统一。**
 *   **提高添加新输入类型或UI变体的效率和安全性。**
@@ -123,11 +119,9 @@
 2.  **设计 `SlotUIDescriptorFactory` 的详细逻辑**:
     *   绘制决策流程图或编写伪代码。
     *   明确处理各种 `inputDefinition` 组合的规则。
-3.  **设计 `SlotRenderer.vue` 组件的模板骨架和核心逻辑**。
-4.  **识别并修改需要更新 `config.multiline: true` 的现有节点定义**。
-5.  **（可选）进一步评估是否确实需要 `UI_NO_DEFAULT_INPUT_WIDGET` Category**，或者是否有其他方式实现其意图。
-6.  **分步实施**：
+3.  **识别并修改需要更新 `config.multiline: true` 的现有节点定义**。
+4.  **（可选）进一步评估是否确实需要 `UI_NO_DEFAULT_INPUT_WIDGET` Category**，或者是否有其他方式实现其意图。
+5.  **分步实施**：
     *   可以先从 `SlotUIDescriptor` 定义和 `SlotUIDescriptorFactory` 的骨架开始。
-    *   然后实现 `SlotRenderer.vue`。
-    *   逐步将 `BaseNode.vue` 中的输入渲染逻辑迁移到新架构。
+    *   逐步将 `BaseNode.vue` 中的输入渲染逻辑重构为基于 `SlotUIDescriptor`。
     *   最后更新节点定义和相关文档。
