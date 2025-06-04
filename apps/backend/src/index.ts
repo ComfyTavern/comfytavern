@@ -152,8 +152,8 @@ app.listen(PORT, (server) => {
   if (server) {
     // 移除对 attachServer 的调用，因为 Elysia 通过 app.ws 处理 WebSocket
     // wsManager.attachServer(server); // <--- 移除此行
-    console.log(`\x1b[93m🦊[ComfyTavern Backend] Elysia is running at http://${server.hostname}:${server.port}\x1b[0m`);
-    console.log(`\x1b[96m🦊[ComfyTavern 后端] 服务器已于端口 ${PORT} 启动，访问地址为 http://localhost:${PORT}\x1b[0m`);
+    console.log(`\n\x1b[93m🦊[ComfyTavern Backend] Elysia is running at http://${server.hostname}:${server.port}\x1b[0m`);
+    console.log(`\n\x1b[96m🦊[ComfyTavern 后端] 服务器已于端口 ${PORT} 启动，访问地址为 http://localhost:${PORT}\x1b[0m\n`);
   } else {
     console.error("Failed to start server.");
     process.exit(1); // 启动失败则退出

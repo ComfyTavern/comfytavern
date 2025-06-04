@@ -1,6 +1,6 @@
 import { fileURLToPath, URL } from 'node:url';
 import path from 'node:path';
-import { defineConfig } from 'vite';
+import { defineConfig, ViteDevServer, PreviewServer, Logger } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import VueDevTools from 'vite-plugin-vue-devtools';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
@@ -17,6 +17,22 @@ const packageJson = JSON.parse(fs.readFileSync(rootPackageJsonPath, 'utf-8'));
 // 使用 'Version' (大写 V) 获取版本号，如果不存在则默认为 'unknown'
 const appVersion = packageJson.Version || 'unknown';
 
+// 自定义启动日志相关
+const customLogPrintedKey = Symbol('customLogPrintedKeyForComfyTavern');
+
+function printCustomDevLog(logger: Logger) {
+  logger.info('\n  ✨ ComfyTavern 开发模式启动 ✨');
+  logger.info(`  前端开发服务器已就绪，请访问 http://localhost:${frontendPort}/ 开始你的创作之旅！`);
+  logger.info('  提示：Vue DevTools 已启用，按 Alt(⌥)+Shift(⇧)+D 切换。');
+  logger.info('  如果遇到问题，可以先查看项目文档或向社区求助哦。\n');
+}
+
+function printCustomPreviewLog(logger: Logger) {
+  logger.info('\n  ✨ ComfyTavern 构建部署模式 ✨');
+  logger.info(`  前端服务器已就绪，请访问 http://localhost:${frontendPort}/ 进行体验！`);
+  logger.info('  如果遇到问题，请复制这个控制台信息并提交到社区。\n');
+}
+
 // Vite 配置文档：https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
@@ -30,6 +46,33 @@ export default defineConfig({
       // 是否为 `node:` 协议导入提供 polyfill
       protocolImports: true,
     }),
+    {
+      name: 'custom-startup-log-comfytavern',
+      configureServer(server: ViteDevServer) {
+        const originalPrintUrls = server.printUrls;
+        server.printUrls = () => {
+          originalPrintUrls();
+          printCustomDevLog(server.config.logger);
+        };
+      },
+      configurePreviewServer(server: PreviewServer) {
+        const originalLoggerInfo = server.config.logger.info;
+        server.config.logger.info = (msg, options) => {
+          originalLoggerInfo(msg, options);
+
+          if (typeof msg === 'string' && msg.includes('Local:') && !(server.httpServer as any)[customLogPrintedKey]) {
+            printCustomPreviewLog(server.config.logger);
+            (server.httpServer as any)[customLogPrintedKey] = true;
+          }
+        };
+
+        server.httpServer.on('close', () => {
+          if ((server.httpServer as any)[customLogPrintedKey]) {
+            delete (server.httpServer as any)[customLogPrintedKey];
+          }
+        });
+      },
+    },
   ],
   resolve: {
     alias: {
