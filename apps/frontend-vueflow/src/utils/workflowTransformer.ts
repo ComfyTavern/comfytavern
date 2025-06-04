@@ -245,9 +245,10 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
         Object.keys(vueNode.data.configValues).length > 0 && {
         configValues: vueNode.data.configValues,
       }),
-      // 保存 size (如果存在)
-      ...(vueNode.width !== undefined &&
-        vueNode.height !== undefined && { size: { width: vueNode.width, height: vueNode.height } }),
+      // 保存 width (如果存在)
+      ...(vueNode.width !== undefined && { width: vueNode.width }),
+      // 保存 height (如果存在)
+      ...(vueNode.height !== undefined && { height: vueNode.height }),
       // 保存 displayName (如果存在且非默认)
       // 优先使用 vueNode.data.displayName，然后是 vueNode.data.label，最后是 vueNode.label
       // 确保 displayName 存储的是字符串类型
@@ -433,8 +434,8 @@ export async function transformWorkflowToVueFlow( // <--- 标记为 async
         type: storageNode.type,
         position: storageNode.position,
         data: vueFlowData,
-        width: storageNode.size?.width,
-        height: storageNode.size?.height,
+        width: storageNode.width, // 直接从 storageNode 读取 width
+        height: storageNode.height, // 直接从 storageNode 读取 height
         label: nodeDisplayLabel, // 顶层 label 使用 displayName
       };
 

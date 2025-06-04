@@ -300,7 +300,8 @@ export interface WorkflowStorageNode {
   id: string; // Nano ID (例如: 10个字符)
   type: string; // 节点类型标识符 (例如: 'RandomNumberNode')
   position: { x: number; y: number }; // 在画布上的位置
-  size?: { width: number; height: number }; // (可选) 尺寸覆盖
+  width?: number; // (可选) 节点的宽度
+  height?: number; // (可选) 节点的高度
   displayName?: string; // (可选) 用户为节点定义的标签，覆盖默认显示名称
   customDescription?: string; // (可选) 用户为节点定义的描述，覆盖默认描述
   customSlotDescriptions?: { inputs?: Record<string, string>; outputs?: Record<string, string> }; // (可选) 用户为此节点实例上特定插槽定义的描述
