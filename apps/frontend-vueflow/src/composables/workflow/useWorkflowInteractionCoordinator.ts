@@ -742,46 +742,87 @@ export function useWorkflowInteractionCoordinator() {
       return;
     }
 
-    // 获取当前元素和要移除元素的 ID 集合
-    const elementIdsToRemoveSet = new Set(elementsToRemove.map((el) => el.id));
-    const removedEdgesFromInput: Edge[] = []; // 存储从输入端移除的边
+    // 获取用户明确选择要删除的元素 ID 集合
+    const explicitlyRemovedElementIds = new Set(elementsToRemove.map((el) => el.id));
+    const removedEdgesFromInput: Edge[] = []; // 存储因 inputConnectionOrder 更新而“移除”的边信息
 
     // 使用快照中的元素进行过滤，并准备更新 inputConnectionOrders
     const nextSnapshot = klona(currentSnapshot); // 深拷贝以进行修改
 
+    // --- 新增逻辑：识别所有需要被删除的元素（包括因节点删除而隐式删除的边）---
+    const nodesBeingExplicitlyRemovedIds = new Set<string>();
+    elementsToRemove.forEach(el => {
+      // 检查 el 是否为节点 (没有 source 和 target 属性，或者说不是边)
+      // VueFlow 的 Edge 类型定义明确包含 source 和 target
+      if (!Object.prototype.hasOwnProperty.call(el, 'source') && !Object.prototype.hasOwnProperty.call(el, 'target')) {
+        nodesBeingExplicitlyRemovedIds.add(el.id);
+      }
+    });
+
+    const implicitlyRemovedEdgeIds = new Set<string>();
+    if (nodesBeingExplicitlyRemovedIds.size > 0) {
+      currentSnapshot.elements.forEach(el => {
+        // 检查 el 是否为边
+        if (Object.prototype.hasOwnProperty.call(el, 'source') && Object.prototype.hasOwnProperty.call(el, 'target')) {
+          const edge = el as Edge; // 类型断言
+          if (nodesBeingExplicitlyRemovedIds.has(edge.source) || nodesBeingExplicitlyRemovedIds.has(edge.target)) {
+            implicitlyRemovedEdgeIds.add(edge.id);
+          }
+        }
+      });
+    }
+
+    const allElementIdsToRemove = new Set([...explicitlyRemovedElementIds, ...implicitlyRemovedEdgeIds]);
+    // --- 新增逻辑结束 ---
+
     const nodesToUpdateInternals = new Set<string>();
 
-    // 筛选出要移除的边，并处理其目标节点的 inputConnectionOrders
-    const edgesBeingRemoved = elementsToRemove.filter(el => "source" in el) as Edge[];
-    for (const edgeToRemove of edgesBeingRemoved) {
+    // 筛选出所有实际将被移除的边 (无论是显式选择还是因节点删除而隐式移除)
+    // 这些边如果连接到多输入节点，需要更新其 inputConnectionOrders
+    const actualEdgesBeingRemoved = currentSnapshot.elements.filter(
+      (el): el is Edge => "source" in el && allElementIdsToRemove.has(el.id)
+    );
+
+    for (const edgeToRemove of actualEdgesBeingRemoved) { // 使用 actualEdgesBeingRemoved
       const targetNodeIndex = nextSnapshot.elements.findIndex(n => n.id === edgeToRemove.target && !("source" in n));
       if (targetNodeIndex !== -1) {
-        const targetNode = nextSnapshot.elements[targetNodeIndex] as VueFlowNode;
-        nodesToUpdateInternals.add(targetNode.id); // 标记目标节点需要更新视图
-        if (targetNode.data?.inputConnectionOrders && edgeToRemove.targetHandle) {
-          const { originalKey: targetOriginalKey } = parseSubHandleId(edgeToRemove.targetHandle);
-          if (targetNode.data.inputConnectionOrders[targetOriginalKey]) {
-            const currentOrder: string[] = targetNode.data.inputConnectionOrders[targetOriginalKey]; // 显式指定类型
-            const newOrder = currentOrder.filter((id: string) => id !== edgeToRemove.id); // 为 id 指定类型
-            if (newOrder.length !== currentOrder.length) {
-              targetNode.data.inputConnectionOrders[targetOriginalKey] = newOrder;
-              if (newOrder.length === 0) {
-                delete targetNode.data.inputConnectionOrders[targetOriginalKey];
+        // 注意：这里操作的是 nextSnapshot.elements，它之后会被基于 allElementIdsToRemove 从 currentSnapshot 重新构建。
+        // 但 inputConnectionOrders 的修改是针对 nextSnapshot 中仍然存在的节点。
+        // 如果 targetNode 本身在 allElementIdsToRemove 中，它最终会被移除，这里的修改就无意义了。
+        // 因此，只应在 targetNode 不会被删除时更新其 inputConnectionOrders。
+        if (!allElementIdsToRemove.has(edgeToRemove.target)) {
+          const targetNode = nextSnapshot.elements[targetNodeIndex] as VueFlowNode; // 这个 targetNode 是 nextSnapshot 里的
+          nodesToUpdateInternals.add(targetNode.id); // 标记目标节点需要更新视图
+
+          if (targetNode.data?.inputConnectionOrders && edgeToRemove.targetHandle) {
+            const { originalKey: targetOriginalKey } = parseSubHandleId(edgeToRemove.targetHandle);
+            if (targetNode.data.inputConnectionOrders[targetOriginalKey]) {
+              const currentOrder: string[] = targetNode.data.inputConnectionOrders[targetOriginalKey];
+              const newOrder = currentOrder.filter((id: string) => id !== edgeToRemove.id);
+              if (newOrder.length !== currentOrder.length) {
+                targetNode.data.inputConnectionOrders[targetOriginalKey] = newOrder;
+                if (newOrder.length === 0) {
+                  delete targetNode.data.inputConnectionOrders[targetOriginalKey];
+                }
+                console.debug(`[InteractionCoordinator:removeElementsAndRecord] Updated inputConnectionOrders for node ${targetNode.id}, handle ${targetOriginalKey}. Removed edge ${edgeToRemove.id}`);
+                // removedEdgesFromInput 记录的是因 inputConnectionOrder 变化而“逻辑上”移除的边，
+                // 即使这条边可能因为其他原因（如节点删除）而被物理删除。
+                // 这个数组主要用于历史记录的 details，以区分是直接删除边还是因顺序调整。
+                // 但如果边本身就在 allElementIdsToRemove 中，它会被物理删除，这里的记录可能有些冗余，但无害。
+                removedEdgesFromInput.push(klona(edgeToRemove)); // 克隆以防万一
               }
-              console.debug(`[InteractionCoordinator:removeElementsAndRecord] Updated inputConnectionOrders for node ${targetNode.id}, handle ${targetOriginalKey}. Removed edge ${edgeToRemove.id}`);
-              removedEdgesFromInput.push(edgeToRemove);
             }
           }
         }
       }
-      // 同时标记源节点，以防万一其视图也受影响
-      if (edgeToRemove.source) {
+      // 同时标记源节点，以防万一其视图也受影响 (如果源节点没被删除的话)
+      if (edgeToRemove.source && !allElementIdsToRemove.has(edgeToRemove.source)) {
         nodesToUpdateInternals.add(edgeToRemove.source);
       }
     }
 
-    // 更新 nextSnapshot.elements
-    nextSnapshot.elements = nextSnapshot.elements.filter((el) => !elementIdsToRemoveSet.has(el.id));
+    // 更新 nextSnapshot.elements，基于 currentSnapshot 和 allElementIdsToRemove
+    nextSnapshot.elements = currentSnapshot.elements.filter((el) => !allElementIdsToRemove.has(el.id));
 
 
     // 检查是否真的有元素被移除，避免无效的历史记录
@@ -791,26 +832,26 @@ export function useWorkflowInteractionCoordinator() {
       );
       return;
     }
-    
+
     // 将移除的边的信息添加到历史记录条目的 details 中
     if (removedEdgesFromInput.length > 0 && entry.details) {
-        entry.details.removedEdgesFromInputOnElementRemove = removedEdgesFromInput.map(e => ({
-            id: e.id,
-            source: e.source,
-            sourceHandle: e.sourceHandle,
-            target: e.target,
-            targetHandle: e.targetHandle,
-        }));
+      entry.details.removedEdgesFromInputOnElementRemove = removedEdgesFromInput.map(e => ({
+        id: e.id,
+        source: e.source,
+        sourceHandle: e.sourceHandle,
+        target: e.target,
+        targetHandle: e.targetHandle,
+      }));
     } else if (removedEdgesFromInput.length > 0) {
-        entry.details = {
-            removedEdgesFromInputOnElementRemove: removedEdgesFromInput.map(e => ({
-                id: e.id,
-                source: e.source,
-                sourceHandle: e.sourceHandle,
-                target: e.target,
-                targetHandle: e.targetHandle,
-            }))
-        };
+      entry.details = {
+        removedEdgesFromInputOnElementRemove: removedEdgesFromInput.map(e => ({
+          id: e.id,
+          source: e.source,
+          sourceHandle: e.sourceHandle,
+          target: e.target,
+          targetHandle: e.targetHandle,
+        }))
+      };
     }
 
 
@@ -818,13 +859,30 @@ export function useWorkflowInteractionCoordinator() {
     // workflowManager.setElements(internalId, nextSnapshot.elements);
     // 使用 applyStateSnapshot 来确保 workflowData (如果被修改) 也被正确应用
     const applied = workflowManager.applyStateSnapshot(internalId, nextSnapshot);
+    console.log(`[DEBUG removeElementsAndRecord ${internalId}] After applyStateSnapshot. nextSnapshot.elements (${nextSnapshot.elements.length}):`, nextSnapshot.elements.map(el => el.id));
+    const managerElementsBeforeSet = workflowManager.getElements(internalId);
+    console.log(`[DEBUG removeElementsAndRecord ${internalId}] After applyStateSnapshot. workflowManager.getElements() BEFORE explicit setElements (${managerElementsBeforeSet.length}):`, managerElementsBeforeSet.map(el => el.id));
     if (!applied) {
-        console.error(`[InteractionCoordinator:removeElementsAndRecord] Failed to apply snapshot for tab ${internalId}.`);
-        // 根据需要处理错误，例如恢复到 currentSnapshot
-        return;
+      console.error(`[InteractionCoordinator:removeElementsAndRecord] Failed to apply snapshot for tab ${internalId}.`);
+      // 根据需要处理错误，例如恢复到 currentSnapshot
+      return;
     }
 
+    // 显式更新 workflowManager 内部的 elements 状态
+    await workflowManager.setElements(internalId, nextSnapshot.elements);
+    const managerElementsAfterSet = workflowManager.getElements(internalId);
+    console.log(`[DEBUG removeElementsAndRecord ${internalId}] AFTER explicit workflowManager.setElements. workflowManager.getElements() (${managerElementsAfterSet.length}):`, managerElementsAfterSet.map(el => el.id));
 
+    console.log(`[DEBUG removeElementsAndRecord ${internalId}] Before recordHistory. Snapshot to be recorded elements (${nextSnapshot.elements.length}):`, nextSnapshot.elements.map(el => el.id));
+
+
+    const instance = workflowViewManagement.getVueFlowInstance(internalId);
+    if (instance) {
+      console.log(`[DEBUG removeElementsAndRecord ${internalId}] Before updateNodeInternals. VueFlow instance nodes (${instance.getNodes.value.length}):`, instance.getNodes.value.map((n: VueFlowNode) => n.id));
+      console.log(`[DEBUG removeElementsAndRecord ${internalId}] Before updateNodeInternals. VueFlow instance edges (${instance.getEdges.value.length}):`, instance.getEdges.value.map((e: Edge) => e.id));
+    } else {
+      console.warn(`[DEBUG removeElementsAndRecord ${internalId}] Before updateNodeInternals. Could not get VueFlow instance.`);
+    }
     // 记录历史
     recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
 

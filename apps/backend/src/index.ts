@@ -31,12 +31,15 @@ await NodeLoader.loadNodes(builtInNodesPath);
 // 2. 加载自定义节点路径 (从 config.json 读取)
 if (CUSTOM_NODE_PATHS && CUSTOM_NODE_PATHS.length > 0) {
   console.log(`[ComfyTavern Backend] Loading custom nodes from paths specified in config.json: ${CUSTOM_NODE_PATHS.join(', ')}`);
+  const projectRootDir = join(__dirname, "..", "..", ".."); // 项目根目录 (从 apps/backend/src 返回到 comfytavern)
   for (const customPath of CUSTOM_NODE_PATHS) {
     // NodeLoader.loadNodes 期望的路径是相对于项目根目录的字符串，
     // 或者可以由 path.resolve 正确解析的路径。
     // CUSTOM_NODE_PATHS 中的路径 (如 "plugins/nodes") 已经是相对于项目根目录的。
-    console.log(`[ComfyTavern Backend] Attempting to load nodes from custom path: ${customPath}`);
-    await NodeLoader.loadNodes(customPath);
+    // 此处将其解析为绝对路径
+    const absoluteCustomPath = join(projectRootDir, customPath);
+    console.log(`[ComfyTavern Backend] Attempting to load nodes from custom path: ${absoluteCustomPath}`);
+    await NodeLoader.loadNodes(absoluteCustomPath);
   }
 } else {
   console.log("[ComfyTavern Backend] No custom node paths configured in config.json.");

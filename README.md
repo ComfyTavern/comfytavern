@@ -34,6 +34,12 @@
     - 创作者可通过直观选项调整应用面板的界面风格（如主题色、对话框样式等，具体视面板类型而定）。
     - 开发者可深入底层，扩展多模态功能或集成更复杂的 AI 模型。
 
+### **核心文档与指南**
+
+为了帮助开发者更好地理解和扩展 ComfyTavern，我们提供了以下核心文档：
+
+- **[节点类型系统](docs/node-types/node-types.zh.md)**：详细介绍了 ComfyTavern 的节点类型系统，包括数据流类型 (`DataFlowType`)、插槽匹配类别 (`SocketMatchCategory`) 以及它们之间的连接规则，是理解节点数据交互的基础。
+- **[自定义节点开发指南](docs/guides/custom-node-development.zh.md)**：提供了详细的自定义节点开发步骤，包括后端定义、执行逻辑实现和前端渲染影响，帮助开发者扩展 ComfyTavern 的功能。
 ---
 
 ### **类比描述**
@@ -62,11 +68,18 @@
 
 ```
 apps/
-  ├── backend/         # 后端服务
-  └── frontend-vueflow/# 前端 (基于 Vue Flow)
+  ├── backend/         # 后端服务 (Elysia + Bun)
+  └── frontend-vueflow/# 前端 (Vue 3 + Vite + VueFlow)
+docs/                   # 文档
+  ├── guides/          # 开发指南
+  ├── node-types/      # 节点类型定义
 packages/
-  ├── types/          # 共享类型定义
+  ├── types/          # 共享 TypeScript 类型定义 (Zod schemas)
   └── utils/          # 共享工具函数
+plugins/
+  └── nodes/          # 用于放置第三方或用户自定义节点
+projects/               # 用户创建的工作流项目数据
+library/                # 全局共享资产库
 ```
 
 ## 开发环境要求

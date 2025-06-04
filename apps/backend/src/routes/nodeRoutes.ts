@@ -6,11 +6,13 @@ import { nodeManager } from '../services/NodeManager';
 import { NodeLoader } from '../services/NodeLoader'; // 导入 NodeLoader
 import { wsManager } from '../index'; // 导入 wsManager
 import { WebSocketMessageType, type NodesReloadedPayload } from '@comfytavern/types'; // 导入 WebSocket 类型
+import { CUSTOM_NODE_PATHS } from '../config'; // <--- 咕咕：导入自定义节点路径配置
 
 // 获取当前文件所在目录的上级目录 (即 src 目录)
 const __filename = fileURLToPath(import.meta.url);
 const __srcDirname = dirname(dirname(__filename)); // routes -> src
-const nodesPath = join(__srcDirname, "nodes"); // 计算 nodes 目录路径
+const builtInNodesPath = join(__srcDirname, "nodes"); // <--- 咕咕：重命名为 builtInNodesPath 以示区分
+const projectRootDir = join(__srcDirname, "..", ".."); // <--- 咕咕：计算项目根目录
 
 // 路由组：处理 /api/nodes
 export const nodeApiRoutes = new Elysia({ prefix: '/api' })
@@ -25,8 +27,22 @@ export const nodeApiRoutes = new Elysia({ prefix: '/api' })
       console.log('[API] Cleared existing nodes.');
 
       // 2. 重新加载节点
-      await NodeLoader.loadNodes(nodesPath);
-      console.log('[API] Finished reloading nodes from disk.');
+      // 2.1 加载内置节点
+      console.log(`[API] Reloading built-in nodes from: ${builtInNodesPath}`);
+      await NodeLoader.loadNodes(builtInNodesPath);
+
+      // 2.2 加载自定义节点
+      if (CUSTOM_NODE_PATHS && CUSTOM_NODE_PATHS.length > 0) {
+        console.log(`[API] Reloading custom nodes from paths: ${CUSTOM_NODE_PATHS.join(', ')}`);
+        for (const customPath of CUSTOM_NODE_PATHS) {
+          const absoluteCustomPath = join(projectRootDir, customPath);
+          console.log(`[API] Attempting to reload nodes from custom path: ${absoluteCustomPath}`);
+          await NodeLoader.loadNodes(absoluteCustomPath);
+        }
+      } else {
+        console.log("[API] No custom node paths configured for reload.");
+      }
+      console.log('[API] Finished reloading all nodes from disk.');
 
       const reloadedNodeCount = nodeManager.getDefinitions().length;
       console.log(`[API] ${reloadedNodeCount} nodes reloaded.`);
