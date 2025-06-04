@@ -2,6 +2,7 @@
 import { spawn, type SpawnOptions } from 'child_process';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { existsSync, copyFileSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -65,6 +66,27 @@ class ComfyTavernServer {
 
   async start() {
     console.log('正在启动 ComfyTavern...');
+
+    // 检查并复制配置文件
+    const configPath = resolve(__dirname, 'config.json');
+    const templateConfigPath = resolve(__dirname, 'config.template.json');
+
+    if (!existsSync(configPath)) {
+      if (existsSync(templateConfigPath)) {
+        try {
+          copyFileSync(templateConfigPath, configPath);
+          console.log(`配置文件 ${configPath} 未找到，已从模板 ${templateConfigPath} 复制创建。`);
+        } catch (err) {
+          console.error(`从模板复制配置文件失败: ${err}`);
+          // 配置文件对于程序运行至关重要，如果复制失败则退出
+          process.exit(1);
+        }
+      } else {
+        console.warn(`警告: 配置文件 ${configPath} 未找到，且模板文件 ${templateConfigPath} 也不存在。请创建配置文件。`);
+        // 配置文件和模板都不存在，程序无法继续，退出
+        process.exit(1);
+      }
+    }
 
     // 启动后端服务器
     const backendPath = resolve(__dirname, 'apps/backend');
