@@ -26,8 +26,6 @@ export class NodeLoader {
             // 尝试导入并处理 index.ts
             // 使用 file:/// 协议并添加时间戳以尝试破坏缓存
             const module = await import(`file:///${indexPath}?v=${Date.now()}`);
-            console.log(`Imported node package entry point (cache-busted): ${indexPath}`);
-
             // 新增：检查并处理导出的 definitions 数组
             if (module.definitions && Array.isArray(module.definitions)) {
               let registeredCountFromIndex = 0;
@@ -41,12 +39,14 @@ export class NodeLoader {
                 }
               }
               if (registeredCountFromIndex > 0) {
-                console.log(`Successfully registered ${registeredCountFromIndex} node definition(s) from ${indexPath}`);
+                console.log(`Imported and successfully registered ${registeredCountFromIndex} node definition(s) from (cache-busted): ${indexPath}`);
               } else {
-                // console.warn(`No valid definitions found in exported 'definitions' array from ${indexPath}.`); // 允许为空
+                // 导入了，但 definitions 为空或无效
+                console.log(`Imported node package entry point (cache-busted): ${indexPath} (0 definitions registered from 'definitions' array)`);
               }
             } else {
-              // console.log(`No 'definitions' array exported from ${indexPath}. Assuming direct registration or other mechanism if it was just executed.`);
+              // 导入了，但没有 definitions 导出
+              console.log(`Imported node package entry point (cache-busted): ${indexPath} (no 'definitions' array exported)`);
             }
           } catch (indexError) {
             // 处理导入 index.ts 时的错误
@@ -106,8 +106,14 @@ export class NodeLoader {
       console.log(`Finished scanning node directory: ${absoluteDirPath}`);
       // 日志输出修改为显示 fullType
       console.log('Registered nodes:', nodeManager.getDefinitions().map(n => `${n.namespace}:${n.type}`));
-    } catch (error) {
-      console.error(`Error reading node directory ${absoluteDirPath}:`, error);
+    } catch (error: any) { // 明确指定 error 类型
+      if (error && error.code === 'ENOENT') {
+        // 如果目录不存在，给出更友好的提示，而不是作为严重错误
+        console.warn(`[NodeLoader] Custom node directory not found: ${absoluteDirPath}`);
+        console.warn(`[NodeLoader] Please ensure the path in config.json is correct and the directory exists, or create it if it's for new custom nodes.`);
+      } else {
+        console.error(`Error reading node directory ${absoluteDirPath}:`, error);
+      }
     }
   }
 }
