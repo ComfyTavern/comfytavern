@@ -206,19 +206,19 @@ const { nodeDefinitions } = storeToRefs(nodeStore); // 从 nodeStore 获取响�
 const workflowStore = useWorkflowStore(); // 实例化 WorkflowStore
 const tabStore = useTabStore(); // 实例化 TabStore
 const activeTabId = computed(() => tabStore.activeTabId); // 获取活动标签页 ID
-const currentWorkflowInterface = computed(() => {
-  if (activeTabId.value) {
-    // 使用 getTabState 方法获取特定标签页的状态
-    const state = workflowStore.getTabState(activeTabId.value);
-    if (state && state.workflowData) {
-      return {
-        inputs: state.workflowData.interfaceInputs || {},
-        outputs: state.workflowData.interfaceOutputs || {},
-      };
-    }
-  }
-  return undefined;
-});
+// const currentWorkflowInterface = computed(() => {
+//   if (activeTabId.value) {
+//     // 使用 getTabState 方法获取特定标签页的状态
+//     const state = workflowStore.getTabState(activeTabId.value);
+//     if (state && state.workflowData) {
+//       return {
+//         inputs: state.workflowData.interfaceInputs || {},
+//         outputs: state.workflowData.interfaceOutputs || {},
+//       };
+//     }
+//   }
+//   return undefined;
+// });
 
 // 初始化连线逻辑
 const { removeNodeConnections } = useCanvasConnections({
@@ -600,7 +600,7 @@ const invalidNodeGroupEdgeIds = useNodeGroupConnectionValidation({
   nodes: getNodes, // 传递响应式引用
   edges: getEdges, // 传递响应式引用
   nodeDefinitions, // 传递响应式引用
-  currentWorkflowInterface, // 传递当前工作流的接口信息
+  // currentWorkflowInterface, // 传递当前工作流的接口信息 - 已在 composable 内部获取
   // areTypesCompatible, // 不再需要传递，Composable 会直接导入
 });
 

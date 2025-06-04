@@ -33,7 +33,7 @@ export function useWorkflowInteractionCoordinator() {
   const workflowInterfaceManagement = useWorkflowInterfaceManagement();
   const workflowGrouping = useWorkflowGrouping();
   const tabStore = useTabStore();
-  const { requestPreviewExecution, isPreviewEnabled } = useWorkflowPreview(); // 使用新的预览 composable
+  const { triggerPreview: requestPreviewExecution, isPreviewEnabled } = useWorkflowPreview(); // 使用新的预览 composable
 
   // 创建一个新的 computed Ref 来包装 tabStore.activeTabId，确保它是一个 Ref 对象
   const coordinatorActiveTabIdRef = computed(() => tabStore.activeTabId);
@@ -175,7 +175,12 @@ export function useWorkflowInteractionCoordinator() {
     recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
 
     // 触发预览 (如果启用)
-    requestPreviewExecution(internalId, nodeId, inputKey, value);
+    // requestPreviewExecution(internalId, nodeId, inputKey, value);
+    // triggerPreview 现在只需要 changedNodeId 和可选的 changeDetails
+    // internalId 会在 triggerPreview 内部通过 tabStore 获取
+    if (isPreviewEnabled.value) { // 检查预览是否启用
+      requestPreviewExecution(nodeId, { type: 'input', key: inputKey, value });
+    }
   }
 
   /**
@@ -353,7 +358,12 @@ export function useWorkflowInteractionCoordinator() {
     // 注意：预览通常针对输入值的变化。配置值的变化是否需要触发预览取决于具体情况。
     // 如果配置变化影响输出，则可能需要触发预览。
     // 这里假设配置变化也需要触发预览。
-    requestPreviewExecution(internalId, nodeId, configKey, value);
+    // requestPreviewExecution(internalId, nodeId, configKey, value);
+    // triggerPreview 现在只需要 changedNodeId 和可选的 changeDetails
+    // internalId 会在 triggerPreview 内部通过 tabStore 获取
+    if (isPreviewEnabled.value) { // 检查预览是否启用
+      requestPreviewExecution(nodeId, { type: 'config', key: configKey, value });
+    }
   }
 
   /**

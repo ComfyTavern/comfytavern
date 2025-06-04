@@ -122,7 +122,7 @@ import type {
     NodeProgressPayload,
     NodeCompletePayload,
     NodeErrorPayload,
-    ExecutePreviewRequestPayload,
+    // ExecutePreviewRequestPayload, // 根据设计文档移除
     // 导入接口类型
     ExecutionNode,
     ExecutionEdge,
@@ -130,7 +130,7 @@ import type {
     NanoId,
     ExecutionsListResponse,
     PromptStatusResponse,
-    ExecutionType, // 导入类型
+    // ExecutionType, // 根据设计文档移除
 } from './workflowExecution';
 // 导入枚举值
 import { ExecutionStatus } from './workflowExecution';
@@ -144,7 +144,7 @@ export type {
     NodeProgressPayload,
     NodeCompletePayload,
     NodeErrorPayload,
-    ExecutePreviewRequestPayload,
+    // ExecutePreviewRequestPayload, // 根据设计文档移除
     // 导出接口类型（使用原始名称）
     ExecutionNode,
     ExecutionEdge,
@@ -152,7 +152,7 @@ export type {
     NanoId,
     ExecutionsListResponse,
     PromptStatusResponse,
-    ExecutionType, // 导出类型
+    // ExecutionType, // 根据设计文档移除
 };
 export { ExecutionStatus }; // 导出值（枚举）
 // --- 结束显式导出 ---
