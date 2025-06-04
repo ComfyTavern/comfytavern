@@ -710,7 +710,7 @@ const handleActionTriggered = (payload: {
         <span v-else class="node-title truncate">{{ label || "未命名节点" }}</span>
       </div>
       <!-- 头部右侧：跳转按钮和分类 -->
-      <div class="flex items-center gap-1">
+      <div class="flex items-center gap-1 flex-shrink-0">
         <!-- 跳转到引用的工作流按钮 -->
         <Tooltip v-if="referencedWorkflowId" content="跳转到引用的工作流" placement="top" :maxWidth="400">
           <button
@@ -720,7 +720,7 @@ const handleActionTriggered = (payload: {
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
           </button>
         </Tooltip>
-        <span v-if="data.category" class="node-category">{{ data.category }}</span>
+        <span v-if="data.category" class="node-category whitespace-nowrap">{{ data.category }}</span>
       </div>
     </div>
 
