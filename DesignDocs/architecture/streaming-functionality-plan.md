@@ -60,7 +60,13 @@
     }
     ```
     -   `isLastChunk` 将由执行引擎在检测到节点的异步生成器执行完毕后，在最后一个相关的 `NODE_YIELD` 事件中设置为 `true`。
-    -   其他必要的 `eventData.type` 包括：`NODE_EXECUTION_START`, `NODE_EXECUTION_COMPLETE` (含成功/失败状态), `WORKFLOW_EXECUTION_START`, `WORKFLOW_EXECUTION_COMPLETE` 等。
+    -   其他必要的 `eventData.type`（在 `eventData` 中）还包括：
+        -   `NODE_EXECUTION_START`: 节点开始执行。
+        -   `NODE_EXECUTION_COMPLETE`: 节点成功执行完毕。`eventData` 可能包含最终结果的摘要。
+        -   `NODE_EXECUTION_FAILED`: 节点执行因未捕获的内部错误而失败。`eventData` 包含错误详情。此事件意味着该节点所有流（若有）均已异常终止。
+        -   `NODE_EXECUTION_CANCELLED`: 节点执行因用户（或外部）请求而被取消。`eventData` 可能包含取消原因。此事件意味着该节点所有流（若有）均已终止。
+        -   `WORKFLOW_EXECUTION_START`: 整个工作流开始执行。
+        -   `WORKFLOW_EXECUTION_COMPLETE`: 整个工作流执行完毕。`eventData` 应包含最终状态（如 `success`, `failed`, `cancelled`）和可能的输出。
 
 #### 3.2.2. `ChunkPayload` 接口 (初步)
 
@@ -123,14 +129,39 @@
     -   使用该数组实例化 `LiveStreamHandleImpl`。
     -   `return { stream_handle: new LiveStreamHandleImpl(raw_chunks) }`。
 
-#### 3.2.6. 错误处理流程 (SSE流意外中断)
+#### 3.2.6. 节点执行终止与流状态处理
 
-1.  **LLM适配器**: 检测到与LLM服务的SSE连接意外中断（网络错误、服务器关闭等），捕获底层错误，并向上（向LLM节点）抛出一个特定的错误。
-2.  **LLM节点**: 在其 `execute` 方法的 `try...catch` 块中捕获来自适配器的错误。在 `catch` 块中，`yield` 一个特殊的 `ChunkPayload`，其 `type` 为 `'error_chunk'`（或 `isError: true`），内容包含错误信息。然后，生成器结束执行（可能 `return` 一个表示节点执行失败的 `NodeResult`）。
-3.  **执行引擎**:
-    -   接收到 `yield` 的错误 `ChunkPayload`，将其通过事件总线发布（在 `eventData` 中标记 `isError: true`）。
-    -   在该LLM节点的异步生成器执行完毕后，为与此错误块相关的事件（或紧随其后的空信号）在事件总线上标记 `isLastChunk: true`。
-    -   根据LLM节点最终 `return` 的错误状态，决定工作流的后续行为。
+节点的执行和其可能产生的 `yield` 流有以下几种主要的终止情况，执行引擎需要明确处理并发出相应的事件信号：
+
+1.  **正常结束 / 空流结束 (Successfully Completed Stream / Empty Stream)**
+    *   **场景**: 节点（如LLM节点）的 `async function* execute()` 方法正常执行完毕，所有数据块均已 `yield`，或者该方法从头到尾没有 `yield` 任何数据块（空流）。
+    *   **引擎行为**:
+        *   当节点的异步生成器迭代完成 (`done: true`)：
+            *   如果至少 `yield` 了一个块：为最后一个实际 `yield` 的 `ChunkPayload`（可能是数据块或节点主动 `yield` 的错误块）发布的 `NODE_YIELD` 事件，其 `eventData.isLastChunk` 设为 `true`。
+            *   如果未 `yield` 任何块（空流）：引擎发布一个 `NODE_YIELD` 事件，其 `eventData` 为 `{ yieldedContent: null, isError: false, isLastChunk: true, ... }`。
+        *   随后，引擎发布 `NODE_EXECUTION_COMPLETE` 事件，`eventData` 中可指明执行成功。
+    *   **流状态**: 清晰、正常结束。
+
+2.  **因节点内部错误导致执行失败 (Execution Failed due to Unhandled Node Error)**
+    *   **场景**: 节点的 `execute` 方法（或其调用的适配器）抛出一个未被节点自身 `try...catch` 处理的异常，导致执行引擎捕获此异常。这包括之前描述的“SSE流意外中断”且未被LLM节点优雅处理的情况。
+    *   **LLM节点内建议的错误处理**: LLM节点应尽量 `try...catch` 来自适配器的错误，并 `yield` 一个 `type: 'error_chunk'` 的 `ChunkPayload`，然后其生成器正常结束。这种错误属于上述“正常结束”场景（最后一个块是错误块）。
+    *   **引擎对未捕获异常的行为**:
+        *   如果引擎捕获到从节点 `execute` 方法（或其生成器）中逃逸出来的未捕获异常：
+            *   立即停止对该节点生成器的进一步处理。
+            *   向事件总线发布 `NODE_EXECUTION_FAILED` 事件。`eventData` 包含 `sourceNodeId` 和详细错误信息。
+    *   **流状态**: `NODE_EXECUTION_FAILED` 事件本身即宣告该节点所有相关的 `yield` 流均已强行、非正常终止。订阅方收到此事件后，应清理所有等待状态。
+
+3.  **因用户/外部请求导致执行取消 (Execution Cancelled by User/External Request)**
+    *   **场景**: 执行引擎收到针对某个正在执行（可能正在流式输出）的节点的取消请求。
+    *   **引擎行为**:
+        *   通知目标节点取消（例如，通过执行上下文中的取消令牌/状态）。
+    *   **节点响应**:
+        *   节点的 `execute` 方法应设计为可响应取消请求。检测到取消后，它应尽快停止工作（例如，中止对LLM适配器的调用），可以选择性地 `yield` 一个表示“已取消”的 `info_chunk`，然后其生成器结束，并 `return` 一个表示执行状态为“已取消”的 `NodeResult`。
+    *   **引擎事件发布**:
+        *   当引擎确认节点因取消请求而结束执行时（基于节点返回的“已取消”状态或引擎的强行终止），向事件总线发布 `NODE_EXECUTION_CANCELLED` 事件。`eventData` 包含 `sourceNodeId` 和可能的取消原因（如 `'USER_REQUEST'`)。
+    *   **流状态**: `NODE_EXECUTION_CANCELLED` 事件宣告该节点所有相关的 `yield` 流均已因取消而终止。订阅方应清理等待状态。
+
+通过这三种明确的节点执行终止事件 (`NODE_EXECUTION_COMPLETE`, `NODE_EXECUTION_FAILED`, `NODE_EXECUTION_CANCELLED`)，以及 `NODE_YIELD` 事件中的 `isLastChunk` 标记，可以为流的生命周期提供清晰、可靠的管理。
 
 ## 4. 后续阶段（阶段二与阶段三）的初步思考
 
