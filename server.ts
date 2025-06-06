@@ -2,7 +2,7 @@
 import { spawn, type SpawnOptions } from 'child_process';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync, copyFileSync } from 'fs';
+import { existsSync, copyFileSync, readFileSync, writeFileSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -71,6 +71,7 @@ class ComfyTavernServer {
     const configPath = resolve(__dirname, 'config.json');
     const templateConfigPath = resolve(__dirname, 'config.template.json');
 
+    let configChanged = false;
     if (!existsSync(configPath)) {
       if (existsSync(templateConfigPath)) {
         try {
@@ -78,12 +79,46 @@ class ComfyTavernServer {
           console.log(`配置文件 ${configPath} 未找到，已从模板 ${templateConfigPath} 复制创建。`);
         } catch (err) {
           console.error(`从模板复制配置文件失败: ${err}`);
-          // 配置文件对于程序运行至关重要，如果复制失败则退出
           process.exit(1);
         }
       } else {
         console.warn(`警告: 配置文件 ${configPath} 未找到，且模板文件 ${templateConfigPath} 也不存在。请创建配置文件。`);
-        // 配置文件和模板都不存在，程序无法继续，退出
+        process.exit(1);
+      }
+    } else if (existsSync(templateConfigPath)) {
+      // 合并模板和现有配置
+      try {
+        const configRaw = readFileSync(configPath, 'utf-8');
+        const templateRaw = readFileSync(templateConfigPath, 'utf-8');
+        const configObj = JSON.parse(configRaw);
+        const templateObj = JSON.parse(templateRaw);
+        function deepMerge(target: any, source: any) {
+          for (const key in source) {
+            if (Object.prototype.hasOwnProperty.call(source, key)) {
+              if (
+                typeof source[key] === 'object' &&
+                source[key] !== null &&
+                !Array.isArray(source[key])
+              ) {
+                if (!target[key] || typeof target[key] !== 'object') {
+                  target[key] = {};
+                  configChanged = true;
+                }
+                deepMerge(target[key], source[key]);
+              } else if (!(key in target)) {
+                target[key] = source[key];
+                configChanged = true;
+              }
+            }
+          }
+        }
+        deepMerge(configObj, templateObj);
+        if (configChanged) {
+          writeFileSync(configPath, JSON.stringify(configObj, null, 2), 'utf-8');
+          console.log(`配置文件已根据模板补全缺失字段。`);
+        }
+      } catch (err) {
+        console.error(`配置文件合并失败: ${err}`);
         process.exit(1);
       }
     }
