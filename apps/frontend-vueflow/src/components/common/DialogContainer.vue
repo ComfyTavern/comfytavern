@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { useDialogService } from '../../services/DialogService';
+import { useDialogService } from '@/services/DialogService';
 import ToastNotification from './ToastNotification.vue';
 
 // 获取对话服务实例

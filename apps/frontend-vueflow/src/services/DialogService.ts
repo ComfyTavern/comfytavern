@@ -1,8 +1,8 @@
 import { ref, shallowRef, markRaw, type Component } from 'vue';
 import { defineStore } from 'pinia';
 
-// 对话框类型
-type DialogType = 'message' | 'confirm' | 'input'; // 添加 input 类型
+// 对话框类型 (DialogInstance 内部使用)
+type DialogInstanceType = 'message' | 'confirm' | 'input';
 
 // 通知类型
 type ToastType = 'info' | 'success' | 'warning' | 'error';
@@ -10,24 +10,26 @@ type ToastType = 'info' | 'success' | 'warning' | 'error';
 // 通知位置
 type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
 
-// 对话框配置
-interface DialogOptions {
+// 通用对话框配置接口 (对应 Dialog.vue 的 props)
+interface UniversalDialogOptions {
   title?: string;
-  message: string;
+  message?: string; // 作为提示信息或slot后备
+  // type prop for Dialog.vue is set internally by showMessage/showConfirm/showInput
+
   confirmText?: string;
   cancelText?: string;
-  showCloseButton?: boolean;
+  showCancelButton?: boolean; 
+  showCloseIcon?: boolean; // 对应 Dialog.vue 的 showCloseIcon
   closeOnBackdrop?: boolean;
-  dangerConfirm?: boolean;
   autoClose?: number;
-}
+  dangerConfirm?: boolean;
 
-// 输入对话框配置
-interface InputDialogOptions extends DialogOptions {
+  // Input-specific props for Dialog.vue
   initialValue?: string;
-  placeholder?: string;
+  inputPlaceholder?: string;
   inputType?: 'text' | 'password' | 'number' | 'textarea';
   inputRows?: number;
+  width?: string;
 }
 
 // 通知配置
@@ -39,20 +41,17 @@ interface ToastOptions {
   position?: ToastPosition;
 }
 
-// 对话框实例
+// 对话框实例接口 (服务内部使用)
 interface DialogInstance {
   id: string;
-  type: DialogType;
-  component: Component;
-  props: Record<string, any>;
-  resolve: (value: boolean | any) => void;
+  type: DialogInstanceType; // 服务内部类型，用于区分 Promise 等
+  component: Component; // 总是 Dialog.vue
+  props: Record<string, any>; // 传递给 Dialog.vue 的 props
+  resolve: (value: boolean | string | void | null) => void; // 调整以适应不同 Promise 返回值
   reject: (reason?: any) => void;
 }
 
-// 通知实例
-
-// 这些是 ToastNotification 组件实际接收的 props，
-// 由 DialogService 在创建时确保提供（包括可选props的默认值）。
+// ToastNotification 组件的具体 Props
 interface ConcreteToastProps {
   visible: boolean;
   title: string;
@@ -64,305 +63,271 @@ interface ConcreteToastProps {
   'onUpdate:visible': (value: boolean) => void;
 }
 
+// 通知实例接口
 interface ToastInstance {
   id: string;
-  props: ConcreteToastProps; // 使用更具体的类型
-  visible: boolean; // 这个 'visible' 是 ToastInstance 级别的，用于管理其在队列中的状态或动画触发
+  props: ConcreteToastProps;
+  visible: boolean;
 }
 
-// 创建DialogService
 export const useDialogService = defineStore('dialogService', () => {
-  // 当前活动的对话框
   const activeDialog = shallowRef<DialogInstance | null>(null);
-  
-  // 对话框队列
   const dialogQueue = ref<DialogInstance[]>([]);
-  
-  // 通知列表
   const toasts = ref<ToastInstance[]>([]);
-  
-  // 最大通知数量
   const maxToasts = 5;
-  
-  // 显示消息对话框
-  function showMessage(options: DialogOptions): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // 动态导入组件
-      import('../components/common/MessageDialog.vue').then((module) => {
-        const dialog: DialogInstance = {
-          id: generateId(),
-          type: 'message',
-          component: markRaw(module.default),
-          props: {
-            visible: true,
-            title: options.title || '消息',
-            message: options.message,
-            confirmText: options.confirmText || '确定',
-            showCloseButton: options.showCloseButton !== undefined ? options.showCloseButton : true,
-            closeOnBackdrop: options.closeOnBackdrop !== undefined ? options.closeOnBackdrop : true,
-            autoClose: options.autoClose || 0,
-            onConfirm: () => {
-              closeDialog(dialog.id);
-              resolve();
-            },
-            onClose: () => {
-              closeDialog(dialog.id);
-              resolve();
-            },
-            'onUpdate:visible': (value: boolean) => {
-              if (!value) {
-                closeDialog(dialog.id);
-                resolve();
-              }
-            }
-          },
-          resolve,
-          reject
-        };
-        
-        addDialog(dialog);
-      }).catch(reject);
-    });
-  }
-  
-  // 显示确认对话框
-  function showConfirm(options: DialogOptions): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      // 动态导入组件
-      import('../components/common/ConfirmDialog.vue').then((module) => {
-        const dialog: DialogInstance = {
-          id: generateId(),
-          type: 'confirm',
-          component: markRaw(module.default),
-          props: {
-            visible: true,
-            title: options.title || '确认',
-            message: options.message,
-            confirmText: options.confirmText || '确定',
-            cancelText: options.cancelText || '取消',
-            showCloseButton: options.showCloseButton !== undefined ? options.showCloseButton : true,
-            closeOnBackdrop: options.closeOnBackdrop !== undefined ? options.closeOnBackdrop : false,
-            dangerConfirm: options.dangerConfirm || false,
-            onConfirm: () => {
-              closeDialog(dialog.id);
-              resolve(true);
-            },
-            onCancel: () => {
-              closeDialog(dialog.id);
-              resolve(false);
-            },
-            onClose: () => {
-              closeDialog(dialog.id);
-              resolve(false);
-            },
-            'onUpdate:visible': (value: boolean) => {
-              if (!value) {
-                closeDialog(dialog.id);
-                resolve(false);
-              }
-            }
-          },
-          resolve,
-          reject
-        };
-        
-        addDialog(dialog);
-      }).catch(reject);
-    });
+
+  function generateId(): string {
+    return `dialog-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  // 显示输入对话框
-  function showInput(options: InputDialogOptions): Promise<string | null> {
-    return new Promise((resolve, reject) => {
-      import('../components/common/InputDialog.vue').then((module) => {
-        const dialog: DialogInstance = {
-          id: generateId(),
-          type: 'input',
-          component: markRaw(module.default),
-          props: {
-            visible: true,
-            title: options.title || '请输入',
-            message: options.message, // message 仍然可以用于显示提示信息
-            confirmText: options.confirmText || '确定',
-            cancelText: options.cancelText || '取消',
-            showCloseButton: options.showCloseButton !== undefined ? options.showCloseButton : true,
-            closeOnBackdrop: options.closeOnBackdrop !== undefined ? options.closeOnBackdrop : false,
-            dangerConfirm: options.dangerConfirm || false,
-            // InputDialog 特有 props
-            initialValue: options.initialValue || '',
-            placeholder: options.placeholder || '请输入内容...',
-            inputType: options.inputType || 'text',
-            inputRows: options.inputRows || 3,
-            onConfirm: (inputValue: string) => {
-              closeDialog(dialog.id);
-              resolve(inputValue);
-            },
-            onCancel: () => {
-              closeDialog(dialog.id);
-              resolve(null); // 用户取消时返回 null
-            },
-            onClose: () => { // MessageDialog 触发的关闭（如点击X）
-              closeDialog(dialog.id);
-              resolve(null); // 关闭也视为取消
-            },
-            'onUpdate:visible': (value: boolean) => {
-              if (!value) {
-                // 如果对话框通过 visible 绑定被外部关闭，确保 Promise 被解决
-                // 检查 activeDialog 是为了避免在已经通过 onConfirm/onCancel/onClose 解决后再解决一次
-                if (activeDialog.value && activeDialog.value.id === dialog.id) {
-                  closeDialog(dialog.id);
-                  resolve(null);
-                }
-              }
-            }
-          },
-          resolve: (value: string | null) => resolve(value), // 调整 resolve 类型
-          reject
-        };
-        addDialog(dialog);
-      }).catch(reject);
-    });
-  }
-  
-  // 显示通知
-  function showToast(options: ToastOptions): string {
-    // 动态导入组件
-    import('../components/common/ToastNotification.vue').then((_module) => {
-      const id = generateId();
-      
-      const toast: ToastInstance = {
-        id,
-        props: {
-          visible: true,
-          title: options.title || '',
-          message: options.message,
-          type: options.type || 'info',
-          duration: options.duration !== undefined ? options.duration : 3000,
-          position: options.position || 'top-right',
-          onClose: () => {
-            removeToast(id);
-          },
-          'onUpdate:visible': (value: boolean) => {
-            if (!value) {
-              removeToast(id);
-            }
-          }
-        },
-        visible: true
-      };
-      
-      // 添加到通知列表
-      toasts.value.push(toast);
-      
-      // 如果超过最大数量，移除最早的通知
-      if (toasts.value.length > maxToasts) {
-        const oldestToast = toasts.value.shift();
-        if (oldestToast) {
-          oldestToast.visible = false;
-        }
-      }
-    });
-    
-    return options.message; // 返回消息作为ID（简化处理）
-  }
-  
-  // 快捷方法：显示成功通知
-  function showSuccess(message: string, title?: string, duration?: number): string {
-    return showToast({
-      title,
-      message,
-      type: 'success',
-      duration
-    });
-  }
-  
-  // 快捷方法：显示错误通知
-  function showError(message: string, title?: string, duration?: number): string {
-    return showToast({
-      title,
-      message,
-      type: 'error',
-      duration
-    });
-  }
-  
-  // 快捷方法：显示警告通知
-  function showWarning(message: string, title?: string, duration?: number): string {
-    return showToast({
-      title,
-      message,
-      type: 'warning',
-      duration
-    });
-  }
-  
-  // 快捷方法：显示信息通知
-  function showInfo(message: string, title?: string, duration?: number): string {
-    return showToast({
-      title,
-      message,
-      type: 'info',
-      duration
-    });
-  }
-  
-  // 添加对话框到队列并显示（如果没有活动对话框）
   function addDialog(dialog: DialogInstance): void {
     dialogQueue.value.push(dialog);
     processDialogQueue();
   }
-  
-  // 处理对话框队列
+
   function processDialogQueue(): void {
     if (!activeDialog.value && dialogQueue.value.length > 0) {
-      const nextDialog = dialogQueue.value[0];
-      if (nextDialog) { // 进一步确保类型安全，尽管逻辑上在 length > 0 时它不应为 undefined
+      const nextDialog = dialogQueue.value.shift(); // 取出队列的第一个
+      if (nextDialog) {
         activeDialog.value = nextDialog;
       }
     }
   }
-  
-  // 关闭对话框
+
   function closeDialog(id: string): void {
     if (activeDialog.value && activeDialog.value.id === id) {
       activeDialog.value = null;
-      dialogQueue.value.shift();
-      processDialogQueue();
+      // dialogQueue.value.shift(); // 已经在 processDialogQueue 前移除了
+      processDialogQueue(); // 尝试处理队列中的下一个
     } else {
-      // 如果不是活动对话框，从队列中移除
-      const index = dialogQueue.value.findIndex(dialog => dialog.id === id);
+      // 如果不是活动对话框（理论上不应发生，因为关闭总是针对活动对话框）
+      // 但为保险起见，也从队列中移除
+      const index = dialogQueue.value.findIndex(d => d.id === id);
       if (index !== -1) {
         dialogQueue.value.splice(index, 1);
       }
     }
   }
   
-  // 移除通知
+  // 显示消息对话框
+  function showMessage(options: UniversalDialogOptions): Promise<void> {
+    return new Promise((resolve, reject) => {
+      import('../components/common/Dialog.vue').then((module) => {
+        const dialogId = generateId();
+        const dialogProps = {
+          ...options,
+          visible: true,
+          type: 'message' as const, // 传递给 Dialog.vue 的 type
+          title: options.title || '消息',
+          message: options.message, 
+          confirmText: options.confirmText || '确定',
+          showCloseIcon: options.showCloseIcon !== undefined ? options.showCloseIcon : true,
+          closeOnBackdrop: options.closeOnBackdrop !== undefined ? options.closeOnBackdrop : true,
+          autoClose: options.autoClose || 0,
+          onConfirm: () => {
+            closeDialog(dialogId);
+            resolve();
+          },
+          onCancel: () => { 
+            closeDialog(dialogId);
+            resolve(); 
+          },
+          'onUpdate:visible': (value: boolean) => {
+            if (!value) {
+              if (activeDialog.value && activeDialog.value.id === dialogId) {
+                closeDialog(dialogId);
+                resolve();
+              }
+            }
+          }
+        };
+
+        const dialog: DialogInstance = {
+          id: dialogId,
+          type: 'message', // DialogInstance 自身的 type
+          component: markRaw(module.default),
+          props: dialogProps,
+          resolve: () => resolve(),
+          reject
+        };
+        addDialog(dialog);
+      }).catch(reject);
+    });
+  }
+  
+  // 显示确认对话框
+  function showConfirm(options: UniversalDialogOptions): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      import('../components/common/Dialog.vue').then((module) => {
+        const dialogId = generateId();
+        const dialogProps = {
+          ...options,
+          visible: true,
+          type: 'confirm' as const,
+          title: options.title || '确认',
+          message: options.message,
+          confirmText: options.confirmText || '确定',
+          cancelText: options.cancelText || '取消',
+          showCloseIcon: options.showCloseIcon !== undefined ? options.showCloseIcon : true,
+          closeOnBackdrop: options.closeOnBackdrop !== undefined ? options.closeOnBackdrop : false,
+          dangerConfirm: options.dangerConfirm || false,
+          onConfirm: () => {
+            closeDialog(dialogId);
+            resolve(true);
+          },
+          onCancel: () => {
+            closeDialog(dialogId);
+            resolve(false);
+          },
+          'onUpdate:visible': (value: boolean) => {
+            if (!value) {
+              if (activeDialog.value && activeDialog.value.id === dialogId) {
+                closeDialog(dialogId);
+                resolve(false);
+              }
+            }
+          }
+        };
+        const dialog: DialogInstance = {
+          id: dialogId,
+          type: 'confirm',
+          component: markRaw(module.default),
+          props: dialogProps,
+          resolve: (val) => resolve(val as boolean), // 明确 resolve 类型
+          reject
+        };
+        addDialog(dialog);
+      }).catch(reject);
+    });
+  }
+
+  // 显示输入对话框
+  function showInput(options: UniversalDialogOptions): Promise<string | null> {
+    return new Promise((resolve, reject) => {
+      import('../components/common/Dialog.vue').then((module) => {
+        const dialogId = generateId();
+        const dialogProps = {
+          ...options,
+          visible: true,
+          type: 'input' as const,
+          title: options.title || '请输入',
+          message: options.message, 
+          confirmText: options.confirmText || '确定',
+          cancelText: options.cancelText || '取消',
+          showCloseIcon: options.showCloseIcon !== undefined ? options.showCloseIcon : true,
+          closeOnBackdrop: options.closeOnBackdrop !== undefined ? options.closeOnBackdrop : false,
+          dangerConfirm: options.dangerConfirm || false,
+          initialValue: options.initialValue || '',
+          inputPlaceholder: options.inputPlaceholder || '请输入内容...',
+          inputType: options.inputType || 'text',
+          inputRows: options.inputRows || 3,
+          onConfirm: (inputValue?: string) => { 
+            closeDialog(dialogId);
+            resolve(inputValue !== undefined ? inputValue : ''); 
+          },
+          onCancel: () => {
+            closeDialog(dialogId);
+            resolve(null);
+          },
+          'onUpdate:visible': (value: boolean) => {
+            if (!value) {
+              if (activeDialog.value && activeDialog.value.id === dialogId) {
+                closeDialog(dialogId);
+                resolve(null);
+              }
+            }
+          }
+        };
+        const dialog: DialogInstance = {
+          id: dialogId,
+          type: 'input',
+          component: markRaw(module.default),
+          props: dialogProps,
+          resolve: (val) => resolve(val as string | null), // 明确 resolve 类型
+          reject
+        };
+        addDialog(dialog);
+      }).catch(reject);
+    });
+  }
+  
   function removeToast(id: string): void {
     const index = toasts.value.findIndex(toast => toast.id === id);
     if (index !== -1) {
       toasts.value.splice(index, 1);
     }
   }
+
+  // 显示通知
+  function showToast(options: ToastOptions): string {
+    const id = generateId(); // ToastNotification 不在此动态导入，假设已全局或按需加载
+    
+    const toast: ToastInstance = {
+      id,
+      props: {
+        visible: true,
+        title: options.title || '',
+        message: options.message,
+        type: options.type || 'info',
+        duration: options.duration !== undefined ? options.duration : 3000,
+        position: options.position || 'top-right',
+        onClose: () => {
+          removeToast(id);
+        },
+        'onUpdate:visible': (value: boolean) => {
+          if (!value) {
+            removeToast(id);
+          }
+        }
+      },
+      visible: true
+    };
+    
+    toasts.value.push(toast);
+    if (toasts.value.length > maxToasts) {
+      const oldestToast = toasts.value.shift();
+      if (oldestToast) {
+        // 触发 ToastNotification 内部的关闭动画和逻辑
+        // 这通常是通过将其 visible prop 设置为 false 来完成的
+        // 但由于 ToastNotification 实例不由 DialogService 直接控制其 props.visible,
+        // 我们需要一种方式通知它关闭。
+        // 简单的做法是直接从数组移除，依赖 DialogContainer 的 :key 或 v-for 更新。
+        // 或者，如果 ToastNotification 监听其 props.onClose，我们可以在这里调用。
+        // 目前的 removeToast(id) 应该能处理。
+      }
+    }
+    return id; // 返回ID，而非message
+  }
   
-  // 生成唯一ID
-  function generateId(): string {
-    return `dialog-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  function showSuccess(message: string, title?: string, duration?: number): string {
+    return showToast({ title, message, type: 'success', duration });
+  }
+  
+  function showError(message: string, title?: string, duration?: number): string {
+    return showToast({ title, message, type: 'error', duration });
+  }
+  
+  function showWarning(message: string, title?: string, duration?: number): string {
+    return showToast({ title, message, type: 'warning', duration });
+  }
+  
+  function showInfo(message: string, title?: string, duration?: number): string {
+    return showToast({ title, message, type: 'info', duration });
   }
   
   return {
     activeDialog,
-    dialogQueue,
+    // dialogQueue, // dialogQueue 是内部状态，通常不直接暴露
     toasts,
     showMessage,
     showConfirm,
-    showInput, // 导出 showInput 方法
+    showInput,
     showToast,
     showSuccess,
     showError,
     showWarning,
     showInfo,
-    closeDialog,
-    removeToast
+    // closeDialog, // 内部辅助函数
+    // removeToast, // 内部辅助函数
   };
 });
