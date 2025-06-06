@@ -187,10 +187,240 @@
     - **错误与取消传播**：流管道中的任何错误或取消信号，需要能正确地向上传播（取消上游）和向下传播（通知下游流已断开）。
   - **事件总线**：复用阶段一机制，由引擎的多路复用分发器负责发布事件。
 
+### 6.1. 核心流处理机制：多路复用、背压与 LLM 解耦策略
+
+在阶段二中，实现高效、健壮的多路复用（Multicasting）与背压（Backpressure）是核心技术挑战，尤其需要考虑 LLM 作为流源的特殊性。
+
+#### 6.1.1. 多路复用与背压策略选择
+
+经过分析，对于 Bun/Node.js 环境，我们考虑了以下主要策略：
+
+1.  **手动分发器循环 + 队列 (Manual Distributor Loop + Queues)**：控制粒度细，但实现复杂度高，易出错。
+2.  **Web Streams API - `ReadableStream.tee()`**: Web 标准，原生处理背压、错误和取消。对于 N>2 个消费者需要链式 `tee()`。是一个强有力的备选方案。
+3.  **Node.js Streams - `.pipe()` + `PassThrough` (首选推荐)**：Node.js 生态成熟稳定，`.pipe()` 机制原生处理背压，多路分发结构清晰。`stream.Readable.from(asyncGenerator)` 提供了良好的 AsyncGenerator 集成。
+4.  **反应式编程库 (e.g., RxJS)**：功能强大但背压模型（Push-based）与 AsyncGenerator（Pull-based）存在阻抗失配风险，引入额外复杂度和依赖。
+5.  **Channel / CSP 模型**：并发模型优秀，但 JavaScript 无原生实现，需引入库或自建，成本高。
+
+**推荐方案**：综合考虑成熟度、背压处理的可靠性、与 AsyncGenerator 的集成以及在 Bun/Node.js 环境下的自然度，**Node.js Streams (`stream.Readable.from` + `.pipe()` + `stream.PassThrough`)** 是当前阶段的首选。
+
+#### 6.1.2. 针对 LLM 的解耦与缓冲策略
+
+直接将背压传递给远程 LLM API 不可行或不经济。因此，我们采用 **“全速生产 + 有限缓冲 + 缓冲后全程背压 + 溢出熔断”** 策略：
+
+1.  **解耦点 - 有限蓄水池 (`BoundedBuffer`)**:
+    - 引擎（或 LLM 节点内部）为每个 LLM 流实例创建一个具有容量上限的内部缓冲区（`BoundedBuffer`）。
+    - 这个 `BoundedBuffer` 负责存储从 LLM API 拉取的数据块。
+2.  **汲水泵 (`Puller` Task)**:
+    - 一个独立的异步任务（“汲水泵”）以最快速度从 LLM API 的原始流 (`asyncGenerator`) 中拉取所有数据块，并推入 `BoundedBuffer`。
+    - 此任务的目标是让 LLM API 尽快完成生成并释放远端资源。
+3.  **背压边界**:
+    - 引擎的多路分发器（使用 Node.js Streams 实现）从 `BoundedBuffer` 中读取数据并分发给下游各个分支（如 TTS 节点、EventBus、内部缓存）。
+    - 下游消费者的处理慢速所产生的背压，将通过 Node.js Streams 的 `.pipe()` 机制，反向传递到分发器，使其暂停从 `BoundedBuffer` 拉取数据。
+    - **关键**：背压信号最多只传递到 `BoundedBuffer`，不会影响“汲水泵”任务从 LLM API 拉取数据的速度，除非 `BoundedBuffer` 已满。
+4.  **溢出熔断 (Overflow Circuit Breaker)**:
+    - `BoundedBuffer` 必须有明确的容量上限（例如，最大块数量、最大内存占用）。
+    - 当“汲水泵”尝试向已满的 `BoundedBuffer` 推送数据时，`BoundedBuffer` 应抛出特定错误（如 `BufferOverflowError`）。
+    - 引擎捕获此错误后，应立即采取熔断措施：取消整个工作流的执行，并清理所有相关资源（包括断开 LLM 连接、关闭所有流等）。这是防止系统因消费者过慢而耗尽内存导致 OOM 的核心保护机制。
+
+#### 6.1.3. Node.js Streams 实现概念
+
+以下是使用 Node.js Streams 和 `BoundedBuffer` 实现上述策略的简化概念代码：
+
+```typescript
+import * as stream from "stream";
+import { promises as streamPromises } from "stream";
+
+class BufferOverflowError extends Error {
+  constructor(message = "Buffer overflow") {
+    super(message);
+    this.name = "BufferOverflowError";
+  }
+}
+
+// 概念性的有限蓄水池
+class BoundedBuffer<T> {
+  // Escaped <T> just in case, though unlikely to be the issue
+  private queue: T[] = [];
+  private limit: number;
+  private ended: boolean = false;
+  private error: Error | null = null;
+  private waitingPuller: ((value: void | PromiseLike<void>) => void) | null = null; // Escaped
+  private waitingPusher: ((value: void | PromiseLike<void>) => void) | null = null; // Escaped
+
+  constructor({ limit }: { limit: number }) {
+    this.limit = limit;
+  }
+
+  async push(item: T): Promise<void> {
+    // Escaped
+    if (this.ended || this.error) throw new Error("Cannot push to ended or errored buffer");
+    while (this.queue.length >= this.limit) {
+      // Escaped >=
+      if (this.ended || this.error)
+        throw new Error("Buffer limit reached, push aborted by end/error");
+      await new Promise<void>((resolve) => {
+        this.waitingPusher = resolve;
+      }); // Escaped
+      this.waitingPusher = null;
+    }
+    this.queue.push(item);
+    if (this.waitingPuller) this.waitingPuller();
+  }
+
+  signalEnd(): void {
+    this.ended = true;
+    if (this.waitingPuller) this.waitingPuller();
+    if (this.waitingPusher) this.waitingPusher();
+  }
+
+  signalError(err: Error): void {
+    this.error = err;
+    this.ended = true;
+    if (this.waitingPuller) this.waitingPuller();
+    if (this.waitingPusher) this.waitingPusher();
+  }
+
+  isFull(): boolean {
+    return this.queue.length >= this.limit; // Escaped >=
+  }
+
+  async *[Symbol.asyncIterator](): AsyncGenerator<T, void, undefined> {
+    // Escaped
+    try {
+      while (true) {
+        if (this.error) throw this.error;
+        if (this.queue.length > 0) {
+          // Escaped >
+          const item = this.queue.shift()!;
+          if (this.waitingPusher) this.waitingPusher();
+          yield item;
+        } else if (this.ended) {
+          return;
+        } else {
+          await new Promise<void>((resolve) => {
+            this.waitingPuller = resolve;
+          }); // Escaped
+          this.waitingPuller = null;
+        }
+      }
+    } finally {
+      this.ended = true;
+      if (this.waitingPuller) this.waitingPuller();
+      if (this.waitingPusher) this.waitingPusher();
+    }
+  }
+}
+
+// 引擎执行 LLM 节点时的概念代码
+async function executeLLMNodeInEngine(
+  llmNode: any,
+  llmRawGenerator: AsyncGenerator<any>, // Escaped
+  engineContext: any
+) {
+  const buffer = new BoundedBuffer<any>({
+    limit: engineContext.config.llmStreamBufferLimit || 1000,
+  }); // Escaped
+  let sourceStream: stream.Readable | null = null;
+  const passThroughStreams: stream.PassThrough[] = [];
+
+  const pullerTask = (async () => {
+    try {
+      for await (const chunk of llmRawGenerator) {
+        if (buffer.isFull()) {
+          throw new BufferOverflowError("LLM stream buffer overflow before push.");
+        }
+        await buffer.push(chunk);
+      }
+      buffer.signalEnd();
+    } catch (error: any) {
+      buffer.signalError(error);
+      if (error instanceof BufferOverflowError) {
+        engineContext.cancelWorkflow(
+          engineContext.runId,
+          `LLM stream buffer overflow: ${error.message}`
+        );
+      } else {
+        engineContext.cancelWorkflow(
+          engineContext.runId,
+          `Error pulling from LLM: ${error.message}`
+        );
+      }
+    }
+  })();
+
+  try {
+    sourceStream = stream.Readable.from(buffer, { objectMode: true });
+    sourceStream.on("error", (err) => {
+      console.error(`SourceStream error for node ${llmNode.id}:`, err);
+      passThroughStreams.forEach((pt) => pt.destroy(err));
+    });
+
+    const eventBusStream = new stream.PassThrough({ objectMode: true });
+    passThroughStreams.push(eventBusStream);
+    sourceStream.pipe(eventBusStream);
+    const eventBusConsumer = (async () => {
+      for await (const chunk of eventBusStream) {
+        engineContext.eventBus.publish({
+          type: "NODE_YIELD",
+          nodeId: llmNode.id,
+          chunk,
+          runId: engineContext.runId,
+        });
+      }
+    })();
+
+    const cacheStream = new stream.PassThrough({ objectMode: true });
+    passThroughStreams.push(cacheStream);
+    sourceStream.pipe(cacheStream);
+    const cachedChunks: any[] = [];
+    let aggregatedText = "";
+    const cacheConsumer = (async () => {
+      for await (const chunk of cacheStream) {
+        cachedChunks.push(chunk);
+        if (chunk && typeof chunk.content === "string") {
+          aggregatedText += chunk.content;
+        }
+      }
+      llmNode.outputs.text.value = aggregatedText;
+      llmNode.outputs.raw_chunks.value = cachedChunks;
+      engineContext.markNodeBatchReady(llmNode.id);
+    })();
+
+    await Promise.all([
+      pullerTask,
+      streamPromises.finished(eventBusStream).catch((err) => {
+        /* log consumer error */
+      }),
+      streamPromises.finished(cacheStream).catch((err) => {
+        /* log consumer error */
+      }),
+    ]);
+  } catch (error: any) {
+    console.error(`Error in executeLLMNodeInEngine for ${llmNode.id}:`, error);
+    if (!buffer.ended) buffer.signalError(error);
+    passThroughStreams.forEach((pt) => pt.destroy(error));
+    sourceStream?.destroy(error);
+  } finally {
+    passThroughStreams.forEach((pt) => {
+      if (!pt.destroyed) pt.destroy();
+    });
+    sourceStream?.destroy();
+  }
+}
+```
+
+**关键实现注意点**：
+
+- **`objectMode: true`**：所有 `stream.Readable.from` 和 `stream.PassThrough` 必须设置，因为我们传递的是 `ChunkPayload` 对象。
+- **错误处理与资源清理**：这是流处理中最复杂的部分。必须在 `pullerTask`、`BoundedBuffer`、`sourceStream` 及所有 `PassThrough` 分支上严密处理错误和取消信号（如通过 `AbortSignal`），确保所有资源（特别是 `llmRawGenerator` 的 `return()` 或 `throw()`）被正确调用和清理，防止泄露。`streamPromises.finished` 有助于等待流结束或出错。
+- **生命周期管理**：确保所有异步任务和流的生命周期得到妥善管理，例如，当工作流被取消时，所有相关的流和任务都能被正确终止。
+
+这种结合了 `BoundedBuffer` 解耦和 Node.js Streams 成熟能力的方案，能在保证 LLM API 调用效率的同时，为下游提供可靠的、带背压的多路流分发。
+
 - **交付价值**：
   - 实现真正的节点间实时数据流（如 LLM -> TTS 边说边合成）。
   - 数据流向与图结构一致，符合图引擎逻辑。
-  - 性能最优。
+  - 性能最优（在上述解耦策略下）。
 
 ## 7. 阶段三：基于事件的协调与控制
 
