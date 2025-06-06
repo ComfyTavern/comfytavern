@@ -112,6 +112,70 @@
     - LLM 新增输出：`live_stream: { dataFlowType: 'STREAM', matchCategories: ['LiveStream', 'TextStream', 'StreamChunk'] }`
     - TTS 定义输入：`input_stream: { dataFlowType: 'STREAM', matchCategories: ['TextStream', 'StreamChunk'] }`
     - TTS `execute`: `async function* execute(inputs: { input_stream: AsyncGenerator<ChunkPayload> }) { for await (const chunk of inputs.input_stream) { /* process & yield audio chunk */ } }`
+- **显式流聚合节点 (`StreamAggregatorNode`) 与通用转换节点理念**：
+
+  - **核心思想**：为了解决流式数据 (`STREAM`) 与需要完整数据的批处理节点 (`STRING`, `ARRAY`) 之间的适配问题，并提升工作流的清晰度和可组合性，引入显式的 `StreamAggregatorNode`。这遵循“显式优于隐式”和“万物皆节点”的原则。
+  - **`StreamAggregatorNode` 定义**:
+    - **目的**: 消费一个完整的输入流，将其聚合成批处理数据（如完整文本或块数组），然后一次性输出。
+    - **输入槽**:
+      ```typescript
+      inputs: {
+        input_stream: { dataFlowType: 'STREAM', matchCategories: ['LiveStream', 'TextStream', 'StreamChunk', 'Any'] }
+      }
+      ```
+    - **输出槽**:
+      ```typescript
+      outputs: {
+        aggregated_text: { dataFlowType: 'STRING', matchCategories: ['LlmOutput', 'Prompt', 'AggregatedText'] },
+        chunk_list: { dataFlowType: 'ARRAY', matchCategories: ['StreamChunkList', 'LlmOutput', 'AggregatedChunks'] }
+        // 未来可扩展: joined_string_with_delimiter, etc.
+      }
+      ```
+    - **`execute` 逻辑 (概念性)**:
+      ```typescript
+      // 非 async function*
+      async function execute(inputs: {
+        input_stream: AsyncGenerator<ChunkPayload>;
+      }): Promise<Outputs> {
+        const cachedChunks: ChunkPayload[] = [];
+        let aggregatedText = "";
+        for await (const chunk of inputs.input_stream) {
+          cachedChunks.push(chunk);
+          if (chunk.type === "text_chunk" && typeof chunk.content === "string") {
+            aggregatedText += chunk.content;
+          }
+          // 可选: 发布聚合进度事件
+        }
+        return {
+          aggregated_text: aggregatedText,
+          chunk_list: cachedChunks,
+        };
+      }
+      ```
+  - **可配置性**:
+    - `aggregation_mode`: (例如: 'concatenate_text', 'collect_chunks_array', 'collect_text_array_by_delimiter')
+    - `delimiter_char_for_text_array`: (用于 `collect_text_array_by_delimiter` 模式)
+    - `timeout_ms`: (超时强制结束聚合)
+    - `max_chunks_count`: (最大块数量限制)
+    - `max_buffer_size_kb`: (最大缓冲大小限制)
+  - **价值与影响**:
+    - **架构清晰性**: 工作流明确表达数据转换意图。
+    - **灵活性与可组合性**: 用户精确控制聚合点，并可组合多种流转换/处理节点。例如：
+      ```mermaid
+      graph LR
+          A[LLM 节点 (STREAM)] --> F1[StreamFilter (STREAM)];
+          F1 --> TTS[TTS 节点 (STREAM)];
+          F1 --> AGG[StreamAggregator (BATCH)];
+          AGG --> BData{聚合后的批数据};
+          BData --> REX[Regex 节点 (BATCH)];
+          REX --> DEDUP[BatchDeduplicator (BATCH)];
+          DEDUP --> SAVE[保存节点 (BATCH)];
+          BData --> SUM[摘要节点 (BATCH)];
+      ```
+    - **前后端职责划分**: 后端图定义权威处理逻辑，简化前端状态管理，保证数据一致性。
+    - **引擎简化**: 聚合逻辑下沉到节点，引擎更纯粹。
+  - **通用转换节点理念**: `StreamAggregatorNode` 是此类显式转换节点的代表。未来可设计更多原子转换节点 (如 `StreamFilterNode`, `SentenceSplitterNode`, `BatchToStreamNode`)，形成强大的数据处理管道能力。
+
   - **执行引擎 (`ExecutionEngine.ts`) - 核心改造**：
     - **调度**：识别 `STREAM` 连接。当 `Node A (STREAM)` 连接到 `Node B (STREAM)` 时，引擎不再等待 A 结束，而是并发启动 A 和 B。
     - **管道 (Piping)**：将 `A.execute()` 返回的 `asyncGenerator` 作为参数传递给 `B.execute()`。
@@ -122,6 +186,7 @@
     - **背压 (Backpressure)**：必须实现机制，当下游节点 B 或 EventBus 消费速度慢于 LLM 生产速度时，能暂停或减慢 LLM 的 `yield`，防止内存溢出。
     - **错误与取消传播**：流管道中的任何错误或取消信号，需要能正确地向上传播（取消上游）和向下传播（通知下游流已断开）。
   - **事件总线**：复用阶段一机制，由引擎的多路复用分发器负责发布事件。
+
 - **交付价值**：
   - 实现真正的节点间实时数据流（如 LLM -> TTS 边说边合成）。
   - 数据流向与图结构一致，符合图引擎逻辑。
@@ -160,4 +225,8 @@
 
 ## 9. 结论
 
-本计划遵循架构解耦和增量演进原则，清晰定义了事件总线与执行引擎在流式处理中的角色。通过“UI 实时化 -> 引擎级节点间数据流 -> 事件级协调控制”的路径，并紧密结合新的节点类型系统，逐步构建 ComfyTavern 的流式能力。每一阶段都建立在坚实、可复用的基础之上，确保了技术路径的合理性与工程实现的可行性。
+本计划遵循架构解耦和增量演进原则，清晰定义了事件总线与执行引擎在流式处理中的角色。通过“UI 实时化 -> 引擎级节点间数据流（辅以如 `StreamAggregatorNode` 等显式转换节点） -> 事件级协调控制”的路径，并紧密结合新的节点类型系统，逐步构建 ComfyTavern 的流式能力。
+
+特别是，在阶段二引入显式的 `StreamAggregatorNode` 以及推广“通用转换节点”的设计理念，将极大地增强工作流的清晰度、可组合性和灵活性。这使得流式数据与批处理操作之间的转换更加透明和可控，完美契合了“图引擎本质”和“职责分离”的核心原则。
+
+每一阶段都建立在坚实、可复用的基础之上，确保了技术路径的合理性与工程实现的可行性，最终将为用户提供一个强大、直观且易于扩展的 AI 工作流平台。
