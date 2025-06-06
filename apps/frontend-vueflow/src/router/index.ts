@@ -32,6 +32,11 @@ const router = createRouter({
       component: () => import('../views/AboutView.vue'),
     },
     {
+      path: '/dialog-demo',
+      name: 'dialog-demo',
+      component: () => import('../components/common/DialogDemo.vue'),
+    },
+    {
       path: '/projects/:projectId/editor/:workflowId?', // 添加可选的 workflowId 参数
       name: 'Editor', // 更新路由名称为 Editor
       component: EditorView,

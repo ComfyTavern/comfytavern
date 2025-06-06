@@ -7,6 +7,7 @@ import { useTabStore } from './stores/tabStore' // 导入标签页状态管理
 import { useProjectStore } from './stores/projectStore'; // 导入项目状态管理
 import { storeToRefs } from 'pinia'
 import { initializeWebSocket, closeWebSocket } from './composables/useWebSocket'; // <-- ADDED: Import WebSocket functions
+import DialogContainer from './components/common/DialogContainer.vue'; // 导入对话框容器组件
 
 // 初始化主题状态管理
 const themeStore = useThemeStore()
@@ -89,6 +90,8 @@ onUnmounted(() => {
 <template>
   <div class="h-full w-full basic-flow bg-gray-100 dark:bg-gray-900">
     <RouterView />
+    <!-- 全局对话框和通知容器 -->
+    <DialogContainer />
   </div>
 </template>
 
