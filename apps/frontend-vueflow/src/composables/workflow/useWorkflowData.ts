@@ -27,12 +27,14 @@ import {
 } from "@/utils/workflowTransformer";
 // import { useApi } from '@/utils/api'; // 移除，不再触发项目元数据更新
 import defaultWorkflowData from '@/data/DefaultWorkflow.json'; // <-- 导入默认工作流数据
+import { useDialogService } from '../../services/DialogService'; // 导入 DialogService
 
 export function useWorkflowData() {
   const workflowStore = useWorkflowStore(); // 访问主 store (用于 ensureTabState 和类型)
   // const tabStore = useTabStore(); // 移除
   const projectStore = useProjectStore(); // 获取项目 store 实例
   const themeStore = useThemeStore();
+  const dialogService = useDialogService(); // 获取 DialogService 实例
   // const api = useApi(); // 移除
 
   // --- 类型转换函数已被移动到 utils/workflowTransformer.ts ---
@@ -75,13 +77,13 @@ export function useWorkflowData() {
     const projectId = projectStore.currentProjectId;
     if (!projectId) {
       console.error(`[saveWorkflow] Cannot save workflow, project ID is missing.`);
-      alert("无法保存工作流：未选择项目。");
+      dialogService.showError("无法保存工作流：未选择项目。");
       return null; // 返回 null 表示失败
     }
     const state = await workflowStore.ensureTabState(internalId); // 添加 await // 仍然需要获取 state 来读取 workflowData 元数据
     if (!state) {
       console.error(`[saveWorkflow] State not found for tab ${internalId} during save.`);
-      alert(`无法保存标签页 ${internalId}：状态丢失。`);
+      dialogService.showError(`无法保存标签页 ${internalId}：状态丢失。`);
       return null; // 返回 null 表示失败
     }
     if (!state.vueFlowInstance) {
@@ -159,7 +161,7 @@ export function useWorkflowData() {
           `[saveWorkflow] Failed to save new workflow (tab ${internalId}, project ${projectId}):`,
           error
         );
-        alert(`保存新工作流失败: ${error instanceof Error ? error.message : String(error)}`);
+        dialogService.showError(`保存新工作流失败: ${error instanceof Error ? error.message : String(error)}`);
         // throw error; // 不再重新抛出，返回 null 表示失败
         return null;
       }
@@ -170,7 +172,7 @@ export function useWorkflowData() {
         console.error(
           `[saveWorkflow] Cannot update workflow: current data or ID missing (tab ${internalId}, project ${projectId}).`
         );
-        alert("更新工作流失败：当前工作流状态异常。");
+        dialogService.showError("更新工作流失败：当前工作流状态异常。");
         return null; // 返回 null 表示失败
       }
       // 如果调用者提供了 newName（例如，用户可能在保存时重命名，尽管当前 UI 不支持），则使用它，否则使用 currentData 的名称。
@@ -224,10 +226,10 @@ export function useWorkflowData() {
             error.response?.data?.error ||
             error.data?.error ||
             `工作流名称 '${nameToUse}' 已存在，请使用其他名称。`;
-          alert(`保存失败：${conflictMessage}`);
+          dialogService.showError(`保存失败：${conflictMessage}`);
         } else {
           // 其他错误使用通用消息
-          alert(`更新工作流失败: ${error instanceof Error ? error.message : String(error)}`);
+          dialogService.showError(`更新工作流失败: ${error instanceof Error ? error.message : String(error)}`);
         }
         // throw error; // 不再重新抛出，返回 null 表示失败
         return null;
@@ -269,7 +271,7 @@ export function useWorkflowData() {
         console.error(
           `[loadWorkflow] Load workflow API call succeeded but returned no data for project ${projectId}, workflow ${workflowId} (tab ${internalId}).`
         );
-        alert(`加载工作流 '${workflowId}' 失败：未收到有效数据。`);
+        dialogService.showError(`加载工作流 '${workflowId}' 失败：未收到有效数据。`);
         return { success: false };
       }
     } catch (error) {
@@ -277,7 +279,7 @@ export function useWorkflowData() {
         `[loadWorkflow] Failed to load workflow (tab ${internalId}, project ${projectId}, workflow ${workflowId}):`,
         error
       );
-      alert(`加载工作流错误: ${error instanceof Error ? error.message : String(error)}`);
+      dialogService.showError(`加载工作流错误: ${error instanceof Error ? error.message : String(error)}`);
       return { success: false };
     }
   }
@@ -310,7 +312,7 @@ export function useWorkflowData() {
     const projectId = projectStore.currentProjectId;
     if (!projectId) {
       console.error(`[deleteWorkflow] Cannot delete workflow, project ID is missing.`);
-      alert("无法删除工作流：未选择项目。");
+      dialogService.showError("无法删除工作流：未选择项目。");
       return false;
     }
     try {
@@ -322,7 +324,7 @@ export function useWorkflowData() {
         `[deleteWorkflow] Failed to delete workflow ${workflowId} from project ${projectId}:`,
         error
       );
-      alert(`删除工作流错误: ${error instanceof Error ? error.message : String(error)}`);
+      dialogService.showError(`删除工作流错误: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }
@@ -352,7 +354,7 @@ export function useWorkflowData() {
         `[saveWorkflowAsNew] Failed to save new workflow in project ${projectId}:`,
         error
       );
-      alert(`创建新工作流文件失败: ${error instanceof Error ? error.message : String(error)}`);
+      dialogService.showError(`创建新工作流文件失败: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   }

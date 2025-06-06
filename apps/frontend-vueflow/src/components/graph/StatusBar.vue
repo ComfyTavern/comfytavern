@@ -111,6 +111,7 @@ import {
 // } from "@/utils/workflowTransformer";
 // import type { FlowExportObject } from "@vue-flow/core"; // 已移至 useWorkflowExecution
 import { useWorkflowExecution } from "@/composables/workflow/useWorkflowExecution"; // 导入新的 composable
+import { useDialogService } from '@/services/DialogService'; // 导入 DialogService
 
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore();
@@ -122,6 +123,7 @@ const { isDockedEditorVisible, toggleDockedEditor } = useEditorState();
 const projectStore = useProjectStore();
 const { currentProjectMetadata } = storeToRefs(projectStore);
 const projectName = computed(() => currentProjectMetadata.value?.name || "ComfyTavern");
+const dialogService = useDialogService(); // 获取 DialogService 实例
 
 const showWorkflowMenu = ref(false);
 const workflowButtonRef = ref<HTMLButtonElement | null>(null);
@@ -188,7 +190,7 @@ const handleExecuteWorkflow = async () => {
 
   if (!activeTabId.value) {
     console.error("[StatusBar] 无法执行：没有活动的标签页。");
-    alert("请先选择一个标签页。");
+    dialogService.showError("请先选择一个标签页。");
     return;
   }
 
@@ -199,11 +201,11 @@ const handleExecuteWorkflow = async () => {
     if (workflowDataFromStore && workflowDataFromStore.nodes && workflowDataFromStore.nodes.length > 0) {
       // Store 中有数据，说明可能只是画布未同步或未渲染完全
       console.warn("[StatusBar] 画布当前元素为空，但侦测到已加载的工作流数据。可能画布尚未完全渲染或同步。执行已取消。");
-      alert("画布尚未完全准备就绪，请稍等片刻或尝试重新加载工作流。");
+      dialogService.showError("画布尚未完全准备就绪，请稍等片刻或尝试重新加载工作流。");
     } else {
       // Store 中也无数据，或数据无效
       console.error("[StatusBar] 无法执行：当前画布元素和工作流存储数据均为空或无效。");
-      alert("画布上没有元素可执行，或画布状态不正确。");
+      dialogService.showError("画布上没有元素可执行，或画布状态不正确。");
     }
     return; // 阻止执行
   }

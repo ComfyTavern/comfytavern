@@ -17,6 +17,7 @@ import { useEdgeStyles } from "../canvas/useEdgeStyles";
 import { useNodeStore } from "../../stores/nodeStore";
 import defaultWorkflowTemplateUntyped from '@/data/DefaultWorkflow.json'; // <-- 导入默认模板
 import type { DataFlowTypeName } from '@comfytavern/types'; // 确保导入 DataFlowTypeName
+import { useDialogService } from '../../services/DialogService'; // 导入 DialogService
 
 // --- 辅助函数 (来自 useWorkflowCoreLogic) ---
 function findNextSlotIndex(
@@ -51,6 +52,7 @@ function createWorkflowManager() {
   const { getEdgeStyleProps } = useEdgeStyles();
   // const workflowDataHandler = useWorkflowData(); // 不再需要
   const nodeStore = useNodeStore(); // 获取 NodeStore 实例
+  const dialogService = useDialogService(); // 获取 DialogService 实例
 
   // --- 内部状态标志 ---
   // --- 核心状态 ---
@@ -444,7 +446,7 @@ function createWorkflowManager() {
       console.error(`[useWorkflowManager/applyDefaultWorkflowToTab] 应用默认模板失败 for ${internalId}:`, error);
       // 可以考虑添加一个回退机制，比如应用一个最小化的硬编码模板
       // 或者直接返回 null 并显示错误
-      alert(`创建新工作流时应用默认模板失败: ${error instanceof Error ? error.message : String(error)}`);
+      dialogService.showError(`创建新工作流时应用默认模板失败: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   }
@@ -947,7 +949,7 @@ function createWorkflowManager() {
    * 处理脏检查并重置标签页状态。
    * @param internalId 标签页的内部 ID。
    */
-  async function createNewWorkflow(internalId: string): Promise<WorkflowStateSnapshot | null> {
+  async function createNewWorkflow(internalId: string): Promise<WorkflowStateSnapshot | null> { // 已是 async
     // 添加返回类型
     // 注意：ensureTabState 和 applyDefaultWorkflowToTab 现在直接调用
     // 因为它们在此 composable 的作用域内定义。
@@ -955,7 +957,13 @@ function createWorkflowManager() {
     const state = await ensureTabState(internalId); // 添加 await
     const tabLabel = tabStore.tabs.find((t) => t.internalId === internalId)?.label || internalId;
 
-    if (state.isDirty && !confirm(`标签页 "${tabLabel}" 有未保存的更改。确定要创建新工作流吗？`)) {
+    if (state.isDirty && !(await dialogService.showConfirm({
+      title: '创建新工作流确认',
+      message: `标签页 "${tabLabel}" 有未保存的更改。确定要创建新工作流吗？这将丢失未保存的更改。`,
+      confirmText: '创建新工作流',
+      cancelText: '取消',
+      dangerConfirm: true,
+    }))) {
       return null; // 返回 null
     }
 

@@ -105,11 +105,13 @@ import { storeToRefs } from "pinia";
 import { ref, computed } from "vue";
 import sanitize from "sanitize-filename";
 import { inject } from "vue";
+import { useDialogService } from "@/services/DialogService";
 
 const emit = defineEmits(["close"]);
 const sidebarRef = inject<{ setActiveTab: (tabId: string) => void }>('sidebarRef');
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore();
+const dialogService = useDialogService();
 const { activeTabId } = storeToRefs(tabStore);
 const importInputRef = ref<HTMLInputElement | null>(null);
 
@@ -144,7 +146,7 @@ const handleNew = () => {
     workflowStore.createNewWorkflow(activeTabId.value);
   } else {
     console.error("无法创建新工作流：没有活动的标签页。");
-    alert("无法创建新工作流：请先打开一个标签页。");
+    dialogService.showError("无法创建新工作流：请先打开一个标签页。");
   }
   closeMenu();
 };
@@ -165,7 +167,7 @@ const handleOpen = () => {
 const handleSave = async () => {
   if (!activeTabId.value) {
     console.error("无法保存：没有活动的标签页。");
-    alert("无法保存：请先打开一个标签页。");
+    dialogService.showError("无法保存：请先打开一个标签页。");
     closeMenu();
     return;
   }
@@ -187,7 +189,7 @@ const handleSave = async () => {
       closeMenu();
     } catch (error) {
       console.error("保存工作流时出错:", error);
-      alert(`保存工作流失败: ${error instanceof Error ? error.message : "未知错误"}`);
+      dialogService.showError(`保存工作流失败: ${error instanceof Error ? error.message : "未知错误"}`);
       closeMenu();
     }
   }
@@ -211,7 +213,7 @@ const handleFileChange = (event: Event) => {
 
   if (!activeTabId.value) {
     console.error("无法导入：没有活动的标签页。");
-    alert("无法导入：请先打开一个标签页。");
+    dialogService.showError("无法导入：请先打开一个标签页。");
     // 重置文件输入
     if (importInputRef.value) {
       importInputRef.value.value = "";
@@ -290,14 +292,14 @@ const handleFileChange = (event: Event) => {
         tabStore.updateTab(currentTabId, { label: name, isDirty: true, associatedId: "" });
 
         console.log("工作流导入成功（临时实现）。"); // Keep as log - user action feedback
-        alert(`工作流 "${name}" 已导入到当前标签页。请记得保存。`);
+        dialogService.showSuccess(`工作流 "${name}" 已导入到当前标签页。请记得保存。`, '导入成功');
         // --- 临时方案结束 ---
       } else {
         throw new Error("无效的工作流文件格式。需要包含 nodes, edges, 和 viewport。");
       }
     } catch (error) {
       console.error("导入工作流时出错:", error);
-      alert(`导入工作流失败: ${error instanceof Error ? error.message : "未知错误"}`);
+      dialogService.showError(`导入工作流失败: ${error instanceof Error ? error.message : "未知错误"}`);
     } finally {
       // 重置文件输入，以便可以再次选择相同的文件
       if (importInputRef.value) {
@@ -307,7 +309,7 @@ const handleFileChange = (event: Event) => {
   };
   reader.onerror = (error) => {
     console.error("读取文件时出错:", error);
-    alert("读取文件失败。");
+    dialogService.showError("读取文件失败。");
     if (importInputRef.value) {
       importInputRef.value.value = "";
     }
@@ -319,14 +321,14 @@ const handleExport = () => {
   const currentTabId = activeTabId.value;
   if (!currentTabId) {
     console.error("无法导出：没有活动的标签页。");
-    alert("无法导出：请先打开一个标签页。");
+    dialogService.showError("无法导出：请先打开一个标签页。");
     closeMenu();
     return;
   }
   const instance = workflowStore.getVueFlowInstance(currentTabId);
   if (!instance) {
     console.error(`无法导出：标签页 ${currentTabId} 的 VueFlow 实例不可用。`);
-    alert("无法导出：VueFlow 实例不可用。");
+    dialogService.showError("无法导出：VueFlow 实例不可用。");
     closeMenu();
     return;
   }

@@ -2,10 +2,12 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProjectStore } from '../../stores/projectStore';
 import type { ProjectMetadata } from '@comfytavern/types';
+import { useDialogService } from '../../services/DialogService'; // 导入 DialogService
 
 export function useProjectManagement() {
   const router = useRouter();
   const projectStore = useProjectStore();
+  const dialogService = useDialogService(); // 获取 DialogService 实例
 
   const projects = ref<ProjectMetadata[]>([]);
   const isLoading = ref(false);
@@ -31,7 +33,7 @@ export function useProjectManagement() {
     if (!projectName || projectName.trim() === '') {
       console.error('项目名称不能为空');
       error.value = '项目名称不能为空。';
-      alert(error.value); // 临时用 alert 提示
+      dialogService.showError(error.value); // 替换 alert
       return; // 提前返回，不执行后续操作
     }
     isLoading.value = true; // 可以添加一个全局加载状态或按钮加载状态
@@ -45,12 +47,12 @@ export function useProjectManagement() {
       } else {
         console.error('创建新项目失败');
         error.value = '创建新项目失败，请检查后端服务或联系管理员。';
-        alert(error.value); // 临时用 alert 提示
+        dialogService.showError(error.value); // 替换 alert
       }
     } catch (err) {
       console.error('创建新项目时出错:', err);
       error.value = `创建新项目时出错: ${err instanceof Error ? err.message : String(err)}`;
-      alert(error.value); // 临时用 alert 提示
+      dialogService.showError(error.value); // 替换 alert
     } finally {
       isLoading.value = false;
     }

@@ -19,6 +19,7 @@ import {
   transformVueFlowToCoreWorkflow, // 新增导入
 } from "@/utils/workflowTransformer";
 import type { FlowExportObject } from "@vue-flow/core"; // 新增导入
+import { useDialogService } from '../../services/DialogService'; // 导入 DialogService
 
 /**
  * Composable for handling workflow execution logic.
@@ -30,6 +31,7 @@ export function useWorkflowExecution() {
   const executionStore = useExecutionStore();
   const { sendMessage, setInitiatingTabForNextPrompt } = useWebSocket(); // 获取 setInitiatingTabForNextPrompt
   const workflowDataHandler = useWorkflowData();
+  const dialogService = useDialogService(); // 获取 DialogService 实例
 
   /**
    * 触发当前活动工作流的完整执行。
@@ -38,7 +40,7 @@ export function useWorkflowExecution() {
     const internalId = tabStore.activeTabId;
     if (!internalId) {
       console.error("[WorkflowExecution:executeWorkflow] No active tab found.");
-      alert("请先选择一个标签页。"); // 与 StatusBar.vue 保持一致
+      dialogService.showError("请先选择一个标签页。"); // 与 StatusBar.vue 保持一致
       return;
     }
 
@@ -61,7 +63,7 @@ export function useWorkflowExecution() {
     const initialElements = workflowManager.getElements(internalId);
     if (!initialElements || initialElements.length === 0) {
       console.error(`[WorkflowExecution:executeWorkflow] No initial elements found for tab ${internalId}. Aborting.`);
-      alert("画布上没有元素可执行。");
+      dialogService.showError("画布上没有元素可执行。");
       return;
     }
 
@@ -99,7 +101,7 @@ export function useWorkflowExecution() {
     const elementsAfterClientScripts = workflowManager.getElements(internalId);
     if (!elementsAfterClientScripts || elementsAfterClientScripts.length === 0) {
       console.error(`[WorkflowExecution:executeWorkflow] Elements became empty or invalid after client scripts for tab ${internalId}. Aborting.`);
-      alert("执行客户端脚本后画布状态错误。");
+      dialogService.showError("执行客户端脚本后画布状态错误。");
       return;
     }
     console.info(`[WorkflowExecution:executeWorkflow] Fetched ${elementsAfterClientScripts.length} elements after client scripts.`);

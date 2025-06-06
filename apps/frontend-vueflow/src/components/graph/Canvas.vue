@@ -75,6 +75,7 @@ import { useCanvasConnections } from "../../composables/canvas/useCanvasConnecti
 import { useNodeGroupConnectionValidation } from "../../composables/node/useNodeGroupConnectionValidation"; // 导入新的 Composable
 import { useWorkflowGrouping } from "@/composables/group/useWorkflowGrouping";
 import { createHistoryEntry } from "@comfytavern/utils"; // <-- 导入 createHistoryEntry
+import { useDialogService } from "@/services/DialogService";
 
 // 定义props和emits
 const props = defineProps({
@@ -205,6 +206,7 @@ const nodeStore = useNodeStore();
 const { nodeDefinitions } = storeToRefs(nodeStore); // 从 nodeStore 获取响应式引用
 const workflowStore = useWorkflowStore(); // 实例化 WorkflowStore
 const tabStore = useTabStore(); // 实例化 TabStore
+const dialogService = useDialogService(); // 实例化 DialogService
 const activeTabId = computed(() => tabStore.activeTabId); // 获取活动标签页 ID
 // const currentWorkflowInterface = computed(() => {
 //   if (activeTabId.value) {
@@ -649,13 +651,13 @@ const handleCreateGroupFromSelection = () => {
   if (selectedNodeIds.length < 1) {
     // 修改：允许单个节点创建组
     console.log("Need to select at least one node to create a group."); // 修改：更新提示信息
-    alert("请选择至少一个节点来创建节点组。"); // 修改：更新用户提示
+    dialogService.showError("请选择至少一个节点来创建节点组。"); // 修改：更新用户提示
     return;
   }
 
   if (!activeTabId.value) {
     console.error("Cannot group nodes: No active tab found.");
-    alert("无法创建节点组：没有活动的标签页。");
+    dialogService.showError("无法创建节点组：没有活动的标签页。");
     return;
   }
 
@@ -667,7 +669,7 @@ const handleCreateGroupFromSelection = () => {
     console.log(`[Canvas] Grouping action dispatched for tab ${activeTabId.value}.`);
   } catch (error) {
     console.error("Error during grouping from context menu:", error);
-    alert(`创建节点组失败: ${error instanceof Error ? error.message : "未知错误"}`);
+    dialogService.showError(`创建节点组失败: ${error instanceof Error ? error.message : "未知错误"}`);
   }
 };
 
@@ -717,7 +719,7 @@ const handleCreateFrameForSelection = () => {
 
   if (minX === Infinity || minY === Infinity || maxX === -Infinity || maxY === -Infinity) {
     console.error("[Canvas] Failed to calculate bounding box for selected nodes.");
-    alert("无法为选中节点创建分组框，计算边界失败。");
+    dialogService.showError("无法为选中节点创建分组框，计算边界失败。");
     return;
   }
 

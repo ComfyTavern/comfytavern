@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { useWorkflowStore } from "./workflowStore"; // 需要访问工作流数据
 import { useProjectStore } from "./projectStore"; // 导入 project store
 import { useRouter } from "vue-router"; // Import useRouter
+import { useDialogService } from '../services/DialogService'; // 导入 DialogService
 // 定义标签页类型
 export type TabType = "workflow" | "settings" | "character" | "groupEditor"; // Add 'groupEditor' back
 
@@ -21,6 +22,7 @@ export const useTabStore = defineStore("tab", () => {
   const workflowStore = useWorkflowStore(); // 获取 workflow store 实例
   const projectStore = useProjectStore(); // 获取 project store 实例
   const router = useRouter(); // 获取 router 实例
+  const dialogService = useDialogService(); // 获取 DialogService 实例
   // --- State ---
   const tabs = ref<Tab[]>([]);
   const activeTabId = ref<string | null>(null);
@@ -85,7 +87,7 @@ export const useTabStore = defineStore("tab", () => {
    * 移除标签页
    * @param internalId - 要移除的标签页ID
    */
-  function removeTab(internalId: string) {
+  async function removeTab(internalId: string) { // 声明为 async 函数
     const index = tabs.value.findIndex((tab) => tab.internalId === internalId);
     if (index === -1) return;
 
@@ -94,8 +96,14 @@ export const useTabStore = defineStore("tab", () => {
 
     // 检查是否有未保存的更改
     if (tabToRemove.isDirty) {
-      // TODO: 实现更友好的确认对话框
-      const confirmClose = confirm(`标签页 "${tabToRemove.label}" 有未保存的更改，确定要关闭吗？`);
+      // 使用 DialogService 进行确认
+      const confirmClose = await dialogService.showConfirm({
+        title: '关闭确认',
+        message: `标签页 "${tabToRemove.label}" 有未保存的更改，确定要关闭吗？`,
+        confirmText: '关闭',
+        cancelText: '取消',
+        dangerConfirm: true, // 可以考虑将关闭未保存的更改视为危险操作
+      });
       if (!confirmClose) {
         return;
       }

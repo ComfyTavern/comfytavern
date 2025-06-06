@@ -15,6 +15,7 @@ import { useWorkflowInteractionCoordinator } from "@/composables/workflow/useWor
 import { sendMessage } from "@/composables/useWebSocket"; // 导入共享的 sendMessage
 import { WebSocketMessageType } from "@comfytavern/types"; // 导入消息类型
 import { klona } from "klona";
+import { useDialogService } from '../services/DialogService'; // 导入 DialogService
 
 export const useWorkflowStore = defineStore("workflow", () => {
   // --- 全局状态 ---
@@ -31,6 +32,7 @@ export const useWorkflowStore = defineStore("workflow", () => {
 
   // --- 获取其他 Store ---
   const tabStore = useTabStore();
+  const dialogService = useDialogService(); // 获取 DialogService 实例
   // 移除了未使用的：projectStore
 
   // --- 实例化 Composables ---
@@ -583,7 +585,7 @@ export const useWorkflowStore = defineStore("workflow", () => {
     const activeId = tabStore.activeTabId;
     if (!activeId) {
       console.error("[WorkflowStore] 无法提示保存：没有活动的标签页。");
-      alert("无法保存：请先打开一个标签页。");
+      dialogService.showError("无法保存：请先打开一个标签页。");
       return false;
     }
 

@@ -3,12 +3,14 @@ import SideBar from './SideBar.vue'; // 侧边栏仍然需要
 import { useProjectManagement } from '../composables/editor/useProjectManagement';
 import { useThemeStore } from '../stores/theme'; // 导入 theme store
 import { computed } from 'vue';
+import { useDialogService } from '../services/DialogService'; // 导入 DialogService
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
 
 // 使用 Composable 获取项目数据和方法
 const { projects, isLoading, error, createNewProject, openProject } = useProjectManagement();
 const themeStore = useThemeStore(); // 获取 theme store 实例
+const dialogService = useDialogService(); // 获取 DialogService 实例
 const isDark = computed(() => themeStore.isDark);
 
 const promptAndCreateProject = async () => {
@@ -16,7 +18,7 @@ const promptAndCreateProject = async () => {
   if (projectName && projectName.trim() !== '') {
     await createNewProject(projectName.trim());
   } else if (projectName !== null) { // 用户点击了确定但输入为空
-    alert('项目名称不能为空！');
+    dialogService.showError('项目名称不能为空！');
   }
   // 如果 projectName 为 null，表示用户点击了取消，不执行任何操作
 };

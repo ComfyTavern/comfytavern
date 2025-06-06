@@ -30,6 +30,7 @@ import { getNodeType } from "@/utils/nodeUtils"; // 导入节点类型辅助函�
 import { transformVueFlowToCoreWorkflow } from "@/utils/workflowTransformer"; // <--- 导入转换函数
 import { useWorkflowViewManagement } from "../workflow/useWorkflowViewManagement"; // ADDED: Import view management
 import { nextTick, type Ref, toRaw } from "vue"; // 导入 Ref 类型, toRaw
+import { useDialogService } from '../../services/DialogService'; // 导入 DialogService
 
 // New isTypeCompatible function, logic copied from useCanvasConnections.ts
 export function isTypeCompatible(sourceSlot: GroupSlotInfo, targetSlot: GroupSlotInfo): boolean { // Added export
@@ -132,6 +133,7 @@ async function updateNodeGroupWorkflowReferenceLogic(
   tabStore: ReturnType<typeof useTabStore>,
   workflowDataHandler: ReturnType<typeof useWorkflowData>,
   nodeDefinitions: Ref<any[]>, // 假设 nodeDefinitions 是一个 Ref
+  dialogService: ReturnType<typeof useDialogService>, // 添加 dialogService 参数
   // REMOVED: updateNodeData: (id: string, data: any) => void
 ): Promise<{ success: boolean; updatedNodeData?: any; edgeIdsToRemove?: string[] }> { // <-- Changed return type
   // 获取当前标签页 ID
@@ -393,7 +395,7 @@ async function updateNodeGroupWorkflowReferenceLogic(
       `[updateNodeGroupWorkflowReferenceLogic] Error updating node ${nodeId} with workflow ${newWorkflowId}:`,
       error
     );
-    alert(`更新节点组引用失败: ${error instanceof Error ? error.message : String(error)}`);
+    dialogService.showError(`更新节点组引用失败: ${error instanceof Error ? error.message : String(error)}`);
     return { success: false }; // <-- Return object
   }
 }
@@ -413,6 +415,7 @@ async function createGroupFromSelectionLogic(
   projectStore: ReturnType<typeof useProjectStore>,
   getEdgeStyleProps: (sourceType: string, targetType: string, isDark: boolean) => any,
   isDark: Ref<boolean>,
+  dialogService: ReturnType<typeof useDialogService>, // 添加 dialogService 参数
   // ADDED Dependency:
   workflowViewManagement: ReturnType<typeof import('../workflow/useWorkflowViewManagement').useWorkflowViewManagement>
 ) {
@@ -835,7 +838,7 @@ async function createGroupFromSelectionLogic(
     console.error(
       "[createGroupFromSelectionLogic] Cannot save new workflow: Project ID is missing."
     );
-    alert("无法创建节点组：当前项目未设定。");
+    dialogService.showError("无法创建节点组：当前项目未设定。");
     return;
   }
 
@@ -850,7 +853,7 @@ async function createGroupFromSelectionLogic(
     }
   } catch (error) {
     console.error("[createGroupFromSelectionLogic] Error saving new workflow:", error);
-    alert(
+    dialogService.showError(
       `创建节点组失败：无法保存新的工作流文件。\n${error instanceof Error ? error.message : String(error)
       }`
     );
@@ -871,7 +874,7 @@ async function createGroupFromSelectionLogic(
 
   if (!nodeGroupDef) {
     console.error("[createGroupFromSelectionLogic] NodeGroup definition (namespace: 'core', type: 'NodeGroup') not found in nodeDefinitions.value!");
-    alert("创建节点组失败：找不到 NodeGroup 定义。");
+    dialogService.showError("创建节点组失败：找不到 NodeGroup 定义。");
     return;
   }
 
@@ -1084,6 +1087,7 @@ export function useWorkflowGrouping() {
   const { generateUniqueNodeId } = useUniqueNodeId();
   const { getEdgeStyleProps } = useEdgeStyles();
   const workflowDataHandler = useWorkflowData();
+  const dialogService = useDialogService(); // 获取 DialogService 实例
 
   /**
    * 公开的函数，用于从外部（如快捷键）触发分组过程。
@@ -1118,6 +1122,7 @@ export function useWorkflowGrouping() {
         projectStore,
         getEdgeStyleProps,
         isDark,
+        dialogService, // 传递 dialogService
         // ADDED Dependency:
         useWorkflowViewManagement() // Assuming it can be instantiated here or passed down
       );
@@ -1145,7 +1150,8 @@ export function useWorkflowGrouping() {
       workflowStore,
       tabStore,
       workflowDataHandler,
-      nodeDefinitions
+      nodeDefinitions,
+      dialogService // 传递 dialogService
       // REMOVED: updateNodeData
     );
   }

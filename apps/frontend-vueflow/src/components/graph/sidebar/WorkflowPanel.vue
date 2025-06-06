@@ -90,6 +90,7 @@ import Tooltip from '@/components/common/Tooltip.vue'; // 导入 Tooltip 组件
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import 'overlayscrollbars/overlayscrollbars.css';
 import { useThemeStore } from "@/stores/theme";
+import { useDialogService } from '@/services/DialogService'; // 导入 DialogService
 
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore(); // Get tabStore instance
@@ -97,6 +98,7 @@ const projectStore = useProjectStore(); // Get projectStore instance
 const { availableWorkflows } = storeToRefs(workflowStore);
 const themeStore = useThemeStore(); // Get theme store instance
 const { isDark } = storeToRefs(themeStore); // Get isDark state
+const dialogService = useDialogService(); // 获取 DialogService 实例
 // const { activeTabId } = storeToRefs(tabStore); // Removed unused activeTabId
 // const vueFlow = useVueFlow(); // Remove unused variable
 
@@ -162,14 +164,14 @@ const handleLoad = async (workflowId: string) => {
   const workflowToLoad = availableWorkflows.value.find(wf => wf.id === workflowId);
   if (!workflowToLoad) {
     console.error(`WorkflowPanel: Workflow with ID ${workflowId} not found in available list.`);
-    alert("无法加载工作流：未在列表中找到。");
+    dialogService.showError("无法加载工作流：未在列表中找到。");
     return;
   }
 
   const currentProjectId = projectStore.currentProjectId;
   if (!currentProjectId) {
     console.error("WorkflowPanel: Cannot load workflow, current project ID is missing.");
-    alert("无法加载工作流：缺少项目信息。");
+    dialogService.showError("无法加载工作流：缺少项目信息。");
     return;
   }
 
