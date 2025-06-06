@@ -2,7 +2,7 @@ import { ref, shallowRef, markRaw, type Component } from 'vue';
 import { defineStore } from 'pinia';
 
 // 对话框类型
-type DialogType = 'message' | 'confirm';
+type DialogType = 'message' | 'confirm' | 'input'; // 添加 input 类型
 
 // 通知类型
 type ToastType = 'info' | 'success' | 'warning' | 'error';
@@ -20,6 +20,14 @@ interface DialogOptions {
   closeOnBackdrop?: boolean;
   dangerConfirm?: boolean;
   autoClose?: number;
+}
+
+// 输入对话框配置
+interface InputDialogOptions extends DialogOptions {
+  initialValue?: string;
+  placeholder?: string;
+  inputType?: 'text' | 'password' | 'number' | 'textarea';
+  inputRows?: number;
 }
 
 // 通知配置
@@ -162,6 +170,59 @@ export const useDialogService = defineStore('dialogService', () => {
       }).catch(reject);
     });
   }
+
+  // 显示输入对话框
+  function showInput(options: InputDialogOptions): Promise<string | null> {
+    return new Promise((resolve, reject) => {
+      import('../components/common/InputDialog.vue').then((module) => {
+        const dialog: DialogInstance = {
+          id: generateId(),
+          type: 'input',
+          component: markRaw(module.default),
+          props: {
+            visible: true,
+            title: options.title || '请输入',
+            message: options.message, // message 仍然可以用于显示提示信息
+            confirmText: options.confirmText || '确定',
+            cancelText: options.cancelText || '取消',
+            showCloseButton: options.showCloseButton !== undefined ? options.showCloseButton : true,
+            closeOnBackdrop: options.closeOnBackdrop !== undefined ? options.closeOnBackdrop : false,
+            dangerConfirm: options.dangerConfirm || false,
+            // InputDialog 特有 props
+            initialValue: options.initialValue || '',
+            placeholder: options.placeholder || '请输入内容...',
+            inputType: options.inputType || 'text',
+            inputRows: options.inputRows || 3,
+            onConfirm: (inputValue: string) => {
+              closeDialog(dialog.id);
+              resolve(inputValue);
+            },
+            onCancel: () => {
+              closeDialog(dialog.id);
+              resolve(null); // 用户取消时返回 null
+            },
+            onClose: () => { // MessageDialog 触发的关闭（如点击X）
+              closeDialog(dialog.id);
+              resolve(null); // 关闭也视为取消
+            },
+            'onUpdate:visible': (value: boolean) => {
+              if (!value) {
+                // 如果对话框通过 visible 绑定被外部关闭，确保 Promise 被解决
+                // 检查 activeDialog 是为了避免在已经通过 onConfirm/onCancel/onClose 解决后再解决一次
+                if (activeDialog.value && activeDialog.value.id === dialog.id) {
+                  closeDialog(dialog.id);
+                  resolve(null);
+                }
+              }
+            }
+          },
+          resolve: (value: string | null) => resolve(value), // 调整 resolve 类型
+          reject
+        };
+        addDialog(dialog);
+      }).catch(reject);
+    });
+  }
   
   // 显示通知
   function showToast(options: ToastOptions): string {
@@ -295,6 +356,7 @@ export const useDialogService = defineStore('dialogService', () => {
     toasts,
     showMessage,
     showConfirm,
+    showInput, // 导出 showInput 方法
     showToast,
     showSuccess,
     showError,

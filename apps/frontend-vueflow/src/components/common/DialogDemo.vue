@@ -43,6 +43,23 @@
               显示自动关闭对话框
             </button>
           </div>
+
+          <div>
+            <button
+              @click="showInputDialog"
+              class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors"
+            >
+              显示输入对话框
+            </button>
+          </div>
+          <div>
+            <button
+              @click="showTextareaDialog"
+              class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors"
+            >
+              显示多行输入对话框
+            </button>
+          </div>
         </div>
       </div>
       
@@ -181,6 +198,49 @@ const showAutoCloseDialog = async () => {
       autoClose: 3000,
     });
     result.value = '对话框已自动关闭';
+  } catch (error) {
+    result.value = `发生错误: ${error}`;
+  }
+};
+
+// 显示输入对话框
+const showInputDialog = async () => {
+  try {
+    const inputValue = await dialogService.showInput({
+      title: '请输入您的名字',
+      message: '我们需要您的名字来进行个性化设置。',
+      initialValue: '咕咕',
+      placeholder: '例如：张三',
+      confirmText: '提交',
+      cancelText: '稍后提示我',
+    });
+    if (inputValue !== null) {
+      result.value = `用户输入了: "${inputValue}"`;
+    } else {
+      result.value = '用户取消了输入';
+    }
+  } catch (error) {
+    result.value = `发生错误: ${error}`;
+  }
+};
+
+// 显示多行输入对话框
+const showTextareaDialog = async () => {
+  try {
+    const inputValue = await dialogService.showInput({
+      title: '请输入您的反馈',
+      message: '请详细描述您遇到的问题或建议：',
+      initialValue: '',
+      placeholder: '请在此处输入您的反馈内容...',
+      inputType: 'textarea',
+      inputRows: 5,
+      confirmText: '发送反馈',
+    });
+    if (inputValue !== null) {
+      result.value = `用户反馈: "${inputValue}"`;
+    } else {
+      result.value = '用户取消了反馈输入';
+    }
   } catch (error) {
     result.value = `发生错误: ${error}`;
   }
