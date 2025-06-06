@@ -411,11 +411,46 @@
 
 ## 5. 交互模板 (Interaction Template)
 
-- (概念同旧文档，用于项目初始化，不限制后续发展)
+- **定位**：项目创建的起点和脚手架，而非运行时的限制。
+- **目的**：
+  - 允许用户快速启动一个具有特定用途的项目（例如："基础聊天"、"带 RAG 的知识问答"、"角色扮演"、"图像生成"）
+  - 提供预设的项目结构、示例工作流、默认配置和必要的资源引用
+  - 降低新用户的学习曲线，展示最佳实践
+- **核心特征**:
+  - **本质**: 一个遵循标准项目目录结构（见 3.1）的预打包文件集合（可以是一个目录模板或 .zip/.cttemplate 压缩包）
+  - **内容包含**:
+    - 一个预配置的 project.json (包含描述、默认设置、对基础/全局知识库的引用声明)
+    - 一个或多个示例性的 workflows/ (例如，一个实现基础 RAG 流程的 workflow.json)
+    - (可选) 示例性的项目本地 knowledgebases/
+    - (可选) 示例性的 scenes/, ui/, assets/
+    - (可选) 一个 README.md 说明模板用途和使用方法
+  - **使用流程**: 用户选择 "新建项目" -> "从模板创建" -> 选择一个模板 -> 系统将模板内容解压/复制到一个新的项目目录中
+  - **非约束性**: 一旦项目基于模板创建完成，它就成为一个完全独立的、可自由修改的项目，与原始模板脱钩。用户可以任意修改、删除、添加工作流和资源。模板只影响初始化状态
+  - **与项目的关系**: 模板是创建项目的"配方"或"蓝图副本"，项目是模板的实例化
 
 ## 6. 节点接口模型 (Node Interface Model)
 
-- (概念同旧文档，关于中心化接口定义与幻影 I/O 节点，适用于工作流节点设计)
+节点接口模型定义了节点组（NodeGroup）的输入输出接口，这些接口在节点组节点上显示为插槽，但实际的数据流由引用的工作流内部节点处理。
+
+- **接口定义**:
+  - 节点组可以定义多个输入和输出接口，每个接口具有以下属性：
+    - `key`: 唯一标识符（如 [`useGroupIOSlots()`](apps/frontend-vueflow/src/composables/group/useGroupIOSlots.ts:9)）
+    - `displayName`: 显示名称
+    - `dataFlowType`: 数据流类型（如 STRING, INTEGER, WILDCARD, CONVERTIBLE_ANY 等）
+    - `customDescription`: 自定义描述（可选）
+  - 接口定义存储在节点组的 `groupInterface` 属性中（输入在 `inputs`，输出在 `outputs`）
+
+- **接口管理**:
+  - 用户可以在节点组的侧边栏（GroupIOEdit 组件）中动态管理接口：
+    - 添加/删除接口（[`useGroupIOActions.addInput()`](apps/frontend-vueflow/src/composables/group/useGroupIOActions.ts:93)）
+    - 排序接口（[`useGroupIOActions.sortInputs()`](apps/frontend-vueflow/src/composables/group/useGroupIOActions.ts:304)）
+    - 编辑接口属性（[`useGroupIOState.editingDisplayName`](apps/frontend-vueflow/src/composables/group/useGroupIOState.ts:23)）
+  - 状态管理使用组合函数 [`useGroupIOState()`](apps/frontend-vueflow/src/composables/group/useGroupIOState.ts:11)
+
+- **动态插槽**:
+  - 节点组节点会动态从引用工作流中获取IO插槽（[`useGroupIOSlots()`](apps/frontend-vueflow/src/composables/group/useGroupIOSlots.ts:18)）
+  - 这些插槽不会被保存到工作流文件中，只保存引用信息
+  - 在加载时动态获取接口定义（[`useGroupIOSlots.finalInputs`](apps/frontend-vueflow/src/composables/group/useGroupIOSlots.ts:29)）
 
 ## 7. ST 兼容性策略总结
 
