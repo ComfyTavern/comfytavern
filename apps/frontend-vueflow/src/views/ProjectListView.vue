@@ -14,13 +14,24 @@ const dialogService = useDialogService(); // 获取 DialogService 实例
 const isDark = computed(() => themeStore.isDark);
 
 const promptAndCreateProject = async () => {
-  const projectName = window.prompt('请输入新项目的名称：');
-  if (projectName && projectName.trim() !== '') {
-    await createNewProject(projectName.trim());
-  } else if (projectName !== null) { // 用户点击了确定但输入为空
+  const projectName = await dialogService.showInput({
+    title: '创建新项目',
+    message: '请输入新项目的名称：',
+    inputPlaceholder: '项目名称'
+  });
+
+  // 用户点击了取消或关闭对话框
+  if (projectName === null) {
+    return;
+  }
+
+  const trimmedProjectName = projectName.trim();
+  if (trimmedProjectName !== '') {
+    await createNewProject(trimmedProjectName);
+  } else {
+    // 用户点击了确定但输入为空或只包含空格
     dialogService.showError('项目名称不能为空！');
   }
-  // 如果 projectName 为 null，表示用户点击了取消，不执行任何操作
 };
 </script>
 
