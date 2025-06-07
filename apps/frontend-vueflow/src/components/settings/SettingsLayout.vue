@@ -92,7 +92,7 @@ const activeSection = computed(() =>
 <style scoped>
 .settings-layout {
   display: flex;
-  height: 100vh;
+  height: 100%;
   width: 100%;
   background-color: var(--ct-bg-base);
   color: var(--ct-text-base);

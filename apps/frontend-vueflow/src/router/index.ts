@@ -39,7 +39,7 @@ const router = createRouter({
     {
       path: '/settings',
       name: 'Settings',
-      component: () => import('../components/settings/SettingsLayout.vue'),
+      component: () => import('../views/SettingsView.vue'),
     },
     {
       path: '/projects/:projectId/editor/:workflowId?', // 添加可选的 workflowId 参数

@@ -23,7 +23,7 @@ const textClasses = computed(() => themeStore.collapsed
 <template>
   <div class="fixed left-0 top-0 bottom-0 flex flex-col z-10 transition-all duration-300 ease-in-out" :class="[
     themeStore.collapsed ? 'w-16' : 'w-64',
-    themeStore.isDark ? 'bg-gray-800 text-white' : 'bg-white text-gray-800' // 亮色主题背景改为白色
+    themeStore.isDark ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'
   ]">
     <!-- 用户头像 -->
     <div class="p-2 flex justify-center">
@@ -37,7 +37,7 @@ const textClasses = computed(() => themeStore.collapsed
     <nav class="flex-1 flex flex-col px-2 py-4 space-y-2">
       <RouterLink to="/" class="w-full p-2 rounded flex items-center" :class="[
         themeStore.collapsed ? 'justify-center' : 'justify-start',
-        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200' // 亮色主题 hover 和 active 调整
+        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
       ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
         <span class="inline text-lg">🏠</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
@@ -46,7 +46,7 @@ const textClasses = computed(() => themeStore.collapsed
 
       <RouterLink to="/projects" class="w-full p-2 rounded flex items-center" :class="[
         themeStore.collapsed ? 'justify-center' : 'justify-start',
-        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200' // 亮色主题 hover 和 active 调整
+        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
       ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
         <span class="inline text-lg">📁</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
@@ -54,7 +54,7 @@ const textClasses = computed(() => themeStore.collapsed
       </RouterLink>
       <RouterLink to="/characters" class="w-full p-2 rounded flex items-center" :class="[
         themeStore.collapsed ? 'justify-center' : 'justify-start',
-        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200' // 亮色主题 hover 和 active 调整
+        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
       ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
         <span class="inline text-lg">🎭</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
@@ -63,7 +63,7 @@ const textClasses = computed(() => themeStore.collapsed
 
       <RouterLink to="/about" class="w-full p-2 rounded flex items-center" :class="[
         themeStore.collapsed ? 'justify-center' : 'justify-start',
-        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200' // 亮色主题 hover 和 active 调整
+        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
       ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
         <span class="inline text-lg">ℹ️</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
@@ -92,14 +92,14 @@ const textClasses = computed(() => themeStore.collapsed
       </Tooltip>
 
       <!-- 设置按钮 -->
-      <button class="w-full p-2 rounded flex items-center mt-2" :class="[
+      <RouterLink to="/settings" class="w-full p-2 rounded flex items-center mt-2" :class="[
         themeStore.collapsed ? 'justify-center' : 'justify-start',
-        themeStore.isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100' // 亮色主题 hover 调整
-      ]">
+        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
+      ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
         <span class="inline text-lg">⚙️</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">设置</span>
-      </button>
+      </RouterLink>
 
       <!-- 折叠按钮 -->
       <Tooltip content="折叠/展开侧边栏">
