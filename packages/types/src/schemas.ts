@@ -42,13 +42,13 @@ export const BuiltInSocketMatchCategory = {
   REGEX_RULE_ARRAY: "RegexRuleArray", // ++ 新增，用于标记 RegexRule[] 类型
   /** 标记此输入组件应作为“大块”或“块级”元素渲染，而不是行内紧凑型 */
   UI_BLOCK: "UiBlock",
- 
+
   // 新增用于操作提示的类别
   /** 标记此输入支持标准的内联预览操作按钮 */
   CanPreview: "CanPreview",
   /** 标记此输入不应显示其类型的默认编辑操作按钮 (如果其类型通常有默认编辑按钮) */
   NoDefaultEdit: "NoDefaultEdit",
- 
+
   // 行为标签
   BEHAVIOR_WILDCARD: "BehaviorWildcard",
   BEHAVIOR_CONVERTIBLE: "BehaviorConvertible",
@@ -287,25 +287,25 @@ export type WorkflowNode = z.infer<typeof WorkflowNodeSchema>;
  * 可以是简单的字符串类型（如 MarkerType.ArrowClosed），也可以是包含详细配置的对象。
  */
 export const MarkerEndSchema = z.union([
-    /** 简单的标记类型字符串，例如 MarkerType.ArrowClosed */
-    z.string(),
-    /** 包含详细配置的标记对象 */
-    z.object({
-        /** 标记类型字符串，例如 MarkerType.Arrow */
-        type: z.string().optional(),
-        /** 标记颜色 */
-        color: z.string().optional(),
-        /** 标记宽度 */
-        width: z.number().optional(),
-        /** 标记高度 */
-        height: z.number().optional(),
-        /** 标记单位 */
-        markerUnits: z.string().optional(),
-        /** 标记方向 */
-        orient: z.string().optional(),
-        /** 标记描边宽度 */
-        strokeWidth: z.number().optional(),
-    })
+  /** 简单的标记类型字符串，例如 MarkerType.ArrowClosed */
+  z.string(),
+  /** 包含详细配置的标记对象 */
+  z.object({
+    /** 标记类型字符串，例如 MarkerType.Arrow */
+    type: z.string().optional(),
+    /** 标记颜色 */
+    color: z.string().optional(),
+    /** 标记宽度 */
+    width: z.number().optional(),
+    /** 标记高度 */
+    height: z.number().optional(),
+    /** 标记单位 */
+    markerUnits: z.string().optional(),
+    /** 标记方向 */
+    orient: z.string().optional(),
+    /** 标记描边宽度 */
+    strokeWidth: z.number().optional(),
+  })
 ]).optional();
 
 
