@@ -1,6 +1,6 @@
 <template>
   <div class="settings-layout">
-    <!-- 左侧导航区 -->
+    <!-- 顶部标签页导航 -->
     <nav class="settings-nav">
       <ul>
         <li
@@ -15,7 +15,7 @@
       </ul>
     </nav>
 
-    <!-- 右侧主体内容区 -->
+    <!-- 主体内容区 -->
     <main class="settings-content">
       <template v-if="activeSection">
         <h2 class="section-title">{{ activeSection.label }}</h2>
@@ -92,6 +92,7 @@ const activeSection = computed(() =>
 <style scoped>
 .settings-layout {
   display: flex;
+  flex-direction: column; /* 改为垂直布局 */
   height: 100%;
   width: 100%;
   background-color: var(--ct-bg-base);
@@ -99,44 +100,47 @@ const activeSection = computed(() =>
 }
 
 .settings-nav {
-  width: 240px;
+  width: 100%; /* 宽度占满 */
   flex-shrink: 0;
-  padding: 24px 0;
-  border-right: 1px solid var(--ct-border-color);
-  background-color: var(--ct-bg-subtle);
+  border-bottom: 1px solid var(--ct-border-color); /* 从右边框改为下边框 */
+  background-color: var(--ct-bg-base);
 }
 
 .settings-nav ul {
   list-style: none;
-  padding: 0;
+  padding: 0 32px; /* 左右留出边距 */
   margin: 0;
+  display: flex; /* 横向排列 */
+  gap: 8px; /* 标签间距 */
 }
 
 .settings-nav li {
-  padding: 12px 24px;
+  padding: 14px 20px; /* 调整内边距以适应标签页 */
   cursor: pointer;
   font-size: 1rem;
   display: flex;
   align-items: center;
-  gap: 12px;
-  border-left: 3px solid transparent;
+  gap: 8px; /* 缩小图标和文字间距 */
+  border-bottom: 3px solid transparent; /* 从左边框改为下边框 */
+  margin-bottom: -1px; /* 巧妙地让边框与父元素的下边框重合 */
   transition: all 0.2s ease;
 }
 
 .settings-nav li:hover {
   background-color: var(--ct-bg-hover);
+  color: var(--ct-text-accent);
 }
 
 .settings-nav li.active {
-  background-color: var(--ct-bg-active);
+  background-color: transparent; /* 激活时背景透明 */
   color: var(--ct-text-accent);
-  border-left-color: var(--ct-accent-color);
+  border-bottom-color: var(--ct-accent-color); /* 激活时下边框高亮 */
   font-weight: 600;
 }
 
 .settings-content {
   flex-grow: 1;
-  padding: 32px 64px; /* 增加内边距 */
+  padding: 32px 48px; /* 调整内边距 */
   overflow-y: auto;
 }
 
