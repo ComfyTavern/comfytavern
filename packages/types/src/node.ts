@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { DataFlowTypeName, GroupSlotInfo, NodeInputAction } from "./schemas"; // 导入 GroupSlotInfo 和 NodeInputAction
+import type { ChunkPayload, DataFlowTypeName, GroupSlotInfo, NodeInputAction } from "./schemas"; // 导入 GroupSlotInfo 和 NodeInputAction
 import { BuiltInSocketMatchCategory, DataFlowType } from "./schemas";
 
 // 基础输入选项
@@ -95,7 +95,17 @@ export interface NodeDefinition {
   description: string; // 节点描述
   inputs: Record<string, InputDefinition>; // 输入插槽定义
   outputs: Record<string, OutputDefinition>; // 输出插槽定义
-  execute?: (inputs: Record<string, any>, context?: any) => Promise<Record<string, any>>; // 节点执行函数 (可选)
+  /**
+   * 节点的执行函数。
+   * 可以是一个返回 Promise 的标准异步函数（批处理模式），
+   * 也可以是一个异步生成器函数（流式处理模式）。
+   */
+  execute?: (
+    inputs: Record<string, any>,
+    context?: any
+  ) =>
+    | Promise<Record<string, any>>
+    | AsyncGenerator<ChunkPayload, Record<string, any> | void, undefined>;
   clientScriptUrl?: string; // 用于加载客户端逻辑的URL (可选)
   filePath?: string; // 加载此节点定义的文件绝对路径 (可选)
   deprecated?: boolean; // 是否已弃用

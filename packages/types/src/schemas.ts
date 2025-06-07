@@ -1,5 +1,25 @@
 import { z } from 'zod';
 
+// --- 流式处理核心类型 ---
+
+/**
+ * 定义流式数据块的内容。
+ * 参考: DesignDocs/architecture/streaming-functionality-plan.md
+ */
+export const ChunkPayloadSchema = z.object({
+  type: z.enum([
+    "text_chunk",
+    "tool_call_chunk",
+    "finish_reason_chunk",
+    "usage_chunk",
+    "error_chunk",
+    "custom"
+  ]),
+  content: z.any(),
+}).passthrough(); // 允许附加元数据
+
+export type ChunkPayload = z.infer<typeof ChunkPayloadSchema>;
+
 // New type definitions as per task SLOT_TYPE_REFACTOR_1_1
 // Inserted after 'import { z } from "zod";'
 
@@ -11,6 +31,8 @@ export const DataFlowType = {
   OBJECT: "OBJECT",
   ARRAY: "ARRAY",
   BINARY: "BINARY",
+  /** 新增：代表一个数据流 */
+  STREAM: "STREAM",
   WILDCARD: "WILDCARD",
   CONVERTIBLE_ANY: "CONVERTIBLE_ANY",
 } as const;
@@ -487,7 +509,12 @@ export const ExecutionNodeSchema = z.object({
    * 这些通常是未连接且非默认值的输入。
    */
   inputs: z.record(z.any()).optional(),
-  // configValues: z.record(z.any()).optional(), // 节点的配置值（如果执行需要）
+  /** 节点的配置值 */
+  configValues: z.record(z.any()).optional(),
+  /** 节点是否被绕过 */
+  bypassed: z.boolean().optional(),
+  /** 节点的多输入连接顺序 (可选) */
+  inputConnectionOrders: z.record(z.array(z.string())).optional(),
 });
 /** 类型推断：执行节点 */
 export type ExecutionNode = z.infer<typeof ExecutionNodeSchema>;
@@ -497,7 +524,8 @@ export type ExecutionNode = z.infer<typeof ExecutionNodeSchema>;
  */
 export const ExecutionEdgeSchema = z.object({
   /** 边的唯一 ID (NanoId) */
-  id: z.string(),
+  /** 边的唯一 ID (NanoId)，在执行前可能没有 */
+  id: z.string().optional(),
   /** 源节点的 ID (NanoId) */
   sourceNodeId: z.string(),
   /** 源节点句柄（插槽）的 ID */

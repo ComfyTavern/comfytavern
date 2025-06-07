@@ -2,7 +2,7 @@
  * @fileoverview 定义工作流执行相关的共享 TypeScript 类型。
  * 参考设计文档: docs/architecture/workflow-execution-plan.md
  */
-import type { GroupSlotInfo } from './schemas'; // 导入 GroupSlotInfo 类型
+import type { ChunkPayload, GroupSlotInfo, ExecutionNode, ExecutionEdge } from './schemas'; // 导入 Zod 推断的类型
 
 /**
  * Nano ID 的类型别名，通常是字符串。
@@ -11,41 +11,8 @@ export type NanoId = string;
 
 // --- 核心执行数据结构 ---
 
-/**
- * 用于执行的节点表示。
- * 参考: workflow-execution-plan.md 第 23 行
- */
-export interface ExecutionNode {
-  /** 节点唯一标识符 (Nano ID) */
-  id: NanoId;
-  /** 节点的完整类型 (namespace:type) */
-  fullType: string;
-  /** 节点的输入值 (仅包含非默认值或连接值) */
-  inputs?: Record<string, any>; // 或者更具体的类型
-  /** 节点的配置值 */
-  configValues?: Record<string, any>; // 或者更具体的类型
-  /** 节点是否被绕过 */
-  bypassed?: boolean;
-  /** 节点的多输入连接顺序 (可选) */
-  inputConnectionOrders?: Record<string, string[]>;
-}
-
-/**
- * 用于执行的边表示。
- * 参考: workflow-execution-plan.md 第 23 行
- */
-export interface ExecutionEdge {
-  /** 边的唯一标识符 (可选, 但建议有) */
-  id?: NanoId;
-  /** 源节点 ID (Nano ID) */
-  sourceNodeId: NanoId;
-  /** 源节点的输出句柄 ID */
-  sourceHandle: string;
-  /** 目标节点 ID (Nano ID) */
-  targetNodeId: NanoId;
-  /** 目标节点的输入句柄 ID */
-  targetHandle: string;
-}
+// ExecutionNode 和 ExecutionEdge 接口已移除。
+// 现在直接从 ./schemas 文件导入由 Zod 推断的类型，作为单一数据源。
 
 /**
  * 提交工作流执行的载荷。
@@ -180,7 +147,20 @@ export interface NodeBypassedPayload {
   pseudoOutputs: Record<string, any>;
 }
 
-
+/**
+ * 通知节点产出流式数据块的载荷。
+ * 这是流式处理的核心事件。
+ */
+export interface NodeYieldPayload {
+  /** 执行 ID (Nano ID) */
+  promptId: NanoId;
+  /** 产出数据的节点 ID (Nano ID) */
+  sourceNodeId: NanoId;
+  /** 产出的数据块内容 */
+  yieldedContent: ChunkPayload;
+  /** 是否是此流的最后一个数据块 */
+  isLastChunk: boolean;
+}
 
 // --- HTTP API 相关类型 ---
 
