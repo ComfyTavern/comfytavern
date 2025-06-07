@@ -1,23 +1,29 @@
-import { reactive, computed, watch, ref } from "vue"; // Added ref
-import { klona } from "klona";
-import { DataFlowType, type GroupSlotInfo, type WorkflowNode as StorageNode, type WorkflowEdge as StorageEdge, type InputDefinition, type OutputDefinition } from "@comfytavern/types"; // Import StorageNode/Edge aliases & Input/OutputDefinition
-import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core";
+import {
+  DataFlowType,
+  type GroupSlotInfo,
+  type InputDefinition,
+  type OutputDefinition,
+  type WorkflowEdge as StorageEdge,
+  type WorkflowNode as StorageNode,
+} from "@comfytavern/types";
 import { getEffectiveDefaultValue } from "@comfytavern/utils"; // <-- 导入默认值工具
-import type {
-  WorkflowData,
-  TabWorkflowState,
-  Viewport,
-  WorkflowStateSnapshot,
-} from "../../types/workflowTypes";
+import type { Edge as VueFlowEdge, Node as VueFlowNode } from "@vue-flow/core";
+import { klona } from "klona";
+import { storeToRefs } from "pinia";
+import { computed, reactive, ref, watch } from "vue"; // Added ref
 import { useTabStore } from "../../stores/tabStore";
 import { useThemeStore } from "../../stores/theme";
-import { storeToRefs } from "pinia";
+import type {
+  TabWorkflowState,
+  Viewport,
+  WorkflowData,
+  WorkflowStateSnapshot,
+} from "../../types/workflowTypes";
 import { useEdgeStyles } from "../canvas/useEdgeStyles";
-// import { useWorkflowData } from "./useWorkflowData"; // 不再需要
+import defaultWorkflowTemplateUntyped from "@/data/DefaultWorkflow.json"; // <-- 导入默认模板
+import type { DataFlowTypeName } from "@comfytavern/types"; // 确保导入 DataFlowTypeName
+import { useDialogService } from "../../services/DialogService"; // 导入 DialogService
 import { useNodeStore } from "../../stores/nodeStore";
-import defaultWorkflowTemplateUntyped from '@/data/DefaultWorkflow.json'; // <-- 导入默认模板
-import type { DataFlowTypeName } from '@comfytavern/types'; // 确保导入 DataFlowTypeName
-import { useDialogService } from '../../services/DialogService'; // 导入 DialogService
 
 // --- 辅助函数 (来自 useWorkflowCoreLogic) ---
 function findNextSlotIndex(
@@ -81,40 +87,48 @@ function createWorkflowManager() {
   }
 
   // 监视活动标签页的 elements 变化
-  watch(() => {
-    const id = activeTabId.value;
-    if (id) {
-      const state = tabStates.get(id);
-      // 我们关心 elements 数组本身或其内容的任何变化
-      // 返回一个包含长度和ID字符串的元组，以便 watch 能检测到内容变化
-      // 确保在 state 或 state.elements 不存在时不尝试访问 map 或 stringify
-      if (!state || !state.elements) return undefined;
-      try {
-        return [state.elements.length, JSON.stringify(state.elements.map((e: VueFlowNode | VueFlowEdge) => e.id))];
-      } catch (error) {
-        // console.error('[DEBUG Watch activeTab.elements] Error stringifying elements:', error, state.elements);
-        return undefined; // 发生错误时返回 undefined
+  watch(
+    () => {
+      const id = activeTabId.value;
+      if (id) {
+        const state = tabStates.get(id);
+        // 我们关心 elements 数组本身或其内容的任何变化
+        // 返回一个包含长度和ID字符串的元组，以便 watch 能检测到内容变化
+        // 确保在 state 或 state.elements 不存在时不尝试访问 map 或 stringify
+        if (!state || !state.elements) return undefined;
+        try {
+          return [
+            state.elements.length,
+            JSON.stringify(state.elements.map((e: VueFlowNode | VueFlowEdge) => e.id)),
+          ];
+        } catch (error) {
+          // console.error('[DEBUG Watch activeTab.elements] Error stringifying elements:', error, state.elements);
+          return undefined; // 发生错误时返回 undefined
+        }
       }
-    }
-    return undefined;
-  }, (newVal, oldVal) => {
-    const currentTabId = activeTabId.value;
-    if (currentTabId && newVal && oldVal) {
-      // newVal 和 oldVal 现在是 [length, idString]
-      const [_newLength, newIdString] = newVal;
-      const [_oldLength, oldIdString] = oldVal;
+      return undefined;
+    },
+    (newVal, oldVal) => {
+      const currentTabId = activeTabId.value;
+      if (currentTabId && newVal && oldVal) {
+        // newVal 和 oldVal 现在是 [length, idString]
+        const [_newLength, newIdString] = newVal;
+        const [_oldLength, oldIdString] = oldVal;
 
-      if (newIdString !== oldIdString) { // 只有当元素ID列表实际改变时才记录
-        // console.log(`[DEBUG Watch activeTab.elements] Elements changed for tab ${currentTabId}.`);
-        // console.log(`  Old: count=${oldLength}, ids=${oldIdString}`);
-        // console.log(`  New: count=${newLength}, ids=${newIdString}`);
-        // console.trace('[DEBUG Watch activeTab.elements] Call stack for change:');
+        if (newIdString !== oldIdString) {
+          // 只有当元素ID列表实际改变时才记录
+          // console.log(`[DEBUG Watch activeTab.elements] Elements changed for tab ${currentTabId}.`);
+          // console.log(`  Old: count=${oldLength}, ids=${oldIdString}`);
+          // console.log(`  New: count=${newLength}, ids=${newIdString}`);
+          // console.trace('[DEBUG Watch activeTab.elements] Call stack for change:');
+        }
+      } else if (currentTabId && newVal && !oldVal) {
+        // const [newLength, newIdString] = newVal;
+        // console.log(`[DEBUG Watch activeTab.elements] Elements initialized for tab ${currentTabId}. New: count=${newLength}, ids=${newIdString}`);
       }
-    } else if (currentTabId && newVal && !oldVal) {
-      // const [newLength, newIdString] = newVal;
-      // console.log(`[DEBUG Watch activeTab.elements] Elements initialized for tab ${currentTabId}. New: count=${newLength}, ids=${newIdString}`);
-    }
-  }, { deep: false }); // deep: false 因为我们观察的是元组 [length, idString] 的变化，这个元组的引用或内容变化就会触发
+    },
+    { deep: false }
+  ); // deep: false 因为我们观察的是元组 [length, idString] 的变化，这个元组的引用或内容变化就会触发
 
   // --- 内部转换辅助函数 ---
   /**
@@ -133,7 +147,8 @@ function createWorkflowManager() {
       data: {}, // 将在下面填充
       width: storageNode.width,
       height: storageNode.height,
-      style: { // 根据存储的宽高设置样式
+      style: {
+        // 根据存储的宽高设置样式
         ...(storageNode.width && { width: `${storageNode.width}px` }),
         ...(storageNode.height && { height: `${storageNode.height}px` }),
       },
@@ -218,7 +233,6 @@ function createWorkflowManager() {
     };
     return vueEdge;
   }
-
 
   // --- 核心逻辑函数 (改编自 useWorkflowCoreLogic) ---
 
@@ -364,11 +378,12 @@ function createWorkflowManager() {
       if (templateData.interfaceInputs) {
         for (const key in templateData.interfaceInputs) {
           const slot = templateData.interfaceInputs[key];
-          if (slot) { // Add null check for slot
+          if (slot) {
+            // Add null check for slot
             typedInterfaceInputs[key] = {
               ...slot,
               key: slot.key, // Explicitly assign key
-              dataFlowType: slot.dataFlowType as DataFlowTypeName // 确保类型正确
+              dataFlowType: slot.dataFlowType as DataFlowTypeName, // 确保类型正确
             };
           }
         }
@@ -378,11 +393,12 @@ function createWorkflowManager() {
       if (templateData.interfaceOutputs) {
         for (const key in templateData.interfaceOutputs) {
           const slot = templateData.interfaceOutputs[key];
-          if (slot) { // Add null check for slot
+          if (slot) {
+            // Add null check for slot
             typedInterfaceOutputs[key] = {
               ...slot,
               key: slot.key, // Explicitly assign key
-              dataFlowType: slot.dataFlowType as DataFlowTypeName // 确保类型正确
+              dataFlowType: slot.dataFlowType as DataFlowTypeName, // 确保类型正确
             };
           }
         }
@@ -394,15 +410,23 @@ function createWorkflowManager() {
       // Remove unused interface DefaultWorkflowNodeTpl
 
       // 处理节点
-      for (const nodeTpl of templateData.nodes as StorageNode[]) { // 使用 StorageNode 类型
+      for (const nodeTpl of templateData.nodes as StorageNode[]) {
+        // 使用 StorageNode 类型
         const vueNode = _storageNodeToVueFlowNode(nodeTpl); // 使用辅助函数
         elements.push(vueNode);
       }
 
       // 处理边
       if (Array.isArray(templateData.edges) && templateData.edges.length > 0) {
-        for (const edgeTpl of templateData.edges as StorageEdge[]) { // 使用 StorageEdge 类型
-          if (typeof edgeTpl === 'object' && edgeTpl !== null && edgeTpl.id && edgeTpl.source && edgeTpl.target) {
+        for (const edgeTpl of templateData.edges as StorageEdge[]) {
+          // 使用 StorageEdge 类型
+          if (
+            typeof edgeTpl === "object" &&
+            edgeTpl !== null &&
+            edgeTpl.id &&
+            edgeTpl.source &&
+            edgeTpl.target
+          ) {
             const vueEdge = _storageEdgeToVueFlowEdge(edgeTpl); // 使用辅助函数
             elements.push(vueEdge);
           } else {
@@ -441,12 +465,16 @@ function createWorkflowManager() {
         );
       }
       return snapshot;
-
     } catch (error) {
-      console.error(`[useWorkflowManager/applyDefaultWorkflowToTab] 应用默认模板失败 for ${internalId}:`, error);
+      console.error(
+        `[useWorkflowManager/applyDefaultWorkflowToTab] 应用默认模板失败 for ${internalId}:`,
+        error
+      );
       // 可以考虑添加一个回退机制，比如应用一个最小化的硬编码模板
       // 或者直接返回 null 并显示错误
-      dialogService.showError(`创建新工作流时应用默认模板失败: ${error instanceof Error ? error.message : String(error)}`);
+      dialogService.showError(
+        `创建新工作流时应用默认模板失败: ${error instanceof Error ? error.message : String(error)}`
+      );
       return null;
     }
   }
@@ -521,7 +549,11 @@ function createWorkflowManager() {
     const newNode = klona(nodeToAdd);
 
     // 如果是 NodeGroup 并且没有 groupInterface，则初始化一个空的
-    if (newNode.type === 'core:NodeGroup' && newNode.data && newNode.data.groupInterface === undefined) {
+    if (
+      newNode.type === "core:NodeGroup" &&
+      newNode.data &&
+      newNode.data.groupInterface === undefined
+    ) {
       newNode.data.groupInterface = { inputs: {}, outputs: {} };
       console.debug(`[addNode] Initialized empty groupInterface for new NodeGroup ${newNode.id}`);
     }
@@ -533,10 +565,18 @@ function createWorkflowManager() {
     // --- 日志添加开始 ---
     if (state.workflowData) {
       console.log(`[WorkflowManager addNode - ${internalId}] After adding to elements:`);
-      console.log(`  state.elements node IDs:`, JSON.stringify(state.elements.filter(el => !("source" in el)).map(n => n.id)));
-      console.log(`  state.workflowData.nodes IDs:`, JSON.stringify(state.workflowData.nodes.map(n => n.id)));
+      console.log(
+        `  state.elements node IDs:`,
+        JSON.stringify(state.elements.filter((el) => !("source" in el)).map((n) => n.id))
+      );
+      console.log(
+        `  state.workflowData.nodes IDs:`,
+        JSON.stringify(state.workflowData.nodes.map((n) => n.id))
+      );
     } else {
-      console.log(`[WorkflowManager addNode - ${internalId}] state.workflowData is null after adding to elements.`);
+      console.log(
+        `[WorkflowManager addNode - ${internalId}] state.workflowData is null after adding to elements.`
+      );
     }
     // --- 日志添加结束 ---
 
@@ -559,7 +599,10 @@ function createWorkflowManager() {
    */
 
   // 辅助函数，用于创建 TabWorkflowState (移除了 Proxy)
-  function createTabWorkflowState(internalId: string, tabInfo?: ReturnType<typeof useTabStore>['tabs'][number]): TabWorkflowState {
+  function createTabWorkflowState(
+    internalId: string,
+    tabInfo?: ReturnType<typeof useTabStore>["tabs"][number]
+  ): TabWorkflowState {
     const associatedId = tabInfo?.associatedId;
     const initialWorkflowData: WorkflowData = {
       id: associatedId || `temp-${internalId}`,
@@ -570,7 +613,8 @@ function createWorkflowManager() {
       interfaceInputs: {},
       interfaceOutputs: {},
     };
-    const state: TabWorkflowState = { // 重命名 targetState 为 state
+    const state: TabWorkflowState = {
+      // 重命名 targetState 为 state
       workflowData: initialWorkflowData,
       isDirty: false,
       vueFlowInstance: null,
@@ -652,10 +696,18 @@ function createWorkflowManager() {
       // --- 日志添加开始 ---
       if (state.workflowData) {
         console.log(`[WorkflowManager setElements - ${internalId}] After updating elements:`);
-        console.log(`  state.elements node IDs:`, JSON.stringify(state.elements.filter(el => !("source" in el)).map(n => n.id)));
-        console.log(`  state.workflowData.nodes IDs:`, JSON.stringify(state.workflowData.nodes.map(n => n.id)));
+        console.log(
+          `  state.elements node IDs:`,
+          JSON.stringify(state.elements.filter((el) => !("source" in el)).map((n) => n.id))
+        );
+        console.log(
+          `  state.workflowData.nodes IDs:`,
+          JSON.stringify(state.workflowData.nodes.map((n) => n.id))
+        );
       } else {
-        console.log(`[WorkflowManager setElements - ${internalId}] state.workflowData is null after updating elements.`);
+        console.log(
+          `[WorkflowManager setElements - ${internalId}] state.workflowData is null after updating elements.`
+        );
       }
       // --- 日志添加结束 ---
 
@@ -784,10 +836,11 @@ function createWorkflowManager() {
 
       // 从 newElements (即 state.elements) 中提取边，并更新 state.workflowData.edges
       // 这是为了确保 workflowManager 内部的 workflowData.edges 与其管理的 elements 列表中的边保持同步。
-      if (state.workflowData) { // 确保 workflowData 存在
-        const edgesFromElements = state.elements.filter(el => 'source' in el) as VueFlowEdge[];
+      if (state.workflowData) {
+        // 确保 workflowData 存在
+        const edgesFromElements = state.elements.filter((el) => "source" in el) as VueFlowEdge[];
         // 将 VueFlowEdge 转换为存储格式的 StorageEdge (即 WorkflowEdge from @comfytavern/types)
-        state.workflowData.edges = edgesFromElements.map(vueEdge => ({
+        state.workflowData.edges = edgesFromElements.map((vueEdge) => ({
           id: vueEdge.id,
           source: vueEdge.source,
           target: vueEdge.target,
@@ -970,7 +1023,8 @@ function createWorkflowManager() {
    * 处理脏检查并重置标签页状态。
    * @param internalId 标签页的内部 ID。
    */
-  async function createNewWorkflow(internalId: string): Promise<WorkflowStateSnapshot | null> { // 已是 async
+  async function createNewWorkflow(internalId: string): Promise<WorkflowStateSnapshot | null> {
+    // 已是 async
     // 添加返回类型
     // 注意：ensureTabState 和 applyDefaultWorkflowToTab 现在直接调用
     // 因为它们在此 composable 的作用域内定义。
@@ -978,13 +1032,16 @@ function createWorkflowManager() {
     const state = await ensureTabState(internalId); // 添加 await
     const tabLabel = tabStore.tabs.find((t) => t.internalId === internalId)?.label || internalId;
 
-    if (state.isDirty && !(await dialogService.showConfirm({
-      title: '创建新工作流确认',
-      message: `标签页 "${tabLabel}" 有未保存的更改。确定要创建新工作流吗？这将丢失未保存的更改。`,
-      confirmText: '创建新工作流',
-      cancelText: '取消',
-      dangerConfirm: true,
-    }))) {
+    if (
+      state.isDirty &&
+      !(await dialogService.showConfirm({
+        title: "创建新工作流确认",
+        message: `标签页 "${tabLabel}" 有未保存的更改。确定要创建新工作流吗？这将丢失未保存的更改。`,
+        confirmText: "创建新工作流",
+        cancelText: "取消",
+        dangerConfirm: true,
+      }))
+    ) {
       return null; // 返回 null
     }
 
@@ -1025,7 +1082,9 @@ function createWorkflowManager() {
   async function updateWorkflowName(internalId: string, newName: string) {
     const state = await ensureTabState(internalId, false); // 确保状态存在
     if (!state || !state.workflowData) {
-      console.warn(`[updateWorkflowName] 无法更新名称，未找到标签页 ${internalId} 的状态或 workflowData`);
+      console.warn(
+        `[updateWorkflowName] 无法更新名称，未找到标签页 ${internalId} 的状态或 workflowData`
+      );
       return;
     }
     if (state.workflowData.name !== newName) {
@@ -1045,7 +1104,9 @@ function createWorkflowManager() {
   async function updateWorkflowDescription(internalId: string, newDescription: string) {
     const state = await ensureTabState(internalId, false); // 确保状态存在
     if (!state || !state.workflowData) {
-      console.warn(`[updateWorkflowDescription] 无法更新描述，未找到标签页 ${internalId} 的状态或 workflowData`);
+      console.warn(
+        `[updateWorkflowDescription] 无法更新描述，未找到标签页 ${internalId} 的状态或 workflowData`
+      );
       return;
     }
     // 假设 WorkflowData 类型有 description 字段
@@ -1076,9 +1137,7 @@ function createWorkflowManager() {
       return;
     }
 
-    const nodeIndex = state.elements.findIndex(
-      (el) => el.id === nodeId && !("source" in el)
-    ); // 确保是节点
+    const nodeIndex = state.elements.findIndex((el) => el.id === nodeId && !("source" in el)); // 确保是节点
 
     if (nodeIndex !== -1) {
       const node = state.elements[nodeIndex] as VueFlowNode; // 类型断言
@@ -1167,7 +1226,7 @@ function createWorkflowManager() {
   async function updateNodeInternalData(
     internalId: string,
     nodeId: string,
-    dataPayload: Partial<VueFlowNode['data']> // 允许部分更新 data
+    dataPayload: Partial<VueFlowNode["data"]> // 允许部分更新 data
   ) {
     const state = await ensureTabState(internalId, false); // 确保状态存在
     if (!state) {
@@ -1190,7 +1249,7 @@ function createWorkflowManager() {
         ...Object.fromEntries(
           Object.entries(dataPayload).map(([key, value]) => [
             key,
-            typeof value === 'object' && value !== null ? klona(value) : value,
+            typeof value === "object" && value !== null ? klona(value) : value,
           ])
         ),
       };

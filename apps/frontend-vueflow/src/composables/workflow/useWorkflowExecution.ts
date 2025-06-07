@@ -1,25 +1,24 @@
-import {
-  type WorkflowExecutionPayload,
-  WebSocketMessageType,
-  type WebSocketMessage,
-  ExecutionStatus,
-  DataFlowType, // 新增导入 DataFlowType
-} from "@comfytavern/types";
-import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core"; // 新增导入
-import { klona } from "klona/full"; // 新增导入
-import { useWorkflowManager } from "./useWorkflowManager";
-import { useTabStore } from "@/stores/tabStore";
-import { useExecutionStore } from "@/stores/executionStore";
 import { useWebSocket } from "@/composables/useWebSocket";
-import { useProjectStore } from '@/stores/projectStore';
-import { useWorkflowData } from './useWorkflowData';
+import { useExecutionStore } from "@/stores/executionStore";
+import { useProjectStore } from "@/stores/projectStore";
+import { useTabStore } from "@/stores/tabStore";
 import { flattenWorkflow } from "@/utils/workflowFlattener";
 import {
+  transformVueFlowToCoreWorkflow,
   transformVueFlowToExecutionPayload,
-  transformVueFlowToCoreWorkflow, // 新增导入
 } from "@/utils/workflowTransformer";
-import type { FlowExportObject } from "@vue-flow/core"; // 新增导入
-import { useDialogService } from '../../services/DialogService'; // 导入 DialogService
+import {
+  type WebSocketMessage,
+  type WorkflowExecutionPayload,
+  DataFlowType,
+  ExecutionStatus,
+  WebSocketMessageType,
+} from "@comfytavern/types";
+import type { FlowExportObject, Edge as VueFlowEdge, Node as VueFlowNode } from "@vue-flow/core"; // 新增导入
+import { klona } from "klona/full"; // 新增导入
+import { useDialogService } from "../../services/DialogService"; // 导入 DialogService
+import { useWorkflowData } from "./useWorkflowData";
+import { useWorkflowManager } from "./useWorkflowManager";
 
 /**
  * Composable for handling workflow execution logic.
@@ -45,10 +44,7 @@ export function useWorkflowExecution() {
     }
 
     const currentStatus = executionStore.getWorkflowStatus(internalId);
-    if (
-      currentStatus === ExecutionStatus.RUNNING ||
-      currentStatus === ExecutionStatus.QUEUED
-    ) {
+    if (currentStatus === ExecutionStatus.RUNNING || currentStatus === ExecutionStatus.QUEUED) {
       console.warn(
         `[WorkflowExecution:executeWorkflow] Workflow for tab ${internalId} is already ${currentStatus}. Execution request ignored.`
       );
@@ -56,30 +52,39 @@ export function useWorkflowExecution() {
       return;
     }
 
-    console.info(`[WorkflowExecution:executeWorkflow] Initiating execution for tab ${internalId}...`);
+    console.info(
+      `[WorkflowExecution:executeWorkflow] Initiating execution for tab ${internalId}...`
+    );
     setInitiatingTabForNextPrompt(internalId); // 设置发起标签页
 
     // 1. 获取初始的当前元素
     const initialElements = workflowManager.getElements(internalId);
     if (!initialElements || initialElements.length === 0) {
-      console.error(`[WorkflowExecution:executeWorkflow] No initial elements found for tab ${internalId}. Aborting.`);
+      console.error(
+        `[WorkflowExecution:executeWorkflow] No initial elements found for tab ${internalId}. Aborting.`
+      );
       dialogService.showError("画布上没有元素可执行。");
       return;
     }
 
     // 2. 从初始元素派生出 VueFlow 节点和边，用于客户端脚本上下文
-    const initialVueFlowNodes = initialElements.filter(el => !('source' in el)) as VueFlowNode[];
-    const initialVueFlowEdges = initialElements.filter(el => 'source' in el) as VueFlowEdge[];
+    const initialVueFlowNodes = initialElements.filter((el) => !("source" in el)) as VueFlowNode[];
+    const initialVueFlowEdges = initialElements.filter((el) => "source" in el) as VueFlowEdge[];
 
     // 3. 执行客户端脚本钩子 (这些脚本会通过 workflowManager.updateNodeData 更新 store)
-    const clientScriptHookName = 'onWorkflowExecute';
+    const clientScriptHookName = "onWorkflowExecute";
     if (initialVueFlowNodes.length > 0) {
-      console.log(`[WorkflowExecution] Attempting to run '${clientScriptHookName}' hook for ${initialVueFlowNodes.length} nodes.`);
-      for (const node of initialVueFlowNodes) { // 迭代初始快照
+      console.log(
+        `[WorkflowExecution] Attempting to run '${clientScriptHookName}' hook for ${initialVueFlowNodes.length} nodes.`
+      );
+      for (const node of initialVueFlowNodes) {
+        // 迭代初始快照
         const executor = executionStore.getNodeClientScriptExecutor(node.id);
         if (executor) {
           try {
-            console.debug(`[WorkflowExecution] Executing client script hook '${clientScriptHookName}' for node ${node.id}`);
+            console.debug(
+              `[WorkflowExecution] Executing client script hook '${clientScriptHookName}' for node ${node.id}`
+            );
             // hookContext 使用克隆的初始状态，避免脚本间意外串改传递的上下文对象本身
             const hookContext = {
               nodeId: node.id,
@@ -90,7 +95,10 @@ export function useWorkflowExecution() {
             };
             await executor(clientScriptHookName, hookContext); // executor 内部调用 setNodeOutputValue -> workflowManager.updateNodeData
           } catch (e) {
-            console.warn(`[WorkflowExecution] Client script hook '${clientScriptHookName}' for node ${node.id} failed:`, e);
+            console.warn(
+              `[WorkflowExecution] Client script hook '${clientScriptHookName}' for node ${node.id} failed:`,
+              e
+            );
           }
         }
       }
@@ -100,14 +108,20 @@ export function useWorkflowExecution() {
     // 这是为了确保 flattenWorkflow 处理的是包含了所有脚本更新的最终状态
     const elementsAfterClientScripts = workflowManager.getElements(internalId);
     if (!elementsAfterClientScripts || elementsAfterClientScripts.length === 0) {
-      console.error(`[WorkflowExecution:executeWorkflow] Elements became empty or invalid after client scripts for tab ${internalId}. Aborting.`);
+      console.error(
+        `[WorkflowExecution:executeWorkflow] Elements became empty or invalid after client scripts for tab ${internalId}. Aborting.`
+      );
       dialogService.showError("执行客户端脚本后画布状态错误。");
       return;
     }
-    console.info(`[WorkflowExecution:executeWorkflow] Fetched ${elementsAfterClientScripts.length} elements after client scripts.`);
+    console.info(
+      `[WorkflowExecution:executeWorkflow] Fetched ${elementsAfterClientScripts.length} elements after client scripts.`
+    );
 
     // 5. 使用更新后的元素进行扁平化工作流
-    console.info(`[WorkflowExecution:executeWorkflow] Flattening workflow for tab ${internalId} using elements after client scripts...`);
+    console.info(
+      `[WorkflowExecution:executeWorkflow] Flattening workflow for tab ${internalId} using elements after client scripts...`
+    );
     const flattenedResult = await flattenWorkflow(
       internalId,
       elementsAfterClientScripts, // 使用执行完客户端脚本后的最新元素
@@ -117,11 +131,15 @@ export function useWorkflowExecution() {
     );
 
     if (!flattenedResult) {
-      console.error(`[WorkflowExecution:executeWorkflow] Failed to flatten workflow for tab ${internalId}. Aborting.`);
+      console.error(
+        `[WorkflowExecution:executeWorkflow] Failed to flatten workflow for tab ${internalId}. Aborting.`
+      );
       // TODO: Show user feedback
       return;
     }
-    console.info(`[WorkflowExecution:executeWorkflow] Workflow flattened successfully for tab ${internalId}. Nodes: ${flattenedResult.nodes.length}, Edges: ${flattenedResult.edges.length}`);
+    console.info(
+      `[WorkflowExecution:executeWorkflow] Workflow flattened successfully for tab ${internalId}. Nodes: ${flattenedResult.nodes.length}, Edges: ${flattenedResult.edges.length}`
+    );
 
     // 重新引入 transformVueFlowToCoreWorkflow 步骤
     // 假设 flattenedResult.nodes 和 .edges 是 VueFlowElement 类型或者兼容的
@@ -143,10 +161,15 @@ export function useWorkflowExecution() {
       // TODO: Show user feedback
       return;
     }
-    console.info(`[WorkflowExecution:executeWorkflow] Workflow transformed to core data successfully for tab ${internalId}. Nodes: ${coreWorkflowData.nodes.length}, Edges: ${coreWorkflowData.edges.length}`);
+    console.info(
+      `[WorkflowExecution:executeWorkflow] Workflow transformed to core data successfully for tab ${internalId}. Nodes: ${coreWorkflowData.nodes.length}, Edges: ${coreWorkflowData.edges.length}`
+    );
 
     // 3. 使用转换后的核心数据构建执行载荷
-    const payload = transformVueFlowToExecutionPayload({ nodes: coreWorkflowData.nodes, edges: coreWorkflowData.edges });
+    const payload = transformVueFlowToExecutionPayload({
+      nodes: coreWorkflowData.nodes,
+      edges: coreWorkflowData.edges,
+    });
     if (!payload) {
       console.error(
         `[WorkflowExecution:executeWorkflow] Failed to create execution payload from core data for tab ${internalId}. Aborting.`
@@ -156,15 +179,19 @@ export function useWorkflowExecution() {
     }
 
     // 新增：构建 outputInterfaceMappings
-    const outputInterfaceMappings: Record<string, { sourceNodeId: string, sourceSlotKey: string }> = {};
+    const outputInterfaceMappings: Record<string, { sourceNodeId: string; sourceSlotKey: string }> =
+      {};
     const activeWorkflowData = workflowManager.getWorkflowData(internalId);
 
-
-    if (activeWorkflowData && activeWorkflowData.interfaceOutputs && Object.keys(activeWorkflowData.interfaceOutputs).length > 0) {
+    if (
+      activeWorkflowData &&
+      activeWorkflowData.interfaceOutputs &&
+      Object.keys(activeWorkflowData.interfaceOutputs).length > 0
+    ) {
       // 在扁平化后的节点列表 (coreWorkflowData.nodes) 中查找 GroupOutput 节点
       // 假设 coreWorkflowData.nodes 中的节点有 id 和 type 属性
       const groupOutputNode = coreWorkflowData.nodes.find(
-        (node) => node.type === 'core:GroupOutput'
+        (node) => node.type === "core:GroupOutput"
       );
 
       if (groupOutputNode) {
@@ -177,7 +204,11 @@ export function useWorkflowExecution() {
               edge.targetHandle === interfaceKey
           );
 
-          if (edgeConnectedToGroupOutputSlot && edgeConnectedToGroupOutputSlot.source && edgeConnectedToGroupOutputSlot.sourceHandle) {
+          if (
+            edgeConnectedToGroupOutputSlot &&
+            edgeConnectedToGroupOutputSlot.source &&
+            edgeConnectedToGroupOutputSlot.sourceHandle
+          ) {
             outputInterfaceMappings[interfaceKey] = {
               sourceNodeId: edgeConnectedToGroupOutputSlot.source,
               sourceSlotKey: edgeConnectedToGroupOutputSlot.sourceHandle,
@@ -186,23 +217,32 @@ export function useWorkflowExecution() {
             const slotInfo = activeWorkflowData.interfaceOutputs[interfaceKey];
             if (slotInfo) {
               if (slotInfo.dataFlowType !== DataFlowType.CONVERTIBLE_ANY) {
-                console.debug(`[WorkflowExecution:executeWorkflow] No valid edge found (in coreWorkflowData.edges) connecting to GroupOutput node's slot '${interfaceKey}' (type: ${slotInfo.dataFlowType}) for workflow ${internalId}. This interface output will not be mapped and will likely be undefined.`);
+                console.debug(
+                  `[WorkflowExecution:executeWorkflow] No valid edge found (in coreWorkflowData.edges) connecting to GroupOutput node's slot '${interfaceKey}' (type: ${slotInfo.dataFlowType}) for workflow ${internalId}. This interface output will not be mapped and will likely be undefined.`
+                );
               }
               // 对于 CONVERTIBLE_ANY 类型，如果未连接，则不发出警告或日志
             } else {
               // 如果 slotInfo 未定义，这可能是一个潜在问题，可以保留一个警告
-              console.warn(`[WorkflowExecution:executeWorkflow] Slot info for interfaceKey '${interfaceKey}' not found in activeWorkflowData.interfaceOutputs for workflow ${internalId}. Cannot determine if it's CONVERTIBLE_ANY.`);
+              console.warn(
+                `[WorkflowExecution:executeWorkflow] Slot info for interfaceKey '${interfaceKey}' not found in activeWorkflowData.interfaceOutputs for workflow ${internalId}. Cannot determine if it's CONVERTIBLE_ANY.`
+              );
             }
             // 不为没有有效连接的 interfaceKey 创建映射
             // outputInterfaceMappings[interfaceKey] = { sourceNodeId: '', sourceSlotKey: '' };
           }
         }
       } else {
-        console.warn(`[WorkflowExecution:executeWorkflow] No GroupOutput node found in coreWorkflowData.nodes for workflow ${internalId} to map interfaceOutputs.`);
+        console.warn(
+          `[WorkflowExecution:executeWorkflow] No GroupOutput node found in coreWorkflowData.nodes for workflow ${internalId} to map interfaceOutputs.`
+        );
       }
     }
     // 保留这个关键日志，但改为 console.debug，如果 outputInterfaceMappings 不大，可以接受
-    console.debug('[WorkflowExecution:executeWorkflow] Final generated outputInterfaceMappings:', klona(outputInterfaceMappings));
+    console.debug(
+      "[WorkflowExecution:executeWorkflow] Final generated outputInterfaceMappings:",
+      klona(outputInterfaceMappings)
+    );
     // 结束新增
 
     // 4. 准备执行状态 (此步骤在原始 StatusBar.vue 中没有，但在旧版 useWorkflowExecution 中有)

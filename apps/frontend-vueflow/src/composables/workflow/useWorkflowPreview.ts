@@ -1,31 +1,35 @@
-import { readonly, ref } from 'vue';
-import { debounce } from 'lodash-es';
-import { storeToRefs } from 'pinia';
-import { nanoid } from 'nanoid';
-import { useVueFlow, type Edge as VueFlowEdge } from '@vue-flow/core';
-import { useExecutionStore } from '@/stores/executionStore';
-import { useNodeStore, type FrontendNodeDefinition } from '@/stores/nodeStore'; // Import FrontendNodeDefinition from nodeStore
-import { useTabStore } from '@/stores/tabStore';
-import { useProjectStore } from '@/stores/projectStore';
-import { useWorkflowData } from '@/composables/workflow/useWorkflowData';
-import { useWorkflowManager } from '@/composables/workflow/useWorkflowManager';
-import { useWebSocket } from '@/composables/useWebSocket';
-import { flattenWorkflow } from '@/utils/workflowFlattener';
+import { useWebSocket } from "@/composables/useWebSocket";
+import { useWorkflowData } from "@/composables/workflow/useWorkflowData";
+import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager";
+import { useExecutionStore } from "@/stores/executionStore";
+import { useNodeStore, type FrontendNodeDefinition } from "@/stores/nodeStore"; // Import FrontendNodeDefinition from nodeStore
+import { useProjectStore } from "@/stores/projectStore";
+import { useTabStore } from "@/stores/tabStore";
+import { flattenWorkflow } from "@/utils/workflowFlattener";
 import {
-  type WorkflowExecutionPayload,
-  type ExecutionNode,
-  type ExecutionEdge,
   WebSocketMessageType,
-  type WebSocketMessage,
-  // NodeDefinition, // Removed as FrontendNodeDefinition is used
+  type ExecutionEdge,
+  type ExecutionNode,
+  type InputDefinition,
   type NanoId,
   type NodeCompletePayload,
   type NodeErrorPayload,
-  type InputDefinition, // Added for inputDef type
-} from '@comfytavern/types';
+  type WebSocketMessage,
+  type WorkflowExecutionPayload,
+} from "@comfytavern/types";
+import { useVueFlow, type Edge as VueFlowEdge } from "@vue-flow/core";
+import { debounce } from "lodash-es";
+import { nanoid } from "nanoid";
+import { storeToRefs } from "pinia";
+import { readonly, ref } from "vue";
 
 // 定义节点预览状态类型
-export type NodePreviewStatus = 'newly_computed' | 'clean_reused' | 'stale_unsafe_reused' | 'error' | 'unknown';
+export type NodePreviewStatus =
+  | "newly_computed"
+  | "clean_reused"
+  | "stale_unsafe_reused"
+  | "error"
+  | "unknown";
 
 /**
  * Composable for handling the new frontend-driven workflow preview execution logic.
@@ -61,25 +65,28 @@ export function useWorkflowPreview() {
   const triggerPreview = debounce(async (changedNodeId: NanoId, _changeDetails?: any) => {
     const activeInternalId = tabStore.activeTabId;
     if (!isPreviewEnabledFromStore.value || !isConnected.value || !activeInternalId) {
-      console.debug('[WorkflowPreview:triggerPreview] Preview disabled, WebSocket not connected, or no active tab.');
+      console.debug(
+        "[WorkflowPreview:triggerPreview] Preview disabled, WebSocket not connected, or no active tab."
+      );
       return;
     }
 
-    console.debug(`[WorkflowPreview:triggerPreview] Triggering preview for changedNodeId: ${changedNodeId} in tab ${activeInternalId}`);
+    console.debug(
+      `[WorkflowPreview:triggerPreview] Triggering preview for changedNodeId: ${changedNodeId} in tab ${activeInternalId}`
+    );
 
     const allNodesRaw = getNodes.value;
     const allEdgesRaw = getEdges.value;
 
     // 1. 获取当前工作流所有节点输出值的最新快照
     const snapshot: Record<NanoId, Record<string, any>> = {};
-    allNodesRaw.forEach(node => {
+    allNodesRaw.forEach((node) => {
       const outputs = executionStore.getAllNodeOutputs(activeInternalId, node.id);
       if (outputs && Object.keys(outputs).length > 0) {
         snapshot[node.id] = outputs;
       }
     });
-    console.debug('[WorkflowPreview:triggerPreview] Constructed snapshot:', snapshot);
-
+    console.debug("[WorkflowPreview:triggerPreview] Constructed snapshot:", snapshot);
 
     // 2. 获取完整扁平化视图 G_flat
     const flatWorkflow = await flattenWorkflow(
@@ -91,12 +98,11 @@ export function useWorkflowPreview() {
     );
 
     if (!flatWorkflow) {
-      console.error('[WorkflowPreview:triggerPreview] Failed to flatten workflow.');
+      console.error("[WorkflowPreview:triggerPreview] Failed to flatten workflow.");
       return;
     }
     const { nodes: flatNodes, edges: flatEdges } = flatWorkflow;
-    console.debug('[WorkflowPreview:triggerPreview] Flattened workflow:', { flatNodes, flatEdges });
-
+    console.debug("[WorkflowPreview:triggerPreview] Flattened workflow:", { flatNodes, flatEdges });
 
     // 3. 从 changedNodeId 开始，进行下游依赖分析，找出受影响节点路径
     const affectedNodeIds = new Set<NanoId>();
@@ -114,7 +120,8 @@ export function useWorkflowPreview() {
     // This ensures propagation starts even if changedNodeId is unsafe.
     flatEdges.forEach((edge: VueFlowEdge) => {
       if (edge.source === changedNodeId) {
-        if (!affectedNodeIds.has(edge.target)) { // Avoid adding if already added (e.g. if changedNodeId was safe)
+        if (!affectedNodeIds.has(edge.target)) {
+          // Avoid adding if already added (e.g. if changedNodeId was safe)
           processingQueue.push(edge.target);
           // Don't add to affectedNodeIds here yet, let the main loop do it to ensure consistent handling
         }
@@ -128,7 +135,10 @@ export function useWorkflowPreview() {
       const currentId = uniqueInitialProcessingQueue.shift()!;
 
       // Only add to affectedNodeIds and process children if not already processed.
-      if (affectedNodeIds.has(currentId) && !(changedNodeDef && !changedNodeDef.isPreviewUnsafe && currentId === changedNodeId)) {
+      if (
+        affectedNodeIds.has(currentId) &&
+        !(changedNodeDef && !changedNodeDef.isPreviewUnsafe && currentId === changedNodeId)
+      ) {
         // If already affected, and it's not the initial safe changedNodeId, skip.
         // The initial safe changedNodeId is added to affectedNodeIds before this loop.
         // This condition ensures we process the initial safe changedNodeId once.
@@ -149,14 +159,17 @@ export function useWorkflowPreview() {
         }
       });
     }
-    console.debug('[WorkflowPreview:triggerPreview] Affected node IDs (downstream analysis):', affectedNodeIds);
-
+    console.debug(
+      "[WorkflowPreview:triggerPreview] Affected node IDs (downstream analysis):",
+      affectedNodeIds
+    );
 
     // 4. 筛选节点: isPreviewUnsafe 为 false (或未定义) 的节点构成 G'
     const gPrimeNodeIds = new Set<NanoId>();
-    affectedNodeIds.forEach(id => {
+    affectedNodeIds.forEach((id) => {
       const nodeDef = getFullNodeDefinition(id);
-      if (nodeDef && !nodeDef.isPreviewUnsafe) { // Check if nodeDef exists
+      if (nodeDef && !nodeDef.isPreviewUnsafe) {
+        // Check if nodeDef exists
         gPrimeNodeIds.add(id);
       }
     });
@@ -168,8 +181,10 @@ export function useWorkflowPreview() {
     if (initiallyChangedNodeDef && !initiallyChangedNodeDef.isPreviewUnsafe) {
       gPrimeNodeIds.add(changedNodeId);
     }
-    console.debug('[WorkflowPreview:triggerPreview] G\' node IDs (isPreviewUnsafe=false filter):', gPrimeNodeIds);
-
+    console.debug(
+      "[WorkflowPreview:triggerPreview] G' node IDs (isPreviewUnsafe=false filter):",
+      gPrimeNodeIds
+    );
 
     const gPrimeExecutionNodes: ExecutionNode[] = [];
     const gPrimeExecutionEdges: ExecutionEdge[] = [];
@@ -178,12 +193,16 @@ export function useWorkflowPreview() {
     for (const nodeId of gPrimeNodeIds) {
       const originalNode = findNode(nodeId);
       if (!originalNode || !originalNode.type) {
-        console.warn(`[WorkflowPreview:triggerPreview] Original node ${nodeId} not found or has no type. Skipping.`);
+        console.warn(
+          `[WorkflowPreview:triggerPreview] Original node ${nodeId} not found or has no type. Skipping.`
+        );
         continue;
       }
       const nodeDef = getFullNodeDefinition(nodeId);
       if (!nodeDef) {
-        console.warn(`[WorkflowPreview:triggerPreview] Node definition for ${nodeId} (type: ${originalNode.type}) not found. Skipping.`);
+        console.warn(
+          `[WorkflowPreview:triggerPreview] Node definition for ${nodeId} (type: ${originalNode.type}) not found. Skipping.`
+        );
         continue;
       }
 
@@ -197,33 +216,41 @@ export function useWorkflowPreview() {
 
       Object.entries(nodeDef.inputs).forEach(([inputKey, inputDefUntyped]) => {
         const inputDef = inputDefUntyped as InputDefinition; // Add type assertion
-        const incomingEdges = flatEdges.filter((e: VueFlowEdge) => e.target === nodeId && e.targetHandle === inputKey);
+        const incomingEdges = flatEdges.filter(
+          (e: VueFlowEdge) => e.target === nodeId && e.targetHandle === inputKey
+        );
 
         if (incomingEdges.length > 0) {
           const edge = incomingEdges[0];
-          if (edge) { // Check if edge is defined
+          if (edge) {
+            // Check if edge is defined
             const sourceNodeId = edge.source;
-            if (!gPrimeNodeIds.has(sourceNodeId)) { // Source node is outside G'
+            if (!gPrimeNodeIds.has(sourceNodeId)) {
+              // Source node is outside G'
               const sourceOutputValue = snapshot[sourceNodeId]?.[edge.sourceHandle!];
               if (sourceOutputValue !== undefined) {
                 execNode.inputs = execNode.inputs || {};
                 execNode.inputs[inputKey] = sourceOutputValue;
               } else {
-                console.warn(`[WorkflowPreview:triggerPreview] Snapshot value for ${sourceNodeId}.${edge.sourceHandle!} is undefined, required by ${nodeId}.${inputKey}`);
+                console.warn(
+                  `[WorkflowPreview:triggerPreview] Snapshot value for ${sourceNodeId}.${edge.sourceHandle!} is undefined, required by ${nodeId}.${inputKey}`
+                );
               }
             }
           }
         } else if (execNode.inputs?.[inputKey] === undefined && inputDef.required) {
-          console.warn(`[WorkflowPreview:triggerPreview] Required input ${nodeId}.${inputKey} is undefined and has no incoming G' edge or preset value.`);
+          console.warn(
+            `[WorkflowPreview:triggerPreview] Required input ${nodeId}.${inputKey} is undefined and has no incoming G' edge or preset value.`
+          );
         }
       });
       gPrimeExecutionNodes.push(execNode);
     }
-    console.debug('[WorkflowPreview:triggerPreview] G\' execution nodes:', gPrimeExecutionNodes);
-
+    console.debug("[WorkflowPreview:triggerPreview] G' execution nodes:", gPrimeExecutionNodes);
 
     // 6. 构造 G' 内部的边
-    flatEdges.forEach((edge: VueFlowEdge) => { // Add type for edge
+    flatEdges.forEach((edge: VueFlowEdge) => {
+      // Add type for edge
       if (gPrimeNodeIds.has(edge.source) && gPrimeNodeIds.has(edge.target)) {
         gPrimeExecutionEdges.push({
           sourceNodeId: edge.source,
@@ -234,15 +261,17 @@ export function useWorkflowPreview() {
         });
       }
     });
-    console.debug('[WorkflowPreview:triggerPreview] G\' execution edges:', gPrimeExecutionEdges);
-
+    console.debug("[WorkflowPreview:triggerPreview] G' execution edges:", gPrimeExecutionEdges);
 
     // 7. 构造 WorkflowExecutionPayload
     // TODO: Resolve clientId. For now, using a placeholder.
     // This should ideally come from useWebSocket() or be handled by sendMessage.
-    const tempClientId = 'temp-preview-client-id'; // Placeholder
-    if (!tempClientId) { // Changed from !clientId to !tempClientId for placeholder logic
-      console.error('[WorkflowPreview:triggerPreview] ClientID is not available. Cannot send preview request.');
+    const tempClientId = "temp-preview-client-id"; // Placeholder
+    if (!tempClientId) {
+      // Changed from !clientId to !tempClientId for placeholder logic
+      console.error(
+        "[WorkflowPreview:triggerPreview] ClientID is not available. Cannot send preview request."
+      );
       return;
     }
     const previewPromptId = nanoid(10);
@@ -264,9 +293,13 @@ export function useWorkflowPreview() {
     };
 
     sendMessage(message);
-    console.debug('[WorkflowPreview:triggerPreview] PROMPT_REQUEST for preview sent with promptId:', previewPromptId, message);
+    console.debug(
+      "[WorkflowPreview:triggerPreview] PROMPT_REQUEST for preview sent with promptId:",
+      previewPromptId,
+      message
+    );
 
-    gPrimeNodeIds.forEach(id => nodePreviewStates.value[id] = 'unknown'); // Or 'computing'
+    gPrimeNodeIds.forEach((id) => (nodePreviewStates.value[id] = "unknown")); // Or 'computing'
   }, 500);
 
   /**
@@ -277,7 +310,8 @@ export function useWorkflowPreview() {
    * @param output 节点输出.
    * @param errorDetails 错误信息 (如果有).
    */
-  const handlePreviewNodeUpdate = ( // This function is called by WebSocket message handlers
+  const handlePreviewNodeUpdate = (
+    // This function is called by WebSocket message handlers
     internalId: string, // This should be part of the WebSocket message or context
     completedPromptId: NanoId, // This is the promptId from the incoming message
     nodeId: NanoId,
@@ -289,7 +323,7 @@ export function useWorkflowPreview() {
     // based on the promptId in the payload compared to the tab's main promptId.
 
     if (errorDetails) {
-      nodePreviewStates.value[nodeId] = 'error';
+      nodePreviewStates.value[nodeId] = "error";
       const errorPayload: NodeErrorPayload = {
         promptId: completedPromptId, // Use the promptId from the message
         nodeId,
@@ -297,7 +331,7 @@ export function useWorkflowPreview() {
       };
       executionStore.updateNodeError(internalId, errorPayload);
     } else {
-      nodePreviewStates.value[nodeId] = 'newly_computed';
+      nodePreviewStates.value[nodeId] = "newly_computed";
       const completePayload: NodeCompletePayload = {
         promptId: completedPromptId, // Use the promptId from the message
         nodeId,
@@ -309,7 +343,6 @@ export function useWorkflowPreview() {
     // assignFinalPreviewStates();
   };
 
-
   const assignFinalPreviewStates = () => {
     const activeInternalId = tabStore.activeTabId;
     if (!activeInternalId) return;
@@ -317,10 +350,13 @@ export function useWorkflowPreview() {
     const allCurrentNodes = getNodes.value;
     const finalStates: Record<NanoId, NodePreviewStatus> = {};
 
-    allCurrentNodes.forEach(node => {
+    allCurrentNodes.forEach((node) => {
       const nodeId = node.id;
       // Check if this node was part of the G' computation (newly_computed or error)
-      if (nodePreviewStates.value[nodeId] === 'newly_computed' || nodePreviewStates.value[nodeId] === 'error') {
+      if (
+        nodePreviewStates.value[nodeId] === "newly_computed" ||
+        nodePreviewStates.value[nodeId] === "error"
+      ) {
         finalStates[nodeId] = nodePreviewStates.value[nodeId];
       } else {
         // Node was not in G', so its value is from snapshot
@@ -330,14 +366,17 @@ export function useWorkflowPreview() {
         // For now, a simpler check: if it's unsafe and its value is from snapshot, mark as stale_unsafe_reused.
         // This doesn't fully capture "affected by initial change" yet.
         if (nodeDef?.isPreviewUnsafe) {
-          finalStates[nodeId] = 'stale_unsafe_reused';
+          finalStates[nodeId] = "stale_unsafe_reused";
         } else {
-          finalStates[nodeId] = 'clean_reused';
+          finalStates[nodeId] = "clean_reused";
         }
       }
     });
     nodePreviewStates.value = finalStates;
-    console.debug('[WorkflowPreview:assignFinalPreviewStates] Updated preview states:', finalStates);
+    console.debug(
+      "[WorkflowPreview:assignFinalPreviewStates] Updated preview states:",
+      finalStates
+    );
   };
 
   return {

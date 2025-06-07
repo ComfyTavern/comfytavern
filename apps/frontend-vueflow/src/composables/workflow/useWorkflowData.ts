@@ -1,41 +1,37 @@
 // apps/frontend-vueflow/src/composables/useWorkflowData.ts
-import type { FlowExportObject, Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core";
-import { type Node, type Edge } from "@vue-flow/core";
-import { getEdgeStyleProps } from "../canvas/useEdgeStyles"; // 导入样式函数
 import {
-  saveWorkflowApi,
-  loadWorkflowApi,
-  listWorkflowsApi,
   deleteWorkflowApi,
+  listWorkflowsApi,
+  loadWorkflowApi,
+  saveWorkflowApi,
 } from "@/api/workflow";
+import { useThemeStore } from "@/stores/theme";
 import type {
-  WorkflowObject,
   GroupSlotInfo,
   WorkflowViewport as SharedViewport,
-  WorkflowStorageObject, // <-- Import WorkflowStorageObject
-  WorkflowStorageEdge, // 导入 WorkflowStorageEdge 以便转换
+  WorkflowObject,
+  WorkflowStorageEdge,
+  WorkflowStorageObject,
 } from "@comfytavern/types";
-import { useThemeStore } from "@/stores/theme";
-// import { useTabStore } from '@/stores/tabStore'; // 移除，不再直接更新 Tab
+import type { FlowExportObject, Edge as VueFlowEdge, Node as VueFlowNode } from "@vue-flow/core";
+import { type Edge, type Node } from "@vue-flow/core";
+import { getEdgeStyleProps } from "../canvas/useEdgeStyles";
 import { useProjectStore } from "@/stores/projectStore";
-import { useWorkflowStore } from "@/stores/workflowStore"; // 仍然需要访问 ensureTabState
-import type { WorkflowData } from "@/types/workflowTypes"; // 从 types 导入 WorkflowData
+import { useWorkflowStore } from "@/stores/workflowStore";
+import type { WorkflowData } from "@/types/workflowTypes";
 import {
+  extractGroupInterface as extractGroupInterfaceUtil,
   transformVueFlowToCoreWorkflow,
   transformWorkflowToVueFlow,
-  extractGroupInterface as extractGroupInterfaceUtil,
 } from "@/utils/workflowTransformer";
-// import { useApi } from '@/utils/api'; // 移除，不再触发项目元数据更新
-import defaultWorkflowData from '@/data/DefaultWorkflow.json'; // <-- 导入默认工作流数据
-import { useDialogService } from '../../services/DialogService'; // 导入 DialogService
+import defaultWorkflowData from "@/data/DefaultWorkflow.json"; // <-- 导入默认工作流数据
+import { useDialogService } from "../../services/DialogService"; // 导入 DialogService
 
 export function useWorkflowData() {
   const workflowStore = useWorkflowStore(); // 访问主 store (用于 ensureTabState 和类型)
-  // const tabStore = useTabStore(); // 移除
   const projectStore = useProjectStore(); // 获取项目 store 实例
   const themeStore = useThemeStore();
   const dialogService = useDialogService(); // 获取 DialogService 实例
-  // const api = useApi(); // 移除
 
   // --- 类型转换函数已被移动到 utils/workflowTransformer.ts ---
 
@@ -161,7 +157,9 @@ export function useWorkflowData() {
           `[saveWorkflow] Failed to save new workflow (tab ${internalId}, project ${projectId}):`,
           error
         );
-        dialogService.showError(`保存新工作流失败: ${error instanceof Error ? error.message : String(error)}`);
+        dialogService.showError(
+          `保存新工作流失败: ${error instanceof Error ? error.message : String(error)}`
+        );
         // throw error; // 不再重新抛出，返回 null 表示失败
         return null;
       }
@@ -192,7 +190,10 @@ export function useWorkflowData() {
         version: import.meta.env.VITE_APP_VERSION || "unknown",
       };
       const workflowIdToUpdate = currentData.id; // 使用现有的相对 ID
-      console.debug(`[saveWorkflow] Updating workflow ${workflowIdToUpdate}. Payload:`, workflowToUpdate); // <-- 修改为直接打印对象
+      console.debug(
+        `[saveWorkflow] Updating workflow ${workflowIdToUpdate}. Payload:`,
+        workflowToUpdate
+      ); // <-- 修改为直接打印对象
       try {
         // 将 projectId 和相对 workflowId 传递给 API 调用
         const updatedWorkflow = (await saveWorkflowApi(
@@ -229,7 +230,9 @@ export function useWorkflowData() {
           dialogService.showError(`保存失败：${conflictMessage}`);
         } else {
           // 其他错误使用通用消息
-          dialogService.showError(`更新工作流失败: ${error instanceof Error ? error.message : String(error)}`);
+          dialogService.showError(
+            `更新工作流失败: ${error instanceof Error ? error.message : String(error)}`
+          );
         }
         // throw error; // 不再重新抛出，返回 null 表示失败
         return null;
@@ -241,7 +244,11 @@ export function useWorkflowData() {
     internalId: string,
     projectId: string, // 接收 projectId
     workflowId: string
-  ): Promise<{ success: boolean; loadedData?: WorkflowStorageObject; flowToLoad?: FlowExportObject }> {
+  ): Promise<{
+    success: boolean;
+    loadedData?: WorkflowStorageObject;
+    flowToLoad?: FlowExportObject;
+  }> {
     const state = await workflowStore.ensureTabState(internalId);
     const instance = state.vueFlowInstance;
     if (!instance) {
@@ -279,7 +286,9 @@ export function useWorkflowData() {
         `[loadWorkflow] Failed to load workflow (tab ${internalId}, project ${projectId}, workflow ${workflowId}):`,
         error
       );
-      dialogService.showError(`加载工作流错误: ${error instanceof Error ? error.message : String(error)}`);
+      dialogService.showError(
+        `加载工作流错误: ${error instanceof Error ? error.message : String(error)}`
+      );
       return { success: false };
     }
   }
@@ -324,7 +333,9 @@ export function useWorkflowData() {
         `[deleteWorkflow] Failed to delete workflow ${workflowId} from project ${projectId}:`,
         error
       );
-      dialogService.showError(`删除工作流错误: ${error instanceof Error ? error.message : String(error)}`);
+      dialogService.showError(
+        `删除工作流错误: ${error instanceof Error ? error.message : String(error)}`
+      );
       return false;
     }
   }
@@ -354,13 +365,16 @@ export function useWorkflowData() {
         `[saveWorkflowAsNew] Failed to save new workflow in project ${projectId}:`,
         error
       );
-      dialogService.showError(`创建新工作流文件失败: ${error instanceof Error ? error.message : String(error)}`);
+      dialogService.showError(
+        `创建新工作流文件失败: ${error instanceof Error ? error.message : String(error)}`
+      );
       return null;
     }
   }
 
   // --- 默认工作流加载 ---
-  async function loadDefaultWorkflow(internalId: string): Promise<{ // <-- 变为 async, 返回 Promise
+  async function loadDefaultWorkflow(internalId: string): Promise<{
+    // <-- 变为 async, 返回 Promise
     elements: Array<Node | Edge>;
     viewport: SharedViewport;
     interfaceInputs: Record<string, GroupSlotInfo>;
@@ -382,7 +396,8 @@ export function useWorkflowData() {
         return null;
       };
 
-      const { flowData: defaultFlowData } = await transformWorkflowToVueFlow( // <-- await
+      const { flowData: defaultFlowData } = await transformWorkflowToVueFlow(
+        // <-- await
         defaultStorageObject,
         "", // Placeholder projectId, not expected to be used for default workflow's internal refs
         isDark,
@@ -393,7 +408,9 @@ export function useWorkflowData() {
       const interfaceInputs = defaultStorageObject.interfaceInputs || {};
       const interfaceOutputs = defaultStorageObject.interfaceOutputs || {};
 
-      console.info(`[useWorkflowData] Successfully loaded and transformed default workflow for tab ${internalId}.`);
+      console.info(
+        `[useWorkflowData] Successfully loaded and transformed default workflow for tab ${internalId}.`
+      );
       return {
         elements: [...defaultFlowData.nodes, ...defaultFlowData.edges],
         viewport: defaultFlowData.viewport,
@@ -401,7 +418,10 @@ export function useWorkflowData() {
         interfaceOutputs,
       };
     } catch (error) {
-      console.error(`[useWorkflowData] Failed to load or transform default workflow for tab ${internalId}. Returning blank structure. Error:`, error);
+      console.error(
+        `[useWorkflowData] Failed to load or transform default workflow for tab ${internalId}. Returning blank structure. Error:`,
+        error
+      );
       const elements: Array<Node | Edge> = [];
       const viewport: SharedViewport = { x: 0, y: 0, zoom: 1 };
       const interfaceInputs: Record<string, GroupSlotInfo> = {};

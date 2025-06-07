@@ -1,8 +1,8 @@
-import { reactive, computed } from "vue";
 import { klona } from "klona/full";
+import { computed, reactive } from "vue";
 // 直接从中央定义文件导入类型
-import type { WorkflowStateSnapshot } from "../../types/workflowTypes";
 import type { HistoryEntry } from "@comfytavern/types"; // <-- Import HistoryEntry
+import type { WorkflowStateSnapshot } from "../../types/workflowTypes";
 
 // --- 类型定义 ---
 
@@ -59,7 +59,12 @@ export function useWorkflowHistory() {
    * @param entry 结构化的历史记录条目
    * @param payload 要记录的数据状态快照 (类型来自 workflowTypes)
    */
-  const recordSnapshot = (internalId: string, entry: HistoryEntry, payload: WorkflowStateSnapshot) => { // <-- Change label to entry
+  const recordSnapshot = (
+    internalId: string,
+    entry: HistoryEntry,
+    payload: WorkflowStateSnapshot
+  ) => {
+    // <-- Change label to entry
     console.log(
       `%c[History] Attempting to record snapshot for ${internalId}: "${entry.summary}"`, // Log summary
       "color: orange; font-weight: bold;"
@@ -265,7 +270,9 @@ export function useWorkflowHistory() {
   /**
    * 获取指定工作流用于 UI 显示的历史记录摘要列表
    */
-  const getHistorySummaries = (internalId: string) => // <-- Rename function
+  const getHistorySummaries = (
+    internalId: string // <-- Rename function
+  ) =>
     computed(() => {
       const state = getHistoryState(internalId);
       // Extract summary from the entry object
