@@ -151,18 +151,32 @@
                   </svg>
                 </div>
                 <div v-show="!isGroupOutputCollapsed(String(key))"
-                  class="p-2 border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800">
-                  <template
-                    v-if="groupPreviewData && groupPreviewData[key] !== null && groupPreviewData[key] !== undefined">
-                    <MarkdownRenderer v-if="isMarkdownContent(groupPreviewData[key])"
-                      :markdown-content="groupPreviewData[key] as string" />
-                    <pre v-else-if="typeof groupPreviewData[key] === 'object' || Array.isArray(groupPreviewData[key])"
-                      class="text-xs whitespace-pre-wrap break-all">{{ JSON.stringify(groupPreviewData[key], null, 2) }}</pre>
-                    <p v-else class="text-xs whitespace-pre-wrap break-all">{{ String(groupPreviewData[key]) }}</p>
-                  </template>
-                  <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">
-                    无可用预览数据。
-                  </p>
+                  class="p-2 border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 space-y-2">
+                  <div>
+                    <p class="text-xs mb-1 text-gray-500 dark:text-gray-400 font-semibold">最终值:</p>
+                    <template
+                      v-if="groupPreviewData && groupPreviewData[key] !== null && groupPreviewData[key] !== undefined">
+                      <MarkdownRenderer v-if="isMarkdownContent(groupPreviewData[key])"
+                        :markdown-content="groupPreviewData[key] as string" />
+                      <pre v-else-if="typeof groupPreviewData[key] === 'object' || Array.isArray(groupPreviewData[key])"
+                        class="text-xs whitespace-pre-wrap break-all">{{ JSON.stringify(groupPreviewData[key], null, 2) }}</pre>
+                      <p v-else class="text-xs whitespace-pre-wrap break-all">{{ String(groupPreviewData[key]) }}</p>
+                    </template>
+                    <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">
+                      无最终预览数据。
+                    </p>
+                  </div>
+
+                  <!-- 新增：显示接口的流式输出 -->
+                  <div v-if="outputDef.dataFlowType === DataFlowType.STREAM">
+                    <p class="text-xs mt-2 mb-1 text-gray-500 dark:text-gray-400 font-semibold">实时流:</p>
+                    <div class="p-1 border rounded bg-gray-100 dark:bg-gray-700/30 max-h-48 overflow-y-auto">
+                      <pre v-if="getInterfaceStreamText(String(key))" class="text-xs whitespace-pre-wrap break-all">{{ getInterfaceStreamText(String(key)) }}</pre>
+                      <p v-else-if="isInterfaceStreamProcessing(String(key))" class="text-xs text-gray-500 dark:text-gray-400 italic">等待流数据...</p>
+                      <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">无流数据。</p>
+                    </div>
+                    <p v-if="isInterfaceStreamDone(String(key))" class="text-xs text-green-500 dark:text-green-400 mt-1">流已结束。</p>
+                  </div>
                 </div>
               </div>
             </template>
@@ -396,6 +410,27 @@ const currentAccumulatedStreamText = computed(() => {
   }
   return executionStore.getAccumulatedStreamedText(activeTabId.value, activeTarget.value.nodeId) || '';
 });
+
+// 新增：用于获取工作流接口流式数据的方法
+const getInterfaceStreamText = (interfaceKey: string) => {
+  if (!activeTabId.value) return '';
+  return executionStore.getAccumulatedInterfaceStreamedText(activeTabId.value, interfaceKey) || '';
+};
+
+const isInterfaceStreamDone = (interfaceKey: string) => {
+  if (!activeTabId.value) return false;
+  return executionStore.isInterfaceStreamComplete(activeTabId.value, interfaceKey) === true;
+};
+
+const isInterfaceStreamProcessing = (interfaceKey: string) => {
+  if (!activeTabId.value) return false;
+  const promptId = executionStore.getCurrentPromptId(activeTabId.value);
+  if (!promptId) return false;
+  if (isInterfaceStreamDone(interfaceKey)) return false;
+  // 检查 store 中是否存在该接口流的记录，无论是否有数据，只要记录存在且未完成，就视为正在处理
+  return !!executionStore.tabExecutionStates.get(activeTabId.value)?.streamingInterfaceOutputs?.[interfaceKey];
+};
+
 
 const isMarkdownSlot = computed(() => {
   if (!activeTarget.value) return false;

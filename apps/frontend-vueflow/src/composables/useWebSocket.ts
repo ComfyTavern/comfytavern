@@ -13,6 +13,7 @@ import {
   type NodeErrorPayload, // 新增
   type NodesReloadedPayload, // 新增：节点重载通知的载荷
   type NodeYieldPayload, // <--- 添加这个导入
+  type WorkflowInterfaceYieldPayload, // <--- ADD THIS
 } from "@comfytavern/types"; // 引入共享类型和枚举
 import { useExecutionStore } from "@/stores/executionStore"; // 导入执行状态存储
 import { useTabStore } from "@/stores/tabStore"; // 导入 TabStore
@@ -151,6 +152,7 @@ const connect = (isRetry = false) => {
         WebSocketMessageType.NODE_COMPLETE,
         WebSocketMessageType.NODE_ERROR,
         WebSocketMessageType.NODE_YIELD, // <--- 添加 NODE_YIELD
+        WebSocketMessageType.WORKFLOW_INTERFACE_YIELD, // <--- ADD THIS
         // WebSocketMessageType.NODE_STATUS_UPDATE, // 旧类型，可能被取代
       ].includes(message.type);
 
@@ -334,6 +336,22 @@ const connect = (isRetry = false) => {
             // 并且如果 effectiveTabId 为空，会在 switch 之前被 return
             // 但为了保险起见，添加一个警告
             console.warn(`[WebSocket] Cannot process NODE_YIELD: No effective tab ID for prompt ${payload?.promptId}, node ${payload?.sourceNodeId}. Message ignored.`);
+          }
+          break;
+        }
+        case WebSocketMessageType.WORKFLOW_INTERFACE_YIELD: {
+          if (effectiveTabId) {
+            const typedPayload = payload as WorkflowInterfaceYieldPayload;
+            // 确保 executionStore 已经初始化
+            if (executionStore) {
+              executionStore.handleWorkflowInterfaceYield(effectiveTabId, typedPayload); // New store action
+            } else {
+              console.error("[WebSocket] executionStore not initialized, cannot handle WORKFLOW_INTERFACE_YIELD.");
+            }
+          } else {
+            // 这个分支理论上不应该进入，因为 WORKFLOW_INTERFACE_YIELD 现在是 requiresTabAssociation
+            // 并且如果 effectiveTabId 为空，会在 switch 之前被 return
+            console.warn(`[WebSocket] Cannot process WORKFLOW_INTERFACE_YIELD: No effective tab ID for prompt ${payload?.promptId}, interfaceKey ${payload?.interfaceOutputKey}. Message ignored.`);
           }
           break;
         }

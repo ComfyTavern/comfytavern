@@ -15,6 +15,7 @@ import {
   type NanoId, // 导入 NanoId
   type ChunkPayload, // 确保 ChunkPayload 已导入
   type NodeYieldPayload,
+  type WorkflowInterfaceYieldPayload, // <--- ADD THIS
 } from '@comfytavern/types';
 
 // 定义客户端脚本钩子执行器的类型
@@ -33,6 +34,7 @@ interface TabExecutionState {
   nodeOutputs: Record<NanoId, Record<string, any> | undefined>; // 存储最终执行结果
   nodePreviewOutputs: Record<NanoId, Record<string, any> | undefined>; // 存储预览结果
   streamingNodeContent: Record<NanoId, { accumulatedText: string; lastChunkTimestamp: number; rawChunks: ChunkPayload[] } | undefined>; // 新增：存储流式内容
+  streamingInterfaceOutputs: Record<string, { accumulatedText: string; lastChunkTimestamp: number; rawChunks: (ChunkPayload | any)[]; isComplete?: boolean } | undefined>; // 新增：存储流式接口输出
 }
 
 export const useExecutionStore = defineStore('execution', () => {
@@ -69,6 +71,7 @@ export const useExecutionStore = defineStore('execution', () => {
         nodeOutputs: {},
         nodePreviewOutputs: {},
         streamingNodeContent: {}, // 初始化新增的属性
+        streamingInterfaceOutputs: {}, // 初始化新增的属性
       });
     }
     // Non-null assertion is safe here because we just ensured it exists
@@ -90,6 +93,7 @@ export const useExecutionStore = defineStore('execution', () => {
     state.nodeOutputs = {};
     state.nodePreviewOutputs = {}; // 清除预览输出
     state.streamingNodeContent = {}; // 清除流式内容
+    state.streamingInterfaceOutputs = {}; // 清除流式接口内容
   };
 
   // 处理 Prompt 请求被接受的消息
@@ -229,6 +233,39 @@ export const useExecutionStore = defineStore('execution', () => {
     }
   };
 
+  const handleWorkflowInterfaceYield = (internalId: string, payload: WorkflowInterfaceYieldPayload) => {
+    const state = ensureTabExecutionState(internalId);
+    if (payload.promptId === state.promptId) {
+      console.debug(`[ExecutionStore] Workflow interface yield for tab ${internalId}, key ${payload.interfaceOutputKey}`, payload.yieldedContent);
+      let interfaceStreamContent = state.streamingInterfaceOutputs[payload.interfaceOutputKey];
+      if (!interfaceStreamContent) {
+        interfaceStreamContent = { accumulatedText: '', lastChunkTimestamp: 0, rawChunks: [] };
+        state.streamingInterfaceOutputs[payload.interfaceOutputKey] = interfaceStreamContent;
+      }
+
+      interfaceStreamContent.rawChunks.push(payload.yieldedContent);
+      interfaceStreamContent.lastChunkTimestamp = Date.now();
+
+      // 假设 yieldedContent 也是 ChunkPayload 类型或者可以判断其类型
+      if (typeof payload.yieldedContent === 'object' && payload.yieldedContent !== null && 'type' in payload.yieldedContent && 'content' in payload.yieldedContent) {
+        const chunk = payload.yieldedContent as ChunkPayload; // Type assertion
+        if (chunk.type === 'text_chunk' && typeof chunk.content === 'string') {
+          interfaceStreamContent.accumulatedText += chunk.content;
+        }
+      } else if (typeof payload.yieldedContent === 'string') { // 直接是字符串的情况
+        interfaceStreamContent.accumulatedText += payload.yieldedContent;
+      }
+
+
+      if (payload.isLastChunk) {
+        console.debug(`[ExecutionStore] Last interface chunk received for key ${payload.interfaceOutputKey} on tab ${internalId}`);
+        interfaceStreamContent.isComplete = true;
+      }
+    } else {
+      console.warn(`[ExecutionStore] Received WORKFLOW_INTERFACE_YIELD for prompt ${payload.promptId} which does not match tab ${internalId}'s current prompt ${state.promptId}. Ignoring key ${payload.interfaceOutputKey}.`);
+    }
+  };
+
   // Action to remove state for a closed tab
   const removeTabExecutionState = (internalId: string) => {
     if (tabExecutionStates.has(internalId)) {
@@ -330,6 +367,18 @@ export const useExecutionStore = defineStore('execution', () => {
     return tabExecutionStates.get(internalId)?.streamingNodeContent[nodeId]?.rawChunks;
   };
 
+  const getAccumulatedInterfaceStreamedText = (internalId: string, interfaceOutputKey: string): string | undefined => {
+    return tabExecutionStates.get(internalId)?.streamingInterfaceOutputs[interfaceOutputKey]?.accumulatedText;
+  };
+
+  const getRawInterfaceStreamedChunks = (internalId: string, interfaceOutputKey: string): (ChunkPayload | any)[] | undefined => {
+    return tabExecutionStates.get(internalId)?.streamingInterfaceOutputs[interfaceOutputKey]?.rawChunks;
+  };
+
+  const isInterfaceStreamComplete = (internalId: string, interfaceOutputKey: string): boolean | undefined => {
+    return tabExecutionStates.get(internalId)?.streamingInterfaceOutputs[interfaceOutputKey]?.isComplete;
+  };
+
   // --- Getter for Node Client Script Executor ---
   /**
    * 获取指定节点的客户端脚本执行器。
@@ -366,6 +415,10 @@ export const useExecutionStore = defineStore('execution', () => {
     getAllNodePreviewOutputs, // Added getter for all preview outputs
     getAccumulatedStreamedText, // 新增 getter
     getRawStreamedChunks, // 新增 getter
+    handleWorkflowInterfaceYield, // New action
+    getAccumulatedInterfaceStreamedText, // New getter
+    getRawInterfaceStreamedChunks, // New getter
+    isInterfaceStreamComplete, // New getter
     // Preview Toggle
     isPreviewEnabled, // Expose state
     togglePreview, // Expose action
