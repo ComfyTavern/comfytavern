@@ -238,3 +238,29 @@ src/
 - **代码检查**: `bunx vue-tsc --build apps/frontend-vueflow/tsconfig.json`,`bun tsc -p apps/backend/tsconfig.json --noEmit`
 - **节点组节点**：节点组节点会动态的从引用工作流组中获取内部的 IO 插槽并显示在自身的输入输出面板中。这些插槽不会被保存到工作流文件中，而是只会保存配置的引用信息，然后在加载时动态获取。
 - **通用类型导入**：`@comfytavern/types`是通用类型的导入路径，通过`index.ts`统一注册了所有通用类型定义。
+
+
+
+## `apply_diff` 工具报错排查：`marker '=======' found`
+
+当 `apply_diff` 工具报告如下错误时：
+
+```
+ERROR: Diff block is malformed: marker '=======' found in your diff content at line X.
+```
+
+这通常意味着在 `REPLACE` 代码块内部错误地包含了 `=======` 标记。`REPLACE` 块应当只包含目标代码行，不应含有任何 `diff` 分隔符。
+
+**特殊情况与排查：**
+
+如果经过检查，你确认 `REPLACE` 块的内容是纯净的（即，确实没有多余的 `=======` 标记在**内部**），那么此报错**可能指示了更深层次的 `diff` 块结构问题，特别是块未正确闭合**。
+
+**可能的原因：**
+
+*   模型生成 `diff` 输出时发生截断。
+*   模型未能正确输出 `diff` 块的起始或结束标记（例如，`<<<<<<<`、`=======`、`>>>>>>>` 未正确配对，或者 `START_REPLACE` / `END_REPLACE` 等自定义标记缺失或错位）。
+
+**处理建议：**
+
+1.  **首要检查 `REPLACE` 内部**：确保 `REPLACE` 块内绝对没有 `=======`。
+2.  **检查 `diff` 块完整性**：如果 `REPLACE` 内部无误，请仔细核对整个 `diff` 块的结构。确认所有的 `diff` 标记（如 `<<<<<<< HEAD`，`=======`，`>>>>>>> BRANCH_NAME`，或工具特定的 `START_BLOCK`/`END_BLOCK` 标记）都已正确、完整地闭合。不完整的 `diff` 块会导致解析器误判，即使 `REPLACE` 内部是干净的，也可能因为外部结构错误而报类似的错误。
