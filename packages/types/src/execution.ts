@@ -40,6 +40,7 @@ export enum WebSocketMessageType {
   NODE_PROGRESS = "NODE_PROGRESS",
   NODE_COMPLETE = "NODE_COMPLETE",
   NODE_ERROR = "NODE_ERROR",
+  NODE_YIELD = "NODE_YIELD", // 新增流式输出消息类型
   EXECUTION_RESULT = "execution_result",
   WORKFLOW_LOADED = "workflow_loaded",
   WORKFLOW_SAVED = "workflow_saved",

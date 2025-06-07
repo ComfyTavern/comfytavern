@@ -133,6 +133,7 @@ export function useWorkflowData() {
         interfaceOutputs: state.workflowData?.interfaceOutputs || {},
         referencedWorkflows: coreWorkflowData.referencedWorkflows, // <-- 新增
         version: import.meta.env.VITE_APP_VERSION || "unknown",
+        previewTarget: state.workflowData?.previewTarget ?? null, // <-- 新增：保存预览目标
       };
       // console.debug(`[saveWorkflow] Saving new workflow. Payload:`, workflowToSave); // <-- 修改为直接打印对象
       try {
@@ -188,6 +189,7 @@ export function useWorkflowData() {
         interfaceOutputs: currentData.interfaceOutputs || {},
         referencedWorkflows: coreWorkflowData.referencedWorkflows, // <-- 新增
         version: import.meta.env.VITE_APP_VERSION || "unknown",
+        previewTarget: currentData.previewTarget ?? null, // <-- 新增：保存预览目标
       };
       const workflowIdToUpdate = currentData.id; // 使用现有的相对 ID
       console.debug(

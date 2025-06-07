@@ -12,6 +12,7 @@ import {
   type NodeCompletePayload, // 新增
   type NodeErrorPayload, // 新增
   type NodesReloadedPayload, // 新增：节点重载通知的载荷
+  type NodeYieldPayload, // <--- 添加这个导入
 } from "@comfytavern/types"; // 引入共享类型和枚举
 import { useExecutionStore } from "@/stores/executionStore"; // 导入执行状态存储
 import { useTabStore } from "@/stores/tabStore"; // 导入 TabStore
@@ -149,6 +150,7 @@ const connect = (isRetry = false) => {
         WebSocketMessageType.NODE_PROGRESS,
         WebSocketMessageType.NODE_COMPLETE,
         WebSocketMessageType.NODE_ERROR,
+        WebSocketMessageType.NODE_YIELD, // <--- 添加 NODE_YIELD
         // WebSocketMessageType.NODE_STATUS_UPDATE, // 旧类型，可能被取代
       ].includes(message.type);
 
@@ -320,6 +322,18 @@ const connect = (isRetry = false) => {
             nodeStore.handleNodesReloadedNotification(typedPayload);
           } else {
             console.error("[WebSocket] nodeStore is null, cannot handle NODES_RELOADED notification.");
+          }
+          break;
+        }
+        case WebSocketMessageType.NODE_YIELD: { // 新增 case
+          if (effectiveTabId) {
+            const typedPayload = payload as NodeYieldPayload; // 类型转换
+            executionStore.handleNodeYield(effectiveTabId, typedPayload);
+          } else {
+            // 这个分支理论上不应该进入，因为 NODE_YIELD 现在是 requiresTabAssociation
+            // 并且如果 effectiveTabId 为空，会在 switch 之前被 return
+            // 但为了保险起见，添加一个警告
+            console.warn(`[WebSocket] Cannot process NODE_YIELD: No effective tab ID for prompt ${payload?.promptId}, node ${payload?.sourceNodeId}. Message ignored.`);
           }
           break;
         }
