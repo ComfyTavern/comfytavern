@@ -1,4 +1,4 @@
-import type { NodeDefinition, CustomMessage } from '@comfytavern/types'; // Import CustomMessage
+import type { NodeDefinition, CustomMessage } from '@comfytavern/types';
 import { promises as fs } from 'fs';
 import path from 'path';
 

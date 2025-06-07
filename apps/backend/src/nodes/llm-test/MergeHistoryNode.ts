@@ -1,5 +1,4 @@
 import type { NodeDefinition, CustomMessage } from '@comfytavern/types'
-// Removed: import { nodeManager } from '../NodeManager'
 
 export class MergeHistoryNodeImpl {
   static async execute(inputs: Record<string, any>): Promise<Record<string, any>> {

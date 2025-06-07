@@ -1,31 +1,4 @@
-import type { NodeDefinition, CustomMessage } from '@comfytavern/types';
-
-// --- Temporary Local Type Definition (Should be in @comfytavern/types) ---
-// Based on llm-adapter-architecture-plan.md
-interface StandardResponse {
-  text: string; // Primary text content
-  choices?: Array<{
-    index: number;
-    message: CustomMessage; // Use CustomMessage here as it's the available type
-    finish_reason: string;
-  }>;
-  usage?: {
-    prompt_tokens?: number;
-    completion_tokens?: number;
-    total_tokens?: number;
-    [key: string]: any;
-  };
-  raw_response?: any;
-  error?: { // Keep error structure for potential direct error returns from services
-    code?: string | number;
-    message: string;
-    type?: string;
-    details?: any;
-  };
-  model: string; // Actual model used
-  response_id?: string;
-}
-// --- End Temporary Type Definition ---
+import type { NodeDefinition, CustomMessage, StandardResponse } from '@comfytavern/types';
 
 
 // Placeholder validation for messages

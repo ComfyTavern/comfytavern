@@ -1,4 +1,11 @@
-import type { NodeDefinition, APISettings } from '@comfytavern/types'
+import type { NodeDefinition } from '@comfytavern/types'
+
+// 本地类型定义，仅此节点使用
+interface APISettings {
+  use_env_vars: boolean;
+  base_url: string;
+  api_key: string;
+}
 // Removed: import { nodeManager } from '../NodeManager'
 
 export class APISettingsNodeImpl {

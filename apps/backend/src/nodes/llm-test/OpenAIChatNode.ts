@@ -1,8 +1,51 @@
 import OpenAI from 'openai'
-import type { NodeDefinition, APISettings, CustomMessage, CustomContentPart } from '@comfytavern/types'
+import type { NodeDefinition } from '@comfytavern/types'
 // Removed: import { nodeManager } from '../NodeManager'
 import { ImageProcessor } from '../../utils/ImageProcessor'
-import { convertToApiMessage } from '@comfytavern/types'
+
+// 本地类型定义
+interface APISettings {
+  use_env_vars: boolean;
+  base_url: string;
+  api_key: string;
+}
+
+interface CustomContentPart {
+  type: 'text' | 'image_url';
+  text?: string;
+  image_url?: {
+    url: string;
+  };
+}
+
+interface CustomMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string | CustomContentPart[];
+}
+
+function convertToApiMessage(msg: CustomMessage): OpenAI.Chat.ChatCompletionMessageParam {
+  const content = typeof msg.content === 'string'
+    ? msg.content
+    : msg.content.map(part => {
+        if (part.type === 'text') {
+          return { type: 'text' as const, text: part.text || '' };
+        }
+        return { type: 'image_url' as const, image_url: part.image_url! };
+      });
+
+  switch (msg.role) {
+    case 'system':
+      return { role: 'system', content: msg.content as string }; // System message content must be a string
+    case 'user':
+      return { role: 'user', content };
+    case 'assistant':
+      // Assistant message content can be string or null, but here we assume string from our logic
+      return { role: 'assistant', content: msg.content as string | null };
+    default:
+      // Fallback for safety, though should not be reached with CustomMessage type
+      return { role: 'user', content };
+  }
+}
 
 export class OpenAIChatNodeImpl {
   private static formatConversation(messages: CustomMessage[]): string {

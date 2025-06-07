@@ -7,7 +7,7 @@ import extract from 'png-chunks-extract';
 // @ts-ignore // png-chunk-text 可能没有完美的 TS 类型
 import PNGtext from 'png-chunk-text';
 import { Buffer } from 'buffer';
-import type { CharacterCard, ApiCharacterEntry } from '../../../../packages/types/SillyTavern'; // 导入 ApiCharacterEntry
+import type { CharacterCard, ApiCharacterEntry } from '@comfytavern/types'; // 导入 ApiCharacterEntry
 
 // 获取当前文件的目录 (ES Module)
 const __filename = fileURLToPath(import.meta.url);

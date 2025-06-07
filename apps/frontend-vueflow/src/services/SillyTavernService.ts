@@ -1,4 +1,4 @@
-import type { CharacterCardUI, ApiCharacterEntry } from '../../../../packages/types/SillyTavern';
+import type { CharacterCardUI, ApiCharacterEntry } from '@comfytavern/types';
 
 // 本地 BackendCharacterData 接口已移除，使用共享的 ApiCharacterEntry
 
