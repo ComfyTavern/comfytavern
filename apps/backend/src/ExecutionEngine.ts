@@ -175,11 +175,26 @@ export class ExecutionEngine {
     console.log(`[Engine-${this.promptId}] Initialized for execution.`);
   }
 
+  private sanitizeObjectForLogging(obj: any, keysToSanitize: string[] = ['system_prompt', 'system_message', 'prompt'], maxLength: number = 100): any {
+    if (typeof obj !== 'object' || obj === null) {
+      return obj;
+    }
+
+    const newObj = { ...obj }; // 浅拷贝
+
+    for (const key of keysToSanitize) {
+      if (newObj.hasOwnProperty(key) && typeof newObj[key] === 'string' && newObj[key].length > maxLength) {
+        newObj[key] = `${newObj[key].substring(0, maxLength)}... (omitted, original length: ${newObj[key].length})`;
+      }
+    }
+    return newObj;
+  }
+
   /**
    * 执行完整的工作流。
    */
   public async run(): Promise<{ status: ExecutionStatus.COMPLETE | ExecutionStatus.ERROR | ExecutionStatus.INTERRUPTED; error?: any }> {
-    console.log(`[Engine-${this.promptId}]----- Starting full execution | 开始执行完整工作流 ----`);
+    console.log(`\n\n\n\x1b[32m[Engine-${this.promptId}]----- Starting full execution | 开始执行完整工作流 ----\x1b[0m\n\n\n`);
     this.isInterrupted = false; // 重置中断标志
 
     try {
@@ -374,7 +389,7 @@ export class ExecutionEngine {
     const node = this.nodes[nodeId];
 
     // 添加日志 - 方法入口
-    console.log(`[Engine-${this.promptId}] prepareNodeInputs for ${nodeId}. Node config inputs: ${JSON.stringify(node?.inputs)}, inputConnectionOrders: ${JSON.stringify((node as any)?.inputConnectionOrders)}`);
+    console.log(`[Engine-${this.promptId}] prepareNodeInputs for ${nodeId}. Node config inputs: ${JSON.stringify(this.sanitizeObjectForLogging(node?.inputs))}, inputConnectionOrders: ${JSON.stringify((node as any)?.inputConnectionOrders)}`);
 
     if (!node) {
       console.warn(`[Engine-${this.promptId}] Node ${nodeId} not found during input preparation.`);
@@ -437,8 +452,8 @@ export class ExecutionEngine {
 
     // 添加日志 - 步骤1之后
     console.log(`[Engine-${this.promptId}] After collecting connected inputs for ${nodeId}:`);
-    console.log(`  multiInputBuffer: ${JSON.stringify(multiInputBuffer)}`);
-    console.log(`  inputs (from single connections): ${JSON.stringify(inputs)}`);
+    console.log(`  multiInputBuffer: ${JSON.stringify(multiInputBuffer)}`); // multiInputBuffer 通常不包含敏感长文本
+    console.log(`  inputs (from single connections): ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
 
     // 2. 根据 inputConnectionOrders 排序多输入值并放入最终的 inputs 对象
     const currentInputConnectionOrders = (node as any).inputConnectionOrders as Record<string, string[]> | undefined;
@@ -470,7 +485,7 @@ export class ExecutionEngine {
 
     // 添加日志 - 步骤2之后
     console.log(`[Engine-${this.promptId}] After processing multi-input orders for ${nodeId}:`);
-    console.log(`  inputs: ${JSON.stringify(inputs)}`);
+    console.log(`  inputs: ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
 
     // 3. 处理来自节点 inputs 属性的预设值 (仅当输入未通过连接提供时)
     if (node.inputs) {
@@ -502,7 +517,7 @@ export class ExecutionEngine {
 
     // 添加日志 - 步骤3之后
     console.log(`[Engine-${this.promptId}] After applying node preset inputs for ${nodeId}:`);
-    console.log(`  inputs: ${JSON.stringify(inputs)}`);
+    console.log(`  inputs: ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
 
     // 4. 应用节点定义中的默认值 (如果输入仍未定义)
     for (const inputKey in definition.inputs) {
@@ -537,7 +552,7 @@ export class ExecutionEngine {
     }
 
     // 添加日志 - 步骤4之后 (返回之前)
-    console.log(`[Engine-${this.promptId}] Final prepared inputs for ${nodeId} (before required check): ${JSON.stringify(inputs)}`);
+    console.log(`[Engine-${this.promptId}] Final prepared inputs for ${nodeId} (before required check): ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
 
     return inputs;
   }
