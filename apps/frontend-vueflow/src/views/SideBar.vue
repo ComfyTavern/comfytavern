@@ -35,13 +35,16 @@ const textClasses = computed(() => themeStore.collapsed
 
     <!-- 导航链接 -->
     <nav class="flex-1 flex flex-col px-2 py-4 space-y-2">
-      <RouterLink to="/home" class="w-full p-2 rounded flex items-center" :class="[
-        themeStore.collapsed ? 'justify-center' : 'justify-start',
-        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
-      ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
-        <span class="inline text-lg">🏠</span>
-        <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
-          :class="textClasses">主页</span>
+      <RouterLink to="/home" custom v-slot="{ navigate, isExactActive }">
+        <div @click="navigate" class="w-full p-2 rounded flex items-center cursor-pointer" :class="[
+          themeStore.collapsed ? 'justify-center' : 'justify-start',
+          themeStore.isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
+          isExactActive ? (themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200') : ''
+        ]">
+          <span class="inline text-lg">🏠</span>
+          <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
+            :class="textClasses">主页</span>
+        </div>
       </RouterLink>
 
       <RouterLink to="/home/projects" class="w-full p-2 rounded flex items-center" :class="[
