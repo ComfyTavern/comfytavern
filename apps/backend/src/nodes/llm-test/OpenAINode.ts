@@ -202,9 +202,11 @@ export const definition: NodeDefinition = {
       displayName: '系统提示',
       description: '系统提示',
       required: true,
-      matchCategories: ['Prompt'],
+      matchCategories: ['Prompt','UiBlock'],
       config: {
-        multiline: true
+        default: '',
+        multiline: true,
+        placeholder: '系统提示词'
       }
     },
     prompt: {
@@ -212,9 +214,11 @@ export const definition: NodeDefinition = {
       displayName: '用户提示',
       description: '用户提示',
       required: true,
-      matchCategories: ['Prompt'],
+      matchCategories: ['Prompt','UiBlock'],
       config: {
-        multiline: true
+        default: '',
+        multiline: true,
+        placeholder: '用户提示词'
       }
     },
     history: {
