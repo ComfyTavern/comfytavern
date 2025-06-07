@@ -1,8 +1,5 @@
 <template>
   <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
-    <!-- 左侧边栏 -->
-    <SideBar />
-
     <!-- 主要内容区域 -->
     <OverlayScrollbarsComponent
       :options="{
@@ -34,7 +31,7 @@
             </div>
             <div v-else-if="recentProjects.length === 0" class="text-center text-gray-500 dark:text-gray-400">
               还没有项目。
-              <router-link to="/projects" class="text-blue-500 hover:underline ml-2">创建新项目</router-link>
+              <router-link to="/home/projects" class="text-blue-500 hover:underline ml-2">创建新项目</router-link>
             </div>
             <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               <div v-for="project in recentProjects" :key="project.id"
@@ -49,7 +46,7 @@
                 </p>
               </div>
             </div>
-            <router-link to="/projects"
+            <router-link to="/home/projects"
               class="text-blue-500 hover:underline mt-4 inline-block float-right">查看所有项目</router-link>
           </div>
         </div>
@@ -74,7 +71,6 @@
 </template>
 
 <script setup lang="ts">
-import SideBar from './SideBar.vue';
 import CharacterCardPreview from '../components/CharacterCardPreview.vue';
 import { useThemeStore } from '../stores/theme'; // 导入 theme store
 import { useProjectManagement } from '../composables/editor/useProjectManagement';

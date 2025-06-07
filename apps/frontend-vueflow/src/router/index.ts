@@ -3,43 +3,51 @@ import HomeView from '../views/HomeView.vue'
 import EditorView from '../views/EditorView.vue'
 import ProjectListView from '../views/ProjectListView.vue'
 import CharacterCardView from '../views/CharacterCardView.vue'
+import HomeLayout from '../views/HomeLayout.vue' // 导入新的布局组件
 import { useProjectStore } from '../stores/projectStore' // 导入项目 store
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/', // 根路径指向 HomeView
-      name: 'home', // 命名为 home
-      component: HomeView,
-    },
-    { // 将项目列表移到 /projects
-      path: '/projects',
-      name: 'projects',
-      component: ProjectListView,
-    },
-    { // 新增：角色卡路由
-      path: '/characters',
-      name: 'characters',
-      component: CharacterCardView,
+      path: '/',
+      redirect: '/home', // 根路径重定向到 /home
     },
     {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue'),
+      path: '/home',
+      component: HomeLayout, // 使用主页布局
+      children: [
+        {
+          path: '', // 默认子路由
+          name: 'home',
+          component: HomeView,
+        },
+        {
+          path: 'projects',
+          name: 'projects',
+          component: ProjectListView,
+        },
+        {
+          path: 'characters',
+          name: 'characters',
+          component: CharacterCardView,
+        },
+        {
+          path: 'about',
+          name: 'about',
+          component: () => import('../views/AboutView.vue'),
+        },
+        {
+          path: 'settings',
+          name: 'settings', // 名字统一小写
+          component: () => import('../views/SettingsView.vue'),
+        },
+      ],
     },
     {
       path: '/dialog-demo',
       name: 'dialog-demo',
       component: () => import('../components/common/DialogDemo.vue'),
-    },
-    {
-      path: '/settings',
-      name: 'Settings',
-      component: () => import('../views/SettingsView.vue'),
     },
     {
       path: '/projects/:projectId/editor/:workflowId?', // 添加可选的 workflowId 参数
@@ -54,7 +62,7 @@ const router = createRouter({
         if (!projectId) {
           console.error('Router Guard: Project ID is missing in route params.');
           // 如果没有项目 ID，重定向到主页或其他安全页面
-          return next({ name: 'home' }); // 重定向到 home (现在已定义)
+          return next({ name: 'home' }); // 重定向到 home
         }
 
         // 如果请求的项目已经是当前加载的项目，则无需重新加载

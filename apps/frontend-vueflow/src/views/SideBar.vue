@@ -35,7 +35,7 @@ const textClasses = computed(() => themeStore.collapsed
 
     <!-- 导航链接 -->
     <nav class="flex-1 flex flex-col px-2 py-4 space-y-2">
-      <RouterLink to="/" class="w-full p-2 rounded flex items-center" :class="[
+      <RouterLink to="/home" class="w-full p-2 rounded flex items-center" :class="[
         themeStore.collapsed ? 'justify-center' : 'justify-start',
         themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
       ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
@@ -44,7 +44,7 @@ const textClasses = computed(() => themeStore.collapsed
           :class="textClasses">主页</span>
       </RouterLink>
 
-      <RouterLink to="/projects" class="w-full p-2 rounded flex items-center" :class="[
+      <RouterLink to="/home/projects" class="w-full p-2 rounded flex items-center" :class="[
         themeStore.collapsed ? 'justify-center' : 'justify-start',
         themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
       ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
@@ -52,7 +52,7 @@ const textClasses = computed(() => themeStore.collapsed
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">项目</span>
       </RouterLink>
-      <RouterLink to="/characters" class="w-full p-2 rounded flex items-center" :class="[
+      <RouterLink to="/home/characters" class="w-full p-2 rounded flex items-center" :class="[
         themeStore.collapsed ? 'justify-center' : 'justify-start',
         themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
       ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
@@ -61,7 +61,7 @@ const textClasses = computed(() => themeStore.collapsed
           :class="textClasses">角色卡</span>
       </RouterLink>
 
-      <RouterLink to="/about" class="w-full p-2 rounded flex items-center" :class="[
+      <RouterLink to="/home/about" class="w-full p-2 rounded flex items-center" :class="[
         themeStore.collapsed ? 'justify-center' : 'justify-start',
         themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
       ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
@@ -92,7 +92,7 @@ const textClasses = computed(() => themeStore.collapsed
       </Tooltip>
 
       <!-- 设置按钮 -->
-      <RouterLink to="/settings" class="w-full p-2 rounded flex items-center mt-2" :class="[
+      <RouterLink to="/home/settings" class="w-full p-2 rounded flex items-center mt-2" :class="[
         themeStore.collapsed ? 'justify-center' : 'justify-start',
         themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
       ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
