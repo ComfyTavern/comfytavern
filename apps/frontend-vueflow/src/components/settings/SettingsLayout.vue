@@ -136,15 +136,15 @@ const activeSection = computed(() =>
 
 .settings-content {
   flex-grow: 1;
-  padding: 24px 48px;
+  padding: 32px 64px; /* 增加内边距 */
   overflow-y: auto;
 }
 
 .section-title {
-  font-size: 1.75rem;
-  font-weight: 600;
-  margin-bottom: 24px;
-  padding-bottom: 12px;
+  font-size: 2rem; /* 增大标题字号 */
+  font-weight: 700; /* 加粗 */
+  margin-bottom: 32px; /* 增-大下外边距 */
+  padding-bottom: 16px; /* 增-大下内边距 */
   border-bottom: 1px solid var(--ct-border-color);
 }
 

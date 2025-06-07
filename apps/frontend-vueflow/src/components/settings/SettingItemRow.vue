@@ -38,7 +38,7 @@ defineProps<{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 0;
+  padding: 16px 0; /* 增加垂直内边距 */
   border-bottom: 1px solid var(--ct-border-color-light);
 }
 
@@ -53,7 +53,7 @@ defineProps<{
 
 .label-area {
   flex: 1;
-  padding-right: 24px;
+  padding-right: 32px; /* 增加右侧内边距 */
 }
 
 .item-label {
@@ -65,12 +65,12 @@ defineProps<{
 .item-description {
   font-size: 0.875rem;
   color: var(--ct-text-muted);
-  margin-top: 4px;
+  margin-top: 6px; /* 增加与标签的间距 */
 }
 
 .control-area {
   flex-shrink: 0;
-  min-width: 250px; /* 给控件一个最小宽度 */
+  min-width: 320px; /* 增-大控件最小宽度 */
   display: flex;
   justify-content: flex-end;
 }

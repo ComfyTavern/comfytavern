@@ -39,6 +39,21 @@
   --color-text: var(--vt-c-text-light-1);
 
   --section-gap: 160px;
+
+  /* ComfyTavern Semantic Colors */
+  --ct-bg-base: #ffffff;
+  --ct-bg-subtle: #f9fafb; /* 更柔和的背景 */
+  --ct-bg-active: #e5e7eb;
+  --ct-bg-hover: #f3f4f6;
+
+  --ct-text-base: #111827;
+  --ct-text-muted: #6b7280; /* 柔和的文本 */
+  --ct-text-accent: #1d4ed8;
+
+  --ct-border-color: #d1d5db;
+  --ct-border-color-light: #e5e7eb;
+
+  --ct-accent-color: #2563eb;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -66,6 +81,21 @@
 
   --color-heading: var(--vt-c-text-dark-1);
   --color-text: var(--vt-c-text-dark-2);
+
+  /* ComfyTavern Semantic Colors - Dark Mode */
+  --ct-bg-base: #111827; /* 深蓝灰色背景 */
+  --ct-bg-subtle: #1f2937; /* 稍亮的背景 */
+  --ct-bg-active: #374151;
+  --ct-bg-hover: #4b5563;
+
+  --ct-text-base: #f9fafb; /* 接近白色的文本 */
+  --ct-text-muted: #9ca3af; /* 提高对比度的柔和文本 */
+  --ct-text-accent: #60a5fa; /* 亮蓝色强调 */
+
+  --ct-border-color: #4b5563; /* 更亮的边框 */
+  --ct-border-color-light: #374151; /* 更亮的次级边框 */
+
+  --ct-accent-color: #3b82f6;
 }
 
 /* 手动设置的亮色模式 */
@@ -79,6 +109,8 @@
 
   --color-heading: var(--vt-c-text-light-1);
   --color-text: var(--vt-c-text-light-1);
+
+  /* ComfyTavern Semantic Colors - Light Mode (already defined in :root) */
 }
 
 *,
