@@ -37,6 +37,11 @@ const router = createRouter({
       component: () => import('../components/common/DialogDemo.vue'),
     },
     {
+      path: '/settings',
+      name: 'Settings',
+      component: () => import('../components/settings/SettingsLayout.vue'),
+    },
+    {
       path: '/projects/:projectId/editor/:workflowId?', // 添加可选的 workflowId 参数
       name: 'Editor', // 更新路由名称为 Editor
       component: EditorView,
