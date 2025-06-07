@@ -1,4 +1,7 @@
-import OpenAI from 'openai'
+import OpenAI from 'openai';
+
+import { ImageProcessor } from '../../utils/ImageProcessor';
+
 import type { NodeDefinition } from '@comfytavern/types'
 
 // 本地类型定义
@@ -7,7 +10,6 @@ interface APISettings {
   base_url: string;
   api_key: string;
 }
-import { ImageProcessor } from '../../utils/ImageProcessor'
 // Removed: import { nodeManager } from '../NodeManager'
 
 export class OpenAINodeImpl {

@@ -1,17 +1,12 @@
+import { CreateWorkflowObject, GroupInterfaceInfo, NodeGroupData, ProjectMetadata, ProjectMetadataSchema, UpdateWorkflowObject, WorkflowNode, WorkflowObject, WorkflowObjectSchema, WorkflowStorageObject, } from "@comfytavern/types";
+import path, { basename, extname, join } from "node:path";
 import { promises as fs } from "node:fs";
-import path, { join, basename, extname } from "node:path";
 import isEqual from "lodash/isEqual";
-import {
-  type WorkflowObject, // 这个已经导入了
-  type GroupInterfaceInfo,
-  type WorkflowNode,
-  type NodeGroupData,
-  type WorkflowStorageObject, // <-- 需要这个
-  WorkflowObjectSchema, // <-- 需要这个
-  // CreateWorkflowObject 已经在下面单独导入了
-} from "@comfytavern/types";
+import { z } from "zod"; // 导入 zod
+
+import { generateSafeWorkflowFilename, sanitizeProjectId } from "../utils/helpers"; // <-- 添加 generateSafeWorkflowFilename
 import { PROJECTS_BASE_DIR } from "../config"; // 导入项目基础目录
-import { sanitizeProjectId, generateSafeWorkflowFilename } from "../utils/helpers"; // <-- 添加 generateSafeWorkflowFilename
+
 
 /**
  * 获取指定项目的工作流目录的绝对路径。
@@ -117,9 +112,6 @@ export async function syncReferencingNodeGroups(
   }
 }
 
-import { ProjectMetadataSchema, type ProjectMetadata } from "@comfytavern/types"; // 导入 ProjectMetadata 类型和 Schema
-import { z } from "zod"; // 导入 zod
-
 // 内部辅助函数：读取并验证 JSON 文件
 interface ReadAndValidateJsonOptions<T> {
   filePath: string;
@@ -142,7 +134,8 @@ async function _readAndValidateJsonFile<T>({
   // 构造一个更具描述性的实体名称，用于日志和错误消息
   const descriptiveEntityName = entityId ? `${entityName} '${entityId}'` : entityName;
   // 首字母大写，用于错误消息
-  const capitalizedEntityName = descriptiveEntityName.charAt(0).toUpperCase() + descriptiveEntityName.slice(1);
+  const capitalizedEntityName =
+    descriptiveEntityName.charAt(0).toUpperCase() + descriptiveEntityName.slice(1);
 
   let fileContent: string;
   try {
@@ -170,7 +163,9 @@ async function _readAndValidateJsonFile<T>({
   const validationResult = schema.safeParse(jsonData);
   if (!validationResult.success) {
     const errorDetails = validationResult.error.flatten().fieldErrors;
-    const message = `${capitalizedEntityName} validation failed. Path: ${filePath}. Details: ${JSON.stringify(errorDetails)}`;
+    const message = `${capitalizedEntityName} validation failed. Path: ${filePath}. Details: ${JSON.stringify(
+      errorDetails
+    )}`;
     console.error(`${logPrefix} ${message}`);
     throw new loadErrorClass(message);
   }
@@ -299,8 +294,9 @@ export async function updateProjectMetadata(
       throw error; // 直接重新抛出已知类型的错误
     }
     // 对于其他未知错误，包装成 ProjectMetadataError
-    const message = `Unexpected error updating project metadata for ID '${projectId}'. Error: ${error instanceof Error ? error.message : String(error)
-      }`;
+    const message = `Unexpected error updating project metadata for ID '${projectId}'. Error: ${
+      error instanceof Error ? error.message : String(error)
+    }`;
     console.error(`[Service:updateProjectMetadata] ${message}`);
     throw new ProjectMetadataError(message);
   }
@@ -363,7 +359,7 @@ export async function listProjects(): Promise<ProjectMetadata[]> {
           // 而是跳过这个项目。所以这里传入的错误类不会被直接抛出到顶层，
           // 而是在下面的 catch 块中被捕获并处理。
           notFoundErrorClass: ProjectNotFoundError, // 或自定义一个更内部的错误类型
-          loadErrorClass: ProjectMetadataError,     // 或自定义一个更内部的错误类型
+          loadErrorClass: ProjectMetadataError, // 或自定义一个更内部的错误类型
           entityName: "project metadata",
           entityId: safeReadProjectId,
         });
@@ -466,7 +462,7 @@ export async function getProjectMetadata(projectId: string): Promise<ProjectMeta
     filePath: metadataPath,
     schema: ProjectMetadataSchema,
     notFoundErrorClass: ProjectNotFoundError, // 特指元数据文件未找到
-    loadErrorClass: ProjectMetadataError,     // 包括读取、解析、验证错误
+    loadErrorClass: ProjectMetadataError, // 包括读取、解析、验证错误
     entityName: "project metadata",
     entityId: projectId,
   });
@@ -713,9 +709,6 @@ export class WorkflowCreationError extends Error {
   }
 }
 
-// 从 @comfytavern/types 导入 CreateWorkflowObjectSchema 推断出的类型
-import { type CreateWorkflowObject } from "@comfytavern/types";
-
 /**
  * 在指定项目中创建新的工作流文件。
  * @param projectId 清理后的项目 ID。
@@ -817,7 +810,10 @@ export async function createWorkflow(
       await updateProjectMetadata(projectId, {}); // 传递空对象，仅更新 updatedAt
       // console.log(`[Service:createWorkflow] Successfully updated project '${projectId}' metadata after workflow creation.`);
     } catch (metaError) {
-      console.warn(`[Service:createWorkflow] Failed to update project metadata for '${projectId}' after workflow creation:`, metaError);
+      console.warn(
+        `[Service:createWorkflow] Failed to update project metadata for '${projectId}' after workflow creation:`,
+        metaError
+      );
       // 工作流本身已创建成功，元数据更新失败通常不应阻塞主流程，但需要记录
     }
 
@@ -905,9 +901,6 @@ export class WorkflowUpdateError extends Error {
     this.name = "WorkflowUpdateError";
   }
 }
-
-// 从 @comfytavern/types 导入 UpdateWorkflowObject 类型
-import { type UpdateWorkflowObject } from "@comfytavern/types";
 
 /**
  * 更新指定项目中的特定工作流。
@@ -1073,7 +1066,10 @@ export async function updateWorkflow(
       await updateProjectMetadata(projectId, {}); // 传递空对象，仅更新 updatedAt
       // console.log(`[Service:updateWorkflow] Successfully updated project '${projectId}' metadata after workflow update.`);
     } catch (metaError) {
-      console.warn(`[Service:updateWorkflow] Failed to update project metadata for '${projectId}' after workflow update:`, metaError);
+      console.warn(
+        `[Service:updateWorkflow] Failed to update project metadata for '${projectId}' after workflow update:`,
+        metaError
+      );
       // 工作流本身已更新成功，元数据更新失败通常不应阻塞主流程，但需要记录
     }
 
@@ -1158,10 +1154,12 @@ export async function deleteWorkflowToRecycleBin(
         await updateProjectMetadata(projectId, {}); // 传递空对象，仅更新 updatedAt
         // console.log(`[Service:deleteWorkflowToRecycleBin] Successfully updated project '${projectId}' metadata after workflow deletion.`);
       } catch (metaError) {
-        console.warn(`[Service:deleteWorkflowToRecycleBin] Failed to update project metadata for '${projectId}' after workflow deletion:`, metaError);
+        console.warn(
+          `[Service:deleteWorkflowToRecycleBin] Failed to update project metadata for '${projectId}' after workflow deletion:`,
+          metaError
+        );
         // 工作流本身已删除成功，元数据更新失败通常不应阻塞主流程，但需要记录
       }
-
     } catch (renameError: any) {
       const message = `Failed to move workflow '${workflowId}' to recycle bin in project '${projectId}'. Error: ${renameError.message}`;
       console.error(`[Service:deleteWorkflowToRecycleBin] ${message}`);

@@ -1,47 +1,13 @@
-import { Elysia, t } from "elysia";
-import { z } from "zod"; // 导入 z 以使用 Zod
-import { promises as fs } from "node:fs";
-import path, { join, basename, extname } from "node:path";
-import {
-  // 使用从 @comfytavern/types 导出的正确 Schema 名称
-  WorkflowObjectSchema, // 用于验证的基础 Schema (如果需要可能会用到)
-  CreateWorkflowObjectSchema, // 用于创建工作流的 Schema
-  UpdateWorkflowObjectSchema, // 用于更新工作流的 Schema
-  type WorkflowStorageObject, // 存储格式的类型
-  type WorkflowObject, // 包含元数据的类型
-  type GroupInterfaceInfo,
-  ProjectMetadataSchema, // 导入项目元数据 Schema
-  type ProjectMetadata, // 导入 Zod 推断的类型
-} from "@comfytavern/types";
-import {
-  sanitizeProjectId,
-  sanitizeWorkflowIdFromParam,
-  generateSafeWorkflowFilename,
-} from "../utils/helpers";
-import { PROJECTS_BASE_DIR } from "../config"; // 导入项目基础目录
-import {
-  getProjectWorkflowsDir,
-  syncReferencingNodeGroups,
-  updateProjectMetadata,
-  listProjects,
-  createProject,
-  ProjectConflictError,
-  ProjectCreationError,
-  getProjectMetadata,
-  ProjectNotFoundError,
-  ProjectMetadataError,
-  listWorkflows,
-  createWorkflow,
-  WorkflowConflictError,
-  WorkflowCreationError,
-  getWorkflow,
-  WorkflowNotFoundError,
-  WorkflowLoadError,
-  updateWorkflow,
-  WorkflowUpdateError,
-  deleteWorkflowToRecycleBin, // <-- 添加 deleteWorkflowToRecycleBin 函数
-  WorkflowDeletionError, // <-- 添加工作流删除错误类型
-} from "../services/projectService"; // 从服务层导入相关函数和错误类型
+import { CreateWorkflowObjectSchema, GroupInterfaceInfo, ProjectMetadata, ProjectMetadataSchema, UpdateWorkflowObjectSchema, WorkflowObject, WorkflowObjectSchema, WorkflowStorageObject } from '@comfytavern/types';
+import path, { basename, extname, join } from 'node:path';
+import { promises as fs } from 'node:fs';
+import { Elysia, t } from 'elysia';
+import { z } from 'zod'; // 导入 z 以使用 Zod
+
+import { createProject, createWorkflow, deleteWorkflowToRecycleBin, getProjectMetadata, getProjectWorkflowsDir, getWorkflow, listProjects, listWorkflows, ProjectConflictError, ProjectCreationError, ProjectMetadataError, ProjectNotFoundError, syncReferencingNodeGroups, updateProjectMetadata, updateWorkflow, WorkflowConflictError, WorkflowCreationError, WorkflowDeletionError, WorkflowLoadError, WorkflowNotFoundError, WorkflowUpdateError } from '../services/projectService'; // 从服务层导入相关函数和错误类型
+import { generateSafeWorkflowFilename, sanitizeProjectId, sanitizeWorkflowIdFromParam } from '../utils/helpers';
+import { PROJECTS_BASE_DIR } from '../config'; // 导入项目基础目录
+
 
 // 移除了错误的 SetElysia 导入
 

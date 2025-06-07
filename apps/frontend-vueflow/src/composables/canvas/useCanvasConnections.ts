@@ -476,7 +476,7 @@ export function useCanvasConnections({
     }
 
     // newEdgeObjectFromCreateEdge 现在包含了所有必要的属性，包括
-    // id, source, sourceHandle, target, targetHandle (原始键), type, animated, style, markerEnd, data
+    // id, source, sourceHandle, target, targetHandle (原始键), animated, style, markerEnd, data
     // 我们将这个完整的对象（或其相关部分）传递给协调器
     // 当前 connectEdgeToInputAndRecord 期望一个更简单的 newEdgeParams 对象，
     // 我们需要确保它能处理或我们传递它期望的结构，但包含关键的修正。

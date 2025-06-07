@@ -1,12 +1,14 @@
 import { Elysia, t } from 'elysia';
 import { promises as fs } from 'node:fs';
-import path, { join, basename, dirname } from 'node:path';
+import path, { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { nodeManager } from '../services/NodeManager';
-import { NodeLoader } from '../services/NodeLoader'; // 导入 NodeLoader
-import { wsManager } from '../index'; // 导入 wsManager
-import { WebSocketMessageType, type NodesReloadedPayload } from '@comfytavern/types'; // 导入 WebSocket 类型
+
+import { NodesReloadedPayload, WebSocketMessageType } from '@comfytavern/types'; // 导入 WebSocket 类型
+
 import { CUSTOM_NODE_PATHS } from '../config'; // <--- 咕咕：导入自定义节点路径配置
+import { wsManager } from '../index'; // 导入 wsManager
+import { NodeLoader } from '../services/NodeLoader'; // 导入 NodeLoader
+import { nodeManager } from '../services/NodeManager';
 
 // 获取当前文件所在目录的上级目录 (即 src 目录)
 const __filename = fileURLToPath(import.meta.url);

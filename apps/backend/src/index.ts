@@ -1,18 +1,20 @@
-import { Elysia } from "elysia"; // 移除未使用的 t
-import { cors } from "@elysiajs/cors";
-import { PORT, FRONTEND_URL, WORKFLOWS_DIR, CUSTOM_NODE_PATHS } from "./config"; // 导入 CUSTOM_NODE_PATHS
-import { promises as fs } from "node:fs";
-import path, { join, dirname } from "node:path"; // 移除未使用的 basename, extname
-import { fileURLToPath } from "node:url";
-import { NodeLoader } from "./services/NodeLoader";
-import { nodeApiRoutes, clientScriptRoutes } from "./routes/nodeRoutes";
-import { globalWorkflowRoutes } from "./routes/workflowRoutes";
-import { addProjectRoutes } from "./routes/projectRoutes";
-import { createWebsocketHandler, websocketSchema } from "./websocket/handler";
-import { WebSocketManager } from "./websocket/WebSocketManager";
-import { ConcurrencyScheduler } from "./services/ConcurrencyScheduler";
-import { executionApiRoutes } from "./routes/executionRoutes";
-import { characterApiRoutes } from "./routes/characterRoutes"; // 导入角色卡路由
+import { Elysia } from 'elysia'; // 移除未使用的 t
+import { promises as fs } from 'node:fs';
+import path, { dirname, join } from 'node:path'; // 移除未使用的 basename, extname
+import { fileURLToPath } from 'node:url';
+
+import { cors } from '@elysiajs/cors';
+
+import { CUSTOM_NODE_PATHS, FRONTEND_URL, PORT, WORKFLOWS_DIR } from './config'; // 导入 CUSTOM_NODE_PATHS
+import { characterApiRoutes } from './routes/characterRoutes'; // 导入角色卡路由
+import { executionApiRoutes } from './routes/executionRoutes';
+import { clientScriptRoutes, nodeApiRoutes } from './routes/nodeRoutes';
+import { addProjectRoutes } from './routes/projectRoutes';
+import { globalWorkflowRoutes } from './routes/workflowRoutes';
+import { ConcurrencyScheduler } from './services/ConcurrencyScheduler';
+import { NodeLoader } from './services/NodeLoader';
+import { createWebsocketHandler, websocketSchema } from './websocket/handler';
+import { WebSocketManager } from './websocket/WebSocketManager';
 
 // 加载节点
 // 获取当前文件的目录 (ES Module)

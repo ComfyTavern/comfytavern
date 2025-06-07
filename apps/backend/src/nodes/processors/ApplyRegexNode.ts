@@ -1,8 +1,10 @@
-import { z } from "zod"; // z 仍然需要，因为 NodeDefinition 可能间接使用
+import { z } from 'zod'; // z 仍然需要，因为 NodeDefinition 可能间接使用
+
+import {
+    BuiltInSocketMatchCategory, DataFlowType, RegexRuleArraySchema, RegexRuleSchema
+} from '@comfytavern/types'; // 导入 Zod schemas 和类型
+
 import type { NodeDefinition, NodeExecutionContext, RegexRule } from "@comfytavern/types"; // 导入 RegexRule 类型
-import { RegexRuleSchema, RegexRuleArraySchema, DataFlowType, BuiltInSocketMatchCategory } from "@comfytavern/types"; // 导入 Zod schemas 和类型
-
-
 class ApplyRegexNodeImpl {
   static async execute(inputs: Record<string, any>, context: NodeExecutionContext): Promise<Record<string, any>> {
     const inputText = inputs?.inputText as string | undefined;

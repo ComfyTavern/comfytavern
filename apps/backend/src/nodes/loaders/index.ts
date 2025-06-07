@@ -3,12 +3,12 @@
 // import { nodeManager } from '../NodeManager'; // 移除
 import type { NodeDefinition } from '@comfytavern/types';
 
-// 导入各个加载器节点的定义
-import { definition as PresetLoaderNodeDefinition } from './PresetLoaderNode';
-import { definition as WorldBookLoaderNodeDefinition } from './WorldBookLoaderNode';
 import { definition as CharacterCardLoaderNodeDefinition } from './CharacterCardLoaderNode';
 import { definition as HistoryLoaderNodeDefinition } from './HistoryLoaderNode';
+// 导入各个加载器节点的定义
+import { definition as PresetLoaderNodeDefinition } from './PresetLoaderNode';
 import { definition as RegexRuleLoaderNodeDefinition } from './RegexRuleLoaderNode';
+import { definition as WorldBookLoaderNodeDefinition } from './WorldBookLoaderNode';
 
 // 定义并导出节点定义数组
 export const definitions: NodeDefinition[] = [

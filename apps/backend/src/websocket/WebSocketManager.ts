@@ -3,8 +3,9 @@
 // 移除旧的 ElysiaWS 导入
 // import { type ElysiaWS } from 'elysia';
 import type { ServerWebSocket } from 'bun'; // 从 bun 导入正确的类型
-import { NanoId } from '@comfytavern/types';
 import { nanoid } from 'nanoid';
+
+import { NanoId } from '@comfytavern/types';
 
 // 定义 WebSocket 上下文类型
 // Bun 的 ServerWebSocket 通常需要一个泛型参数来定义 data 的类型

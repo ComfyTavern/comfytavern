@@ -1,19 +1,20 @@
+import { Buffer } from 'buffer';
 import { Elysia, t } from 'elysia';
 import { promises as fs } from 'node:fs';
-import path, { join, dirname } from 'node:path';
+import path, { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-// @ts-ignore // png-chunks-extract 可能没有完美的 TS 类型
-import extract from 'png-chunks-extract';
 // @ts-ignore // png-chunk-text 可能没有完美的 TS 类型
 import PNGtext from 'png-chunk-text';
-import { Buffer } from 'buffer';
+// @ts-ignore // png-chunks-extract 可能没有完美的 TS 类型
+import extract from 'png-chunks-extract';
+
+import { SILLYTAVERN_DIR } from '../config'; // 导入 SILLYTAVERN_DIR
+
 import type { CharacterCard, ApiCharacterEntry } from '@comfytavern/types'; // 导入 ApiCharacterEntry
 
 // 获取当前文件的目录 (ES Module)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename); // apps/backend/src/routes
-
-import { SILLYTAVERN_DIR } from '../config'; // 导入 SILLYTAVERN_DIR
 
 // 角色卡数据目录
 const CHARACTER_CARD_DIR = path.join(SILLYTAVERN_DIR, 'CharacterCard');

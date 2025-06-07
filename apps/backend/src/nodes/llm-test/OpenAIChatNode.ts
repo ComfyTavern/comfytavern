@@ -1,8 +1,9 @@
-import OpenAI from 'openai'
-import type { NodeDefinition } from '@comfytavern/types'
-// Removed: import { nodeManager } from '../NodeManager'
-import { ImageProcessor } from '../../utils/ImageProcessor'
+import OpenAI from 'openai';
 
+// Removed: import { nodeManager } from '../NodeManager'
+import { ImageProcessor } from '../../utils/ImageProcessor';
+
+import type { NodeDefinition } from '@comfytavern/types'
 // 本地类型定义
 interface APISettings {
   use_env_vars: boolean;

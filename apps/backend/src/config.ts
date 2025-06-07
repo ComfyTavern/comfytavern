@@ -1,5 +1,6 @@
-import config from '../../../config.json';
 import path from 'node:path'; // 导入 path 模块
+
+import config from '../../../config.json';
 
 const isDev = process.argv.includes('dev');
 const { backend, frontend } = config.server;

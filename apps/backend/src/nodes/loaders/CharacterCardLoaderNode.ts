@@ -1,6 +1,7 @@
 import type { NodeDefinition } from '@comfytavern/types';
 import { promises as fs } from 'fs';
 import path from 'path';
+
 // import { extract } from 'png-chunks-extract'; // 可选：如果需要支持 PNG 元数据提取
 // import { decode } from 'png-chunk-text';     // 可选：解码 PNG 文本块
 

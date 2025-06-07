@@ -1,7 +1,11 @@
+import type { NodeDefinition } from '@comfytavern/types'; // Import NodeDefinition type
 import { readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path'; // Import resolve
+
 import { nodeManager } from './NodeManager';
-import type { NodeDefinition } from '@comfytavern/types'; // Import NodeDefinition type
+
+
+// Import NodeDefinition type
 
 export class NodeLoader {
   /**
