@@ -210,7 +210,7 @@ const showInputDialog = async () => {
       title: '请输入您的名字',
       message: '我们需要您的名字来进行个性化设置。',
       initialValue: '咕咕',
-      placeholder: '例如：张三',
+      inputPlaceholder: '例如：张三',
       confirmText: '提交',
       cancelText: '稍后提示我',
     });
@@ -231,7 +231,7 @@ const showTextareaDialog = async () => {
       title: '请输入您的反馈',
       message: '请详细描述您遇到的问题或建议：',
       initialValue: '',
-      placeholder: '请在此处输入您的反馈内容...',
+      inputPlaceholder: '请在此处输入您的反馈内容...',
       inputType: 'textarea',
       inputRows: 5,
       confirmText: '发送反馈',

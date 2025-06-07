@@ -13,6 +13,8 @@ import {
   type NodeErrorPayload,
   // type ExecutionType, // 移除未使用的导入
   type NanoId, // 导入 NanoId
+  type ChunkPayload, // 确保 ChunkPayload 已导入
+  type NodeYieldPayload,
 } from '@comfytavern/types';
 
 // 定义客户端脚本钩子执行器的类型
@@ -30,6 +32,7 @@ interface TabExecutionState {
   nodeProgress: Record<NanoId, { value: number; max: number } | undefined>; // 存储节点进度
   nodeOutputs: Record<NanoId, Record<string, any> | undefined>; // 存储最终执行结果
   nodePreviewOutputs: Record<NanoId, Record<string, any> | undefined>; // 存储预览结果
+  streamingNodeContent: Record<NanoId, { accumulatedText: string; lastChunkTimestamp: number; rawChunks: ChunkPayload[] } | undefined>; // 新增：存储流式内容
 }
 
 export const useExecutionStore = defineStore('execution', () => {
@@ -65,6 +68,7 @@ export const useExecutionStore = defineStore('execution', () => {
         nodeProgress: {},
         nodeOutputs: {},
         nodePreviewOutputs: {},
+        streamingNodeContent: {}, // 初始化新增的属性
       });
     }
     // Non-null assertion is safe here because we just ensured it exists
@@ -85,6 +89,7 @@ export const useExecutionStore = defineStore('execution', () => {
     state.nodeProgress = {};
     state.nodeOutputs = {};
     state.nodePreviewOutputs = {}; // 清除预览输出
+    state.streamingNodeContent = {}; // 清除流式内容
   };
 
   // 处理 Prompt 请求被接受的消息
@@ -196,6 +201,33 @@ export const useExecutionStore = defineStore('execution', () => {
       }
   };
 
+  // 新增：处理节点流式输出 (NODE_YIELD)
+  const handleNodeYield = (internalId: string, payload: NodeYieldPayload) => {
+    const state = ensureTabExecutionState(internalId);
+    if (payload.promptId === state.promptId) {
+      console.debug(`[ExecutionStore] Node yield for tab ${internalId}, node ${payload.sourceNodeId}`, payload.yieldedContent);
+      let nodeStreamContent = state.streamingNodeContent[payload.sourceNodeId];
+      if (!nodeStreamContent) {
+        nodeStreamContent = { accumulatedText: '', lastChunkTimestamp: 0, rawChunks: [] };
+        state.streamingNodeContent[payload.sourceNodeId] = nodeStreamContent;
+      }
+
+      nodeStreamContent.rawChunks.push(payload.yieldedContent);
+      nodeStreamContent.lastChunkTimestamp = Date.now();
+
+      if (payload.yieldedContent.type === 'text_chunk' && typeof payload.yieldedContent.content === 'string') {
+        nodeStreamContent.accumulatedText += payload.yieldedContent.content;
+      }
+
+      // 如果是最后一个块，可以考虑做一些清理或标记
+      if (payload.isLastChunk) {
+        console.debug(`[ExecutionStore] Last chunk received for node ${payload.sourceNodeId} on tab ${internalId}`);
+        // 例如: nodeStreamContent.isComplete = true; (需要扩展接口)
+      }
+    } else {
+      console.warn(`[ExecutionStore] Received NODE_YIELD for prompt ${payload.promptId} which does not match tab ${internalId}'s current prompt ${state.promptId}. Ignoring node ${payload.sourceNodeId}.`);
+    }
+  };
 
   // Action to remove state for a closed tab
   const removeTabExecutionState = (internalId: string) => {
@@ -225,6 +257,7 @@ export const useExecutionStore = defineStore('execution', () => {
       // state.nodeProgress = {};
       // state.nodeOutputs = {};
       // state.nodePreviewOutputs = {};
+      // state.streamingNodeContent = {}; // 也应清除流式内容
     }
   };
 
@@ -288,6 +321,15 @@ export const useExecutionStore = defineStore('execution', () => {
       return tabExecutionStates.get(internalId)?.nodePreviewOutputs[nodeId];
   };
 
+  // 新增：获取节点累积的流式文本
+  const getAccumulatedStreamedText = (internalId: string, nodeId: string): string | undefined => {
+    return tabExecutionStates.get(internalId)?.streamingNodeContent[nodeId]?.accumulatedText;
+  };
+
+  const getRawStreamedChunks = (internalId: string, nodeId: string): ChunkPayload[] | undefined => {
+    return tabExecutionStates.get(internalId)?.streamingNodeContent[nodeId]?.rawChunks;
+  };
+
   // --- Getter for Node Client Script Executor ---
   /**
    * 获取指定节点的客户端脚本执行器。
@@ -309,6 +351,7 @@ export const useExecutionStore = defineStore('execution', () => {
     updateNodeProgress,
     updateNodeExecutionResult,
     updateNodeError,
+    handleNodeYield, // 新增 action
     removeTabExecutionState,
     setWorkflowStatusManually,
     // Getters
@@ -321,6 +364,8 @@ export const useExecutionStore = defineStore('execution', () => {
     getAllNodeOutputs,
     getNodePreviewOutput, // Added getter for preview output
     getAllNodePreviewOutputs, // Added getter for all preview outputs
+    getAccumulatedStreamedText, // 新增 getter
+    getRawStreamedChunks, // 新增 getter
     // Preview Toggle
     isPreviewEnabled, // Expose state
     togglePreview, // Expose action
