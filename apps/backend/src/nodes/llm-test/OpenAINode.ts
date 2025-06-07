@@ -57,7 +57,7 @@ export class OpenAINodeImpl {
         }
       }
     }
-    
+
     // 处理图片和提示信息
     if (image) {
       try {
@@ -84,8 +84,8 @@ export class OpenAINodeImpl {
     } else {
       // 如果没有图片，则必须有 prompt
       if (prompt) {
-         messages.push({ role: 'user', content: prompt });
-      } else if (messages.length === (system_prompt ? 1:0) ) {
+        messages.push({ role: 'user', content: prompt });
+      } else if (messages.length === (system_prompt ? 1 : 0)) {
         // 如果 messages 数组在添加用户消息前，长度等于 (system_prompt ? 1:0)
         // 这意味着没有图片，也没有用户文本提示，并且 messages 只包含可能的系统提示或为空
         const errorMsg = "用户提示 (prompt) 或图像 (image) 必须提供至少一个";
@@ -116,7 +116,7 @@ export class OpenAINodeImpl {
             yield chunk;
           }
           if (part.choices[0]?.finish_reason) {
-             yield { type: 'finish_reason_chunk', content: part.choices[0]?.finish_reason };
+            yield { type: 'finish_reason_chunk', content: part.choices[0]?.finish_reason };
           }
         }
         return; // 流式模式下返回 void
@@ -202,7 +202,7 @@ export const definition: NodeDefinition = {
       displayName: '系统提示',
       description: '系统提示',
       required: true,
-      matchCategories: ['Prompt','UiBlock'],
+      matchCategories: ['Prompt', 'UiBlock'],
       config: {
         default: '',
         multiline: true,
@@ -214,7 +214,7 @@ export const definition: NodeDefinition = {
       displayName: '用户提示',
       description: '用户提示',
       required: true,
-      matchCategories: ['Prompt','UiBlock'],
+      matchCategories: ['Prompt', 'UiBlock'],
       config: {
         default: '',
         multiline: true,
@@ -247,11 +247,17 @@ export const definition: NodeDefinition = {
   },
 
   outputs: {
-    response: {
+    response: { // 用于批处理模式 (当 stream=false)
       dataFlowType: 'STRING',
-      displayName: '生成回复',
-      description: '生成的回复',
+      displayName: '生成回复 (批处理)',
+      description: '一次性生成的完整文本回复。仅当“启用流式输出”为 false 时有效。',
       matchCategories: ['LlmOutput']
+    },
+    stream_output: { // 新增：用于流式模式 (当 stream=true)
+      dataFlowType: 'STREAM',
+      displayName: '回复流 (流式)',
+      description: '逐块生成的文本回复数据流。仅当“启用流式输出”为 true 时有效。',
+      matchCategories: ['LlmOutput', 'TextStream'] // TextStream 用于标识这是一个文本内容的流
     }
   },
 

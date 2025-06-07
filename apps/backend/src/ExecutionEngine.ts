@@ -2,9 +2,9 @@ import { Stream } from 'node:stream';
 import { promisify } from 'node:util';
 
 import {
-    BuiltInSocketMatchCategory, ChunkPayload, DataFlowType, ExecutionEdge, ExecutionNode,
-    ExecutionStatus, NanoId, NodeCompletePayload, NodeDefinition, NodeErrorPayload,
-    NodeExecutingPayload, NodeExecutionResult, NodeYieldPayload, WorkflowExecutionPayload
+  BuiltInSocketMatchCategory, ChunkPayload, DataFlowType, ExecutionEdge, ExecutionNode,
+  ExecutionStatus, NanoId, NodeCompletePayload, NodeDefinition, NodeErrorPayload,
+  NodeExecutingPayload, NodeExecutionResult, NodeYieldPayload, WorkflowExecutionPayload
 } from '@comfytavern/types';
 
 import { nodeManager } from './services/NodeManager'; // 用于获取节点定义
@@ -15,6 +15,40 @@ import { WebSocketManager } from './websocket/WebSocketManager';
 // import { HistoryService } from './services/HistoryService'; // TODO: Import HistoryService
 
 const finished = promisify(Stream.finished);
+
+// 辅助函数，用于等待流结束，比 promisify(Stream.finished) 更明确地处理不同事件
+async function streamEndPromise(stream: Stream.Stream): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let ended = false;
+    const makeEnded = (fn: () => void) => {
+      if (!ended) {
+        ended = true;
+        // 移除监听器以避免内存泄漏和重复调用
+        if (stream instanceof Stream.Readable) stream.off('end', onEndOrFinish);
+        if (stream instanceof Stream.Writable || stream instanceof Stream.Duplex) stream.off('finish', onEndOrFinish);
+        stream.off('close', onClose);
+        stream.off('error', onError);
+        fn();
+      }
+    };
+
+    const onEndOrFinish = () => makeEnded(resolve);
+    const onClose = () => makeEnded(resolve); // 'close' 也视为正常结束的一种形式
+    const onError = (err: Error) => makeEnded(() => reject(err));
+
+    if (stream instanceof Stream.Readable) {
+      stream.on('end', onEndOrFinish);
+    }
+    // Writable streams emit 'finish'. Duplex streams are both.
+    if (stream instanceof Stream.Writable || stream instanceof Stream.Duplex) {
+      stream.on('finish', onEndOrFinish);
+    }
+    // 'close' is emitted when the stream and any of its underlying resources have been closed.
+    stream.on('close', onClose);
+    stream.on('error', onError);
+  });
+}
+
 
 class BufferOverflowError extends Error {
   constructor(message: string) {
@@ -30,7 +64,7 @@ class BufferOverflowError extends Error {
 class BoundedBuffer<T> {
   private limit: number;
   private buffer: T[] = [];
-  private waitingResolvers: ((value: IteratorResult<T>) => void)[] = [];
+  private waitingResolvers: { resolve: (value: IteratorResult<T>) => void, reject: (reason?: any) => void }[] = [];
   private isDone = false;
   private error: any = null;
 
@@ -61,30 +95,28 @@ class BoundedBuffer<T> {
     if (!this.isDone) {
       this.isDone = true;
       this.error = error;
-      this.tryResolveWaiting();
+      // 立即 reject 所有等待者
+      while (this.waitingResolvers.length > 0) {
+        this.waitingResolvers.shift()!.reject(this.error);
+      }
+      // this.tryResolveWaiting(); // tryResolveWaiting 也会被其他地方调用，这里确保错误优先传播
     }
   }
 
   private tryResolveWaiting(): void {
     while (this.waitingResolvers.length > 0) {
-      const resolver = this.waitingResolvers.shift()!;
+      const callbacks = this.waitingResolvers.shift()!; // 改为 callbacks
+      if (this.isDone && this.error) { // 优先处理错误
+        callbacks.reject(this.error); // <<< 关键：调用 reject
+        continue; // 处理下一个等待者
+      }
       if (this.buffer.length > 0) {
-        resolver({ value: this.buffer.shift()!, done: false });
+        callbacks.resolve({ value: this.buffer.shift()!, done: false });
       } else if (this.isDone) {
-        if (this.error) {
-          // Propagate the error through the iterator
-          // This is tricky as standard iterators don't throw this way.
-          // A better approach is to have the consumer check for an error state.
-          // For now, we resolve with done, and the consumer should check `this.error`.
-          // Or, we can make the promise reject, which is more idiomatic.
-          // Let's stick to resolving and let the puller task handle the rejection.
-          resolver({ value: undefined, done: true });
-        } else {
-          resolver({ value: undefined, done: true });
-        }
+        // 此时 this.error 必然为 null (因为上面已经处理了 error 情况)
+        callbacks.resolve({ value: undefined, done: true });
       } else {
-        // No data and not done, put resolver back
-        this.waitingResolvers.unshift(resolver);
+        this.waitingResolvers.unshift(callbacks); // 放回去
         break;
       }
     }
@@ -92,22 +124,23 @@ class BoundedBuffer<T> {
 
   [Symbol.asyncIterator](): AsyncGenerator<T, void, undefined> {
     const next = (): Promise<IteratorResult<T>> => {
-      return new Promise<IteratorResult<T>>((resolve) => {
+      return new Promise<IteratorResult<T>>((resolve, reject) => { // Modified to allow rejection
         if (this.buffer.length > 0) {
           resolve({ value: this.buffer.shift()!, done: false });
         } else if (this.isDone) {
           if (this.error) {
             // This will cause the for-await-of loop to throw.
-            throw this.error;
+            reject(this.error); // Reject the promise if there's an error
+          } else {
+            resolve({ value: undefined, done: true });
           }
-          resolve({ value: undefined, done: true });
         } else {
-          this.waitingResolvers.push(resolve);
+          this.waitingResolvers.push({ resolve, reject }); // 存储 resolve 和 reject
         }
       });
     };
 
-    const self = {
+    return {
       next,
       return: async (): Promise<IteratorResult<T, void>> => {
         this.signalEnd();
@@ -115,13 +148,18 @@ class BoundedBuffer<T> {
       },
       throw: async (e: any): Promise<IteratorResult<T, void>> => {
         this.signalError(e);
+        // Ensure the promise from next() would reject if called after this.
+        this.waitingResolvers.forEach(resolver => {
+          // Attempt to make pending promises reject. This is tricky.
+          // A robust way is for next() to check this.error.
+        });
+        this.waitingResolvers = []; // Clear resolvers
         return { value: undefined, done: true as const };
       },
       [Symbol.asyncIterator]() {
         return this;
       },
     };
-    return self;
   }
 }
 
@@ -144,6 +182,7 @@ export class ExecutionEngine {
   private nodePseudoOutputs: Record<NanoId, any> = {}; // 存储绕过节点的伪输出
   private executionOrder: NanoId[] = [];
   private isInterrupted: boolean = false;
+  private backgroundTasks: Promise<any>[] = []; // 用于追踪后台流处理任务
 
   constructor(
     promptId: NanoId,
@@ -154,8 +193,6 @@ export class ExecutionEngine {
   ) {
     this.promptId = promptId;
     this.payload = payload;
-    // 打印构造函数接收到的完整 payload
-    // console.log(`[ExecutionEngine CONSTRUCTOR DEBUG] Received payload for prompt ${promptId}:`, JSON.stringify(payload, null, 2));
     if (payload.interfaceInputs) {
       console.log(`[ExecutionEngine CONSTRUCTOR DEBUG] Payload for prompt ${promptId} CONTAINS interfaceInputs.`);
     } else {
@@ -165,11 +202,10 @@ export class ExecutionEngine {
     // this.outputManager = outputManager;
     // this.historyService = historyService;
 
-    // 将 payload 中的节点数组转换为 Record，并添加类型注解
     this.nodes = payload.nodes.reduce((acc: Record<NanoId, ExecutionNode>, node: ExecutionNode) => {
       acc[node.id] = node;
       return acc;
-    }, {}); // 初始值 {} 会被正确推断为 Record<NanoId, ExecutionNode>
+    }, {});
     this.edges = payload.edges;
 
     console.log(`[Engine-${this.promptId}] Initialized for execution.`);
@@ -179,9 +215,7 @@ export class ExecutionEngine {
     if (typeof obj !== 'object' || obj === null) {
       return obj;
     }
-
-    const newObj = { ...obj }; // 浅拷贝
-
+    const newObj = { ...obj };
     for (const key of keysToSanitize) {
       if (newObj.hasOwnProperty(key) && typeof newObj[key] === 'string' && newObj[key].length > maxLength) {
         newObj[key] = `${newObj[key].substring(0, maxLength)}... (omitted, original length: ${newObj[key].length})`;
@@ -195,7 +229,8 @@ export class ExecutionEngine {
    */
   public async run(): Promise<{ status: ExecutionStatus.COMPLETE | ExecutionStatus.ERROR | ExecutionStatus.INTERRUPTED; error?: any }> {
     console.log(`\n\n\n\x1b[32m[Engine-${this.promptId}]----- Starting full execution | 开始执行完整工作流 ----\x1b[0m\n\n\n`);
-    this.isInterrupted = false; // 重置中断标志
+    this.isInterrupted = false;
+    this.backgroundTasks = []; // 重置后台任务列表
 
     try {
       this.executionOrder = this.topologicalSort(this.nodes, this.edges);
@@ -208,7 +243,6 @@ export class ExecutionEngine {
         }
 
         const node = this.nodes[nodeId];
-        // 检查节点是否被绕过
         if (node?.bypassed === true) {
           console.log(`[Engine-${this.promptId}] Node ${nodeId} is bypassed, handling bypass logic...`);
           try {
@@ -216,37 +250,25 @@ export class ExecutionEngine {
             if (!definition) {
               throw new Error(`Node type ${node.fullType} not found in registry.`);
             }
-
-            // 准备输入以便传递给绕过处理函数
             const inputs = this.prepareNodeInputs(nodeId);
-
-            // 处理绕过逻辑并获取伪输出
             const pseudoOutputs = this.handleBypassedNode(definition, node, inputs);
-
-            // 存储伪输出并发送通知
             this.nodePseudoOutputs[nodeId] = pseudoOutputs;
-            this.nodeResults[nodeId] = pseudoOutputs; // 同时存入nodeResults，以供下游节点使用
+            this.nodeResults[nodeId] = pseudoOutputs;
             this.nodeStates[nodeId] = ExecutionStatus.SKIPPED;
-
-            // 通知前端节点被绕过
             this.sendNodeBypassed(nodeId, pseudoOutputs);
-
-            // 继续处理下一个节点
             continue;
           } catch (error: any) {
             console.error(`[Engine-${this.promptId}] Error processing bypassed node ${nodeId}:`, error);
-            // 发送错误消息并终止工作流执行
             this.sendNodeError(nodeId, `Error in bypass processing: ${error.message}`);
             return { status: ExecutionStatus.ERROR, error: error.message || String(error) };
           }
         }
 
         const inputs = this.prepareNodeInputs(nodeId);
-        const result = await this.executeNode(nodeId, inputs);
+        const result = await this.executeNode(nodeId, inputs); // executeNode 现在对于流式节点会立即返回
 
         if (result.status === ExecutionStatus.ERROR) {
           console.error(`[Engine-${this.promptId}] Workflow execution stopped due to error in node ${nodeId}`);
-          // 错误状态已在 executeNode 中发送
           return { status: ExecutionStatus.ERROR, error: result.error };
         }
         if (result.status === ExecutionStatus.INTERRUPTED) {
@@ -255,9 +277,15 @@ export class ExecutionEngine {
         }
       }
 
+      // 等待所有后台流处理任务完成
+      if (this.backgroundTasks.length > 0) {
+        console.log(`[Engine-${this.promptId}] Waiting for ${this.backgroundTasks.length} background stream tasks to complete...`);
+        await Promise.all(this.backgroundTasks);
+        console.log(`[Engine-${this.promptId}] All background stream tasks completed.`);
+      }
+
       console.log(`[Engine-${this.promptId}] Workflow execution completed successfully.`);
 
-      // 收集并发送工作流的 interfaceOutputs
       if (this.payload.outputInterfaceMappings && Object.keys(this.payload.outputInterfaceMappings).length > 0) {
         const finalWorkflowOutputs: Record<string, any> = {};
         for (const interfaceOutputKey in this.payload.outputInterfaceMappings) {
@@ -268,34 +296,24 @@ export class ExecutionEngine {
             if (sourceNodeResult && sourceSlotKey in sourceNodeResult) {
               finalWorkflowOutputs[interfaceOutputKey] = sourceNodeResult[sourceSlotKey];
             } else {
-              // 如果源节点结果或特定槽位不存在，则该输出接口的值为 undefined
               finalWorkflowOutputs[interfaceOutputKey] = undefined;
               console.warn(`[Engine-${this.promptId}] Could not find result for interfaceOutput '${interfaceOutputKey}' (sourceNode: ${sourceNodeId}, sourceSlot: ${sourceSlotKey})`);
             }
           }
         }
-        // 使用特殊 ID 发送聚合后的工作流输出
         this.sendNodeComplete('__WORKFLOW_INTERFACE_OUTPUTS__', finalWorkflowOutputs);
         console.log(`[Engine-${this.promptId}] Sent aggregated workflow interface outputs:`, finalWorkflowOutputs);
       }
 
-      // TODO: 调用 HistoryService 记录成功
       return { status: ExecutionStatus.COMPLETE };
 
     } catch (error: any) {
       console.error(`[Engine-${this.promptId}] Workflow execution failed:`, error);
-      // TODO: 调用 HistoryService 记录失败
       const finalStatus = this.isInterrupted ? ExecutionStatus.INTERRUPTED : ExecutionStatus.ERROR;
-      // 发送最终的错误状态 (如果之前没有发送过) - Scheduler 会发送最终状态
       return { status: finalStatus, error: error.message || String(error) };
     }
   }
 
-
-
-  /**
-   * 中断当前执行。
-   */
   public interrupt(): boolean {
     if (!this.isInterrupted) {
       console.log(`[Engine-${this.promptId}] Received interrupt signal.`);
@@ -305,19 +323,10 @@ export class ExecutionEngine {
     return false;
   }
 
-  /**
-   * 公共 getter，用于检查引擎是否已被中断。
-   */
   public getIsInterrupted(): boolean {
     return this.isInterrupted;
   }
 
-  // --- 内部辅助方法 ---
-
-  /**
-   * 对工作流图进行拓扑排序。
-   * (基本逻辑不变，适配 NanoId)
-   */
   private topologicalSort(nodes: Record<NanoId, ExecutionNode>, edges: ExecutionEdge[]): NanoId[] {
     const order: NanoId[] = [];
     const inDegree: Record<NanoId, number> = {};
@@ -331,8 +340,8 @@ export class ExecutionEngine {
     });
 
     edges.forEach(edge => {
-      const sourceId = edge.sourceNodeId; // 使用 ExecutionEdge 字段
-      const targetId = edge.targetNodeId; // 使用 ExecutionEdge 字段
+      const sourceId = edge.sourceNodeId;
+      const targetId = edge.targetNodeId;
       if (nodes[sourceId] && nodes[targetId]) {
         if (adj[sourceId]) {
           adj[sourceId].push(targetId);
@@ -376,19 +385,13 @@ export class ExecutionEngine {
       console.error(`[Engine-${this.promptId}] Cycle detected in the graph involving nodes:`, remainingNodes);
       throw new Error(`Workflow contains a cycle involving nodes: ${remainingNodes.join(', ')}`);
     }
-
     return order;
   }
 
-  /**
-   * 准备节点的输入数据。
-   * (需要适配 ExecutionNode 和 ExecutionEdge)
-   */
   private prepareNodeInputs(nodeId: NanoId): Record<string, any> {
     const inputs: Record<string, any> = {};
     const node = this.nodes[nodeId];
 
-    // 添加日志 - 方法入口
     console.log(`[Engine-${this.promptId}] prepareNodeInputs for ${nodeId}. Node config inputs: ${JSON.stringify(this.sanitizeObjectForLogging(node?.inputs))}, inputConnectionOrders: ${JSON.stringify((node as any)?.inputConnectionOrders)}`);
 
     if (!node) {
@@ -400,21 +403,24 @@ export class ExecutionEngine {
       return {};
     }
 
-    // 临时存储多输入的值，键是原始插槽名，值是 { edgeId: string, value: any }[]
     const multiInputBuffer: Record<string, Array<{ edgeId: string, value: any }>> = {};
 
-    // 1. 收集所有连接的值到对应缓冲区
     this.edges.forEach(edge => {
       if (edge.targetNodeId === nodeId) {
         const sourceNodeId = edge.sourceNodeId;
         const sourceOutputKey = edge.sourceHandle;
-        const rawTargetInputKey = edge.targetHandle; // e.g., 'text_inputs__0' or 'separator'
+        const rawTargetInputKey = edge.targetHandle;
 
         if (sourceNodeId && sourceOutputKey && rawTargetInputKey) {
           const sourceResult = this.nodeResults[sourceNodeId];
           const sourceNodeState = this.nodeStates[sourceNodeId];
+          // 流式节点的状态可能是 RUNNING，但其流输出已经可用
+          const isSourceReady = sourceNodeState === ExecutionStatus.COMPLETE ||
+            sourceNodeState === ExecutionStatus.SKIPPED ||
+            (sourceNodeState === ExecutionStatus.RUNNING && sourceResult && sourceResult[sourceOutputKey] instanceof Stream.Readable);
 
-          if ((sourceNodeState === ExecutionStatus.COMPLETE || sourceNodeState === ExecutionStatus.SKIPPED) && sourceResult) {
+
+          if (isSourceReady && sourceResult) {
             const sourceValue = sourceResult[sourceOutputKey];
             const { originalKey: actualInputKey } = parseSubHandleId(rawTargetInputKey);
             const inputDef = definition.inputs[actualInputKey];
@@ -423,24 +429,18 @@ export class ExecutionEngine {
               if (!multiInputBuffer[actualInputKey]) {
                 multiInputBuffer[actualInputKey] = [];
               }
-              //  InputDefinition使用 edge.id! 来处理潜在的 TS2322 (string | undefined to string)
               multiInputBuffer[actualInputKey].push({ edgeId: edge.id!, value: sourceValue });
             } else {
-              inputs[actualInputKey] = sourceValue; // 单输入直接赋值
+              inputs[actualInputKey] = sourceValue;
             }
           } else {
-            console.warn(`[Engine-${this.promptId}] Source node ${sourceNodeId} for edge ${edge.id} did not complete successfully or has no outputs. Setting input ${rawTargetInputKey} to undefined.`);
-            // 对于未成功或无输出的上游，其对应输入应为 undefined
-            // 需要确定 actualInputKey 并相应设置
+            console.warn(`[Engine-${this.promptId}] Source node ${sourceNodeId} for edge ${edge.id} (state: ${sourceNodeState}) did not complete successfully or its output '${sourceOutputKey}' is not yet available. Setting input ${rawTargetInputKey} to undefined.`);
             const { originalKey: actualInputKey } = parseSubHandleId(rawTargetInputKey);
             const inputDef = definition.inputs[actualInputKey];
             if (inputDef?.multi) {
-              // 对于多输入，如果一个连接失败，我们仍然需要一个占位符或决定如何处理
-              // 暂时也将其加入 buffer，但值为 undefined，后续排序时会处理
               if (!multiInputBuffer[actualInputKey]) {
                 multiInputBuffer[actualInputKey] = [];
               }
-              //  InputDefinition使用 edge.id! 来处理潜在的 TS2322
               multiInputBuffer[actualInputKey].push({ edgeId: edge.id!, value: undefined });
             } else {
               inputs[actualInputKey] = undefined;
@@ -450,12 +450,10 @@ export class ExecutionEngine {
       }
     });
 
-    // 添加日志 - 步骤1之后
     console.log(`[Engine-${this.promptId}] After collecting connected inputs for ${nodeId}:`);
-    console.log(`  multiInputBuffer: ${JSON.stringify(multiInputBuffer)}`); // multiInputBuffer 通常不包含敏感长文本
+    console.log(`  multiInputBuffer: ${JSON.stringify(multiInputBuffer)}`);
     console.log(`  inputs (from single connections): ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
 
-    // 2. 根据 inputConnectionOrders 排序多输入值并放入最终的 inputs 对象
     const currentInputConnectionOrders = (node as any).inputConnectionOrders as Record<string, string[]> | undefined;
     if (currentInputConnectionOrders) {
       for (const originalInputKey in currentInputConnectionOrders) {
@@ -463,49 +461,25 @@ export class ExecutionEngine {
         if (inputDef?.multi && multiInputBuffer[originalInputKey]) {
           const orderedEdgeIds = currentInputConnectionOrders[originalInputKey] || [];
           const collectedValuesForSlot = multiInputBuffer[originalInputKey];
-
-          inputs[originalInputKey] = orderedEdgeIds
-            .map((edgeId: string) => { //  InputDefinition为 edgeId 添加类型
-              const foundEntry = collectedValuesForSlot.find(entry => entry.edgeId === edgeId); //  InputDefinition修正属性名 originalEdgeId -> edgeId
-              // 如果找不到对应的边（例如，边被删除但 order 未更新），或者值为 undefined，则保留 undefined
-              return foundEntry !== undefined ? foundEntry.value : undefined;
-            });
-          // 注意：这里不过滤 undefined，让后续的默认值和必需检查来处理，
-          // 因为一个多输入数组中可能合法地包含 undefined 值（如果上游节点就是这么输出的）
-          // 或者如果一个连接失败，它在数组中对应的位置应该是 undefined。
+          inputs[originalInputKey] = orderedEdgeIds.map((edgeId: string) => {
+            const foundEntry = collectedValuesForSlot.find(entry => entry.edgeId === edgeId);
+            return foundEntry !== undefined ? foundEntry.value : undefined;
+          });
         }
       }
     }
-    // 对于那些在 multiInputBuffer 中有值，但在 inputConnectionOrders 中没有条目的多输入槽
-    // (例如，如果前端允许连接到多输入槽但没有正确更新 orders，或者 orders 为空数组但有连接)
-    // 这种情况理论上不应该发生，如果发生了，意味着前端状态和后端收到的工作流数据不一致。
-    // 为了健壮性，如果 inputs[originalInputKey] 仍然未定义，但 multiInputBuffer[originalInputKey] 有内容，
-    // 可以考虑使用 buffer 中的值（顺序不定）。但更推荐的是确保前端数据一致性。
-    // 当前选择：严格依赖 inputConnectionOrders 来构建多输入数组。
 
-    // 添加日志 - 步骤2之后
     console.log(`[Engine-${this.promptId}] After processing multi-input orders for ${nodeId}:`);
     console.log(`  inputs: ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
 
-    // 3. 处理来自节点 inputs 属性的预设值 (仅当输入未通过连接提供时)
     if (node.inputs) {
       for (const inputKey in node.inputs) {
-        // 只有当该输入槽还没有从连接中获取到值时，才使用预设值
         if (inputs[inputKey] === undefined) {
           const inputDef = definition.inputs[inputKey];
           if (inputDef?.multi) {
-            // 如果是多输入，预设值应该是数组
             if (Array.isArray(node.inputs[inputKey])) {
               inputs[inputKey] = node.inputs[inputKey];
             } else if (node.inputs[inputKey] !== undefined) {
-              // 如果预设值不是数组但插槽是 multi，将其包装成数组
-              // 这对于 MergeNode 的 text_inputs (默认是 '') 可能不直接适用，
-              // 但作为通用逻辑，如果节点期望数组，这里可以做转换。
-              // MergeNode 自身会处理非数组的默认值，所以这里可以保守一些。
-              // inputs[inputKey] = [node.inputs[inputKey]];
-              // 考虑到 MergeNode 的健壮性，如果预设值不是数组，让 MergeNode 自己处理。
-              // 但如果其他多输入节点严格要求数组，这里就需要包装。
-              // 暂时保持与单输入一致的逻辑：直接赋值。节点自身需要处理类型。
               inputs[inputKey] = node.inputs[inputKey];
             }
           } else {
@@ -515,20 +489,14 @@ export class ExecutionEngine {
       }
     }
 
-    // 添加日志 - 步骤3之后
     console.log(`[Engine-${this.promptId}] After applying node preset inputs for ${nodeId}:`);
     console.log(`  inputs: ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
 
-    // 4. 应用节点定义中的默认值 (如果输入仍未定义)
     for (const inputKey in definition.inputs) {
       if (inputs[inputKey] === undefined && definition.inputs[inputKey].config?.default !== undefined) {
         const inputDef = definition.inputs[inputKey];
         const defaultValue = inputDef.config!.default;
         if (inputDef.multi && !Array.isArray(defaultValue)) {
-          // 对于多输入插槽，如果其定义的默认值不是数组，
-          // MergeNode 的 execute 方法会通过 text_inputs = [] 和 Array.isArray() 来处理。
-          // 其他节点可能需要在这里将默认值包装成数组，例如 inputs[inputKey] = [defaultValue];
-          // 但为了与 MergeNode 的行为一致，我们让节点自己处理。
           inputs[inputKey] = defaultValue;
         } else {
           inputs[inputKey] = defaultValue;
@@ -536,60 +504,47 @@ export class ExecutionEngine {
       }
     }
 
-    // 5. 检查必需输入
     for (const inputKey in definition.inputs) {
-      // 获取输入定义
       const inputDef = definition.inputs[inputKey];
-
-      // 检查是否为必需输入
       const isRequired = typeof inputDef.required === 'function'
         ? inputDef.required(node.configValues || {})
         : inputDef.required === true;
-
       if (isRequired && inputs[inputKey] === undefined) {
-        throw new Error(`Missing required input '${inputKey}' for node ${nodeId} (${node.fullType})`);
+        // 如果是流输入，且上游是流式节点但尚未完成（状态为RUNNING），则不应抛出错误
+        // 检查连接到此必需输入槽的上游节点是否为流式且正在运行
+        let isConnectedToRunningStream = false;
+        this.edges.forEach(edge => {
+          if (edge.targetNodeId === nodeId && parseSubHandleId(edge.targetHandle).originalKey === inputKey) {
+            const sourceNode = this.nodes[edge.sourceNodeId];
+            const sourceNodeDef = sourceNode ? nodeManager.getNode(sourceNode.fullType) : undefined;
+            const sourceNodeState = this.nodeStates[edge.sourceNodeId];
+            if (sourceNodeDef && Object.values(sourceNodeDef.outputs || {}).some(out => out.dataFlowType === DataFlowType.STREAM) && sourceNodeState === ExecutionStatus.RUNNING) {
+              isConnectedToRunningStream = true;
+            }
+          }
+        });
+
+        if (!isConnectedToRunningStream) {
+          throw new Error(`Missing required input '${inputKey}' for node ${nodeId} (${node.fullType})`);
+        } else {
+          console.log(`[Engine-${this.promptId}] Required input '${inputKey}' for node ${nodeId} is connected to a running stream, deferring strict check.`);
+        }
       }
     }
 
-    // 添加日志 - 步骤4之后 (返回之前)
     console.log(`[Engine-${this.promptId}] Final prepared inputs for ${nodeId} (before required check): ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
-
     return inputs;
   }
 
-
-  /**
-   * 执行单个节点逻辑。
-   * @param nodeId 要执行的节点 ID
-   * @param inputs 节点的输入值
-   * @param executionType 'full' 或 'preview'
-   * @returns 包含状态和错误信息（如果失败）的对象
-   */
-  /**
-   * 发送节点错误状态。
-   * @param nodeId 节点ID
-   * @param errorDetails 错误详情
-   * @param executionType 执行类型
-   */
   private sendNodeError(nodeId: NanoId, errorDetails: any): void {
-    // 对于预览错误，我们可能不想广播给所有人，或者使用不同的消息类型
-    // 但当前设计是统一处理
     const payload: NodeErrorPayload = {
       promptId: this.promptId,
       nodeId,
-      errorDetails: { message: String(errorDetails) }, // 简化错误信息
+      errorDetails: { message: String(errorDetails) },
     };
-    // 注意：错误消息也需要区分 executionType 吗？设计文档未明确，暂时不加
-    this.wsManager.broadcast('NODE_ERROR', payload); // 考虑是否只发给相关 client
+    this.wsManager.broadcast('NODE_ERROR', payload);
   }
 
-  /**
-   * 执行单个节点逻辑。
-   * @param nodeId 要执行的节点 ID
-   * @param inputs 节点的输入值
-   * @param executionType 'full' 或 'preview'
-   * @returns 包含状态和错误信息（如果失败）的对象
-   */
   private async executeNode(
     nodeId: NanoId,
     inputs: Record<string, any>
@@ -620,138 +575,258 @@ export class ExecutionEngine {
 
       const context = {
         promptId: this.promptId,
+        nodeId: nodeId, // <--- 添加 nodeId 到 context
         workflowInterfaceInputs: this.payload.interfaceInputs,
         workflowInterfaceOutputs: this.payload.interfaceOutputs,
       };
 
       const executeFn = definition.execute;
-      // A more robust way to check for async generator functions
-      const isAsyncGenerator = Object.prototype.toString.call(executeFn) === '[object AsyncGeneratorFunction]';
+      const hasStreamOutput = Object.values(definition.outputs || {}).some(
+        output => output.dataFlowType === DataFlowType.STREAM
+      );
 
-      let outputs: Record<string, any> | void;
+      if (hasStreamOutput) {
+        console.log(`[Engine-${this.promptId}] Node ${nodeId} has stream output(s). Starting stream execution in background.`);
+        const nodeGenerator = executeFn(inputs, context) as AsyncGenerator<ChunkPayload, Record<string, any> | void, undefined>;
 
-      if (isAsyncGenerator) {
-        console.log(`[Engine-${this.promptId}] Node ${nodeId} is a stream node. Handling with stream logic.`);
-        outputs = await this.handleStreamNodeExecution(node, definition, inputs, context);
+        const streamOutputs = this.startStreamNodeExecution(node, nodeGenerator, definition, context);
+
+        // 立即存储流实例，让下游可以访问
+        // 批处理结果将在流结束后由 startStreamNodeExecution 内部处理并更新到 nodeResults
+        this.nodeResults[nodeId] = { ...streamOutputs };
+        // 状态保持 RUNNING，直到后台任务完成并更新为 COMPLETE
+
+        // 对于 executeNode 来说，启动流式任务已完成，可以继续主循环
+        return { status: ExecutionStatus.COMPLETE }; // Or RUNNING if we want to be more precise about the node's state from executeNode's perspective
+
       } else {
         console.log(`[Engine-${this.promptId}] Node ${nodeId} is a batch node. Handling with standard await.`);
         const result = await (executeFn(inputs, context) as Promise<Record<string, any>>);
-        outputs = result;
+
+        if (this.isInterrupted) {
+          throw new Error('Execution interrupted by user.');
+        }
+
+        this.nodeResults[nodeId] = result || {};
+        this.nodeStates[nodeId] = ExecutionStatus.COMPLETE;
+        this.sendNodeComplete(nodeId, result || {});
+        console.log(`[Engine-${this.promptId}] Node ${nodeId} completed.`);
+        return { status: ExecutionStatus.COMPLETE };
       }
-
-      if (this.isInterrupted) {
-        throw new Error('Execution interrupted by user.');
-      }
-
-      // Store results (stream nodes might return void for batch outputs)
-      this.nodeResults[nodeId] = outputs || {};
-      this.nodeStates[nodeId] = ExecutionStatus.COMPLETE;
-
-      this.sendNodeComplete(nodeId, outputs || {});
-      console.log(`[Engine-${this.promptId}] Node ${nodeId} completed.`);
-      return { status: ExecutionStatus.COMPLETE };
 
     } catch (error: any) {
       const errorMessage = error.message || String(error);
-      console.error(`[Engine-${this.promptId}] Error executing node ${nodeId} (${node.fullType}):`, errorMessage);
+      console.error(`[Engine-${this.promptId}] Error executing node ${nodeId} (${node.fullType}):`, errorMessage, error.stack);
       this.nodeStates[nodeId] = this.isInterrupted ? ExecutionStatus.INTERRUPTED : ExecutionStatus.ERROR;
-
       this.sendNodeError(nodeId, errorMessage);
       return { status: this.nodeStates[nodeId], error: errorMessage };
     }
   }
 
   /**
-   * 处理流式节点的执行，包括数据拉取、缓冲、多路分发和背压。
-   * @param node 正在执行的节点
-   * @param context 包含 promptId 等信息的执行上下文
-   * @returns 返回一个包含批处理结果的对象，或者在流式模式下返回 void
+   * 启动流式节点的后台执行，并管理其生命周期。
+   * 返回用于连接下游的流实例。
    */
-  private async handleStreamNodeExecution(
+  private startStreamNodeExecution(
     node: ExecutionNode,
-    nodeDefinition: NodeDefinition,
-    inputs: Record<string, any>,
-    context: { promptId: NanoId; [key: string]: any }
-  ): Promise<Record<string, any> | void> {
-    const executeFn = nodeDefinition.execute!;
-    const nodeGenerator = executeFn(inputs, context) as AsyncGenerator<ChunkPayload, Record<string, any> | void, undefined>;
-    
+    nodeGenerator: AsyncGenerator<ChunkPayload, Record<string, any> | void, undefined>,
+    definition: NodeDefinition,
+    context: { promptId: NanoId;[key: string]: any }
+  ): Record<string, Stream.Readable> {
+    const { id: nodeId, fullType } = node;
+    const nodeIdentifier = `${definition.displayName || definition.type}(${nodeId})`;
+    const { promptId } = context;
+
     const buffer = new BoundedBuffer<ChunkPayload>({ limit: 1000 }); // 可配置
     const sourceStream = Stream.Readable.from(buffer, { objectMode: true });
 
-    let batchResult: Record<string, any> | void = undefined;
+    const streamOutputsToReturn: Record<string, Stream.Readable> = {};
+    const consumerPromises: Promise<any>[] = [];
 
-    // 1. Puller Task
-    const pullerTask = (async () => {
-      try {
-        // The result of the for-await-of loop on a generator is the generator's return value.
-        // However, we need to get it explicitly.
-        let next = await nodeGenerator.next();
-        while(!next.done) {
-          if (buffer.isFull()) {
-            throw new BufferOverflowError(`Node ${node.id} stream buffer overflow.`);
-          }
-          await buffer.push(next.value);
-          next = await nodeGenerator.next();
+    // DEBUG 日志
+    sourceStream.on('error', (err) => console.error(`[Engine-${promptId}] DEBUG_STREAM: sourceStream for ${nodeIdentifier} errored:`, err));
+    sourceStream.on('end', () => console.log(`[Engine-${promptId}] DEBUG_STREAM: sourceStream for ${nodeIdentifier} ended.`));
+    sourceStream.on('close', () => console.log(`[Engine-${promptId}] DEBUG_STREAM: sourceStream for ${nodeIdentifier} closed.`));
+
+
+    // 1. 设置多路广播 (Multicaster)
+    // 分支 A: 事件总线
+    const eventBusStream = new Stream.PassThrough({ objectMode: true });
+    eventBusStream.on('error', (err) => console.error(`[Engine-${promptId}] DEBUG_STREAM: eventBusStream for ${nodeIdentifier} errored:`, err));
+    eventBusStream.on('end', () => console.log(`[Engine-${promptId}] DEBUG_STREAM: eventBusStream for ${nodeIdentifier} ended.`));
+    eventBusStream.on('close', () => console.log(`[Engine-${promptId}] DEBUG_STREAM: eventBusStream for ${nodeIdentifier} closed.`));
+    sourceStream.pipe(eventBusStream);
+    consumerPromises.push(this.consumeForEventBus(eventBusStream, nodeId, promptId)); // consumeForEventBus 将自行获取 identifier
+
+    // 分支 B: 连接下游节点
+    for (const outputKey in definition.outputs) {
+      if (definition.outputs[outputKey].dataFlowType === DataFlowType.STREAM) {
+        const downstreamConnections = this.getDownstreamStreamConnections(nodeId, outputKey);
+
+        const passThroughForOutput = new Stream.PassThrough({ objectMode: true });
+        passThroughForOutput.on('error', (err) => console.error(`[Engine-${promptId}] DEBUG_STREAM: passThroughForOutput '${outputKey}' for ${nodeIdentifier} errored:`, err));
+        passThroughForOutput.on('end', () => console.log(`[Engine-${promptId}] DEBUG_STREAM: passThroughForOutput '${outputKey}' for ${nodeIdentifier} ended.`));
+        passThroughForOutput.on('close', () => console.log(`[Engine-${promptId}] DEBUG_STREAM: passThroughForOutput '${outputKey}' for ${nodeIdentifier} closed.`));
+
+        sourceStream.pipe(passThroughForOutput);
+        streamOutputsToReturn[outputKey] = passThroughForOutput; // 这个流将返回给 executeNode 并存入 nodeResults
+
+        if (downstreamConnections.length === 0) {
+          // 如果流输出没有连接，确保它被消费以防止 sourceStream 阻塞
+          console.log(`[Engine-${promptId}] Stream output '${outputKey}' for node ${nodeIdentifier} has no downstream connections. Consuming to prevent stall.`);
+          passThroughForOutput.resume(); // 确保数据被丢弃，防止阻塞上游
+          consumerPromises.push(streamEndPromise(passThroughForOutput).catch(err => {
+            console.warn(`[Engine-${promptId}] Error ensuring unconsumed stream output '${outputKey}' for node ${nodeIdentifier} ended:`, err.message);
+            // 即使这里出错，也应该让 Promise resolve 或以特定方式处理，避免阻塞 Promise.all
+            // 对于这个 catch，我们只是记录警告，Promise 仍然会因错误而 reject，由 streamLifecyclePromise 的 catch 处理
+            throw err; // 重新抛出，让 streamLifecyclePromise 的 catch 捕获
+          }));
         }
-        batchResult = next.value; // This is the return value of the generator
-      } catch (error) {
-        buffer.signalError(error);
-        throw error;
-      } finally {
-        buffer.signalEnd();
+        // 如果有下游连接，下游节点会负责消费 passThroughForOutput。
+        // 我们可以选择性地在这里也添加 finished(passThroughForOutput) 到 consumerPromises
+        // 以确保即使下游节点消费逻辑有误，这个分支的流也能结束。
+        // 但这可能导致重复的错误处理或日志。暂时让下游节点负责。
+      }
+    }
+
+    // 2. 创建并管理流生命周期 Promise
+    const streamLifecyclePromise = (async () => {
+      let batchResult: Record<string, any> | void = undefined;
+      let pullerError: any = null;
+
+      // Puller Task: 从 nodeGenerator 拉取数据到 buffer
+      const pullerTask = (async () => {
+        let chunkCounter = 0;
+        console.log(`[Engine-${promptId}] PULLER_TASK_STARTED for node ${nodeIdentifier}`);
+        try {
+          // --- 移除掉错误的 for await...of 循环 ---
+          /*
+           for await (const chunk of nodeGenerator) {
+                chunkCounter++;
+           }
+          */
+          // --- 只保留手动迭代 ---
+
+          // 直接使用 nodeGenerator
+          // const manualGenerator = nodeGenerator; // 不再需要别名
+          let nextResult = await nodeGenerator.next(); // 直接在原始 generator 上调用
+          chunkCounter = 0; // 确保计数器从0开始
+
+          while (!nextResult.done) { // 只有当 done 为 false 时，value 才是 yield 出来的 chunk
+            chunkCounter++;
+            if (this.isInterrupted) { // 增加中断检查
+              throw new Error('Execution interrupted during stream pulling.');
+            }
+            if (buffer.isFull()) {
+              console.error(`[Engine-${promptId}] Buffer overflow for node ${nodeIdentifier}.`);
+              // 溢出时，不仅抛错，还要通知 buffer
+              const overflowError = new BufferOverflowError(`Node ${nodeIdentifier} stream buffer overflow.`);
+              buffer.signalError(overflowError);
+              throw overflowError; // 抛出以便外层捕获
+            }
+            // ✅ 关键：将 yield 出来的值推入 buffer
+            await buffer.push(nextResult.value);
+            // console.log(`[Engine-${promptId}] PULLER_TASK_PUSHED_CHUNK ${chunkCounter} for node ${nodeIdentifier}`);
+            nextResult = await nodeGenerator.next(); // 获取下一个
+          }
+          // ✅ 循环结束，nextResult.done 为 true，此时 nextResult.value 是生成器的 return 值
+          batchResult = nextResult.value;
+
+        } catch (error: any) {
+          console.error(`[Engine-${promptId}] Puller task for ${nodeIdentifier} caught error: ${error.message}`, error.stack);
+          pullerError = error;
+          buffer.signalError(error); // 确保任何错误都通知 buffer
+        } finally {
+          // 确保无论如何都 signalEnd 或 signalError (signalError内部会设置isDone)
+          if (!pullerError) {
+            console.log(`[Engine-${promptId}] PULLER_TASK_FINALLY for node ${nodeIdentifier}. Buffer signaled end. Processed ${chunkCounter} chunks.`);
+            buffer.signalEnd();
+          } else {
+            // 如果已有错误，signalError 已经被调用过了
+            console.log(`[Engine-${promptId}] PULLER_TASK_FINALLY_ERROR for node ${nodeIdentifier}. Buffer signaled error. Processed ${chunkCounter} chunks before error.`);
+          }
+        }
+      })();
+
+      // The original for...await loop was removed.
+      // Manual iteration logic is now self-contained above.
+
+      try {
+        await Promise.all([pullerTask, ...consumerPromises]);
+
+        if (pullerError) {
+          throw pullerError;
+        }
+
+        console.log(`[Engine-${promptId}] All streams and puller for node ${nodeIdentifier} have finished successfully.`);
+
+        const existingOutputs = this.nodeResults[nodeId] || {};
+        let outputsToMerge = {};
+        if (typeof batchResult === 'object' && batchResult !== null) {
+          outputsToMerge = batchResult;
+        }
+        this.nodeResults[nodeId] = { ...existingOutputs, ...outputsToMerge };
+        this.nodeStates[nodeId] = ExecutionStatus.COMPLETE;
+        this.sendNodeComplete(nodeId, (typeof batchResult === 'object' && batchResult !== null) ? batchResult : {});
+        console.log(`[Engine-${promptId}] Node ${nodeIdentifier} officially marked as COMPLETE.`);
+
+      } catch (error: any) {
+        const errorMessage = error.message || String(error);
+        console.error(`[Engine-${promptId}] Error in stream lifecycle for node ${nodeIdentifier}:`, errorMessage, error.stack);
+        this.nodeStates[nodeId] = this.isInterrupted ? ExecutionStatus.INTERRUPTED : ExecutionStatus.ERROR;
+        this.sendNodeError(nodeId, errorMessage);
       }
     })();
 
-    // 2. Multicaster Setup
-    const consumerPromises: Promise<any>[] = [];
-
-    const eventBusStream = new Stream.PassThrough({ objectMode: true });
-    sourceStream.pipe(eventBusStream);
-    consumerPromises.push(this.consumeForEventBus(eventBusStream, node.id, context.promptId));
-
-    // TODO: Implement downstream connections
-
-    // 3. Error Handling & Completion
-    try {
-      await Promise.all([pullerTask, ...consumerPromises]);
-    } catch (error: any) {
-      if (error instanceof BufferOverflowError) {
-        console.error(`[Engine-${context.promptId}] Fusing workflow due to buffer overflow in node ${node.id}.`);
-        this.interrupt();
-        this.sendNodeError(node.id, `Buffer Overflow: ${error.message}`);
-      }
-      // Re-throw to be caught by the main executeNode catch block
-      throw error;
-    }
-
-    return batchResult;
+    this.backgroundTasks.push(streamLifecyclePromise);
+    return streamOutputsToReturn;
   }
 
-  /**
-   * 消费来自多路分发器的流，并将其转换为 WebSocket 事件。
-   */
+
   private async consumeForEventBus(readable: Stream.Readable, nodeId: NanoId, promptId: NanoId): Promise<void> {
-    for await (const chunk of readable) {
-      const payload: NodeYieldPayload = {
-        promptId,
-        sourceNodeId: nodeId,
-        yieldedContent: chunk as ChunkPayload,
-        isLastChunk: false, // 这个标志需要重新考虑，因为流结束时才知道
-      };
-      this.wsManager.broadcast('NODE_YIELD', payload);
+    const nodeInstance = this.nodes[nodeId];
+    let nodeIdentifier: string;
+    if (nodeInstance) {
+      const definition = nodeManager.getNode(nodeInstance.fullType);
+      nodeIdentifier = definition ? `${definition.displayName || definition.type}(${nodeId})` : `${nodeInstance.fullType}(${nodeId})`;
+    } else {
+      nodeIdentifier = `UnknownNode(${nodeId})`;
     }
-    // 流结束时，发送一个最终的 isLastChunk=true 的消息
+    console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_STARTED for node ${nodeIdentifier}`);
+    try {
+      for await (const chunk of readable) {
+        const payload: NodeYieldPayload = {
+          promptId,
+          sourceNodeId: nodeId, // Keep original nodeId for payload
+          yieldedContent: chunk as ChunkPayload,
+          isLastChunk: false,
+        };
+        this.wsManager.broadcast('NODE_YIELD', payload);
+      }
+      // 移除了 await finished(readable); 因为 for await 循环结束本身就意味着流结束。
+      // 如果流未能正常结束，for await 会抛出错误，由 catch 块处理。
+      console.log(`[Engine-${promptId}] consumeForEventBus for node ${nodeIdentifier}: for-await loop completed.`);
+    } catch (error: any) {
+      console.error(`[Engine-${promptId}] consumeForEventBus for node ${nodeIdentifier} caught error during stream consumption:`, error); // 修改日志消息
+      const finalErrorPayload: NodeYieldPayload = {
+        promptId,
+        sourceNodeId: nodeId, // Keep original nodeId for payload
+        yieldedContent: { type: 'error_chunk', content: `Stream consumption error: ${error.message}` },
+        isLastChunk: true,
+      };
+      this.wsManager.broadcast('NODE_YIELD', finalErrorPayload);
+      console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_ERRORED_OR_ABORTED for node ${nodeIdentifier}`);
+      throw error;
+    }
     const finalPayload: NodeYieldPayload = {
       promptId,
-      sourceNodeId: nodeId,
-      yieldedContent: { type: 'finish_reason_chunk', content: 'Stream ended' }, // 示例内容
+      sourceNodeId: nodeId, // Keep original nodeId for payload
+      yieldedContent: { type: 'finish_reason_chunk', content: 'Stream ended' },
       isLastChunk: true,
     };
     this.wsManager.broadcast('NODE_YIELD', finalPayload);
+    console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_FINISHED for node ${nodeIdentifier}`);
   }
-
-  // --- WebSocket 发送辅助方法 ---
 
   private sendNodeComplete(nodeId: NanoId, output: any): void {
     const payload: NodeCompletePayload = {
@@ -759,16 +834,9 @@ export class ExecutionEngine {
       nodeId,
       output,
     };
-    this.wsManager.broadcast('NODE_COMPLETE', payload); // 考虑是否只发给相关 client
+    this.wsManager.broadcast('NODE_COMPLETE', payload);
   }
 
-  /**
-   * 处理被绕过的节点，生成伪输出。
-   * @param nodeDefinition 节点定义
-   * @param executionNode 执行节点数据
-   * @param currentInputs 当前节点的输入值
-   * @returns 生成的伪输出
-   */
   private handleBypassedNode(
     nodeDefinition: NodeDefinition,
     executionNode: ExecutionNode,
@@ -777,7 +845,6 @@ export class ExecutionEngine {
     const pseudoOutputs: Record<string, any> = {};
     const { bypassBehavior } = nodeDefinition;
 
-    // 1. 如果 bypassBehavior === 'mute'，所有输出槽设为 undefined
     if (bypassBehavior === 'mute') {
       console.log(`[Engine-${this.promptId}] Node ${executionNode.id} has 'mute' bypass behavior, setting all outputs to undefined.`);
       for (const outputKey in nodeDefinition.outputs) {
@@ -786,19 +853,14 @@ export class ExecutionEngine {
       return pseudoOutputs;
     }
 
-    // 2. 如果 bypassBehavior 是一个对象
     if (bypassBehavior && typeof bypassBehavior === 'object') {
-      // 处理 passThrough 规则
       if (bypassBehavior.passThrough) {
         for (const [outputKey, inputKey] of Object.entries(bypassBehavior.passThrough)) {
-          // 验证输入和输出键是否存在
           if (nodeDefinition.outputs[outputKey] && inputKey in currentInputs) {
             const outputDef = nodeDefinition.outputs[outputKey];
-            const inputDef = nodeDefinition.inputs[inputKey];
-
-            // 验证类型兼容性
+            const inputDef = nodeDefinition.inputs[inputKey as string]; // Cast as string
             if (this.isTypeCompatible(outputDef, inputDef)) {
-              pseudoOutputs[outputKey] = currentInputs[inputKey];
+              pseudoOutputs[outputKey] = currentInputs[inputKey as string];
             } else {
               console.warn(`[Engine-${this.promptId}] Type incompatibility in passThrough for node ${executionNode.id}: ${inputKey}->${outputKey}`);
               pseudoOutputs[outputKey] = undefined;
@@ -806,175 +868,91 @@ export class ExecutionEngine {
           }
         }
       }
-
-      // 处理 defaults 规则
       if (bypassBehavior.defaults) {
         for (const [outputKey, defaultValue] of Object.entries(bypassBehavior.defaults)) {
-          // 只在 passThrough 没有设置该输出时才应用默认值
           if (!(outputKey in pseudoOutputs)) {
             pseudoOutputs[outputKey] = defaultValue;
           }
         }
       }
-
-      // 如果有任何输出都没有被处理，检查是否需要进一步设置
       for (const outputKey in nodeDefinition.outputs) {
         if (!(outputKey in pseudoOutputs)) {
           pseudoOutputs[outputKey] = this.getGenericEmptyValueForType(nodeDefinition.outputs[outputKey].dataFlowType);
         }
       }
-
       return pseudoOutputs;
     }
 
-    // 3. 默认回退策略：智能穿透匹配
     console.log(`[Engine-${this.promptId}] Node ${executionNode.id} has no explicit bypass behavior, using default strategy.`);
-
-    // 获取所有输入和输出的定义
     const inputSlotDefs = nodeDefinition.inputs || {};
     const outputSlotDefs = nodeDefinition.outputs || {};
-
-    // 可用输入键列表
     const availableInputKeys = Object.keys(currentInputs);
 
-    // 遍历所有输出槽
     for (const outputKey in outputSlotDefs) {
       const outputDef = outputSlotDefs[outputKey];
       let matched = false;
-
-      // 尝试找到匹配的输入
       for (let i = 0; i < availableInputKeys.length; i++) {
         const inputKey = availableInputKeys[i];
         const inputDef = inputSlotDefs[inputKey];
-
         if (inputDef && this.isTypeCompatible(outputDef, inputDef)) {
-          // 找到匹配的输入，设置伪输出并从可用列表中移除
           pseudoOutputs[outputKey] = currentInputs[inputKey];
-          availableInputKeys.splice(i, 1); // 移除已使用的输入
+          availableInputKeys.splice(i, 1);
           matched = true;
           break;
         }
       }
-
-      // 如果没有找到匹配的输入，使用通用空值
       if (!matched) {
         pseudoOutputs[outputKey] = this.getGenericEmptyValueForType(outputDef.dataFlowType);
       }
     }
-
     return pseudoOutputs;
   }
 
-  /**
-   * 检查输出定义和输入定义之间的类型兼容性。
-   * @param outputDef 输出槽定义
-   * @param inputDef 输入槽定义
-   * @returns 是否类型兼容
-   */
-  /**
-   * 检查输出定义和输入定义之间的类型兼容性。
-   * 实现了设计文档的连接兼容性规则。
-   * @param outputDef 输出槽定义
-   * @param inputDef 输入槽定义
-   * @returns 是否类型兼容
-   */
   private isTypeCompatible(
     outputDef: { dataFlowType: string; matchCategories?: string[] },
     inputDef: { dataFlowType: string; matchCategories?: string[] }
   ): boolean {
-    // 1. 特殊行为标签检查 (BEHAVIOR_WILDCARD, BEHAVIOR_CONVERTIBLE)
-    // 如果输出具有BEHAVIOR_WILDCARD标签，可以连接到任何输入
-    if (outputDef.matchCategories?.includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD)) {
+    if (outputDef.matchCategories?.includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD) ||
+      inputDef.matchCategories?.includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD)) {
       return true;
     }
-
-    // 如果输入具有BEHAVIOR_WILDCARD标签，可以接受任何输出
-    if (inputDef.matchCategories?.includes(BuiltInSocketMatchCategory.BEHAVIOR_WILDCARD)) {
+    if (outputDef.dataFlowType === DataFlowType.WILDCARD || outputDef.dataFlowType === DataFlowType.CONVERTIBLE_ANY ||
+      inputDef.dataFlowType === DataFlowType.WILDCARD || inputDef.dataFlowType === DataFlowType.CONVERTIBLE_ANY) {
       return true;
     }
-
-    // BEHAVIOR_CONVERTIBLE不在此处实际处理，但在连接时需要特殊处理
-
-    // 2. 如果输出是 WILDCARD/CONVERTIBLE_ANY，可以匹配任何输入
-    if (outputDef.dataFlowType === DataFlowType.WILDCARD ||
-      outputDef.dataFlowType === DataFlowType.CONVERTIBLE_ANY) {
-      return true;
-    }
-
-    // 3. 如果输入是 WILDCARD/CONVERTIBLE_ANY，可以接受任何输出
-    if (inputDef.dataFlowType === DataFlowType.WILDCARD ||
-      inputDef.dataFlowType === DataFlowType.CONVERTIBLE_ANY) {
-      return true;
-    }
-
-    // 4. 基于 SocketMatchCategory 的优先匹配
-    // 只有当输入和输出都有matchCategories时才进行
     if (outputDef.matchCategories?.length && inputDef.matchCategories?.length) {
-      // 检查是否有至少一个相同的分类
       for (const category of outputDef.matchCategories) {
         if (inputDef.matchCategories.includes(category)) {
           return true;
         }
       }
-
-      // 可以在此处添加更复杂的兼容性规则
-      // 例如：某些matchCategories之间可能有预定义的兼容关系
     }
-
-    // 5. 基于 DataFlowType 的保底匹配
-    // 检查基本类型匹配
     if (outputDef.dataFlowType === inputDef.dataFlowType) {
       return true;
     }
-
-    // 特殊类型转换 (例如 INTEGER 可以转换为 FLOAT)
-    if (outputDef.dataFlowType === DataFlowType.INTEGER &&
-      inputDef.dataFlowType === DataFlowType.FLOAT) {
+    if (outputDef.dataFlowType === DataFlowType.INTEGER && inputDef.dataFlowType === DataFlowType.FLOAT) {
       return true;
     }
-
-    // STRING, INTEGER, FLOAT, BOOLEAN 可以连接到 STRING
     if (inputDef.dataFlowType === DataFlowType.STRING &&
       (outputDef.dataFlowType === DataFlowType.INTEGER ||
         outputDef.dataFlowType === DataFlowType.FLOAT ||
         outputDef.dataFlowType === DataFlowType.BOOLEAN)) {
       return true;
     }
-
     return false;
   }
 
-  /**
-   * 根据数据流类型获取通用空值。
-   * @param dataFlowType 数据流类型
-   * @returns 对应类型的通用空值
-   */
   private getGenericEmptyValueForType(dataFlowType: string): any {
     switch (dataFlowType) {
-      case DataFlowType.STRING:
-        return '';
-      case DataFlowType.INTEGER:
-      case DataFlowType.FLOAT:
-        return 0;
-      case DataFlowType.BOOLEAN:
-        return false;
-      case DataFlowType.ARRAY:
-        return [];
-      case DataFlowType.OBJECT:
-        return {};
-      case DataFlowType.BINARY:
-      case DataFlowType.WILDCARD:
-      case DataFlowType.CONVERTIBLE_ANY:
-      default:
-        return null;
+      case DataFlowType.STRING: return '';
+      case DataFlowType.INTEGER: case DataFlowType.FLOAT: return 0;
+      case DataFlowType.BOOLEAN: return false;
+      case DataFlowType.ARRAY: return [];
+      case DataFlowType.OBJECT: return {};
+      case DataFlowType.BINARY: case DataFlowType.WILDCARD: case DataFlowType.CONVERTIBLE_ANY: default: return null;
     }
   }
 
-  /**
-   * 发送节点被绕过的消息。
-   * @param nodeId 节点ID
-   * @param pseudoOutputs 伪输出数据
-   */
   private sendNodeBypassed(nodeId: NanoId, pseudoOutputs: Record<string, any>): void {
     const payload = {
       promptId: this.promptId,
@@ -982,5 +960,13 @@ export class ExecutionEngine {
       pseudoOutputs,
     };
     this.wsManager.broadcast('NODE_BYPASSED', payload);
+  }
+
+  // 新增辅助函数：获取下游流连接
+  private getDownstreamStreamConnections(sourceNodeId: NanoId, sourceOutputKey: string): ExecutionEdge[] {
+    return this.edges.filter(edge =>
+      edge.sourceNodeId === sourceNodeId &&
+      edge.sourceHandle === sourceOutputKey
+    );
   }
 }

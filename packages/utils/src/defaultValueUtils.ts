@@ -50,6 +50,8 @@ export function getEffectiveDefaultValue(inputDef: InputDefinition): any { // �
       return null;
     case 'CONVERTIBLE_ANY':
       return null;
+    case 'STREAM': // 新增对 STREAM 类型的处理
+      return null; // 流类型的默认值通常是 null，表示没有活动的流
     default:
       // 对于未知或未显式处理的 dataFlowType，记录警告并返回 null
       // eslint-disable-next-line no-console
