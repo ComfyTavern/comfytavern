@@ -37,6 +37,15 @@ export const ChunkPayloadSchema = z.object({
 export type ChunkPayload = z.infer<typeof ChunkPayloadSchema>;
 
 /**
+ * 表示一个接口输出的实际值或占位符。
+ * 特别用于当输出是一个流时，在初始的接口输出聚合消息中可能发送一个占位符。
+ * 实际的流数据将通过 WORKFLOW_INTERFACE_YIELD 消息单独发送。
+ */
+export type InterfaceOutputValue =
+  | any // 代表实际的非流数据，或流对象的引用（尽管通常不直接发送流对象）
+  | { type: 'stream_placeholder'; message: string; interfaceOutputKey: string }; // 流的占位符
+
+/**
  * 数据流类型的常量定义。
  */
 export const DataFlowType = {

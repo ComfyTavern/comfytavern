@@ -4,7 +4,11 @@ import { promisify } from 'node:util';
 import {
   BuiltInSocketMatchCategory, ChunkPayload, DataFlowType, ExecutionEdge, ExecutionNode,
   ExecutionStatus, NanoId, NodeCompletePayload, NodeDefinition, NodeErrorPayload,
-  NodeExecutingPayload, NodeExecutionResult, NodeYieldPayload, WorkflowExecutionPayload
+  NodeExecutingPayload, NodeExecutionResult, NodeYieldPayload, WorkflowExecutionPayload,
+  WebSocketMessageType, // Corrected name for MessageType enum
+  InterfaceOutputValue,
+  WorkflowInterfaceYieldPayload,
+  GroupSlotInfo // For typing interfaceOutputDefinitions
 } from '@comfytavern/types';
 
 import { nodeManager } from './services/NodeManager'; // 用于获取节点定义
@@ -182,7 +186,9 @@ export class ExecutionEngine {
   private nodePseudoOutputs: Record<NanoId, any> = {}; // 存储绕过节点的伪输出
   private executionOrder: NanoId[] = [];
   private isInterrupted: boolean = false;
-  private backgroundTasks: Promise<any>[] = []; // 用于追踪后台流处理任务
+  private backgroundTasks: Promise<any>[] = []; // 用于追踪所有后台任务，包括节点内部流和接口流
+  private interfaceOutputDefinitions: Record<string, GroupSlotInfo> | undefined; // Corrected type
+  private activeInterfaceStreamConsumers: Set<string> = new Set(); // Tracks interfaceOutputKeys
 
   constructor(
     promptId: NanoId,
@@ -207,6 +213,9 @@ export class ExecutionEngine {
       return acc;
     }, {});
     this.edges = payload.edges;
+    // Correctly access interfaceOutputs directly from the payload,
+    // as defined in WorkflowExecutionPayload type in @comfytavern/types/src/execution.ts
+    this.interfaceOutputDefinitions = payload.interfaceOutputs;
 
     console.log(`[Engine-${this.promptId}] Initialized for execution.`);
   }
@@ -277,35 +286,56 @@ export class ExecutionEngine {
         }
       }
 
-      // 等待所有后台流处理任务完成
+      // 等待所有节点内部的后台流处理任务完成
       if (this.backgroundTasks.length > 0) {
-        console.log(`[Engine-${this.promptId}] Waiting for ${this.backgroundTasks.length} background stream tasks to complete...`);
-        await Promise.all(this.backgroundTasks);
-        console.log(`[Engine-${this.promptId}] All background stream tasks completed.`);
+        console.log(`[Engine-${this.promptId}] Waiting for ${this.backgroundTasks.length} initial background stream tasks (node-internal) to complete...`);
+        await Promise.all(this.backgroundTasks); // This waits for node-internal streams handled by streamLifecyclePromise
+        console.log(`[Engine-${this.promptId}] All initial background stream tasks (node-internal) completed.`);
       }
 
-      console.log(`[Engine-${this.promptId}] Workflow execution completed successfully.`);
+      // 现在处理最终的工作流接口输出，这可能会启动新的后台任务（用于流式接口输出）
+      // 这些新的后台任务的 Promise 也会被加入到 this.backgroundTasks
+      await this._processAndBroadcastFinalOutputs();
 
-      if (this.payload.outputInterfaceMappings && Object.keys(this.payload.outputInterfaceMappings).length > 0) {
-        const finalWorkflowOutputs: Record<string, any> = {};
-        for (const interfaceOutputKey in this.payload.outputInterfaceMappings) {
-          const mapping = this.payload.outputInterfaceMappings[interfaceOutputKey];
-          if (mapping) {
-            const { sourceNodeId, sourceSlotKey } = mapping;
-            const sourceNodeResult = this.nodeResults[sourceNodeId];
-            if (sourceNodeResult && sourceSlotKey in sourceNodeResult) {
-              finalWorkflowOutputs[interfaceOutputKey] = sourceNodeResult[sourceSlotKey];
-            } else {
-              finalWorkflowOutputs[interfaceOutputKey] = undefined;
-              console.warn(`[Engine-${this.promptId}] Could not find result for interfaceOutput '${interfaceOutputKey}' (sourceNode: ${sourceNodeId}, sourceSlot: ${sourceSlotKey})`);
-            }
-          }
-        }
-        this.sendNodeComplete('__WORKFLOW_INTERFACE_OUTPUTS__', finalWorkflowOutputs);
-        console.log(`[Engine-${this.promptId}] Sent aggregated workflow interface outputs:`, finalWorkflowOutputs);
+      // 再次检查 backgroundTasks，因为 _processAndBroadcastFinalOutputs 可能向其中添加了接口流处理的 Promise
+      if (this.activeInterfaceStreamConsumers.size > 0) {
+          // This log might be slightly confusing if backgroundTasks was already awaited.
+          // The key is that activeInterfaceStreamConsumers reflects ongoing interface streams.
+          // We need to ensure all promises related to these are also in backgroundTasks and awaited.
+          // _handleStreamInterfaceOutput should add its promise to backgroundTasks.
+          console.log(`[Engine-${this.promptId}] Waiting for ${this.activeInterfaceStreamConsumers.size} active interface stream consumers to complete...`);
+          // Assuming _handleStreamInterfaceOutput adds its promise to this.backgroundTasks,
+          // and those promises correctly manage activeInterfaceStreamConsumers.
+          // Await all tasks again if new ones were added.
+          // To be safe, we can filter backgroundTasks for only new promises or re-await all if logic is complex.
+          // For now, let's assume _processAndBroadcastFinalOutputs's started streams are tracked via activeInterfaceStreamConsumers
+          // and their promises are added to backgroundTasks by _handleStreamInterfaceOutput.
+          // The final Promise.all below will catch them.
       }
 
-      return { status: ExecutionStatus.COMPLETE };
+      // 等待所有后台任务，包括节点内部流和新启动的接口流
+      // This assumes _handleStreamInterfaceOutput adds its promise to this.backgroundTasks
+      const allBackgroundPromises = [...this.backgroundTasks]; // Create a new array if backgroundTasks was cleared or re-assigned
+      if (allBackgroundPromises.length > 0) {
+          console.log(`[Engine-${this.promptId}] Waiting for ALL ${allBackgroundPromises.length} background tasks (node-internal and interface streams) to complete...`);
+          await Promise.all(allBackgroundPromises);
+          console.log(`[Engine-${this.promptId}] ALL background tasks completed.`);
+      }
+      
+      if (this.activeInterfaceStreamConsumers.size === 0 && this.isInterrupted === false) {
+        console.log(`[Engine-${this.promptId}] Workflow execution completed successfully (all nodes, internal streams, and interface streams processed).`);
+        return { status: ExecutionStatus.COMPLETE };
+      } else if (this.isInterrupted) {
+        console.log(`[Engine-${this.promptId}] Workflow execution was interrupted before all interface streams could complete.`);
+        // Error status will be handled by the main catch block if an interruption error was thrown.
+        // If interruption happened cleanly, this might be INTERRUPTED.
+        // The main catch block handles the final status.
+        throw new Error('Execution interrupted by user during final output streaming.');
+      } else {
+        // Should not happen if logic is correct, implies some interface streams didn't clear from activeInterfaceStreamConsumers
+        console.error(`[Engine-${this.promptId}] Workflow completed processing, but ${this.activeInterfaceStreamConsumers.size} interface streams are still marked active. This indicates a potential issue.`);
+        return { status: ExecutionStatus.ERROR, error: "Interface stream completion tracking error." };
+      }
 
     } catch (error: any) {
       console.error(`[Engine-${this.promptId}] Workflow execution failed:`, error);
@@ -968,5 +998,123 @@ export class ExecutionEngine {
       edge.sourceNodeId === sourceNodeId &&
       edge.sourceHandle === sourceOutputKey
     );
+  }
+
+  private async _handleStreamInterfaceOutput(
+    interfaceKey: string,
+    stream: Stream.Readable,
+    interfaceDisplayName?: string
+  ): Promise<void> {
+    const taskPromise = new Promise<void>((resolve, reject) => {
+      console.log(`[Engine-${this.promptId}] Starting to consume stream for interface output: ${interfaceKey} (${interfaceDisplayName || 'N/A'})`);
+      this.activeInterfaceStreamConsumers.add(interfaceKey);
+
+      stream.on('data', (chunk) => {
+        if (this.isInterrupted) {
+          console.log(`[Engine-${this.promptId}] Interrupting data event for interface stream ${interfaceKey}`);
+          stream.destroy(new Error('Interrupted by user')); // Attempt to stop the stream
+          return;
+        }
+        const payload: WorkflowInterfaceYieldPayload = {
+          promptId: this.promptId,
+          interfaceOutputKey: interfaceKey,
+          interfaceOutputDisplayName: interfaceDisplayName,
+          yieldedContent: chunk,
+          isLastChunk: false,
+        };
+        this.wsManager.broadcast(WebSocketMessageType.WORKFLOW_INTERFACE_YIELD, payload);
+      });
+
+      stream.on('end', () => {
+        console.log(`[Engine-${this.promptId}] Stream for interface output ${interfaceKey} ended.`);
+        const payload: WorkflowInterfaceYieldPayload = {
+          promptId: this.promptId,
+          interfaceOutputKey: interfaceKey,
+          interfaceOutputDisplayName: interfaceDisplayName,
+          yieldedContent: { type: 'finish_reason_chunk', content: 'Stream ended' },
+          isLastChunk: true,
+        };
+        this.wsManager.broadcast(WebSocketMessageType.WORKFLOW_INTERFACE_YIELD, payload);
+        this.activeInterfaceStreamConsumers.delete(interfaceKey);
+        resolve();
+      });
+
+      stream.on('error', (err) => {
+        console.error(`[Engine-${this.promptId}] Error in stream for interface output ${interfaceKey}:`, err.message);
+        // Do not broadcast error as a YIELD, let main error handling catch it or send specific interface error
+        this.activeInterfaceStreamConsumers.delete(interfaceKey);
+        if (err.message === 'Interrupted by user') {
+          resolve(); // Interruption is a form of completion for this handler
+        } else {
+          reject(err);
+        }
+      });
+
+      // Ensure consumption if it's a PassThrough that might not have other consumers
+      if (typeof (stream as any).isPaused === 'function' && (stream as any).isPaused()) {
+        stream.resume();
+      }
+    });
+    this.backgroundTasks.push(taskPromise); // Add this stream's lifecycle to the main background tasks
+    return taskPromise;
+  }
+
+  private async _processAndBroadcastFinalOutputs(): Promise<void> {
+    if (!this.payload.outputInterfaceMappings || Object.keys(this.payload.outputInterfaceMappings).length === 0) {
+      console.log(`[Engine-${this.promptId}] No interface output mappings defined.`);
+      return;
+    }
+
+    const finalWorkflowOutputs: Record<string, InterfaceOutputValue> = {}; // Use InterfaceOutputValue type
+
+    for (const interfaceOutputKey in this.payload.outputInterfaceMappings) {
+      if (this.isInterrupted) {
+        console.log(`[Engine-${this.promptId}] Skipping processing of interface output ${interfaceOutputKey} due to interruption.`);
+        continue;
+      }
+      const mapping = this.payload.outputInterfaceMappings[interfaceOutputKey];
+      if (!mapping) continue;
+
+      const { sourceNodeId, sourceSlotKey } = mapping;
+      const sourceNodeResult = this.nodeResults[sourceNodeId];
+      let valueToOutput: any = null;
+
+      if (sourceNodeResult && sourceSlotKey in sourceNodeResult) {
+        valueToOutput = sourceNodeResult[sourceSlotKey];
+      } else {
+        console.warn(
+          `[Engine-${this.promptId}] Source for interface output ${interfaceOutputKey} (node: ${sourceNodeId}, slot: ${sourceSlotKey}) not found in nodeResults.`
+        );
+      }
+
+      const interfaceDef = this.interfaceOutputDefinitions?.[interfaceOutputKey];
+      const interfaceType = interfaceDef?.dataFlowType;
+      const interfaceDisplayName = interfaceDef?.displayName;
+
+      if (interfaceType === 'STREAM' && valueToOutput instanceof Stream.Readable) {
+        console.log(`[Engine-${this.promptId}] Handling STREAM interface output: ${interfaceOutputKey}.`);
+        // _handleStreamInterfaceOutput now adds its promise to this.backgroundTasks
+        // No need to collect promises separately here if that's the case.
+        await this._handleStreamInterfaceOutput(interfaceOutputKey, valueToOutput, interfaceDisplayName);
+        finalWorkflowOutputs[interfaceOutputKey] = {
+          type: 'stream_placeholder',
+          message: `Stream started for ${interfaceOutputKey} (${interfaceDisplayName || ''})`,
+        };
+      } else {
+        if (interfaceType === 'STREAM' && !(valueToOutput instanceof Stream.Readable)) {
+          console.warn(
+            `[Engine-${this.promptId}] Interface output ${interfaceOutputKey} is defined as STREAM, but actual value is not a ReadableStream. Value:`, valueToOutput
+          );
+        }
+        finalWorkflowOutputs[interfaceOutputKey] = valueToOutput;
+      }
+    }
+
+    if (Object.keys(finalWorkflowOutputs).length > 0 && !this.isInterrupted) {
+      this.sendNodeComplete('__WORKFLOW_INTERFACE_OUTPUTS__', finalWorkflowOutputs);
+      console.log(`[Engine-${this.promptId}] Sent aggregated workflow interface outputs (with stream placeholders):`, finalWorkflowOutputs);
+    } else if (this.isInterrupted) {
+      console.log(`[Engine-${this.promptId}] Aggregated workflow interface outputs not sent due to interruption.`);
+    }
   }
 }

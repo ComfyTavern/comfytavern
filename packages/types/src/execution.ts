@@ -49,6 +49,7 @@ export enum WebSocketMessageType {
   BACKEND_RELOADED = "backend_reloaded",
   ERROR = "error",
   NODES_RELOADED = "NODES_RELOADED",
+  WORKFLOW_INTERFACE_YIELD = "WORKFLOW_INTERFACE_YIELD", // 新增工作流接口流式输出消息类型
 }
 
 // 通用 WebSocket 消息结构
@@ -141,6 +142,17 @@ export interface NodeYieldPayload {
   promptId: NanoId;
   sourceNodeId: NanoId;
   yieldedContent: ChunkPayload;
+  isLastChunk: boolean;
+}
+
+/**
+ * 当工作流的某个流式接口产出数据块时的载荷。
+ */
+export interface WorkflowInterfaceYieldPayload {
+  promptId: NanoId;
+  interfaceOutputKey: string; // 对应于 interfaceOutputs 中的键
+  interfaceOutputDisplayName?: string; // 接口输出的显示名称 (可选)
+  yieldedContent: ChunkPayload | any; // 数据块 (通常是 ChunkPayload，但允许 any 以兼容旧的或特殊数据)
   isLastChunk: boolean;
 }
 
