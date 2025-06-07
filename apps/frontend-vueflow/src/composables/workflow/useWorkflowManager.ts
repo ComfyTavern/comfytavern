@@ -194,7 +194,7 @@ function createWorkflowManager() {
     if (storageNode.inputConnectionOrders) {
       vueFlowData.inputConnectionOrders = klona(storageNode.inputConnectionOrders);
     }
-    
+
     // 将构建好的 vueFlowData 赋值给 vueNode.data
     vueNode.data = vueFlowData;
 
@@ -530,6 +530,16 @@ function createWorkflowManager() {
     state.elements.push(newNode);
     // console.debug(`[addNode] 已将节点 ${newNode.id} 添加到标签页 ${internalId} 的状态中`);
 
+    // --- 日志添加开始 ---
+    if (state.workflowData) {
+      console.log(`[WorkflowManager addNode - ${internalId}] After adding to elements:`);
+      console.log(`  state.elements node IDs:`, JSON.stringify(state.elements.filter(el => !("source" in el)).map(n => n.id)));
+      console.log(`  state.workflowData.nodes IDs:`, JSON.stringify(state.workflowData.nodes.map(n => n.id)));
+    } else {
+      console.log(`[WorkflowManager addNode - ${internalId}] state.workflowData is null after adding to elements.`);
+    }
+    // --- 日志添加结束 ---
+
     // 标记为脏
     markAsDirty(internalId);
   }
@@ -638,6 +648,17 @@ function createWorkflowManager() {
     if (JSON.stringify(state.elements) !== JSON.stringify(newElements)) {
       // console.debug(`[useWorkflowManager/setElements] 标签页 ${internalId} 的元素已更改。`);
       state.elements = newElements;
+
+      // --- 日志添加开始 ---
+      if (state.workflowData) {
+        console.log(`[WorkflowManager setElements - ${internalId}] After updating elements:`);
+        console.log(`  state.elements node IDs:`, JSON.stringify(state.elements.filter(el => !("source" in el)).map(n => n.id)));
+        console.log(`  state.workflowData.nodes IDs:`, JSON.stringify(state.workflowData.nodes.map(n => n.id)));
+      } else {
+        console.log(`[WorkflowManager setElements - ${internalId}] state.workflowData is null after updating elements.`);
+      }
+      // --- 日志添加结束 ---
+
       markAsDirty(internalId); // 标记为脏
       // 移除了 recordHistory 调用
     } else {

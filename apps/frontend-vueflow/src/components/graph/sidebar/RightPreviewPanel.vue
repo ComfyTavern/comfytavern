@@ -17,10 +17,12 @@
     <div class="panel-header" :class="{ 'collapsed': !panelLayout.isExpanded }" @mousedown.stop.prevent="startDragTop">
       <div v-if="panelLayout.isExpanded" class="flex items-center space-x-2 flex-grow min-w-0">
         <h3 class="panel-title truncate flex-shrink"
-          :title="panelMode === 'singlePreview' && activeTarget ? `${nodeDisplayName} (ID: ${activeTarget.nodeId})` : (panelMode === 'groupOverview' && activeTabId ? `组输出 (工作流: ${activeWorkflowName})` : '预览')">
+          :title="panelMode === 'singlePreview' && activeTarget ? `单一预览: ${nodeDisplayName} (ID: ${activeTarget.nodeId})` :
+            (panelMode === 'groupOverview' && activeTabId && groupOutputs ? `组输出总览: ${activeWorkflowName}` :
+              (panelMode === 'streamPreview' && activeTarget && activeTarget.nodeId ? `流式输出: ${nodeDisplayName} (ID: ${activeTarget.nodeId})` : '预览'))">
           <template v-if="panelMode === 'singlePreview'">
             <template v-if="activeTarget">
-              {{ nodeDisplayName }} <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(ID: {{
+              单一: {{ nodeDisplayName }} <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(ID: {{
                 activeTarget.nodeId }})</span>
             </template>
             <template v-else>
@@ -30,11 +32,21 @@
           </template>
           <template v-else-if="panelMode === 'groupOverview'">
             <template v-if="activeTabId && groupOutputs">
-              组输出总览 <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">({{ activeWorkflowName }})</span>
+              组总览: {{ activeWorkflowName }}
             </template>
             <template v-else>
               <span class="text-gray-700 dark:text-gray-300">组输出总览 <span
                   class="text-gray-400 dark:text-gray-500">（无可用工作流）</span></span>
+            </template>
+          </template>
+          <template v-else-if="panelMode === 'streamPreview'">
+            <template v-if="activeTarget && activeTarget.nodeId">
+              流式: {{ nodeDisplayName }} <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(ID: {{
+                activeTarget.nodeId }})</span>
+            </template>
+            <template v-else>
+              <span class="text-gray-700 dark:text-gray-300">流式输出 <span
+                  class="text-gray-400 dark:text-gray-500">（未选目标）</span></span>
             </template>
           </template>
         </h3>
@@ -50,6 +62,11 @@
           :class="['px-2 py-0.5 text-xs rounded-md transition-colors', panelMode === 'groupOverview' ? 'bg-green-500 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600']"
           title="组输出总览模式">
           组总览
+        </button>
+        <button @click="panelMode = 'streamPreview'"
+          :class="['px-2 py-0.5 text-xs rounded-md transition-colors', panelMode === 'streamPreview' ? 'bg-purple-500 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600']"
+          title="流式输出预览模式">
+          流式
         </button>
       </div>
       <button class="toggle-button" @click="togglePanelExpansion">
@@ -106,43 +123,7 @@
 
       <!-- 组输出总览模式 -->
       <template v-else-if="panelMode === 'groupOverview'">
-        <template v-if="activeTabId && groupOutputs && Object.keys(groupOutputs).length > 0">
-          <div class="p-2 space-y-2">
-            <template v-for="(outputDef, key) in groupOutputs" :key="key">
-              <template v-if="outputDef.dataFlowType !== DataFlowType.CONVERTIBLE_ANY">
-                <div class="border border-gray-200 dark:border-gray-600 rounded-md overflow-hidden">
-                  <div @click="toggleGroupOutputCollapse(String(key))"
-                    class="flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors">
-                    <span class="font-medium text-sm text-gray-700 dark:text-gray-200">{{ outputDef.displayName || key
-                      }}</span>
-                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform duration-200"
-                      :class="{ 'rotate-180': !isGroupOutputCollapsed(String(key)) }" viewBox="0 0 20 20"
-                      fill="currentColor">
-                      <path fill-rule="evenodd"
-                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                        clip-rule="evenodd" />
-                    </svg>
-                  </div>
-                  <div v-show="!isGroupOutputCollapsed(String(key))"
-                    class="p-2 border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800">
-                    <template
-                      v-if="groupPreviewData && groupPreviewData[key] !== null && groupPreviewData[key] !== undefined">
-                      <MarkdownRenderer v-if="isMarkdownContent(groupPreviewData[key])"
-                        :markdown-content="groupPreviewData[key] as string" />
-                      <pre v-else-if="typeof groupPreviewData[key] === 'object' || Array.isArray(groupPreviewData[key])"
-                        class="text-xs whitespace-pre-wrap break-all">{{ JSON.stringify(groupPreviewData[key], null, 2) }}</pre>
-                      <p v-else class="text-xs whitespace-pre-wrap break-all">{{ String(groupPreviewData[key]) }}</p>
-                    </template>
-                    <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">
-                      无可用预览数据。
-                    </p>
-                  </div>
-                </div>
-              </template>
-            </template>
-          </div>
-        </template>
-        <template v-else-if="!activeTabId">
+        <template v-if="!activeTabId">
           <p class="p-4 text-sm text-gray-500 dark:text-gray-400">
             没有活动的工作流。
           </p>
@@ -152,12 +133,72 @@
             当前工作流没有定义组输出接口。
           </p>
         </template>
+        <template v-else-if="displayableGroupOutputsCount > 0">
+          <div class="p-2 space-y-2">
+            <template v-for="(outputDef, key) in displayableGroupOutputs" :key="key">
+              <!-- outputDef.dataFlowType !== DataFlowType.CONVERTIBLE_ANY is already filtered by displayableGroupOutputs -->
+              <div class="border border-gray-200 dark:border-gray-600 rounded-md overflow-hidden">
+                <div @click="toggleGroupOutputCollapse(String(key))"
+                  class="flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors">
+                  <span class="font-medium text-sm text-gray-700 dark:text-gray-200">{{ outputDef.displayName || key
+                  }}</span>
+                  <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform duration-200"
+                    :class="{ 'rotate-180': !isGroupOutputCollapsed(String(key)) }" viewBox="0 0 20 20"
+                    fill="currentColor">
+                    <path fill-rule="evenodd"
+                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                      clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div v-show="!isGroupOutputCollapsed(String(key))"
+                  class="p-2 border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800">
+                  <template
+                    v-if="groupPreviewData && groupPreviewData[key] !== null && groupPreviewData[key] !== undefined">
+                    <MarkdownRenderer v-if="isMarkdownContent(groupPreviewData[key])"
+                      :markdown-content="groupPreviewData[key] as string" />
+                    <pre v-else-if="typeof groupPreviewData[key] === 'object' || Array.isArray(groupPreviewData[key])"
+                      class="text-xs whitespace-pre-wrap break-all">{{ JSON.stringify(groupPreviewData[key], null, 2) }}</pre>
+                    <p v-else class="text-xs whitespace-pre-wrap break-all">{{ String(groupPreviewData[key]) }}</p>
+                  </template>
+                  <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">
+                    无可用预览数据。
+                  </p>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
         <template v-else>
+          <!-- This case implies activeTabId and groupOutputs exist, but all are CONVERTIBLE_ANY or no displayable outputs -->
           <p class="p-4 text-sm text-gray-500 dark:text-gray-400">
-            未能加载组输出数据。
+            当前工作流的组输出没有可用接口。
           </p>
         </template>
       </template>
+
+      <!-- 流式预览模式 -->
+      <template v-else-if="panelMode === 'streamPreview'">
+        <template v-if="activeTarget && activeTarget.nodeId">
+          <div class="p-4 space-y-2">
+            <div>
+              <p class="text-xs mb-2 text-gray-500 dark:text-gray-400">实时流式文本输出：</p>
+              <div class="p-2 border rounded bg-gray-50 dark:bg-gray-700/50 max-h-96 overflow-y-auto">
+                <pre v-if="currentAccumulatedStreamText"
+                  class="text-xs whitespace-pre-wrap break-all">{{ currentAccumulatedStreamText }}</pre>
+                <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">
+                  等待流数据...
+                </p>
+              </div>
+            </div>
+          </div>
+        </template>
+        <template v-else>
+          <p class="p-4 text-sm text-gray-500 dark:text-gray-400">
+            无预览目标被选中。右键点击节点以激活流式预览。
+          </p>
+        </template>
+      </template>
+
     </div>
   </div>
 </template>
@@ -165,17 +206,16 @@
 <script setup lang="ts">
 import { ref, onUnmounted, type Ref, computed, watch } from 'vue'; // Added watch
 import { useLocalStorage } from '@vueuse/core';
-import { DataFlowType } from '@comfytavern/types'; // Added DataFlowType import
+import { DataFlowType, type OutputDefinition } from '@comfytavern/types'; // ChunkPayload 不再需要在这里导入, 添加 WorkflowNode, OutputDefinition
 import { useWorkflowManager } from '@/composables/workflow/useWorkflowManager';
 import { useExecutionStore } from '@/stores/executionStore';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import { useNodeStore } from '@/stores/nodeStore';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
 import type { Node as VueFlowNode } from "@vue-flow/core";
-import type { OutputDefinition } from '@comfytavern/types';
 
 // 新增：面板模式状态
-const panelMode = ref<'singlePreview' | 'groupOverview'>('singlePreview');
+const panelMode = ref<'singlePreview' | 'groupOverview' | 'streamPreview'>('singlePreview');
 
 // 新增：组输出项的折叠状态 (使用 activeTabId 作为 key)
 const groupOutputItemCollapseState = useLocalStorage('groupOutputItemCollapseStatePerWorkflow', {} as Record<string, Record<string, boolean>>);
@@ -229,6 +269,25 @@ const groupPreviewData = computed(() => {
   }, {} as Record<string, any>);
 });
 
+// 新增：计算可显示的组输出项
+const displayableGroupOutputs = computed<Record<string, OutputDefinition>>(() => {
+  const result: Record<string, OutputDefinition> = {};
+  if (groupOutputs.value) {
+    for (const key in groupOutputs.value) {
+      const outputDef = groupOutputs.value[key];
+      // Add a check to ensure outputDef is defined before accessing its properties
+      if (outputDef && outputDef.dataFlowType !== DataFlowType.CONVERTIBLE_ANY) {
+        result[key] = outputDef; // outputDef is narrowed to OutputDefinition here
+      }
+    }
+  }
+  return result;
+});
+
+const displayableGroupOutputsCount = computed(() => {
+  return Object.keys(displayableGroupOutputs.value).length;
+});
+
 // 处理组输出项的折叠状态
 const toggleGroupOutputCollapse = (outputKey: string) => {
   if (!activeTabId.value) return;
@@ -252,12 +311,18 @@ const isMarkdownContent = (content: unknown): content is string => {
   return /^#|^\*\*|^-\s|^```|\[.*\]\(.*\)|!\[.*\]\(.*\)/.test(content);
 };
 
-// 监听 activeTarget 的变化，如果设置了新的单一预览目标，则切换回单一预览模式
-watch(activeTarget, (newTarget) => {
+// 监听 activeTarget 的变化
+watch(activeTarget, (newTarget, oldTarget) => {
+  // 如果设置了新的单一预览目标，并且当前不是流式预览，则切换回单一预览模式
   if (newTarget && panelMode.value === 'groupOverview') {
     panelMode.value = 'singlePreview';
   }
-});
+  // 如果节点目标改变，并且当前是流式预览模式，可能需要重置流式内容
+  // (这部分逻辑可以根据具体需求调整，例如，如果流式内容是持久的直到手动清除)
+  if (newTarget?.nodeId !== oldTarget?.nodeId && panelMode.value === 'streamPreview') {
+    // currentAccumulatedStreamText 会通过 computed 自动更新
+  }
+}, { deep: true });
 
 // 监听来自 workflowManager 的请求，切换到组输出总览模式
 watch(() => workflowManager.showGroupOutputOverview.value, (showGroupOverview) => {
@@ -275,52 +340,79 @@ const previewData = computed(() => {
   const { nodeId, slotKey } = activeTarget.value;
   const tabState = executionStore.tabExecutionStates.get(activeTabId.value);
   if (!tabState || !tabState.nodeOutputs || !tabState.nodeOutputs[nodeId]) {
+    // 尝试从 nodePreviewOutputs 获取，如果 nodeOutputs 中没有
+    // 这取决于流式预览是否会写入 previewOutputs
+    // 根据 store 的逻辑，NODE_COMPLETE 会写入 nodeOutputs 或 nodePreviewOutputs
+    // NODE_YIELD 应该类似地决定写入哪里
+    // 假设 NODE_YIELD 会更新到 nodeOutputs (如果主流程)
+    if (tabState?.nodePreviewOutputs && tabState.nodePreviewOutputs[nodeId]) {
+      return tabState.nodePreviewOutputs[nodeId]?.[slotKey] ?? null;
+    }
     return null;
   }
   return tabState.nodeOutputs[nodeId]?.[slotKey] ?? null;
 });
 
-const activeNodeInstance = computed(() => {
-  if (!activeTarget.value || !activeTabId.value) return null;
-  const workflowData = workflowStore.getWorkflowData(activeTabId.value);
-  return workflowData?.nodes.find((n: VueFlowNode) => n.id === activeTarget.value!.nodeId) || null;
+const activeNodeInstance = computed<VueFlowNode | null>(() => {
+  if (!activeTarget.value || !activeTabId.value) {
+    return null;
+  }
+  const elements = workflowManager.getElements(activeTabId.value);
+  const nodeElements = elements.filter(el => !("source" in el)) as VueFlowNode[]; // 过滤出节点
+  const foundNode = nodeElements.find(n => n.id === activeTarget.value!.nodeId) || null;
+  return foundNode;
 });
 
 const nodeDisplayName = computed(() => {
-  if (!activeNodeInstance.value) return activeTarget.value?.nodeId || 'N/A';
-  const node = activeNodeInstance.value;
-  const fullType = node.data?.namespace ? `${node.data.namespace}:${node.type}` : node.type;
-  const nodeDef = nodeStore.getNodeDefinitionByFullType(fullType);
-  // 优先顺序: 用户自定义标签 (node.data.label) -> VueFlow 标签 (node.label) -> 节点定义显示名 (nodeDef.displayName) -> 节点类型 (node.type)
-  return node.data?.label || node.label || nodeDef?.displayName || node.type;
+  if (!activeNodeInstance.value) {
+    return activeTarget.value?.nodeId || 'N/A';
+  }
+  const node = activeNodeInstance.value; // 类型为 VueFlowNode
+  const nodeDef = node.type ? nodeStore.getNodeDefinitionByFullType(node.type) : undefined;
+  return node.data?.displayName || node.label || nodeDef?.displayName || node.id || node.type || 'N/A';
 });
 
 const slotDisplayName = computed(() => {
-  if (!activeNodeInstance.value || !activeTarget.value) return activeTarget.value?.slotKey || 'N/A';
-  const node = activeNodeInstance.value;
-  const slotKey = activeTarget.value.slotKey; // 这个 slotKey 就是 outputs Record 中的键
-  const fullType = node.data?.namespace ? `${node.data.namespace}:${node.type}` : node.type;
-  const nodeDef = nodeStore.getNodeDefinitionByFullType(fullType);
-  const outputSlotDef: OutputDefinition | undefined = nodeDef?.outputs?.[slotKey]; // 直接通过 key 访问并添加类型注解
-  // 优先顺序: 插槽定义显示名 (outputSlotDef.displayName) -> 插槽键 (slotKey)
-  return outputSlotDef?.displayName || slotKey; // 使用 displayName
+  if (!activeNodeInstance.value || !activeTarget.value) {
+    return activeTarget.value?.slotKey || 'N/A';
+  }
+  const node = activeNodeInstance.value; // 类型为 VueFlowNode
+  const slotKey = activeTarget.value.slotKey;
+
+  const vueFlowSlotData = node.data?.outputs?.[slotKey];
+  if (vueFlowSlotData?.displayName) {
+    return vueFlowSlotData.displayName;
+  }
+
+  const nodeDef = node.type ? nodeStore.getNodeDefinitionByFullType(node.type) : undefined;
+  const outputSlotDefFromDef = nodeDef?.outputs?.[slotKey];
+  return outputSlotDefFromDef?.displayName || slotKey;
 });
 
-// 辅助函数判断内容是否可能是 Markdown
+// 新增：计算属性，用于获取当前选中节点的累积流式文本
+const currentAccumulatedStreamText = computed(() => {
+  if (!activeTabId.value || !activeTarget.value?.nodeId) {
+    return '';
+  }
+  return executionStore.getAccumulatedStreamedText(activeTabId.value, activeTarget.value.nodeId) || '';
+});
+
 const isMarkdownSlot = computed(() => {
   if (!activeTarget.value) return false;
-  // 启发式规则: 如果 slotKey 包含 'markdown'
+  // 启发式规则
   if (activeTarget.value.slotKey.toLowerCase().includes('markdown')) return true;
 
-  // 检查插槽定义的类型（如果可用）
-  const node = activeNodeInstance.value;
+  const node = activeNodeInstance.value; // 类型为 VueFlowNode
   if (node) {
     const slotKey = activeTarget.value.slotKey;
-    const fullType = node.data?.namespace ? `${node.data.namespace}:${node.type}` : node.type;
-    const nodeDef = nodeStore.getNodeDefinitionByFullType(fullType);
-    const outputSlotDef: OutputDefinition | undefined = nodeDef?.outputs?.[slotKey]; // 直接通过 key 访问并添加类型注解
-    // 假设 'markdown' 是一个明确的类型，检查 dataFlowType
-    if (outputSlotDef?.dataFlowType && typeof outputSlotDef.dataFlowType === 'string' && outputSlotDef.dataFlowType.toLowerCase().includes('markdown')) return true;
+    const outputSlotDef = node.data?.outputs?.[slotKey]; // 从 VueFlowNode.data 获取
+    if (outputSlotDef?.dataFlowType && typeof outputSlotDef.dataFlowType === 'string' && outputSlotDef.dataFlowType.toLowerCase().includes('markdown')) {
+      return true;
+    }
+    // 可选: 如果 VueFlowNode.data 中没有，再尝试从 nodeDef 获取
+    // const nodeDef = node.type ? nodeStore.getNodeDefinitionByFullType(node.type) : undefined;
+    // const outputSlotDefFromDef = nodeDef?.outputs?.[slotKey];
+    // if (outputSlotDefFromDef?.dataFlowType && typeof outputSlotDefFromDef.dataFlowType === 'string' && outputSlotDefFromDef.dataFlowType.toLowerCase().includes('markdown')) return true;
   }
   return false;
 });
