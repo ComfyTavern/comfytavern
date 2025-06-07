@@ -51,7 +51,7 @@ const PARAM_RIGHT_HANDLE_SPACE = 12 + 8; // 20px
 const PARAM_NAME_INLINE_INPUT_GAP = 8;
 
 /** 估算的内联输入组件（如数字、布尔值、下拉框）的最小宽度 */
-const INLINE_INPUT_MIN_WIDTH = 80;
+const INLINE_INPUT_MIN_WIDTH = 120;
 
 /** "输入"/"输出" 区域标题的水平内边距 (px-2 -> 8px * 2 = 16px) */
 
