@@ -9,14 +9,130 @@ import {
   NodeExecutingPayload,
   NodeCompletePayload,
   NodeErrorPayload,
+  ChunkPayload,
+  NodeYieldPayload,
   // ExecutionType, // No longer needed
 } from '@comfytavern/types';
 import { nodeManager } from './services/NodeManager'; // 用于获取节点定义
 import { WebSocketManager } from './websocket/WebSocketManager';
 import { DataFlowType, BuiltInSocketMatchCategory } from '@comfytavern/types';
 import { parseSubHandleId } from './utils/helpers'; //  InputDefinition导入解析函数
+import { Stream } from 'node:stream';
+import { promisify } from 'node:util';
 // import { OutputManager } from './services/OutputManager'; // TODO: Import OutputManager
 // import { HistoryService } from './services/HistoryService'; // TODO: Import HistoryService
+
+const finished = promisify(Stream.finished);
+
+class BufferOverflowError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'BufferOverflowError';
+  }
+}
+
+/**
+ * 一个简单的、带容量限制的异步队列，用于在生产者和消费者之间解耦。
+ * 实现了异步迭代器协议。
+ */
+class BoundedBuffer<T> {
+  private limit: number;
+  private buffer: T[] = [];
+  private waitingResolvers: ((value: IteratorResult<T>) => void)[] = [];
+  private isDone = false;
+  private error: any = null;
+
+  constructor({ limit }: { limit: number }) {
+    this.limit = limit;
+  }
+
+  isFull(): boolean {
+    return this.buffer.length >= this.limit;
+  }
+
+  async push(chunk: T): Promise<void> {
+    if (this.isDone) {
+      throw new Error('Cannot push to a finished buffer.');
+    }
+    this.buffer.push(chunk);
+    this.tryResolveWaiting();
+  }
+
+  signalEnd(): void {
+    if (!this.isDone) {
+      this.isDone = true;
+      this.tryResolveWaiting();
+    }
+  }
+
+  signalError(error: any): void {
+    if (!this.isDone) {
+      this.isDone = true;
+      this.error = error;
+      this.tryResolveWaiting();
+    }
+  }
+
+  private tryResolveWaiting(): void {
+    while (this.waitingResolvers.length > 0) {
+      const resolver = this.waitingResolvers.shift()!;
+      if (this.buffer.length > 0) {
+        resolver({ value: this.buffer.shift()!, done: false });
+      } else if (this.isDone) {
+        if (this.error) {
+          // Propagate the error through the iterator
+          // This is tricky as standard iterators don't throw this way.
+          // A better approach is to have the consumer check for an error state.
+          // For now, we resolve with done, and the consumer should check `this.error`.
+          // Or, we can make the promise reject, which is more idiomatic.
+          // Let's stick to resolving and let the puller task handle the rejection.
+          resolver({ value: undefined, done: true });
+        } else {
+          resolver({ value: undefined, done: true });
+        }
+      } else {
+        // No data and not done, put resolver back
+        this.waitingResolvers.unshift(resolver);
+        break;
+      }
+    }
+  }
+
+  [Symbol.asyncIterator](): AsyncGenerator<T, void, undefined> {
+    const next = (): Promise<IteratorResult<T>> => {
+      return new Promise<IteratorResult<T>>((resolve) => {
+        if (this.buffer.length > 0) {
+          resolve({ value: this.buffer.shift()!, done: false });
+        } else if (this.isDone) {
+          if (this.error) {
+            // This will cause the for-await-of loop to throw.
+            throw this.error;
+          }
+          resolve({ value: undefined, done: true });
+        } else {
+          this.waitingResolvers.push(resolve);
+        }
+      });
+    };
+
+    const self = {
+      next,
+      return: async (): Promise<IteratorResult<T, void>> => {
+        this.signalEnd();
+        return { value: undefined, done: true as const };
+      },
+      throw: async (e: any): Promise<IteratorResult<T, void>> => {
+        this.signalError(e);
+        return { value: undefined, done: true as const };
+      },
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    return self;
+  }
+}
+
 
 /**
  * 负责执行单个工作流实例的引擎。
@@ -485,51 +601,46 @@ export class ExecutionEngine {
       return { status: ExecutionStatus.ERROR, error: errorMsg };
     }
 
-    // 发送节点开始执行状态
     this.nodeStates[nodeId] = ExecutionStatus.RUNNING;
     const executingPayload: NodeExecutingPayload = { promptId: this.promptId, nodeId };
-    this.wsManager.broadcast('NODE_EXECUTING', executingPayload); // 或者只发给相关 client?
+    this.wsManager.broadcast('NODE_EXECUTING', executingPayload);
     console.log(`[Engine-${this.promptId}] Executing node ${nodeId} (${node.fullType})...`);
 
-
     try {
-      // 检查中断标志
       if (this.isInterrupted) {
         throw new Error('Execution interrupted by user.');
       }
 
-      // NodeGroup 逻辑已移至前端进行扁平化处理
-
-      // TODO: 传递更丰富的上下文，包括 promptId, engine 实例等
       const context = {
         promptId: this.promptId,
-        // 将工作流的 interfaceInputs 传递给节点执行上下文
-        // GroupInputNode 将使用它来获取其输出值
-        // GroupOutputNode 可能也需要 interfaceOutputs 定义 (暂未实现相关逻辑)
         workflowInterfaceInputs: this.payload.interfaceInputs,
-        workflowInterfaceOutputs: this.payload.interfaceOutputs, // 以备 GroupOutputNode 将来使用
-        // 如果节点需要访问整个工作流定义，可以传递 this.payload
-        // currentWorkflow: this.payload,
+        workflowInterfaceOutputs: this.payload.interfaceOutputs,
       };
-      // 实际执行节点逻辑
-      const outputs = await definition.execute(inputs, context);
 
-      // 检查中断标志 (执行后)
+      const executeFn = definition.execute;
+      // A more robust way to check for async generator functions
+      const isAsyncGenerator = Object.prototype.toString.call(executeFn) === '[object AsyncGeneratorFunction]';
+
+      let outputs: Record<string, any> | void;
+
+      if (isAsyncGenerator) {
+        console.log(`[Engine-${this.promptId}] Node ${nodeId} is a stream node. Handling with stream logic.`);
+        outputs = await this.handleStreamNodeExecution(node, definition, inputs, context);
+      } else {
+        console.log(`[Engine-${this.promptId}] Node ${nodeId} is a batch node. Handling with standard await.`);
+        const result = await (executeFn(inputs, context) as Promise<Record<string, any>>);
+        outputs = result;
+      }
+
       if (this.isInterrupted) {
         throw new Error('Execution interrupted by user.');
       }
 
-      // 存储结果
-      this.nodeResults[nodeId] = outputs;
+      // Store results (stream nodes might return void for batch outputs)
+      this.nodeResults[nodeId] = outputs || {};
       this.nodeStates[nodeId] = ExecutionStatus.COMPLETE;
 
-      // TODO: 调用 OutputManager 保存输出 (仅限 full execution)
-      // if (executionType === 'full') {
-      //   await this.outputManager.saveOutputs(this.promptId, nodeId, outputs);
-      // }
-
-      // 发送节点完成状态
-      this.sendNodeComplete(nodeId, outputs);
+      this.sendNodeComplete(nodeId, outputs || {});
       console.log(`[Engine-${this.promptId}] Node ${nodeId} completed.`);
       return { status: ExecutionStatus.COMPLETE };
 
@@ -538,10 +649,99 @@ export class ExecutionEngine {
       console.error(`[Engine-${this.promptId}] Error executing node ${nodeId} (${node.fullType}):`, errorMessage);
       this.nodeStates[nodeId] = this.isInterrupted ? ExecutionStatus.INTERRUPTED : ExecutionStatus.ERROR;
 
-      // 发送节点错误状态
       this.sendNodeError(nodeId, errorMessage);
       return { status: this.nodeStates[nodeId], error: errorMessage };
     }
+  }
+
+  /**
+   * 处理流式节点的执行，包括数据拉取、缓冲、多路分发和背压。
+   * @param node 正在执行的节点
+   * @param context 包含 promptId 等信息的执行上下文
+   * @returns 返回一个包含批处理结果的对象，或者在流式模式下返回 void
+   */
+  private async handleStreamNodeExecution(
+    node: ExecutionNode,
+    nodeDefinition: NodeDefinition,
+    inputs: Record<string, any>,
+    context: { promptId: NanoId; [key: string]: any }
+  ): Promise<Record<string, any> | void> {
+    const executeFn = nodeDefinition.execute!;
+    const nodeGenerator = executeFn(inputs, context) as AsyncGenerator<ChunkPayload, Record<string, any> | void, undefined>;
+    
+    const buffer = new BoundedBuffer<ChunkPayload>({ limit: 1000 }); // 可配置
+    const sourceStream = Stream.Readable.from(buffer, { objectMode: true });
+
+    let batchResult: Record<string, any> | void = undefined;
+
+    // 1. Puller Task
+    const pullerTask = (async () => {
+      try {
+        // The result of the for-await-of loop on a generator is the generator's return value.
+        // However, we need to get it explicitly.
+        let next = await nodeGenerator.next();
+        while(!next.done) {
+          if (buffer.isFull()) {
+            throw new BufferOverflowError(`Node ${node.id} stream buffer overflow.`);
+          }
+          await buffer.push(next.value);
+          next = await nodeGenerator.next();
+        }
+        batchResult = next.value; // This is the return value of the generator
+      } catch (error) {
+        buffer.signalError(error);
+        throw error;
+      } finally {
+        buffer.signalEnd();
+      }
+    })();
+
+    // 2. Multicaster Setup
+    const consumerPromises: Promise<any>[] = [];
+
+    const eventBusStream = new Stream.PassThrough({ objectMode: true });
+    sourceStream.pipe(eventBusStream);
+    consumerPromises.push(this.consumeForEventBus(eventBusStream, node.id, context.promptId));
+
+    // TODO: Implement downstream connections
+
+    // 3. Error Handling & Completion
+    try {
+      await Promise.all([pullerTask, ...consumerPromises]);
+    } catch (error: any) {
+      if (error instanceof BufferOverflowError) {
+        console.error(`[Engine-${context.promptId}] Fusing workflow due to buffer overflow in node ${node.id}.`);
+        this.interrupt();
+        this.sendNodeError(node.id, `Buffer Overflow: ${error.message}`);
+      }
+      // Re-throw to be caught by the main executeNode catch block
+      throw error;
+    }
+
+    return batchResult;
+  }
+
+  /**
+   * 消费来自多路分发器的流，并将其转换为 WebSocket 事件。
+   */
+  private async consumeForEventBus(readable: Stream.Readable, nodeId: NanoId, promptId: NanoId): Promise<void> {
+    for await (const chunk of readable) {
+      const payload: NodeYieldPayload = {
+        promptId,
+        sourceNodeId: nodeId,
+        yieldedContent: chunk as ChunkPayload,
+        isLastChunk: false, // 这个标志需要重新考虑，因为流结束时才知道
+      };
+      this.wsManager.broadcast('NODE_YIELD', payload);
+    }
+    // 流结束时，发送一个最终的 isLastChunk=true 的消息
+    const finalPayload: NodeYieldPayload = {
+      promptId,
+      sourceNodeId: nodeId,
+      yieldedContent: { type: 'finish_reason_chunk', content: 'Stream ended' }, // 示例内容
+      isLastChunk: true,
+    };
+    this.wsManager.broadcast('NODE_YIELD', finalPayload);
   }
 
   // --- WebSocket 发送辅助方法 ---
