@@ -69,7 +69,7 @@ const previewCharacters = computed(() => {
       没有找到角色卡。
     </div>
     <div v-if="!isLoading && characters.length > 0 && !error" class="mt-4 text-right">
-      <router-link to="/characters" class="text-blue-500 hover:underline">查看全部角色卡 &rarr;</router-link>
+      <router-link :to="{ name: 'characters' }" class="text-blue-500 hover:underline">查看全部角色卡 &rarr;</router-link>
     </div>
   </div>
 </template>
