@@ -16,30 +16,37 @@
         @blur="endEdit"
         @keydown.enter="endEdit"
         @keydown.esc="cancelEdit"
-        class="w-full px-2 py-1 text-xs rounded border transition-colors duration-200 h-6 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-700 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500 text-left"
-        :class="{
-          'border-red-500 dark:border-red-700': hasError,
-          'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default focus:ring-0 focus:border-gray-300 dark:focus:border-gray-600':
-            props.readonly && !props.disabled,
-          'disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed':
-            props.disabled,
-        }"
+        class="w-full rounded border transition-colors duration-200 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-700 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500 text-left"
+        :class="[
+          sizeClasses.editingInput,
+          {
+            'border-red-500 dark:border-red-700': hasError,
+            'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default focus:ring-0 focus:border-gray-300 dark:focus:border-gray-600':
+              props.readonly && !props.disabled,
+            'disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed':
+              props.disabled,
+          }
+        ]"
         autocomplete="off"
       />
     </template>
     <template v-else>
       <Tooltip :content="tooltipContent" placement="top" :show-delay="500" trigger-class="w-full">
         <div
-          class="flex items-stretch rounded overflow-hidden border border-gray-300 dark:border-gray-600 group focus-within:ring-1 focus-within:ring-blue-300 dark:focus-within:ring-blue-700 focus-within:border-transparent h-6"
-          :class="{
-            'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default':
-              props.readonly && !props.disabled,
-            'opacity-50 cursor-not-allowed': props.disabled,
-          }"
+          class="flex items-stretch rounded overflow-hidden border border-gray-300 dark:border-gray-600 group focus-within:ring-1 focus-within:ring-blue-300 dark:focus-within:ring-blue-700 focus-within:border-transparent"
+          :class="[
+            sizeClasses.displayWrapper,
+            {
+              'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default':
+                props.readonly && !props.disabled,
+              'opacity-50 cursor-not-allowed': props.disabled,
+            }
+          ]"
         >
           <!-- 减少按钮 -->
           <button
-            class="flex items-center justify-center w-4 px-0.5 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 active:bg-gray-200 dark:active:bg-gray-500 transition-colors duration-200 focus:outline-none border-r border-gray-300 dark:border-gray-600"
+            class="flex items-center justify-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 active:bg-gray-200 dark:active:bg-gray-500 transition-colors duration-200 focus:outline-none border-r border-gray-300 dark:border-gray-600"
+            :class="sizeClasses.stepperButton"
             @click.stop="stepValue(-1)"
             :disabled="props.disabled || props.readonly"
           >
@@ -62,15 +69,18 @@
           <!-- 数值显示 -->
           <div
             ref="valueDisplayRef"
-            class="flex flex-1 items-center px-2 py-1 text-xs select-none text-gray-900 dark:text-gray-100 text-right transition-colors duration-200 bg-white dark:bg-gray-700"
-            :class="{
-              'opacity-50 cursor-not-allowed': props.disabled, // Highest precedence for disabled
-              'opacity-75 cursor-default': props.readonly && !props.disabled, // Readonly takes precedence over interactive if not disabled
-              'cursor-ew-resize': !props.disabled && !props.readonly, // Draggable only if not disabled or readonly
-              'border-red-500 dark:border-red-700': hasError,
-              'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600':
-                hasSuggestions && !props.disabled && !props.readonly && !isDragging, // Click to open suggestions
-            }"
+            class="flex flex-1 items-center select-none text-gray-900 dark:text-gray-100 text-right transition-colors duration-200 bg-white dark:bg-gray-700"
+            :class="[
+              sizeClasses.valueDisplay,
+              {
+                'opacity-50 cursor-not-allowed': props.disabled, // Highest precedence for disabled
+                'opacity-75 cursor-default': props.readonly && !props.disabled, // Readonly takes precedence over interactive if not disabled
+                'cursor-ew-resize': !props.disabled && !props.readonly, // Draggable only if not disabled or readonly
+                'border-red-500 dark:border-red-700': hasError,
+                'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600':
+                  hasSuggestions && !props.disabled && !props.readonly && !isDragging, // Click to open suggestions
+              }
+            ]"
             @mousedown.stop="handleMouseDown"
           >
             {{ formatDisplayValue(displayValue) }}
@@ -78,7 +88,8 @@
 
           <!-- 增加按钮 -->
           <button
-            class="flex items-center justify-center w-4 px-0.5 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 active:bg-gray-200 dark:active:bg-gray-500 transition-colors duration-200 focus:outline-none border-l border-gray-300 dark:border-gray-600"
+            class="flex items-center justify-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 active:bg-gray-200 dark:active:bg-gray-500 transition-colors duration-200 focus:outline-none border-l border-gray-300 dark:border-gray-600"
+            :class="sizeClasses.stepperButton"
             @click.stop="stepValue(1)"
             :disabled="props.disabled || props.readonly"
           >
@@ -140,6 +151,7 @@ interface Props {
   disabled?: boolean;
   suggestions?: number[];
   readonly?: boolean;
+  size?: 'small' | 'large';
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -152,6 +164,7 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   suggestions: () => [],
   readonly: false,
+  size: 'small',
 });
 
 const emit = defineEmits<{
@@ -178,6 +191,25 @@ const dropdownWidth = ref(0);
 // Get viewport from VueFlow to access zoom level
 const { viewport } = useVueFlow();
 const currentCanvasScale = computed(() => viewport.value.zoom ?? 1);
+
+const sizeClasses = computed(() => {
+  if (props.size === 'large') {
+    return {
+      editingInput: 'h-10 px-3 py-2 text-sm',
+      displayWrapper: 'h-10',
+      stepperButton: 'w-8 px-2',
+      valueDisplay: 'px-3 text-sm',
+    };
+  }
+  // Default 'small'
+  return {
+    editingInput: 'h-6 px-2 py-1 text-xs',
+    displayWrapper: 'h-6',
+    stepperButton: 'w-4 px-0.5',
+    valueDisplay: 'px-2 text-xs',
+  };
+});
+
 
 const hasSuggestions = computed(() => props.suggestions && props.suggestions.length > 0);
 

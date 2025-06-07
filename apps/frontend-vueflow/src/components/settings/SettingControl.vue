@@ -21,11 +21,13 @@
       :max="itemConfig.max"
       :step="itemConfig.step"
       class="w-full"
+      size="large"
     />
     <BooleanToggle
       v-else-if="itemConfig.type === 'boolean'"
       v-model="currentValue"
       :id="itemConfig.key"
+      size="large"
     />
     <SelectInput
       v-else-if="itemConfig.type === 'select'"
@@ -33,6 +35,7 @@
       :id="itemConfig.key"
       :suggestions="itemConfig.options || []"
       class="w-full"
+      size="large"
     />
     <p v-else>咕？未知的控件类型: {{ itemConfig.type }}</p>
   </div>

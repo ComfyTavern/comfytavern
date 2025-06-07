@@ -1,30 +1,11 @@
 <template>
   <div class="boolean-toggle">
-    <button
-      type="button"
-      :disabled="props.disabled || props.readonly"
-      @click="toggle"
-      class="relative inline-flex h-4 w-8 items-center rounded-full transition-colors duration-200
-             focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-400
-             dark:focus:ring-blue-600 focus:ring-offset-2"
-      :class="{
-        'bg-blue-500 dark:bg-blue-600': props.modelValue,
-        'bg-gray-200 dark:bg-gray-700': !props.modelValue,
-        'opacity-50 cursor-not-allowed': props.disabled || props.readonly,
-        'cursor-pointer': !props.disabled && !props.readonly
-      }"
-      role="switch"
-      :aria-checked="props.modelValue"
-    >
-      <span
-        class="inline-block h-3 w-3 transform rounded-full bg-white shadow
-               transition-transform duration-200 ease-in-out"
-        :class="{
-          'translate-x-4': props.modelValue,
-          'translate-x-0.5': !props.modelValue
-        }"
-      />
-    </button>
+    <label class="relative inline-flex items-center" :class="sizeClasses.cursor">
+      <input type="checkbox" :checked="modelValue" @change="toggle" class="sr-only peer" :disabled="props.disabled || props.readonly">
+      <div class="rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:border-white after:content-[''] after:absolute after:bg-white after:border-gray-300 after:border after:rounded-full after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"
+           :class="sizeClasses.wrapper">
+      </div>
+    </label>
     <div v-if="props.hasError" class="text-xs text-red-500 dark:text-red-400 mt-1">
       {{ props.errorMessage }}
     </div>
@@ -32,12 +13,14 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 interface Props {
   modelValue: boolean
   disabled?: boolean
   hasError?: boolean
   errorMessage?: string
   readonly?: boolean
+  size?: 'small' | 'large'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -46,15 +29,37 @@ const props = withDefaults(defineProps<Props>(), {
   hasError: false,
   errorMessage: '',
   readonly: false,
+  size: 'small',
 })
+
+const sizeClasses = computed(() => {
+  const base = {
+    cursor: !props.disabled && !props.readonly ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
+  };
+  if (props.size === 'large') {
+    return {
+      ...base,
+      wrapper: "w-11 h-6 after:top-0.5 after:left-[2px] after:h-5 after:w-5 peer-checked:after:translate-x-full",
+    };
+  }
+  // small
+  return {
+    ...base,
+    wrapper: "w-8 h-4 after:top-[1px] after:left-[1px] after:h-3 after:w-3 peer-checked:after:translate-x-4",
+  };
+});
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 
-const toggle = () => {
-  if (!props.disabled && !props.readonly) {
-    emit('update:modelValue', !props.modelValue)
+const toggle = (event?: Event) => {
+  if (props.disabled || props.readonly) return;
+
+  if (event && event.target instanceof HTMLInputElement) {
+    emit('update:modelValue', event.target.checked);
+  } else {
+    emit('update:modelValue', !props.modelValue);
   }
 }
 </script>

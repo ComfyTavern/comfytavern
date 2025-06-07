@@ -5,17 +5,20 @@
       type="button"
       :disabled="props.disabled || props.readonly"
       @click.stop="toggleDropdown"
-      class="w-full px-2 py-1 text-xs rounded border transition-colors duration-200 h-6 flex items-center justify-between text-left
+      class="w-full rounded border transition-colors duration-200 flex items-center justify-between text-left
              bg-white dark:bg-gray-700
              border-gray-300 dark:border-gray-600
              text-gray-900 dark:text-gray-100
              focus:ring-1 focus:ring-inset focus:ring-blue-300 dark:focus:ring-blue-700 focus:border-transparent
              hover:border-gray-400 dark:hover:border-gray-500"
-      :class="{
-        'border-red-500 dark:border-red-700': props.hasError,
-        'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default focus:ring-0 focus:border-gray-300 dark:focus:border-gray-600': props.readonly && !props.disabled,
-        'disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed': props.disabled
-      }"
+      :class="[
+        sizeClasses.button,
+        {
+          'border-red-500 dark:border-red-700': props.hasError,
+          'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default focus:ring-0 focus:border-gray-300 dark:focus:border-gray-600': props.readonly && !props.disabled,
+          'disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed': props.disabled
+        }
+      ]"
       aria-haspopup="listbox"
       :aria-expanded="isDropdownVisible"
     >
@@ -69,6 +72,7 @@ interface Props {
   hasError?: boolean
   errorMessage?: string
   readonly?: boolean
+  size?: 'small' | 'large'
 }
 
 // 定义 Props 默认值
@@ -80,7 +84,20 @@ const props = withDefaults(defineProps<Props>(), {
   hasError: false,
   errorMessage: '',
   readonly: false,
+  size: 'small',
 })
+
+const sizeClasses = computed(() => {
+  if (props.size === 'large') {
+    return {
+      button: 'h-10 px-3 py-2 text-sm',
+    };
+  }
+  // small
+  return {
+    button: 'h-6 px-2 py-1 text-xs',
+  };
+});
 
 // Define emits
 const emit = defineEmits<{
