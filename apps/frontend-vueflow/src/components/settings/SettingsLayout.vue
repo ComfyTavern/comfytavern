@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineComponent, defineAsyncComponent } from 'vue';
+import { ref, computed, defineComponent, defineAsyncComponent, markRaw } from 'vue';
 import type { SettingsSection, SettingItemConfig } from '@/types/settings';
 import SettingsPanel from './SettingsPanel.vue';
 
@@ -82,7 +82,7 @@ const sections = ref<SettingsSection[]>([
     label: '测试面板',
     icon: 'bug_report', // Material Icon name for a bug or test
     type: 'component',
-    component: defineAsyncComponent(() => import('@/views/TestPanelView.vue'))
+    component: markRaw(defineAsyncComponent(() => import('@/views/TestPanelView.vue')))
   },
   { id: 'about', label: '关于', icon: 'info', type: 'component', component: { ...PlaceholderComponent, props: { title: '关于 ComfyTavern' } } },
 ]);

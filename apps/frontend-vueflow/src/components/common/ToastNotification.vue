@@ -1,132 +1,104 @@
 <template>
   <!-- Teleport to="body" 已移除 -->
-  <div
-    v-if="visible"
-    class="transition-all duration-300 flex items-center"
-    :style="{ zIndex: 9999 }"
-    :class="[
-      /* positionClasses 已移除，由 DialogContainer 控制 */
-      { 'opacity-0 translate-y-4': !showContent, 'opacity-100 translate-y-0': showContent }
-    ]"
-  >
-    <div
-      class="max-w-md w-full shadow-lg rounded-lg pointer-events-auto overflow-hidden"
-      :class="[
-        typeClasses,
-        { 'ring-1': !isDark }
-      ]"
-    >
+  <!-- ********* 核心修改： 移除了 v-if="visible" ********* -->
+  <!-- 让组件的生命周期由父组件的 v-for 和 TransitionGroup 控制，内部只控制动画class -->
+  <div class="transition-all duration-300 flex items-center" :style="{ zIndex: 9999 }" :class="[
+    /* positionClasses 已移除，由 DialogContainer 控制 */
+    { 'opacity-0 translate-y-4': !showContent, 'opacity-100 translate-y-0': showContent }
+  ]" @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave">
+    <div class="max-w-md w-full shadow-lg rounded-lg pointer-events-auto overflow-hidden" :class="[
+      typeClasses,
+      { 'ring-1': !isDark }
+    ]">
       <div class="p-4">
         <div class="flex items-start">
           <!-- 图标 -->
           <div class="flex-shrink-0">
             <!-- 成功图标 -->
-            <svg
-              v-if="type === 'success'"
-              class="h-6 w-6 text-green-400"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            <svg v-if="type === 'success'" class="h-6 w-6 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+              viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+
+            <!-- 错误图标 -->
+            <svg v-else-if="type === 'error'" class="h-6 w-6 text-red-400" xmlns="http://www.w3.org/2000/svg"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+
+            <!-- 警告图标 -->
+            <svg v-else-if="type === 'warning'" class="h-6 w-6 text-yellow-400" xmlns="http://www.w3.org/2000/svg"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+
+            <!-- 信息图标 -->
+            <svg v-else class="h-6 w-6 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+
+          <!-- 内容 -->
+          <div class="ml-3 flex-1 pt-0.5">
+            <p v-if="title" class="text-sm font-medium" :class="textColorClass">{{ title }}</p>
+            <p class="text-sm" :class="[title ? 'mt-1' : '', textColorClass]">{{ message }}</p>
+          </div>
+
+          <!-- 关闭按钮 -->
+          <div class="ml-4 flex-shrink-0 flex">
+            <button @click="close"
+              class="inline-flex rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent"
+              :class="closeButtonClass">
+              <span class="sr-only">关闭</span>
+              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clip-rule="evenodd" />
               </svg>
-              
-              <!-- 错误图标 -->
-              <svg
-                v-else-if="type === 'error'"
-                class="h-6 w-6 text-red-400"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              
-              <!-- 警告图标 -->
-              <svg
-                v-else-if="type === 'warning'"
-                class="h-6 w-6 text-yellow-400"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              
-              <!-- 信息图标 -->
-              <svg
-                v-else
-                class="h-6 w-6 text-blue-400"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            
-            <!-- 内容 -->
-            <div class="ml-3 flex-1 pt-0.5">
-              <p v-if="title" class="text-sm font-medium" :class="textColorClass">{{ title }}</p>
-              <p class="text-sm" :class="[title ? 'mt-1' : '', textColorClass]">{{ message }}</p>
-            </div>
-            
-            <!-- 关闭按钮 -->
-            <div class="ml-4 flex-shrink-0 flex">
-              <button
-                @click="close"
-                class="inline-flex rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent"
-                :class="closeButtonClass"
-              >
-                <span class="sr-only">关闭</span>
-                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                </svg>
-              </button>
-            </div>
+            </button>
           </div>
         </div>
-        
-        <!-- 进度条 -->
-        <div
-          v-if="duration > 0"
-          class="h-1 transition-all duration-100 ease-linear"
-          :class="progressBarClass"
-          :style="{ width: `${progressWidth}%` }"
-        ></div>
       </div>
+
+      <!-- 进度条 -->
+      <div v-if="duration > 0" class="h-1 mt-2 transition-all duration-100 ease-linear" :class="progressBarClass"
+        :style="{ width: `${progressWidth}%` }"></div>
     </div>
+  </div>
   <!-- </Teleport> -->
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount } from 'vue';
+// 增加 onUnmounted, onMounted 钩子
+import { ref, computed, watch, onBeforeUnmount, onMounted, onUnmounted } from 'vue';
 import { useThemeStore } from '../../stores/theme';
 
 type ToastType = 'info' | 'success' | 'warning' | 'error';
-type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
+// position type 已移除，因为不由自身控制
+// type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
 
 const props = withDefaults(defineProps<{
+  // visible 现在主要用于 watch 启动 timer 和动画，不控制 v-if
   visible: boolean;
   title?: string;
   message: string;
   type?: ToastType;
   duration?: number; // 显示时长，单位毫秒，0表示不自动关闭
-  position?: ToastPosition;
+  // position?: ToastPosition; // 位置由父容器 DialogContainer 控制
 }>(), {
   title: '',
   type: 'info',
   duration: 3000, // 默认3秒后自动关闭
-  position: 'top-right',
+  // position: 'top-right',
 });
 
 const emit = defineEmits<{
+  // 通知父组件可以移除了
   (e: 'update:visible', value: boolean): void;
-  (e: 'close'): void;
+  (e: 'close'): void; // 含义变为：通知父组件，本组件已完成关闭流程，可以被移除了
 }>();
 
 // 使用主题store
@@ -135,22 +107,25 @@ const isDark = computed(() => themeStore.isDark);
 
 // 控制内容显示的动画
 const showContent = ref(false);
+// 增加一个标志位，防止重复关闭
+const isClosing = ref(false);
+
 
 // 自动关闭计时器
-let autoCloseTimer: number | null = null;
+let autoCloseTimer: number | undefined = undefined; // 使用 undefined 更清晰
 
 // 进度条宽度
 const progressWidth = ref(100);
-let progressInterval: number | null = null;
+let progressInterval: number | undefined = undefined;
 
-// 计算位置类名 (已移除，由 DialogContainer 控制)
-// const positionClasses = computed(() => { ... });
 
 // 计算类型相关的类名
 const typeClasses = computed(() => {
+  // 防御性编程：在组件卸载过程中，props 可能为 null 或 computed 被访问
+  const currentType = props?.type || 'info';
   if (isDark.value) {
     // 暗色模式下的样式
-    switch (props.type) {
+    switch (currentType) {
       case 'success':
         return 'bg-gray-800 border-l-4 border-green-500';
       case 'error':
@@ -163,7 +138,7 @@ const typeClasses = computed(() => {
     }
   } else {
     // 亮色模式下的样式
-    switch (props.type) {
+    switch (currentType) {
       case 'success':
         return 'bg-white ring-green-300 border-l-4 border-green-500';
       case 'error':
@@ -179,25 +154,20 @@ const typeClasses = computed(() => {
 
 // 计算文本颜色
 const textColorClass = computed(() => {
-  if (isDark.value) {
-    return 'text-gray-100';
-  } else {
-    return 'text-gray-900';
-  }
+  return isDark.value ? 'text-gray-100' : 'text-gray-900';
 });
 
 // 计算关闭按钮样式
 const closeButtonClass = computed(() => {
-  if (isDark.value) {
-    return 'text-gray-400 hover:text-gray-200 focus:ring-gray-600';
-  } else {
-    return 'text-gray-400 hover:text-gray-600 focus:ring-gray-400';
-  }
+  return isDark.value
+    ? 'text-gray-400 hover:text-gray-200 focus:ring-gray-600'
+    : 'text-gray-400 hover:text-gray-600 focus:ring-gray-400';
 });
-
 // 计算进度条样式
 const progressBarClass = computed(() => {
-  switch (props.type) {
+  // 防御性编程
+  const currentType = props?.type || 'info';
+  switch (currentType) {
     case 'success':
       return 'bg-green-500';
     case 'error':
@@ -210,72 +180,125 @@ const progressBarClass = computed(() => {
   }
 });
 
-// 监听visible变化，控制动画
-watch(() => props.visible, (newValue) => {
-  if (newValue) {
-    // 显示Toast时，先渲染DOM，然后添加动画
-    setTimeout(() => {
-      showContent.value = true;
-    }, 50);
-
-    // 重置进度条
-    progressWidth.value = 100;
-
-    // 设置自动关闭和进度条
-    if (props.duration && props.duration > 0) {
-      // 设置自动关闭计时器
-      autoCloseTimer = window.setTimeout(() => {
-        close();
-      }, props.duration);
-
-      // 设置进度条动画
-      const updateInterval = 10; // 每10毫秒更新一次
-      const steps = props.duration / updateInterval;
-      const decrementPerStep = 100 / steps;
-
-      progressInterval = window.setInterval(() => {
-        progressWidth.value = Math.max(0, progressWidth.value - decrementPerStep);
-      }, updateInterval);
-    }
-  } else {
-    // 隐藏Toast时，先执行动画，然后移除DOM
-    showContent.value = false;
-    
-    // 清除计时器
-    clearTimers();
-  }
-}, { immediate: true });
-
-// 关闭Toast
-const close = () => {
-  // 先执行动画
-  showContent.value = false;
-  
-  // 清除计时器
-  clearTimers();
-  
-  // 等待动画完成后再关闭
-  setTimeout(() => {
-    emit('update:visible', false);
-    emit('close');
-  }, 300);
-};
-
 // 清除所有计时器
 const clearTimers = () => {
   if (autoCloseTimer) {
     clearTimeout(autoCloseTimer);
-    autoCloseTimer = null;
+    autoCloseTimer = undefined;
   }
-  
   if (progressInterval) {
     clearInterval(progressInterval);
-    progressInterval = null;
+    progressInterval = undefined;
   }
 };
 
-// 组件卸载前清除计时器
+// 关闭Toast
+const close = () => {
+  // 防止重复触发
+  if (isClosing.value) return;
+  isClosing.value = true;
+
+  // 先执行动画
+  showContent.value = false;
+  // 清除计时器
+  clearTimers();
+  // 等待动画完成后再通知父组件移除自己
+  // 300ms 是 transition-all duration-300 的时长
+  setTimeout(() => {
+    // 只有当组件还未被父级卸载时才 emit
+    if (props.visible) {
+      emit('update:visible', false);
+      emit('close');
+    }
+    // isClosing.value = false; // 组件即将销毁，无需重置
+  }, 300);
+};
+
+// 启动计时器和进度条
+const startTimers = () => {
+  clearTimers();
+  // 如果正在关闭或不需要自动关闭，则返回
+  if (isClosing.value || (props.duration ?? 0) <= 0) {
+    progressWidth.value = 100; // 确保非自动关闭时进度条是满的
+    return;
+  }
+
+  progressWidth.value = 100;
+
+  autoCloseTimer = window.setTimeout(() => {
+    close();
+  }, props.duration);
+
+  const updateInterval = 50; // 增加间隔，减少更新频率
+  const totalSteps = props.duration! / updateInterval;
+  const decrementPerStep = 100 / totalSteps;
+
+  progressInterval = window.setInterval(() => {
+    // 关键：在正在关闭或不可见时，停止更新 state，避免触发更新
+    if (!props.visible || isClosing.value) {
+      clearTimers(); // 确保清除
+      return;
+    }
+    progressWidth.value = Math.max(0, progressWidth.value - decrementPerStep);
+    // 进度为0时，也清除 interval，让 timeout 去触发 close
+    if (progressWidth.value <= 0) {
+      clearTimers();
+    }
+  }, updateInterval);
+};
+
+// 鼠标移入处理
+const handleMouseEnter = () => {
+  // 只有在需要自动关闭时才暂停
+  if (!isClosing.value && (props.duration ?? 0) > 0) {
+    clearTimers();
+  }
+};
+
+// 鼠标移出处理
+const handleMouseLeave = () => {
+  // 只有在需要自动关闭时才恢复
+  if (!isClosing.value && (props.duration ?? 0) > 0) {
+    // 重新开始计时，但可以考虑不清零进度条，这里选择重新开始
+    startTimers();
+  }
+};
+
+// 监听visible变化，控制动画和计时器
+watch(() => props.visible, (newValue) => {
+  if (newValue) {
+    isClosing.value = false; // 重置关闭状态
+    // 显示Toast时，nextTick 或短延迟后添加动画 class
+    setTimeout(() => {
+      showContent.value = true;
+    }, 10); // 确保 DOM 已挂载
+    startTimers();
+  } else {
+    // 如果是父组件主动设置 visible 为 false, 也触发关闭流程
+    if (!isClosing.value) {
+      close();
+    }
+    // 无论如何，visible 为 false 时，清除计时器
+    clearTimers();
+  }
+}, { immediate: false }); // immediate 改为 false, 初始由 onMounted 处理
+
+onMounted(() => {
+  // 初始挂载时如果 visible 为 true，执行显示逻辑
+  if (props.visible) {
+    isClosing.value = false;
+    setTimeout(() => {
+      showContent.value = true;
+    }, 10);
+    startTimers();
+  }
+})
+
+// 组件卸载前/时 清除计时器，确保万无一失
 onBeforeUnmount(() => {
   clearTimers();
 });
+onUnmounted(() => {
+  clearTimers();
+})
 </script>
