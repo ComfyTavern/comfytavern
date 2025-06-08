@@ -16,26 +16,50 @@
         @click.stop
       >
         <!-- 标题栏 -->
-        <div v-if="props.title" class="flex justify-between items-center p-4">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">
+        <div v-if="props.title" class="flex justify-between items-center p-4 pr-2"> <!-- pr-2 为关闭和复制按钮留空间 -->
+          <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 flex-grow">
             {{ props.title }}
           </h3>
-          <button
-            v-if="props.showCloseIcon"
-            @click="handleCancel"
-            class="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
-          >
-            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div class="flex items-center space-x-2">
+            <button
+              v-if="props.showCopyButton && (props.message || $slots.default)"
+              @click="copyContent"
+              class="p-1 rounded text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"
+              :title="copyButtonTitle"
+            >
+              <svg v-if="!copySuccess" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+              <svg v-else class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </button>
+            <button
+              v-if="props.showCloseIcon"
+              @click="handleCancel"
+              class="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none p-1"
+            >
+              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <!-- 内容区域 -->
-        <div class="p-4 text-gray-700 dark:text-gray-300 max-h-[70vh] overflow-y-auto">
-          <slot>
-            <p v-if="props.message">{{ props.message }}</p>
-          </slot>
+        <div class="p-4 text-gray-700 dark:text-gray-300">
+          <OverlayScrollbarsComponent
+            :options="{
+              scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
+              overflow: { y: 'scroll' },
+              paddingAbsolute: true,
+            }"
+            :style="{ maxHeight: 'calc(70vh - 80px)' }" class="pr-2"
+            ref="contentScrollRef"
+          >
+            <div ref="contentToCopyRef">
+              <slot>
+                <MarkdownRenderer v-if="props.message" :markdown-content="props.message" />
+                <p v-else-if="!$slots.default && !props.message" class="text-sm text-gray-500 dark:text-gray-400">没有内容可显示。</p>
+              </slot>
+            </div>
+          </OverlayScrollbarsComponent>
           <div v-if="props.type === 'input'" class="mt-2">
             <textarea
               v-if="props.inputType === 'textarea'"
@@ -90,6 +114,10 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useUiStore } from '@/stores/uiStore';
+import { useThemeStore } from '@/stores/theme'; // 导入主题 store
+import MarkdownRenderer from './MarkdownRenderer.vue'; // 导入 MarkdownRenderer
+import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'; // 导入滚动条组件
+import 'overlayscrollbars/overlayscrollbars.css'; // 导入滚动条 CSS
 
 const props = withDefaults(defineProps<{
   visible: boolean;
@@ -111,6 +139,7 @@ const props = withDefaults(defineProps<{
   inputType?: 'text' | 'password' | 'number' | 'textarea';
   inputRows?: number;
   width?: string; // 对话框宽度
+  showCopyButton?: boolean; // 是否显示复制按钮
 }>(), {
   type: 'message',
   confirmText: '确定',
@@ -125,6 +154,7 @@ const props = withDefaults(defineProps<{
   inputType: 'text',
   inputRows: 3,
   width: 'max-w-md', // 默认宽度
+  showCopyButton: true, // 默认显示复制按钮
 });
 
 const emit = defineEmits<{
@@ -140,7 +170,43 @@ const internalInputValue = ref(props.inputValue || props.initialValue);
 let autoCloseTimer: number | null = null;
 
 const uiStore = useUiStore();
+const themeStore = useThemeStore(); // 使用主题 store
+const isDark = computed(() => themeStore.isDark); // 获取暗黑模式状态
 const dynamicZIndex = ref(uiStore.baseZIndex);
+
+// 用于复制功能
+const copySuccess = ref(false);
+const copyButtonTitle = computed(() => (copySuccess.value ? '已复制' : '复制内容'));
+const contentToCopyRef = ref<HTMLElement | null>(null); // Ref for the content area to copy
+const contentScrollRef = ref<InstanceType<typeof OverlayScrollbarsComponent> | null>(null);
+
+
+const copyContent = async () => {
+  let textToCopy = "";
+  if (props.message) {
+    textToCopy = props.message;
+  } else if (contentToCopyRef.value) {
+    textToCopy = contentToCopyRef.value.textContent || "";
+  }
+
+  if (!textToCopy.trim()) {
+    // console.warn("没有可复制的内容");
+    // 可以选择用一个 toast 提示用户
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(textToCopy.trim());
+    copySuccess.value = true;
+    setTimeout(() => {
+      copySuccess.value = false;
+    }, 2000);
+  } catch (err) {
+    console.error('复制内容失败:', err);
+    // 可以在此添加用户提示
+  }
+};
+
 
 watch(() => props.visible, (newValue) => {
   if (newValue) {

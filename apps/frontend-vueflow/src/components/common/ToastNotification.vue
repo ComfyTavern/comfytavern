@@ -42,13 +42,25 @@
           </div>
 
           <!-- 内容 -->
-          <div class="ml-3 flex-1 pt-0.5 max-h-40 overflow-y-auto">
-            <p v-if="title" class="text-sm font-medium" :class="textColorClass">{{ title }}</p>
-            <p class="text-sm" :class="[title ? 'mt-1' : '', textColorClass]">{{ message }}</p>
+          <div class="ml-3 flex-1 pt-0.5 relative min-w-0"> <!-- 添加 min-w-0 来约束 flex item 的宽度 -->
+            <p v-if="title" class="text-sm font-medium" :class="textColorClass">{{ title }}</p> <!-- 移除 pr-6 -->
+            <OverlayScrollbarsComponent
+              :options="{
+                scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
+                overflow: { y: 'scroll', x: 'hidden' }, // 明确x轴隐藏，y轴滚动
+                paddingAbsolute: true,
+              }"
+              :style="{ maxHeight: title ? '8rem' : '10rem' }"
+              class="text-sm pr-2"
+              :class="[title ? 'mt-1' : '', textColorClass]"
+            >
+              <MarkdownRenderer v-if="message" :markdown-content="message" />
+            </OverlayScrollbarsComponent>
+            <!-- 复制按钮已移动到关闭按钮区域 -->
           </div>
 
-          <!-- 关闭按钮 -->
-          <div class="ml-4 flex-shrink-0 flex">
+          <!-- 关闭按钮和复制按钮 -->
+          <div class="ml-4 flex-shrink-0 flex flex-col items-center space-y-1.5">
             <button @click="close"
               class="inline-flex rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent"
               :class="closeButtonClass">
@@ -58,6 +70,15 @@
                   d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
                   clip-rule="evenodd" />
               </svg>
+            </button>
+            <button
+              v-if="props.showCopyButton && message"
+              @click="copyContent"
+              class="p-0.5 rounded text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"
+              :title="copyButtonTitle"
+            >
+              <svg v-if="!copySuccess" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+              <svg v-else class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
             </button>
           </div>
         </div>
@@ -75,6 +96,9 @@
 // 增加 onUnmounted, onMounted 钩子
 import { ref, computed, watch, onBeforeUnmount, onMounted, onUnmounted } from 'vue';
 import { useThemeStore } from '../../stores/theme';
+import MarkdownRenderer from './MarkdownRenderer.vue'; // 导入 MarkdownRenderer
+import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'; // 导入滚动条组件
+import 'overlayscrollbars/overlayscrollbars.css'; // 导入滚动条 CSS
 
 type ToastType = 'info' | 'success' | 'warning' | 'error';
 // position type 已移除，因为不由自身控制
@@ -88,11 +112,13 @@ const props = withDefaults(defineProps<{
   type?: ToastType;
   duration?: number; // 显示时长，单位毫秒，0表示不自动关闭
   // position?: ToastPosition; // 位置由父容器 DialogContainer 控制
+  showCopyButton?: boolean; // 是否显示复制按钮
 }>(), {
   title: '',
   type: 'info',
   duration: 5000, // 默认5秒后自动关闭
   // position: 'top-right',
+  showCopyButton: true, // 默认显示复制按钮
 });
 
 const emit = defineEmits<{
@@ -261,6 +287,24 @@ const handleMouseLeave = () => {
   if (!isClosing.value && (props.duration ?? 0) > 0) {
     // 重新开始计时，但可以考虑不清零进度条，这里选择重新开始
     startTimers();
+  }
+};
+
+// 复制功能
+const copySuccess = ref(false);
+const copyButtonTitle = computed(() => (copySuccess.value ? '已复制' : '复制内容'));
+
+const copyContent = async () => {
+  if (!props.message) return;
+  try {
+    await navigator.clipboard.writeText(props.message);
+    copySuccess.value = true;
+    setTimeout(() => {
+      copySuccess.value = false;
+    }, 2000);
+  } catch (err) {
+    console.error('复制消息失败:', err);
+    // 可以在此添加用户提示，例如使用一个新的 toast
   }
 };
 
