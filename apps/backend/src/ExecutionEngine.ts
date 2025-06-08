@@ -186,6 +186,7 @@ export class ExecutionEngine {
   private nodeResults: Record<NanoId, any> = {}; // 存储节点输出 { [outputKey]: value }
   private nodePseudoOutputs: Record<NanoId, any> = {}; // 存储绕过节点的伪输出
   private executionOrder: NanoId[] = [];
+  private adj: Record<NanoId, NanoId[]> = {}; // 用于存储图的邻接表
   private isInterrupted: boolean = false;
   private backgroundTasks: Promise<any>[] = []; // 用于追踪所有后台任务，包括节点内部流和接口流
   private interfaceOutputDefinitions: Record<string, GroupSlotInfo> | undefined; // Corrected type
@@ -248,20 +249,29 @@ export class ExecutionEngine {
       // 初始化执行日志，确保在任何节点执行前完成
       await loggingService.initializeExecutionLog(this.promptId, this.payload);
       // console.log(`[Engine-${this.promptId}] Execution log initialized successfully.`); // 可选的确认日志
-
-      this.executionOrder = this.topologicalSort(this.nodes, this.edges);
+   
+      this.executionOrder = this.topologicalSort(this.nodes, this.edges); // topologicalSort 内部会填充 this.adj
       // console.log(`[Engine-${this.promptId}] Execution order:`, this.executionOrder);
-
+   
+      let hasExecutionError = false; // 标记是否有节点执行失败
+   
       for (const nodeId of this.executionOrder) {
         if (this.isInterrupted) {
           console.log(`[Engine-${this.promptId}] Execution interrupted before node ${nodeId}.`);
+          this.skipDescendants(nodeId, ExecutionStatus.INTERRUPTED); // 标记后续节点为中断
           throw new Error('Execution interrupted by user.');
         }
-
+   
+        // 如果节点已经被标记为 SKIPPED 或 ERROR (例如，由于上游节点失败)，则跳过执行
+        if (this.nodeStates[nodeId] === ExecutionStatus.SKIPPED || this.nodeStates[nodeId] === ExecutionStatus.ERROR || this.nodeStates[nodeId] === ExecutionStatus.INTERRUPTED) {
+          console.log(`[Engine-${this.promptId}] Skipping node ${nodeId} as its state is already ${this.nodeStates[nodeId]}.`);
+          continue;
+        }
+   
         const node = this.nodes[nodeId];
-        if (node?.bypassed === true) {
-          console.log(`[Engine-${this.promptId}] Node ${nodeId} is bypassed, handling bypass logic...`);
-          try {
+        try {
+          if (node?.bypassed === true) {
+            console.log(`[Engine-${this.promptId}] Node ${nodeId} is bypassed, handling bypass logic...`);
             const definition = nodeManager.getNode(node.fullType);
             if (!definition) {
               throw new Error(`Node type ${node.fullType} not found in registry.`);
@@ -273,28 +283,35 @@ export class ExecutionEngine {
             this.nodeStates[nodeId] = ExecutionStatus.SKIPPED;
             this.sendNodeBypassed(nodeId, pseudoOutputs);
             continue;
-          } catch (error: any) {
-            console.error(`[Engine-${this.promptId}] Error processing bypassed node ${nodeId}:`, error);
-            this.sendNodeError(nodeId, `Error in bypass processing: ${error.message}`);
-            // 此处错误会导致 run 方法提前返回，最终的 WORKFLOW_END 日志会在外层 catch 中记录
-            // loggingService.logNodeError(nodeId, node.fullType, error); // 节点相关的错误应在节点执行层面记录
-            return { status: ExecutionStatus.ERROR, error: error.message || String(error) };
           }
-        }
-
-        const inputs = this.prepareNodeInputs(nodeId);
-        const result = await this.executeNode(nodeId, inputs); // executeNode 现在对于流式节点会立即返回
-
-        if (result.status === ExecutionStatus.ERROR) {
-          console.error(`[Engine-${this.promptId}] Workflow execution stopped due to error in node ${nodeId}`);
-          return { status: ExecutionStatus.ERROR, error: result.error };
-        }
-        if (result.status === ExecutionStatus.INTERRUPTED) {
-          console.log(`[Engine-${this.promptId}] Workflow execution interrupted during node ${nodeId}`);
-          return { status: ExecutionStatus.INTERRUPTED };
+   
+          const inputs = this.prepareNodeInputs(nodeId);
+          const result = await this.executeNode(nodeId, inputs);
+   
+          if (result.status === ExecutionStatus.ERROR) {
+            console.error(`[Engine-${this.promptId}] Error in node ${nodeId}. Marking as ERROR and skipping descendants.`);
+            hasExecutionError = true;
+            this.nodeStates[nodeId] = ExecutionStatus.ERROR; // 确保当前节点状态被正确标记
+            // 注意：executeNode 内部已经发送了 NODE_ERROR，这里不需要重复发送
+            this.skipDescendants(nodeId, ExecutionStatus.SKIPPED); // 下游节点标记为 SKIPPED
+            // 不再直接 return，而是继续循环处理其他可能独立的分支
+          } else if (result.status === ExecutionStatus.INTERRUPTED) {
+            console.log(`[Engine-${this.promptId}] Node ${nodeId} execution interrupted. Marking as INTERRUPTED and skipping descendants.`);
+            this.nodeStates[nodeId] = ExecutionStatus.INTERRUPTED;
+            this.skipDescendants(nodeId, ExecutionStatus.INTERRUPTED);
+            throw new Error('Execution interrupted by user during node execution.'); // 抛出以终止整个 run
+          }
+          // 对于 COMPLETE 或其他非错误/中断状态，继续执行
+        } catch (error: any) {
+          console.error(`[Engine-${this.promptId}] Critical error processing node ${nodeId}:`, error);
+          this.nodeStates[nodeId] = ExecutionStatus.ERROR;
+          this.sendNodeError(nodeId, `Critical error: ${error.message}`);
+          hasExecutionError = true;
+          this.skipDescendants(nodeId, ExecutionStatus.SKIPPED);
+          // 同样，不直接 return，允许其他分支继续
         }
       }
-
+   
       // 1. 启动接口输出流处理 (它会将接口消费者的 Promise 添加到 this.backgroundTasks)
       //    必须在等待任何 backgroundTasks 之前调用，以确保所有消费者都已启动！
       //    _processAndBroadcastFinalOutputs 内部会调用 _handleStreamInterfaceOutput,
@@ -314,28 +331,44 @@ export class ExecutionEngine {
       }
 
       // 移除原有的 阶段1 / 阶段3 的 Promise.all 和 this.backgroundTasks = []
-
-      if (this.activeInterfaceStreamConsumers.size === 0 && this.isInterrupted === false) {
+   
+      // 最终状态判断
+      if (this.isInterrupted) {
+        const interruptErrorMsg = 'Execution interrupted by user.';
+        console.log(`[Engine-${this.promptId}] Workflow execution was interrupted.`);
+        // loggingService.logWorkflowEnd(ExecutionStatus.INTERRUPTED, interruptErrorMsg) // 会在 catch 中处理
+        throw new Error(interruptErrorMsg); // 确保外层 catch 捕获并记录 INTERRUPTED
+      }
+   
+      if (hasExecutionError) {
+        console.log(`[Engine-${this.promptId}] Workflow execution finished with one or more node errors.`);
+        // loggingService.logWorkflowEnd(ExecutionStatus.ERROR, "One or more nodes failed.") // 会在 catch 中处理
+        // 注意：如果因为 hasExecutionError 而进入这里，外层的 catch 块可能不会被触发，
+        // 除非这里也抛出一个错误。或者，我们直接返回 ERROR 状态。
+        // 为了与现有结构保持一致，如果 run 方法本身没有抛出其他异常，
+        // 这里的 hasExecutionError 应该导致返回 { status: ExecutionStatus.ERROR }
+        return { status: ExecutionStatus.ERROR, error: "One or more nodes failed during execution." };
+      }
+   
+      // 如果没有中断，也没有节点执行错误，再检查接口流
+      if (this.activeInterfaceStreamConsumers.size === 0) {
         console.log(`[Engine-${this.promptId}] Workflow execution completed successfully (all nodes, internal streams, and interface streams processed).`);
         loggingService.logWorkflowEnd(ExecutionStatus.COMPLETE)
           .catch(err => console.error(`[Engine-${this.promptId}] Failed to log workflow completion:`, err));
         return { status: ExecutionStatus.COMPLETE };
-      } else if (this.isInterrupted) {
-        const interruptErrorMsg = 'Execution interrupted by user during final output streaming.';
-        console.log(`[Engine-${this.promptId}] Workflow execution was interrupted before all interface streams could complete.`);
-        // loggingService.logWorkflowEnd(ExecutionStatus.INTERRUPTED, interruptErrorMsg) // 会在 catch 中处理
-        //   .catch(err => console.error(`[Engine-${this.promptId}] Failed to log workflow interruption:`, err));
-        throw new Error(interruptErrorMsg);
       } else {
-        const trackingErrorMsg = "Interface stream completion tracking error.";
-        console.error(`[Engine-${this.promptId}] Workflow completed processing, but ${this.activeInterfaceStreamConsumers.size} interface streams are still marked active. This indicates a potential issue.`);
+        // 这种情况理论上不应该发生，如果所有节点都完成了，接口流也应该完成或被中断处理
+        const trackingErrorMsg = `Interface stream completion tracking error: ${this.activeInterfaceStreamConsumers.size} streams still active.`;
+        console.error(`[Engine-${this.promptId}] ${trackingErrorMsg}`);
         // loggingService.logWorkflowEnd(ExecutionStatus.ERROR, trackingErrorMsg) // 会在 catch 中处理
-        //   .catch(err => console.error(`[Engine-${this.promptId}] Failed to log workflow error:`, err));
         return { status: ExecutionStatus.ERROR, error: trackingErrorMsg };
       }
-
+   
     } catch (error: any) {
-      console.error(`[Engine-${this.promptId}] Workflow execution failed:`, error);
+      // 这个 catch 块主要处理 run 方法内部直接抛出的错误，
+      // 例如拓扑排序失败、中断信号、或者在 for 循环中因中断而抛出的错误。
+      // 对于单个节点执行失败，如果上面没有正确处理并返回，也可能在这里捕获。
+      console.error(`[Engine-${this.promptId}] Workflow execution failed with an exception:`, error);
       const finalStatus = this.isInterrupted ? ExecutionStatus.INTERRUPTED : ExecutionStatus.ERROR;
       const errorMessage = error.message || String(error);
       loggingService.logWorkflowEnd(finalStatus, errorMessage)
@@ -370,7 +403,8 @@ export class ExecutionEngine {
       inDegree[id] = 0;
       adj[id] = [];
     });
-
+    this.adj = adj; // 保存邻接表
+ 
     edges.forEach(edge => {
       const sourceId = edge.sourceNodeId;
       const targetId = edge.targetNodeId;
@@ -1195,5 +1229,74 @@ export class ExecutionEngine {
     } else if (this.isInterrupted) {
       // console.log(`[Engine-${this.promptId}] Aggregated workflow interface outputs not sent due to interruption.`);
     }
+  }
+ 
+  /**
+   * 标记指定节点的所有下游节点为特定状态（通常是 SKIPPED 或 INTERRUPTED）。
+   * @param startNodeId 起始节点ID
+   * @param statusToSet 要设置的状态
+   */
+  private skipDescendants(startNodeId: NanoId, statusToSet: ExecutionStatus.SKIPPED | ExecutionStatus.INTERRUPTED | ExecutionStatus.ERROR): void {
+    const queue: NanoId[] = [startNodeId];
+    const visited: Set<NanoId> = new Set([startNodeId]); // 防止在环路中无限循环（尽管拓扑排序应该避免环）
+    
+    // 注意：我们不应该改变 startNodeId 自身的状态，因为它可能已经是 ERROR 或正在被处理。
+    // 这个方法主要用于处理其 *下游* 节点。
+    // 因此，我们从 startNodeId 的直接子节点开始。
+
+    const initialChildren = this.adj[startNodeId] || [];
+    queue.splice(0, queue.length, ...initialChildren); // 替换队列内容为直接子节点
+    initialChildren.forEach(childId => visited.add(childId));
+
+    while (queue.length > 0) {
+      const currentNodeId = queue.shift()!;
+      
+      // 只有当节点当前状态不是更严重的错误或已完成时才更新
+      if (
+        this.nodeStates[currentNodeId] !== ExecutionStatus.ERROR &&
+        this.nodeStates[currentNodeId] !== ExecutionStatus.COMPLETE &&
+        this.nodeStates[currentNodeId] !== ExecutionStatus.INTERRUPTED // 如果已经是 INTERRUPTED，则不应被 SKIPPED 覆盖
+      ) {
+        if (statusToSet === ExecutionStatus.INTERRUPTED || this.nodeStates[currentNodeId] !== ExecutionStatus.SKIPPED) { // INTERRUPTED 优先，或者当前不是 SKIPPED
+             this.nodeStates[currentNodeId] = statusToSet;
+             console.log(`[Engine-${this.promptId}] Marking descendant node ${currentNodeId} as ${statusToSet} due to upstream failure/interruption.`);
+             // 根据需要，可以发送一个 NODE_SKIPPED 或类似的消息给客户端
+             if (statusToSet === ExecutionStatus.SKIPPED) {
+                this.sendNodeSkipped(currentNodeId, `Skipped due to upstream node failure.`);
+             } else if (statusToSet === ExecutionStatus.INTERRUPTED) {
+                // 通常中断消息由引擎或节点自身发出，这里主要是状态标记
+             }
+        }
+      }
+
+      const neighbors = this.adj[currentNodeId] || [];
+      for (const neighborId of neighbors) {
+        if (!visited.has(neighborId)) {
+          visited.add(neighborId);
+          queue.push(neighborId);
+        }
+      }
+    }
+  }
+
+  // 辅助方法，用于发送节点跳过状态 (如果需要)
+  private sendNodeSkipped(nodeId: NanoId, reason: string): void {
+    // 根据用户反馈，将“跳过”事件作为一种特定类型的“错误”记录到日志中。
+    // 我们将构造一个 error-like 对象来传递给 logNodeError。
+    const skipError = {
+      name: 'NodeSkippedError', // 自定义错误名称
+      message: `Node ${nodeId} was skipped. Reason: ${reason}`,
+      details: {
+        nodeId,
+        nodeType: this.nodes[nodeId]?.fullType || 'UnknownType',
+        reason,
+      }
+    };
+    // 调用 logNodeError，durationMs 可以为 undefined 或 0
+    loggingService.logNodeError(nodeId, this.nodes[nodeId]?.fullType || 'UnknownType', skipError)
+      .catch((err: any) => console.error(`[Engine-${this.promptId}] Failed to log node skipped (as error) for ${nodeId}:`, err));
+    
+    // 如果未来需要明确区分 skipped 和 error 的 WebSocket 消息，可以在这里添加
+    // 例如: this.wsManager.broadcast('NODE_SKIPPED', { promptId: this.promptId, nodeId, reason });
   }
 }
