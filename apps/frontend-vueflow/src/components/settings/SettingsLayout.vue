@@ -16,7 +16,15 @@
     </nav>
 
     <!-- 主体内容区 -->
-    <main class="settings-content">
+    <OverlayScrollbarsComponent
+      class="settings-content"
+      :options="{
+        scrollbars: { autoHide: 'leave', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
+        overflow: { y: 'scroll' },
+        paddingAbsolute: true,
+      }"
+      defer
+    >
       <template v-if="activeSection">
         <!-- 核心: 根据类型动态渲染 -->
         <!-- Case 1: 数据驱动模式 -->
@@ -33,7 +41,7 @@
           咕？这里似乎没有内容... 可能是正在施工中。
         </div>
       </template>
-    </main>
+    </OverlayScrollbarsComponent>
   </div>
 </template>
 
@@ -41,6 +49,10 @@
 import { ref, computed, defineComponent, defineAsyncComponent, markRaw } from 'vue';
 import type { SettingsSection, SettingItemConfig } from '@/types/settings';
 import SettingsPanel from './SettingsPanel.vue';
+import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
+import "overlayscrollbars/overlayscrollbars.css";
+import { useThemeStore } from '@/stores/theme';
+import { storeToRefs } from 'pinia';
 
 // --- 占位符组件 ---
 // 后续这些将被替换为真实的自定义组件
@@ -92,6 +104,9 @@ const activeSectionId = ref(sections.value[0]?.id ?? ''); // 默认选中第一�
 const activeSection = computed(() =>
   sections.value.find(s => s.id === activeSectionId.value)
 );
+
+const themeStore = useThemeStore();
+const { isDark } = storeToRefs(themeStore);
 </script>
 
 <style scoped>
@@ -153,8 +168,8 @@ const activeSection = computed(() =>
 
 .settings-content {
   flex-grow: 1;
-  padding: 16px 48px; /* 调整内边距 */
-  overflow-y: auto;
+  padding: 16px 48px; /* 调整内边距, OverlayScrollbarsComponent会使用这个padding */
+  /* overflow-y: auto; 由 OverlayScrollbarsComponent 控制 */
 }
 
 .section-title {
