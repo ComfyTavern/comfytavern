@@ -5,6 +5,7 @@ import config from '../../../config.json';
 const isDev = process.argv.includes('dev');
 const { backend, frontend } = config.server;
 const executionConfig = config.execution || {}; // 添加默认值以防 config.json 中缺少 execution
+export const LOG_DIR = executionConfig.logDir ? path.resolve(process.cwd(), '../../', executionConfig.logDir) : path.resolve(process.cwd(), '../../logs/executions'); // 日志目录配置, 确保相对路径从项目根目录开始
 
 export const PORT = backend.port;
 export const FRONTEND_URL = `http://localhost:${frontend.port}`;

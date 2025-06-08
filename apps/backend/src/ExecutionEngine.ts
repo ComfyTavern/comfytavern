@@ -14,6 +14,7 @@ import {
 import { nodeManager } from './services/NodeManager'; // 用于获取节点定义
 import { parseSubHandleId } from './utils/helpers'; //  InputDefinition导入解析函数
 import { WebSocketManager } from './websocket/WebSocketManager';
+import { loggingService } from './services/LoggingService'; // 导入日志服务
 
 // import { OutputManager } from './services/OutputManager'; // TODO: Import OutputManager
 // import { HistoryService } from './services/HistoryService'; // TODO: Import HistoryService
@@ -218,6 +219,9 @@ export class ExecutionEngine {
     this.interfaceOutputDefinitions = payload.interfaceOutputs;
 
     console.log(`[Engine-${this.promptId}] Initialized for execution.`);
+    // 初始化执行日志
+    loggingService.initializeExecutionLog(this.promptId, this.payload)
+      .catch(err => console.error(`[Engine-${this.promptId}] Failed to initialize execution log:`, err));
   }
 
   private sanitizeObjectForLogging(obj: any, keysToSanitize: string[] = ['system_prompt', 'system_message', 'prompt'], maxLength: number = 100): any {
@@ -237,7 +241,8 @@ export class ExecutionEngine {
    * 执行完整的工作流。
    */
   public async run(): Promise<{ status: ExecutionStatus.COMPLETE | ExecutionStatus.ERROR | ExecutionStatus.INTERRUPTED; error?: any }> {
-    console.log(`\n\n\n\x1b[32m[Engine-${this.promptId}]----- Starting full execution | 开始执行完整工作流 ----\x1b[0m\n\n\n`);
+    // 在控制台中显眼地打印执行开始日志
+    console.log(`\n\n\n\x1b[32m[Engine-${this.promptId}]----- Starting execution | 开始执行工作流 ----\x1b[0m\n\n\n`);
     this.isInterrupted = false;
     this.backgroundTasks = []; // 重置后台任务列表
 
@@ -269,6 +274,8 @@ export class ExecutionEngine {
           } catch (error: any) {
             console.error(`[Engine-${this.promptId}] Error processing bypassed node ${nodeId}:`, error);
             this.sendNodeError(nodeId, `Error in bypass processing: ${error.message}`);
+            // 此处错误会导致 run 方法提前返回，最终的 WORKFLOW_END 日志会在外层 catch 中记录
+            // loggingService.logNodeError(nodeId, node.fullType, error); // 节点相关的错误应在节点执行层面记录
             return { status: ExecutionStatus.ERROR, error: error.message || String(error) };
           }
         }
@@ -290,41 +297,48 @@ export class ExecutionEngine {
       //    必须在等待任何 backgroundTasks 之前调用，以确保所有消费者都已启动！
       //    _processAndBroadcastFinalOutputs 内部会调用 _handleStreamInterfaceOutput,
       //    后者将 Promise 加入 this.backgroundTasks 并开始消费。
-       console.log(`[Engine-${this.promptId}] Starting interface output processing...`);
+      console.log(`[Engine-${this.promptId}] Starting interface output processing...`);
       await this._processAndBroadcastFinalOutputs();
-       console.log(`[Engine-${this.promptId}] Interface output processing started. Background tasks count: ${this.backgroundTasks.length}`);
+      console.log(`[Engine-${this.promptId}] Interface output processing started. Background tasks count: ${this.backgroundTasks.length}`);
 
 
       // 2. 等待所有后台任务 (包括所有节点的 streamLifecyclePromise 和所有接口的 _handleStreamInterfaceOutput Promise)
-       const allBackgroundPromises = [...this.backgroundTasks]; // 复制
-       if (allBackgroundPromises.length > 0) {
-          console.log(`[Engine-${this.promptId}] Waiting for ALL ${allBackgroundPromises.length} background tasks (node streams + interface streams) to complete...`);
-          // 这里会等待所有生产者和消费者完成
-          await Promise.all(allBackgroundPromises);
-          console.log(`[Engine-${this.promptId}] ALL background tasks completed.`);
-       }
-      
+      const allBackgroundPromises = [...this.backgroundTasks]; // 复制
+      if (allBackgroundPromises.length > 0) {
+        console.log(`[Engine-${this.promptId}] Waiting for ALL ${allBackgroundPromises.length} background tasks (node streams + interface streams) to complete...`);
+        // 这里会等待所有生产者和消费者完成
+        await Promise.all(allBackgroundPromises);
+        console.log(`[Engine-${this.promptId}] ALL background tasks completed.`);
+      }
+
       // 移除原有的 阶段1 / 阶段3 的 Promise.all 和 this.backgroundTasks = []
 
       if (this.activeInterfaceStreamConsumers.size === 0 && this.isInterrupted === false) {
         console.log(`[Engine-${this.promptId}] Workflow execution completed successfully (all nodes, internal streams, and interface streams processed).`);
+        loggingService.logWorkflowEnd(ExecutionStatus.COMPLETE)
+          .catch(err => console.error(`[Engine-${this.promptId}] Failed to log workflow completion:`, err));
         return { status: ExecutionStatus.COMPLETE };
       } else if (this.isInterrupted) {
+        const interruptErrorMsg = 'Execution interrupted by user during final output streaming.';
         console.log(`[Engine-${this.promptId}] Workflow execution was interrupted before all interface streams could complete.`);
-        // Error status will be handled by the main catch block if an interruption error was thrown.
-        // If interruption happened cleanly, this might be INTERRUPTED.
-        // The main catch block handles the final status.
-        throw new Error('Execution interrupted by user during final output streaming.');
+        // loggingService.logWorkflowEnd(ExecutionStatus.INTERRUPTED, interruptErrorMsg) // 会在 catch 中处理
+        //   .catch(err => console.error(`[Engine-${this.promptId}] Failed to log workflow interruption:`, err));
+        throw new Error(interruptErrorMsg);
       } else {
-        // Should not happen if logic is correct, implies some interface streams didn't clear from activeInterfaceStreamConsumers
+        const trackingErrorMsg = "Interface stream completion tracking error.";
         console.error(`[Engine-${this.promptId}] Workflow completed processing, but ${this.activeInterfaceStreamConsumers.size} interface streams are still marked active. This indicates a potential issue.`);
-        return { status: ExecutionStatus.ERROR, error: "Interface stream completion tracking error." };
+        // loggingService.logWorkflowEnd(ExecutionStatus.ERROR, trackingErrorMsg) // 会在 catch 中处理
+        //   .catch(err => console.error(`[Engine-${this.promptId}] Failed to log workflow error:`, err));
+        return { status: ExecutionStatus.ERROR, error: trackingErrorMsg };
       }
 
     } catch (error: any) {
       console.error(`[Engine-${this.promptId}] Workflow execution failed:`, error);
       const finalStatus = this.isInterrupted ? ExecutionStatus.INTERRUPTED : ExecutionStatus.ERROR;
-      return { status: finalStatus, error: error.message || String(error) };
+      const errorMessage = error.message || String(error);
+      loggingService.logWorkflowEnd(finalStatus, errorMessage)
+        .catch(err => console.error(`[Engine-${this.promptId}] Failed to log workflow failure:`, err));
+      return { status: finalStatus, error: errorMessage };
     }
   }
 
@@ -332,6 +346,8 @@ export class ExecutionEngine {
     if (!this.isInterrupted) {
       console.log(`[Engine-${this.promptId}] Received interrupt signal.`);
       this.isInterrupted = true;
+      loggingService.logInterrupt(this.promptId)
+        .catch(err => console.error(`[Engine-${this.promptId}] Failed to log interrupt signal:`, err));
       return true;
     }
     return false;
@@ -580,7 +596,11 @@ export class ExecutionEngine {
     this.nodeStates[nodeId] = ExecutionStatus.RUNNING;
     const executingPayload: NodeExecutingPayload = { promptId: this.promptId, nodeId };
     this.wsManager.broadcast('NODE_EXECUTING', executingPayload);
-    console.log(`[Engine-${this.promptId}] Executing node ${nodeId} (${node.fullType})...`);
+    // console.log(`[Engine-${this.promptId}] Executing node ${nodeId} (${node.fullType})...`);
+
+    const nodeStartTime = Date.now();
+    loggingService.logNodeStart(nodeId, node.fullType, inputs)
+      .catch(err => console.error(`[Engine-${this.promptId}] Failed to log node start for ${nodeId}:`, err));
 
     try {
       if (this.isInterrupted) {
@@ -602,16 +622,12 @@ export class ExecutionEngine {
       if (hasStreamOutput) {
         // console.log(`[Engine-${this.promptId}] Node ${nodeId} has stream output(s). Starting stream execution in background.`);
         const nodeGenerator = executeFn(inputs, context) as AsyncGenerator<ChunkPayload, Record<string, any> | void, undefined>;
+        // 将 nodeStartTime 传递给流处理函数，以便正确记录包含流处理的总时长
+        const streamOutputs = this.startStreamNodeExecution(node, nodeGenerator, definition, context, nodeStartTime);
 
-        const streamOutputs = this.startStreamNodeExecution(node, nodeGenerator, definition, context);
-
-        // 立即存储流实例，让下游可以访问
-        // 批处理结果将在流结束后由 startStreamNodeExecution 内部处理并更新到 nodeResults
         this.nodeResults[nodeId] = { ...streamOutputs };
         // 状态保持 RUNNING，直到后台任务完成并更新为 COMPLETE
-
-        // 对于 executeNode 来说，启动流式任务已完成，可以继续主循环
-        return { status: ExecutionStatus.COMPLETE }; // Or RUNNING if we want to be more precise about the node's state from executeNode's perspective
+        return { status: ExecutionStatus.COMPLETE };
 
       } else {
         // console.log(`[Engine-${this.promptId}] Node ${nodeId} is a batch node. Handling with standard await.`);
@@ -621,17 +637,23 @@ export class ExecutionEngine {
           throw new Error('Execution interrupted by user.');
         }
 
+        const durationMs = Date.now() - nodeStartTime;
         this.nodeResults[nodeId] = result || {};
         this.nodeStates[nodeId] = ExecutionStatus.COMPLETE;
+        loggingService.logNodeComplete(nodeId, node.fullType, result || {}, durationMs)
+          .catch(err => console.error(`[Engine-${this.promptId}] Failed to log node complete for ${nodeId}:`, err));
         this.sendNodeComplete(nodeId, result || {});
-        console.log(`[Engine-${this.promptId}] Node ${nodeId} completed.`);
+        // console.log(`[Engine-${this.promptId}] Node ${nodeId} completed.`);
         return { status: ExecutionStatus.COMPLETE };
       }
 
     } catch (error: any) {
+      const durationMs = Date.now() - nodeStartTime;
       const errorMessage = error.message || String(error);
-      console.error(`[Engine-${this.promptId}] Error executing node ${nodeId} (${node.fullType}):`, errorMessage, error.stack);
+      // console.error(`[Engine-${this.promptId}] Error executing node ${nodeId} (${node.fullType}):`, errorMessage, error.stack);
       this.nodeStates[nodeId] = this.isInterrupted ? ExecutionStatus.INTERRUPTED : ExecutionStatus.ERROR;
+      loggingService.logNodeError(nodeId, node.fullType, error, durationMs)
+        .catch(err => console.error(`[Engine-${this.promptId}] Failed to log node error for ${nodeId}:`, err));
       this.sendNodeError(nodeId, errorMessage);
       return { status: this.nodeStates[nodeId], error: errorMessage };
     }
@@ -645,7 +667,8 @@ export class ExecutionEngine {
     node: ExecutionNode,
     nodeGenerator: AsyncGenerator<ChunkPayload, Record<string, any> | void, undefined>,
     definition: NodeDefinition,
-    context: { promptId: NanoId;[key: string]: any }
+    context: { promptId: NanoId;[key: string]: any },
+    nodeStartTime: number // 添加 nodeStartTime 参数
   ): Record<string, Stream.Readable> {
     const { id: nodeId, fullType } = node;
     const nodeIdentifier = `${definition.displayName || definition.type}(${nodeId})`;
@@ -715,9 +738,9 @@ export class ExecutionEngine {
         try {
           // --- 移除掉错误的 for await...of 循环 ---
           /*
-           for await (const chunk of nodeGenerator) {
+          for await (const chunk of nodeGenerator) {
                 chunkCounter++;
-           }
+          }
           */
           // --- 只保留手动迭代 ---
 
@@ -808,15 +831,23 @@ export class ExecutionEngine {
         if (typeof batchResult === 'object' && batchResult !== null) {
           outputsToMerge = batchResult;
         }
-        this.nodeResults[nodeId] = { ...existingOutputs, ...outputsToMerge };
+        const finalNodeResult = { ...existingOutputs, ...outputsToMerge };
+        this.nodeResults[nodeId] = finalNodeResult;
         this.nodeStates[nodeId] = ExecutionStatus.COMPLETE;
+
+        const durationMs = Date.now() - nodeStartTime;
+        loggingService.logNodeComplete(nodeId, fullType, finalNodeResult, durationMs)
+          .catch(err => console.error(`[Engine-${promptId}] Failed to log stream node complete for ${nodeIdentifier}:`, err));
         this.sendNodeComplete(nodeId, (typeof batchResult === 'object' && batchResult !== null) ? batchResult : {});
-        console.log(`[Engine-${promptId}] Node ${nodeIdentifier} officially marked as COMPLETE.`);
+        // console.log(`[Engine-${promptId}] Node ${nodeIdentifier} officially marked as COMPLETE.`);
 
       } catch (error: any) {
+        const durationMs = Date.now() - nodeStartTime;
         const errorMessage = error.message || String(error);
-        console.error(`[Engine-${promptId}] Error in stream lifecycle for node ${nodeIdentifier}:`, errorMessage, error.stack);
+        // console.error(`[Engine-${promptId}] Error in stream lifecycle for node ${nodeIdentifier}:`, errorMessage, error.stack);
         this.nodeStates[nodeId] = this.isInterrupted ? ExecutionStatus.INTERRUPTED : ExecutionStatus.ERROR;
+        loggingService.logNodeError(nodeId, fullType, error, durationMs)
+          .catch(err => console.error(`[Engine-${promptId}] Failed to log stream node error for ${nodeIdentifier}:`, err));
         this.sendNodeError(nodeId, errorMessage);
       }
     })();
@@ -845,29 +876,33 @@ export class ExecutionEngine {
           isLastChunk: false,
         };
         this.wsManager.broadcast('NODE_YIELD', payload);
+        loggingService.logStreamChunk(promptId, nodeId, chunk as ChunkPayload, false, 'NODE_YIELD')
+          .catch(err => console.error(`[Engine-${promptId}] Failed to log NODE_YIELD chunk for ${nodeIdentifier}:`, err));
       }
-      // 移除了 await finished(readable); 因为 for await 循环结束本身就意味着流结束。
-      // 如果流未能正常结束，for await 会抛出错误，由 catch 块处理。
       // console.log(`[Engine-${promptId}] consumeForEventBus for node ${nodeIdentifier}: for-await loop completed.`);
     } catch (error: any) {
-      console.error(`[Engine-${promptId}] consumeForEventBus for node ${nodeIdentifier} caught error during stream consumption:`, error); // 修改日志消息
+      // console.error(`[Engine-${promptId}] consumeForEventBus for node ${nodeIdentifier} caught error during stream consumption:`, error);
+      loggingService.logStreamError(promptId, nodeId, error, 'NODE_YIELD')
+        .catch(err => console.error(`[Engine-${promptId}] Failed to log NODE_YIELD error for ${nodeIdentifier}:`, err));
       const finalErrorPayload: NodeYieldPayload = {
         promptId,
-        sourceNodeId: nodeId, // Keep original nodeId for payload
+        sourceNodeId: nodeId,
         yieldedContent: { type: 'error_chunk', content: `Stream consumption error: ${error.message}` },
         isLastChunk: true,
       };
       this.wsManager.broadcast('NODE_YIELD', finalErrorPayload);
-      // console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_ERRORED_OR_ABORTED for node ${nodeIdentifier}`);
       throw error;
     }
+    const finalPayloadContent: ChunkPayload = { type: 'finish_reason_chunk', content: 'Stream ended' };
     const finalPayload: NodeYieldPayload = {
       promptId,
-      sourceNodeId: nodeId, // Keep original nodeId for payload
-      yieldedContent: { type: 'finish_reason_chunk', content: 'Stream ended' },
+      sourceNodeId: nodeId,
+      yieldedContent: finalPayloadContent,
       isLastChunk: true,
     };
     this.wsManager.broadcast('NODE_YIELD', finalPayload);
+    loggingService.logStreamChunk(promptId, nodeId, finalPayloadContent, true, 'NODE_YIELD')
+      .catch(err => console.error(`[Engine-${promptId}] Failed to log final NODE_YIELD chunk for ${nodeIdentifier}:`, err));
     // console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_FINISHED for node ${nodeIdentifier}`);
   }
 
@@ -887,6 +922,7 @@ export class ExecutionEngine {
   ): Record<string, any> {
     const pseudoOutputs: Record<string, any> = {};
     const { bypassBehavior } = nodeDefinition;
+    const { id: nodeId, fullType } = executionNode;
 
     if (bypassBehavior === 'mute') {
       // console.log(`[Engine-${this.promptId}] Node ${executionNode.id} has 'mute' bypass behavior, setting all outputs to undefined.`);
@@ -948,6 +984,8 @@ export class ExecutionEngine {
         pseudoOutputs[outputKey] = this.getGenericEmptyValueForType(outputDef.dataFlowType);
       }
     }
+    loggingService.logNodeBypassed(nodeId, fullType, pseudoOutputs)
+      .catch(err => console.error(`[Engine-${this.promptId}] Failed to log node bypassed for ${nodeId}:`, err));
     return pseudoOutputs;
   }
 
@@ -1035,39 +1073,42 @@ export class ExecutionEngine {
           promptId: this.promptId,
           interfaceOutputKey: interfaceKey,
           interfaceOutputDisplayName: interfaceDisplayName,
-          yieldedContent: chunk as ChunkPayload, // Assuming chunk is ChunkPayload
+          yieldedContent: chunk as ChunkPayload,
           isLastChunk: false,
         };
         this.wsManager.broadcast(WebSocketMessageType.WORKFLOW_INTERFACE_YIELD, payload);
-        // console.debug(`[Engine-${this.promptId}] [${consumerId}] Broadcasted chunk. Index: ${chunkIndex}.`);
+        loggingService.logStreamChunk(this.promptId, interfaceKey as NanoId, chunk as ChunkPayload, false, 'INTERFACE_YIELD')
+          .catch(logErr => console.error(`[Engine-${this.promptId}] Failed to log INTERFACE_YIELD chunk for ${interfaceKey}:`, logErr));
         chunkIndex++;
       });
 
       stream.on('end', () => {
-        // console.debug(`[Engine-${this.promptId}] [${consumerId}] Stream for interface output ${interfaceKey} ENDED. Processed ${chunkIndex} chunks. Broadcasting last chunk...`);
+        const finalChunkContent: ChunkPayload = { type: 'finish_reason_chunk', content: 'Stream ended' };
         const payload: WorkflowInterfaceYieldPayload = {
           promptId: this.promptId,
           interfaceOutputKey: interfaceKey,
           interfaceOutputDisplayName: interfaceDisplayName,
-          yieldedContent: { type: 'finish_reason_chunk', content: 'Stream ended' } as ChunkPayload,
+          yieldedContent: finalChunkContent,
           isLastChunk: true,
         };
         this.wsManager.broadcast(WebSocketMessageType.WORKFLOW_INTERFACE_YIELD, payload);
-        // console.debug(`[Engine-${this.promptId}] [${consumerId}] Broadcasted LAST chunk for ${interfaceKey}.`);
+        loggingService.logStreamChunk(this.promptId, interfaceKey as NanoId, finalChunkContent, true, 'INTERFACE_YIELD')
+          .catch(logErr => console.error(`[Engine-${this.promptId}] Failed to log final INTERFACE_YIELD chunk for ${interfaceKey}:`, logErr));
         this.activeInterfaceStreamConsumers.delete(interfaceKey);
-        // console.debug(`[Engine-${this.promptId}] [${consumerId}] Resolving promise for ${interfaceKey}.`);
         resolve();
       });
 
       stream.on('error', (err) => {
-        console.error(`[Engine-${this.promptId}] [${consumerId}] ERROR in stream for interface output ${interfaceKey} after ${chunkIndex} chunks:`, err.message, err.stack);
+        // console.error(`[Engine-${this.promptId}] [${consumerId}] ERROR in stream for interface output ${interfaceKey} after ${chunkIndex} chunks:`, err.message, err.stack);
+        loggingService.logStreamError(this.promptId, interfaceKey as NanoId, err, 'INTERFACE_YIELD')
+          .catch(logErr => console.error(`[Engine-${this.promptId}] Failed to log INTERFACE_YIELD error for ${interfaceKey}:`, logErr));
         this.activeInterfaceStreamConsumers.delete(interfaceKey);
         if (err.message === 'Interrupted by user') {
-          console.warn(`[Engine-${this.promptId}] [${consumerId}] Stream for ${interfaceKey} interrupted by user. Resolving promise.`);
-          resolve();
+          // console.warn(`[Engine-${this.promptId}] [${consumerId}] Stream for ${interfaceKey} interrupted by user. Resolving promise.`);
+          resolve(); // Resolve on user interruption as it's a controlled stop
         } else {
-          console.error(`[Engine-${this.promptId}] [${consumerId}] Stream for ${interfaceKey} errored. Rejecting promise.`);
-          reject(err);
+          // console.error(`[Engine-${this.promptId}] [${consumerId}] Stream for ${interfaceKey} errored. Rejecting promise.`);
+          reject(err); // Reject for other errors
         }
       });
 
