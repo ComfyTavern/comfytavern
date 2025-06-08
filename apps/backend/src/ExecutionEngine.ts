@@ -200,9 +200,9 @@ export class ExecutionEngine {
     this.promptId = promptId;
     this.payload = payload;
     if (payload.interfaceInputs) {
-      console.log(`[ExecutionEngine CONSTRUCTOR DEBUG] Payload for prompt ${promptId} CONTAINS interfaceInputs.`);
+      // console.log(`[ExecutionEngine CONSTRUCTOR DEBUG] Payload for prompt ${promptId} CONTAINS interfaceInputs.`);
     } else {
-      console.log(`[ExecutionEngine CONSTRUCTOR DEBUG] Payload for prompt ${promptId} DOES NOT CONTAIN interfaceInputs.`);
+      // console.log(`[ExecutionEngine CONSTRUCTOR DEBUG] Payload for prompt ${promptId} DOES NOT CONTAIN interfaceInputs.`);
     }
     this.wsManager = wsManager;
     // this.outputManager = outputManager;
@@ -243,7 +243,7 @@ export class ExecutionEngine {
 
     try {
       this.executionOrder = this.topologicalSort(this.nodes, this.edges);
-      console.log(`[Engine-${this.promptId}] Execution order:`, this.executionOrder);
+      // console.log(`[Engine-${this.promptId}] Execution order:`, this.executionOrder);
 
       for (const nodeId of this.executionOrder) {
         if (this.isInterrupted) {
@@ -406,7 +406,7 @@ export class ExecutionEngine {
     const inputs: Record<string, any> = {};
     const node = this.nodes[nodeId];
 
-    console.log(`[Engine-${this.promptId}] prepareNodeInputs for ${nodeId}. Node config inputs: ${JSON.stringify(this.sanitizeObjectForLogging(node?.inputs))}, inputConnectionOrders: ${JSON.stringify((node as any)?.inputConnectionOrders)}`);
+    // console.log(`[Engine-${this.promptId}] prepareNodeInputs for ${nodeId}. Node config inputs: ${JSON.stringify(this.sanitizeObjectForLogging(node?.inputs))}, inputConnectionOrders: ${JSON.stringify((node as any)?.inputConnectionOrders)}`);
 
     if (!node) {
       console.warn(`[Engine-${this.promptId}] Node ${nodeId} not found during input preparation.`);
@@ -464,9 +464,9 @@ export class ExecutionEngine {
       }
     });
 
-    console.log(`[Engine-${this.promptId}] After collecting connected inputs for ${nodeId}:`);
-    console.log(`  multiInputBuffer: ${JSON.stringify(multiInputBuffer)}`);
-    console.log(`  inputs (from single connections): ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
+    // console.log(`[Engine-${this.promptId}] After collecting connected inputs for ${nodeId}:`);
+    // console.log(`  multiInputBuffer: ${JSON.stringify(multiInputBuffer)}`);
+    // console.log(`  inputs (from single connections): ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
 
     const currentInputConnectionOrders = (node as any).inputConnectionOrders as Record<string, string[]> | undefined;
     if (currentInputConnectionOrders) {
@@ -483,8 +483,8 @@ export class ExecutionEngine {
       }
     }
 
-    console.log(`[Engine-${this.promptId}] After processing multi-input orders for ${nodeId}:`);
-    console.log(`  inputs: ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
+    // console.log(`[Engine-${this.promptId}] After processing multi-input orders for ${nodeId}:`);
+    // console.log(`  inputs: ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
 
     if (node.inputs) {
       for (const inputKey in node.inputs) {
@@ -503,8 +503,8 @@ export class ExecutionEngine {
       }
     }
 
-    console.log(`[Engine-${this.promptId}] After applying node preset inputs for ${nodeId}:`);
-    console.log(`  inputs: ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
+    // console.log(`[Engine-${this.promptId}] After applying node preset inputs for ${nodeId}:`);
+    // console.log(`  inputs: ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
 
     for (const inputKey in definition.inputs) {
       if (inputs[inputKey] === undefined && definition.inputs[inputKey].config?.default !== undefined) {
@@ -541,12 +541,12 @@ export class ExecutionEngine {
         if (!isConnectedToRunningStream) {
           throw new Error(`Missing required input '${inputKey}' for node ${nodeId} (${node.fullType})`);
         } else {
-          console.log(`[Engine-${this.promptId}] Required input '${inputKey}' for node ${nodeId} is connected to a running stream, deferring strict check.`);
+          // console.log(`[Engine-${this.promptId}] Required input '${inputKey}' for node ${nodeId} is connected to a running stream, deferring strict check.`);
         }
       }
     }
 
-    console.log(`[Engine-${this.promptId}] Final prepared inputs for ${nodeId} (before required check): ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
+    // console.log(`[Engine-${this.promptId}] Final prepared inputs for ${nodeId} (before required check): ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
     return inputs;
   }
 
@@ -600,7 +600,7 @@ export class ExecutionEngine {
       );
 
       if (hasStreamOutput) {
-        console.log(`[Engine-${this.promptId}] Node ${nodeId} has stream output(s). Starting stream execution in background.`);
+        // console.log(`[Engine-${this.promptId}] Node ${nodeId} has stream output(s). Starting stream execution in background.`);
         const nodeGenerator = executeFn(inputs, context) as AsyncGenerator<ChunkPayload, Record<string, any> | void, undefined>;
 
         const streamOutputs = this.startStreamNodeExecution(node, nodeGenerator, definition, context);
@@ -614,7 +614,7 @@ export class ExecutionEngine {
         return { status: ExecutionStatus.COMPLETE }; // Or RUNNING if we want to be more precise about the node's state from executeNode's perspective
 
       } else {
-        console.log(`[Engine-${this.promptId}] Node ${nodeId} is a batch node. Handling with standard await.`);
+        // console.log(`[Engine-${this.promptId}] Node ${nodeId} is a batch node. Handling with standard await.`);
         const result = await (executeFn(inputs, context) as Promise<Record<string, any>>);
 
         if (this.isInterrupted) {
@@ -658,17 +658,17 @@ export class ExecutionEngine {
     const consumerPromises: Promise<any>[] = [];
 
     // DEBUG 日志
-    sourceStream.on('error', (err) => console.error(`[Engine-${promptId}] DEBUG_STREAM: sourceStream for ${nodeIdentifier} errored:`, err));
-    sourceStream.on('end', () => console.log(`[Engine-${promptId}] DEBUG_STREAM: sourceStream for ${nodeIdentifier} ended.`));
-    sourceStream.on('close', () => console.log(`[Engine-${promptId}] DEBUG_STREAM: sourceStream for ${nodeIdentifier} closed.`));
+    sourceStream.on('error', (err) => { /* console.error(`[Engine-${promptId}] DEBUG_STREAM: sourceStream for ${nodeIdentifier} errored:`, err) */ });
+    sourceStream.on('end', () => { /* console.log(`[Engine-${promptId}] DEBUG_STREAM: sourceStream for ${nodeIdentifier} ended.`) */ });
+    sourceStream.on('close', () => { /* console.log(`[Engine-${promptId}] DEBUG_STREAM: sourceStream for ${nodeIdentifier} closed.`) */ });
 
 
     // 1. 设置多路广播 (Multicaster)
     // 分支 A: 事件总线
     const eventBusStream = new Stream.PassThrough({ objectMode: true });
-    eventBusStream.on('error', (err) => console.error(`[Engine-${promptId}] DEBUG_STREAM: eventBusStream for ${nodeIdentifier} errored:`, err));
-    eventBusStream.on('end', () => console.log(`[Engine-${promptId}] DEBUG_STREAM: eventBusStream for ${nodeIdentifier} ended.`));
-    eventBusStream.on('close', () => console.log(`[Engine-${promptId}] DEBUG_STREAM: eventBusStream for ${nodeIdentifier} closed.`));
+    eventBusStream.on('error', (err) => { /* console.error(`[Engine-${promptId}] DEBUG_STREAM: eventBusStream for ${nodeIdentifier} errored:`, err) */ });
+    eventBusStream.on('end', () => { /* console.log(`[Engine-${promptId}] DEBUG_STREAM: eventBusStream for ${nodeIdentifier} ended.`) */ });
+    eventBusStream.on('close', () => { /* console.log(`[Engine-${promptId}] DEBUG_STREAM: eventBusStream for ${nodeIdentifier} closed.`) */ });
     sourceStream.pipe(eventBusStream);
     consumerPromises.push(this.consumeForEventBus(eventBusStream, nodeId, promptId)); // consumeForEventBus 将自行获取 identifier
 
@@ -678,16 +678,16 @@ export class ExecutionEngine {
         const downstreamConnections = this.getDownstreamStreamConnections(nodeId, outputKey);
 
         const passThroughForOutput = new Stream.PassThrough({ objectMode: true });
-        passThroughForOutput.on('error', (err) => console.error(`[Engine-${promptId}] DEBUG_STREAM: passThroughForOutput '${outputKey}' for ${nodeIdentifier} errored:`, err));
-        passThroughForOutput.on('end', () => console.log(`[Engine-${promptId}] DEBUG_STREAM: passThroughForOutput '${outputKey}' for ${nodeIdentifier} ended.`));
-        passThroughForOutput.on('close', () => console.log(`[Engine-${promptId}] DEBUG_STREAM: passThroughForOutput '${outputKey}' for ${nodeIdentifier} closed.`));
+        passThroughForOutput.on('error', (err) => { /* console.error(`[Engine-${promptId}] DEBUG_STREAM: passThroughForOutput '${outputKey}' for ${nodeIdentifier} errored:`, err) */ });
+        passThroughForOutput.on('end', () => { /* console.log(`[Engine-${promptId}] DEBUG_STREAM: passThroughForOutput '${outputKey}' for ${nodeIdentifier} ended.`) */ });
+        passThroughForOutput.on('close', () => { /* console.log(`[Engine-${promptId}] DEBUG_STREAM: passThroughForOutput '${outputKey}' for ${nodeIdentifier} closed.`) */ });
 
         sourceStream.pipe(passThroughForOutput);
         streamOutputsToReturn[outputKey] = passThroughForOutput; // 这个流将返回给 executeNode 并存入 nodeResults
 
         if (downstreamConnections.length === 0) {
           // 如果流输出没有连接，确保它被消费以防止 sourceStream 阻塞
-          console.log(`[Engine-${promptId}] Stream output '${outputKey}' for node ${nodeIdentifier} has no downstream connections. Consuming to prevent stall.`);
+          // console.log(`[Engine-${promptId}] Stream output '${outputKey}' for node ${nodeIdentifier} has no downstream connections. Consuming to prevent stall.`);
           passThroughForOutput.resume(); // 确保数据被丢弃，防止阻塞上游
           consumerPromises.push(streamEndPromise(passThroughForOutput).catch(err => {
             console.warn(`[Engine-${promptId}] Error ensuring unconsumed stream output '${outputKey}' for node ${nodeIdentifier} ended:`, err.message);
@@ -711,7 +711,7 @@ export class ExecutionEngine {
       // Puller Task: 从 nodeGenerator 拉取数据到 buffer
       const pullerTask = (async () => {
         let chunkCounter = 0;
-        console.log(`[Engine-${promptId}] PULLER_TASK_STARTED for node ${nodeIdentifier}`);
+        // console.log(`[Engine-${promptId}] PULLER_TASK_STARTED for node ${nodeIdentifier}`);
         try {
           // --- 移除掉错误的 for await...of 循环 ---
           /*
@@ -753,11 +753,11 @@ export class ExecutionEngine {
         } finally {
           // 确保无论如何都 signalEnd 或 signalError (signalError内部会设置isDone)
           if (!pullerError) {
-            console.log(`[Engine-${promptId}] PULLER_TASK_FINALLY for node ${nodeIdentifier}. Buffer signaled end. Processed ${chunkCounter} chunks.`);
+            // console.log(`[Engine-${promptId}] PULLER_TASK_FINALLY for node ${nodeIdentifier}. Buffer signaled end. Processed ${chunkCounter} chunks.`);
             buffer.signalEnd();
           } else {
             // 如果已有错误，signalError 已经被调用过了
-            console.log(`[Engine-${promptId}] PULLER_TASK_FINALLY_ERROR for node ${nodeIdentifier}. Buffer signaled error. Processed ${chunkCounter} chunks before error.`);
+            // console.log(`[Engine-${promptId}] PULLER_TASK_FINALLY_ERROR for node ${nodeIdentifier}. Buffer signaled error. Processed ${chunkCounter} chunks before error.`);
           }
         }
       })();
@@ -801,7 +801,7 @@ export class ExecutionEngine {
 
         // 只有在 pullerTask 无错，并且所有 consumerPromises 都成功解决后，才认为完全成功。
         // Promise.all(consumerPromises) 如果有 reject，这里就不会执行到。
-        console.log(`[Engine-${promptId}] All streams and puller for node ${nodeIdentifier} have finished successfully.`);
+        // console.log(`[Engine-${promptId}] All streams and puller for node ${nodeIdentifier} have finished successfully.`);
 
         const existingOutputs = this.nodeResults[nodeId] || {};
         let outputsToMerge = {};
@@ -835,7 +835,7 @@ export class ExecutionEngine {
     } else {
       nodeIdentifier = `UnknownNode(${nodeId})`;
     }
-    console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_STARTED for node ${nodeIdentifier}`);
+    // console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_STARTED for node ${nodeIdentifier}`);
     try {
       for await (const chunk of readable) {
         const payload: NodeYieldPayload = {
@@ -848,7 +848,7 @@ export class ExecutionEngine {
       }
       // 移除了 await finished(readable); 因为 for await 循环结束本身就意味着流结束。
       // 如果流未能正常结束，for await 会抛出错误，由 catch 块处理。
-      console.log(`[Engine-${promptId}] consumeForEventBus for node ${nodeIdentifier}: for-await loop completed.`);
+      // console.log(`[Engine-${promptId}] consumeForEventBus for node ${nodeIdentifier}: for-await loop completed.`);
     } catch (error: any) {
       console.error(`[Engine-${promptId}] consumeForEventBus for node ${nodeIdentifier} caught error during stream consumption:`, error); // 修改日志消息
       const finalErrorPayload: NodeYieldPayload = {
@@ -858,7 +858,7 @@ export class ExecutionEngine {
         isLastChunk: true,
       };
       this.wsManager.broadcast('NODE_YIELD', finalErrorPayload);
-      console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_ERRORED_OR_ABORTED for node ${nodeIdentifier}`);
+      // console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_ERRORED_OR_ABORTED for node ${nodeIdentifier}`);
       throw error;
     }
     const finalPayload: NodeYieldPayload = {
@@ -868,7 +868,7 @@ export class ExecutionEngine {
       isLastChunk: true,
     };
     this.wsManager.broadcast('NODE_YIELD', finalPayload);
-    console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_FINISHED for node ${nodeIdentifier}`);
+    // console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_FINISHED for node ${nodeIdentifier}`);
   }
 
   private sendNodeComplete(nodeId: NanoId, output: any): void {
@@ -889,7 +889,7 @@ export class ExecutionEngine {
     const { bypassBehavior } = nodeDefinition;
 
     if (bypassBehavior === 'mute') {
-      console.log(`[Engine-${this.promptId}] Node ${executionNode.id} has 'mute' bypass behavior, setting all outputs to undefined.`);
+      // console.log(`[Engine-${this.promptId}] Node ${executionNode.id} has 'mute' bypass behavior, setting all outputs to undefined.`);
       for (const outputKey in nodeDefinition.outputs) {
         pseudoOutputs[outputKey] = undefined;
       }
@@ -926,7 +926,7 @@ export class ExecutionEngine {
       return pseudoOutputs;
     }
 
-    console.log(`[Engine-${this.promptId}] Node ${executionNode.id} has no explicit bypass behavior, using default strategy.`);
+    // console.log(`[Engine-${this.promptId}] Node ${executionNode.id} has no explicit bypass behavior, using default strategy.`);
     const inputSlotDefs = nodeDefinition.inputs || {};
     const outputSlotDefs = nodeDefinition.outputs || {};
     const availableInputKeys = Object.keys(currentInputs);
@@ -1020,12 +1020,12 @@ export class ExecutionEngine {
   ): Promise<void> {
     const taskPromise = new Promise<void>((resolve, reject) => {
       const consumerId = `InterfaceConsumer-${this.promptId}-${interfaceKey}`;
-      console.log(`[Engine-${this.promptId}] [${consumerId}] STARTING consumption for interface output: ${interfaceKey} ('${interfaceDisplayName || 'N/A'}'). Stream readable: ${stream.readable}`);
+      // console.log(`[Engine-${this.promptId}] [${consumerId}] STARTING consumption for interface output: ${interfaceKey} ('${interfaceDisplayName || 'N/A'}'). Stream readable: ${stream.readable}`);
       this.activeInterfaceStreamConsumers.add(interfaceKey);
       let chunkIndex = 0;
 
       stream.on('data', (chunk) => {
-        console.debug(`[Engine-${this.promptId}] [${consumerId}] Received chunk. Index: ${chunkIndex}. Broadcasting... Payload: ${JSON.stringify(chunk)}`);
+        // console.debug(`[Engine-${this.promptId}] [${consumerId}] Received chunk. Index: ${chunkIndex}. Broadcasting... Payload: ${JSON.stringify(chunk)}`);
         if (this.isInterrupted) {
           console.warn(`[Engine-${this.promptId}] [${consumerId}] Interrupting data event for interface stream ${interfaceKey} at chunk ${chunkIndex}`);
           stream.destroy(new Error('Interrupted by user'));
@@ -1039,12 +1039,12 @@ export class ExecutionEngine {
           isLastChunk: false,
         };
         this.wsManager.broadcast(WebSocketMessageType.WORKFLOW_INTERFACE_YIELD, payload);
-        console.debug(`[Engine-${this.promptId}] [${consumerId}] Broadcasted chunk. Index: ${chunkIndex}.`);
+        // console.debug(`[Engine-${this.promptId}] [${consumerId}] Broadcasted chunk. Index: ${chunkIndex}.`);
         chunkIndex++;
       });
 
       stream.on('end', () => {
-        console.debug(`[Engine-${this.promptId}] [${consumerId}] Stream for interface output ${interfaceKey} ENDED. Processed ${chunkIndex} chunks. Broadcasting last chunk...`);
+        // console.debug(`[Engine-${this.promptId}] [${consumerId}] Stream for interface output ${interfaceKey} ENDED. Processed ${chunkIndex} chunks. Broadcasting last chunk...`);
         const payload: WorkflowInterfaceYieldPayload = {
           promptId: this.promptId,
           interfaceOutputKey: interfaceKey,
@@ -1053,9 +1053,9 @@ export class ExecutionEngine {
           isLastChunk: true,
         };
         this.wsManager.broadcast(WebSocketMessageType.WORKFLOW_INTERFACE_YIELD, payload);
-        console.debug(`[Engine-${this.promptId}] [${consumerId}] Broadcasted LAST chunk for ${interfaceKey}.`);
+        // console.debug(`[Engine-${this.promptId}] [${consumerId}] Broadcasted LAST chunk for ${interfaceKey}.`);
         this.activeInterfaceStreamConsumers.delete(interfaceKey);
-        console.debug(`[Engine-${this.promptId}] [${consumerId}] Resolving promise for ${interfaceKey}.`);
+        // console.debug(`[Engine-${this.promptId}] [${consumerId}] Resolving promise for ${interfaceKey}.`);
         resolve();
       });
 
@@ -1073,7 +1073,7 @@ export class ExecutionEngine {
 
       // Ensure consumption if it's a PassThrough that might not have other consumers
       if (typeof (stream as any).isPaused === 'function' && (stream as any).isPaused()) {
-        console.debug(`[Engine-${this.promptId}] [${consumerId}] Stream for ${interfaceKey} was paused, resuming.`);
+        // console.debug(`[Engine-${this.promptId}] [${consumerId}] Stream for ${interfaceKey} was paused, resuming.`);
         stream.resume();
       }
     });
@@ -1083,18 +1083,18 @@ export class ExecutionEngine {
 
   private async _processAndBroadcastFinalOutputs(): Promise<void> {
     if (!this.payload.outputInterfaceMappings || Object.keys(this.payload.outputInterfaceMappings).length === 0) {
-      console.log(`[Engine-${this.promptId}] No interface output mappings defined.`);
+      // console.log(`[Engine-${this.promptId}] No interface output mappings defined.`);
       return;
     }
 
     const finalWorkflowOutputs: Record<string, InterfaceOutputValue> = {}; // Use InterfaceOutputValue type
 
-    console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Starting. Mappings: ${JSON.stringify(this.payload.outputInterfaceMappings)}`);
+    // console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Starting. Mappings: ${JSON.stringify(this.payload.outputInterfaceMappings)}`);
 
     for (const interfaceOutputKey in this.payload.outputInterfaceMappings) {
-      console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Processing interfaceOutputKey: ${interfaceOutputKey}`);
+      // console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Processing interfaceOutputKey: ${interfaceOutputKey}`);
       if (this.isInterrupted) {
-        console.log(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Skipping processing of interface output ${interfaceOutputKey} due to interruption.`);
+        // console.log(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Skipping processing of interface output ${interfaceOutputKey} due to interruption.`);
         continue;
       }
       const mapping = this.payload.outputInterfaceMappings[interfaceOutputKey];
@@ -1104,16 +1104,16 @@ export class ExecutionEngine {
       }
 
       const { sourceNodeId, sourceSlotKey } = mapping;
-      console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Mapping for ${interfaceOutputKey}: sourceNodeId=${sourceNodeId}, sourceSlotKey=${sourceSlotKey}`);
+      // console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Mapping for ${interfaceOutputKey}: sourceNodeId=${sourceNodeId}, sourceSlotKey=${sourceSlotKey}`);
       const sourceNodeResult = this.nodeResults[sourceNodeId];
       const sourceNodeState = this.nodeStates[sourceNodeId];
       let valueToOutput: any = null;
 
-      console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] sourceNodeResult for ${sourceNodeId}: ${sourceNodeResult ? 'Exists' : 'null/undefined'}, sourceNodeState: ${sourceNodeState}`);
+      // console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] sourceNodeResult for ${sourceNodeId}: ${sourceNodeResult ? 'Exists' : 'null/undefined'}, sourceNodeState: ${sourceNodeState}`);
 
       if (sourceNodeResult && sourceSlotKey in sourceNodeResult) {
         valueToOutput = sourceNodeResult[sourceSlotKey];
-        console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] valueToOutput for ${interfaceOutputKey} from nodeResults: ${typeof valueToOutput}. Is Readable: ${valueToOutput instanceof Stream.Readable}`);
+        // console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] valueToOutput for ${interfaceOutputKey} from nodeResults: ${typeof valueToOutput}. Is Readable: ${valueToOutput instanceof Stream.Readable}`);
       } else {
         console.warn(
           `[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Source for interface output ${interfaceOutputKey} (node: ${sourceNodeId}, slot: ${sourceSlotKey}) not found in nodeResults.`
@@ -1123,10 +1123,10 @@ export class ExecutionEngine {
       const interfaceDef = this.interfaceOutputDefinitions?.[interfaceOutputKey];
       const interfaceType = interfaceDef?.dataFlowType;
       const interfaceDisplayName = interfaceDef?.displayName;
-      console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Interface def for ${interfaceOutputKey}: type=${interfaceType}, displayName=${interfaceDisplayName}`);
+      // console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Interface def for ${interfaceOutputKey}: type=${interfaceType}, displayName=${interfaceDisplayName}`);
 
       if (interfaceType === 'STREAM' && valueToOutput instanceof Stream.Readable) {
-        console.log(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Handling STREAM interface output: ${interfaceOutputKey}. Stream destroyed: ${valueToOutput.destroyed}, readable: ${valueToOutput.readable}`);
+        // console.log(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Handling STREAM interface output: ${interfaceOutputKey}. Stream destroyed: ${valueToOutput.destroyed}, readable: ${valueToOutput.readable}`);
         // _handleStreamInterfaceOutput now adds its promise to this.backgroundTasks
         // 移除 await, 让 _handleStreamInterfaceOutput 启动后台任务即可
         this._handleStreamInterfaceOutput(interfaceOutputKey, valueToOutput, interfaceDisplayName);
@@ -1145,12 +1145,12 @@ export class ExecutionEngine {
       }
     }
 
-    console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Finished loop. finalWorkflowOutputs count: ${Object.keys(finalWorkflowOutputs).length}`);
+    // console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Finished loop. finalWorkflowOutputs count: ${Object.keys(finalWorkflowOutputs).length}`);
     if (Object.keys(finalWorkflowOutputs).length > 0 && !this.isInterrupted) {
       this.sendNodeComplete('__WORKFLOW_INTERFACE_OUTPUTS__', finalWorkflowOutputs);
-      console.log(`[Engine-${this.promptId}] Sent aggregated workflow interface outputs (with stream placeholders):`, finalWorkflowOutputs);
+      // console.log(`[Engine-${this.promptId}] Sent aggregated workflow interface outputs (with stream placeholders):`, finalWorkflowOutputs);
     } else if (this.isInterrupted) {
-      console.log(`[Engine-${this.promptId}] Aggregated workflow interface outputs not sent due to interruption.`);
+      // console.log(`[Engine-${this.promptId}] Aggregated workflow interface outputs not sent due to interruption.`);
     }
   }
 }
