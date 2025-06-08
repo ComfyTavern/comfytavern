@@ -16,14 +16,17 @@
     <!-- 面板头部，包含标题、模式切换和展开/收起按钮 -->
     <div class="panel-header" :class="{ 'collapsed': !panelLayout.isExpanded }" @mousedown.stop.prevent="startDragTop">
       <div v-if="panelLayout.isExpanded" class="flex items-center space-x-2 flex-grow min-w-0">
-        <h3 class="panel-title truncate flex-shrink"
-          :title="panelMode === 'singlePreview' && activeTarget ? `单一预览: ${nodeDisplayName} (ID: ${activeTarget.nodeId})` :
-            (panelMode === 'groupOverview' && activeTabId && groupOutputs ? `组输出总览: ${activeWorkflowName}` :
-              (panelMode === 'streamPreview' && activeTarget && activeTarget.nodeId ? `流式输出: ${nodeDisplayName} (ID: ${activeTarget.nodeId})` : '预览'))">
+        <h3 class="panel-title truncate flex-shrink" :title="panelMode === 'singlePreview' && activeTarget ? `单一预览: ${nodeDisplayName} (ID: ${activeTarget.nodeId})` :
+          (panelMode === 'groupOverview' && activeTabId && groupOutputs ? `组输出总览: ${activeWorkflowName}` : '预览')">
+          <!-- 移除 streamPreview 的标题逻辑 -->
           <template v-if="panelMode === 'singlePreview'">
             <template v-if="activeTarget">
-              单一: {{ nodeDisplayName }} <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(ID: {{
-                activeTarget.nodeId }})</span>
+              <!-- 根据 isStreamSlot 显示不同前缀 -->
+              {{ isStreamSlot ? '流式/单一' : '单一' }}: {{ nodeDisplayName }}
+              <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(ID: {{ activeTarget.nodeId }})</span>
+              <!-- 如果是流式，显示类型 -->
+              <span v-if="isStreamSlot"
+                class="text-xs font-semibold text-purple-500 dark:text-purple-400 uppercase ml-2">[STREAM]</span>
             </template>
             <template v-else>
               <span class="text-gray-700 dark:text-gray-300">单一预览 <span
@@ -39,23 +42,15 @@
                   class="text-gray-400 dark:text-gray-500">（无可用工作流）</span></span>
             </template>
           </template>
-          <template v-else-if="panelMode === 'streamPreview'">
-            <template v-if="activeTarget && activeTarget.nodeId">
-              流式: {{ nodeDisplayName }} <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(ID: {{
-                activeTarget.nodeId }})</span>
-            </template>
-            <template v-else>
-              <span class="text-gray-700 dark:text-gray-300">流式输出 <span
-                  class="text-gray-400 dark:text-gray-500">（未选目标）</span></span>
-            </template>
-          </template>
+          <!-- 移除了 streamPreview 的 template -->
         </h3>
       </div>
+      <!-- 按钮组 -->
       <div v-if="panelLayout.isExpanded"
         class="mode-switcher flex-shrink-0 flex items-center space-x-1 p-1 bg-gray-100 dark:bg-gray-700 rounded-md mx-2">
         <button @click="panelMode = 'singlePreview'"
           :class="['px-2 py-0.5 text-xs rounded-md transition-colors', panelMode === 'singlePreview' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600']"
-          title="单一插槽预览模式">
+          title="单一插槽预览模式 (含流式)"> <!-- title -->
           单一
         </button>
         <button @click="panelMode = 'groupOverview'"
@@ -63,11 +58,14 @@
           title="组输出总览模式">
           组总览
         </button>
+        <!-- 移除了 流式 按钮 -->
+        <!--
         <button @click="panelMode = 'streamPreview'"
           :class="['px-2 py-0.5 text-xs rounded-md transition-colors', panelMode === 'streamPreview' ? 'bg-purple-500 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600']"
           title="流式输出预览模式">
           流式
         </button>
+        -->
       </div>
       <button class="toggle-button" @click="togglePanelExpansion">
         <!-- 收起状态显示放大镜图标 -->
@@ -91,15 +89,24 @@
       <!-- 单一预览模式 -->
       <template v-if="panelMode === 'singlePreview'">
         <template v-if="activeTarget">
-          <div class="p-4 space-y-2">
+          <!-- 增加 space-y-3 以容纳可能的流式区域 -->
+          <div class="p-4 space-y-3">
+            <!-- 插槽信息 -->
+            <p class="text-sm mb-2">
+              <span class="font-semibold text-gray-500 dark:text-gray-400">插槽: </span>
+              <span class="text-gray-800 dark:text-gray-100">{{ slotDisplayName }}</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(Key: {{ activeTarget.slotKey }})</span>
+              <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase ml-2">- 输出</span>
+            </p>
+
+            <!-- 最终值/当前值 显示区域 -->
             <div>
-              <p class="text-sm mb-2">
-                <span class="font-semibold text-gray-500 dark:text-gray-400">插槽: </span>
-                <span class="text-gray-800 dark:text-gray-100">{{ slotDisplayName }}</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(Key: {{ activeTarget.slotKey }})</span>
-                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase ml-2">- 输出</span>
+              <!-- 标题 -->
+              <p class="text-xs mb-1 text-gray-500 dark:text-gray-400 font-semibold">
+                {{ isStreamSlot ? '最终值:' : '当前值:' }}
               </p>
-              <div class="p-2 border rounded bg-gray-50 dark:bg-gray-700/50 max-h-96 overflow-y-auto"> <!-- 输出内容 -->
+              <!-- 调整 max-h-60 留出空间 -->
+              <div class="p-2 border rounded bg-gray-50 dark:bg-gray-700/50 max-h-60 overflow-y-auto">
                 <template v-if="previewData !== null && previewData !== undefined">
                   <MarkdownRenderer v-if="isMarkdownSlot && typeof previewData === 'string'"
                     :markdown-content="previewData" />
@@ -108,10 +115,27 @@
                   <p v-else class="text-xs whitespace-pre-wrap break-all">{{ String(previewData) }}</p>
                 </template>
                 <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">
-                  无可用预览数据或插槽未产生输出。
+                  <!-- 提示语 -->
+                  {{ isStreamSlot ? '流结束后显示最终值。' : '无可用预览数据或插槽未产生输出。' }}
                 </p>
               </div>
             </div>
+
+            <!-- 实时流显示区域 (仅当 isStreamSlot 为 true 时显示) -->
+            <div v-if="isStreamSlot">
+              <p class="text-xs mt-2 mb-1 text-gray-500 dark:text-gray-400 font-semibold">实时流:</p>
+              <!-- 样式参考 groupOverview 中的流显示 -->
+              <div class="p-1 border rounded bg-gray-100 dark:bg-gray-700/30 max-h-48 overflow-y-auto">
+                <pre v-if="currentAccumulatedStreamText" class="text-xs whitespace-pre-wrap break-all">{{
+                  currentAccumulatedStreamText }}</pre>
+                <p v-else-if="isSingleStreamProcessing" class="text-xs text-gray-500 dark:text-gray-400 italic">等待流数据...
+                </p>
+                <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">无流数据。</p>
+              </div>
+              <p v-if="isSingleStreamDone" class="text-xs text-green-500 dark:text-green-400 mt-1">流已结束。</p>
+            </div>
+            <!-- !!! 咕咕新增结束 -->
+
           </div>
         </template>
         <template v-else>
@@ -167,15 +191,19 @@
                     </p>
                   </div>
 
-                  <!-- 新增：显示接口的流式输出 -->
+                  <!-- 显示接口的流式输出 -->
                   <div v-if="outputDef.dataFlowType === DataFlowType.STREAM">
                     <p class="text-xs mt-2 mb-1 text-gray-500 dark:text-gray-400 font-semibold">实时流:</p>
                     <div class="p-1 border rounded bg-gray-100 dark:bg-gray-700/30 max-h-48 overflow-y-auto">
-                      <pre v-if="getInterfaceStreamText(String(key))" class="text-xs whitespace-pre-wrap break-all">{{ getInterfaceStreamText(String(key)) }}</pre>
-                      <p v-else-if="isInterfaceStreamProcessing(String(key))" class="text-xs text-gray-500 dark:text-gray-400 italic">等待流数据...</p>
+                      <pre v-if="getInterfaceStreamText(String(key))" class="text-xs whitespace-pre-wrap break-all">{{
+                        getInterfaceStreamText(String(key)) }}</pre>
+                      <p v-else-if="isInterfaceStreamProcessing(String(key))"
+                        class="text-xs text-gray-500 dark:text-gray-400 italic">
+                        等待流数据...</p>
                       <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">无流数据。</p>
                     </div>
-                    <p v-if="isInterfaceStreamDone(String(key))" class="text-xs text-green-500 dark:text-green-400 mt-1">流已结束。</p>
+                    <p v-if="isInterfaceStreamDone(String(key))"
+                      class="text-xs text-green-500 dark:text-green-400 mt-1">流已结束。</p>
                   </div>
                 </div>
               </div>
@@ -189,30 +217,6 @@
           </p>
         </template>
       </template>
-
-      <!-- 流式预览模式 -->
-      <template v-else-if="panelMode === 'streamPreview'">
-        <template v-if="activeTarget && activeTarget.nodeId">
-          <div class="p-4 space-y-2">
-            <div>
-              <p class="text-xs mb-2 text-gray-500 dark:text-gray-400">实时流式文本输出：</p>
-              <div class="p-2 border rounded bg-gray-50 dark:bg-gray-700/50 max-h-96 overflow-y-auto">
-                <pre v-if="currentAccumulatedStreamText"
-                  class="text-xs whitespace-pre-wrap break-all">{{ currentAccumulatedStreamText }}</pre>
-                <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">
-                  等待流数据...
-                </p>
-              </div>
-            </div>
-          </div>
-        </template>
-        <template v-else>
-          <p class="p-4 text-sm text-gray-500 dark:text-gray-400">
-            无预览目标被选中。右键点击节点以激活流式预览。
-          </p>
-        </template>
-      </template>
-
     </div>
   </div>
 </template>
@@ -220,7 +224,8 @@
 <script setup lang="ts">
 import { ref, onUnmounted, type Ref, computed, watch } from 'vue'; // Added watch
 import { useLocalStorage } from '@vueuse/core';
-import { DataFlowType, type OutputDefinition } from '@comfytavern/types'; // ChunkPayload 不再需要在这里导入, 添加 WorkflowNode, OutputDefinition
+// 确保 DataFlowType, OutputDefinition, ExecutionStatus 已导入
+import { DataFlowType, type OutputDefinition, ExecutionStatus } from '@comfytavern/types';
 import { useWorkflowManager } from '@/composables/workflow/useWorkflowManager';
 import { useExecutionStore } from '@/stores/executionStore';
 import { useWorkflowStore } from '@/stores/workflowStore';
@@ -228,10 +233,10 @@ import { useNodeStore } from '@/stores/nodeStore';
 import MarkdownRenderer from '@/components/common/MarkdownRenderer.vue';
 import type { Node as VueFlowNode } from "@vue-flow/core";
 
-// 新增：面板模式状态
-const panelMode = ref<'singlePreview' | 'groupOverview' | 'streamPreview'>('singlePreview');
+// 移除了 'streamPreview'
+const panelMode = ref<'singlePreview' | 'groupOverview'>('singlePreview');
 
-// 新增：组输出项的折叠状态 (使用 activeTabId 作为 key)
+// 组输出项的折叠状态 (使用 activeTabId 作为 key)
 const groupOutputItemCollapseState = useLocalStorage('groupOutputItemCollapseStatePerWorkflow', {} as Record<string, Record<string, boolean>>);
 
 const workflowManager = useWorkflowManager();
@@ -250,7 +255,7 @@ const activeWorkflowData = computed(() => {
   return workflowStore.getWorkflowData(activeTabId.value);
 });
 
-// 新增：获取当前活动工作流的名称
+// 获取当前活动工作流的名称
 const activeWorkflowName = computed(() => {
   return activeWorkflowData.value?.name || activeTabId.value; // 如果 name 不存在，则回退到显示 id
 });
@@ -283,7 +288,7 @@ const groupPreviewData = computed(() => {
   }, {} as Record<string, any>);
 });
 
-// 新增：计算可显示的组输出项
+// 计算可显示的组输出项
 const displayableGroupOutputs = computed<Record<string, OutputDefinition>>(() => {
   const result: Record<string, OutputDefinition> = {};
   if (groupOutputs.value) {
@@ -326,16 +331,13 @@ const isMarkdownContent = (content: unknown): content is string => {
 };
 
 // 监听 activeTarget 的变化
-watch(activeTarget, (newTarget, oldTarget) => {
-  // 如果设置了新的单一预览目标，并且当前不是流式预览，则切换回单一预览模式
+// 监听逻辑调整
+watch(activeTarget, (newTarget) => { // 移除了 oldTarget
+  // 如果设置了新的单一预览目标，并且当前在组总览，则切换回单一预览模式
   if (newTarget && panelMode.value === 'groupOverview') {
     panelMode.value = 'singlePreview';
   }
-  // 如果节点目标改变，并且当前是流式预览模式，可能需要重置流式内容
-  // (这部分逻辑可以根据具体需求调整，例如，如果流式内容是持久的直到手动清除)
-  if (newTarget?.nodeId !== oldTarget?.nodeId && panelMode.value === 'streamPreview') {
-    // currentAccumulatedStreamText 会通过 computed 自动更新
-  }
+  // 移除了与 streamPreview 相关的逻辑
 }, { deep: true });
 
 // 监听来自 workflowManager 的请求，切换到组输出总览模式
@@ -353,18 +355,15 @@ const previewData = computed(() => {
   if (!activeTarget.value || !activeTabId.value) return null;
   const { nodeId, slotKey } = activeTarget.value;
   const tabState = executionStore.tabExecutionStates.get(activeTabId.value);
-  if (!tabState || !tabState.nodeOutputs || !tabState.nodeOutputs[nodeId]) {
-    // 尝试从 nodePreviewOutputs 获取，如果 nodeOutputs 中没有
-    // 这取决于流式预览是否会写入 previewOutputs
-    // 根据 store 的逻辑，NODE_COMPLETE 会写入 nodeOutputs 或 nodePreviewOutputs
-    // NODE_YIELD 应该类似地决定写入哪里
-    // 假设 NODE_YIELD 会更新到 nodeOutputs (如果主流程)
-    if (tabState?.nodePreviewOutputs && tabState.nodePreviewOutputs[nodeId]) {
-      return tabState.nodePreviewOutputs[nodeId]?.[slotKey] ?? null;
-    }
-    return null;
+  // 优先从 nodeOutputs 获取最终值
+  if (tabState?.nodeOutputs?.[nodeId]?.[slotKey] !== undefined) {
+    return tabState.nodeOutputs[nodeId][slotKey];
   }
-  return tabState.nodeOutputs[nodeId]?.[slotKey] ?? null;
+  // 如果没有最终值，尝试从 nodePreviewOutputs 获取中间值（如果有）
+  if (tabState?.nodePreviewOutputs?.[nodeId]?.[slotKey] !== undefined) {
+    return tabState.nodePreviewOutputs[nodeId][slotKey];
+  }
+  return null;
 });
 
 const activeNodeInstance = computed<VueFlowNode | null>(() => {
@@ -381,37 +380,73 @@ const nodeDisplayName = computed(() => {
   if (!activeNodeInstance.value) {
     return activeTarget.value?.nodeId || 'N/A';
   }
-  const node = activeNodeInstance.value; // 类型为 VueFlowNode
+  const node = activeNodeInstance.value;
   const nodeDef = node.type ? nodeStore.getNodeDefinitionByFullType(node.type) : undefined;
   return node.data?.displayName || node.label || nodeDef?.displayName || node.id || node.type || 'N/A';
 });
 
-const slotDisplayName = computed(() => {
-  if (!activeNodeInstance.value || !activeTarget.value) {
-    return activeTarget.value?.slotKey || 'N/A';
-  }
-  const node = activeNodeInstance.value; // 类型为 VueFlowNode
-  const slotKey = activeTarget.value.slotKey;
+// 获取当前选中插槽的定义
+const activeSlotDefinition = computed<OutputDefinition | undefined>(() => {
+  const node = activeNodeInstance.value;
+  const slotKey = activeTarget.value?.slotKey;
+  if (!node || !slotKey) return undefined;
 
-  const vueFlowSlotData = node.data?.outputs?.[slotKey];
-  if (vueFlowSlotData?.displayName) {
-    return vueFlowSlotData.displayName;
-  }
+  // 1. 优先从节点实例数据中获取 (可能包含动态信息)
+  const instanceDef = node.data?.outputs?.[slotKey];
+  if (instanceDef) return instanceDef;
 
+  // 2. 从节点类型定义中获取
   const nodeDef = node.type ? nodeStore.getNodeDefinitionByFullType(node.type) : undefined;
-  const outputSlotDefFromDef = nodeDef?.outputs?.[slotKey];
-  return outputSlotDefFromDef?.displayName || slotKey;
+  return nodeDef?.outputs?.[slotKey];
 });
 
-// 新增：计算属性，用于获取当前选中节点的累积流式文本
+// 判断当前选中的插槽是否为 STREAM 类型
+const isStreamSlot = computed(() => {
+  return activeSlotDefinition.value?.dataFlowType === DataFlowType.STREAM;
+});
+
+
+const slotDisplayName = computed(() => {
+  // 直接使用 activeSlotDefinition
+  if (!activeTarget.value) return 'N/A';
+  return activeSlotDefinition.value?.displayName || activeTarget.value.slotKey;
+});
+
+// 获取当前选中节点的累积流式文本
 const currentAccumulatedStreamText = computed(() => {
   if (!activeTabId.value || !activeTarget.value?.nodeId) {
     return '';
   }
+  // 确保只在 isStreamSlot 为 true 时才真正去获取，虽然这里获取了模板也会用 v-if 拦截
+  // if (!isStreamSlot.value) return ''; // 这一行可以被模板的 v-if 覆盖，所以不一定需要在这里加
   return executionStore.getAccumulatedStreamedText(activeTabId.value, activeTarget.value.nodeId) || '';
 });
 
-// 新增：用于获取工作流接口流式数据的方法
+// 单一节点流状态判断，参考 interface 的逻辑
+const isSingleStreamDone = computed(() => {
+  if (!activeTabId.value || !activeTarget.value?.nodeId) return false;
+  // 确保是流式插槽
+  if (!isStreamSlot.value) return false;
+  // 使用 nodeStates 判断流是否结束
+  const nodeState = executionStore.getNodeState(activeTabId.value, activeTarget.value.nodeId);
+  return nodeState === ExecutionStatus.COMPLETE || nodeState === ExecutionStatus.ERROR || nodeState === ExecutionStatus.INTERRUPTED;
+});
+
+const isSingleStreamProcessing = computed(() => {
+  if (!activeTabId.value || !activeTarget.value?.nodeId) return false;
+  // 确保是流式插槽
+  if (!isStreamSlot.value) return false;
+  const promptId = executionStore.getCurrentPromptId(activeTabId.value);
+  if (!promptId) return false;
+  if (isSingleStreamDone.value) return false;
+  // 使用 streamingNodeContent
+  // 检查 store 中是否存在该节点流的记录，且未完成
+  return !!executionStore.tabExecutionStates.get(activeTabId.value)?.streamingNodeContent?.[activeTarget.value.nodeId];
+});
+// !!! 咕咕新增结束
+
+
+// 用于获取工作流接口流式数据的方法 (保持不变)
 const getInterfaceStreamText = (interfaceKey: string) => {
   if (!activeTabId.value) return '';
   return executionStore.getAccumulatedInterfaceStreamedText(activeTabId.value, interfaceKey) || '';
@@ -433,33 +468,27 @@ const isInterfaceStreamProcessing = (interfaceKey: string) => {
 
 
 const isMarkdownSlot = computed(() => {
+  // 使用 activeSlotDefinition
   if (!activeTarget.value) return false;
   // 启发式规则
   if (activeTarget.value.slotKey.toLowerCase().includes('markdown')) return true;
 
-  const node = activeNodeInstance.value; // 类型为 VueFlowNode
-  if (node) {
-    const slotKey = activeTarget.value.slotKey;
-    const outputSlotDef = node.data?.outputs?.[slotKey]; // 从 VueFlowNode.data 获取
-    if (outputSlotDef?.dataFlowType && typeof outputSlotDef.dataFlowType === 'string' && outputSlotDef.dataFlowType.toLowerCase().includes('markdown')) {
-      return true;
-    }
-    // 可选: 如果 VueFlowNode.data 中没有，再尝试从 nodeDef 获取
-    // const nodeDef = node.type ? nodeStore.getNodeDefinitionByFullType(node.type) : undefined;
-    // const outputSlotDefFromDef = nodeDef?.outputs?.[slotKey];
-    // if (outputSlotDefFromDef?.dataFlowType && typeof outputSlotDefFromDef.dataFlowType === 'string' && outputSlotDefFromDef.dataFlowType.toLowerCase().includes('markdown')) return true;
+  const outputSlotDef = activeSlotDefinition.value;
+  if (outputSlotDef?.dataFlowType && typeof outputSlotDef.dataFlowType === 'string' && outputSlotDef.dataFlowType.toLowerCase().includes('markdown')) {
+    return true;
   }
   return false;
 });
 
+// --- 布局和拖拽逻辑 (保持不变) ---
 const panelLayout = useLocalStorage('rightPreviewPanelLayout', {
   isExpanded: true,
-  width: 300,
-  height: 400,
+  width: 350, // 稍微加宽一点默认值
+  height: 500, // 稍微加高一点默认值
   top: 100,
 });
 
-const wasDraggingHeader = ref(false); // 新增：用于判断是否正在拖拽头部
+const wasDraggingHeader = ref(false); // 用于判断是否正在拖拽头部
 
 const togglePanelExpansion = () => {
   if (wasDraggingHeader.value) {
@@ -542,7 +571,7 @@ const startDragTop = (event: MouseEvent) => {
   isDraggingTop.value = true;
   initialMouseYTop.value = event.clientY;
   initialTop.value = panelLayout.value.top;
-  wasDraggingHeader.value = false; // 每次开始拖动（或点击）头部时，重置拖拽标志
+  wasDraggingHeader.value = false;
   document.addEventListener('mousemove', handleDragTop);
   document.addEventListener('mouseup', stopDragTop);
 };
@@ -550,16 +579,20 @@ const startDragTop = (event: MouseEvent) => {
 const handleDragTop = (event: MouseEvent) => {
   if (!isDraggingTop.value) return;
   const deltaY = event.clientY - initialMouseYTop.value;
-  if (deltaY !== 0) { // 只有当实际发生拖动时才标记
+  if (Math.abs(deltaY) > 2) { // 增加一个阈值，防止轻微移动就触发
     wasDraggingHeader.value = true;
   }
   const newTop = initialTop.value + deltaY;
   const minTop = 0;
-  const maxTop = window.innerHeight - 40; // 40 是收起时的高度
+  const maxTop = window.innerHeight - 40;
   panelLayout.value.top = Math.max(minTop, Math.min(newTop, maxTop));
 };
 
-const stopDragTop = () => {
+const stopDragTop = () => { // 移除了未使用的 event 参数
+  // 使用 setTimeout 延迟重置，确保 togglePanelExpansion 有机会先读取 wasDraggingHeader 的值
+  setTimeout(() => {
+    wasDraggingHeader.value = false;
+  }, 0);
   isDraggingTop.value = false;
   document.removeEventListener('mousemove', handleDragTop);
   document.removeEventListener('mouseup', stopDragTop);
@@ -616,8 +649,11 @@ onUnmounted(() => {
   document.removeEventListener('mousemove', handleResizeCorner);
   document.removeEventListener('mouseup', stopResizeCorner);
 });
+// --- 布局和拖拽逻辑结束 ---
+
 </script>
 
+<!-- Style 保持不变 -->
 <style scoped>
 .right-preview-panel {
   @apply fixed right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg flex flex-col z-50 rounded-md;
@@ -651,7 +687,20 @@ onUnmounted(() => {
 .right-preview-panel.is-resizing {
   transition: none !important;
   /* 拖拽时禁用所有过渡效果，确保即时响应 */
+  user-select: none;
+  /* 防止拖拽时选中文字 */
+  pointer-events: none;
+  /* 优化拖拽性能 */
 }
+
+/* 确保handle在resizing时依然可交互 */
+.right-preview-panel.is-resizing .resize-handle-width,
+.right-preview-panel.is-resizing .resize-handle-height,
+.right-preview-panel.is-resizing .resize-handle-corner,
+.right-preview-panel.is-resizing .panel-header {
+  pointer-events: auto;
+}
+
 
 .resize-handle-width {
   @apply absolute top-0 left-0 w-3 h-full cursor-ew-resize z-50;
@@ -674,9 +723,14 @@ onUnmounted(() => {
 }
 
 .panel-header {
-  @apply flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700 flex-shrink-0;
+  @apply flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 select-none;
+  /* 禁止选中 */
   cursor: grab;
   /* 整个头部都可以拖动 */
+}
+
+.panel-header:active {
+  cursor: grabbing;
 }
 
 .panel-header.collapsed {
@@ -686,6 +740,8 @@ onUnmounted(() => {
   /* 确保按钮填满收起后的容器 */
   width: 100%;
   /* 确保按钮填满收起后的容器 */
+  cursor: pointer;
+  /* 收起时点击展开，不需要grab */
 }
 
 .panel-title {
@@ -693,12 +749,15 @@ onUnmounted(() => {
 }
 
 .toggle-button {
-  @apply p-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md;
+  @apply p-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md cursor-pointer;
+  /* 确保按钮是pointer */
   /* 给按钮本身也加点圆角 */
   display: flex;
   /* 用于更好地控制SVG图标的对齐 */
   align-items: center;
   justify-content: center;
+  pointer-events: auto;
+  /* 确保按钮可点击 */
 }
 
 .panel-header.collapsed .toggle-button {
