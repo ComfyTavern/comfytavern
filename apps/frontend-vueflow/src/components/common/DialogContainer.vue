@@ -78,17 +78,29 @@ const getPositionContainerClasses = (position: ToastPosition): string[] => {
   }
 };
 
-// 获取内部堆叠容器的 Tailwind 类 (flex 方向和间距)
+// 获取内部堆叠容器的 Tailwind 类 (flex 方向、对齐和间距)
 const getToastStackClasses = (position: ToastPosition): string[] => {
-  const baseStackClasses = ['flex', 'gap-2']; // 使用 gap 来控制间距
+  const baseStackClasses = ['flex', 'gap-2'];
+  let alignmentClass = 'items-stretch'; // 默认 flex items 会被拉伸
+
+  // 根据 position 的后缀确定交叉轴对齐方式
+  if (position.endsWith('-left')) {
+    alignmentClass = 'items-start'; // 子项在交叉轴（水平）的起始处对齐
+  } else if (position.endsWith('-right')) {
+    alignmentClass = 'items-end';   // 子项在交叉轴（水平）的末尾处对齐
+  } else if (position.endsWith('-center')) {
+    alignmentClass = 'items-center';// 子项在交叉轴（水平）的中间处对齐
+  }
+  // 对于 'top-center' 和 'bottom-center'，父级 "position container" 已经是 items-center，
+  // 这里的 items-center 是针对 stack div 内部的 toast notification。
+
+  // 根据 position 的前缀确定主轴方向 (flex-direction)
   if (position.startsWith('top-')) {
-    // 对于顶部位置，新通知通常希望在最上方（如果数组是 push 新的）
-    // 或者最下方（如果数组是 unshift 新的）。
-    // DialogService.toasts.push()，新通知在数组末尾。
-    // flex-col: 新通知在下。 flex-col-reverse: 新通知在上。
-    return [...baseStackClasses, 'flex-col-reverse']; // 新通知在视觉顶部
+    // 新通知（数组末尾）在视觉顶部
+    return [...baseStackClasses, 'flex-col-reverse', alignmentClass];
   } else { // bottom-*
-    return [...baseStackClasses, 'flex-col']; // 新通知在视觉底部
+    // 新通知（数组末尾）在视觉底部
+    return [...baseStackClasses, 'flex-col', alignmentClass];
   }
 };
 

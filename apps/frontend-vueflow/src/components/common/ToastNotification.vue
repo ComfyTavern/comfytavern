@@ -2,7 +2,7 @@
   <!-- Teleport to="body" 已移除 -->
   <div
     v-if="visible"
-    class="transition-all duration-300 flex items-center w-full"
+    class="transition-all duration-300 flex items-center"
     :style="{ zIndex: 9999 }"
     :class="[
       /* positionClasses 已移除，由 DialogContainer 控制 */
