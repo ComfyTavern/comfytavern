@@ -6,6 +6,7 @@
       v-model="currentValue"
       :id="itemConfig.key"
       class="w-full"
+      size="large"
     />
     <TextAreaInput
       v-else-if="itemConfig.type === 'textarea'"
