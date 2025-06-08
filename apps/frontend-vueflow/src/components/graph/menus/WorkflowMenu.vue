@@ -101,18 +101,25 @@
 import type { WorkflowData } from "@/types/workflowTypes";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useTabStore } from "@/stores/tabStore";
+import { useProjectStore } from "@/stores/projectStore"; // 咕咕：新增导入
 import { storeToRefs } from "pinia";
 import { ref, computed } from "vue";
 import sanitize from "sanitize-filename";
 import { inject } from "vue";
+import { deepClone } from '@/utils/deepClone'; // 咕咕：重新加入导入
 import { useDialogService } from "@/services/DialogService";
+import type { WorkflowObject } from "@comfytavern/types"; // 咕咕：新增导入
+import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core"; // 咕咕：新增导入
+import { transformVueFlowToCoreWorkflow } from '@/utils/workflowTransformer'; // 咕咕：确保导入
 
 const emit = defineEmits(["close"]);
 const sidebarRef = inject<{ setActiveTab: (tabId: string) => void }>('sidebarRef');
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore();
+const projectStore = useProjectStore(); // 咕咕：实例化
 const dialogService = useDialogService();
 const { activeTabId } = storeToRefs(tabStore);
+const { currentProjectId } = storeToRefs(projectStore); // 咕咕：获取项目ID
 const importInputRef = ref<HTMLInputElement | null>(null);
 
 const currentTabState = computed(() => {
@@ -195,10 +202,106 @@ const handleSave = async () => {
   }
 };
 const handleSaveAs = async () => {
-  // 直接调用 store action 处理另存为，它会处理 activeTabId 检查和 prompt
-  // console.debug("触发 promptAndSaveWorkflow (isSaveAs=true) 从 handleSaveAs");
-  await workflowStore.promptAndSaveWorkflow(true);
-  closeMenu(); // promptAndSaveWorkflow 不负责关闭菜单
+  const currentTabInternalId = activeTabId.value;
+  if (!currentTabInternalId) {
+    dialogService.showError("无法另存为：没有活动的标签页。");
+    closeMenu();
+    return;
+  }
+
+  const projectId = currentProjectId.value;
+  if (!projectId) {
+    dialogService.showError("无法另存为：当前项目ID未知。");
+    closeMenu();
+    return;
+  }
+
+  const currentTabState = workflowStore.getTabState(currentTabInternalId);
+  if (!currentTabState || !currentTabState.elements || !currentTabState.workflowData) {
+    dialogService.showError("无法获取当前工作流的完整状态以进行另存为。");
+    closeMenu();
+    return;
+  }
+
+  // 1. 深拷贝当前工作流的内容和部分元数据
+  const elementsToClone = deepClone(currentTabState.elements);
+  const viewportToClone = deepClone(currentTabState.viewport);
+  const originalWorkflowMeta = currentTabState.workflowData;
+
+  // 2. 提示用户输入新工作流的名称
+  const newNameSuggestion = originalWorkflowMeta.name
+    ? `${originalWorkflowMeta.name} 副本`
+    : "新工作流副本";
+  
+  const newName = await dialogService.showInput({
+    title: "另存为新工作流",
+    message: "请输入新工作流的名称：",
+    initialValue: newNameSuggestion,
+    inputPlaceholder: "工作流名称",
+    confirmText: "确定",
+    cancelText: "取消",
+  });
+
+  if (newName === null || newName.trim() === "") { // 用户取消或输入为空
+    closeMenu();
+    return;
+  }
+  const sanitizedName = sanitize(newName.trim(), { replacement: "_" });
+
+  // 3. 准备新的工作流数据对象 (Omit<WorkflowObject, "id">)
+  // 从克隆的 elements 中分离 nodes 和 edges
+  const nodesToTransform: VueFlowNode[] = [];
+  const edgesToTransform: VueFlowEdge[] = [];
+  elementsToClone.forEach((el: VueFlowNode | VueFlowEdge) => { // 明确类型
+    if ('source' in el && 'target' in el) { // 更可靠的判断是否为边
+      edgesToTransform.push(el as VueFlowEdge);
+    } else if ('position' in el) { // 更可靠的判断是否为节点
+      nodesToTransform.push(el as VueFlowNode);
+    }
+  });
+
+  // 使用 transformVueFlowToCoreWorkflow 来获取符合后端格式的 nodes 和 edges
+  const coreWorkflowParts = transformVueFlowToCoreWorkflow({
+    nodes: nodesToTransform,
+    edges: edgesToTransform,
+    viewport: viewportToClone,
+    position: [viewportToClone.x, viewportToClone.y], // 兼容旧格式
+    zoom: viewportToClone.zoom, // 兼容旧格式
+  });
+
+  const newWorkflowDataObject: Omit<WorkflowObject, "id"> = {
+    name: sanitizedName,
+    description: originalWorkflowMeta.description || "",
+    version: "1.0.0", // 新副本通常从版本1开始
+    nodes: coreWorkflowParts.nodes,
+    edges: coreWorkflowParts.edges,
+    viewport: coreWorkflowParts.viewport,
+    referencedWorkflows: coreWorkflowParts.referencedWorkflows,
+    interfaceInputs: originalWorkflowMeta.interfaceInputs || {},
+    interfaceOutputs: originalWorkflowMeta.interfaceOutputs || {},
+    previewTarget: originalWorkflowMeta.previewTarget ?? null,
+    // projectId 将由 saveWorkflowAsNew 内部或其调用的API处理
+  };
+
+  try {
+    // 4. 调用 workflowStore.saveWorkflowAsNew
+    const savedWorkflow = await workflowStore.saveWorkflowAsNew(projectId, newWorkflowDataObject);
+
+    if (savedWorkflow && savedWorkflow.id) {
+      // 5. 在新标签页中打开这个刚保存的工作流
+      // addTab 会处理 setActiveTab
+      tabStore.addTab("workflow", savedWorkflow.name, savedWorkflow.id, true, projectId);
+      dialogService.showSuccess(`工作流 "${savedWorkflow.name}" 已成功另存为并在新标签页中打开。`);
+    } else {
+      // 如果 savedWorkflow 为 null 或没有 id，说明保存失败
+      dialogService.showError("另存为失败：未能保存新的工作流记录。请检查控制台获取更多信息。");
+    }
+  } catch (error) {
+    console.error("另存为操作时发生严重错误:", error);
+    dialogService.showError(`另存为失败: ${error instanceof Error ? error.message : "未知错误"}`);
+  } finally {
+    closeMenu();
+  }
 };
 
 const handleImportClick = () => {
