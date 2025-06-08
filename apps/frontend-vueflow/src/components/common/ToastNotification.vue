@@ -10,7 +10,7 @@
       ]"
     >
       <div
-        class="max-w-sm w-full shadow-lg rounded-lg pointer-events-auto overflow-hidden"
+        class="max-w-md w-full shadow-lg rounded-lg pointer-events-auto overflow-hidden"
         :class="[
           typeClasses,
           { 'ring-1': !isDark }
@@ -70,7 +70,7 @@
             </div>
             
             <!-- 内容 -->
-            <div class="ml-3 w-0 flex-1 pt-0.5">
+            <div class="ml-3 flex-1 pt-0.5">
               <p v-if="title" class="text-sm font-medium" :class="textColorClass">{{ title }}</p>
               <p class="text-sm" :class="[title ? 'mt-1' : '', textColorClass]">{{ message }}</p>
             </div>
