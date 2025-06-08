@@ -254,8 +254,9 @@ export class ExecutionEngine {
       // console.log(`[Engine-${this.promptId}] Execution order:`, this.executionOrder);
    
       let hasExecutionError = false; // 标记是否有节点执行失败
-   
+
       for (const nodeId of this.executionOrder) {
+        // console.log(`[Engine-${this.promptId}] RUN_LOOP: Processing node ${nodeId}`); // DEBUG
         if (this.isInterrupted) {
           console.log(`[Engine-${this.promptId}] Execution interrupted before node ${nodeId}.`);
           this.skipDescendants(nodeId, ExecutionStatus.INTERRUPTED); // 标记后续节点为中断
@@ -285,9 +286,11 @@ export class ExecutionEngine {
             continue;
           }
    
-          const inputs = this.prepareNodeInputs(nodeId);
-          const result = await this.executeNode(nodeId, inputs);
-   
+          const inputs = await this.prepareNodeInputs(nodeId); // prepareNodeInputs is now async
+          // console.log(`[Engine-${this.promptId}] RUN_LOOP: Inputs prepared for ${nodeId}. Executing...`); // DEBUG
+          const result = await this.executeNode(nodeId, inputs); // executeNode remains async
+
+          // console.log(`[Engine-${this.promptId}] RUN_LOOP: Node ${nodeId} executeNode returned status: ${result.status}`); // DEBUG
           if (result.status === ExecutionStatus.ERROR) {
             console.error(`[Engine-${this.promptId}] Error in node ${nodeId}. Marking as ERROR and skipping descendants.`);
             hasExecutionError = true;
@@ -454,7 +457,7 @@ export class ExecutionEngine {
     return order;
   }
 
-  private prepareNodeInputs(nodeId: NanoId): Record<string, any> {
+  private async prepareNodeInputs(nodeId: NanoId): Promise<Record<string, any>> { // 变成 async
     const inputs: Record<string, any> = {};
     const node = this.nodes[nodeId];
 
@@ -471,7 +474,8 @@ export class ExecutionEngine {
 
     const multiInputBuffer: Record<string, Array<{ edgeId: string, value: any }>> = {};
 
-    this.edges.forEach(edge => {
+    // 使用 for...of 替代 forEach 以正确处理 await
+    for (const edge of this.edges) {
       if (edge.targetNodeId === nodeId) {
         const sourceNodeId = edge.sourceNodeId;
         const sourceOutputKey = edge.sourceHandle;
@@ -487,7 +491,17 @@ export class ExecutionEngine {
 
 
           if (isSourceReady && sourceResult) {
-            const sourceValue = sourceResult[sourceOutputKey];
+            let sourceValue = sourceResult[sourceOutputKey];
+            if (sourceValue instanceof Promise) { // 如果是 Promise，则 await
+              try {
+                sourceValue = await sourceValue;
+              } catch (promiseError: any) {
+                console.warn(`[Engine-${this.promptId}] Error awaiting promised input '${sourceOutputKey}' from node ${sourceNodeId} for ${nodeId}: ${promiseError.message}`);
+                // 根据策略，这里可以抛出错误，或者将 sourceValue 设为 undefined/特定错误标记
+                // 为了保持流程，暂时设为 undefined，下游的 required 检查可能会捕获
+                sourceValue = undefined;
+              }
+            }
             const { originalKey: actualInputKey } = parseSubHandleId(rawTargetInputKey);
             const inputDef = definition.inputs[actualInputKey];
 
@@ -514,7 +528,7 @@ export class ExecutionEngine {
           }
         }
       }
-    });
+    };
 
     // console.log(`[Engine-${this.promptId}] After collecting connected inputs for ${nodeId}:`);
     // console.log(`  multiInputBuffer: ${JSON.stringify(multiInputBuffer)}`);
@@ -613,7 +627,7 @@ export class ExecutionEngine {
 
   private async executeNode(
     nodeId: NanoId,
-    inputs: Record<string, any>
+    inputs: Record<string, any> // inputs 已经是 await 后的结果
   ): Promise<{ status: ExecutionStatus; error?: any }> {
     const node = this.nodes[nodeId];
     if (!node) {
@@ -658,12 +672,26 @@ export class ExecutionEngine {
       if (hasStreamOutput) {
         // console.log(`[Engine-${this.promptId}] Node ${nodeId} has stream output(s). Starting stream execution in background.`);
         const nodeGenerator = executeFn(inputs, context) as AsyncGenerator<ChunkPayload, Record<string, any> | void, undefined>;
-        // 将 nodeStartTime 传递给流处理函数，以便正确记录包含流处理的总时长
-        const streamOutputs = this.startStreamNodeExecution(node, nodeGenerator, definition, context, nodeStartTime);
+        const { streams, batchDataPromise } = this.startStreamNodeExecution(node, nodeGenerator, definition, context, nodeStartTime);
 
-        this.nodeResults[nodeId] = { ...streamOutputs };
-        // 状态保持 RUNNING，直到后台任务完成并更新为 COMPLETE
-        return { status: ExecutionStatus.COMPLETE };
+        const resultsForNode: Record<string, any> = { ...streams };
+        for (const outputKey in definition.outputs) {
+          if (definition.outputs[outputKey].dataFlowType !== DataFlowType.STREAM) {
+            resultsForNode[outputKey] = batchDataPromise.then(batch => {
+              if (batch && typeof batch === 'object' && outputKey in batch) {
+                return (batch as Record<string, any>)[outputKey];
+              }
+              // console.warn(`[Engine-${this.promptId}] Batch result for ${nodeId}.${outputKey} was expected but not found or batch was void.`);
+              return undefined;
+            }).catch(err => {
+              console.error(`[Engine-${this.promptId}] Promise for ${nodeId}.${outputKey} (from batchDataPromise) rejected: ${err.message}`);
+              throw err; // Re-throw so the promise stored in resultsForNode rejects
+            });
+          }
+        }
+        this.nodeResults[nodeId] = resultsForNode;
+        this.nodeStates[nodeId] = ExecutionStatus.RUNNING; // Node is running, batch data is pending
+        return { status: ExecutionStatus.RUNNING };
 
       } else {
         // console.log(`[Engine-${this.promptId}] Node ${nodeId} is a batch node. Handling with standard await.`);
@@ -705,7 +733,7 @@ export class ExecutionEngine {
     definition: NodeDefinition,
     context: { promptId: NanoId;[key: string]: any },
     nodeStartTime: number // 添加 nodeStartTime 参数
-  ): Record<string, Stream.Readable> {
+  ): { streams: Record<string, Stream.Readable>, batchDataPromise: Promise<Record<string, any> | void> } {
     const { id: nodeId, fullType } = node;
     const nodeIdentifier = `${definition.displayName || definition.type}(${nodeId})`;
     const { promptId } = context;
@@ -763,6 +791,13 @@ export class ExecutionEngine {
     }
 
     // 2. 创建并管理流生命周期 Promise
+    let batchResultResolver!: (value: Record<string, any> | void | PromiseLike<Record<string, any> | void>) => void;
+    let batchResultRejector!: (reason?: any) => void;
+    const batchDataPromise = new Promise<Record<string, any> | void>((resolve, reject) => {
+      batchResultResolver = resolve;
+      batchResultRejector = reject;
+    });
+
     const streamLifecyclePromise = (async () => {
       let batchResult: Record<string, any> | void = undefined;
       let pullerError: any = null;
@@ -861,23 +896,23 @@ export class ExecutionEngine {
         // 只有在 pullerTask 无错，并且所有 consumerPromises 都成功解决后，才认为完全成功。
         // Promise.all(consumerPromises) 如果有 reject，这里就不会执行到。
         // console.log(`[Engine-${promptId}] All streams and puller for node ${nodeIdentifier} have finished successfully.`);
+        
+        batchResultResolver(batchResult); // Resolve the promise for batch outputs
 
-        const existingOutputs = this.nodeResults[nodeId] || {};
-        let outputsToMerge = {};
-        if (typeof batchResult === 'object' && batchResult !== null) {
-          outputsToMerge = batchResult;
-        }
-        const finalNodeResult = { ...existingOutputs, ...outputsToMerge };
-        this.nodeResults[nodeId] = finalNodeResult;
+        // 更新全局状态
+        // 注意：this.nodeResults[nodeId] 不在这里用 batchResult 更新，因为它持有的是 Promise
         this.nodeStates[nodeId] = ExecutionStatus.COMPLETE;
-
         const durationMs = Date.now() - nodeStartTime;
-        loggingService.logNodeComplete(nodeId, fullType, finalNodeResult, durationMs)
+        // 日志记录和发送 NODE_COMPLETE 时，使用实际的 batchResult
+        const resultForLoggingAndEvent = (typeof batchResult === 'object' && batchResult !== null) ? batchResult : {};
+        loggingService.logNodeComplete(nodeId, fullType, resultForLoggingAndEvent, durationMs)
           .catch(err => console.error(`[Engine-${promptId}] Failed to log stream node complete for ${nodeIdentifier}:`, err));
-        this.sendNodeComplete(nodeId, (typeof batchResult === 'object' && batchResult !== null) ? batchResult : {});
+        this.sendNodeComplete(nodeId, resultForLoggingAndEvent);
         // console.log(`[Engine-${promptId}] Node ${nodeIdentifier} officially marked as COMPLETE.`);
 
       } catch (error: any) {
+        batchResultRejector(error); // Reject the promise for batch outputs
+
         const durationMs = Date.now() - nodeStartTime;
         const errorMessage = error.message || String(error);
         // console.error(`[Engine-${promptId}] Error in stream lifecycle for node ${nodeIdentifier}:`, errorMessage, error.stack);
@@ -889,7 +924,7 @@ export class ExecutionEngine {
     })();
 
     this.backgroundTasks.push(streamLifecyclePromise);
-    return streamOutputsToReturn;
+    return { streams: streamOutputsToReturn, batchDataPromise };
   }
 
 

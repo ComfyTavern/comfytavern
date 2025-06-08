@@ -31,8 +31,9 @@
             </template>
           </template>
           <template v-else-if="panelMode === 'groupOverview'">
-            <template v-if="activeTabId && groupOutputs"> <span class="text-lg font-semibold text-green-500 dark:text-green-300">{{
-              activeWorkflowName }}</span> 组输出总览 </template>
+            <template v-if="activeTabId && groupOutputs"> <span
+                class="text-lg font-semibold text-green-500 dark:text-green-300">{{
+                  activeWorkflowName }}</span> 组输出总览 </template>
             <template v-else>
               <span class="text-gray-700 dark:text-gray-300">组输出总览
                 <span class="text-gray-400 dark:text-gray-500">（无可用工作流）</span></span>
@@ -89,17 +90,13 @@
               <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase ml-2">- 输出</span>
               <span v-if="isStreamSlot"
                 class="text-xs font-semibold text-purple-500 dark:text-purple-400 uppercase ml-2">[STREAM]</span>
+              <span v-if="isSingleStreamProcessing"
+                class="text-blue-500 dark:text-blue-400 ml-2 font-normal text-xs">(流式传输中...)</span>
+              <span v-else-if="isStreamSlot && isSingleStreamDone"
+                class="text-green-500 dark:text-green-400 ml-2 font-normal text-xs">(流已结束)</span>
             </p>
 
             <div class="flex flex-col flex-grow overflow-hidden">
-              <!-- 标题和状态 -->
-              <p class="text-xs mb-1 text-gray-500 dark:text-gray-400 font-semibold flex-shrink-0">
-                输出值:
-                <span v-if="isSingleStreamProcessing"
-                  class="text-blue-500 dark:text-blue-400 ml-2 font-normal text-xs">(流式传输中...)</span>
-                <span v-else-if="isStreamSlot && isSingleStreamDone"
-                  class="text-green-500 dark:text-green-400 ml-2 font-normal text-xs">(流已结束)</span>
-              </p>
               <!-- 内容框：移除 max-h, 添加 flex-grow overflow-y-auto -->
               <div class="p-2 border rounded bg-gray-50 dark:bg-gray-700/50 flex-grow overflow-y-auto">
                 <!-- 使用 mergedSinglePreviewContent， 增加 !== '' 的判断 -->
@@ -158,6 +155,14 @@
                     <!-- 添加 STREAM 标签 -->
                     <span v-if="item.isStream"
                       class="text-xs font-semibold text-purple-500 dark:text-purple-400 uppercase ml-1">[STREAM]</span>
+                    <!-- 标题和状态 -->
+                    <span class="text-xs mb-1 text-gray-500 dark:text-gray-400 font-semibold">
+                      输出值:
+                      <!-- 显示状态文本 -->
+                      <span v-if="item.status" :class="['ml-2 font-normal text-xs', item.status.class]">
+                        {{ item.status.text }}
+                      </span>
+                    </span>
                   </span>
                   <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform duration-200"
                     :class="{ 'rotate-180': !isGroupOutputCollapsed(item.key) }" viewBox="0 0 20 20"
@@ -170,14 +175,6 @@
                 <!-- Content: 合并后的单一内容块 -->
                 <div v-show="!isGroupOutputCollapsed(item.key)"
                   class="p-2 border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 space-y-1">
-                  <!-- 标题和状态 -->
-                  <p class="text-xs mb-1 text-gray-500 dark:text-gray-400 font-semibold">
-                    输出值:
-                    <!-- 显示状态文本 -->
-                    <span v-if="item.status" :class="['ml-2 font-normal text-xs', item.status.class]">
-                      {{ item.status.text }}
-                    </span>
-                  </p>
                   <!-- 内容显示区域 -->
                   <div class="p-1 border rounded bg-gray-100 dark:bg-gray-700/30 max-h-64 overflow-y-auto">
                     <!-- 有内容时 -->
