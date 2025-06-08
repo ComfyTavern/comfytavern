@@ -19,6 +19,7 @@
 | `OBJECT`            | 通用 JavaScript 对象                                                                                  | `object`                    |
 | `ARRAY`             | 通用 JavaScript 数组                                                                                  | `any[]`                     |
 | `BINARY`            | 二进制数据                                                                                            | `ArrayBuffer`, `Uint8Array` |
+| `STREAM`            | 表示一个数据流。节点执行时，此类型的输出槽会提供一个可读流 (Node.js `Stream.Readable`)，下游节点可以消费这个流。流中的数据通常由一系列 `ChunkPayload` 对象组成。 | `Stream.Readable` (执行时), `AsyncGenerator<ChunkPayload, any, any>` (节点实现) |
 | `WILDCARD`          | 特殊类型：通配符，不指定数据格式，可连接任何类型，连接时不强制转换。                                  | `any`                       |
 | `CONVERTIBLE_ANY`   | 特殊类型：连接时动态转换，会将其自身的 `dataFlowType` 和 `matchCategories` 更改为与连接对方完全一致。 | `any` (初始)                |
 
@@ -49,7 +50,7 @@
 *   `VideoData`: 实际视频数据 (通常为 `OBJECT` 或 `BINARY` DataFlowType)
 *   `ResourceId`: 资源标识符
 *   `Trigger`: 触发信号 (常用于按钮类交互)
-*   `StreamChunk`: 数据流块
+*   `StreamChunk`: 数据流块，通常作为 `DataFlowType.STREAM` 类型输出的流中的数据单元。
 *   `ComboOption`: 用于标记来源于或适用于 COMBO (下拉建议) 选择的值
 *   `UI_BLOCK`: (UI渲染提示) 标记此输入组件应作为“大块”或“块级”元素渲染，而不是行内紧凑型。
 *   `CanPreview`: (操作提示) 标记此输入支持标准的内联预览操作按钮。
@@ -68,7 +69,7 @@
 
 在节点的 `InputDefinition` 和 `OutputDefinition` 中：
 
-*   旧的 `type: string` 字段被 `dataFlowType: DataFlowTypeName` 替换。
+*   插槽定义中的旧 `type: string` 字段已被 `dataFlowType: DataFlowTypeName` 替换。输出插槽的 `dataFlowType` 可以是 `STREAM`，表示该输出是一个数据流。
 *   新增**可选的** `matchCategories: string[]` 字段，用于定义语义或行为标签。
 *   `config` 对象包含用于指导前端 UI 渲染和交互行为的具体配置项。
 
@@ -205,6 +206,10 @@ inputs: {
     *   `INTEGER`, `FLOAT`, `BOOLEAN` 可以连接到 `STRING` (隐式转换为字符串)。
     *   `WILDCARD` 可以连接到任何 `DataFlowType`。任何 `DataFlowType` 也可以连接到 `WILDCARD`。
     *   `CONVERTIBLE_ANY` 在连接时会将其自身的 `dataFlowType` 更改为与连接对方完全一致。
+    *   `STREAM` 类型：
+        *   `STREAM` 类型的输出通常只能连接到 `dataFlowType` 为 `STREAM` 的输入插槽。
+        *   如果输入插槽的 `dataFlowType` 为 `WILDCARD` 或 `CONVERTIBLE_ANY`，它们也可以接受 `STREAM` 输出，但要求接收节点的内部逻辑必须能正确处理和消费传入的流数据。
+        *   `STREAM` 类型不会自动转换为其他非流 `DataFlowType` (如 `STRING`, `OBJECT` 等)。连接时需要精确匹配或由 `WILDCARD`/`CONVERTIBLE_ANY` 处理。
 *   如果通过 `DataFlowType` 规则找到兼容性，则连接被认为是有效的。
 
 **总结连接逻辑优先级：**
@@ -233,6 +238,17 @@ inputs: {
 *   **组相关属性**: `isGroupInternal`, `groupId`, `groupConfig`, `dynamicSlots`。
 *   **`data.groupInfo`**: (前端) 若节点是 `NodeGroup`，其 `data` 可能包含 `groupInfo`。
 
+## 4.x 节点执行与流式输出
+
+节点的 `execute` 方法负责其核心逻辑。除了返回一个包含所有输出值的对象 (通常包装在 `Promise` 中) 外，`execute` 方法还可以返回一个异步生成器 (`AsyncGenerator<ChunkPayload, Record<string, any> | void, undefined>`) 来实现流式输出。
+
+当 `execute` 方法返回异步生成器时：
+*   该节点应至少有一个输出槽的 `dataFlowType` 被定义为 `STREAM`。
+*   生成器通过 `yield` 关键字产生的值都应该是一个 `ChunkPayload` 对象。这些数据块将通过 `NODE_YIELD` WebSocket 消息实时发送到前端，并被传递给连接到相应 `STREAM` 输出槽的下游节点的输入槽。
+*   生成器最终通过 `return` 语句返回的值 (如果存在，通常是一个包含批处理结果的对象) 会在流处理完全结束后，作为节点的最终输出结果的一部分。这个批处理结果与流式输出槽是分开的（流式输出槽在执行期间的值是一个可读流实例）。
+
+对于声明了 `STREAM` 数据流类型的输出插槽，其在工作流执行时传递给下游节点的值是一个 Node.js `Stream.Readable` 实例。下游节点负责消费这个流。
+
 ## 5. 执行状态
 
 节点在工作流执行期间的状态由 `ExecutionStatus` 枚举定义：
@@ -248,4 +264,6 @@ inputs: {
 
 ## 6. WebSocket 通信
 
-节点系统依赖 WebSocket 进行前后端通信，消息类型定义在 `packages/types/src/node.ts` 中的 `WebSocketMessageType`。这包括工作流操作、节点定义获取、执行控制、状态更新等。
+节点系统依赖 WebSocket 进行前后端通信，消息类型定义在 `packages/types/src/node.ts` 中的 `WebSocketMessageType`。这包括工作流操作、节点定义获取、执行控制、状态更新等。其中与流式数据处理相关的关键消息类型有：
+*   `NODE_YIELD`: 当节点通过其异步生成器 `yield` 一个 `ChunkPayload` 时，此消息类型用于将该数据块实时发送到前端。这表示流数据正在从源节点产生并向下游传递。
+*   `WORKFLOW_INTERFACE_YIELD`: 类似于 `NODE_YIELD`，但用于工作流的输出接口产生的流式数据块，当工作流的某个输出被定义为流式时，通过此消息将数据块发送到前端。
