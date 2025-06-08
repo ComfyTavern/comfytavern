@@ -1195,74 +1195,96 @@ export class ExecutionEngine {
 
   private async _processAndBroadcastFinalOutputs(): Promise<void> {
     if (!this.payload.outputInterfaceMappings || Object.keys(this.payload.outputInterfaceMappings).length === 0) {
-      // console.log(`[Engine-${this.promptId}] No interface output mappings defined.`);
       return;
     }
 
-    const finalWorkflowOutputs: Record<string, InterfaceOutputValue> = {}; // Use InterfaceOutputValue type
+    const finalWorkflowOutputs: Record<string, InterfaceOutputValue> = {};
+    const batchPromisesMap: Map<string, Promise<any>> = new Map(); // 用于存储批处理Promise及其接口键
 
-    // console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Starting. Mappings: ${JSON.stringify(this.payload.outputInterfaceMappings)}`);
-
+    // 阶段1: 识别流并启动它们，收集批处理Promise
     for (const interfaceOutputKey in this.payload.outputInterfaceMappings) {
-      // console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Processing interfaceOutputKey: ${interfaceOutputKey}`);
       if (this.isInterrupted) {
-        // console.log(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Skipping processing of interface output ${interfaceOutputKey} due to interruption.`);
+        // console.log(`[Engine-${this.promptId}] Interrupted during interface output processing for ${interfaceOutputKey}.`);
+        finalWorkflowOutputs[interfaceOutputKey] = undefined; // Or a specific interruption marker
         continue;
       }
+
       const mapping = this.payload.outputInterfaceMappings[interfaceOutputKey];
       if (!mapping) {
-        console.warn(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] No mapping found for interfaceOutputKey: ${interfaceOutputKey}. Skipping.`);
+        console.warn(`[Engine-${this.promptId}] No mapping for interfaceOutputKey: ${interfaceOutputKey}.`);
+        finalWorkflowOutputs[interfaceOutputKey] = undefined;
         continue;
       }
 
       const { sourceNodeId, sourceSlotKey } = mapping;
-      // console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Mapping for ${interfaceOutputKey}: sourceNodeId=${sourceNodeId}, sourceSlotKey=${sourceSlotKey}`);
       const sourceNodeResult = this.nodeResults[sourceNodeId];
-      const sourceNodeState = this.nodeStates[sourceNodeId];
-      let valueToOutput: any = null;
-
-      // console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] sourceNodeResult for ${sourceNodeId}: ${sourceNodeResult ? 'Exists' : 'null/undefined'}, sourceNodeState: ${sourceNodeState}`);
-
-      if (sourceNodeResult && sourceSlotKey in sourceNodeResult) {
-        valueToOutput = sourceNodeResult[sourceSlotKey];
-        // console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] valueToOutput for ${interfaceOutputKey} from nodeResults: ${typeof valueToOutput}. Is Readable: ${valueToOutput instanceof Stream.Readable}`);
-      } else {
-        console.warn(
-          `[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Source for interface output ${interfaceOutputKey} (node: ${sourceNodeId}, slot: ${sourceSlotKey}) not found in nodeResults.`
-        );
-      }
-
       const interfaceDef = this.interfaceOutputDefinitions?.[interfaceOutputKey];
       const interfaceType = interfaceDef?.dataFlowType;
       const interfaceDisplayName = interfaceDef?.displayName;
-      // console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Interface def for ${interfaceOutputKey}: type=${interfaceType}, displayName=${interfaceDisplayName}`);
 
-      if (interfaceType === 'STREAM' && valueToOutput instanceof Stream.Readable) {
-        // console.log(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Handling STREAM interface output: ${interfaceOutputKey}. Stream destroyed: ${valueToOutput.destroyed}, readable: ${valueToOutput.readable}`);
-        // _handleStreamInterfaceOutput now adds its promise to this.backgroundTasks
-        // 移除 await, 让 _handleStreamInterfaceOutput 启动后台任务即可
-        this._handleStreamInterfaceOutput(interfaceOutputKey, valueToOutput, interfaceDisplayName);
-        finalWorkflowOutputs[interfaceOutputKey] = {
-          type: 'stream_placeholder',
-          message: `Stream started for ${interfaceOutputKey} (${interfaceDisplayName || ''})`,
-        };
-      } else {
-        console.warn(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] NOT handling ${interfaceOutputKey} as STREAM. interfaceType: ${interfaceType}, valueToOutput is Readable: ${valueToOutput instanceof Stream.Readable}. Value: ${typeof valueToOutput}`);
-        if (interfaceType === 'STREAM' && !(valueToOutput instanceof Stream.Readable)) {
-          console.warn(
-            `[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Interface output ${interfaceOutputKey} is defined as STREAM, but actual value is not a ReadableStream. Value:`, valueToOutput
-          );
+      if (sourceNodeResult && sourceSlotKey in sourceNodeResult) {
+        const rawValue = sourceNodeResult[sourceSlotKey];
+
+        if (interfaceType === DataFlowType.STREAM && rawValue instanceof Stream.Readable) {
+          // console.log(`[Engine-${this.promptId}] Starting STREAM interface output: ${interfaceOutputKey} ('${interfaceDisplayName || ''}')`);
+          this._handleStreamInterfaceOutput(interfaceOutputKey, rawValue, interfaceDisplayName);
+          finalWorkflowOutputs[interfaceOutputKey] = {
+            type: 'stream_placeholder',
+            message: `Stream started for ${interfaceOutputKey} (${interfaceDisplayName || ''})`,
+          };
+        } else if (rawValue instanceof Promise) {
+          // console.log(`[Engine-${this.promptId}] Identified Promise for batch interface output: ${interfaceOutputKey} ('${interfaceDisplayName || ''}')`);
+          batchPromisesMap.set(interfaceOutputKey, rawValue);
+          finalWorkflowOutputs[interfaceOutputKey] = undefined; // 初始占位，后续会被真实值替换
+        } else {
+          // console.log(`[Engine-${this.promptId}] Direct value for interface output: ${interfaceOutputKey} ('${interfaceDisplayName || ''}')`);
+          finalWorkflowOutputs[interfaceOutputKey] = rawValue;
         }
-        finalWorkflowOutputs[interfaceOutputKey] = valueToOutput;
+      } else {
+        console.warn(`[Engine-${this.promptId}] Source for interface output ${interfaceOutputKey} (node: ${sourceNodeId}, slot: ${sourceSlotKey}) not found in nodeResults.`);
+        finalWorkflowOutputs[interfaceOutputKey] = undefined;
       }
     }
 
-    // console.debug(`[Engine-${this.promptId}] [_processAndBroadcastFinalOutputs] Finished loop. finalWorkflowOutputs count: ${Object.keys(finalWorkflowOutputs).length}`);
+    // 阶段2: 等待所有收集到的批处理Promise完成
+    if (batchPromisesMap.size > 0) {
+      // console.log(`[Engine-${this.promptId}] Waiting for ${batchPromisesMap.size} batch interface promises...`);
+      const promiseKeys = Array.from(batchPromisesMap.keys());
+      const promisesToAwait = promiseKeys.map(key =>
+        batchPromisesMap.get(key)!
+          .then(resolvedValue => ({ key, value: resolvedValue, status: 'fulfilled' as const }))
+          .catch(error => {
+            console.error(`[Engine-${this.promptId}] Error resolving promise for batch interface output ${key}:`, error.message);
+            return { key, value: undefined, status: 'rejected' as const, error };
+          })
+      );
+
+      try {
+        const settledResults = await Promise.all(promisesToAwait);
+        settledResults.forEach(result => {
+          if (result.status === 'fulfilled') {
+            finalWorkflowOutputs[result.key] = result.value;
+            // console.log(`[Engine-${this.promptId}] Batch interface output ${result.key} resolved successfully.`);
+          } else {
+            // 对于 rejected 的 Promise，我们已经在上面 catch 中记录了错误，这里可以决定是否用特定错误标记覆盖 finalWorkflowOutputs
+            finalWorkflowOutputs[result.key] = { type: 'error_placeholder', message: `Error resolving batch output: ${result.error?.message || 'Unknown error'}` };
+            // console.warn(`[Engine-${this.promptId}] Batch interface output ${result.key} failed to resolve.`);
+          }
+        });
+      } catch (error) {
+        // Promise.all 本身配置为不 fail-fast (因为我们用了 .then/.catch 包装)，所以理论上不应到这里。
+        // 但以防万一，记录一个通用错误。
+        console.error(`[Engine-${this.promptId}] Unexpected error in Promise.allSettled-like logic for batch outputs:`, error);
+      }
+      // console.log(`[Engine-${this.promptId}] All batch interface promises have been processed.`);
+    }
+
+    // 阶段3: 发送最终的接口输出（包含已解析的批处理值和流的占位符）
     if (Object.keys(finalWorkflowOutputs).length > 0 && !this.isInterrupted) {
       this.sendNodeComplete('__WORKFLOW_INTERFACE_OUTPUTS__', finalWorkflowOutputs);
-      // console.log(`[Engine-${this.promptId}] Sent aggregated workflow interface outputs (with stream placeholders):`, finalWorkflowOutputs);
+      // console.log(`[Engine-${this.promptId}] Sent final aggregated workflow interface outputs:`, this.sanitizeObjectForLogging(finalWorkflowOutputs));
     } else if (this.isInterrupted) {
-      // console.log(`[Engine-${this.promptId}] Aggregated workflow interface outputs not sent due to interruption.`);
+      // console.log(`[Engine-${this.promptId}] Final aggregated workflow interface outputs not sent due to interruption.`);
     }
   }
  
