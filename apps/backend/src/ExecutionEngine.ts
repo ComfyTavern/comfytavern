@@ -219,9 +219,7 @@ export class ExecutionEngine {
     this.interfaceOutputDefinitions = payload.interfaceOutputs;
 
     console.log(`[Engine-${this.promptId}] Initialized for execution.`);
-    // 初始化执行日志
-    loggingService.initializeExecutionLog(this.promptId, this.payload)
-      .catch(err => console.error(`[Engine-${this.promptId}] Failed to initialize execution log:`, err));
+    // 初始化执行日志的调用已移至 run() 方法的开头
   }
 
   private sanitizeObjectForLogging(obj: any, keysToSanitize: string[] = ['system_prompt', 'system_message', 'prompt'], maxLength: number = 100): any {
@@ -247,6 +245,10 @@ export class ExecutionEngine {
     this.backgroundTasks = []; // 重置后台任务列表
 
     try {
+      // 初始化执行日志，确保在任何节点执行前完成
+      await loggingService.initializeExecutionLog(this.promptId, this.payload);
+      // console.log(`[Engine-${this.promptId}] Execution log initialized successfully.`); // 可选的确认日志
+
       this.executionOrder = this.topologicalSort(this.nodes, this.edges);
       // console.log(`[Engine-${this.promptId}] Execution order:`, this.executionOrder);
 
