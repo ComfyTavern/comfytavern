@@ -1,29 +1,29 @@
 <template>
-  <Teleport to="body">
+  <!-- Teleport to="body" 已移除 -->
+  <div
+    v-if="visible"
+    class="transition-all duration-300 flex items-center w-full"
+    :style="{ zIndex: 9999 }"
+    :class="[
+      /* positionClasses 已移除，由 DialogContainer 控制 */
+      { 'opacity-0 translate-y-4': !showContent, 'opacity-100 translate-y-0': showContent }
+    ]"
+  >
     <div
-      v-if="visible"
-      class="fixed transition-all duration-300 flex items-center"
-      :style="{ zIndex: 9999 }"
+      class="max-w-md w-full shadow-lg rounded-lg pointer-events-auto overflow-hidden"
       :class="[
-        positionClasses,
-        { 'opacity-0 translate-y-4': !showContent, 'opacity-100 translate-y-0': showContent }
+        typeClasses,
+        { 'ring-1': !isDark }
       ]"
     >
-      <div
-        class="max-w-md w-full shadow-lg rounded-lg pointer-events-auto overflow-hidden"
-        :class="[
-          typeClasses,
-          { 'ring-1': !isDark }
-        ]"
-      >
-        <div class="p-4">
-          <div class="flex items-start">
-            <!-- 图标 -->
-            <div class="flex-shrink-0">
-              <!-- 成功图标 -->
-              <svg
-                v-if="type === 'success'"
-                class="h-6 w-6 text-green-400"
+      <div class="p-4">
+        <div class="flex items-start">
+          <!-- 图标 -->
+          <div class="flex-shrink-0">
+            <!-- 成功图标 -->
+            <svg
+              v-if="type === 'success'"
+              class="h-6 w-6 text-green-400"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -100,7 +100,7 @@
         ></div>
       </div>
     </div>
-  </Teleport>
+  <!-- </Teleport> -->
 </template>
 
 <script setup lang="ts">
@@ -143,25 +143,8 @@ let autoCloseTimer: number | null = null;
 const progressWidth = ref(100);
 let progressInterval: number | null = null;
 
-// 计算位置类名
-const positionClasses = computed(() => {
-  switch (props.position) {
-    case 'top-left':
-      return 'top-4 left-4';
-    case 'top-center':
-      return 'top-4 left-1/2 -translate-x-1/2';
-    case 'top-right':
-      return 'top-4 right-4';
-    case 'bottom-left':
-      return 'bottom-4 left-4';
-    case 'bottom-center':
-      return 'bottom-4 left-1/2 -translate-x-1/2';
-    case 'bottom-right':
-      return 'bottom-4 right-4';
-    default:
-      return 'top-4 right-4';
-  }
-});
+// 计算位置类名 (已移除，由 DialogContainer 控制)
+// const positionClasses = computed(() => { ... });
 
 // 计算类型相关的类名
 const typeClasses = computed(() => {

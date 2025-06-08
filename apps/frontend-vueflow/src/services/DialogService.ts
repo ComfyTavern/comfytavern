@@ -8,7 +8,7 @@ type DialogInstanceType = 'message' | 'confirm' | 'input';
 type ToastType = 'info' | 'success' | 'warning' | 'error';
 
 // 通知位置
-type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
+export type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
 
 // 通用对话框配置接口 (对应 Dialog.vue 的 props)
 interface UniversalDialogOptions {
