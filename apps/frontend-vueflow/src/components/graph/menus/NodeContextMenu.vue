@@ -6,12 +6,6 @@
     </div>
     <div v-if="isGroupOutputNode" class="context-menu-separator"></div>
     <div class="context-menu-items">
-      <div class="context-menu-item" @click="onDuplicate">
-        <span class="icon">🔄</span> 复制节点
-      </div>
-      <div class="context-menu-item" @click="onDelete">
-        <span class="icon">🗑</span> 删除节点
-      </div>
       <div class="context-menu-item" @click="onConnect">
         <span class="icon">🔗</span> 连接到...
       </div>
@@ -21,8 +15,11 @@
     </div>
     <div class="context-menu-separator"></div>
     <div class="context-menu-items">
-      <div class="context-menu-item" @click="onCopySelection">
-        <span class="icon">⎘</span> 复制选中项 ({{ selectedNodeCount }})
+      <div class="context-menu-item" @click="onCopySelectionToLocal">
+        <span class="icon">⎘</span> 复制选中项 (本地) ({{ selectedNodeCount }})
+      </div>
+      <div class="context-menu-item" @click="onCopySelectionToSystem">
+        <span class="icon">📋</span> 复制选中项 (剪贴板) ({{ selectedNodeCount }})
       </div>
       <div class="context-menu-item" @click="onCreateGroup">
         <span class="icon">🧱</span> 创建节点组 (Ctrl+G)
@@ -41,6 +38,7 @@
 import type { XYPosition } from "@vue-flow/core";
 import { computed } from 'vue';
 import { useWorkflowManager } from '@/composables/workflow/useWorkflowManager';
+import { useCanvasClipboard } from '@/composables/canvas/useCanvasClipboard'; // <-- 新增导入
 
 const props = defineProps<{
   visible: boolean;
@@ -52,11 +50,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "edit", nodeId: string): void;
-  (e: "duplicate", nodeId: string): void;
   (e: "connect", nodeId: string): void;
   (e: "disconnect", nodeId: string): void;
-  (e: "delete", nodeId: string): void;
-  (e: "copy-selection"): void;
+  // (e: "copy-selection"): void; // 将由内部处理
   (e: "create-group-from-selection"): void;
   (e: "create-frame-for-selection"): void;
   (e: "delete-selection"): void;
@@ -64,6 +60,7 @@ const emit = defineEmits<{
 }>();
 
 const workflowManager = useWorkflowManager();
+const { handleLocalCopy, handleSystemCopy } = useCanvasClipboard(); // <-- 使用新的 composable
 
 const isGroupOutputNode = computed(() => {
   return props.nodeType === 'core:GroupOutput';
@@ -76,11 +73,6 @@ const onViewGroupOutput = () => {
   }
 };
 
-const onDuplicate = () => {
-  emit("duplicate", props.nodeId);
-  emit("close");
-};
-
 const onConnect = () => {
   emit("connect", props.nodeId);
   emit("close");
@@ -91,13 +83,17 @@ const onDisconnect = () => {
   emit("close");
 };
 
-const onDelete = () => {
-  emit("delete", props.nodeId);
+const onCopySelectionToLocal = () => {
+  if (props.selectedNodeCount > 0) {
+    handleLocalCopy();
+  }
   emit("close");
 };
 
-const onCopySelection = () => {
-  emit("copy-selection");
+const onCopySelectionToSystem = () => {
+  if (props.selectedNodeCount > 0) {
+    handleSystemCopy(); // 假设 handleSystemCopy 不需要参数，或者可以从 store/vueflow 获取选中节点
+  }
   emit("close");
 };
 

@@ -1,43 +1,34 @@
 import { onMounted, onUnmounted } from "vue";
-import { useVueFlow, type Node, type Edge, type NodeMouseEvent } from "@vue-flow/core"; // 保留 useVueFlow，添加类型
+import { useVueFlow, type NodeMouseEvent } from "@vue-flow/core"; // 保留 useVueFlow，添加类型
 import { useWorkflowStore } from "@/stores/workflowStore"; // <-- 导入 WorkflowStore
 import { useTabStore } from "@/stores/tabStore"; // <-- 导入 TabStore
-import { v4 as uuidv4 } from "uuid"; // 导入 uuid
-import { deepClone } from "@/utils/deepClone"; // 用于深拷贝的辅助函数
 import { useWorkflowGrouping } from "../group/useWorkflowGrouping"; // <-- 导入分组 composable
 import { createHistoryEntry } from "@comfytavern/utils"; // <-- 导入 createHistoryEntry
 import { type DataFlowTypeName, type HistoryEntry, type OutputDefinition as OriginalOutputDefinition, DataFlowType, type GroupSlotInfo } from "@comfytavern/types"; // <-- 从 types 导入 HistoryEntry, OutputDefinition, DataFlowType 和 GroupSlotInfo
 import { useWorkflowManager } from "../workflow/useWorkflowManager";
 import { useWorkflowInteractionCoordinator } from "../workflow/useWorkflowInteractionCoordinator";
 import { useNodeStore } from "@/stores/nodeStore";
+import { useCanvasClipboard } from "./useCanvasClipboard"; // <-- 新增导入
+
 /**
  * 用于处理 VueFlow 画布上键盘快捷键的 Composable。
  */
 export function useCanvasKeyboardShortcuts() {
-  // 仅从 useVueFlow 解构使用的方法和属性
-  // 仅从 useVueFlow 解构使用的方法
-  // 仅导入使用的函数和响应式引用
   const {
     getNodes,
     getEdges,
-    // removeNodes, // 不再直接使用
-    // removeEdges, // 不再直接使用
     addSelectedNodes,
     addSelectedEdges,
-    addNodes: vueFlowAddNodes,
-    addEdges: vueFlowAddEdges,
-    project,
     onNodeClick, // 添加 onNodeClick
-  } = useVueFlow(); // 移除了 getViewport，因为它没有被直接使用
+  } = useVueFlow();
   const tabStore = useTabStore(); // <-- 获取 TabStore 实例
   const workflowStore = useWorkflowStore(); // <-- 获取 WorkflowStore 实例
   const { groupSelectedNodes: performGrouping } = useWorkflowGrouping(); // <-- 获取分组函数
   const workflowManager = useWorkflowManager();
   const interactionCoordinator = useWorkflowInteractionCoordinator();
   const nodeStore = useNodeStore();
+  const { handleLocalCopy, handleLocalPaste, handleSystemCopy, handleSystemPaste } = useCanvasClipboard(); // <-- 使用新的 composable
 
-  // 本地剪贴板，用于存储复制的节点和边
-  let clipboardData: { nodes: Node[]; edges: Edge[] } | null = null;
 
   // 处理键盘按下事件
   const handleKeyDown = (event: KeyboardEvent) => {
@@ -76,7 +67,7 @@ export function useCanvasKeyboardShortcuts() {
       if (isInputFocused) return; // 允许在输入框中复制文本
       event.preventDefault();
       console.log("Ctrl+C pressed - copying selected elements...");
-      handleCopy();
+      handleLocalCopy(); // <-- 修改调用
     }
 
     // --- Ctrl/Cmd + V: 粘贴元素 ---
@@ -84,7 +75,23 @@ export function useCanvasKeyboardShortcuts() {
       if (isInputFocused) return; // 允许在输入框中粘贴文本
       event.preventDefault();
       console.log("Ctrl+V pressed - pasting elements...");
-      handlePaste();
+      handleLocalPaste(); // <-- 修改调用
+    }
+
+    // --- Ctrl/Cmd + Shift + C: 系统复制 ---
+    else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'c') {
+      if (isInputFocused) return; // 允许在输入框中复制文本，但不处理画布复制
+      event.preventDefault();
+      console.log("Ctrl+Shift+C pressed - copying selected elements to system clipboard...");
+      handleSystemCopy(); // <-- 修改调用
+    }
+
+    // --- Ctrl/Cmd + Shift + V: 系统粘贴 ---
+    else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'v') {
+      if (isInputFocused) return; // 允许在输入框中粘贴文本，但不处理画布粘贴
+      event.preventDefault();
+      console.log("Ctrl+Shift+V pressed - pasting elements from system clipboard...");
+      handleSystemPaste(); // <-- 修改调用
     }
 
     // --- Ctrl/Cmd + Shift + Z: 重做 ---
@@ -195,170 +202,7 @@ export function useCanvasKeyboardShortcuts() {
 
     console.log(`Dispatched deletion of ${selectedNodes.length} nodes and ${selectedEdges.length} edges.`);
     // markAsDirty 和其他副作用应该由 removeElementsAndRecord 内部处理
-  };
-
-  // 复制选中元素的处理函数
-  const handleCopy = () => {
-    const selectedNodes = getNodes.value.filter((n) => n.selected);
-    // 下面未使用 selectedEdges，剪贴板只需要 internalEdges
-
-    if (selectedNodes.length === 0) {
-      clipboardData = null; // 清空剪贴板
-      console.log("No nodes selected for copying.");
-      return;
-    }
-
-    // 获取选中节点内部的边 + 连接选中节点的边
-    const selectedNodeIds = new Set(selectedNodes.map((n) => n.id));
-    const internalEdges = getEdges.value.filter(
-      (edge) => selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target)
-    );
-
-    // 深拷贝选中的节点和相关边
-    clipboardData = {
-      nodes: deepClone(selectedNodes),
-      edges: deepClone(internalEdges), // 只复制内部边
-    };
-
-    console.log(
-      `Copied ${clipboardData.nodes.length} nodes and ${clipboardData.edges.length} internal edges to clipboard.`
-    );
-  };
-
-  // 粘贴元素的处理函数
-  const handlePaste = () => {
-    if (!clipboardData || clipboardData.nodes.length === 0) {
-      console.log("Clipboard is empty.");
-      return;
-    }
-
-    const activeTabId = tabStore.activeTabId;
-    if (!activeTabId) {
-      console.warn("Cannot paste: No active tab ID found.");
-      return;
-    }
-
-    // 1. 清除当前选择（手动设置 selected = false）
-    getNodes.value.forEach((node) => {
-      if (node.selected) {
-        node.selected = false;
-      }
-    });
-    getEdges.value.forEach((edge) => {
-      if (edge.selected) {
-        edge.selected = false;
-      }
-    });
-
-    // 2. 计算粘贴位置 (视口中心)
-    // getViewport 是一个函数，不是 ref。调用它以获取当前视口。
-    // const currentViewport = getViewport(); // 我们实际上不需要这里的视口对象本身
-    const viewPortCenter = project({
-      // project 内部使用当前视口
-      x: window.innerWidth / 2,
-      y: window.innerHeight / 2,
-    });
-
-    // 3. 计算复制节点的中心点 (以第一个节点为参考)
-    const firstCopiedNode = clipboardData.nodes[0];
-
-    // 在访问属性之前检查 firstCopiedNode 是否存在
-    if (!firstCopiedNode) {
-      console.error("Cannot paste: No node found in clipboard data.");
-      return;
-    }
-
-    // 使用可选链和空值合并运算符以确保安全。
-    // 节点尺寸可能在基本类型定义中不可用，
-    // 但通常在渲染后的运行时存在。使用类型断言作为解决方法。
-    const nodeWidth = (firstCopiedNode as any).dimensions?.width ?? 100;
-    const nodeHeight = (firstCopiedNode as any).dimensions?.height ?? 50;
-    const copiedCenterX = firstCopiedNode.position.x + nodeWidth / 2;
-    const copiedCenterY = firstCopiedNode.position.y + nodeHeight / 2;
-
-    // 4. 计算偏移量
-    const offsetX = viewPortCenter.x - copiedCenterX;
-    const offsetY = viewPortCenter.y - copiedCenterY;
-
-    // 5. 生成新节点和边，并应用偏移和新 ID
-    const idMapping: Record<string, string> = {}; // 旧 ID -> 新 ID
-    const newNodes: Node[] = [];
-    const newEdges: Edge[] = [];
-
-    clipboardData.nodes.forEach((node) => {
-      const oldId = node.id;
-      const newId = uuidv4();
-      idMapping[oldId] = newId;
-
-      newNodes.push({
-        ...deepClone(node), // 深拷贝确保数据隔离
-        id: newId,
-        position: {
-          x: node.position.x + offsetX,
-          y: node.position.y + offsetY,
-        },
-        // 不要在此处设置 selected，稍后使用 addSelectedNodes
-        // dragging 是内部状态，不要在此处设置
-        // 可以考虑重置其他状态，如 zIndex
-      });
-    });
-
-    clipboardData.edges.forEach((edge) => {
-      const sourceId = idMapping[edge.source];
-      const targetId = idMapping[edge.target];
-
-      // 仅添加两个端点都在新粘贴节点中的边
-      if (sourceId && targetId) {
-        newEdges.push({
-          ...deepClone(edge),
-          id: uuidv4(),
-          source: sourceId,
-          target: targetId,
-          // 不要在此处设置 selected，稍后使用 addSelectedEdges
-        });
-      }
-    });
-
-    // 6. 添加到画布
-    if (newNodes.length > 0) {
-      vueFlowAddNodes(newNodes);
-    }
-    if (newEdges.length > 0) {
-      vueFlowAddEdges(newEdges);
-    }
-
-    // 6.1. 选中新添加的元素
-    // 添加后，我们需要找到相应的 GraphNode/GraphEdge 实例
-    const newNodeIds = new Set(newNodes.map((n) => n.id));
-    const newEdgeIds = new Set(newEdges.map((e) => e.id));
-
-    // 查找 VueFlow 添加的实际 GraphNode/GraphEdge 实例
-    const nodesToSelect = getNodes.value.filter((n) => newNodeIds.has(n.id));
-    const edgesToSelect = getEdges.value.filter((e) => newEdgeIds.has(e.id));
-
-    if (nodesToSelect.length > 0) {
-      addSelectedNodes(nodesToSelect);
-    }
-    if (edgesToSelect.length > 0) {
-      addSelectedEdges(edgesToSelect);
-    }
-
-    // 7. 标记为已修改
-    workflowStore.markAsDirty(activeTabId);
-
-    // 8. 记录历史
-    workflowStore.recordHistorySnapshot({
-      actionType: 'paste',
-      objectType: 'elements',
-      summary: `粘贴了 ${newNodes.length} 个节点和 ${newEdges.length} 条边`,
-      details: { nodeCount: newNodes.length, edgeCount: newEdges.length, newNodeIds: newNodes.map(n => n.id), newEdgeIds: newEdges.map(e => e.id) },
-      timestamp: Date.now()
-    });
-
-    console.log(`Pasted ${newNodes.length} nodes and ${newEdges.length} edges.`);
-
-    // 可选：清空剪贴板，防止重复粘贴相同内容（如果需要）
-    // clipboardData = null;
+    // markAsDirty 和其他副作用应该由 removeElementsAndRecord 内部处理
   };
 
   // 全选元素的实现
@@ -417,21 +261,21 @@ export function useCanvasKeyboardShortcuts() {
     // console.log(`[CanvasKeyboardShortcuts] handleNodeAltClick for node ${node.id}. BaseNode should have handled precise alt-clicks on handles.`);
 
     const nodeDef = nodeStore.getNodeDefinitionByFullType(node.type as string);
-    
+
     // 检查节点类型是否为 GroupOutput，如果是，则不进行循环预览，因为 GroupOutput 通常没有可直接点击预览的“输出”Handle
     // 它们的“输出”是通过连接到其输入Handle (target handle) 来定义的。
     if (node.type === 'core:GroupOutput') {
-        console.log(`[CanvasKeyboardShortcuts] Alt+Click on GroupOutput node ${node.id}. No cycle preview for GroupOutput.`);
-        return;
+      console.log(`[CanvasKeyboardShortcuts] Alt+Click on GroupOutput node ${node.id}. No cycle preview for GroupOutput.`);
+      return;
     }
 
     // 确保 nodeDef 和 outputs 存在 (对于 GroupInput，其 "outputs" 来自 interfaceInputs)
     let rawOutputSlots: Record<string, OriginalOutputDefinition | GroupSlotInfo> | undefined;
     if (node.type === 'core:GroupInput') {
-        const workflowData = workflowManager.getWorkflowData(internalId);
-        rawOutputSlots = workflowData?.interfaceInputs;
+      const workflowData = workflowManager.getWorkflowData(internalId);
+      rawOutputSlots = workflowData?.interfaceInputs;
     } else {
-        rawOutputSlots = nodeDef?.outputs;
+      rawOutputSlots = nodeDef?.outputs;
     }
 
     if (!nodeDef || !rawOutputSlots || Object.keys(rawOutputSlots).length === 0) {
@@ -447,14 +291,14 @@ export function useCanvasKeyboardShortcuts() {
     const outputSlots: ProcessedOutputDefinition[] = Object.entries(
       rawOutputSlots
     )
-    .map(([key, def]) => ({
+      .map(([key, def]) => ({
         ...def,
         key,
         // 确保 dataFlowType 存在，对于 GroupSlotInfo 它直接存在，对于 OriginalOutputDefinition 它也应该存在
         // 假设 def.dataFlowType 总是根据类型定义存在
         dataFlowType: def.dataFlowType
-    } as ProcessedOutputDefinition))
-    .filter(slot => slot.dataFlowType && slot.dataFlowType !== DataFlowType.WILDCARD && slot.dataFlowType !== DataFlowType.CONVERTIBLE_ANY); // 确保 slot.dataFlowType 存在再比较
+      } as ProcessedOutputDefinition))
+      .filter(slot => slot.dataFlowType && slot.dataFlowType !== DataFlowType.WILDCARD && slot.dataFlowType !== DataFlowType.CONVERTIBLE_ANY); // 确保 slot.dataFlowType 存在再比较
 
 
     if (outputSlots.length === 0) {
@@ -518,8 +362,10 @@ export function useCanvasKeyboardShortcuts() {
     deleteSelectedElements,
     selectAllElements,
     handleRedo, // 暴露重做函数
-    handleCopy, // 暴露复制粘贴函数，虽然它们主要由快捷键触发
-    handlePaste,
+    // handleLocalCopy, // 由快捷键内部调用，不直接暴露
+    // handleLocalPaste, // 由快捷键内部调用，不直接暴露
+    // handleSystemCopy, // 由快捷键内部调用，不直接暴露
+    // handleSystemPaste, // 由快捷键内部调用，不直接暴露
     groupSelectedNodes, // 暴露分组函数
     handleUndo, // 暴露撤销函数
   };

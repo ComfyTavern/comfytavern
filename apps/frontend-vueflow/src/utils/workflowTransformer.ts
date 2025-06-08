@@ -7,9 +7,6 @@ import type {
   GroupInterfaceInfo,
   WorkflowViewport as SharedViewport,
   NodeDefinition, // <-- 导入 NodeDefinition
-  // InputDefinition, // “InputDefinition”已声明，但从未使用过。
-} from "@comfytavern/types";
-import type {
   WorkflowExecutionPayload, // <-- 新增：执行载荷类型
   ExecutionNode, // <-- 新增：执行节点类型
   ExecutionEdge, // <-- 新增：执行边类型
@@ -18,6 +15,22 @@ import { getEffectiveDefaultValue } from "@comfytavern/utils"; // <-- 导入默�
 import { useNodeStore } from "@/stores/nodeStore"; // <-- 导入 Node Store
 import { useSlotDefinitionHelper } from "@/composables/node/useSlotDefinitionHelper"; // 导入插槽定义辅助函数
 import isEqual from "lodash-es/isEqual"; // <-- 导入深比较函数
+import type { Node as VueFlowNodeType, Edge as VueFlowEdgeType } from '@vue-flow/core'; // 确保这些类型被导入, 重命名以避免与参数名冲突
+import { klona } from 'klona'; // 用于深拷贝
+
+export const WORKFLOW_FRAGMENT_SOURCE = "ComfyTavernWorkflowFragment";
+export const WORKFLOW_FRAGMENT_VERSION = "1.0";
+
+export interface WorkflowFragmentData {
+  nodes: WorkflowStorageNode[];
+  edges: WorkflowStorageEdge[];
+}
+
+export interface SerializedWorkflowFragment {
+  source: typeof WORKFLOW_FRAGMENT_SOURCE;
+  version: string;
+  data: WorkflowFragmentData;
+}
 
 // 辅助函数类型定义 (从 useEdgeStyles.ts 导入)
 type GetEdgeStylePropsFunc = (
@@ -78,48 +91,7 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
       nodeType !== "core:GroupOutput" &&
       nodeType !== "core:NodeGroup" // 阻止为 NodeGroup 提取 inputValues
     ) {
-      // --- 诊断日志开始 ---
-      /*
-      console.log(
-        `[DEBUG_TRANSFORM] Node ${vueNode.id} (${nodeType}): Entering input processing. vueNode.data && nodeDef && vueNode.data.inputs === nodeDef.inputs:`, vueNode.data && nodeDef && vueNode.data.inputs === nodeDef.inputs
-      );
-      try {
-        console.log(
-          `[DEBUG_TRANSFORM] Node ${vueNode.id} (${nodeType}): vueNode.data.inputs structure:`,
-          JSON.parse(JSON.stringify(vueNode.data && vueNode.data.inputs))
-        );
-      } catch (e) {
-        console.error(
-          `[DEBUG_TRANSFORM] Node ${vueNode.id} (${nodeType}): Error stringifying vueNode.data.inputs:`,
-          e,
-          vueNode.data && vueNode.data.inputs
-        );
-      }
-      if (nodeDef && nodeDef.inputs) { // 确保 nodeDef.inputs 存在才打印
-        try {
-          console.log(
-            `[DEBUG_TRANSFORM] Node ${vueNode.id} (${nodeType}): nodeDef.inputs structure:`,
-            JSON.parse(JSON.stringify(nodeDef.inputs))
-          );
-        } catch (e) {
-          console.error(
-            `[DEBUG_TRANSFORM] Node ${vueNode.id} (${nodeType}): Error stringifying nodeDef.inputs:`,
-            e,
-            nodeDef.inputs
-          );
-        }
-      }
-      // 检查特定问题键 'string_input' (如果节点是 'core:TestWidgets')
-      if (vueNode.type === 'core:TestWidgets' && vueNode.data && vueNode.data.inputs && vueNode.data.inputs['string_input']) {
-        const specificInputData = vueNode.data.inputs['string_input'];
-        console.log(
-          `[DEBUG_TRANSFORM] Node ${vueNode.id} (core:TestWidgets): string_input details:`,
-          JSON.parse(JSON.stringify(specificInputData)),
-          `"value" in string_input: ${"value" in specificInputData}`
-        );
-      }
-      */
-      // --- 诊断日志结束 ---
+
       Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
         // inputData is now an object { value: ..., description: ..., ... }
         const inputDef = nodeDef.inputs?.[inputName];
@@ -651,4 +623,257 @@ export function transformVueFlowToExecutionPayload(
     nodes: executionNodes,
     edges: executionEdges,
   };
+}
+
+/**
+ * Serializes a fragment of a workflow (selected nodes and edges) into a JSON string for clipboard.
+ * 将工作流片段（选定的节点和边）序列化为 JSON 字符串，用于剪贴板。
+ * @param nodesToSerialize Array of VueFlowNode objects to serialize.
+ * @param edgesToSerialize Array of VueFlowEdge objects to serialize.
+ * @returns JSON string representing the workflow fragment.
+ */
+export function serializeWorkflowFragment(
+  nodesToSerialize: VueFlowNodeType[],
+  edgesToSerialize: VueFlowEdgeType[]
+): string | null {
+  const nodeStore = useNodeStore();
+  const nodeDefinitionsMap = new Map<string, NodeDefinition>(
+    nodeStore.nodeDefinitions?.map((def) => [`${def.namespace}:${def.type}`, def]) ?? []
+  );
+
+  try {
+    const storageNodes: WorkflowStorageNode[] = nodesToSerialize.map((vueNode) => {
+      const nodeType = vueNode.type;
+      if (!nodeType) {
+        console.error(`[serializeWorkflowFragment] Node with ID ${vueNode.id} has no type defined.`);
+        throw new Error(`Node ${vueNode.id} has no type.`);
+      }
+      const nodeDef = nodeDefinitionsMap.get(nodeType);
+      if (!nodeDef) {
+        console.error(`[serializeWorkflowFragment] Node definition not found for type ${nodeType} (ID: ${vueNode.id}).`);
+        throw new Error(`Node definition not found for ${nodeType}.`);
+      }
+
+      const inputValues: Record<string, any> = {};
+      if (
+        nodeDef.inputs &&
+        vueNode.data?.inputs &&
+        nodeType !== "core:GroupInput" &&
+        nodeType !== "core:GroupOutput" &&
+        nodeType !== "core:NodeGroup"
+      ) {
+        Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
+          const inputDef = nodeDef.inputs?.[inputName];
+          if (inputDef && typeof inputData === "object" && inputData !== null && "value" in inputData) {
+            const currentValue = inputData.value;
+            const effectiveDefault = getEffectiveDefaultValue(inputDef);
+            if (!isEqual(currentValue, effectiveDefault)) {
+              inputValues[inputName] = klona(currentValue);
+            }
+          }
+        });
+      }
+
+      const customSlotDescriptions: WorkflowStorageNode['customSlotDescriptions'] = {};
+      if (nodeDef.inputs && vueNode.data?.inputs) {
+        const currentCustomInputDescs: Record<string, string> = {};
+        Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
+          if (typeof inputData === "object" && inputData !== null && "description" in inputData) {
+            const currentDesc = inputData.description as string;
+            const defaultDesc = nodeDef.inputs?.[inputName]?.description || "";
+            if (currentDesc && currentDesc !== defaultDesc) {
+              currentCustomInputDescs[inputName] = currentDesc;
+            }
+          }
+        });
+        if (Object.keys(currentCustomInputDescs).length > 0) {
+          customSlotDescriptions.inputs = currentCustomInputDescs;
+        }
+      }
+       if (nodeDef.outputs && vueNode.data?.outputs) {
+        const currentCustomOutputDescs: Record<string, string> = {};
+        Object.entries(vueNode.data.outputs).forEach(([outputName, outputData]) => {
+          if (typeof outputData === "object" && outputData !== null && "description" in outputData) {
+            const currentDesc = outputData.description as string;
+            const defaultDesc = nodeDef.outputs?.[outputName]?.description || "";
+            if (currentDesc && currentDesc !== defaultDesc) {
+              currentCustomOutputDescs[outputName] = currentDesc;
+            }
+          }
+        });
+        if (Object.keys(currentCustomOutputDescs).length > 0) {
+          customSlotDescriptions.outputs = currentCustomOutputDescs;
+        }
+      }
+
+      const sNode: WorkflowStorageNode = {
+        id: vueNode.id,
+        type: nodeType,
+        position: klona(vueNode.position),
+        ...(Object.keys(inputValues).length > 0 && { inputValues }),
+        ...(vueNode.data?.configValues && Object.keys(vueNode.data.configValues).length > 0 && { configValues: klona(vueNode.data.configValues) }),
+        ...(vueNode.width !== undefined && { width: vueNode.width }),
+        ...(vueNode.height !== undefined && { height: vueNode.height }),
+        ...(((vueNode.data?.displayName || vueNode.label) && String(vueNode.data?.displayName || vueNode.label) !== String(nodeDef.displayName)) && { displayName: String(vueNode.data?.displayName || vueNode.label) }),
+        ...(vueNode.data?.description && vueNode.data.description !== (nodeDef.description || "") && { customDescription: vueNode.data.description }),
+        ...(Object.keys(customSlotDescriptions).length > 0 && { customSlotDescriptions }),
+        ...(vueNode.data?.inputConnectionOrders && { inputConnectionOrders: klona(vueNode.data.inputConnectionOrders) }),
+      };
+      return sNode;
+    });
+
+    const storageEdges: WorkflowStorageEdge[] = edgesToSerialize.map((vueEdge) => {
+      return {
+        id: vueEdge.id,
+        source: vueEdge.source,
+        target: vueEdge.target,
+        sourceHandle: vueEdge.sourceHandle ?? "",
+        targetHandle: vueEdge.targetHandle ?? "",
+        label: typeof vueEdge.label === "string" && vueEdge.label ? vueEdge.label : undefined,
+        // WorkflowStorageEdge does not have a 'data' field.
+      };
+    });
+
+    const fragment: SerializedWorkflowFragment = {
+      source: WORKFLOW_FRAGMENT_SOURCE,
+      version: WORKFLOW_FRAGMENT_VERSION,
+      data: {
+        nodes: storageNodes,
+        edges: storageEdges,
+      },
+    };
+    return JSON.stringify(fragment);
+  } catch (error) {
+    console.error("Error serializing workflow fragment:", error);
+    return null;
+  }
+}
+
+/**
+ * Deserializes a JSON string from the clipboard into VueFlow nodes and edges.
+ * 将剪贴板中的 JSON 字符串反序列化为 VueFlow 节点和边。
+ * Does not handle ID conflicts or apply styles; these are responsibilities of the caller.
+ * 不处理 ID 冲突或应用样式；这些是调用者的责任。
+ * @param jsonString The JSON string to deserialize.
+ * @returns An object containing arrays of VueFlowNode and VueFlowEdge, or null if deserialization fails.
+ */
+export function deserializeWorkflowFragment(
+  jsonString: string
+): { nodes: VueFlowNodeType[]; edges: VueFlowEdgeType[] } | null {
+  const nodeStore = useNodeStore();
+  const nodeDefinitionsMap = new Map<string, NodeDefinition>(
+    nodeStore.nodeDefinitions?.map((def) => [`${def.namespace}:${def.type}`, def]) ?? []
+  );
+
+  try {
+    const parsed: any = JSON.parse(jsonString);
+
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      parsed.source !== WORKFLOW_FRAGMENT_SOURCE ||
+      !parsed.data ||
+      !Array.isArray(parsed.data.nodes) ||
+      !Array.isArray(parsed.data.edges)
+    ) {
+      console.warn("Invalid workflow fragment format in clipboard.", parsed);
+      return null;
+    }
+
+    if (parsed.version !== WORKFLOW_FRAGMENT_VERSION) {
+      console.warn(`Workflow fragment version mismatch. Expected ${WORKFLOW_FRAGMENT_VERSION}, got ${parsed.version}. Attempting to parse anyway.`);
+    }
+
+    const fragmentData = parsed.data as WorkflowFragmentData;
+
+    const vueFlowNodes: VueFlowNodeType[] = fragmentData.nodes.map((storageNode) => {
+      const nodeDef = nodeDefinitionsMap.get(storageNode.type);
+      if (!nodeDef) {
+        console.error(`[deserializeWorkflowFragment] Node definition not found for type ${storageNode.type} (ID: ${storageNode.id}). Skipping.`);
+        return {
+          id: storageNode.id,
+          type: "error",
+          position: storageNode.position || { x: 0, y: 0 },
+          label: `Error: Unknown Type ${storageNode.type}`,
+        } as VueFlowNodeType;
+      }
+
+      const vueFlowData: Record<string, any> = {
+        configValues: klona(storageNode.configValues || {}),
+        defaultDescription: nodeDef.description || "",
+        description: storageNode.customDescription || nodeDef.description || "",
+        inputs: {},
+        outputs: {},
+      };
+
+      if (nodeDef.inputs) {
+        Object.entries(nodeDef.inputs).forEach(([inputName, inputDef]) => {
+          const effectiveDefault = getEffectiveDefaultValue(inputDef);
+          const storedValue = storageNode.inputValues?.[inputName];
+          const finalValue = storedValue !== undefined ? klona(storedValue) : klona(effectiveDefault);
+          const defaultSlotDesc = inputDef.description || "";
+          const customSlotDesc = storageNode.customSlotDescriptions?.inputs?.[inputName];
+          const displaySlotDesc = customSlotDesc || defaultSlotDesc;
+          vueFlowData.inputs[inputName] = {
+            value: finalValue,
+            description: displaySlotDesc,
+            defaultDescription: defaultSlotDesc,
+            ...klona(inputDef),
+          };
+        });
+      }
+
+      if (nodeDef.outputs) {
+        Object.entries(nodeDef.outputs).forEach(([outputName, outputDef]) => {
+          const defaultSlotDesc = outputDef.description || "";
+          const customSlotDesc = storageNode.customSlotDescriptions?.outputs?.[outputName];
+          const displaySlotDesc = customSlotDesc || defaultSlotDesc;
+          vueFlowData.outputs[outputName] = {
+            description: displaySlotDesc,
+            defaultDescription: defaultSlotDesc,
+            ...klona(outputDef),
+          };
+        });
+      }
+      
+      const nodeDefaultLabel = nodeDef.displayName || storageNode.type;
+      vueFlowData.defaultLabel = nodeDefaultLabel;
+      vueFlowData.displayName = storageNode.displayName || nodeDefaultLabel;
+
+      if (storageNode.inputConnectionOrders) {
+        vueFlowData.inputConnectionOrders = klona(storageNode.inputConnectionOrders);
+      }
+      
+      if (storageNode.type === "core:NodeGroup" && storageNode.configValues?.referencedWorkflowId) {
+        vueFlowData.groupInterface = { inputs: {}, outputs: {} };
+      }
+
+      return {
+        id: storageNode.id,
+        type: storageNode.type,
+        position: klona(storageNode.position),
+        data: vueFlowData,
+        width: storageNode.width,
+        height: storageNode.height,
+        label: vueFlowData.displayName,
+      } as VueFlowNodeType;
+    });
+
+    const vueFlowEdges: VueFlowEdgeType[] = fragmentData.edges.map((storageEdge) => {
+      return {
+        id: storageEdge.id,
+        source: storageEdge.source,
+        target: storageEdge.target,
+        sourceHandle: storageEdge.sourceHandle,
+        targetHandle: storageEdge.targetHandle,
+        label: storageEdge.label,
+        data: {}, // Initialize data as empty; styles/types to be computed later
+      } as VueFlowEdgeType;
+    });
+
+    return { nodes: vueFlowNodes, edges: vueFlowEdges };
+  } catch (error) {
+    console.error("Error deserializing workflow fragment:", error);
+    return null;
+  }
 }

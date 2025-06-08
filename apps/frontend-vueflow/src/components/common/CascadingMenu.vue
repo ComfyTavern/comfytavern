@@ -248,6 +248,7 @@ defineExpose({ menuElement });
 }
 
 .cascading-menu li.context-menu-item .label {
+  @apply text-gray-800 dark:text-gray-300;
   flex-grow: 1;
 }
 
@@ -255,6 +256,7 @@ defineExpose({ menuElement });
   margin-left: auto;
   padding-left: 0.75rem;
   font-size: 0.8em;
+  @apply text-gray-600 dark:text-gray-300;
   /* color: #888; */
 }
 

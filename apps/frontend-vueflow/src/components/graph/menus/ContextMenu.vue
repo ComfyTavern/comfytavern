@@ -1,19 +1,11 @@
 <template>
-  <div v-if="visible"
-       class="context-menu context-menu-base"
-       :style="{ left: `${position.x}px`, top: `${position.y}px` }"
-       @click.stop
-       @mousedown.stop
-       @mouseleave="handleMouseLeaveBaseMenu"
-       ref="baseMenuRef">
+  <div v-if="visible" class="context-menu context-menu-base"
+    :style="{ left: `${position.x}px`, top: `${position.y}px` }" @click.stop @mousedown.stop
+    @mouseleave="handleMouseLeaveBaseMenu" ref="baseMenuRef">
     <!-- 常规菜单选项 -->
     <div class="context-menu-items">
-      <div
-        class="context-menu-item"
-        @mouseenter="handleShowNodeSubMenu"
-        @mouseleave="handleHideNodeSubMenuDelayed"
-        ref="addNodeMenuItemRef"
-      >
+      <div class="context-menu-item" @mouseenter="handleShowNodeSubMenu" @mouseleave="handleHideNodeSubMenuDelayed"
+        ref="addNodeMenuItemRef">
         <span class="icon">+</span> 添加节点 <span class="submenu-arrow-static">▶</span>
       </div>
       <div class="context-menu-item" @click="handleOpenSearchPanel">
@@ -23,14 +15,20 @@
         <span class="icon">⊞</span> 添加分组框
       </div>
       <div class="context-menu-separator"></div>
-      <div class="context-menu-item" @click="onCopy" :class="{ disabled: !hasSelectedNodes }">
-        <span class="icon">⎘</span> 复制
+      <div class="context-menu-item" @click="onLocalCopy" :class="{ disabled: !hasSelectedNodes }">
+        <span class="icon">⎘</span> 复制选中项 (本地)
       </div>
-      <div class="context-menu-item" @click="onPaste" :class="{ disabled: !hasCopiedNodes }">
-        <span class="icon">📋</span> 粘贴
+      <div class="context-menu-item" @click="onSystemCopy" :class="{ disabled: !hasSelectedNodes }">
+        <span class="icon">📋</span> 复制选中项 (剪贴板)
+      </div>
+      <div class="context-menu-item" @click="onLocalPaste">
+        <span class="icon">📥</span> 粘贴 (本地)
+      </div>
+      <div class="context-menu-item" @click="onSystemPaste">
+        <span class="icon">📲</span> 从剪贴板粘贴
       </div>
       <div class="context-menu-item" @click="onDelete" :class="{ disabled: !hasSelectedNodes }">
-        <span class="icon">🗑</span> 删除
+        <span class="icon">🗑</span> 删除选中项
       </div>
       <div class="context-menu-separator"></div>
       <div class="context-menu-item" @click="onSelectAll">
@@ -42,18 +40,11 @@
     </div>
 
     <!-- 节点添加菜单 - 新的级联菜单 (作为子菜单显示) -->
-    <CascadingMenu
-      v-if="isAddNodeSubMenuOpen"
-      :items="cascadingMenuItems"
-      :level="1"
-      :parent-rect="addNodeMenuItemRef?.getBoundingClientRect()"
-      @select-item="onCascadingNodeSelect"
-      @close-all="closeAllContextMenus"
-      @mouseenter="cancelHideNodeSubMenu"
-      @mouseleave="handleHideNodeSubMenuDelayed"
-      class="context-submenu"
-    />
-    
+    <CascadingMenu v-if="isAddNodeSubMenuOpen" :items="cascadingMenuItems" :level="1"
+      :parent-rect="addNodeMenuItemRef?.getBoundingClientRect()" @select-item="onCascadingNodeSelect"
+      @close-all="closeAllContextMenus" @mouseenter="cancelHideNodeSubMenu" @mouseleave="handleHideNodeSubMenuDelayed"
+      class="context-submenu" />
+
     <!-- HierarchicalMenu is now handled by parent component -->
   </div>
 </template>
@@ -66,20 +57,21 @@ import { storeToRefs } from 'pinia';
 // import HierarchicalMenu from '@/components/common/HierarchicalMenu.vue'; // 不再直接使用
 import CascadingMenu, { type MenuItem as CascadingMenuItemType } from '@/components/common/CascadingMenu.vue';
 import type { FrontendNodeDefinition } from '../../../stores/nodeStore';
+import { useCanvasClipboard } from '@/composables/canvas/useCanvasClipboard'; // <-- 新增导入
 
 // Props & Emits
 const props = defineProps<{
   visible: boolean;
   position: XYPosition;
   hasSelectedNodes: boolean;
-  hasCopiedNodes: boolean;
+  // hasCopiedNodes: boolean; // 不再需要，由 useCanvasClipboard 内部管理
 }>();
 
 const emit = defineEmits<{
   (e: 'request-add-node', payload: { fullNodeType: string; screenPosition: XYPosition }): void; // 修改事件定义
   (e: 'add-group'): void;
-  (e: 'copy'): void;
-  (e: 'paste'): void;
+  // (e: 'copy'): void; // 将由内部处理
+  // (e: 'paste'): void; // 将由内部处理
   (e: 'delete'): void;
   (e: 'select-all'): void;
   (e: 'reset-view'): void;
@@ -91,6 +83,9 @@ const emit = defineEmits<{
 const nodeStore = useNodeStore();
 const { nodeDefinitions } = storeToRefs(nodeStore);
 const loading = ref(false);
+
+// Composables
+const { handleLocalCopy, handleLocalPaste, handleSystemCopy, handleSystemPaste } = useCanvasClipboard();
 
 // Refs for Blender-style submenu interaction
 const baseMenuRef = ref<HTMLElement | null>(null);
@@ -232,11 +227,11 @@ const cancelHideNodeSubMenu = () => {
 const handleMouseLeaveBaseMenu = (event: MouseEvent) => {
   // If mouse leaves the base menu and not moving towards an open submenu, close submenu
   if (isAddNodeSubMenuOpen.value && baseMenuRef.value && !baseMenuRef.value.contains(event.relatedTarget as Node)) {
-     // Check if relatedTarget is part of the CascadingMenu. This is tricky.
-     // A simpler approach: CascadingMenu itself handles mouseleave to call handleHideNodeSubMenuDelayed.
-     // If mouse leaves base menu entirely, and also leaves the submenu, it will close.
+    // Check if relatedTarget is part of the CascadingMenu. This is tricky.
+    // A simpler approach: CascadingMenu itself handles mouseleave to call handleHideNodeSubMenuDelayed.
+    // If mouse leaves base menu entirely, and also leaves the submenu, it will close.
   }
-   // For now, rely on CascadingMenu's own mouseleave and the item's mouseleave
+  // For now, rely on CascadingMenu's own mouseleave and the item's mouseleave
 };
 
 
@@ -270,15 +265,27 @@ const onAddGroup = () => {
   closeAllContextMenus();
 };
 
-const onCopy = () => {
+const onLocalCopy = () => {
   if (!props.hasSelectedNodes) return;
-  emit('copy');
+  handleLocalCopy();
   closeAllContextMenus();
 };
 
-const onPaste = () => {
-  if (!props.hasCopiedNodes) return;
-  emit('paste');
+const onSystemCopy = () => {
+  if (!props.hasSelectedNodes) return;
+  handleSystemCopy();
+  closeAllContextMenus();
+};
+
+const onLocalPaste = () => {
+  // 内部检查剪贴板是否有内容
+  handleLocalPaste();
+  closeAllContextMenus();
+};
+
+const onSystemPaste = () => {
+  // 内部检查剪贴板是否有内容
+  handleSystemPaste();
   closeAllContextMenus();
 };
 
@@ -303,13 +310,13 @@ const onResetView = () => {
 .context-menu {
   position: fixed;
   min-width: 250px;
-  max-height: 400px;
+  max-height: 75vh;
   overflow-y: auto;
   z-index: 1000;
 }
 
 .context-menu-items {
-  @apply max-h-[calc(400px-3rem)] overflow-y-auto;
+  @apply max-h-[calc(100%-3rem)] overflow-y-auto;
 }
 
 .context-menu-item {
@@ -323,8 +330,9 @@ const onResetView = () => {
 .context-menu-item .icon {
   @apply mr-2 text-gray-500 dark:text-gray-400;
 }
+
 .submenu-arrow-static {
-  @apply ml-auto pl-2 text-xs text-gray-400 dark:text-gray-500;
+  @apply ml-auto pl-2 text-xs text-gray-600 dark:text-gray-300;
 }
 
 .context-menu-separator {
