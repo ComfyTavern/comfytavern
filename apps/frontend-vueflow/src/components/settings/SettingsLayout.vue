@@ -18,8 +18,6 @@
     <!-- 主体内容区 -->
     <main class="settings-content">
       <template v-if="activeSection">
-        <h2 class="section-title">{{ activeSection.label }}</h2>
-
         <!-- 核心: 根据类型动态渲染 -->
         <!-- Case 1: 数据驱动模式 -->
         <SettingsPanel
@@ -95,7 +93,7 @@ const activeSection = computed(() =>
   flex-direction: column; /* 改为垂直布局 */
   height: 100%;
   width: 100%;
-  background-color: var(--ct-bg-base);
+  background-color: transparent; /* 由父容器控制背景 */
   color: var(--ct-text-base);
 }
 
@@ -103,7 +101,7 @@ const activeSection = computed(() =>
   width: 100%; /* 宽度占满 */
   flex-shrink: 0;
   border-bottom: 1px solid var(--ct-border-color); /* 从右边框改为下边框 */
-  background-color: var(--ct-bg-base);
+  background-color: transparent;
 }
 
 .settings-nav ul {
@@ -132,7 +130,7 @@ const activeSection = computed(() =>
 }
 
 .settings-nav li.active {
-  background-color: transparent; /* 激活时背景透明 */
+  background-color: var(--ct-bg-hover);
   color: var(--ct-text-accent);
   border-bottom-color: var(--ct-accent-color); /* 激活时下边框高亮 */
   font-weight: 600;
@@ -155,7 +153,7 @@ const activeSection = computed(() =>
 .placeholder-content,
 .placeholder-component {
   padding: 20px;
-  background-color: var(--ct-bg-subtle);
+  background-color: var(--ct-bg-hover);
   border-radius: 8px;
   border: 1px dashed var(--ct-border-color);
 }

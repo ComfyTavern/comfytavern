@@ -7,9 +7,9 @@
       @click="props.closeOnBackdropClick && handleClose()"
     >
       <div
-        class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 transition-all duration-300"
+        class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col"
         :class="{ 'opacity-0 scale-95': !showContentTransition, 'opacity-100 scale-100': showContentTransition }"
-        :style="{ width: props.width || 'max-w-md' }"
+        :style="{ width: props.width || 'max-w-md', height: props.height }"
         @click.stop
       >
         <div v-if="props.title || props.showCloseButton" class="flex justify-between items-center p-4 border-b dark:border-gray-700">
@@ -52,6 +52,7 @@ const props = withDefaults(defineProps<{
   visible: boolean;
   title?: string;
   width?: string;
+  height?: string; // 修改：模态框固定高度
   showCloseButton?: boolean;
   closeOnBackdropClick?: boolean;
   // 用于内部渲染 DialogService 传递过来的组件
@@ -60,6 +61,7 @@ const props = withDefaults(defineProps<{
   showCloseButton: true,
   closeOnBackdropClick: true,
   width: 'max-w-md', // 默认宽度
+  height: '75vh', // 默认固定高度，可以根据需要调整
 });
 
 const emit = defineEmits<{
@@ -111,8 +113,8 @@ onBeforeUnmount(() => {
 <style scoped>
 /* 可以根据需要添加或调整样式 */
 .modal-content-area {
-  /* 如果内容过长，可以考虑添加 max-height 和 overflow-y: auto */
-  /* max-height: 70vh; */
-  /* overflow-y: auto; */
+  flex-grow: 1; /* 占据剩余空间 */
+  overflow-y: auto; /* 内容超出时显示滚动条 */
+  min-height: 0; /* 防止 flex item 在内容过少时无法正确收缩，配合 overflow 很重要 */
 }
 </style>

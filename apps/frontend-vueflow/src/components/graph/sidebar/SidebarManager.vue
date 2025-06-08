@@ -38,7 +38,7 @@
 
         <!-- 设置按钮 -->
         <Tooltip content="设置" triggerClass="w-full">
-          <button class="icon-button" @click="uiStore.openSettingsModal()">
+          <button class="icon-button" @click="uiStore.openSettingsModal({ width: '800px', height: '75vh' })">
             <span class="tab-icon">⚙️</span>
             <span class="tab-label">设置</span>
           </button>

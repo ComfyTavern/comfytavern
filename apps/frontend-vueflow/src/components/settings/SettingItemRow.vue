@@ -38,10 +38,12 @@ defineProps<{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 0; /* 增加垂直内边距 */
-  border-bottom: 1px solid var(--ct-border-color-light);
+  padding: 8px 0; /* 调整垂直内边距，使其更紧凑 */
+  /* border-bottom: 1px solid var(--ct-border-color-light); -- 移除横线 */
 }
 
+/* 由于移除了所有项目的底边框，以下针对首尾元素的特殊处理不再需要 */
+/*
 .setting-group .setting-item-row:last-child {
   border-bottom: none;
   padding-bottom: 0;
@@ -49,7 +51,7 @@ defineProps<{
 .setting-group .setting-item-row:first-child {
   padding-top: 0;
 }
-
+*/
 
 .label-area {
   flex: 1;

@@ -12,14 +12,24 @@ interface RegexEditorModalData {
 interface UiStoreState {
   isRegexEditorModalVisible: boolean;
   regexEditorModalData: RegexEditorModalData | null;
-  isSettingsModalVisible: boolean; // 新增：控制设置模态框的显示状态
+  isSettingsModalVisible: boolean; // 控制设置模态框的显示状态
+  settingsModalProps: { // 修改：存储设置模态框的属性
+    width: string;
+    height: string; // 修改：固定高度
+  };
 }
+
+const defaultSettingsModalProps = {
+  width: 'max-w-3xl', // 默认宽度
+  height: '75vh',   // 修改：默认固定高度
+};
 
 export const useUiStore = defineStore('ui', {
   state: (): UiStoreState => ({
     isRegexEditorModalVisible: false,
     regexEditorModalData: null,
-    isSettingsModalVisible: false, // 新增
+    isSettingsModalVisible: false,
+    settingsModalProps: { ...defaultSettingsModalProps }, // 初始化
   }),
   actions: {
     openRegexEditorModal(data: RegexEditorModalData) {
@@ -38,12 +48,21 @@ export const useUiStore = defineStore('ui', {
     // 目前的设计是 BaseNode 触发打开，模态框内部编辑，保存时通过 emit('save') + v-model 更新。
     // 所以这里的 onSave 暂时作为一种可能性保留。
 
-    // 新增：控制设置模态框的方法
-    openSettingsModal() {
+    // 控制设置模态框的方法
+    openSettingsModal(props?: { width?: string; height?: string }) {
+      if (props) {
+        this.settingsModalProps.width = props.width ?? defaultSettingsModalProps.width;
+        this.settingsModalProps.height = props.height ?? defaultSettingsModalProps.height;
+      } else {
+        // 如果没有传递 props，确保使用默认值
+        this.settingsModalProps = { ...defaultSettingsModalProps };
+      }
       this.isSettingsModalVisible = true;
     },
     closeSettingsModal() {
       this.isSettingsModalVisible = false;
+      // 关闭时重置为默认尺寸，可选行为
+      this.settingsModalProps = { ...defaultSettingsModalProps };
     },
   },
 });

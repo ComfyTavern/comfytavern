@@ -22,7 +22,7 @@ const projectStore = useProjectStore();
 const { isDark } = storeToRefs(themeStore)
 const { activeTabId } = storeToRefs(tabStore);
 const { currentProjectId } = storeToRefs(projectStore); // 获取当前项目 ID 的响应式引用
-const { isSettingsModalVisible } = storeToRefs(uiStore); // 获取设置模态框的显示状态
+const { isSettingsModalVisible, settingsModalProps } = storeToRefs(uiStore); // 获取设置模态框的显示状态和属性
 
 onMounted(async () => {
   themeStore.initTheme();
@@ -103,7 +103,8 @@ onUnmounted(() => {
     <BaseModal
       :visible="isSettingsModalVisible"
       title="设置"
-      width="max-w-3xl"
+      :width="settingsModalProps.width"
+      :height="settingsModalProps.height"
       @update:visible="!$event && uiStore.closeSettingsModal()"
     >
       <SettingsLayout />

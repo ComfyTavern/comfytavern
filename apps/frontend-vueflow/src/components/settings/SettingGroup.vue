@@ -37,6 +37,6 @@ defineProps<{
 .group-content {
   display: flex;
   flex-direction: column;
-  gap: 20px; /* 增大设置项之间的垂直间距 */
+  gap: 12px; /* 调整设置项之间的垂直间距，使其更紧凑 */
 }
 </style>
