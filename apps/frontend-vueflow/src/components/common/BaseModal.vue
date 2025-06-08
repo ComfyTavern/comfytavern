@@ -3,7 +3,7 @@
     <div
       v-if="props.visible"
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center transition-opacity duration-300"
-      :style="{ zIndex: 60 }"
+      :style="{ zIndex: dynamicZIndex }"
       :class="{ 'opacity-0': !showContentTransition, 'opacity-100': showContentTransition }"
       @click="props.closeOnBackdropClick && handleClose()"
     >
@@ -48,6 +48,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, useSlots, type Component as VueComponent, computed, nextTick } from 'vue';
+import { useUiStore } from '@/stores/uiStore';
 
 const props = withDefaults(defineProps<{
   visible: boolean;
@@ -74,9 +75,12 @@ const slots = useSlots();
 const hasFooterSlot = computed(() => !!slots.footer);
 
 const showContentTransition = ref(false);
+const uiStore = useUiStore();
+const dynamicZIndex = ref(uiStore.baseZIndex); // 初始化为基础 z-index
 
 watch(() => props.visible, (newValue) => {
   if (newValue) {
+    dynamicZIndex.value = uiStore.getNextZIndex();
     // DOM 更新后启动入场动画
     nextTick(() => {
       showContentTransition.value = true;

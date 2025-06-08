@@ -3,7 +3,8 @@
     <!-- 遮罩层 -->
     <div
       v-if="props.visible"
-      class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center transition-opacity duration-300"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center transition-opacity duration-300"
+      :style="{ zIndex: dynamicZIndex }"
       :class="{ 'opacity-0': !showContent, 'opacity-100': showContent }"
       @click="props.closeOnBackdrop && handleCancel()"
     >
@@ -88,6 +89,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue';
+import { useUiStore } from '@/stores/uiStore';
 
 const props = withDefaults(defineProps<{
   visible: boolean;
@@ -137,8 +139,12 @@ const showContent = ref(false);
 const internalInputValue = ref(props.inputValue || props.initialValue);
 let autoCloseTimer: number | null = null;
 
+const uiStore = useUiStore();
+const dynamicZIndex = ref(uiStore.baseZIndex);
+
 watch(() => props.visible, (newValue) => {
   if (newValue) {
+    dynamicZIndex.value = uiStore.getNextZIndex();
     if (props.type === 'input') {
       internalInputValue.value = props.inputValue !== undefined ? props.inputValue : props.initialValue;
     }

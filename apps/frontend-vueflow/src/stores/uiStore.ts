@@ -17,6 +17,8 @@ interface UiStoreState {
     width: string;
     height: string; // 修改：固定高度
   };
+  baseZIndex: number; // 新增：基础 z-index
+  currentMaxZIndex: number; // 新增：当前最大 z-index
 }
 
 const defaultSettingsModalProps = {
@@ -24,14 +26,22 @@ const defaultSettingsModalProps = {
   height: '75vh',   // 修改：默认固定高度
 };
 
+const BASE_Z_INDEX = 1000; // 定义基础 z-index 值
+
 export const useUiStore = defineStore('ui', {
   state: (): UiStoreState => ({
     isRegexEditorModalVisible: false,
     regexEditorModalData: null,
     isSettingsModalVisible: false,
     settingsModalProps: { ...defaultSettingsModalProps }, // 初始化
+    baseZIndex: BASE_Z_INDEX,
+    currentMaxZIndex: BASE_Z_INDEX,
   }),
   actions: {
+    getNextZIndex(): number {
+      this.currentMaxZIndex += 10;
+      return this.currentMaxZIndex;
+    },
     openRegexEditorModal(data: RegexEditorModalData) {
       this.regexEditorModalData = data;
       this.isRegexEditorModalVisible = true;

@@ -2,7 +2,8 @@
   <Teleport to="body">
     <div
       v-if="visible"
-      class="fixed z-50 transition-all duration-300 flex items-center"
+      class="fixed transition-all duration-300 flex items-center"
+      :style="{ zIndex: 9999 }"
       :class="[
         positionClasses,
         { 'opacity-0 translate-y-4': !showContent, 'opacity-100 translate-y-0': showContent }
