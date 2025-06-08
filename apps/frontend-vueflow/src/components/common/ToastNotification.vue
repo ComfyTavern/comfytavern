@@ -42,7 +42,7 @@
           </div>
 
           <!-- 内容 -->
-          <div class="ml-3 flex-1 pt-0.5">
+          <div class="ml-3 flex-1 pt-0.5 max-h-40 overflow-y-auto">
             <p v-if="title" class="text-sm font-medium" :class="textColorClass">{{ title }}</p>
             <p class="text-sm" :class="[title ? 'mt-1' : '', textColorClass]">{{ message }}</p>
           </div>
@@ -91,7 +91,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   title: '',
   type: 'info',
-  duration: 3000, // 默认3秒后自动关闭
+  duration: 5000, // 默认5秒后自动关闭
   // position: 'top-right',
 });
 

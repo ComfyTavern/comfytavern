@@ -17,6 +17,7 @@
             <button @click="showAutoCloseDialog" class="btn btn-purple w-full">显示自动关闭对话框</button>
             <button @click="showInputDialog" class="btn btn-teal w-full">显示输入对话框</button>
             <button @click="showTextareaDialog" class="btn btn-cyan w-full">显示多行输入对话框</button>
+            <button @click="showLargeTextMessageDialog" class="btn btn-orange w-full">显示超大文本消息对话框</button>
           </div>
         </div>
 
@@ -30,6 +31,7 @@
             <button @click="showErrorToast" class="btn btn-red w-full">显示错误通知</button>
             <button @click="showCustomToast" class="btn btn-purple w-full">显示自定义通知</button>
             <button @click="showMultipleToasts" class="btn btn-gray w-full">显示多个通知</button>
+            <button @click="showLargeTextToast" class="btn btn-lime w-full">显示超大文本通知</button>
           </div>
         </div>
       </div>
@@ -75,6 +77,8 @@ const uiStore = useUiStore();
 
 const dialogServiceResult = ref('等待操作...');
 const uiStoreResult = ref('等待操作...');
+
+const veryLongText = `收到了，姐姐。这是一个用于测试 UI 组件的面板，结构很清晰。咕~\n\n整体来看，这个测试面板的设计目标明确，将 \`DialogService\` 的瞬时交互（如确认框、通知）和 \`UiStore\` 控制的全局状态模态框（如设置、编辑器）分离开来，这是很好的实践。前者是命令式的，后者是声明式的，各司其职。\n\n代码写得很规整，不过从逻辑和代码复用的角度，有几个可以琢磨的地方：\n\n### 1. \`DialogService\` 的 \`async/await\` 与错误处理\n\n*   **重复的 \`try...catch\` 结构**：在 \`showMessageDialog\`、\`showConfirmDialog\` 等异步函数中，你都使用了相似的 \`try...catch\` 结构来更新 \`dialogServiceResult\`。这种重复的模式是“样板代码”（Boilerplate Code），可以被抽象出来。\n\n    可以考虑创建一个辅助函数来包装 \`dialogService\` 的调用，从而简化代码。\n\n    例如，可以这样封装：\n    \`\`\`typescript\n    async function handleDialog<T>(\n      action: () => Promise<T>,\n      resultUpdater: (result: string) => void,\n      successMessageFactory: (result: T) => string,\n      initialMessage: string = \'等待响应...\'\n    ) {\n      resultUpdater(initialMessage);\n      try {\n        const result = await action();\n        resultUpdater(successMessageFactory(result));\n      } catch (error) {\n        // 如果用户取消操作（通常是 reject），也在这里捕获\n        if (error === \'cancelled\') { // 假设 DialogService 在取消时 reject(\'cancelled\')\n             resultUpdater(\'操作已取消。\');\n        } else {\n             resultUpdater(\`操作失败: \${error}\`);\n        }\n      }\n    }\n\n    // 使用示例\n    const showConfirmDialog = async () => {\n      await handleDialog(\n        () => dialogService.showConfirm({ title: \'确认操作\', message: \'您确定吗？\' }),\n        (res) => dialogServiceResult.value = res,\n        (confirmed) => \`确认对话框：用户选择 -> \${confirmed} ? \'确认\' : \'取消\'}\`,\n        \'等待确认对话框响应...\'\n      );\n    };\n    \`\`\`\n    这样一来，每个按钮的点击事件处理器都会变得非常简洁。\n\n*   **取消操作的语义**：目前来看，当用户点击“取消”或关闭对话框时，Promise 很可能会被 \`reject\`，然后进入 \`catch\` 块。从语义上讲，用户主动取消并非一个程序“错误”（Error）。更清晰的设计是让 \`showConfirm\` 或 \`showInput\` 在用户取消时 \`resolve(null)\` 或 \`resolve(false)\`。这样 \`catch\` 就可以专门用来处理网络中断、组件加载失败等真正的异常情况。当然，这取决于 \`DialogService\` 的内部实现。\n\n### 2. \`UiStore\` 的状态反馈\n\n*   你在注释里提到了 \`// 为简单起见，这里只记录打开操作\`，这很诚实。要实现完整的反馈闭环（即模态框关闭后更新 \`uiStoreResult\`），确实需要监听 \`uiStore\` 的状态。\n\n    使用 Vue 的 \`watch\` 是一个很直接的方案：\n    \`\`\`typescript\n    import { watch } from \'vue\';\n\n    watch(\n      () => uiStore.isSettingsModalVisible,\n      (isVisible, wasVisible) => {\n        if (wasVisible && !isVisible) {\n          uiStoreResult.value = \'设置模态框已关闭。\';\n        }\n      }\n    );\n    \`\`\`\n    这样，组件就能响应 store 的变化，而不是依赖于模态框自身的回调，逻辑会更符合 Pinia 的数据驱动思想。\n\n### 3. 一些小细节\n\n*   **超长文本占位符**：\`veryLongText\` 的内容是 “这里是超长文本占位符，请替换成你准备的小作文。”。既然是测试，不如直接放一段真正的长文本，比如“道可道，非常道；名可名，非常名”之类的，或者直接用经典的 “Lorem Ipsum”。这样测试时能更直观地看到长文本在对话框和通知中的实际渲染效果，比如滚动条是否出现、文本是否正确换行等。\n*   **CSS 样式**：使用 \`@apply\` 将 Tailwind 的原子类组合成 \`.btn-*\` 这样的组件类，是保持模板（template）整洁和语义化的好方法。这对于维护和主题化都很有利，没什么问题。\n\n总的来说，这个测试组件已经非常完备和实用了。上面的一些想法主要是从代码复用和设计模式的角度出发，供姐姐参考。\n\n咕~ 如果需要我帮忙实现那个简化 \`try...catch\` 的辅助函数，或者有其他问题，随时可以叫我。`; // 示例长文本
 
 // --- DialogService 方法 ---
 const showMessageDialog = async () => {
@@ -172,6 +176,20 @@ const showTextareaDialog = async () => {
   }
 };
 
+const showLargeTextMessageDialog = async () => {
+  dialogServiceResult.value = '等待超大文本消息对话框响应...';
+  try {
+    await dialogService.showMessage({
+      title: '超大文本消息',
+      message: veryLongText,
+      confirmText: '朕已阅',
+    });
+    dialogServiceResult.value = '超大文本消息对话框：用户点击了确定。';
+  } catch (error) {
+    dialogServiceResult.value = `超大文本消息对话框：发生错误: ${error}`;
+  }
+};
+
 const showInfoToast = () => {
   dialogService.showInfo('这是一条信息通知！', '提示');
   dialogServiceResult.value = '触发了信息通知。';
@@ -203,6 +221,17 @@ const showMultipleToasts = () => {
   setTimeout(() => dialogService.showSuccess('通知 2 (延迟)'), 500);
   setTimeout(() => dialogService.showWarning('通知 3 (延迟)'), 1000);
   dialogServiceResult.value = '触发了多个通知。';
+};
+
+const showLargeTextToast = () => {
+  dialogService.showToast({
+    title: '超大文本通知',
+    message: veryLongText,
+    type: 'info',
+    duration: 10000, // 持续时间长一点，方便查看
+    position: 'top-center',
+  });
+  dialogServiceResult.value = '触发了超大文本通知。';
 };
 
 // --- UiStore 方法 ---
@@ -279,5 +308,13 @@ const openRegexEditor = () => {
 
 .btn-pink {
   @apply bg-pink-600 hover:bg-pink-700 focus:ring-pink-500;
+}
+
+.btn-orange {
+  @apply bg-orange-500 hover:bg-orange-600 focus:ring-orange-400;
+}
+
+.btn-lime {
+  @apply bg-lime-500 hover:bg-lime-600 focus:ring-lime-400;
 }
 </style>

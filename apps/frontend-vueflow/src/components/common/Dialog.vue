@@ -32,7 +32,7 @@
         </div>
 
         <!-- 内容区域 -->
-        <div class="p-4 text-gray-700 dark:text-gray-300">
+        <div class="p-4 text-gray-700 dark:text-gray-300 max-h-[70vh] overflow-y-auto">
           <slot>
             <p v-if="props.message">{{ props.message }}</p>
           </slot>

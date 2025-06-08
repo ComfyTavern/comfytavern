@@ -74,7 +74,7 @@ export const useDialogService = defineStore('dialogService', () => {
   const activeDialog = shallowRef<DialogInstance | null>(null);
   const dialogQueue = ref<DialogInstance[]>([]);
   const toasts = ref<ToastInstance[]>([]);
-  const maxToasts = 5;
+  const maxToasts = 10;
 
   function generateId(): string {
     return `dialog-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
