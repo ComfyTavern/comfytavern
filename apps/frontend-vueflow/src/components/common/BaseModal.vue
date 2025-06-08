@@ -3,7 +3,7 @@
     <div
       v-if="props.visible"
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center transition-opacity duration-300"
-      :style="{ zIndex: 1100 }"
+      :style="{ zIndex: 60 }"
       :class="{ 'opacity-0': !showContentTransition, 'opacity-100': showContentTransition }"
       @click="props.closeOnBackdropClick && handleClose()"
     >

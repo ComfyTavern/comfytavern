@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineComponent } from 'vue';
+import { ref, computed, defineComponent, defineAsyncComponent } from 'vue';
 import type { SettingsSection, SettingItemConfig } from '@/types/settings';
 import SettingsPanel from './SettingsPanel.vue';
 
@@ -77,6 +77,13 @@ const sections = ref<SettingsSection[]>([
   { id: 'keybindings', label: '快捷键', icon: 'keyboard', type: 'component', component: { ...PlaceholderComponent, props: { title: '快捷键编辑器' } } },
   { id: 'llm', label: '模型配置', icon: 'brain', type: 'component', component: { ...PlaceholderComponent, props: { title: 'LLM API 管理器' } } },
   { id: 'mcp', label: 'MCP', icon: 'protocol', type: 'data-driven', dataConfig: mcpSettingsConfig },
+  {
+    id: 'test-panel',
+    label: '测试面板',
+    icon: 'bug_report', // Material Icon name for a bug or test
+    type: 'component',
+    component: defineAsyncComponent(() => import('@/views/TestPanelView.vue'))
+  },
   { id: 'about', label: '关于', icon: 'info', type: 'component', component: { ...PlaceholderComponent, props: { title: '关于 ComfyTavern' } } },
 ]);
 

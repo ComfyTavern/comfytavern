@@ -42,12 +42,12 @@ const router = createRouter({
           name: 'settings', // 名字统一小写
           component: () => import('../views/SettingsView.vue'),
         },
+        {
+          path: 'settings/test-panel', // 新增测试面板路由
+          name: 'settings-test-panel',
+          component: () => import('../views/TestPanelView.vue'),
+        },
       ],
-    },
-    {
-      path: '/dialog-demo',
-      name: 'dialog-demo',
-      component: () => import('../components/common/DialogDemo.vue'),
     },
     {
       path: '/projects/:projectId/editor/:workflowId?', // 添加可选的 workflowId 参数
