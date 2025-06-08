@@ -15,7 +15,7 @@ defineProps<{
 
 <style scoped>
 .setting-group {
-  padding: 28px; /* 增加内边距 */
+  padding: 8px 16px; /* 增加内边距 */
   border-radius: 12px; /* 增加圆角 */
   background-color: var(--ct-bg-subtle);
   border: 1px solid var(--ct-border-color);
@@ -26,10 +26,10 @@ defineProps<{
 }
 
 .group-title {
-  font-size: 1.25rem; /* 增大字号 */
+  font-size: 1.5rem; /* 增大字号 */
   font-weight: 600;
-  margin-bottom: 20px; /* 增加下外边距 */
-  padding-bottom: 12px; /* 增加下内边距 */
+  margin-bottom: 16px; /* 增加下外边距 */
+  padding-bottom: 6px; /* 增加下内边距 */
   border-bottom: 1px solid var(--ct-border-color-light);
   color: var(--ct-text-base); /* 确保标题颜色 */
 }

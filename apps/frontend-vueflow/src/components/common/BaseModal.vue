@@ -29,7 +29,7 @@
           </button>
         </div>
 
-        <div class="modal-content-area p-4">
+        <div class="modal-content-area p-2">
           <slot>
             <!-- 默认插槽，用于插入自定义组件 -->
             <component v-if="_contentDefinition && _contentDefinition.component" :is="_contentDefinition.component" v-bind="_contentDefinition.props" />

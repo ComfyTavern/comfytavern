@@ -100,45 +100,53 @@ const activeSection = computed(() =>
 .settings-nav {
   width: 100%; /* 宽度占满 */
   flex-shrink: 0;
-  border-bottom: 1px solid var(--ct-border-color); /* 从右边框改为下边框 */
+  /* 移除下边框，胶囊样式不需要这个 */
   background-color: transparent;
+  padding: 12px 0; /* 给胶囊组一些垂直方向的呼吸空间 */
+  display: flex; /* 用于内部 ul 的对齐 */
+  justify-content: flex-start; /* 默认靠左，可以改为 center 使胶囊居中 */
 }
 
 .settings-nav ul {
   list-style: none;
-  padding: 0 32px; /* 左右留出边距 */
-  margin: 0;
-  display: flex; /* 横向排列 */
-  gap: 8px; /* 标签间距 */
+  width: auto; /* 宽度根据内容自适应 */
+  padding: 4px; /* 内边距，让li元素和ul边框之间有空隙 */
+  margin: 0 42px; /* 左右外边距调整为32px */
+  display: inline-flex; /* 让ul根据内容自适应宽度，并可以应用padding和圆角 */
+  background-color: transparent; /* 胶囊组的背景色 */
+  border-radius: 9999px; /* 大圆角形成胶囊容器 */
+  gap: 4px; /* 标签之间的间距 */
 }
 
 .settings-nav li {
-  padding: 14px 20px; /* 调整内边距以适应标签页 */
+  padding: 10px 20px; /* 调整内边距以适应胶囊形状 */
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.9rem; /* 可以适当减小字体 */
   display: flex;
   align-items: center;
-  gap: 8px; /* 缩小图标和文字间距 */
-  border-bottom: 3px solid transparent; /* 从左边框改为下边框 */
-  margin-bottom: -1px; /* 巧妙地让边框与父元素的下边框重合 */
+  gap: 6px; /* 调整图标和文字间距 */
+  border-radius: 9999px; /* 大圆角形成胶囊标签 */
   transition: all 0.2s ease;
+  border: 1px solid transparent; /* 添加一个透明边框，防止激活时跳动 */
+  /* 移除 border-bottom 和 margin-bottom */
 }
 
 .settings-nav li:hover {
-  background-color: var(--ct-bg-hover);
+  background-color: var(--ct-bg-hover-ui, #e0e0e0); /* 悬停时的背景色 */
   color: var(--ct-text-accent);
 }
 
 .settings-nav li.active {
-  background-color: var(--ct-bg-hover);
-  color: var(--ct-text-accent);
-  border-bottom-color: var(--ct-accent-color); /* 激活时下边框高亮 */
+  background-color: var(--ct-accent-color); /* 激活时的背景色 */
+  color: var(--ct-text-on-accent, #ffffff); /* 激活时的文字颜色 */
   font-weight: 600;
+  /* 移除 border-bottom-color */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* 可选：给激活的标签一点点凸起感 */
 }
 
 .settings-content {
   flex-grow: 1;
-  padding: 32px 48px; /* 调整内边距 */
+  padding: 16px 48px; /* 调整内边距 */
   overflow-y: auto;
 }
 

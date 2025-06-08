@@ -38,7 +38,7 @@ defineProps<{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 0; /* 调整垂直内边距，使其更紧凑 */
+  padding: 4px 12px; /* 调整垂直内边距，使其更紧凑 */
   /* border-bottom: 1px solid var(--ct-border-color-light); -- 移除横线 */
 }
 
