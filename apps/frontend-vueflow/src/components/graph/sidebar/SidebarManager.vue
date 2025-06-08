@@ -38,7 +38,7 @@
 
         <!-- 设置按钮 -->
         <Tooltip content="设置" triggerClass="w-full">
-          <button class="icon-button">
+          <button class="icon-button" @click="uiStore.openSettingsModal()">
             <span class="tab-icon">⚙️</span>
             <span class="tab-label">设置</span>
           </button>
@@ -50,6 +50,13 @@
     <div class="sidebar-content" :style="{ width: activeTab ? '300px' : '0px' }">
       <component v-if="activeTab" :is="getTabComponent" @node-selected="nodeSelected" @add-node="addNodeToCanvas" />
     </div>
+
+    <!-- 设置模态框 (已移至 App.vue) -->
+    <!--
+    <BaseModal v-model:visible="isSettingsModalVisible" title="设置" width="max-w-3xl">
+      <SettingsLayout />
+    </BaseModal>
+    -->
   </div>
 </template>
 
@@ -58,12 +65,15 @@ import { ref, computed, markRaw } from 'vue';
 import { storeToRefs } from 'pinia';
 import { RouterLink } from 'vue-router'; // 确保导入
 import { useThemeStore } from '../../../stores/theme';
+import { useUiStore } from '../../../stores/uiStore'; // 导入 UI Store
 import NodePanel from './NodePanel.vue';
 import WorkflowPanel from './WorkflowPanel.vue'; // 导入工作流面板
 import GroupIOEdit from './GroupIOEdit.vue'; // <-- 导入接口编辑器
 import HistoryPanel from './HistoryPanel.vue'; // <-- 导入历史记录面板
 import WorkflowInfoPanel from './WorkflowInfoPanel.vue'; // <-- 导入工作流信息面板
 import Tooltip from '@/components/common/Tooltip.vue'; // 导入 Tooltip 组件
+// import BaseModal from '../../common/BaseModal.vue'; // 不再需要
+// import SettingsLayout from '../../settings/SettingsLayout.vue'; // 不再需要
 import type { FrontendNodeDefinition } from '../../../stores/nodeStore';
 
 // 定义标签页接口
@@ -83,6 +93,7 @@ const emit = defineEmits<{
 // 主题
 const themeStore = useThemeStore();
 const { isDark } = storeToRefs(themeStore);
+const uiStore = useUiStore(); // 初始化 UI Store
 
 // 定义可用的标签页
 const tabs = ref<SidebarTab[]>([
@@ -126,6 +137,9 @@ const tabs = ref<SidebarTab[]>([
 
 // 当前激活的标签页，可以为 null 表示关闭状态
 const activeTab = ref<string | null>(null); // 当前激活的标签页 ID，null 表示关闭
+
+// 控制设置模态框的显示状态 (已移至 uiStore)
+// const isSettingsModalVisible = ref(false);
 
 // 获取当前激活标签页的组件
 const getTabComponent = computed(() => {

@@ -5,19 +5,25 @@ import { useThemeStore } from './stores/theme'
 import { useWorkflowStore } from './stores/workflowStore' // 导入工作流状态管理
 import { useTabStore } from './stores/tabStore' // 导入标签页状态管理
 import { useProjectStore } from './stores/projectStore'; // 导入项目状态管理
+import { useUiStore } from './stores/uiStore'; // 导入 UI Store
 import { storeToRefs } from 'pinia'
 import { initializeWebSocket, closeWebSocket } from './composables/useWebSocket'; // <-- ADDED: Import WebSocket functions
 import DialogContainer from './components/common/DialogContainer.vue'; // 导入对话框容器组件
+import BaseModal from './components/common/BaseModal.vue'; // 导入模态框组件
+import SettingsLayout from './components/settings/SettingsLayout.vue'; // 导入设置布局组件
 
 // 初始化主题状态管理
 const themeStore = useThemeStore()
 const workflowStore = useWorkflowStore()
 const tabStore = useTabStore()
+const uiStore = useUiStore(); // 初始化 UI Store
 
 const projectStore = useProjectStore();
 const { isDark } = storeToRefs(themeStore)
 const { activeTabId } = storeToRefs(tabStore);
 const { currentProjectId } = storeToRefs(projectStore); // 获取当前项目 ID 的响应式引用
+const { isSettingsModalVisible } = storeToRefs(uiStore); // 获取设置模态框的显示状态
+
 onMounted(async () => {
   themeStore.initTheme();
   initializeWebSocket(); // <-- ADDED: Initialize WebSocket connection
@@ -92,6 +98,16 @@ onUnmounted(() => {
     <RouterView />
     <!-- 全局对话框和通知容器 -->
     <DialogContainer />
+
+    <!-- 全局设置模态框 -->
+    <BaseModal
+      :visible="isSettingsModalVisible"
+      title="设置"
+      width="max-w-3xl"
+      @update:visible="!$event && uiStore.closeSettingsModal()"
+    >
+      <SettingsLayout />
+    </BaseModal>
   </div>
 </template>
 

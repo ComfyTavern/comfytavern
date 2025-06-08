@@ -12,12 +12,14 @@ interface RegexEditorModalData {
 interface UiStoreState {
   isRegexEditorModalVisible: boolean;
   regexEditorModalData: RegexEditorModalData | null;
+  isSettingsModalVisible: boolean; // 新增：控制设置模态框的显示状态
 }
 
 export const useUiStore = defineStore('ui', {
   state: (): UiStoreState => ({
     isRegexEditorModalVisible: false,
     regexEditorModalData: null,
+    isSettingsModalVisible: false, // 新增
   }),
   actions: {
     openRegexEditorModal(data: RegexEditorModalData) {
@@ -35,5 +37,13 @@ export const useUiStore = defineStore('ui', {
     // 但如果希望模态框保存后，通过 store 通知 BaseNode 更新，则 onSave 回调有用。
     // 目前的设计是 BaseNode 触发打开，模态框内部编辑，保存时通过 emit('save') + v-model 更新。
     // 所以这里的 onSave 暂时作为一种可能性保留。
+
+    // 新增：控制设置模态框的方法
+    openSettingsModal() {
+      this.isSettingsModalVisible = true;
+    },
+    closeSettingsModal() {
+      this.isSettingsModalVisible = false;
+    },
   },
 });
