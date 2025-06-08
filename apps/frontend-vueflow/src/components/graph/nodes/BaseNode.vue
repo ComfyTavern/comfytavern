@@ -789,10 +789,10 @@ const handleActionTriggered = (payload: {
               <Tooltip placement="right" :maxWidth="400" :showDelay="300">
                 <template #content>
                   <div>类型: {{ output.dataFlowType || "未知" }}</div>
-                  <!-- 直接调用 store getter 获取最终输出 -->
+                  <!-- 直接调用 store getter 获取当前缓存的输出 -->
                   <div v-if="executionStore.getNodeOutput(activeTabId!, props.id, String(output.key)) !== undefined"
                     class="mt-1">
-                    最终:
+                    当前缓存结果:
                     {{
                       formatOutputValueForTooltip(
                         executionStore.getNodeOutput(activeTabId!, props.id, String(output.key))

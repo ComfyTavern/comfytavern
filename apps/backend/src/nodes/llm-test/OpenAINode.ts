@@ -100,6 +100,7 @@ export class OpenAINodeImpl {
 
     if (stream) {
       // --- 流式处理逻辑 ---
+      let accumulatedStreamContent = ''; // 用于累积流式内容
       try {
         const streamResponse = await client.chat.completions.create({
           model,
@@ -114,12 +115,14 @@ export class OpenAINodeImpl {
           if (content) {
             const chunk: ChunkPayload = { type: 'text_chunk', content };
             yield chunk;
+            accumulatedStreamContent += content; // 累积内容
           }
           if (part.choices[0]?.finish_reason) {
             yield { type: 'finish_reason_chunk', content: part.choices[0]?.finish_reason };
           }
         }
-        return; // 流式模式下返回 void
+        // 当流成功结束时，将累积的内容通过 'response' 端口输出
+        return { response: accumulatedStreamContent };
       } catch (error) {
         const errorMsg = `OpenAI API 流式请求错误: ${error instanceof Error ? error.message : String(error)}`;
         yield { type: 'error_chunk', content: errorMsg };
@@ -247,13 +250,13 @@ export const definition: NodeDefinition = {
   },
 
   outputs: {
-    response: { // 用于批处理模式 (当 stream=false)
+    response: {
       dataFlowType: 'STRING',
-      displayName: '生成回复 (批处理)',
-      description: '一次性生成的完整文本回复。仅当“启用流式输出”为 false 时有效。',
+      displayName: '生成回复 (批处理/完整流)',
+      description: '一次性生成的完整文本回复。当启用流式输出时，此端口会在流处理完成后提供聚合的完整内容。',
       matchCategories: ['LlmOutput']
     },
-    stream_output: { // 新增：用于流式模式 (当 stream=true)
+    stream_output: {
       dataFlowType: 'STREAM',
       displayName: '回复流 (流式)',
       description: '逐块生成的文本回复数据流。仅当“启用流式输出”为 true 时有效。',
