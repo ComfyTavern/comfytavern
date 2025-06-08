@@ -1,12 +1,5 @@
 import type { NodeDefinition } from '@comfytavern/types'
-// Removed: import { nodeManager } from './NodeManager'
-
-// 处理转义字符，将形如 \n 的字符串转换为实际的换行符
-function unescapeString(str: string): string {
-  return str.replace(/\\n/g, '\n')
-    .replace(/\\r/g, '\r')
-    .replace(/\\t/g, '\t');
-}
+import { parseEscapedCharacters } from '@comfytavern/utils';
 
 export class TextMergeNodeImpl {
   static async execute(inputs: Record<string, any>): Promise<Record<string, any>> {
@@ -16,7 +9,7 @@ export class TextMergeNodeImpl {
     console.log(`[TextMergeNode] separator: ${JSON.stringify(separator)}`);
 
     // 处理分隔符中的转义字符
-    const processedSeparator = unescapeString(separator);
+    const processedSeparator = parseEscapedCharacters(separator);
     console.log(`[TextMergeNode] Processed separator: ${JSON.stringify(processedSeparator)}`);
 
     // 确保所有输入都是字符串类型，不需要转换因为已经限制了只接受STRING类型

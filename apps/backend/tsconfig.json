@@ -27,10 +27,11 @@
     /* Modules */
     "module": "ES2022",                                /* Specify what module code is generated. */
     // "rootDir": "./",                                  /* Specify the root folder within your source files. */
-    "moduleResolution": "node",                       /* Specify how TypeScript looks up a file from a given module specifier. */
+    "moduleResolution": "bundler",                       /* Specify how TypeScript looks up a file from a given module specifier. */
     "baseUrl": "../../",                              /* Specify the base directory to resolve non-relative module names relative to the root. */
     "paths": {
-      "@comfytavern/types": ["packages/types/src/index.ts"] /* Map @comfytavern/types to the shared types package. */
+      "@comfytavern/types": ["packages/types/src/index.ts"], /* Map @comfytavern/types to the shared types package. */
+      "@comfytavern/utils": ["packages/utils/src/index.ts"]  /* Map @comfytavern/utils to the shared utils package. */
     },                                                /* Specify a set of entries that re-map imports to additional lookup locations. */
     // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */
     // "typeRoots": [],                                  /* Specify multiple folders that act like './node_modules/@types'. */

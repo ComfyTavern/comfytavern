@@ -1,5 +1,6 @@
 import type { NodeDefinition, ChunkPayload, NodeExecutionContext } from '@comfytavern/types';
 import { Stream } from 'node:stream'; // 需要导入 Stream
+import { parseEscapedCharacters } from '@comfytavern/utils';
 
 export class StreamSuffixRelayNodeImpl {
   static async* execute(
@@ -7,7 +8,7 @@ export class StreamSuffixRelayNodeImpl {
     context: NodeExecutionContext // 添加 context 以便未来使用 promptId 或 nodeId
   ): AsyncGenerator<ChunkPayload, void, undefined> {
     const inputStream = inputs.inputStream as Stream.Readable; // 这是 ExecutionEngine 传过来的
-    const suffix = typeof inputs.suffix === 'string' ? inputs.suffix : '';
+    const suffix = parseEscapedCharacters(typeof inputs.suffix === 'string' ? inputs.suffix : '');
     const nodeId = context.nodeId || 'unknown_stream_suffix_node'; // 从 context 获取 nodeId
 
     if (!(inputStream instanceof Stream.Readable)) {
