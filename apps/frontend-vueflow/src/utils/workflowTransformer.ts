@@ -12,6 +12,7 @@ import type {
   WorkflowExecutionPayload, // <-- 新增：执行载荷类型
   ExecutionNode, // <-- 新增：执行节点类型
   ExecutionEdge, // <-- 新增：执行边类型
+  // WorkflowObject, // 确保 WorkflowObject 已导入
 } from "@comfytavern/types";
 import { getEffectiveDefaultValue } from "@comfytavern/utils"; // <-- 导入默认值工具
 import { useNodeStore } from "@/stores/nodeStore"; // <-- 导入 Node Store
@@ -20,6 +21,25 @@ import isEqual from "lodash-es/isEqual"; // <-- 导入深比较函数
 import type { Node as VueFlowNodeType, Edge as VueFlowEdgeType } from '@vue-flow/core'; // 确保这些类型被导入, 重命名以避免与参数名冲突
 import { klona } from 'klona'; // 用于深拷贝
 
+// --- 缓存 Node Definitions Map ---
+let _definitionsMapCache: Map<string, NodeDefinition> | null = null;
+let _lastDefinitions: readonly NodeDefinition[] | undefined = undefined; // 使用 readonly
+
+function getNodeDefinitionsMap(): Map<string, NodeDefinition> {
+  const nodeStore = useNodeStore();
+  // 假设 nodeStore.nodeDefinitions 是响应式的或可能变化
+  const currentDefs = nodeStore.nodeDefinitions;
+  // 检查引用是否变化，作为简单的缓存失效策略
+  if (!_definitionsMapCache || _lastDefinitions !== currentDefs) {
+    console.debug("[workflowTransformer] Rebuilding Node Definitions Map Cache");
+    _lastDefinitions = currentDefs;
+    _definitionsMapCache = new Map<string, NodeDefinition>(
+      currentDefs?.map((def) => [`${def.namespace}:${def.type}`, def]) ?? []
+    );
+  }
+  return _definitionsMapCache;
+}
+// ---------------------------------
 export const WORKFLOW_FRAGMENT_SOURCE = "ComfyTavernWorkflowFragment";
 export const WORKFLOW_FRAGMENT_VERSION = "1.0";
 
@@ -45,6 +65,318 @@ type GetEdgeStylePropsFunc = (
   markerEnd: any; // 根据实际类型调整
 };
 
+
+// --- 开始：VueFlow -> Storage 辅助函数 ---
+
+/**
+ * 内部辅助函数：提取节点的基础属性到 WorkflowStorageNode 格式。
+ */
+function _createBaseStorageNodeProperties(
+  vueNode: VueFlowNode,
+  nodeDef: NodeDefinition
+): Pick<
+  WorkflowStorageNode,
+  | "id"
+  | "type"
+  | "position"
+  | "configValues"
+  | "width"
+  | "height"
+  | "displayName"
+  | "customDescription"
+  | "inputConnectionOrders"
+> {
+  const nodeType = vueNode.type as string; // 已在调用方检查
+
+  let finalDisplayName: string | undefined = undefined;
+  const uiNameSource = vueNode.data?.displayName || vueNode.data?.label || vueNode.label;
+  if (uiNameSource !== undefined && String(uiNameSource) !== String(nodeDef.displayName)) {
+    finalDisplayName = String(uiNameSource);
+  }
+
+  let customDescription: string | undefined = undefined;
+  if (vueNode.data?.description && vueNode.data.description !== (nodeDef.description || "")) {
+    customDescription = vueNode.data.description;
+  }
+
+  const baseProperties: ReturnType<typeof _createBaseStorageNodeProperties> = {
+    id: vueNode.id,
+    type: nodeType,
+    position: klona(vueNode.position), // 确保位置是深拷贝的
+  };
+
+  if (vueNode.data?.configValues && Object.keys(vueNode.data.configValues).length > 0) {
+    baseProperties.configValues = klona(vueNode.data.configValues);
+  }
+  if (vueNode.width !== undefined) {
+    if (typeof vueNode.width === 'number') {
+      baseProperties.width = vueNode.width;
+    } else if (typeof vueNode.width === 'string') {
+      const parsedWidth = parseFloat(vueNode.width);
+      if (!isNaN(parsedWidth)) {
+        baseProperties.width = parsedWidth;
+      } else {
+        console.warn(`[_createBaseStorageNodeProperties] Node ${vueNode.id}: width "${vueNode.width}" is a string but could not be parsed to a number. Skipping width.`);
+      }
+    }
+    // 函数类型的 width 被忽略
+  }
+  if (vueNode.height !== undefined) {
+    if (typeof vueNode.height === 'number') {
+      baseProperties.height = vueNode.height;
+    } else if (typeof vueNode.height === 'string') {
+      const parsedHeight = parseFloat(vueNode.height);
+      if (!isNaN(parsedHeight)) {
+        baseProperties.height = parsedHeight;
+      } else {
+        console.warn(`[_createBaseStorageNodeProperties] Node ${vueNode.id}: height "${vueNode.height}" is a string but could not be parsed to a number. Skipping height.`);
+      }
+    }
+    // 函数类型的 height 被忽略
+  }
+  if (finalDisplayName !== undefined) {
+    baseProperties.displayName = finalDisplayName;
+  }
+  if (customDescription !== undefined) {
+    baseProperties.customDescription = customDescription;
+  }
+  if (vueNode.data?.inputConnectionOrders) {
+    baseProperties.inputConnectionOrders = klona(vueNode.data.inputConnectionOrders);
+  }
+
+  return baseProperties;
+}
+
+/**
+ * 内部辅助函数：提取节点的 inputValues。
+ */
+function _extractInputValuesForStorage(
+  vueNode: VueFlowNode,
+  nodeDef: NodeDefinition,
+  mode: "core" | "fragment"
+): Record<string, any> {
+  const nodeType = vueNode.type as string;
+  const inputValues: Record<string, any> = {};
+
+  if (mode === "core") {
+    if (nodeType === "core:NodeGroup") {
+      if (vueNode.data?.inputs) {
+        Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
+          if (typeof inputData === "object" && inputData !== null && "value" in inputData) {
+            inputValues[inputName] = klona(inputData.value);
+          } else {
+            console.warn(`[_extractInputValuesForStorage:core:NodeGroup] NodeGroup ${vueNode.id}: Input '${inputName}' data structure unexpected. Skipping. Data:`, inputData);
+          }
+        });
+      }
+    } else if (
+      nodeDef.inputs &&
+      vueNode.data?.inputs &&
+      nodeType !== "core:GroupInput" &&
+      nodeType !== "core:GroupOutput"
+    ) {
+      Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
+        const inputDef = nodeDef.inputs?.[inputName];
+        if (inputDef && typeof inputData === "object" && inputData !== null && "value" in inputData) {
+          const currentValue = inputData.value;
+          const effectiveDefault = getEffectiveDefaultValue(inputDef);
+          let valueToSave = currentValue;
+          let valueToCompare = currentValue;
+
+          try {
+            if (inputDef.dataFlowType === 'INTEGER') {
+              const parsedInt = parseInt(String(currentValue), 10);
+              if (!isNaN(parsedInt)) {
+                valueToCompare = parsedInt; valueToSave = parsedInt;
+              } else if (currentValue !== "" && currentValue !== null) {
+                console.warn(`[_extractInputValuesForStorage:core] Node ${vueNode.id} (${nodeType}): Input '${inputName}' (INTEGER) couldn't parse:`, currentValue);
+              }
+            } else if (inputDef.dataFlowType === 'FLOAT') {
+              const parsedFloat = parseFloat(String(currentValue));
+              if (!isNaN(parsedFloat)) {
+                valueToCompare = parsedFloat; valueToSave = parsedFloat;
+              } else if (currentValue !== "" && currentValue !== null) {
+                console.warn(`[_extractInputValuesForStorage:core] Node ${vueNode.id} (${nodeType}): Input '${inputName}' (FLOAT) couldn't parse:`, currentValue);
+              }
+            }
+          } catch (e) {
+            console.error(`[_extractInputValuesForStorage:core] Type coercion error for input '${inputName}' on node ${vueNode.id}:`, e);
+          }
+
+          if (!isEqual(valueToCompare, effectiveDefault)) {
+            inputValues[inputName] = valueToSave;
+          }
+        } else if (!inputDef) {
+          console.warn(`[_extractInputValuesForStorage:core] Node ${vueNode.id} (${nodeType}): Input '${inputName}' in data but not definition. Skipping.`);
+        } else {
+          console.warn(`[_extractInputValuesForStorage:core] Node ${vueNode.id} (${nodeType}): Input '${inputName}' data structure unexpected. Skipping. Data:`, inputData);
+        }
+      });
+    }
+  } else if (mode === "fragment") {
+    if (
+      nodeDef.inputs &&
+      vueNode.data?.inputs &&
+      nodeType !== "core:GroupInput" &&
+      nodeType !== "core:GroupOutput" &&
+      nodeType !== "core:NodeGroup" // Crucially, NodeGroup inputValues are not serialized for fragments
+    ) {
+      Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
+        const inputDef = nodeDef.inputs?.[inputName];
+        if (inputDef && typeof inputData === "object" && inputData !== null && "value" in inputData) {
+          const currentValue = inputData.value;
+          const effectiveDefault = getEffectiveDefaultValue(inputDef);
+          if (!isEqual(currentValue, effectiveDefault)) {
+            inputValues[inputName] = klona(currentValue); // No type coercion for fragments
+          }
+        }
+      });
+    }
+  }
+  return inputValues;
+}
+
+/**
+ * 内部辅助函数：提取节点的 customSlotDescriptions。
+ */
+function _extractCustomSlotDescriptionsForStorage(
+  vueNode: VueFlowNode,
+  nodeDef: NodeDefinition
+): WorkflowStorageNode['customSlotDescriptions'] {
+  const nodeType = vueNode.type as string;
+  const customSlotDescriptions: WorkflowStorageNode['customSlotDescriptions'] = {};
+
+  if (nodeType === "core:NodeGroup") { // NodeGroup 不应有自定义插槽描述，它们来自引用的工作流
+    return undefined;
+  }
+
+  if (nodeDef.inputs && vueNode.data?.inputs) {
+    const customInputDescs: Record<string, string> = {};
+    Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
+      if (typeof inputData === "object" && inputData !== null && "description" in inputData) {
+        const currentDesc = inputData.description as string; // Assume string
+        const defaultDesc = nodeDef.inputs?.[inputName]?.description || "";
+        if (currentDesc && currentDesc !== defaultDesc) {
+          customInputDescs[inputName] = currentDesc;
+        }
+      }
+    });
+    if (Object.keys(customInputDescs).length > 0) {
+      customSlotDescriptions.inputs = customInputDescs;
+    }
+  }
+
+  if (nodeDef.outputs && vueNode.data?.outputs) {
+    const customOutputDescs: Record<string, string> = {};
+    Object.entries(vueNode.data.outputs).forEach(([outputName, outputData]) => {
+      if (typeof outputData === "object" && outputData !== null && "description" in outputData) {
+        const currentDesc = outputData.description as string; // Assume string
+        const defaultDesc = nodeDef.outputs?.[outputName]?.description || "";
+        if (currentDesc && currentDesc !== defaultDesc) {
+          customOutputDescs[outputName] = currentDesc;
+        }
+      }
+    });
+    if (Object.keys(customOutputDescs).length > 0) {
+      customSlotDescriptions.outputs = customOutputDescs;
+    }
+  }
+
+  if (Object.keys(customSlotDescriptions.inputs || {}).length > 0 || Object.keys(customSlotDescriptions.outputs || {}).length > 0) {
+    return customSlotDescriptions;
+  }
+  return undefined;
+}
+
+// --- 结束：VueFlow -> Storage 辅助函数 ---
+
+
+// --- 开始：Storage -> VueFlow 辅助函数 ---
+
+/**
+ * 内部辅助函数：创建 VueFlowNode.data 的基础部分。
+ */
+function _createBaseVueFlowNodeData(
+  storageNode: WorkflowStorageNode,
+  nodeDef: NodeDefinition
+): Record<string, any> {
+  // ✅ 优化 1: 使用浅拷贝 ...nodeDef 代替逐属性 klona
+  // 确保 nodeDef 中除了 inputs/outputs 的其他顶层属性（category, icon等）被复制
+  const vueFlowData: Record<string, any> = {
+    ...nodeDef, // 浅拷贝定义
+    // 覆盖或添加存储的/计算的属性
+    configValues: klona(storageNode.configValues || {}), // ✅ configValues 需要 klona
+    defaultDescription: nodeDef.description || "",
+    description: storageNode.customDescription || nodeDef.description || "",
+    inputs: {}, // 显式设置为空，由 _populate 填充
+    outputs: {},// 显式设置为空，由 _populate 填充
+  };
+  /* ❌ 移除这段低效代码
+  for (const key in nodeDef) {
+    if (key !== 'inputs' && key !== 'outputs' && Object.prototype.hasOwnProperty.call(nodeDef, key)) {
+      vueFlowData[key] = klona((nodeDef as any)[key]); // <-- 性能杀手
+    }
+  }
+  */
+
+  const nodeDefaultLabel = nodeDef.displayName || storageNode.type;
+  // 确保不会覆盖从 ...nodeDef 带来的 displayName
+  vueFlowData.defaultLabel = nodeDefaultLabel;
+  vueFlowData.displayName = storageNode.displayName || nodeDefaultLabel; // 优先使用存储的 displayName
+
+  if (storageNode.inputConnectionOrders) {
+    vueFlowData.inputConnectionOrders = klona(storageNode.inputConnectionOrders); // ✅ 需要 klona
+  }
+  return vueFlowData;
+}
+
+
+/**
+ * 内部辅助函数：填充 VueFlowNode.data 的 inputs 和 outputs。
+ * 此函数不处理 NodeGroup 的异步接口加载。
+ */
+function _populateVueFlowNodeSlots(
+  vueFlowData: Record<string, any>, // 将被修改
+  storageNode: WorkflowStorageNode,
+  nodeDef: NodeDefinition
+): void {
+  if (nodeDef.inputs) {
+    Object.entries(nodeDef.inputs).forEach(([inputName, inputDef]) => {
+      const effectiveDefault = getEffectiveDefaultValue(inputDef);
+      const storedValue = storageNode.inputValues?.[inputName];
+      const finalValue = storedValue !== undefined ? klona(storedValue) : klona(effectiveDefault);
+      const defaultSlotDesc = inputDef.description || "";
+      const customSlotDesc = storageNode.customSlotDescriptions?.inputs?.[inputName];
+      const displaySlotDesc = customSlotDesc || defaultSlotDesc;
+      vueFlowData.inputs[inputName] = {
+        value: finalValue,
+        description: displaySlotDesc,
+        defaultDescription: defaultSlotDesc,
+        // ✅ 优化 2: 直接引用/浅拷贝 inputDef (definition)
+        ...inputDef, // ❌ 代替 ...klona(inputDef)
+      };
+
+    });
+  }
+
+  if (nodeDef.outputs) {
+    Object.entries(nodeDef.outputs).forEach(([outputName, outputDef]) => {
+      const defaultSlotDesc = outputDef.description || "";
+      const customSlotDesc = storageNode.customSlotDescriptions?.outputs?.[outputName];
+      const displaySlotDesc = customSlotDesc || defaultSlotDesc;
+      vueFlowData.outputs[outputName] = {
+        description: displaySlotDesc,
+        defaultDescription: defaultSlotDesc,
+        // ✅ 优化 3: 直接引用/浅拷贝 outputDef (definition)
+        ...outputDef, // ❌ 代替 ...klona(outputDef)
+      };
+    });
+  }
+}
+
+// --- 结束：Storage -> VueFlow 辅助函数 ---
+
+
 /**
  * 将 Vue Flow 导出的数据转换为后端 WorkflowObject 所需的核心数据结构。
  * (不包括 ID、名称、项目 ID 和时间戳等元数据)
@@ -55,239 +387,52 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
   nodes: WorkflowStorageNode[];
   edges: WorkflowStorageEdge[];
   viewport: SharedViewport;
-  referencedWorkflows: string[]; // <-- 新增：引用的工作流 ID 列表
+  referencedWorkflows: string[];
 } {
-  const nodeStore = useNodeStore(); // 获取 Node Store 实例
-  const referencedWorkflowIds = new Set<string>(); // <-- 新增：用于收集引用的工作流 ID
-
-
-  // 使用完整的类型标识符 (namespace:type) 作为 Map 的键
-  const nodeDefinitionsMap = new Map<string, NodeDefinition>(
-    nodeStore.nodeDefinitions?.map((def) => [`${def.namespace}:${def.type}`, def]) ?? []
-  );
+  // const nodeStore = useNodeStore(); // 移除
+  const referencedWorkflowIds = new Set<string>();
+  // ✅ 优化 4: 使用缓存 Map
+  const nodeDefinitionsMap = getNodeDefinitionsMap();
 
   const nodes = flow.nodes.map((vueNode: VueFlowNode): WorkflowStorageNode => {
-    const nodeType = vueNode.type; // Store type for safe access
-
+    const nodeType = vueNode.type;
     if (!nodeType) {
-      console.error(
-        `[transformVueFlowToCoreWorkflow] Node with ID ${vueNode.id} has no type defined. Skipping.`
-      );
-      // 返回一个不包含 label 的错误节点对象
+      console.error(`[transformVueFlowToCoreWorkflow] Node ID ${vueNode.id} has no type. Skipping.`);
       return { id: vueNode.id, type: "error", position: vueNode.position };
     }
     const nodeDef = nodeDefinitionsMap.get(nodeType);
     if (!nodeDef) {
-      console.error(
-        `[transformVueFlowToCoreWorkflow] 找不到类型为 ${nodeType} (ID: ${vueNode.id}) 的节点定义，将跳过此节点。`
-      );
-      // 返回一个不包含 label 的错误节点对象
+      console.error(`[transformVueFlowToCoreWorkflow] No definition for type ${nodeType} (ID: ${vueNode.id}). Skipping.`);
       return { id: vueNode.id, type: "error", position: vueNode.position };
     }
 
-    let inputValues: Record<string, any> = {}; // 修改为 let 以允许重新赋值
-    // 根据节点类型处理输入值，特别是 NodeGroup 的覆盖值
+    const baseProperties = _createBaseStorageNodeProperties(vueNode, nodeDef);
+    const inputValues = _extractInputValuesForStorage(vueNode, nodeDef, "core");
+    const customSlotDescriptions = _extractCustomSlotDescriptionsForStorage(vueNode, nodeDef);
 
-    if (nodeType === "core:NodeGroup") {
-      // 新逻辑：直接从 vueNode.data.inputs[slotKey].value 保存 NodeGroup 的输入值
-      // 不再与模板默认值比较，也不依赖 vueNode.data.inputValues
-      if (vueNode.data?.inputs) {
-        const groupInputValues: Record<string, any> = {};
-        Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
-          // inputData 结构是 { value: ..., description: ..., ... }
-          if (typeof inputData === "object" && inputData !== null && "value" in inputData) {
-            // 直接克隆并保存当前值
-            groupInputValues[inputName] = klona(inputData.value);
-          } else {
-            console.warn(
-              `[transformVueFlowToCoreWorkflow] NodeGroup ${vueNode.id}: Input '${inputName}' data structure unexpected or 'value' missing. Skipping save for this input. Data:`,
-              inputData
-            );
-          }
-        });
-        if (Object.keys(groupInputValues).length > 0) {
-          inputValues = groupInputValues;
-        }
-      }
-    } else if ( // 其他普通节点的处理逻辑
-      nodeDef.inputs &&
-      vueNode.data?.inputs &&
-      nodeType !== "core:GroupInput" && // GroupInput/Output 的 inputs/outputs 代表接口, 不直接存储值
-      nodeType !== "core:GroupOutput"
-      // core:NodeGroup 已在上面的 if 分支中处理，此处无需重复检查
-    ) {
-      // 现有通用逻辑：从 vueNode.data.inputs 提取与默认值不同的输入值
-      Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
-        // inputData is now an object { value: ..., description: ..., ... }
-        const inputDef = nodeDef.inputs?.[inputName];
-        if (
-          inputDef &&
-          typeof inputData === "object" &&
-          inputData !== null &&
-          "value" in inputData
-        ) {
-          const currentValue = inputData.value; // Get the actual value from UI state
-          const effectiveDefault = getEffectiveDefaultValue(inputDef);
+    const storageNode: WorkflowStorageNode = { ...baseProperties } as WorkflowStorageNode; // Cast needed as base is Pick
 
-          let valueToSave = currentValue;
-          let valueToCompare = currentValue;
-
-          // --- Attempt type coercion for comparison and saving ---
-          try {
-            if (inputDef.dataFlowType === 'INTEGER') {
-              const parsedInt = parseInt(String(currentValue), 10);
-              if (!isNaN(parsedInt)) {
-                valueToCompare = parsedInt;
-                valueToSave = parsedInt; // Save as number
-              } else if (currentValue !== "" && currentValue !== null) {
-                // Don't warn for empty strings/null converting to NaN
-                console.warn(
-                  `[transformVueFlowToCoreWorkflow] Node ${vueNode.id} (${vueNode.type}): Input '${inputName}' (dataFlowType INTEGER) could not be parsed as integer:`,
-                  currentValue
-                );
-              }
-            } else if (inputDef.dataFlowType === 'FLOAT') {
-              const parsedFloat = parseFloat(String(currentValue));
-              if (!isNaN(parsedFloat)) {
-                valueToCompare = parsedFloat;
-                valueToSave = parsedFloat; // Save as number
-              } else if (currentValue !== "" && currentValue !== null) {
-                // Don't warn for empty strings/null converting to NaN
-                console.warn(
-                  `[transformVueFlowToCoreWorkflow] Node ${vueNode.id} (${vueNode.type}): Input '${inputName}' (dataFlowType FLOAT) could not be parsed as float:`,
-                  currentValue
-                );
-              }
-            }
-            // Add cases for BOOLEAN or other types if needed, though isEqual often handles boolean strings okay.
-          } catch (e) {
-            console.error(
-              `[transformVueFlowToCoreWorkflow] Error during type coercion for input '${inputName}' on node ${vueNode.id}:`,
-              e
-            );
-          }
-          // --- End Type Coercion ---
-
-          // Compare potentially coerced value with the default
-          if (!isEqual(valueToCompare, effectiveDefault)) {
-            inputValues[inputName] = valueToSave; // Save the potentially coerced value
-          }
-        } else if (!inputDef) {
-          // 如果在定义中找不到输入，可能意味着数据陈旧或不一致，可以选择记录警告
-          console.warn(
-            `[transformVueFlowToCoreWorkflow] Node ${vueNode.id} (${vueNode.type}): Input '${inputName}' found in data but not in definition. Skipping save for this input.`
-          );
-        } else {
-          console.warn(
-            `[transformVueFlowToCoreWorkflow] Node ${vueNode.id} (${vueNode.type}): Input '${inputName}' data structure unexpected. Skipping save for this input. Data:`,
-            inputData
-          );
-        }
-      }); // End of Object.entries loop for inputs
-    } // End of if/else if block for inputValues processing
-
-
-    // Prepare custom slot descriptions
-    const customSlotDescriptions: {
-      inputs?: Record<string, string>;
-      outputs?: Record<string, string>;
-    } = {};
-    const customInputSlotDescriptions: Record<string, string> = {};
-    const customOutputSlotDescriptions: Record<string, string> = {};
-
-    // Check input slot descriptions
-    if (nodeDef.inputs && vueNode.data?.inputs && nodeType !== "core:NodeGroup") { // 阻止为 NodeGroup 提取 customSlotDescriptions
-      Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
-        // inputData now contains the description object
-        if (typeof inputData === "object" && inputData !== null && "description" in inputData) {
-          const currentDesc = inputData.description;
-          const defaultDesc = nodeDef.inputs?.[inputName]?.description || "";
-          // Ensure currentDesc is a string before assigning
-          if (typeof currentDesc === "string" && currentDesc && currentDesc !== defaultDesc) {
-            customInputSlotDescriptions[inputName] = currentDesc;
-          }
-        }
-      });
-      if (Object.keys(customInputSlotDescriptions).length > 0) {
-        customSlotDescriptions.inputs = customInputSlotDescriptions;
-      }
+    if (Object.keys(inputValues).length > 0) {
+      storageNode.inputValues = inputValues;
+    }
+    if (customSlotDescriptions) {
+      storageNode.customSlotDescriptions = customSlotDescriptions;
     }
 
-    // Check output slot descriptions
-    if (nodeDef.outputs && vueNode.data?.outputs && nodeType !== "core:NodeGroup") { // 阻止为 NodeGroup 提取 customSlotDescriptions
-      Object.entries(vueNode.data.outputs).forEach(([outputName, outputData]) => {
-        // outputData now contains the description object
-        if (typeof outputData === "object" && outputData !== null && "description" in outputData) {
-          const currentDesc = outputData.description;
-          const defaultDesc = nodeDef.outputs?.[outputName]?.description || "";
-          // Ensure currentDesc is a string before assigning
-          if (typeof currentDesc === "string" && currentDesc && currentDesc !== defaultDesc) {
-            customOutputSlotDescriptions[outputName] = currentDesc;
-          }
-        }
-      });
-      if (Object.keys(customOutputSlotDescriptions).length > 0) {
-        customSlotDescriptions.outputs = customOutputSlotDescriptions;
-      }
-    }
-
-    const storageNode: WorkflowStorageNode = {
-      id: vueNode.id, // 确保使用 VueFlow 节点的 ID (应该是 nanoid)
-      type: nodeType, // Use the safe nodeType variable
-      position: vueNode.position,
-      // 仅当 inputValues 不为空时才包含它
-      ...(Object.keys(inputValues).length > 0 && { inputValues }),
-      // 保存 configValues (如果存在且不为空)
-      ...(vueNode.data?.configValues &&
-        Object.keys(vueNode.data.configValues).length > 0 && {
-        configValues: vueNode.data.configValues,
-      }),
-      // 保存 width (如果存在)
-      ...(vueNode.width !== undefined && { width: vueNode.width }),
-      // 保存 height (如果存在)
-      ...(vueNode.height !== undefined && { height: vueNode.height }),
-      // 保存 displayName (如果存在且非默认)
-      // 优先使用 vueNode.data.displayName，然后是 vueNode.data.label，最后是 vueNode.label
-      // 确保 displayName 存储的是字符串类型
-      ...(((vueNode.data?.displayName || vueNode.data?.label || vueNode.label) &&
-        String(vueNode.data?.displayName || vueNode.data?.label || vueNode.label) !== String(nodeDef.displayName)) && { displayName: String(vueNode.data?.displayName || vueNode.data?.label || vueNode.label) }),
-      // 保存 customDescription (如果存在且非默认)
-      ...(vueNode.data?.description &&
-        vueNode.data.description !== (nodeDef.description || "") && {
-        customDescription: vueNode.data.description,
-      }),
-      // 保存 customSlotDescriptions (如果存在且不为空)
-      ...(Object.keys(customSlotDescriptions).length > 0 && { customSlotDescriptions }),
-      // zIndex is not part of WorkflowStorageNode, removed assignment
-      // 旧的 label 字段不再保存
-    };
-
-    // 处理 inputConnectionOrders
-    if (vueNode.data?.inputConnectionOrders) {
-      storageNode.inputConnectionOrders = vueNode.data.inputConnectionOrders;
-    }
-
-    // 如果是 NodeGroup 并且有引用的工作流 ID，则收集它
     if (nodeType === "core:NodeGroup" && vueNode.data?.configValues?.referencedWorkflowId) {
       referencedWorkflowIds.add(vueNode.data.configValues.referencedWorkflowId as string);
     }
-
     return storageNode;
   });
 
-
-  const edges = flow.edges.map((vueEdge: VueFlowEdge): WorkflowStorageEdge => {
-    // 边只需要核心属性
-    return {
-      id: vueEdge.id, // 确保使用 VueFlow 边的 ID (应该是 nanoid)
-      source: vueEdge.source,
-      target: vueEdge.target,
-      sourceHandle: vueEdge.sourceHandle ?? "", // Ensure string
-      targetHandle: vueEdge.targetHandle ?? "", // Ensure string
-      // 可选：如果边有标签且为字符串，也可以保存
-      ...(typeof vueEdge.label === "string" && vueEdge.label && { label: vueEdge.label }),
-    };
-  });
+  const edges = flow.edges.map((vueEdge: VueFlowEdge): WorkflowStorageEdge => ({
+    id: vueEdge.id,
+    source: vueEdge.source,
+    target: vueEdge.target,
+    sourceHandle: vueEdge.sourceHandle ?? "",
+    targetHandle: vueEdge.targetHandle ?? "",
+    ...(typeof vueEdge.label === "string" && vueEdge.label && { label: vueEdge.label }),
+  }));
 
   const viewport: SharedViewport = {
     x: flow.viewport.x,
@@ -299,42 +444,45 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
     nodes,
     edges,
     viewport,
-    referencedWorkflows: Array.from(referencedWorkflowIds), // <-- 新增：返回收集到的 ID
+    referencedWorkflows: Array.from(referencedWorkflowIds),
   };
 }
 
 /**
  * 将从后端加载的 WorkflowObject 转换为 Vue Flow 可以直接使用的格式。
- * @param workflow 从后端加载的工作流对象
- * @param projectId 当前项目的 ID
- * @param isDark 当前是否为暗黑模式
- * @param getEdgeStylePropsFunc 用于获取边样式的函数
- * @param loadWorkflowByIdFunc 一个函数，用于根据 projectId 和 workflowId 加载工作流数据
- * @returns 包含 flowData 和 viewport 的对象 Promise
  */
-export async function transformWorkflowToVueFlow( // <--- 标记为 async
+export async function transformWorkflowToVueFlow(
   workflow: WorkflowStorageObject,
-  projectId: string, // <--- 新增 projectId
+  projectId: string,
   isDark: boolean,
   getEdgeStylePropsFunc: GetEdgeStylePropsFunc,
-  loadWorkflowByIdFunc: ( // <--- 新增加载函数参数
+  loadWorkflowByIdFunc: (
     pId: string,
     wfId: string
   ) => Promise<WorkflowStorageObject | null>
-): Promise<{ flowData: FlowExportObject; viewport: SharedViewport }> { // <--- 返回 Promise
-  const nodeStore = useNodeStore();
-  const nodeDefinitionsMap = new Map<string, NodeDefinition>(
-    nodeStore.nodeDefinitions?.map((def) => [`${def.namespace}:${def.type}`, def]) ?? []
-  );
+): Promise<{ flowData: FlowExportObject; viewport: SharedViewport }> {
+  // const nodeStore = useNodeStore(); // 移除
+  // ✅ 优化 4: 使用缓存 Map
+  const nodeDefinitionsMap = getNodeDefinitionsMap();
+  // ✅ 优化 5: 缓存 NodeGroup 加载 Promise
+  const workflowLoadCache = new Map<string, Promise<WorkflowStorageObject | null>>();
+  const cachedLoadFunc = (pId: string, wfId: string): Promise<WorkflowStorageObject | null> => {
+    const cacheKey = `${pId}:${wfId}`;
+    if (workflowLoadCache.has(cacheKey)) {
+      // console.debug(`[transformWorkflowToVueFlow] Cache hit for workflow ${cacheKey}`);
+      return workflowLoadCache.get(cacheKey)!;
+    }
+    const promise = loadWorkflowByIdFunc(pId, wfId);
+    workflowLoadCache.set(cacheKey, promise);
+    return promise;
+  }
 
-  // 阶段 1: 处理节点并异步加载 NodeGroup 接口
-  const nodes: VueFlowNode[] = await Promise.all( // <--- await Promise.all
-    workflow.nodes.map(async (storageNode: WorkflowStorageNode): Promise<VueFlowNode> => { // <--- async map callback, returns Promise<VueFlowNode>
+  const nodes: VueFlowNode[] = await Promise.all(
+    workflow.nodes.map(async (storageNode: WorkflowStorageNode): Promise<VueFlowNode> => {
+      // ... nodeDef check
       const nodeDef = nodeDefinitionsMap.get(storageNode.type);
-      if (!nodeDef) {
-        console.error(
-          `[transformWorkflowToVueFlow] 找不到类型为 ${storageNode.type} (ID: ${storageNode.id}) 的节点定义，将跳过此节点。`
-        );
+      if (!nodeDef) { // Preserving original error handling structure
+        console.error(`[transformWorkflowToVueFlow] No definition for type ${storageNode.type} (ID: ${storageNode.id}). Skipping.`);
         return {
           id: storageNode.id,
           type: "error",
@@ -343,45 +491,32 @@ export async function transformWorkflowToVueFlow( // <--- 标记为 async
         } as VueFlowNode;
       }
 
-      const vueFlowData: Record<string, any> = {
-        ...nodeDef,
-        inputs: {},
-        outputs: {},
-        configValues: storageNode.configValues || {},
-        defaultDescription: nodeDef.description || "",
-        description: storageNode.customDescription || nodeDef.description || "",
-      };
+      const vueFlowData = _createBaseVueFlowNodeData(storageNode, nodeDef);
+      if (storageNode.type !== "core:NodeGroup") {
+        _populateVueFlowNodeSlots(vueFlowData, storageNode, nodeDef);
+      }
 
-      // NodeGroup 的接口处理：异步加载并填充 groupInterface
       if (storageNode.type === "core:NodeGroup") {
         const referencedWorkflowId = vueFlowData.configValues?.referencedWorkflowId as string | undefined;
         if (referencedWorkflowId) {
-          console.debug(
-            `[transformWorkflowToVueFlow] NodeGroup ${storageNode.id} references workflow ${referencedWorkflowId}. Attempting to load its interface...`
-          );
           try {
-            const referencedWorkflowData = await loadWorkflowByIdFunc(projectId, referencedWorkflowId);
+            // ✅ 使用缓存加载函数
+            const referencedWorkflowData = await cachedLoadFunc(projectId, referencedWorkflowId);
             if (referencedWorkflowData) {
               const groupInterface = extractGroupInterface(referencedWorkflowData);
-              vueFlowData.groupInterface = groupInterface; // 填充 groupInterface
-              console.debug(
-                `[transformWorkflowToVueFlow] NodeGroup ${storageNode.id} interface loaded and applied:`,
-                JSON.parse(JSON.stringify(groupInterface))
-              );
-
-              // --- 为 NodeGroup 基于 groupInterface 构建 inputs 和 outputs ---
-              // 清空可能由通用逻辑基于 NodeGroup 自身定义（而非模板）填充的 inputs/outputs
+              vueFlowData.groupInterface = groupInterface;
               vueFlowData.inputs = {};
               vueFlowData.outputs = {};
 
-              if (vueFlowData.groupInterface?.inputs) {
-                Object.entries(vueFlowData.groupInterface.inputs).forEach(
+              if (groupInterface.inputs) {
+                Object.entries(groupInterface.inputs).forEach(
                   ([inputName, inputDefFromInterfaceUntyped]) => {
-                    const inputDefFromInterface = inputDefFromInterfaceUntyped as InputDefinition; // 类型断言
+                    const inputDefFromInterface = inputDefFromInterfaceUntyped as InputDefinition;
+                    // ... effectiveDefault, storedValue, finalValue, descriptions
                     const effectiveDefault = getEffectiveDefaultValue(inputDefFromInterface);
-                    // storageNode.inputValues 包含的是此 NodeGroup 实例的覆盖值
                     const storedValue = storageNode.inputValues?.[inputName];
-                    const finalValue = storedValue !== undefined ? storedValue : effectiveDefault;
+                    // ✅ finalValue (state) 需要 klona
+                    const finalValue = storedValue !== undefined ? klona(storedValue) : klona(effectiveDefault);
                     const defaultSlotDesc = inputDefFromInterface.description || "";
                     const customSlotDesc = storageNode.customSlotDescriptions?.inputs?.[inputName];
                     const displaySlotDesc = customSlotDesc || defaultSlotDesc;
@@ -390,167 +525,112 @@ export async function transformWorkflowToVueFlow( // <--- 标记为 async
                       value: finalValue,
                       description: displaySlotDesc,
                       defaultDescription: defaultSlotDesc,
-                      ...(inputDefFromInterface as object), // 使用类型断言确保是对象
+                      // ✅ 优化 6: 直接引用/浅拷贝 (definition)
+                      ...inputDefFromInterface, // ❌ 代替 ...klona(inputDefFromInterface)
                     };
                   }
                 );
               }
-
-              if (vueFlowData.groupInterface?.outputs) {
-                Object.entries(vueFlowData.groupInterface.outputs).forEach(
+              if (groupInterface.outputs) {
+                Object.entries(groupInterface.outputs).forEach(
                   ([outputName, outputDefFromInterfaceUntyped]) => {
-                    const outputDefFromInterface = outputDefFromInterfaceUntyped as OutputDefinition; // 类型断言
+                    const outputDefFromInterface = outputDefFromInterfaceUntyped as OutputDefinition;
+                    // ... descriptions
                     const defaultSlotDesc = outputDefFromInterface.description || "";
                     const customSlotDesc = storageNode.customSlotDescriptions?.outputs?.[outputName];
                     const displaySlotDesc = customSlotDesc || defaultSlotDesc;
-
                     vueFlowData.outputs[outputName] = {
                       description: displaySlotDesc,
                       defaultDescription: defaultSlotDesc,
-                      ...(outputDefFromInterface as object), // 使用类型断言确保是对象
+                      // ✅ 优化 7: 直接引用/浅拷贝 (definition)
+                      ...outputDefFromInterface, // ❌ 代替 ...klona(outputDefFromInterface)
                     };
                   }
                 );
               }
-              // --- NodeGroup inputs/outputs 构建结束 ---
-            } else {
-              console.warn(
-                `[transformWorkflowToVueFlow] NodeGroup ${storageNode.id}: Referenced workflow ${referencedWorkflowId} could not be loaded. Interface will be empty.`
-              );
-              vueFlowData.groupInterface = { inputs: {}, outputs: {} }; // 设置空接口以避免后续错误
-              vueFlowData.inputs = {}; // 确保 inputs 也为空
-              vueFlowData.outputs = {}; // 确保 outputs 也为空
+            } else { // Preserving original warning structure
+              console.warn(`[transformWorkflowToVueFlow] NodeGroup ${storageNode.id}: Referenced workflow ${referencedWorkflowId} not loaded. Interface empty.`);
+              vueFlowData.groupInterface = { inputs: {}, outputs: {} };
+              vueFlowData.inputs = {}; vueFlowData.outputs = {};
             }
-          } catch (error) {
-            console.error(
-              `[transformWorkflowToVueFlow] NodeGroup ${storageNode.id}: Error loading referenced workflow ${referencedWorkflowId}:`,
-              error
-            );
-            vueFlowData.groupInterface = { inputs: {}, outputs: {} }; // 设置空接口
-            vueFlowData.inputs = {}; // 确保 inputs 也为空
-            vueFlowData.outputs = {}; // 确保 outputs 也为空
+          } catch (error) { // Preserving original error handling structure
+            console.error(`[transformWorkflowToVueFlow] NodeGroup ${storageNode.id}: Error loading ref workflow ${referencedWorkflowId}:`, error);
+            vueFlowData.groupInterface = { inputs: {}, outputs: {} };
+            vueFlowData.inputs = {}; vueFlowData.outputs = {};
           }
-        } else {
-          console.warn(
-            `[transformWorkflowToVueFlow] NodeGroup ${storageNode.id} is missing referencedWorkflowId in configValues. Interface will be empty.`
-          );
-          vueFlowData.groupInterface = { inputs: {}, outputs: {} }; // 设置空接口
-          vueFlowData.inputs = {}; // 确保 inputs 也为空
-          vueFlowData.outputs = {}; // 确保 outputs 也为空
+        } else { // Preserving original warning structure
+          console.warn(`[transformWorkflowToVueFlow] NodeGroup ${storageNode.id} missing referencedWorkflowId. Interface empty.`);
+          vueFlowData.groupInterface = { inputs: {}, outputs: {} };
+          vueFlowData.inputs = {}; vueFlowData.outputs = {};
         }
-      } else {
-        // --- 这是针对非 NodeGroup 节点的现有 inputs/outputs 构建逻辑 ---
-        if (nodeDef.inputs) {
-          Object.entries(nodeDef.inputs).forEach(([inputName, inputDef]) => {
-            const effectiveDefault = getEffectiveDefaultValue(inputDef);
-            const storedValue = storageNode.inputValues?.[inputName];
-            const finalValue = storedValue !== undefined ? storedValue : effectiveDefault;
-            const defaultSlotDesc = inputDef.description || "";
-            const customSlotDesc = storageNode.customSlotDescriptions?.inputs?.[inputName];
-            const displaySlotDesc = customSlotDesc || defaultSlotDesc;
-            vueFlowData.inputs[inputName] = {
-              value: finalValue,
-              description: displaySlotDesc,
-              defaultDescription: defaultSlotDesc,
-              ...inputDef,
-            };
-          });
-        }
-
-        if (nodeDef.outputs) {
-          Object.entries(nodeDef.outputs).forEach(([outputName, outputDef]) => {
-            const defaultSlotDesc = outputDef.description || "";
-            const customSlotDesc = storageNode.customSlotDescriptions?.outputs?.[outputName];
-            const displaySlotDesc = customSlotDesc || defaultSlotDesc;
-            vueFlowData.outputs[outputName] = {
-              description: displaySlotDesc,
-              defaultDescription: defaultSlotDesc,
-              ...outputDef,
-            };
-          });
-        }
-        // --- 非 NodeGroup 节点逻辑结束 ---
       }
-
-      const nodeDefaultLabel = nodeDef.displayName || storageNode.type;
-      // 如果存储中有 displayName，则使用它，否则使用默认标签
-      const nodeDisplayLabel = storageNode.displayName || nodeDefaultLabel;
-      vueFlowData.defaultLabel = nodeDefaultLabel;
-      // 同时将 displayName 设置到 data 中，以便在画布上正确显示
-      vueFlowData.displayName = nodeDisplayLabel;
-
-
-      const vueFlowNodeObject: VueFlowNode = {
+      // ... return VueFlowNode
+      return {
         id: storageNode.id,
         type: storageNode.type,
-        position: storageNode.position,
+        position: storageNode.position, // ⚠️ 注意：这里没有 klona，VueFlow 内部可能会修改它。如果需要隔离，这里也应 klona(storageNode.position)
         data: vueFlowData,
-        width: storageNode.width, // 直接从 storageNode 读取 width
-        height: storageNode.height, // 直接从 storageNode 读取 height
-        label: nodeDisplayLabel, // 顶层 label 使用 displayName
-      };
-
-      if (storageNode.inputConnectionOrders) {
-        if (!vueFlowNodeObject.data) vueFlowNodeObject.data = {};
-        vueFlowNodeObject.data.inputConnectionOrders = storageNode.inputConnectionOrders;
-      }
-
-      return vueFlowNodeObject;
+        width: storageNode.width,
+        height: storageNode.height,
+        label: vueFlowData.displayName,
+      } as VueFlowNode;
     })
   );
 
-  // 阶段 2: 处理边 (此时 NodeGroup 的 groupInterface 应该已填充)
+
   const vueFlowNodesMap = new Map<string, VueFlowNode>(nodes.map((n) => [n.id, n]));
-  const { getSlotDefinition } = useSlotDefinitionHelper(); // 获取辅助函数
+  const { getSlotDefinition } = useSlotDefinitionHelper();
+
+  // 准备 workflowData 参数给 getSlotDefinition，遵循原始代码使用 as any 的方式
+  // getSlotDefinition 的参数类型是 (WorkflowObject & { id: string })
+  // workflow (WorkflowStorageObject) 本身不完全匹配此类型，特别是缺少 id, name 等元数据。
+  // 原始代码通过 as any 绕过此类型检查。
+  const workflowDataForSlotHelper = {
+    // 从 workflow (WorkflowStorageObject) 获取 getSlotDefinition 主要依赖的属性
+    interfaceInputs: workflow.interfaceInputs || {},
+    interfaceOutputs: workflow.interfaceOutputs || {},
+    // 包含 nodes 和 edges，因为它们是 WorkflowObject 的一部分，getSlotDefinition 可能会间接访问
+    nodes: workflow.nodes,
+    edges: workflow.edges,
+    viewport: workflow.viewport || { x: 0, y: 0, zoom: 1 },
+    // id, name, projectId 等元数据字段：
+    // WorkflowStorageObject 没有这些。getSlotDefinition 的类型签名 (WorkflowObject & { id: string })
+    // 暗示它可能期望这些。通过 as any，我们允许 getSlotDefinition 内部处理这些字段可能缺失的情况。
+    // 如果 getSlotDefinition 严格需要 id 或 name，而它们在此对象中不存在，则运行时可能出错，
+    // 但这是原始代码行为的一部分。
+  };
 
   const edges: VueFlowEdge[] = workflow.edges.map(
     (storageEdge: WorkflowStorageEdge): VueFlowEdge => {
       const sourceNode = vueFlowNodesMap.get(storageEdge.source);
       const targetNode = vueFlowNodesMap.get(storageEdge.target);
-
       let sourceType = "any";
       let targetType = "any";
 
-      // 准备 workflowData 参数给 getSlotDefinition
-      // 因为 getSlotDefinition 期望的 workflowData 包含 interfaceInputs/Outputs
-      // 而这里的 workflow 是 WorkflowStorageObject，它直接在顶层有这些属性
-      const workflowDataForSlotHelper = {
-        interfaceInputs: workflow.interfaceInputs,
-        interfaceOutputs: workflow.interfaceOutputs,
-        // 其他 workflowData 属性如果 getSlotDefinition 需要的话，也应添加
-        // 但目前 getSlotDefinition 主要依赖 interfaceInputs/Outputs
-      };
-
-      // 确定源类型
       if (sourceNode && storageEdge.sourceHandle) {
-        const sourceSlotDef = getSlotDefinition(sourceNode, storageEdge.sourceHandle, 'source', workflowDataForSlotHelper as any); // 使用 as any 临时解决类型问题
-        if (sourceSlotDef?.dataFlowType) {
-          sourceType = sourceSlotDef.dataFlowType;
-        } else if (sourceSlotDef) {
-          console.warn(`[transformWorkflowToVueFlow] Node ${sourceNode.id} (source for edge ${storageEdge.id}) output handle '${storageEdge.sourceHandle}' found, but 'dataFlowType' is missing or invalid. Defaulting to 'any'. SlotDef:`, JSON.stringify(sourceSlotDef));
-        } else {
-          console.warn(`[transformWorkflowToVueFlow] Node ${sourceNode.id} (source for edge ${storageEdge.id}) output handle '${storageEdge.sourceHandle}' not found. Defaulting to 'any'.`);
-        }
+        const sourceSlotDef = getSlotDefinition(
+          sourceNode,
+          storageEdge.sourceHandle,
+          'source',
+          workflowDataForSlotHelper as any // 恢复原始的 as any 断言
+        );
+        if (sourceSlotDef?.dataFlowType) sourceType = sourceSlotDef.dataFlowType;
+        else if (sourceSlotDef) console.warn(`[transformWorkflowToVueFlow] Edge ${storageEdge.id} source: Slot ${storageEdge.sourceHandle} on ${sourceNode.id} missing dataFlowType.`);
+        else console.warn(`[transformWorkflowToVueFlow] Edge ${storageEdge.id} source: Slot ${storageEdge.sourceHandle} on ${sourceNode.id} not found.`);
       }
-
-      // 确定目标类型
       if (targetNode && storageEdge.targetHandle) {
-        const targetSlotDef = getSlotDefinition(targetNode, storageEdge.targetHandle, 'target', workflowDataForSlotHelper as any); // 使用 as any 临时解决类型问题
-        if (targetSlotDef?.dataFlowType) {
-          targetType = targetSlotDef.dataFlowType;
-        } else if (targetSlotDef) {
-          console.warn(`[transformWorkflowToVueFlow] Node ${targetNode.id} (target for edge ${storageEdge.id}) input handle '${storageEdge.targetHandle}' found, but 'dataFlowType' is missing or invalid. Defaulting to 'any'. SlotDef:`, JSON.stringify(targetSlotDef));
-        } else {
-          console.warn(`[transformWorkflowToVueFlow] Node ${targetNode.id} (target for edge ${storageEdge.id}) input handle '${storageEdge.targetHandle}' not found. Defaulting to 'any'.`);
-        }
+        const targetSlotDef = getSlotDefinition(
+          targetNode,
+          storageEdge.targetHandle,
+          'target',
+          workflowDataForSlotHelper as any // 恢复原始的 as any 断言
+        );
+        if (targetSlotDef?.dataFlowType) targetType = targetSlotDef.dataFlowType;
+        else if (targetSlotDef) console.warn(`[transformWorkflowToVueFlow] Edge ${storageEdge.id} target: Slot ${storageEdge.targetHandle} on ${targetNode.id} missing dataFlowType.`);
+        else console.warn(`[transformWorkflowToVueFlow] Edge ${storageEdge.id} target: Slot ${storageEdge.targetHandle} on ${targetNode.id} not found.`);
       }
 
-      const {
-        animated: edgeAnimated,
-        style: edgeStyle,
-        markerEnd: finalMarkerEnd,
-      } = getEdgeStylePropsFunc(sourceType, targetType, isDark);
-
+      const { animated, style, markerEnd } = getEdgeStylePropsFunc(sourceType, targetType, isDark);
       return {
         id: storageEdge.id,
         source: storageEdge.source,
@@ -559,13 +639,10 @@ export async function transformWorkflowToVueFlow( // <--- 标记为 async
         targetHandle: storageEdge.targetHandle,
         type: "default",
         label: storageEdge.label,
-        data: {
-          sourceType: sourceType,
-          targetType: targetType,
-        },
-        animated: edgeAnimated,
-        style: edgeStyle,
-        markerEnd: finalMarkerEnd,
+        data: { sourceType, targetType },
+        animated,
+        style,
+        markerEnd,
       };
     }
   );
@@ -576,127 +653,61 @@ export async function transformWorkflowToVueFlow( // <--- 标记为 async
     zoom: workflow.viewport?.zoom ?? 1,
   };
 
-  const flowData: FlowExportObject = {
-    nodes: nodes, // nodes is now an array of resolved VueFlowNode objects
-    edges: edges,
-    position: [viewport.x, viewport.y],
-    zoom: viewport.zoom,
-    viewport: {
-      x: viewport.x,
-      y: viewport.y,
+  return {
+    flowData: {
+      nodes,
+      edges,
+      position: [viewport.x, viewport.y],
       zoom: viewport.zoom,
+      viewport,
     },
+    viewport,
   };
-
-  return { flowData, viewport };
 }
 
 /**
  * 从工作流定义中提取组接口的辅助函数。
- * @param groupData 从后端加载的完整工作流对象 (通常是作为 Group 使用的工作流)
- * @returns 提取出的组接口信息
  */
 export function extractGroupInterface(groupData: WorkflowStorageObject): GroupInterfaceInfo {
-  // <-- 接收 Storage 类型
-  // 直接从加载的工作流对象的顶层属性获取接口信息
   const inputs = groupData.interfaceInputs || {};
   const outputs = groupData.interfaceOutputs || {};
-  console.debug(
-    `[extractGroupInterface] Extracted from top-level: Inputs:`,
-    JSON.parse(JSON.stringify(inputs)),
-    `Outputs:`,
-    JSON.parse(JSON.stringify(outputs))
-  );
-  const groupInterface: GroupInterfaceInfo = { inputs, outputs };
-  // console.debug(
-  //   "[extractGroupInterface] Extracted Interface:",
-  //   JSON.stringify(groupInterface, null, 2)
-  // );
-  return groupInterface;
+  console.debug(`[extractGroupInterface] Extracted: Inputs:`, klona(inputs), `Outputs:`, klona(outputs));
+  return { inputs, outputs };
 }
+
 /**
- * 将当前的 Vue Flow 状态转换为后端执行引擎所需的 WorkflowExecutionPayload 格式。
- * @param flow Vue Flow 导出的对象或当前状态
+ * 将核心工作流数据（存储格式）转换为后端执行引擎所需的 WorkflowExecutionPayload 格式。
+ * @param coreWorkflow 包含 WorkflowStorageNode 和 WorkflowStorageEdge 的对象
  * @returns 符合 WorkflowExecutionPayload 结构的对象
  */
 export function transformVueFlowToExecutionPayload(
-  flow: { nodes: VueFlowNode[]; edges: VueFlowEdge[] } // 可以接收 FlowExportObject 或仅包含 nodes/edges 的对象
+  coreWorkflow: { nodes: WorkflowStorageNode[]; edges: WorkflowStorageEdge[] }
 ): WorkflowExecutionPayload {
-  const nodeStore = useNodeStore(); // 获取 Node Store 实例
-  // 使用完整的类型标识符 (namespace:type) 作为 Map 的键
-  const nodeDefinitionsMap = new Map<string, NodeDefinition>(
-    nodeStore.nodeDefinitions?.map((def) => [`${def.namespace}:${def.type}`, def]) ?? []
-  );
-
-  const executionNodes: ExecutionNode[] = flow.nodes.map((vueNode: VueFlowNode): ExecutionNode => {
-    const nodeType = vueNode.type; // Store type for safe access
-    if (!nodeType) {
-      console.error(
-        `[transformVueFlowToExecutionPayload] Node with ID ${vueNode.id} has no type defined. Skipping.`
-      );
-      return { id: vueNode.id, fullType: "error", inputs: {}, configValues: {} };
-    }
-    const nodeDef = nodeDefinitionsMap.get(nodeType); // Use safe nodeType
-    if (!nodeDef) {
-      // 在实际执行时，可能需要更健壮的错误处理，例如抛出错误或返回特定错误节点
-      console.error(
-        `[transformVueFlowToExecutionPayload] 找不到类型为 ${nodeType} (ID: ${vueNode.id}) 的节点定义，将跳过此节点。`
-      ); // Use safe nodeType
-      // 返回一个最小化的表示，或者根据策略抛出错误
-      return { id: vueNode.id, fullType: "error", inputs: {}, configValues: {} };
-    }
-
-    const executionInputValues: Record<string, any> = {};
-    // 直接从 vueNode.inputValues (即 StorageNode.inputValues) 获取输入值
-    // vueNode 在这里实际上是 StorageNode 结构 (或兼容结构)
-    if (nodeDef.inputs && (vueNode as any).inputValues) {
-      Object.entries((vueNode as any).inputValues).forEach(([inputName, storedValue]) => {
-        const inputDef = nodeDef.inputs?.[inputName];
-        if (inputDef) {
-          const effectiveDefault = getEffectiveDefaultValue(inputDef);
-          // 仅当存储的值与有效默认值不同时才包含
-          if (!isEqual(storedValue, effectiveDefault)) {
-            executionInputValues[inputName] = storedValue;
-          }
-        } else {
-          // 这个警告仍然有效，因为 inputValues 中的键可能在定义中不存在
-          console.warn(
-            `[transformVueFlowToExecutionPayload] Node ${vueNode.id} (${vueNode.type}): Input '${inputName}' found in inputValues but not in definition. Skipping inclusion for this input.`
-          );
-        }
-      });
-    }
-
+  const executionNodes: ExecutionNode[] = coreWorkflow.nodes.map((storageNode): ExecutionNode => {
     const execNode: ExecutionNode = {
-      id: vueNode.id,
-      fullType: nodeType,
-      // 仅当 executionInputValues 不为空时才包含它
-      ...(Object.keys(executionInputValues).length > 0 && { inputs: executionInputValues }),
-      // 直接从 vueNode.configValues (即 StorageNode.configValues) 获取配置值
-      ...((vueNode as any).configValues &&
-        Object.keys((vueNode as any).configValues).length > 0 && {
-        configValues: (vueNode as any).configValues,
-      }),
+      id: storageNode.id,
+      fullType: storageNode.type,
     };
-
-    // 直接从 vueNode.inputConnectionOrders (即 StorageNode.inputConnectionOrders) 获取
-    if ((vueNode as any).inputConnectionOrders && Object.keys((vueNode as any).inputConnectionOrders).length > 0) {
-      execNode.inputConnectionOrders = (vueNode as any).inputConnectionOrders;
+    // storageNode.inputValues 已经是筛选过的 (与默认值不同)
+    if (storageNode.inputValues && Object.keys(storageNode.inputValues).length > 0) {
+      execNode.inputs = storageNode.inputValues; // No need to klona, these are for immediate execution
     }
-
+    if (storageNode.configValues && Object.keys(storageNode.configValues).length > 0) {
+      execNode.configValues = storageNode.configValues;
+    }
+    if (storageNode.inputConnectionOrders && Object.keys(storageNode.inputConnectionOrders).length > 0) {
+      execNode.inputConnectionOrders = storageNode.inputConnectionOrders;
+    }
     return execNode;
   });
 
-  const executionEdges: ExecutionEdge[] = flow.edges.map((vueEdge: VueFlowEdge): ExecutionEdge => {
-    // 执行边只需要核心连接信息
-    return {
-      id: vueEdge.id, // 使用 VueFlow 边的 ID
-      sourceNodeId: vueEdge.source,
-      targetNodeId: vueEdge.target,
-      sourceHandle: vueEdge.sourceHandle ?? "", // Ensure string
-      targetHandle: vueEdge.targetHandle ?? "", // Ensure string
-    };
-  });
+  const executionEdges: ExecutionEdge[] = coreWorkflow.edges.map((storageEdge): ExecutionEdge => ({
+    id: storageEdge.id,
+    sourceNodeId: storageEdge.source,
+    targetNodeId: storageEdge.target,
+    sourceHandle: storageEdge.sourceHandle ?? "",
+    targetHandle: storageEdge.targetHandle ?? "",
+  }));
 
   return {
     nodes: executionNodes,
@@ -704,122 +715,62 @@ export function transformVueFlowToExecutionPayload(
   };
 }
 
+
 /**
  * Serializes a fragment of a workflow (selected nodes and edges) into a JSON string for clipboard.
- * 将工作流片段（选定的节点和边）序列化为 JSON 字符串，用于剪贴板。
- * @param nodesToSerialize Array of VueFlowNode objects to serialize.
- * @param edgesToSerialize Array of VueFlowEdge objects to serialize.
- * @returns JSON string representing the workflow fragment.
  */
 export function serializeWorkflowFragment(
   nodesToSerialize: VueFlowNodeType[],
   edgesToSerialize: VueFlowEdgeType[]
 ): string | null {
-  const nodeStore = useNodeStore();
-  const nodeDefinitionsMap = new Map<string, NodeDefinition>(
-    nodeStore.nodeDefinitions?.map((def) => [`${def.namespace}:${def.type}`, def]) ?? []
-  );
+  // const nodeStore = useNodeStore(); // 移除
+  // ✅ 优化 4: 使用缓存 Map
+  const nodeDefinitionsMap = getNodeDefinitionsMap();
 
   try {
     const storageNodes: WorkflowStorageNode[] = nodesToSerialize.map((vueNode) => {
       const nodeType = vueNode.type;
       if (!nodeType) {
-        console.error(`[serializeWorkflowFragment] Node with ID ${vueNode.id} has no type defined.`);
+        console.error(`[serializeWorkflowFragment] Node ID ${vueNode.id} has no type.`);
         throw new Error(`Node ${vueNode.id} has no type.`);
       }
       const nodeDef = nodeDefinitionsMap.get(nodeType);
       if (!nodeDef) {
-        console.error(`[serializeWorkflowFragment] Node definition not found for type ${nodeType} (ID: ${vueNode.id}).`);
+        console.error(`[serializeWorkflowFragment] No definition for type ${nodeType} (ID: ${vueNode.id}).`);
         throw new Error(`Node definition not found for ${nodeType}.`);
       }
 
-      const inputValues: Record<string, any> = {};
-      if (
-        nodeDef.inputs &&
-        vueNode.data?.inputs &&
-        nodeType !== "core:GroupInput" &&
-        nodeType !== "core:GroupOutput" &&
-        nodeType !== "core:NodeGroup"
-      ) {
-        Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
-          const inputDef = nodeDef.inputs?.[inputName];
-          if (inputDef && typeof inputData === "object" && inputData !== null && "value" in inputData) {
-            const currentValue = inputData.value;
-            const effectiveDefault = getEffectiveDefaultValue(inputDef);
-            if (!isEqual(currentValue, effectiveDefault)) {
-              inputValues[inputName] = klona(currentValue);
-            }
-          }
-        });
-      }
+      const baseProperties = _createBaseStorageNodeProperties(vueNode, nodeDef);
+      // For fragments, inputValues are extracted differently (no type coercion, NodeGroup excluded)
+      const inputValues = _extractInputValuesForStorage(vueNode, nodeDef, "fragment");
+      // Custom slot descriptions are generally applicable
+      const customSlotDescriptions = _extractCustomSlotDescriptionsForStorage(vueNode, nodeDef);
 
-      const customSlotDescriptions: WorkflowStorageNode['customSlotDescriptions'] = {};
-      if (nodeDef.inputs && vueNode.data?.inputs) {
-        const currentCustomInputDescs: Record<string, string> = {};
-        Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
-          if (typeof inputData === "object" && inputData !== null && "description" in inputData) {
-            const currentDesc = inputData.description as string;
-            const defaultDesc = nodeDef.inputs?.[inputName]?.description || "";
-            if (currentDesc && currentDesc !== defaultDesc) {
-              currentCustomInputDescs[inputName] = currentDesc;
-            }
-          }
-        });
-        if (Object.keys(currentCustomInputDescs).length > 0) {
-          customSlotDescriptions.inputs = currentCustomInputDescs;
-        }
-      }
-      if (nodeDef.outputs && vueNode.data?.outputs) {
-        const currentCustomOutputDescs: Record<string, string> = {};
-        Object.entries(vueNode.data.outputs).forEach(([outputName, outputData]) => {
-          if (typeof outputData === "object" && outputData !== null && "description" in outputData) {
-            const currentDesc = outputData.description as string;
-            const defaultDesc = nodeDef.outputs?.[outputName]?.description || "";
-            if (currentDesc && currentDesc !== defaultDesc) {
-              currentCustomOutputDescs[outputName] = currentDesc;
-            }
-          }
-        });
-        if (Object.keys(currentCustomOutputDescs).length > 0) {
-          customSlotDescriptions.outputs = currentCustomOutputDescs;
-        }
-      }
+      const sNode: WorkflowStorageNode = { ...baseProperties } as WorkflowStorageNode;
 
-      const sNode: WorkflowStorageNode = {
-        id: vueNode.id,
-        type: nodeType,
-        position: klona(vueNode.position),
-        ...(Object.keys(inputValues).length > 0 && { inputValues }),
-        ...(vueNode.data?.configValues && Object.keys(vueNode.data.configValues).length > 0 && { configValues: klona(vueNode.data.configValues) }),
-        ...(vueNode.width !== undefined && { width: vueNode.width }),
-        ...(vueNode.height !== undefined && { height: vueNode.height }),
-        ...(((vueNode.data?.displayName || vueNode.label) && String(vueNode.data?.displayName || vueNode.label) !== String(nodeDef.displayName)) && { displayName: String(vueNode.data?.displayName || vueNode.label) }),
-        ...(vueNode.data?.description && vueNode.data.description !== (nodeDef.description || "") && { customDescription: vueNode.data.description }),
-        ...(Object.keys(customSlotDescriptions).length > 0 && { customSlotDescriptions }),
-        ...(vueNode.data?.inputConnectionOrders && { inputConnectionOrders: klona(vueNode.data.inputConnectionOrders) }),
-      };
+      if (Object.keys(inputValues).length > 0) {
+        sNode.inputValues = inputValues;
+      }
+      if (customSlotDescriptions) {
+        sNode.customSlotDescriptions = customSlotDescriptions;
+      }
+      // Note: referencedWorkflowId is not relevant for fragments in this context.
       return sNode;
     });
 
-    const storageEdges: WorkflowStorageEdge[] = edgesToSerialize.map((vueEdge) => {
-      return {
-        id: vueEdge.id,
-        source: vueEdge.source,
-        target: vueEdge.target,
-        sourceHandle: vueEdge.sourceHandle ?? "",
-        targetHandle: vueEdge.targetHandle ?? "",
-        label: typeof vueEdge.label === "string" && vueEdge.label ? vueEdge.label : undefined,
-        // WorkflowStorageEdge does not have a 'data' field.
-      };
-    });
+    const storageEdges: WorkflowStorageEdge[] = edgesToSerialize.map((vueEdge) => ({
+      id: vueEdge.id,
+      source: vueEdge.source,
+      target: vueEdge.target,
+      sourceHandle: vueEdge.sourceHandle ?? "",
+      targetHandle: vueEdge.targetHandle ?? "",
+      label: typeof vueEdge.label === "string" && vueEdge.label ? vueEdge.label : undefined,
+    }));
 
     const fragment: SerializedWorkflowFragment = {
       source: WORKFLOW_FRAGMENT_SOURCE,
       version: WORKFLOW_FRAGMENT_VERSION,
-      data: {
-        nodes: storageNodes,
-        edges: storageEdges,
-      },
+      data: { nodes: storageNodes, edges: storageEdges },
     };
     return JSON.stringify(fragment);
   } catch (error) {
@@ -830,37 +781,25 @@ export function serializeWorkflowFragment(
 
 /**
  * Deserializes a JSON string from the clipboard into VueFlow nodes and edges.
- * 将剪贴板中的 JSON 字符串反序列化为 VueFlow 节点和边。
- * Does not handle ID conflicts or apply styles; these are responsibilities of the caller.
- * 不处理 ID 冲突或应用样式；这些是调用者的责任。
- * @param jsonString The JSON string to deserialize.
- * @returns An object containing arrays of VueFlowNode and VueFlowEdge, or null if deserialization fails.
  */
 export function deserializeWorkflowFragment(
   jsonString: string
 ): { nodes: VueFlowNodeType[]; edges: VueFlowEdgeType[] } | null {
-  const nodeStore = useNodeStore();
-  const nodeDefinitionsMap = new Map<string, NodeDefinition>(
-    nodeStore.nodeDefinitions?.map((def) => [`${def.namespace}:${def.type}`, def]) ?? []
-  );
+  // const nodeStore = useNodeStore(); // 移除
+  // ✅ 优化 4: 使用缓存 Map
+  const nodeDefinitionsMap = getNodeDefinitionsMap();
 
   try {
     const parsed: any = JSON.parse(jsonString);
-
     if (
-      !parsed ||
-      typeof parsed !== "object" ||
-      parsed.source !== WORKFLOW_FRAGMENT_SOURCE ||
-      !parsed.data ||
-      !Array.isArray(parsed.data.nodes) ||
-      !Array.isArray(parsed.data.edges)
+      !parsed || typeof parsed !== "object" || parsed.source !== WORKFLOW_FRAGMENT_SOURCE ||
+      !parsed.data || !Array.isArray(parsed.data.nodes) || !Array.isArray(parsed.data.edges)
     ) {
       console.warn("Invalid workflow fragment format in clipboard.", parsed);
       return null;
     }
-
     if (parsed.version !== WORKFLOW_FRAGMENT_VERSION) {
-      console.warn(`Workflow fragment version mismatch. Expected ${WORKFLOW_FRAGMENT_VERSION}, got ${parsed.version}. Attempting to parse anyway.`);
+      console.warn(`Fragment version mismatch. Expected ${WORKFLOW_FRAGMENT_VERSION}, got ${parsed.version}. Parsing anyway.`);
     }
 
     const fragmentData = parsed.data as WorkflowFragmentData;
@@ -868,7 +807,7 @@ export function deserializeWorkflowFragment(
     const vueFlowNodes: VueFlowNodeType[] = fragmentData.nodes.map((storageNode) => {
       const nodeDef = nodeDefinitionsMap.get(storageNode.type);
       if (!nodeDef) {
-        console.error(`[deserializeWorkflowFragment] Node definition not found for type ${storageNode.type} (ID: ${storageNode.id}). Skipping.`);
+        console.error(`[deserializeWorkflowFragment] No definition for type ${storageNode.type} (ID: ${storageNode.id}). Skipping.`);
         return {
           id: storageNode.id,
           type: "error",
@@ -877,59 +816,26 @@ export function deserializeWorkflowFragment(
         } as VueFlowNodeType;
       }
 
-      const vueFlowData: Record<string, any> = {
-        configValues: klona(storageNode.configValues || {}),
-        defaultDescription: nodeDef.description || "",
-        description: storageNode.customDescription || nodeDef.description || "",
-        inputs: {},
-        outputs: {},
-      };
+      const vueFlowData = _createBaseVueFlowNodeData(storageNode, nodeDef);
+      _populateVueFlowNodeSlots(vueFlowData, storageNode, nodeDef); // Populates inputs/outputs
 
-      if (nodeDef.inputs) {
-        Object.entries(nodeDef.inputs).forEach(([inputName, inputDef]) => {
-          const effectiveDefault = getEffectiveDefaultValue(inputDef);
-          const storedValue = storageNode.inputValues?.[inputName];
-          const finalValue = storedValue !== undefined ? klona(storedValue) : klona(effectiveDefault);
-          const defaultSlotDesc = inputDef.description || "";
-          const customSlotDesc = storageNode.customSlotDescriptions?.inputs?.[inputName];
-          const displaySlotDesc = customSlotDesc || defaultSlotDesc;
-          vueFlowData.inputs[inputName] = {
-            value: finalValue,
-            description: displaySlotDesc,
-            defaultDescription: defaultSlotDesc,
-            ...klona(inputDef),
-          };
-        });
-      }
-
-      if (nodeDef.outputs) {
-        Object.entries(nodeDef.outputs).forEach(([outputName, outputDef]) => {
-          const defaultSlotDesc = outputDef.description || "";
-          const customSlotDesc = storageNode.customSlotDescriptions?.outputs?.[outputName];
-          const displaySlotDesc = customSlotDesc || defaultSlotDesc;
-          vueFlowData.outputs[outputName] = {
-            description: displaySlotDesc,
-            defaultDescription: defaultSlotDesc,
-            ...klona(outputDef),
-          };
-        });
-      }
-
-      const nodeDefaultLabel = nodeDef.displayName || storageNode.type;
-      vueFlowData.defaultLabel = nodeDefaultLabel;
-      vueFlowData.displayName = storageNode.displayName || nodeDefaultLabel;
-
-      if (storageNode.inputConnectionOrders) {
-        vueFlowData.inputConnectionOrders = klona(storageNode.inputConnectionOrders);
-      }
-
-      if (storageNode.type === "core:NodeGroup" && storageNode.configValues?.referencedWorkflowId) {
+      // For pasted NodeGroups, initialize groupInterface as empty.
+      // It will be populated on full load/save.
+      if (storageNode.type === "core:NodeGroup") {
         vueFlowData.groupInterface = { inputs: {}, outputs: {} };
+        // Ensure inputs/outputs are also empty for pasted NodeGroup,
+        // as _populateVueFlowNodeSlots might fill them based on NodeGroup's own (empty) definition.
+        // However, _populateVueFlowNodeSlots uses nodeDef, which for NodeGroup might have generic slots.
+        // It's safer to clear them here if groupInterface is the source of truth for NodeGroup slots.
+        // vueFlowData.inputs = {}; // This might be too aggressive if NodeGroup def has some base slots.
+        // vueFlowData.outputs = {};
       }
+
 
       return {
         id: storageNode.id,
         type: storageNode.type,
+        // ✅ 确保 position 被 klona，因为粘贴后节点位置会变
         position: klona(storageNode.position),
         data: vueFlowData,
         width: storageNode.width,
@@ -938,17 +844,15 @@ export function deserializeWorkflowFragment(
       } as VueFlowNodeType;
     });
 
-    const vueFlowEdges: VueFlowEdgeType[] = fragmentData.edges.map((storageEdge) => {
-      return {
-        id: storageEdge.id,
-        source: storageEdge.source,
-        target: storageEdge.target,
-        sourceHandle: storageEdge.sourceHandle,
-        targetHandle: storageEdge.targetHandle,
-        label: storageEdge.label,
-        data: {}, // Initialize data as empty; styles/types to be computed later
-      } as VueFlowEdgeType;
-    });
+    const vueFlowEdges: VueFlowEdgeType[] = fragmentData.edges.map((storageEdge) => ({
+      id: storageEdge.id,
+      source: storageEdge.source,
+      target: storageEdge.target,
+      sourceHandle: storageEdge.sourceHandle,
+      targetHandle: storageEdge.targetHandle,
+      label: storageEdge.label,
+      data: {}, // Styles/types computed later by caller
+    } as VueFlowEdgeType));
 
     return { nodes: vueFlowNodes, edges: vueFlowEdges };
   } catch (error) {
