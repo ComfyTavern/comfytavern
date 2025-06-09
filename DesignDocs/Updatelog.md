@@ -1,51 +1,312 @@
 # 更新记录
 
+## 2025 年 6 月 9 日
+
+- refactor(workflow): 清理调试日志并优化节点组输入顺序处理
+  移除冗余的调试日志代码，添加处理节点组输入顺序的功能
+  添加辅助函数用于提取父级句柄键，确保节点组创建时输入顺序正确
+- feat(NodeGroup): 实现节点组实例输入值覆盖和模板同步功能
+  - 新增 NodeGroup 实例输入值覆盖功能，允许用户为实例设置特定值
+  - 实现模板工作流接口变更时自动同步到 NodeGroup 实例
+  - 修改 workflowTransformer 以正确处理 NodeGroup 实例的 inputValues
+  - 添加工作流扁平化时对 NodeGroup 输入值的处理逻辑
+  - 更新 useGroupIOSlots 以支持实例值覆盖和 CONVERTIBLE_ANY 过滤
+  - 在 workflowStore 中添加模板变更跟踪和同步相关操作
+  - 添加设计文档说明 NodeGroup 实例配置与同步机制
+- docs: 添加 CONVERTIBLE_ANY 类型详细说明
+  本部分详细解释 `CONVERTIBLE_ANY` 类型的行为特性，主要供 AI 系统理解及开发者参考。
+  - `CONVERTIBLE_ANY` (`BEHAVIOR_CONVERTIBLE`) 的特性与应用：解释了 `CONVERTIBLE_ANY` 类型的核心行为和规则，包括彻底的类型转换、禁止互连及动态占位符再生机制等。
+  - 针对节点组（`core:NodeGroup`）的外部接口行为：描述了 `NodeGroup` 节点在外部接口上如何处理 `CONVERTIBLE_ANY` 插槽，确保其“不可见性”和无持久值”的特性。
+- docs: 移除关于节点组节点的描述
+- feat(剪贴板): 实现系统剪贴板与本地剪贴板功能
+  新增 useClipboard 和 useCanvasClipboard composables 用于处理剪贴板操作
+  重构上下文菜单和快捷键逻辑以支持两种剪贴板模式
+  添加工作流片段序列化和反序列化工具函数
+  优化节点样式和菜单交互体验
+
+## 2025 年 6 月 8 日
+
+- refactor(ExecutionEngine): 优化接口输出处理流程并支持批处理 Promise
+  将\_processAndBroadcastFinalOutputs 方法重构为三个阶段：识别流并启动、等待批处理 Promise 完成、发送最终输出。新增对 Promise 类型输出的处理支持，并优化了错误处理和日志记录。
+- feat(ExecutionEngine): 支持异步处理节点输入和流式输出
+  refactor(RightPreviewPanel): 重组流状态显示逻辑
+  - 将 prepareNodeInputs 改为异步方法以处理 Promise 输入
+  - 改进流式节点的执行状态处理和结果返回
+  - 调整前端面板中流状态信息的显示位置
+  - 移除重复的状态显示并优化布局结构
+- feat(OpenAINode): 在流式处理中累积并返回完整响应内容
+  修改流式处理逻辑以累积内容并在结束时通过 response 端口输出
+  更新输出端口描述以反映流式/批处理模式的行为变化
+  同时修正前端节点工具提示中的缓存结果描述
+- docs(node-types): 添加 STREAM 类型及相关流式处理文档
+  添加 STREAM 数据类型定义，说明其在节点执行时的流式处理机制，包括：
+  - 输出槽的 STREAM 类型定义
+  - 异步生成器实现流式输出的方式
+  - 流式数据的连接规则
+  - 相关的 WebSocket 消息类型
+- fix(ExecutionEngine): 修复节点执行失败后未跳过下游节点的问题
+  添加邻接表存储和 skipDescendants 方法，当节点执行失败或中断时自动标记下游节点为跳过状态
+- feat(utils): 添加字符串转义字符解析工具函数
+  将字符串转义字符解析功能提取到 utils 包中，供多个节点复用
+  更新 MergeNode 和 StreamSuffixRelayNode 使用新的工具函数
+  修改 tsconfig 以支持 utils 包的路径映射
+- fix(ui): 修正右预览面板的显示逻辑和样式
+  修复了右预览面板中的一些显示问题和样式细节，具体如下：
+  - 移除了多余的 `resize-handle-top` 拖拽句柄。
+  - 更新了面板头部的 `class` 绑定，确保正确切换展开和收起状态。
+  - 优化了 `singlePreview` 模式下插槽信息和预览数据的显示逻辑，增加了流式状态的提示。
+  - 修正了 `groupOverview` 模式下组输出项的折叠状态逻辑，确保默认展开所有项。
+  - 优化了组输出项的显示逻辑，增加了流式状态和空内容提示。
+  - 调整了 `previewData` 和 `currentAccumulatedStreamText` 的逻辑，确保正确显示最终值或流式文本。
+  - 添加了 `mergedSinglePreviewContent` 计算属性，根据状态智能决定显示实时流还是最终/静态值。
+  - 修正了 `processedGroupOutputs` 计算属性中的逻辑，确保正确处理组输出项的内容和状态。
+  - 优化了样式部分，确保在展开和收起状态下面板有正确的边框和圆角处理。
+- feat(websocket): 实现接口流式输出和后台任务管理
+  实现流式接口输出的处理逻辑，包括占位符发送和流数据分块传输
+  扩展 ExecutionEngine 以支持接口流式输出的后台任务管理和生命周期控制
+- feat(Utilities): 添加流后缀接力节点实现
+  实现 StreamSuffixRelayNode 用于处理文本流并添加指定后缀
+  包含节点定义和执行逻辑，支持错误处理和日志记录
+- feat(stream): 新增流式处理支持及相关节点
+  添加对 STREAM 数据类型的默认值处理
+  实现流式日志节点用于调试流数据
+  为 OpenAINode 添加流式输出选项
+
+## 2025 年 6 月 7 日
+
+- feat(websocket): 新增 NODE_YIELD 消息类型支持流式输出
+  添加 NODE_YIELD 消息类型以支持流式输出功能，同时在 workflow 数据中新增 previewTarget 字段用于保存预览目标。修改 websocket 处理逻辑以支持消息类型。
+- feat(ExecutionEngine): 添加日志敏感信息过滤功能
+  新增 sanitizeObjectForLogging 方法用于过滤日志中的敏感长文本信息
+  修改相关日志输出调用，对包含系统提示、消息等敏感字段的对象进行过滤
+  优化执行开始日志的显示格式
+- feat(llm-test): 为 OpenAINode 添加默认值和占位文本
+  为系统提示和用户提示字段添加默认空字符串和占位文本，并扩展匹配类别包含 UiBlock
+- style: 调整内联输入组件的最小宽度
+  将内联输入组件（如数字、布尔值、下拉框）的最小宽度从 80px 调整为 120px，以提供更好的用户体验和更充裕的输入空间。
+- refactor(workflow): 优化代码结构并修复类型导入顺序，统一代码格式和缩进风格
+- feat(预览面板): 添加流式预览模式并优化显示逻辑
+  - 在右侧预览面板中新增流式预览模式，支持实时显示节点流式输出
+  - 重构组输出预览逻辑，添加可显示组输出项的计算属性
+  - 优化节点和插槽显示名称的获取逻辑
+  - 在 workflowManager 中添加调试日志以便追踪节点状态变化
+- docs(.roo/rules): 添加 apply_diff 工具报错排查指南
+  补充关于`apply_diff`工具报错`marker '=======' found`的排查说明，包括错误原因分析及处理建议，帮助开发者快速定位和解决问题。
+- feat(streaming): 实现 LLM 节点流式输出功能
+  - 在 OpenAINode 中修改 execute 方法为生成器函数，支持流式输出
+  - 在 executionStore 中添加 streamingNodeContent 状态和相关处理方法
+  - 添加 getAccumulatedStreamedText 和 getRawStreamedChunks getter 方法
+  - 更新 DialogDemo 组件中的 placeholder 属性名为 inputPlaceholder 以保持一致性
+- docs(.roo/rules/rules.md): 更新代码检查命令
+  将代码检查命令从 `bun tsc -p apps/frontend-vueflow/tsconfig.json --noEmit` 更新为 `bunx vue-tsc --build apps/frontend-vueflow/tsconfig.json`，以使用 Vue 的 TypeScript 编译器进行检查。
+- fix(CharacterCardPreview): 修复角色卡预览页面的路由链接
+  使用命名路由替代硬编码路径，提高路由维护性
+- refactor: 优化代码格式和导入顺序
+  整理多个文件的导入语句顺序，移除多余空行和注释
+  统一代码格式，调整部分文件的代码结构以提高可读性
+- refactor(types): 重构类型定义文件结构并优化类型组织
+  将类型定义文件按功能模块拆分，移除冗余类型定义，移动 SillyTavern 相关类型
+  统一工作流执行相关类型定义，优化类型导入路径
+  修复多处类型引用路径错误，清理无用导入和注释
+- feat(ExecutionEngine): 添加流式节点执行支持
+  实现 BoundedBuffer 类用于流式数据缓冲
+  添加 handleStreamNodeExecution 方法处理流式节点执行
+  支持通过 WebSocket 广播流式数据块
+- feat(types): 添加流式处理支持并重构类型定义
+  - 在 NodeDefinition 中扩展 execute 函数以支持流式处理
+  - 新增 ChunkPayload 类型和相关 schema 用于流式数据块
+  - 在 DataFlowType 中添加 STREAM 类型
+  - 将 ExecutionNode 和 ExecutionEdge 类型移至 schemas.ts 作为单一数据源
+  - 新增 NodeYieldPayload 类型用于流式处理事件
+  - 重构 index.ts 以提供更清晰的类型导出结构
+- refactor: 精简流式功能设计文档并更新方案
+- docs(rules): 更新规则文档并添加完整性规范
+  重构规则文档结构，添加文档重构与修订内容完整性规范，明确要求输出完整文档而非变更描述
+- refactor(布局): 将设置页面导航从侧边栏改为顶部标签页
+  - 修改布局方向为垂直排列
+  - 导航样式调整为标签页形式
+  - 调整内边距和间距以适应新布局
+  - 更新激活状态的视觉样式
+- feat(components): 为输入组件添加大尺寸支持
+  为 SettingControl 中的 NumberInput、BooleanToggle 和 SelectInput 组件添加 size 属性，支持'small'和'large'两种尺寸。同时重构了这些组件的样式处理逻辑，使用计算属性动态生成不同尺寸的样式类。
+  修改包括：
+  - 为所有输入组件添加 size 属性
+  - 使用 sizeClasses 计算属性管理不同尺寸的样式
+  - 统一处理不同尺寸下的布局和交互样式
+- style(settings): 调整设置页面的间距、字体和颜色变量
+  增加各设置组件的内边距和间距，增大标题字号和权重，优化颜色变量定义
+- style(frontend): 移除链接颜色注释并优化侧边栏路由链接样式
+  移除 main.css 中链接颜色的注释代码，优化 SideBar.vue 中路由链接的点击行为和样式，使用 custom v-slot 实现更精确的激活状态控制
+- feat(router): 重构路由结构并添加主页布局组件
+  - 新增 HomeLayout 组件作为主页的统一布局
+  - 将原有路由重构为嵌套结构，统一在 /home 路径下
+  - 更新所有相关组件的路由链接指向新路径
+  - 移除 HomeView 中重复的 SideBar 组件
+- refactor(布局): 重构设置页面布局并优化侧边栏导航
+  - 将 SettingsLayout 从组件移动到视图层
+  - 修改设置页面高度从 100vh 到 100%以避免布局问题
+  - 优化侧边栏导航样式和设置按钮路由
+  - 移除重复的样式注释保持代码整洁
+- feat(settings): 添加设置页面基础架构和组件
+  实现设置页面的路由和基础组件结构，包括：
+  1. 添加设置页面路由入口
+  2. 创建设置项类型定义和存储管理
+  3. 实现数据驱动的设置项展示组件
+  4. 构建设置页面布局框架
+- style(Dialog): 移除对话框组件的边框并统一输入框样式
+  移除标题栏和按钮区域的边框样式，使界面更简洁。统一输入框的亮色和暗色模式下的样式，确保视觉一致性。
+- refactor(ProjectListView): 使用 dialogService 替换原生 prompt 进行项目创建
+  将原生 window.prompt 替换为 dialogService.showInput 以提供更一致的用户体验，并改进空输入时的错误处理
+- refactor(对话框组件): 重构对话框组件为统一 Dialog 组件并更新 DialogService
+  将 MessageDialog、ConfirmDialog 和 InputDialog 合并为统一的 Dialog 组件，简化代码结构
+  更新 DialogService 以适配新组件并优化类型定义和接口
+  修复 DialogContainer 中的导入路径为别名路径
+- feat(对话框): 添加输入和多行输入对话框功能
+  - 新增 InputDialog 组件支持文本、密码、数字和多行输入
+  - 扩展 DialogService 添加 showInput 方法处理输入对话框逻辑
+  - 在 DialogDemo 中添加演示按钮展示输入对话框功能
+- refactor(ui): 替换 alert 为 DialogService 提供统一错误提示
+- feat(ui): 添加全局对话框和通知系统
+  实现完整的对话框和通知系统，包括：
+  1. 对话框服务(DialogService)管理对话框和通知的显示
+  2. 基础对话框组件(MessageDialog, ConfirmDialog)
+  3. 通知组件(ToastNotification)
+  4. 全局对话框容器(DialogContainer)
+  5. 演示页面(DialogDemo)展示功能
+
+## 2025 年 6 月 6 日
+
+- feat(配置): 添加配置文件合并功能以补全缺失字段
+  当配置文件存在时，自动合并模板中的新字段到现有配置中。这解决了需要手动更新配置文件的问题，提高了配置管理的便利性。
+- feat(配置): 添加配置文件合并功能以补全缺失字段
+  当配置文件存在时，自动合并模板中的新字段到现有配置中。这解决了需要手动更新配置文件的问题，提高了配置管理的便利性。
+- docs(architecture): 添加流处理核心机制与背压策略文档
+  详细说明阶段二的核心流处理机制，包括多路复用方案选择、LLM 解耦策略和 Node.js Streams 实现方案
+- docs(architecture): 更新交互模板和节点接口模型的架构文档
+  - 交互模板部分：明确模板定位、目的、核心特征及使用流程
+  - 节点接口模型部分：详细描述接口定义、管理方式和动态插槽机制
+  - 更新内容使架构设计更清晰，便于团队理解和实施
+- docs(architecture): 更新流式功能设计文档，新增 StreamAggregatorNode 设计
+  - 新增显式流聚合节点(StreamAggregatorNode)的详细设计规范
+  - 补充流式数据与批处理节点的适配方案
+  - 完善执行引擎改造和事件总线的流式处理机制
+  - 强调显式转换节点对工作流清晰度和可组合性的价值
+- docs(architecture): 更新流式功能计划文档，明确阶段划分和设计原则
+  重构流式功能架构文档，明确三个阶段的演进路径：
+  1. UI 实时流与批处理访问（当前焦点）
+  2. 引擎原生节点间实时流
+  3. 基于事件的协调控制
+     强调类型系统集成、职责分离和增量演进原则
+
+## 2025 年 6 月 5 日
+
+- docs(architecture): 完善流式功能设计文档中的事件类型和错误处理
+  - 补充 `eventData.type` 的详细事件类型说明
+  - 重构错误处理流程为更清晰的节点执行终止场景分类
+  - 明确三种终止情况（正常结束、内部错误、外部取消）的处理逻辑和事件信号
+- docs(architecture): 添加流式功能演进计划文档
+  添加详细的流式功能演进计划文档，描述三个阶段实现路径：
+  1. 基础流式能力与 UI 实时更新
+  2. 基于事件总线的高级异步交互
+  3. 引擎原生支持节点间实时流
+     包含各阶段设计细节、关键组件和实现方案，为后续开发提供指导
+- docs(架构设计): 更新本地用户系统设计方案，增加 API Key 扩展
+  更新本地用户系统设计方案文档，新增 API Key 机制支持程序化访问，完善用户上下文类型定义和 API 设计。主要变更包括：
+  1. 新增 API Key 数据结构和管理流程
+  2. 扩展 UserContext 类型支持三种运行模式
+  3. 新增 API Key 相关接口设计
+  4. 补充安全考虑和实施阶段规划
+- docs: 移动到 old.
+- docs: 移动到 old
+- docs(architecture): 添加本地用户系统设计方案文档
+  添加详细的本地用户系统设计方案文档，描述三种核心使用模式（纯本地自用、个人远程访问和多用户共享）的设计目标、配置机制、用户交互流和 API 设计。文档包含完整的系统架构说明和安全考虑，为后续实现提供基础。
+- docs(架构): 添加应用面板集成方案及相关设计文档
+  新增应用面板集成方案的架构设计文档，包括总览文档和四个详细子文档：
+  1. 应用面板规范与生命周期管理
+  2. API 服务与集成接口设计
+  3. 执行核心与安全保障
+  4. 开发者生态与支持
+     这些文档详细规划了 ComfyTavern 平台中应用面板的技术实现方案，涵盖面板定义、API 设计、执行流程和安全考虑等多个方面。同时删除了旧的综合性设计文档，将其拆分为更专注的独立文档。
+- feat: 移除注释
+- refactor(types): 将节点尺寸属性从对象结构改为独立属性
+  将 WorkflowStorageNode 接口中的 size 对象拆分为独立的 width 和 height 属性，简化数据结构
+  同时更新相关转换器逻辑以适配新的属性结构
+- refactor(workflow): 根据设计文档移除未使用的类型和接口
+  移除 ExecutePreviewRequestPayload 和 ExecutionType 类型导出，这些类型已根据设计文档不再需要
+  重构预览执行逻辑，使用新的 triggerPreview 方法并简化参数传递
+  清理 Canvas.vue 中未使用的 currentWorkflowInterface 计算属性
+
 ## 2025 年 6 月 4 日
 
+- style: 优化控制台日志格式并添加自定义启动信息
+  在 backend/src/index.ts 中添加换行符使日志输出更清晰易读
+  在 frontend-vueflow/vite.config.ts 中添加自定义开发模式和预览模式的启动日志，提供更友好的用户体验和调试信息
+- style(backend): 改进服务器启动日志的可读性和信息展示
+  修改控制台输出格式，添加颜色标记和中英文双语的服务器启动信息，提升开发调试时的可读性和用户体验
+- feat: 添加配置文件检查与自动复制功能
+  在服务器启动时检查配置文件是否存在，若不存在则从模板文件自动复制创建。确保程序在缺少配置文件时能够正常初始化或给出明确错误提示。
+- chore: 更新.gitignore 并添加 config.template.json
+  - 将 config.json 添加到.gitignore 以防止提交实际配置文件
+  - 添加 config.template.json 作为配置文件模板，包含服务器端口和工作流配置等默认设置
+- Merge branch 'main' of https://github.com/ComfyTavern/comfytavern
+- docs: 添加核心文档链接和更新目录结构
+  在 README 中添加了核心文档的链接，包括节点类型系统和自定义节点开发指南，方便开发者快速查阅。同时更新了项目目录结构说明，更清晰地示后端技术栈和新增的文档目录组织方式。
+- docs: 更新前后端 README 文档以完善项目描述
+  - 重写后端 README，详细说明核心功能、技术栈和项目结构
+  - 重写前端 README，补充可视化编辑器功能和技术实现细节
+  - 统一前后端文档风格，提供更清晰的项目说明和开发指引
+- docs(Updatelog): 更新设计文档变更记录
+  - 新增 2025 年 6 月 1 日至 4 日的详细更新记录
+  - 记录功能新增、问题修复、架构优化等多项变更
+  - 完善文档结构，保持更新日志的完整性和时效性
 - fix(workflow): 修复删除节点时未正确处理关联边的问题
-  新增逻辑识别因节点删除而隐式删除的边，确保同时更新相关节点的inputConnectionOrders。优化了删除元素的处理流程，避免因节点删除导致边残留或状态不一致。（其实这里同时修复了节点删除的状态更新问题，但AI没有识别出进更新日志）
-- style(节点样式): 修复节点头部右侧布局和文本换行问题X
-  调整节点头部右侧容器的flex-shrink属性防止布局压缩，并为分类标签添加nowrap防止文本换行X
-  X
-- refactor(node-resize): 优化节点宽度计算逻辑并调整参数X
-  - 移除未使用的 NODE_DESC_FONT 导入X
-  - 定义更具体的 UseNodeResizeProps 接口X
-  - 调整自动计算宽度限制值（MAX_NODE_WIDTH 1200，AUTO_CALC_MAX_WIDTH 420）X
-  - 重构 calculateMinWidth 方法，移除描述参数并添加分类标签计算X
-  - 改进输入/输出插槽宽度计算逻辑X
-  X
-- fix(节点加载): 修正自定义节点路径加载问题并改进节点重载逻辑X
-  - 修复项目根目录路径计算错误，从 apps/backend/src 正确返回到 comfytavern 根目录X
-  - 在节点路由中区分内置节点路径和自定义节点路径X
-  - 添加自定义节点路径配置的导入X
-  - 改进节点重载流程，分别处理内置节点和自定义节点X
-  - 增加更详细的日志输出以便调试X
-  X
-- fix(节点加载): 修复自定义节点路径解析和错误处理X
-  1. 将自定义节点路径解析为绝对路径，确保在不同环境下都能正确加载X
-  2. 改进NodeLoader的错误处理逻辑，对目录不存在的情况提供更友好的警告提示X
-  3. 优化日志输出格式，合并重复的日志信息并增加更多上下文信息X
-  X
-- refactor(架构文档): 简化项目与知识库架构文档结构X
-  - 移除冗余字段如 alt_text, caption, editor_description 等，将相关元数据合并到 metadata 字段X
-  - 简化知识库引用结构，去除 type 和 path 字段，统一使用 source_id 标识X
-  - 删除不再使用的 variable_handling 和 templateUsed 字段X
-  - 优化文档结构使其更简洁易维护X
-  X
+  新增逻辑识别因节点删除而隐式删除的边，确保同时更新相关节点的 inputConnectionOrders。优化了删除元素的处理流程，避免因节点删除导致边残留或状态不一致。（其实这里同时修复了节点删除的状态更新问题，但 AI 没有识别出进更新日志）
+- style(节点样式): 修复节点头部右侧布局和文本换行问题
+  调整节点头部右侧容器的 flex-shrink 属性防止布局压缩，并为分类标签添加 nowrap 防止文本换行
+
+- refactor(node-resize): 优化节点宽度计算逻辑并调整参数
+
+  - 移除未使用的 NODE_DESC_FONT 导入
+  - 定义更具体的 UseNodeResizeProps 接口
+  - 调整自动计算宽度限制值（MAX_NODE_WIDTH 1200，AUTO_CALC_MAX_WIDTH 420）
+  - 重构 calculateMinWidth 方法，移除描述参数并添加分类标签计算
+  - 改进输入/输出插槽宽度计算逻辑
+
+- fix(节点加载): 修正自定义节点路径加载问题并改进节点重载逻辑
+
+  - 修复项目根目录路径计算错误，从 apps/backend/src 正确返回到 comfytavern 根目录
+  - 在节点路由中区分内置节点路径和自定义节点路径
+  - 添加自定义节点路径配置的导入
+  - 改进节点重载流程，分别处理内置节点和自定义节点
+  - 增加更详细的日志输出以便调试
+
+- fix(节点加载): 修复自定义节点路径解析和错误处理
+
+  1. 将自定义节点路径解析为绝对路径，确保在不同环境下都能正确加载
+  2. 改进 NodeLoader 的错误处理逻辑，对目录不存在的情况提供更友好的警告提示
+  3. 优化日志输出格式，合并重复的日志信息并增加更多上下文信息
+
+- refactor(架构文档): 简化项目与知识库架构文档结构
+
+  - 移除冗余字段如 alt_text, caption, editor_description 等，将相关元数据合并到 metadata 字段
+  - 简化知识库引用结构，去除 type 和 path 字段，统一使用 source_id 标识
+  - 删除不再使用的 variable_handling 和 templateUsed 字段
+  - 优化文档结构使其更简洁易维护
+
 - docs(architecture): 完善知识库架构文档中的嵌入模型配置和动态引用机制
-  - 详细说明嵌入模型配置的优先级和回退机制X
-  - 新增CAIU动态内容引用规范，包括引用格式、解析规则和循环检测
+  - 详细说明嵌入模型配置的优先级和回退机制
+  - 新增 CAIU 动态内容引用规范，包括引用格式、解析规则和循环检测
   - 补充编辑器集成说明和标签机制
-  - 更新CAIU条目类型和组CAIU的处理逻辑
-  - 明确角色卡数据将转换为结构化CAIU条目
-- docs(架构设计): 添加项目与知识库架构规划v2文档
-  新增ComfyTavern项目与知识库架构规划v2文档，详细说明以下核心概念：
+  - 更新 CAIU 条目类型和组 CAIU 的处理逻辑
+  - 明确角色卡数据将转换为结构化 CAIU 条目
+- docs(架构设计): 添加项目与知识库架构规划 v2 文档
+  新增 ComfyTavern 项目与知识库架构规划 v2 文档，详细说明以下核心概念：
   - 工程项目(Project)的组织结构
-  - 知识库(Knowledge Base)的CAIU原子信息单元设计
+  - 知识库(Knowledge Base)的 CAIU 原子信息单元设计
   - 工作流(Workflow)与核心节点类型
-  - 统一项目结构与project.json规范
+  - 统一项目结构与 project.json 规范
   - 知识库管理与引用机制
-  该文档取代旧版架构规划，为后续开发提供设计依据。
+    该文档取代旧版架构规划，为后续开发提供设计依据。
 
 ## 2025 年 6 月 3 日
 
@@ -55,26 +316,26 @@
   2. 自定义节点默认存放在 `plugins/nodes/`，可通过 `config.json` 的 `customNodePaths` 配置
   3. 更新所有示例路径和相关说明
 - feat(节点加载): 添加自定义节点路径配置支持
-  - 在config.json中添加customNodePaths配置项，用于指定自定义节点路径
-  - 修改config.ts导出CUSTOM_NODE_PATHS常量
-  - 更新index.ts以支持从配置路径加载自定义节点
-  - 创建plugins/nodes目录及.gitignore文件，忽略除指定文件外的所有内容
+  - 在 config.json 中添加 customNodePaths 配置项，用于指定自定义节点路径
+  - 修改 config.ts 导出 CUSTOM_NODE_PATHS 常量
+  - 更新 index.ts 以支持从配置路径加载自定义节点
+  - 创建 plugins/nodes 目录及.gitignore 文件，忽略除指定文件外的所有内容
 - docs: 更新节点类型文档并添加自定义节点开发指南
   添加两个新的操作提示标签 `CanPreview` 和 `NoDefaultEdit` 到节点类型文档
   在输入定义中新增 `actions` 属性用于定义输入槽操作按钮
   创建完整的中英文自定义节点开发指南文档，包含节点定义、执行逻辑和前端渲染等详细说明
-- docs(node-types): 更新节点类型文档，添加UI_BLOCK和hideHandle说明
+- docs(node-types): 更新节点类型文档，添加 UI_BLOCK 和 hideHandle 说明
   添加了两个新的配置项说明：
-  1. UI_BLOCK标签用于提示前端将输入组件渲染为块级元素
-  2. hideHandle选项用于隐藏连接点手柄
-- docs(node-types): 添加UI_BLOCK类型和hideHandle选项说明
-  在节点类型文档中添加了UI_BLOCK类型的说明，用于标记块级元素渲染方式。同时新增了hideHandle选项的文档说明，用于控制是否显示
+  1. UI_BLOCK 标签用于提示前端将输入组件渲染为块级元素
+  2. hideHandle 选项用于隐藏连接点手柄
+- docs(node-types): 添加 UI_BLOCK 类型和 hideHandle 选项说明
+  在节点类型文档中添加了 UI_BLOCK 类型的说明，用于标记块级元素渲染方式。同时新增了 hideHandle 选项的文档说明，用于控制是否显示
   接点。
-- feat(节点): 添加隐藏连接点支持并优化UI块级渲染
-  - 在SlotDefinitionBase接口和GroupSlotInfoSchema中添加hideHandle字段，用于控制连接点(Handle)的显示
-  - 为多个节点添加UiBlock匹配类别，统一处理块级UI元素的渲染逻辑
-  - 修改BaseNode.vue组件，根据hideHandle字段和UiBlock类别调整连接点和输入组件的显示条件
-  - 移除过时的条件判断，简化UI块级渲染逻辑
+- feat(节点): 添加隐藏连接点支持并优化 UI 块级渲染
+  - 在 SlotDefinitionBase 接口和 GroupSlotInfoSchema 中添加 hideHandle 字段，用于控制连接点(Handle)的显示
+  - 为多个节点添加 UiBlock 匹配类别，统一处理块级 UI 元素的渲染逻辑
+  - 修改 BaseNode.vue 组件，根据 hideHandle 字段和 UiBlock 类别调整连接点和输入组件的显示条件
+  - 移除过时的条件判断，简化 UI 块级渲染逻辑
 - fix: 移除错误的文档
 - docs(architecture): 更新节点输入渲染重构方案文档
   - 简化 `SlotUIDescriptor` 结构，明确其核心职责为决定主输入组件名称
@@ -83,37 +344,37 @@
   - 优化 `BaseNode.vue` 的改造方案，强调模板简化和职责分离
   - 更新实施步骤，增加对现有节点定义的审查要求
 - refactor(architecture): 优化 `BaseNode.vue` 模板渲染逻辑，引入 `SlotUIDescriptorFactor`
-  *   **`SlotUIDescriptorFactory`** 的职责更清晰：用于生成描述插槽UI渲染的 `SlotUIDescriptor` 对象，包含组件名称、属性、布
-  提示等。
-  *   **`BaseNode.vue` 的模板**：根据 `SlotUIDescriptor` 属性进行条件渲染，简化了模板中的逻辑判断，通过动态组件 `<component :is="slotUIDescriptor.componentName" ... />` 实现复杂UI的渲染。
-  *   **输入定义的 `labelText`**：明确其来源为 `inputDefinition.displayName`，对于按钮类输入，可能来源于 `inputDefinition.config.label`。
-  *   **`languageHint`**：明确其为前端组件如 `RichCodeEditor` 期望的 prop 名称。
-  *   **`default`, `placeholder`, `label`**：主要用于按钮类型输入的显示文本。
-  *   **节点定义**：审查并修改部分现有节点的输入定义，确保所有期望渲染为“大块”内联组件的输入都在其 `config` 中添加 `multiline: true`。
-  *   **`getInputComponent` 函数**：其职责可能会被 `SlotUIDescriptorFactory` 吸收或调整。
-  *   **预期收益**：优化 `BaseNode.vue` 的模板结构，使其条件渲染逻辑更清晰，降低维护成本；UI渲染决策逻辑高度集中和内聚，更于理解、测试和扩展；节点输入UI的行为定义更加清晰、声明式和统一；提高添加新输入类型或UI变体的效率和安全性。
-  *   **设计步骤**：
-      *   设计 `SlotUIDescriptorFactory` 的详细逻辑。
-      *   识别并修改需要更新 `config.multiline: true` 的现有节点定义。
-      *   （可选）进一步评估是否确实需要 `UI_NO_DEFAULT_INPUT_INPUT_WIDGET` Category，或者是否有其他方式实现其意图。        
-      *   分步实施：先从 `SlotUIDescriptor` 定义和 `SlotUIDescriptorFactory` 的骨架开始，逐步将 `BaseNode.vue` 中的输入渲染逻辑重构为基于 `SlotUIDescriptor`，最后更新节点定义和相关文档。
+  - **`SlotUIDescriptorFactory`** 的职责更清晰：用于生成描述插槽 UI 渲染的 `SlotUIDescriptor` 对象，包含组件名称、属性、布
+    提示等。
+  - **`BaseNode.vue` 的模板**：根据 `SlotUIDescriptor` 属性进行条件渲染，简化了模板中的逻辑判断，通过动态组件 `<component :is="slotUIDescriptor.componentName" ... />` 实现复杂 UI 的渲染。
+  - **输入定义的 `labelText`**：明确其来源为 `inputDefinition.displayName`，对于按钮类输入，可能来源于 `inputDefinition.config.label`。
+  - **`languageHint`**：明确其为前端组件如 `RichCodeEditor` 期望的 prop 名称。
+  - **`default`, `placeholder`, `label`**：主要用于按钮类型输入的显示文本。
+  - **节点定义**：审查并修改部分现有节点的输入定义，确保所有期望渲染为“大块”内联组件的输入都在其 `config` 中添加 `multiline: true`。
+  - **`getInputComponent` 函数**：其职责可能会被 `SlotUIDescriptorFactory` 吸收或调整。
+  - **预期收益**：优化 `BaseNode.vue` 的模板结构，使其条件渲染逻辑更清晰，降低维护成本；UI 渲染决策逻辑高度集中和内聚，更于理解、测试和扩展；节点输入 UI 的行为定义更加清晰、声明式和统一；提高添加新输入类型或 UI 变体的效率和安全性。
+  - **设计步骤**：
+    - 设计 `SlotUIDescriptorFactory` 的详细逻辑。
+    - 识别并修改需要更新 `config.multiline: true` 的现有节点定义。
+    - （可选）进一步评估是否确实需要 `UI_NO_DEFAULT_INPUT_INPUT_WIDGET` Category，或者是否有其他方式实现其意图。
+    - 分步实施：先从 `SlotUIDescriptor` 定义和 `SlotUIDescriptorFactory` 的骨架开始，逐步将 `BaseNode.vue` 中的输入渲染逻辑重构为基于 `SlotUIDescriptor`，最后更新节点定义和相关文档。
 - fix(ui): 修正节点输入操作栏的自定义动作顺序
 
 ## 2025 年 6 月 2 日
 
 - docs: 添加 .VSCodeCounter 到 .gitignore
 - docs(rules): 添加通用类型导入路径说明到规则文档
-  在规则文档中补充了关于通用类型导入路径`@comfytavern/types`的说明，明确其通过`index.ts`统一注册所有通用类型定义的功能。    
-- docs(architecture): 添加节点输入UI渲染重构规划文档并移除废弃字段
-  添加详细的架构设计文档，规划如何重构节点输入UI渲染逻辑以实现解耦和可维护性。
-  同时移除动态节点输入动作中不再使用的showConditionKey字段。
+  在规则文档中补充了关于通用类型导入路径`@comfytavern/types`的说明，明确其通过`index.ts`统一注册所有通用类型定义的功能。
+- docs(architecture): 添加节点输入 UI 渲染重构规划文档并移除废弃字段
+  添加详细的架构设计文档，规划如何重构节点输入 UI 渲染逻辑以实现解耦和可维护性。
+  同时移除动态节点输入动作中不再使用的 showConditionKey 字段。
 - feat(regex): 实现内联正则规则编辑器功能
   新增正则规则编辑器功能，包括：
   1. 在 ApplyRegexNode 节点中添加内联规则编辑支持
   2. 创建 RegexEditorModal 模态框组件用于规则管理
   3. 添加 InlineRegexRuleDisplay 组件显示规则列表
   4. 更新类型定义和校验逻辑
-  相关变更涉及前端组件、后端节点逻辑和类型定义，提供完整的正则规则编辑体验。
+     相关变更涉及前端组件、后端节点逻辑和类型定义，提供完整的正则规则编辑体验。
 - feat(节点输入): 实现动态输入操作按钮系统
   添加 NodeInputAction 类型定义和 NodeInputActionsBar 组件，支持通过 matchCategories 语义标签和 actions 数组动态控制输入槽作按钮。移除 BaseNode.vue 中硬编码的按钮逻辑，改为由输入定义驱动。
   新增设计文档说明动态按钮方案，更新测试节点以使用 CanPreview 标签。核心变更包括：
@@ -122,7 +383,7 @@
   3. 实现 NodeInputActionsBar 组件处理按钮渲染和交互
   4. 重构 BaseNode.vue 使用新组件处理按钮逻辑
 - style(侧边栏): 优化节点面板和侧边栏的样式细节
-  - 将添加节点的"+"文本替换为SVG图标，提升视觉一致性
+  - 将添加节点的"+"文本替换为 SVG 图标，提升视觉一致性
   - 调整侧边栏图标的内边距和间距，改善布局
   - 为节点拖拽手柄添加边框样式，增强可视性
   - 统一各部分的间距和字体大小，提高整体协调性
@@ -136,22 +397,22 @@
   主要变更包括：
   - 前端负责构建迷你预览工作流并处理边界输入
   - 后端保持标准执行逻辑不变
-  - 详细说明核心流程、API调整和实现要点
-  - 包含Mermaid流程图和具体修改计划
+  - 详细说明核心流程、API 调整和实现要点
+  - 包含 Mermaid 流程图和具体修改计划
 - style(workflowFlattener): 修正代码缩进和格式
 - refactor(workflowTransformer): 移除调试日志代码
   清理 transformVueFlowToCoreWorkflow 函数中的调试日志代码，这些日志已不再需要且影响代码整洁性
 - docs: 更新 README.md 中的状态描述和功能说明
-- refactor(services): 将节点管理相关文件移动到services目录
-  将NodeManager和NodeLoader及相关引用从nodes目录移动到services目录，以更好地组织代码结构。同时更新所有相关文件的引用路径。  
+- refactor(services): 将节点管理相关文件移动到 services 目录
+  将 NodeManager 和 NodeLoader 及相关引用从 nodes 目录移动到 services 目录，以更好地组织代码结构。同时更新所有相关文件的引用路径。
 - docs(guides): 添加自定义节点开发指南文档
   添加详细的 ComfyTavern 自定义节点开发指南，包含节点定义、执行逻辑、前端渲染等完整说明。该文档将帮助开发者快速上手创建功能强大且易于维护的自定义节点。
 - 更新日志
 - chore: 更新版本号
   将版本号从 0.0.5 更新为 0.0.6，以反映最近的代码更改。
 - refactor: 移除调试日志以清理代码
-  清理多个文件中的调试日志输出，包括ExecutionEngine、websocket handler、GroupInputNode以及前端相关的websocket和workflow执行逻辑。这些调试日志在开发阶段有用，但在生产环境中会带来不必要的控制台输出。
-  保留关键日志（如interfaceInputs检查）和错误日志，仅移除开发调试用的详细输出。将部分重要日志改为console.debug级别。        
+  清理多个文件中的调试日志输出，包括 ExecutionEngine、websocket handler、GroupInputNode 以及前端相关的 websocket 和 workflow 执行逻辑。这些调试日志在开发阶段有用，但在生产环境中会带来不必要的控制台输出。
+  保留关键日志（如 interfaceInputs 检查）和错误日志，仅移除开发调试用的详细输出。将部分重要日志改为 console.debug 级别。
 - feat(workflow): 添加工作流接口输入输出支持
   - 在 WorkflowExecutionPayload 中添加 interfaceInputs 和 interfaceOutputs 字段
   - 实现 GroupInputNode 从工作流接口获取输入值的逻辑
@@ -238,7 +499,6 @@
   - 增加对未知消息类型的处理逻辑，返回明确的错误提示
   - 优化日志记录，包含更详细的错误信息和上下文
   - 移除冗余的 try-catch 块，简化代码结构
-
 
 ## 2025 年 5 月 29 日
 
