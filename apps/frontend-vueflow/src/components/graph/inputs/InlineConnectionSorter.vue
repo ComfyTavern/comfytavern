@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, type PropType, computed } from 'vue';
+import { ref, watch, type PropType, computed } from 'vue'; // 导入 nextTick
 import draggable from 'vuedraggable';
 import type { Edge, Node as VueFlowNode } from '@vue-flow/core'; // Renamed Node to VueFlowNode to avoid conflict
 import type { InputDefinition, HistoryEntry } from '@comfytavern/types';
@@ -73,6 +73,13 @@ const workflowStore = useWorkflowStore(); // 获取工作流存储实例
 const draggableConnections = ref<DraggableConnectionItem[]>([]);
 
 const mapEdgeIdsToDraggableItems = () => {
+  // console.log(
+  //   `[InlineConnectionSorter] mapEdgeIdsToDraggableItems CALLED for Node ID: ${props.nodeId}, Input Handle: ${props.inputHandleKey}. Current ordered IDs count: ${props.currentOrderedEdgeIds.length}, All edges count: ${props.allEdges.length}`
+  // );
+  // 下面这两行日志可以暂时注释掉或者保持，因为新的日志更详细
+  // console.log('[InlineConnectionSorter] mapEdgeIdsToDraggableItems - props.currentOrderedEdgeIds:', JSON.parse(JSON.stringify(props.currentOrderedEdgeIds)));
+  // console.log('[InlineConnectionSorter] mapEdgeIdsToDraggableItems - props.allEdges:', JSON.parse(JSON.stringify(props.allEdges.map(e => ({id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle, targetHandle: e.targetHandle})))));
+
   const items: DraggableConnectionItem[] = [];
   if (!props.currentOrderedEdgeIds || !props.findNode || !props.allEdges || !props.getNodeLabel) {
     return items;
@@ -82,6 +89,36 @@ const mapEdgeIdsToDraggableItems = () => {
   for (const edgeId of props.currentOrderedEdgeIds) {
     const edge = props.allEdges.find(e => e.id === edgeId); // 简化查找：只通过 edgeId
     if (edge) {
+      // console.log(
+      //   `[InlineConnectionSorter] Processing edge for Node ID: ${props.nodeId}, Input Handle: ${props.inputHandleKey}. Edge ID=${edge.id}, Source=${edge.source}, SourceHandle=${edge.sourceHandle}, Target=${edge.target}, TargetHandle=${edge.targetHandle}`
+      // );
+      const targetNode = props.findNode(edge.target);
+      if (!targetNode) {
+        // console.warn(
+        //   `[InlineConnectionSorter] Target node NOT FOUND for edge ${edge.id}. Node ID: ${props.nodeId}, Input Handle: ${props.inputHandleKey}, Target Node ID: ${edge.target}`
+        // );
+      } else {
+        // console.log(
+        //   `[InlineConnectionSorter] Target node FOUND for edge ${edge.id}. Node ID: ${props.nodeId}, Input Handle: ${props.inputHandleKey}, Target Node ID: ${targetNode.id}, Label: ${props.getNodeLabel(targetNode.id)}`
+        // );
+        if (edge.targetHandle) {
+          const targetSlotDef = getSlotDefinition(targetNode, edge.targetHandle, 'target', currentWorkflowData);
+          if (!targetSlotDef) {
+            // console.warn(
+            //   `[InlineConnectionSorter] Target handle/slot ${edge.targetHandle} NOT FOUND on target node ${targetNode.id} for edge ${edge.id}. Node ID: ${props.nodeId}, Input Handle: ${props.inputHandleKey}`
+            // );
+          } else {
+            // console.log(
+            //   `[InlineConnectionSorter] Target handle/slot ${edge.targetHandle} (DisplayName: ${targetSlotDef.displayName}) FOUND on target node ${targetNode.id} for edge ${edge.id}. Node ID: ${props.nodeId}, Input Handle: ${props.inputHandleKey}`
+            // );
+          }
+        // } else {
+            // console.log(
+            //   `[InlineConnectionSorter] Edge ${edge.id} has no targetHandle. Node ID: ${props.nodeId}, Input Handle: ${props.inputHandleKey}`
+            // );
+        }
+      }
+
       const sourceNode = props.findNode(edge.source);
       let sourceHandleLabel = edge.sourceHandle || '默认输出'; // 如果句柄ID为空，则使用默认文本
 
@@ -106,7 +143,7 @@ const mapEdgeIdsToDraggableItems = () => {
       });
     } else {
       // 如果根据 edgeId 在 allEdges 中找不到边，这通常表示数据不一致
-      console.warn(`[InlineConnectionSorter] 边 ID ${edgeId} 在 allEdges 中未找到 (数据可能不一致).`);
+      // console.warn(`[InlineConnectionSorter] 边 ID ${edgeId} 在 allEdges 中未找到 (数据可能不一致). Node ID: ${props.nodeId}, Input Handle: ${props.inputHandleKey}`);
       items.push({
         id: edgeId,
         sourceNodeId: 'error-edge-not-in-allEdges',

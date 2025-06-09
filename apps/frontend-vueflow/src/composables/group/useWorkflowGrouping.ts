@@ -400,6 +400,18 @@ async function updateNodeGroupWorkflowReferenceLogic(
   }
 }
 
+// Helper function to extract parent handle key from a child handle key (e.g., "text_input__0" -> "text_input")
+function getParentHandleKey(childHandleKey: string): string {
+  if (!childHandleKey) {
+    return "";
+  }
+  const parts = childHandleKey.split('__');
+  if (parts[0] !== undefined) {
+    return parts[0];
+  }
+  return childHandleKey;
+}
+
 // --- 辅助函数：createGroupFromSelectionLogic ---
 // 移到 useWorkflowGrouping 外部，并将依赖项作为参数传递
 async function createGroupFromSelectionLogic(
@@ -419,7 +431,9 @@ async function createGroupFromSelectionLogic(
   // ADDED Dependency:
   workflowViewManagement: ReturnType<typeof import('../workflow/useWorkflowViewManagement').useWorkflowViewManagement>
 ) {
-  console.debug(`[GROUPING_LOGIC_START] Called createGroupFromSelectionLogic for tab ${currentTabId} with selected nodes:`, selectedNodeIds);
+
+  const oldToNewEdgeIdMap = new Map<string, string>(); // Map old boundary edge IDs to new edge IDs
+
   const allNodes = state.elements.filter(
     (el: VueFlowNode | VueFlowEdge) => !("source" in el)
   ) as VueFlowNode[];
@@ -516,17 +530,17 @@ async function createGroupFromSelectionLogic(
         }
 
         // For logging external source info (remains the same)
-        const externalSourceNode = allNodes.find((n) => n.id === edge.source);
+        // const externalSourceNode = allNodes.find((n) => n.id === edge.source); // No longer used
         // const externalSourceNodeType = getNodeType(externalSourceNode); // Not strictly needed for log
-        const externalSourceNodeDef = externalSourceNode
-          ? nodeDefinitions.value.find((def: any) => def.type === getNodeType(externalSourceNode)) // getNodeType here
-          : undefined;
-        const externalSourceHandleId = edge.sourceHandle || "default_source";
-        const externalOutputDef = externalSourceNodeDef?.outputs?.[externalSourceHandleId];
+        // const externalSourceNodeDef = externalSourceNode // No longer used
+        //   ? nodeDefinitions.value.find((def: any) => def.type === getNodeType(externalSourceNode)) // getNodeType here
+        //   : undefined;
+        // const externalSourceHandleId = edge.sourceHandle || "default_source"; // No longer used
+        // const externalOutputDef = externalSourceNodeDef?.outputs?.[externalSourceHandleId]; // No longer used after commenting out debug log
 
-        console.debug(
-          `[GROUPING_INPUT_LOG] Edge ${edge.id}: External Source (${edge.source}:${externalSourceHandleId}, DefType: ${externalOutputDef?.dataFlowType}) -> Internal Target (${edge.target}:${targetHandleId}, DefType: ${slotDefinitionForGroupMap?.dataFlowType}). Assigning to Group Input Slot ${groupSlotKey} with Type: ${slotDefinitionForGroupMap?.dataFlowType || DataFlowType.CONVERTIBLE_ANY}`
-        );
+        // console.debug(
+        //   `[GROUPING_INPUT_LOG] Edge ${edge.id}: External Source (${edge.source}:${externalSourceHandleId}, DefType: ${externalOutputDef?.dataFlowType}) -> Internal Target (${edge.target}:${targetHandleId}, DefType: ${slotDefinitionForGroupMap?.dataFlowType}). Assigning to Group Input Slot ${groupSlotKey} with Type: ${slotDefinitionForGroupMap?.dataFlowType || DataFlowType.CONVERTIBLE_ANY}`
+        // );
 
         groupInputsMap.set(groupSlotKey, {
           originalTargetNodeId: edge.target,
@@ -581,17 +595,17 @@ async function createGroupFromSelectionLogic(
         }
 
         // For logging external target info (remains the same)
-        const externalTargetNode = allNodes.find((n) => n.id === edge.target);
+        // const externalTargetNode = allNodes.find((n) => n.id === edge.target); // No longer used
         // const externalTargetNodeType = getNodeType(externalTargetNode); // Not strictly needed for log
-        const externalTargetNodeDef = externalTargetNode
-          ? nodeDefinitions.value.find((def: any) => def.type === getNodeType(externalTargetNode)) // getNodeType here
-          : undefined;
-        const externalTargetHandleId = edge.targetHandle || "default_target";
-        const externalTargetInputDef = externalTargetNodeDef?.inputs?.[externalTargetHandleId];
+        // const externalTargetNodeDef = externalTargetNode // No longer used
+        //   ? nodeDefinitions.value.find((def: any) => def.type === getNodeType(externalTargetNode)) // getNodeType here
+        //   : undefined;
+        // const externalTargetHandleId = edge.targetHandle || "default_target"; // No longer used
+        // const externalTargetInputDef = externalTargetNodeDef?.inputs?.[externalTargetHandleId]; // No longer used after commenting out debug log
 
-        console.debug(
-          `[GROUPING_OUTPUT_LOG] Edge ${edge.id}: Internal Source (${edge.source}:${sourceHandleId}, DefType: ${slotDefinitionForGroupMap?.dataFlowType}) -> External Target (${edge.target}:${externalTargetHandleId}, DefType: ${externalTargetInputDef?.dataFlowType}). Assigning to Group Output Slot ${groupSlotKey} with Type: ${slotDefinitionForGroupMap?.dataFlowType || DataFlowType.CONVERTIBLE_ANY}`
-        );
+        // console.debug(
+        //   `[GROUPING_OUTPUT_LOG] Edge ${edge.id}: Internal Source (${edge.source}:${sourceHandleId}, DefType: ${slotDefinitionForGroupMap?.dataFlowType}) -> External Target (${edge.target}:${externalTargetHandleId}, DefType: ${externalTargetInputDef?.dataFlowType}). Assigning to Group Output Slot ${groupSlotKey} with Type: ${slotDefinitionForGroupMap?.dataFlowType || DataFlowType.CONVERTIBLE_ANY}`
+        // );
 
         groupOutputsMap.set(groupSlotKey, {
           originalSourceNodeId: edge.source,
@@ -677,24 +691,20 @@ async function createGroupFromSelectionLogic(
   // 2. 添加选中的节点到新工作流（调整位置, VueFlowNode格式）
   nodesToGroup.forEach((originalNode) => {
     // --- START DIAGNOSTIC LOGS for NodeGroup data V3 ---
-    // 检查 Ba-fAru2l7 或任何 core:NodeGroup 类型的节点
-    // 注意：'Ba-fAru2l7' 是示例 ID，实际场景中可能是其他 ID
-    if (originalNode.type === 'core:NodeGroup') {
-      try {
-        // 记录进入循环时 originalNode.data 的状态
-        const dataSnapshot = originalNode.data ? JSON.parse(JSON.stringify(originalNode.data)) : undefined;
-        console.log(`[GROUPING_LOGIC_COPY_V3] Node ${originalNode.id} (type: ${originalNode.type}) - IN LOOP START - originalNode.data (snapshot):`, dataSnapshot);
-        if (originalNode.data === undefined) {
-          console.warn(`[GROUPING_LOGIC_COPY_V3] Node ${originalNode.id} (type: ${originalNode.type}) - originalNode.data is ALREADY UNDEFINED upon entering forEach loop.`);
-        } else if (originalNode.data && dataSnapshot.groupInterface === undefined && originalNode.data.referencedWorkflowId) {
-          // 如果 data 存在，但 groupInterface 缺失，且它是一个已引用的节点组
-          console.warn(`[GROUPING_LOGIC_COPY_V3] Node ${originalNode.id} (type: ${originalNode.type}) - originalNode.data exists BUT groupInterface is UNDEFINED. ReferencedWorkflowId: ${originalNode.data.referencedWorkflowId}`);
-        }
-      } catch (e) {
-        console.error(`[GROUPING_LOGIC_COPY_V3] Error stringifying originalNode.data for ${originalNode.id} at loop start:`, e);
-        console.log(`[GROUPING_LOGIC_COPY_V3] Node ${originalNode.id} (type: ${originalNode.type}) - originalNode.data (raw, at loop start):`, originalNode.data);
-      }
-    }
+    // if (originalNode.type === 'core:NodeGroup') {
+    //   try {
+    //     const dataSnapshot = originalNode.data ? JSON.parse(JSON.stringify(originalNode.data)) : undefined;
+    //     console.log(`[GROUPING_LOGIC_COPY_V3] Node ${originalNode.id} (type: ${originalNode.type}) - IN LOOP START - originalNode.data (snapshot):`, dataSnapshot);
+    //     if (originalNode.data === undefined) {
+    //       console.warn(`[GROUPING_LOGIC_COPY_V3] Node ${originalNode.id} (type: ${originalNode.type}) - originalNode.data is ALREADY UNDEFINED upon entering forEach loop.`);
+    //     } else if (originalNode.data && dataSnapshot.groupInterface === undefined && originalNode.data.referencedWorkflowId) {
+    //       console.warn(`[GROUPING_LOGIC_COPY_V3] Node ${originalNode.id} (type: ${originalNode.type}) - originalNode.data exists BUT groupInterface is UNDEFINED. ReferencedWorkflowId: ${originalNode.data.referencedWorkflowId}`);
+    //     }
+    //   } catch (e) {
+    //     console.error(`[GROUPING_LOGIC_COPY_V3] Error stringifying originalNode.data for ${originalNode.id} at loop start:`, e);
+    //     console.log(`[GROUPING_LOGIC_COPY_V3] Node ${originalNode.id} (type: ${originalNode.type}) - originalNode.data (raw, at loop start):`, originalNode.data);
+    //   }
+    // }
     // --- END DIAGNOSTIC LOGS V3 ---
 
     // 使用 toRaw 获取原始对象，避免 Vue 的响应式代理带来的问题，然后深拷贝
@@ -781,7 +791,7 @@ async function createGroupFromSelectionLogic(
 
   // 5. 定义新工作流的接口 (这部分逻辑不变)
   // 5. 定义新工作流的接口
-  console.debug('[GROUPING_LOGIC_INTERFACE] Group Inputs Map:', JSON.parse(JSON.stringify(Object.fromEntries(groupInputsMap))));
+  // console.debug('[GROUPING_LOGIC_INTERFACE] Group Inputs Map:', JSON.parse(JSON.stringify(Object.fromEntries(groupInputsMap))));
   const newWorkflowInterfaceInputs: Record<string, GroupSlotInfo> = {};
   groupInputsMap.forEach((info, key) => {
     newWorkflowInterfaceInputs[key] = {
@@ -793,7 +803,7 @@ async function createGroupFromSelectionLogic(
     };
   });
 
-  console.debug('[GROUPING_LOGIC_INTERFACE] Group Outputs Map:', JSON.parse(JSON.stringify(Object.fromEntries(groupOutputsMap))));
+  // console.debug('[GROUPING_LOGIC_INTERFACE] Group Outputs Map:', JSON.parse(JSON.stringify(Object.fromEntries(groupOutputsMap))));
   const newWorkflowInterfaceOutputs: Record<string, GroupSlotInfo> = {};
   groupOutputsMap.forEach((info, key) => {
     newWorkflowInterfaceOutputs[key] = {
@@ -911,12 +921,12 @@ async function createGroupFromSelectionLogic(
     },
     width: nodeGroupDef.width || 250,
   };
-  console.debug(
-    `[GROUPING_LOGIC_INSTANCE] Created NodeGroup instance ${nodeGroupNodeId} with interface:`,
-    JSON.parse(JSON.stringify(nodeGroupInterfaceSnapshot)),
-    "Full instance data:",
-    JSON.parse(JSON.stringify(nodeGroupInstance))
-  );
+  // console.debug(
+  //   `[GROUPING_LOGIC_INSTANCE] Created NodeGroup instance ${nodeGroupNodeId} with interface:`,
+  //   JSON.parse(JSON.stringify(nodeGroupInterfaceSnapshot)),
+  //   "Full instance data:",
+  //   JSON.parse(JSON.stringify(nodeGroupInstance))
+  // );
 
   // --- 修改主画布元素 ---
   const nodeIdsToRemove = new Set(selectedNodeIds);
@@ -975,25 +985,79 @@ async function createGroupFromSelectionLogic(
       ...styleProps,
       data: { sourceType, targetType },
     };
-    console.debug('[GROUPING_NEW_EDGE_INFO] Attempting to create edge:', {
-      id: newEdge.id,
-      source: newEdge.source,
-      sourceHandle: newEdge.sourceHandle,
-      target: newEdge.target,
-      targetHandle: newEdge.targetHandle,
-      type: newEdge.type,
-      style: newEdge.style,
-      markerEnd: newEdge.markerEnd,
-      data: newEdge.data,
-    });
-    console.debug(
-      `[GROUPING_LOGIC_RECONNECT] Creating edge for NodeGroup ${nodeGroupInstance.id}: `,
-      `Source: ${newEdge.source} (Handle: ${newEdge.sourceHandle}, Type: ${sourceType}), `,
-      `Target: ${newEdge.target} (Handle: ${newEdge.targetHandle}, Type: ${targetType}), `,
-      `Original External Node: ${conn.externalNodeId}, Original External Handle: ${conn.externalHandle}, IsInputToGroup: ${isInput}`
-    );
+
+    // Populate the map from old edge ID to new edge ID
+    if (conn.originalEdgeId && newEdge.id) {
+      oldToNewEdgeIdMap.set(conn.originalEdgeId, newEdge.id);
+    }
+
+    // console.debug('[GROUPING_NEW_EDGE_INFO] Attempting to create edge:', {
+    //   id: newEdge.id,
+    //   source: newEdge.source,
+    //   sourceHandle: newEdge.sourceHandle,
+    //   target: newEdge.target,
+    //   targetHandle: newEdge.targetHandle,
+    //   type: newEdge.type,
+    //   style: newEdge.style,
+    //   markerEnd: newEdge.markerEnd,
+    //   data: newEdge.data,
+    // });
+    // console.debug(
+    //   `[GROUPING_LOGIC_RECONNECT] Creating edge for NodeGroup ${nodeGroupInstance.id}: `,
+    //   `Source: ${newEdge.source} (Handle: ${newEdge.sourceHandle}, Type: ${sourceType}), `,
+    //   `Target: ${newEdge.target} (Handle: ${newEdge.targetHandle}, Type: ${targetType}), `,
+    //   `Original External Node: ${conn.externalNodeId}, Original External Handle: ${conn.externalHandle}, IsInputToGroup: ${isInput}`
+    // );
     remainingElements.push(newEdge);
   });
+
+  // --- Update inputOrder for affected target nodes BEFORE applying changes ---
+  const nodesInRemainingElements = remainingElements.filter(el => !("source" in el)) as VueFlowNode[];
+  for (const conn of externalToGroupNodeConnections) {
+    // If the original connection was an output from the grouped selection to an external node
+    if (!conn.isInput) {
+      const targetNodeId = conn.externalNodeId;
+      const targetNode = nodesInRemainingElements.find(n => n.id === targetNodeId);
+      const targetHandleKey = conn.externalHandle; // e.g., 'text_inputs__0', handle on the external target node
+      const parentTargetHandleKey = getParentHandleKey(targetHandleKey); // e.g., 'text_inputs'
+
+      // Debug log to inspect targetNode.data before attempting to access inputConnectionOrders
+      // if (targetNode && targetNode.data) {
+      //   console.log(`[GROUPING_DEBUG_TARGET_NODE_DATA] Node ${targetNodeId}, TargetHandleKey: ${targetHandleKey}, ParentTargetHandleKey: ${parentTargetHandleKey}. Data:`, JSON.parse(JSON.stringify(targetNode.data)));
+      // }
+
+      if (targetNode && targetNode.data && typeof targetNode.data.inputConnectionOrders === 'object' && targetNode.data.inputConnectionOrders !== null &&
+          Object.prototype.hasOwnProperty.call(targetNode.data.inputConnectionOrders, parentTargetHandleKey)) {
+        
+        const currentOrderedEdgeIds = targetNode.data.inputConnectionOrders[parentTargetHandleKey] as string[];
+        let orderChanged = false;
+        
+        const newOrderedEdgeIds = currentOrderedEdgeIds.map(idInOrder => {
+          // Check if this ID in the order list is the original boundary edge we just replaced
+          if (idInOrder === conn.originalEdgeId) {
+            const newEdgeIdMapped = oldToNewEdgeIdMap.get(conn.originalEdgeId);
+            if (newEdgeIdMapped) {
+              orderChanged = true;
+              return newEdgeIdMapped;
+            }
+          }
+          return idInOrder; // If not the one replaced, or no mapping, keep original
+        });
+
+        if (orderChanged) {
+          // Create a new object for the specific parent handle's order
+          const updatedParentHandleOrder = { ...targetNode.data.inputConnectionOrders, [parentTargetHandleKey]: newOrderedEdgeIds };
+          // Create a new object for the overall node data, updating the inputConnectionOrders property
+          const newOverallNodeData = { ...targetNode.data, inputConnectionOrders: updatedParentHandleOrder };
+          targetNode.data = newOverallNodeData; // Update the node data in remainingElements
+
+          // console.log(`[GROUPING_UPDATE_INPUT_ORDER] Updated inputConnectionOrders for Node ${targetNodeId}, Parent Input Handle ${parentTargetHandleKey}. New order: ${JSON.stringify(newOrderedEdgeIds)}. Original edge ${conn.originalEdgeId} replaced by ${oldToNewEdgeIdMap.get(conn.originalEdgeId)}`);
+        }
+      // } else if (targetNode && targetNode.data) { // Log if the condition to update inputConnectionOrders failed
+        // console.log(`[GROUPING_DEBUG_INPUT_ORDER_FAIL] Condition to update inputConnectionOrders failed for Node ${targetNodeId}. ParentTargetHandleKey: ${parentTargetHandleKey}. inputConnectionOrders exists: ${typeof targetNode.data.inputConnectionOrders === 'object' && targetNode.data.inputConnectionOrders !== null}, hasOwnProperty: ${targetNode.data.inputConnectionOrders ? Object.prototype.hasOwnProperty.call(targetNode.data.inputConnectionOrders, parentTargetHandleKey) : 'N/A'}`);
+      }
+    }
+  }
 
   // --- 更新状态和实例 (Command-based update BEFORE snapshot) ---
   const instance = workflowViewManagement.getVueFlowInstance(currentTabId);
@@ -1001,7 +1065,7 @@ async function createGroupFromSelectionLogic(
 
   if (instance) {
     try {
-      console.debug(`[createGroupFromSelectionLogic] Applying command-based update for tab ${currentTabId}`);
+      // console.debug(`[createGroupFromSelectionLogic] Applying command-based update for tab ${currentTabId}`);
       const nodes = remainingElements.filter((el): el is VueFlowNode => !("source" in el));
       const edges = remainingElements.filter((el): el is VueFlowEdge => "source" in el);
       finalViewport = instance.getViewport(); // Get current viewport BEFORE clearing
@@ -1023,7 +1087,7 @@ async function createGroupFromSelectionLogic(
         instance.updateNodeInternals(nodeIds);
       }
       await nextTick(); // Extra tick for safety
-      console.debug(`[createGroupFromSelectionLogic] Command-based update applied for tab ${currentTabId}`);
+      // console.debug(`[createGroupFromSelectionLogic] Command-based update applied for tab ${currentTabId}`);
 
     } catch (error) {
       console.error(`[createGroupFromSelectionLogic] Error during command-based update for tab ${currentTabId}:`, error);
@@ -1055,7 +1119,7 @@ async function createGroupFromSelectionLogic(
       viewport: finalViewport,     // Use the final viewport
       workflowData: currentWorkflowData // Use the fetched workflow data
     };
-    console.debug(`[createGroupFromSelectionLogic] Recording history with constructed snapshot for tab ${currentTabId}`);
+    // console.debug(`[createGroupFromSelectionLogic] Recording history with constructed snapshot for tab ${currentTabId}`);
     // 创建 HistoryEntry 对象
     const historyEntry: HistoryEntry = createHistoryEntry(
       'create', // actionType
