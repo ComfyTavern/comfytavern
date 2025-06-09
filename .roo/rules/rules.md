@@ -237,7 +237,7 @@ src/
 - **代码格式化与检查**: 使用 Prettier 和 ESLint/Hint 强制执行代码风格和规范。
 - **代码检查**: `bunx vue-tsc --build apps/frontend-vueflow/tsconfig.json`,`bun tsc -p apps/backend/tsconfig.json --noEmit`
 - **通用类型导入**：`@comfytavern/types`是通用类型的导入路径，通过`index.ts`统一注册了所有通用类型定义。
-- **工作流数据转换**：我们以画布数据为单一事实来源的，这个`workflowTransformer.ts`转换仅保存/加载和创建执行负载才会用。
+- **工作流数据转换**：我们以画布数据为单一事实来源的，这个`workflowTransformer.ts`转换仅保存/加载和创建执行负载才会用，而`workflowData.nodes`并不是实时同步画布状态的。
 
 ## CONVERTIBLE_ANY 类型详细说明
 
