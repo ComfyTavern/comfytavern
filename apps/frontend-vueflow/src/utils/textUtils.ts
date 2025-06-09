@@ -1,13 +1,23 @@
 const canvas = document.createElement("canvas");
 const context = canvas.getContext("2d");
 
+// 缓存对象，用于存储已计算的文本宽度
+const textWidthCache: { [key: string]: number } = {};
+const MAX_CACHE_SIZE = 500; // 简单的大小限制，防止内存无限增长
+let cacheKeys: string[] = [];
+
 /**
- * Measures the width of a text string using a canvas context.
+ * Measures the width of a text string using a canvas context, with caching.
  * @param text The text to measure.
  * @param font The CSS font string (e.g., '500 14px Inter, sans-serif'). Defaults to the node title font.
  * @returns The width of the text in pixels.
  */
 export function measureTextWidth(text: string, font: string = NODE_TITLE_FONT): number {
+  const cacheKey = `${font}:${text}`;
+  if (textWidthCache[cacheKey] !== undefined) {
+    return textWidthCache[cacheKey];
+  }
+
   if (!context) {
     // Fallback estimation if canvas context is not available
     console.warn("Canvas context not available for text measurement. Using estimation.");
@@ -27,7 +37,19 @@ export function measureTextWidth(text: string, font: string = NODE_TITLE_FONT): 
   context.font = font;
   const metrics = context.measureText(text);
   // Add a small buffer for potential rendering differences
-  return metrics.width + 2;
+  const width = metrics.width + 2;
+
+  // 添加到缓存
+  if (cacheKeys.length >= MAX_CACHE_SIZE) {
+    const oldestKey = cacheKeys.shift();
+    if (oldestKey) {
+      delete textWidthCache[oldestKey];
+    }
+  }
+  textWidthCache[cacheKey] = width;
+  cacheKeys.push(cacheKey);
+
+  return width;
 }
 
 // Define font styles used in the node based on Tailwind classes

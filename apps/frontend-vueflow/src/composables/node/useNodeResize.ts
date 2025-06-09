@@ -333,23 +333,24 @@ export function useNodeResize(props: Readonly<UseNodeResizeProps>) {
     const activeId = tabStore.activeTabId;
     let storedWidth: number | undefined = undefined;
     if (activeId) {
-      // 修改 - 通过 workflowManager 获取元素列表并查找节点
-      const elements = workflowManager.getElements(activeId); // 使用 workflowManager
-      // 添加类型注解
-      const node = elements.find(
-        (el: VueFlowNode | Edge) => el.id === nodeId && !("source" in el)
-      ) as VueFlowNode | undefined;
-      // 处理 node.width 的多种类型
-      const rawWidth = node?.width;
-      if (typeof rawWidth === "number") {
-        storedWidth = rawWidth;
-      } else if (typeof rawWidth === "string") {
-        const parsedWidth = parseFloat(rawWidth); // 尝试解析 "200px" -> 200
-        if (!isNaN(parsedWidth)) {
-          storedWidth = parsedWidth;
+      // 修改：直接从 activeTabState 获取 elements，避免 getElements() 的深拷贝
+      const activeState = workflowManager.getActiveTabState();
+      if (activeState && activeState.elements) {
+        const node = activeState.elements.find(
+          (el: VueFlowNode | Edge) => el.id === nodeId && !("source" in el)
+        ) as VueFlowNode | undefined;
+        // 处理 node.width 的多种类型
+        const rawWidth = node?.width;
+        if (typeof rawWidth === "number") {
+          storedWidth = rawWidth;
+        } else if (typeof rawWidth === "string") {
+          const parsedWidth = parseFloat(rawWidth); // 尝试解析 "200px" -> 200
+          if (!isNaN(parsedWidth)) {
+            storedWidth = parsedWidth;
+          }
         }
+        // 其他类型 (WidthFunc, undefined, NaN) 会导致 storedWidth 保持 undefined
       }
-      // 其他类型 (WidthFunc, undefined, NaN) 会导致 storedWidth 保持 undefined
     }
     // --- 结束读取 ---
 

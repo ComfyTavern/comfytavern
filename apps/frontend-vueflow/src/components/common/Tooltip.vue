@@ -5,69 +5,38 @@
   </div>
   <!-- 将 Tooltip 内容传送到 body，避免父元素的样式影响 -->
   <Teleport to="body">
-    <div
-      v-if="isTooltipVisible"
-      ref="floatingRef"
-      :style="[floatingStyles, { width: computedWidth, maxWidth: computedMaxWidth }]"
-      :class="[
+    <div v-if="isTooltipVisible" ref="floatingRef"
+      :style="[floatingStyles, { width: computedWidth, maxWidth: computedMaxWidth }]" :class="[
         'tooltip-content rounded shadow-lg border relative', // 添加 relative 定位以支持复制按钮定位
         isDark
           ? 'bg-gray-700 text-gray-100 border-gray-600' // 暗色模式样式
           : 'bg-white text-gray-900 border-gray-300', // 亮色模式样式
-      ]"
-      style="z-index: 100; overflow: hidden"
-    >
+      ]" style="z-index: 100; overflow: hidden">
       <!-- 复制按钮 -->
       <div class="relative">
-        <button
-          v-if="props.showCopyButton && (content || $slots.content)"
+        <button v-if="props.showCopyButton && (content || $slots.content)"
           class="copy-button absolute right-1 top-1 p-1 rounded-md hover:bg-opacity-10 hover:bg-gray-500 transition-colors group"
-          @click="copyContent"
-          style="z-index: 101; pointer-events: auto"
-        >
-          <svg
-            class="w-4 h-4"
-            :class="isDark ? 'text-gray-300' : 'text-gray-600'"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              v-if="!copySuccess"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-            />
-            <path
-              v-else
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M5 13l4 4L19 7"
-            />
+          @click="copyContent" style="z-index: 101; pointer-events: auto">
+          <svg class="w-4 h-4" :class="isDark ? 'text-gray-300' : 'text-gray-600'" xmlns="http://www.w3.org/2000/svg"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path v-if="!copySuccess" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
           <!-- 自定义提示 -->
           <div
             class="absolute right-full top-1/2 transform -translate-y-1/2 mr-2 px-2 py-1 rounded text-xs whitespace-nowrap transition-all duration-200 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0"
-            :class="isDark ? 'bg-gray-600 text-gray-100' : 'bg-gray-200 text-gray-800'"
-          >
+            :class="isDark ? 'bg-gray-600 text-gray-100' : 'bg-gray-200 text-gray-800'">
             {{ copyButtonTitle }}
           </div>
         </button>
       </div>
 
-      <OverlayScrollbarsComponent
-        :options="{
-          scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
-          overflow: { y: 'scroll' }, // 始终允许垂直滚动
-          paddingAbsolute: true, // 让内边距作用于滚动内容而非滚动条本身
-        }"
-        :style="{ maxHeight: computedMaxHeight }"
-        class="p-2"
-        defer
-      >
+      <OverlayScrollbarsComponent :options="{
+        scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
+        overflow: { y: 'scroll' }, // 始终允许垂直滚动
+        paddingAbsolute: true, // 让内边距作用于滚动内容而非滚动条本身
+      }" :style="{ maxHeight: computedMaxHeight }" class="p-2" defer>
         <!-- Tooltip 内容插槽，优先使用插槽内容，否则显示 content prop -->
         <slot name="content">
           <!-- 如果插槽没有提供内容，并且 content prop 有值，则使用 MarkdownRenderer 渲染 -->
@@ -101,7 +70,7 @@ export default {
  * @param {boolean} [showCopyButton=false] - 是否显示复制按钮。
  * @param {boolean} [interactive=true] - Tooltip 是否可交互 (允许鼠标悬停在 Tooltip 内容上)。
  */
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted, shallowRef } from "vue";
 import { useWindowSize, useEventListener, isClient } from "@vueuse/core"; // 导入 useWindowSize, useEventListener 和 isClient
 import {
   useFloating,
@@ -162,11 +131,42 @@ const floatingRef = ref<HTMLElement | null>(null);
 const isTooltipVisible = ref(false);
 const isReferenceHovered = ref(false); // 手动跟踪 referenceRef 的悬停状态
 
-// 使用 @vueuse/core 检测浮动元素 (Tooltip 内容) 是否悬停 (仅当 interactive 为 true 时相关)
-const isFloatingHovered = useElementHover(floatingRef, {
-  delayEnter: 0, // 进入 Tooltip 内容本身不需要延迟
-  delayLeave: props.hideDelay, // 离开时使用相同的延迟
-});
+// 仅在 interactive 模式下才初始化浮动元素悬停检测
+let stopFloatingHoverWatch: (() => void) | null = null;
+const isFloatingHovered = shallowRef(false); // 仍然使用 shallowRef 以优化
+
+// isMobile 的声明需要在使用之前
+// const isMobile = ref(isClient && 'ontouchstart' in window); // 这行在下面，大约 180 行
+
+// 仅在 interactive 模式下且非移动端才初始化浮动元素悬停检测
+// 注意：isMobile 的初始化在下方，这里暂时先判断 props.interactive
+// 稍后在 onMounted 中，如果 isMobile 为 true，可以考虑是否需要额外处理或禁用此 watch
+if (props.interactive) {
+  // isMobile 的值在 onMounted 后才稳定，这里先假设非移动端
+  // 更好的做法是将这个 watch 的初始化也移到 onMounted 中，或者在 onMounted 中根据 isMobile 再次判断是否需要 stop
+  const floatingHoverRef = useElementHover(floatingRef, {
+    delayEnter: 0,
+    delayLeave: props.hideDelay,
+  });
+
+  stopFloatingHoverWatch = watch(floatingHoverRef, (hovering) => { // 将 watch 返回的 stop 函数赋值给 stopFloatingHoverWatch
+    if (isMobile.value) { // 在 watch 内部再次检查 isMobile，如果变为 mobile，则不处理悬停
+      isFloatingHovered.value = false; // 确保在移动端时，悬停状态为 false
+      return;
+    }
+    isFloatingHovered.value = hovering;
+    if (hovering) {
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+        hideTimeout = null;
+      }
+    } else {
+      if (isTooltipVisible.value && !isReferenceHovered.value && !hideTimeout) {
+        startHideTimer();
+      }
+    }
+  });
+}
 
 // 用于控制显示延迟的 Timeout ID
 let showTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -387,21 +387,7 @@ const handleClickOutside = (event: MouseEvent | TouchEvent) => {
 };
 
 
-// 监听浮动元素的悬停状态变化 (仅当 interactive 为 true 且非移动端时)
-watch(isFloatingHovered, (hovering) => {
-  if (isMobile.value || !props.interactive) return;
-
-  if (hovering) {
-    if (hideTimeout) {
-      clearTimeout(hideTimeout);
-      hideTimeout = null;
-    }
-  } else {
-    if (isTooltipVisible.value && !isReferenceHovered.value && !hideTimeout) {
-      startHideTimer();
-    }
-  }
-});
+// 移除了全局的 isFloatingHovered watch，改为在 interactive 模式下局部处理
 
 // --- 生命周期钩子 ---
 
@@ -454,6 +440,10 @@ const { floatingStyles } = useFloating(
 // 组件卸载时清除所有待处理的计时器和事件监听器
 onUnmounted(() => {
   clearTimeouts();
+  if (stopFloatingHoverWatch) {
+    stopFloatingHoverWatch();
+    stopFloatingHoverWatch = null;
+  }
   // useEventListener 会自动清理监听器，无需手动移除
 });
 // --- 生命周期钩子结束 ---
