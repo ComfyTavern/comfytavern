@@ -236,7 +236,6 @@ src/
 - **错误处理**: 实现全局和局部的错误处理机制，提供友好的用户反馈。
 - **代码格式化与检查**: 使用 Prettier 和 ESLint/Hint 强制执行代码风格和规范。
 - **代码检查**: `bunx vue-tsc --build apps/frontend-vueflow/tsconfig.json`,`bun tsc -p apps/backend/tsconfig.json --noEmit`
-- **节点组节点**：节点组节点会动态的从引用工作流组中获取内部的 IO 插槽并显示在自身的输入输出面板中。这些插槽不会被保存到工作流文件中，而是只会保存配置的引用信息，然后在加载时动态获取。
 - **通用类型导入**：`@comfytavern/types`是通用类型的导入路径，通过`index.ts`统一注册了所有通用类型定义。
 
 
