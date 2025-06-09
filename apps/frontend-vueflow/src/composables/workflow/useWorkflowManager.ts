@@ -686,7 +686,7 @@ function createWorkflowManager() {
     if (!state) return;
 
     // 深拷贝元素
-    const newElements = JSON.parse(JSON.stringify(elements));
+    const newElements = klona(elements);
 
     // 在标记为脏和记录历史之前检查元素是否实际更改 (原始逻辑)
     if (JSON.stringify(state.elements) !== JSON.stringify(newElements)) {
@@ -694,19 +694,25 @@ function createWorkflowManager() {
       state.elements = newElements;
 
       // --- 日志添加开始 ---
-      if (state.workflowData) {
-        console.log(`[WorkflowManager setElements - ${internalId}] After updating elements:`);
+      if (state.elements) {
+        // 检查 state.elements 是否存在
         console.log(
-          `  state.elements node IDs:`,
-          JSON.stringify(state.elements.filter((el) => !("source" in el)).map((n) => n.id))
+          `[WorkflowManager setElements - ${internalId}] After 'state.elements = newElements;'`
         );
-        console.log(
-          `  state.workflowData.nodes IDs:`,
-          JSON.stringify(state.workflowData.nodes.map((n) => n.id))
-        );
+        const ngInState = state.elements.find((el) => el.type === "core:NodeGroup") as
+          | VueFlowNode
+          | undefined;
+        if (ngInState) {
+          console.log(
+            `  NodeGroup (${ngInState.id}) in state.elements - data.inputValues:`,
+            JSON.stringify(ngInState.data?.inputValues)
+          );
+        } else {
+          console.log(`  No NodeGroup found in state.elements after update.`);
+        }
       } else {
         console.log(
-          `[WorkflowManager setElements - ${internalId}] state.workflowData is null after updating elements.`
+          `[WorkflowManager setElements - ${internalId}] state.elements is null/undefined after 'state.elements = newElements;'`
         );
       }
       // --- 日志添加结束 ---
@@ -822,15 +828,6 @@ function createWorkflowManager() {
       JSON.stringify(state.workflowData.interfaceOutputs) !== JSON.stringify(newOutputs);
 
     if (elementsChanged || inputsChanged || outputsChanged) {
-      // console.debug(
-      //   `[setElementsAndInterface] 标签页 ${internalId} 的状态已更改。更新元素: ${elementsChanged}, 输入: ${inputsChanged}, 输出: ${outputsChanged}`
-      // );
-
-      // Log before applying element updates
-      // console.log(`[DEBUG Manager - setElementsAndInterface] Tab ${internalId}. BEFORE state.elements assignment.`);
-      // console.log(`[DEBUG Manager - setElementsAndInterface] Current state.elements (count ${state.elements.length}):`, state.elements.map((e: VueFlowNode | VueFlowEdge) => e.id));
-      // console.log(`[DEBUG Manager - setElementsAndInterface] newElements to assign (count ${newElements.length}):`, newElements.map((e: VueFlowNode | VueFlowEdge) => e.id));
-
       // 应用更新
       state.elements = newElements; // VueFlow elements (包含节点和边) 被更新
 
@@ -849,52 +846,16 @@ function createWorkflowManager() {
           type: vueEdge.type, // VueFlowEdge 也有 type 字段，通常是自定义边的类型
           data: vueEdge.data ? klona(vueEdge.data) : {}, // 深拷贝 data，确保 data 总是对象
         }));
-        // console.debug(`[DEBUG-MI] WORKFLOW_MANAGER (setElementsAndInterface): Updated state.workflowData.edges with ${state.workflowData.edges.length} edges from state.elements.`);
-      } else {
-        // console.warn("[DEBUG-MI] WORKFLOW_MANAGER (setElementsAndInterface): state.workflowData is null, cannot update edges.");
       }
-
-      // debugger; // 断点1 - elements 刚刚被修改
-
-      // Log after applying element updates
-      // console.log(`[DEBUG Manager - setElementsAndInterface] Tab ${internalId}. AFTER state.elements assignment.`);
-      // console.log(`[DEBUG Manager - setElementsAndInterface] New state.elements (count ${state.elements.length}):`, state.elements.map((e: VueFlowNode | VueFlowEdge) => e.id));
 
       state.workflowData.interfaceInputs = newInputs;
       state.workflowData.interfaceOutputs = newOutputs;
 
-      // 诊断日志 - 直接从 tabStates 重新获取并检查
-      // const reFetchedState = tabStates.get(internalId);
-      // if (reFetchedState) {
-      //   console.log(`[DEBUG Manager - setElementsAndInterface] Re-fetched state from tabStates.elements (count ${reFetchedState.elements.length}):`, reFetchedState.elements.map((e: VueFlowNode | VueFlowEdge) => e.id));
-      //   if (JSON.stringify(reFetchedState.elements) === JSON.stringify(newElements)) {
-      //     console.log(`[DEBUG Manager - setElementsAndInterface] Re-fetched state MATCHES newElements.`);
-      //   } else {
-      //     console.error(`[DEBUG Manager - setElementsAndInterface] Re-fetched state MISMATCHES newElements! Current reFetchedState.elements:`, JSON.stringify(reFetchedState.elements.map(e => e.id)), `Expected newElements:`, JSON.stringify(newElements.map(e => e.id)));
-      //   }
-      // } else {
-      //   console.error(`[DEBUG Manager - setElementsAndInterface] Could not re-fetch state for ${internalId} from tabStates.`);
-      // }
-
-      // 标记为脏并记录历史
-      // 诊断 - 检查调用 markAsDirty 前的 isDirty 状态
-      // if (state) { // 确保 state 存在
-      // console.log(`[DEBUG Manager - setElementsAndInterface] About to call markAsDirty. Current state.isDirty: ${state.isDirty}`);
-      // }
       markAsDirty(internalId);
       // 移除了 recordHistory 调用
     } else {
       // console.debug(`[setElementsAndInterface] 标签页 ${internalId} 的状态未更改。跳过更新。`);
     }
-
-    // 在函数真正返回前，最后一次检查 tabStates Map
-    // const finalCheckState = tabStates.get(internalId);
-    // if (finalCheckState) {
-    // console.log(`[DEBUG Manager - setElementsAndInterface] FINAL CHECK before function return. Elements count: ${finalCheckState.elements.length}):`, finalCheckState.elements.map((e: VueFlowNode | VueFlowEdge) => e.id));
-    // } else {
-    // console.error(`[DEBUG Manager - setElementsAndInterface] FINAL CHECK: No state found for ${internalId} before function return.`);
-    // }
-    // debugger; // 断点2 - 函数即将返回
   }
 
   // --- 新增：状态快照获取与应用 ---
@@ -911,13 +872,33 @@ function createWorkflowManager() {
       return undefined;
     }
     try {
+      // 在克隆前记录 NodeGroup 的 inputValues
+      const nodeGroupInData = state.elements.find((el) => el.type === "core:NodeGroup");
+      if (nodeGroupInData) {
+        // console.log(`[DEBUG getCurrentSnapshot - ${internalId}] BEFORE klona. NodeGroup (${nodeGroupInData.id}) data.inputValues:`, JSON.stringify((nodeGroupInData as VueFlowNode).data?.inputValues));
+      } else {
+        console.log(
+          `[DEBUG getCurrentSnapshot - ${internalId}] BEFORE klona. No NodeGroup found in state.elements.`
+        );
+      }
+
       // 返回状态的深拷贝
-      return klona({
+      const snapshot = klona({
         elements: state.elements,
         viewport: state.viewport,
         workflowData: state.workflowData,
         // 可以根据需要添加其他需要记录的状态属性
       });
+
+      const nodeGroupInSnapshot = snapshot.elements.find((el) => el.type === "core:NodeGroup");
+      if (nodeGroupInSnapshot) {
+        // console.log(`[DEBUG getCurrentSnapshot - ${internalId}] AFTER klona. NodeGroup (${nodeGroupInSnapshot.id}) data.inputValues in snapshot:`, JSON.stringify((nodeGroupInSnapshot as VueFlowNode).data?.inputValues));
+      } else {
+        console.log(
+          `[DEBUG getCurrentSnapshot - ${internalId}] AFTER klona. No NodeGroup found in snapshot.elements.`
+        );
+      }
+      return snapshot;
     } catch (error) {
       console.error(`[getCurrentSnapshot] 获取标签页 ${internalId} 快照时出错:`, error);
       return undefined;
@@ -932,18 +913,6 @@ function createWorkflowManager() {
    * @param snapshot 要应用的状态快照。
    */
   function applyStateSnapshot(internalId: string, snapshot: WorkflowStateSnapshot): boolean {
-    // 诊断日志，非常重要！
-    // const currentElementsBeforeApply = tabStates.get(internalId)?.elements;
-    // const currentElementsCountBeforeApply = currentElementsBeforeApply?.length ?? 'N/A';
-    // const currentElementIdsBeforeApply = currentElementsBeforeApply?.map((e: VueFlowNode | VueFlowEdge) => e.id) ?? 'N/A';
-
-    // console.log(
-    //   `[DEBUG Manager - applyStateSnapshot] CALLED for tab ${internalId}. ` +
-    //   `Snapshot elements count: ${snapshot.elements.length}, IDs: ${JSON.stringify(snapshot.elements.map(e => e.id))}. ` +
-    //   `Current elements BEFORE apply (count ${currentElementsCountBeforeApply}): ${JSON.stringify(currentElementIdsBeforeApply)}`
-    // );
-    // console.trace(`[DEBUG Manager - applyStateSnapshot] Call stack`); // 打印调用栈
-
     const state = tabStates.get(internalId);
     if (!state) {
       console.error(`[applyStateSnapshot] 无法应用快照，未找到标签页 ${internalId} 的状态`);

@@ -55,13 +55,13 @@ export function useGroupIOSlots(props: NodeProps) {
 
         // 检查是否为 CONVERTIBLE_ANY (包括通过 matchCategories 判断)
         const isConvertibleAny = typedSlot.dataFlowType === DataFlowType.CONVERTIBLE_ANY ||
-                                 typedSlot.matchCategories?.includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
+          typedSlot.matchCategories?.includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
 
         // NodeGroup 的输入插槽需要过滤掉 CONVERTIBLE_ANY
         if (nodeType === 'core:NodeGroup' && isConvertibleAny) {
           continue; // 跳过 NodeGroup 的 CONVERTIBLE_ANY 输入
         }
-        
+
         let slotDescription: string | null = null;
         if ('customDescription' in typedSlot && typedSlot.customDescription) {
           slotDescription = typedSlot.customDescription;
@@ -74,15 +74,22 @@ export function useGroupIOSlots(props: NodeProps) {
 
         let uiInitialValue: any;
         if (nodeType === 'core:NodeGroup') {
-          const snapshotDefaultValue = getEffectiveDefaultValue(typedSlot as InputDefinition); // NodeGroup 的 slotDef 总是 InputDefinition
-          const instanceOverrideValue = nodeData.inputValues?.[key];
-          uiInitialValue = instanceOverrideValue !== undefined ? instanceOverrideValue : snapshotDefaultValue;
+          // 对于 NodeGroup，其输入值已在加载时填充到 nodeData.inputs[key].value
+          // 该值要么是存储的实例覆盖值，要么是模板的默认值。
+          if (nodeData?.inputs?.[key] && nodeData.inputs[key].value !== undefined) {
+            uiInitialValue = nodeData.inputs[key].value;
+          } else {
+            // 安全回退：如果 inputs[key].value 未定义（理论上不应发生）
+            // 则使用 groupInterface 中的定义来获取模板默认值。
+            // typedSlot 在这里应该是从 groupInterface 获取的 InputDefinition。
+            uiInitialValue = getEffectiveDefaultValue(typedSlot as InputDefinition);
+          }
         } else if (nodeData?.inputs?.[key]?.value !== undefined) { // 普通节点或 GroupOutput
-           uiInitialValue = nodeData.inputs[key].value;
-        } else { // 回退到定义中的默认值
-           uiInitialValue = getEffectiveDefaultValue(typedSlot as InputDefinition);
+          uiInitialValue = nodeData.inputs[key].value;
+        } else { // 回退到定义中的默认值 (通常不应发生于已加载的节点)
+          uiInitialValue = getEffectiveDefaultValue(typedSlot as InputDefinition);
         }
-        
+
         displayInputs.push({
           ...(typedSlot as any),
           key: key,
@@ -138,8 +145,8 @@ export function useGroupIOSlots(props: NodeProps) {
 
         // NodeGroup 的输出插槽需要过滤掉 CONVERTIBLE_ANY (包括通过 matchCategories 判断)
         const isConvertibleAny = typedSlot.dataFlowType === DataFlowType.CONVERTIBLE_ANY ||
-                                 typedSlot.matchCategories?.includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
-                                 
+          typedSlot.matchCategories?.includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE);
+
         if (nodeType === 'core:NodeGroup' && isConvertibleAny) {
           continue; // 跳过 NodeGroup 的 CONVERTIBLE_ANY 输出
         }
