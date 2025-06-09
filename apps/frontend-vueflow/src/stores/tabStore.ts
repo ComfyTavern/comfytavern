@@ -5,6 +5,7 @@ import { useWorkflowStore } from "./workflowStore"; // 需要访问工作流数�
 import { useProjectStore } from "./projectStore"; // 导入 project store
 import { useRouter } from "vue-router"; // Import useRouter
 import { useDialogService } from '../services/DialogService'; // 导入 DialogService
+import { usePerformanceStatsStore } from './performanceStatsStore'; // + 导入 performanceStatsStore
 // 定义标签页类型
 export type TabType = "workflow" | "settings" | "character" | "groupEditor"; // Add 'groupEditor' back
 
@@ -23,6 +24,7 @@ export const useTabStore = defineStore("tab", () => {
   const projectStore = useProjectStore(); // 获取 project store 实例
   const router = useRouter(); // 获取 router 实例
   const dialogService = useDialogService(); // 获取 DialogService 实例
+  const performanceStatsStore = usePerformanceStatsStore(); // + 初始化 performanceStatsStore
   // --- State ---
   const tabs = ref<Tab[]>([]);
   const activeTabId = ref<string | null>(null);
@@ -140,6 +142,12 @@ export const useTabStore = defineStore("tab", () => {
       `TabStore: 已为关闭的标签页 ${removedInternalId} 调用 workflowStore.removeWorkflowData`
     );
     // --- 清理结束 ---
+
+    // 清理性能统计数据
+    performanceStatsStore.clearStats(removedInternalId);
+    console.debug(
+      `TabStore: 已为关闭的标签页 ${removedInternalId} 调用 performanceStatsStore.clearStats`
+    );
 
     // Check if the removed tab was the last one for the *current* project
     const remainingTabsForProject = tabs.value.filter(

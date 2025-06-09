@@ -50,13 +50,6 @@
     <div class="sidebar-content" :style="{ width: activeTab ? '300px' : '0px' }">
       <component v-if="activeTab" :is="getTabComponent" @node-selected="nodeSelected" @add-node="addNodeToCanvas" />
     </div>
-
-    <!-- 设置模态框 (已移至 App.vue) -->
-    <!--
-    <BaseModal v-model:visible="isSettingsModalVisible" title="设置" width="max-w-3xl">
-      <SettingsLayout />
-    </BaseModal>
-    -->
   </div>
 </template>
 
@@ -71,6 +64,7 @@ import WorkflowPanel from './WorkflowPanel.vue'; // 导入工作流面板
 import GroupIOEdit from './GroupIOEdit.vue'; // <-- 导入接口编辑器
 import HistoryPanel from './HistoryPanel.vue'; // <-- 导入历史记录面板
 import WorkflowInfoPanel from './WorkflowInfoPanel.vue'; // <-- 导入工作流信息面板
+import PerformancePanel from './PerformancePanel.vue'; // <-- 导入性能面板
 import Tooltip from '@/components/common/Tooltip.vue'; // 导入 Tooltip 组件
 // import BaseModal from '../../common/BaseModal.vue'; // 不再需要
 // import SettingsLayout from '../../settings/SettingsLayout.vue'; // 不再需要
@@ -124,6 +118,13 @@ const tabs = ref<SidebarTab[]>([
     title: '操作历史',
     icon: '📜', // 使用卷轴图标
     component: markRaw(HistoryPanel)
+  },
+  {
+    id: 'performance',
+    label: '统计',
+    title: '节点统计',
+    icon: '📊', // 使用条形图图标
+    component: markRaw(PerformancePanel)
   },
   { // <-- 添加工作流信息标签页
     id: 'info',
@@ -182,12 +183,14 @@ defineExpose({
 }
 
 .sidebar-icon-bar {
-  @apply flex flex-col w-12 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 items-center py-1 transition-all duration-300 ease-in-out; /* py-2 -> py-1 */
+  @apply flex flex-col w-12 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 items-center py-1 transition-all duration-300 ease-in-out;
+  /* py-2 -> py-1 */
   /* 添加过渡 */
 }
 
 .icon-button {
-  @apply flex flex-col items-center justify-center w-full py-1 px-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer; /* py-2 -> py-1 */
+  @apply flex flex-col items-center justify-center w-full py-1 px-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer;
+  /* py-2 -> py-1 */
   /* 调整内边距 */
 }
 
@@ -213,12 +216,14 @@ defineExpose({
 }
 
 .tab-buttons-container {
-  @apply flex-1 flex flex-col items-center w-full overflow-y-auto gap-y-2 mt-6; /* Added mt-4 for separation */
+  @apply flex-1 flex flex-col items-center w-full overflow-y-auto gap-y-2 mt-6;
+  /* Added mt-4 for separation */
   /* 允许标签按钮滚动 */
 }
 
 .bottom-buttons-container {
-  @apply mt-auto flex flex-col items-center w-full border-t border-gray-200 dark:border-gray-700 pt-1; /* pt-2 -> pt-1 */
+  @apply mt-auto flex flex-col items-center w-full border-t border-gray-200 dark:border-gray-700 pt-1;
+  /* pt-2 -> pt-1 */
   /* 底部按钮容器 */
 }
 
