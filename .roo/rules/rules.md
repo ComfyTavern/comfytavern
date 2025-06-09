@@ -238,7 +238,32 @@ src/
 - **代码检查**: `bunx vue-tsc --build apps/frontend-vueflow/tsconfig.json`,`bun tsc -p apps/backend/tsconfig.json --noEmit`
 - **通用类型导入**：`@comfytavern/types`是通用类型的导入路径，通过`index.ts`统一注册了所有通用类型定义。
 
+## CONVERTIBLE_ANY 类型详细说明
 
+本部分详细解释 `CONVERTIBLE_ANY` 类型的行为特性，主要供 AI 系统理解及开发者参考。
+
+### `CONVERTIBLE_ANY` (`BEHAVIOR_CONVERTIBLE`) 的特性与应用
+
+`CONVERTIBLE_ANY` 类型（通常带有 `BEHAVIOR_CONVERTIBLE` 标签，并在 UI 上显示为 `*`）是为提升连接便利性而设计的特殊类型。其核心行为和规则如下：
+
+- **彻底的类型转换**：
+
+  - 当一个 `CONVERTIBLE_ANY` 输入插槽连接到一个具有具体类型的输出插槽时，该 `CONVERTIBLE_ANY` 输入插槽会**彻底转变为**所连接输出插槽的类型（包括其 `dataFlowType` 和 `matchCategories`，但不包括 `BEHAVIOR_CONVERTIBLE` 标签本身）。
+  - 类似地，当一个 `CONVERTIBLE_ANY` 输出插槽连接到一个具有具体类型的输入插槽时，该 `CONVERTIBLE_ANY` 输出插槽也会**彻底转变为**所连接输入插槽的类型。
+  - 这种转换是**完全的、无痕迹的**。一旦转换完成，该插槽就表现得如同它从一开始就是那个新的具体类型，不再保留任何 `CONVERTIBLE_ANY` 的特性或状态。
+
+- **禁止 `CONVERTIBLE_ANY` 互连**：
+
+  - 两个 `CONVERTIBLE_ANY` 类型的插槽（例如，一个 `CONVERTIBLE_ANY` 输出连接到另一个 `CONVERTIBLE_ANY` 输入）**不能直接相互连接**。这是因为双方都需要从对方获取一个具体的类型来完成自身的转换，如果双方都是 `CONVERTIBLE_ANY`，则无法确定转换的目标类型，连接无法成立。
+
+- **动态占位符再生机制（特定场景）**：
+
+  - 在某些特定节点或内部机制下，例如组 IO 节点（`core:GroupInput` / `core:GroupOutput`）在其所属节点组的内部接口定义（`groupInterface`）中，当一个 `CONVERTIBLE_ANY` 插槽被连接并（如上所述）彻底转换类型后，系统会**动态生成一个新的 `CONVERTIBLE_ANY` 占位符插槽添加到插槽末尾**。
+  - 这个新生成的占位符是为了保持连接的便利性，确保总有一个可用的“万能连接点”供下一次灵活连接，而用户无需手动创建。重要的是，这个新生成的占位符与那个已被彻底转换的插槽是两个不同的实体。
+
+- **针对节点组（`core:NodeGroup`）的外部接口行为**：
+  - **外部接口的类型确定性**：节点组节点（`core:NodeGroup`）在父工作流中向外部暴露的连接插槽，其类型来源于其内部引用的子工作流中的 `GroupInput` 和 `GroupOutput` 节点。
+  - **`CONVERTIBLE_ANY` 在外部的“不可见性”**：`NodeGroup` 节点在显示插槽时会过滤掉 `CONVERTIBLE_ANY`（即 `*`）插槽。`CONVERTIBLE_ANY` 作为一个可操作的、等待连接的类型，在 `NodeGroup` 节点的外部接口上是“不可见”且“无持久值”的。其“彻底转换”和“动态占位符再生”机制主要服务于节点组内部接口定义的灵活性和连接便利性。
 
 ## `apply_diff` 工具报错排查：`marker '=======' found`
 
@@ -256,8 +281,8 @@ ERROR: Diff block is malformed: marker '=======' found in your diff content at l
 
 **可能的原因：**
 
-*   模型生成 `diff` 输出时发生截断。
-*   模型未能正确输出 `diff` 块的起始或结束标记（例如，`<<<<<<<`、`=======`、`>>>>>>>` 未正确配对，或者 `START_REPLACE` / `END_REPLACE` 等自定义标记缺失或错位）。
+- 模型生成 `diff` 输出时发生截断。
+- 模型未能正确输出 `diff` 块的起始或结束标记（例如，`<<<<<<<`、`=======`、`>>>>>>>` 未正确配对，或者 `START_REPLACE` / `END_REPLACE` 等自定义标记缺失或错位）。
 
 **处理建议：**
 
