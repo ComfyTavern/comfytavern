@@ -1,5 +1,6 @@
 import type { Node as VueFlowNode, Edge } from "@vue-flow/core";
 import { getNodeType } from "@/utils/nodeUtils";
+import { klona } from "klona/full"; // ++ 导入 klona
 import type { useWorkflowData } from '@/composables/workflow/useWorkflowData';
 import type { useProjectStore } from '@/stores/projectStore';
 import type { useWorkflowManager } from '@/composables/workflow/useWorkflowManager';
@@ -121,11 +122,64 @@ export async function flattenWorkflow(
       console.debug(`[Flatten NodeGroup ${node.id}] Returned from recursive call for ${referencedWorkflowId}. Flattened sub-workflow has ${flattenedSubWorkflow.nodes.length} nodes and ${flattenedSubWorkflow.edges.length} edges.`);
       console.debug(`[Flatten NodeGroup ${node.id}] Sub-workflow nodes: ${flattenedSubWorkflow.nodes.map(n => `${n.id}(${getNodeType(n)})`).join(', ')}`);
       // console.debug(`[Flatten NodeGroup ${node.id}] Sub-workflow edges: ${flattenedSubWorkflow.edges.map(e => `${e.id} (${e.sourceHandle} -> ${e.targetHandle})`).join(', ')}`);
+ 
+ 
+      // --- 处理 NodeGroup 实例的 inputValues 覆盖 ---
+      const parentNodeGroupInstance = node; // 当前正在展开的 NodeGroup
+      if (parentNodeGroupInstance.data?.inputValues && Object.keys(parentNodeGroupInstance.data.inputValues).length > 0) {
+        const instanceInputValues = parentNodeGroupInstance.data.inputValues;
+        const subWorkflowNodes = flattenedSubWorkflow.nodes;
+        let subWorkflowEdges = flattenedSubWorkflow.edges; // 可变
 
+        for (const subNode of subWorkflowNodes) {
+          if (getNodeType(subNode) === 'core:GroupInput') {
+            const internalGroupInputNode = subNode;
+            const outputSlotKeys = Object.keys(internalGroupInputNode.data?.outputs || {});
+
+            for (const slotKeyInParent of outputSlotKeys) {
+              if (instanceInputValues.hasOwnProperty(slotKeyInParent)) {
+                const overrideValue = instanceInputValues[slotKeyInParent];
+                console.debug(`[Flatten NodeGroup ${parentNodeGroupInstance.id}] Applying override for '${slotKeyInParent}' with value:`, klona(overrideValue));
+
+                const edgesToProcessForOverride: Edge[] = [];
+                const remainingEdgesAfterOverride: Edge[] = [];
+
+                for (const edge of subWorkflowEdges) {
+                  if (edge.source === internalGroupInputNode.id && edge.sourceHandle === slotKeyInParent) {
+                    edgesToProcessForOverride.push(edge);
+                  } else {
+                    remainingEdgesAfterOverride.push(edge);
+                  }
+                }
+                
+                if (edgesToProcessForOverride.length > 0) {
+                    subWorkflowEdges = remainingEdgesAfterOverride;
+
+                    for (const edgeBeingReplaced of edgesToProcessForOverride) {
+                        const targetNodeForOverride = subWorkflowNodes.find(n => n.id === edgeBeingReplaced.target);
+                        if (targetNodeForOverride && edgeBeingReplaced.targetHandle) {
+                            targetNodeForOverride.data = targetNodeForOverride.data || {};
+                            targetNodeForOverride.data.inputValues = targetNodeForOverride.data.inputValues || {};
+                            targetNodeForOverride.data.inputValues[edgeBeingReplaced.targetHandle] = klona(overrideValue);
+                            
+                            console.debug(`[Flatten NodeGroup ${parentNodeGroupInstance.id}] Set input '${edgeBeingReplaced.targetHandle}' of node '${targetNodeForOverride.id}' to override value. Edge ${edgeBeingReplaced.id} removed.`);
+                        } else {
+                            console.warn(`[Flatten NodeGroup ${parentNodeGroupInstance.id}] Could not find target node '${edgeBeingReplaced.target}' for override via edge ${edgeBeingReplaced.id}`);
+                        }
+                    }
+                } else {
+                    console.debug(`[Flatten NodeGroup ${parentNodeGroupInstance.id}] Override value for '${slotKeyInParent}' exists, but GroupInput's output slot is not connected internally.`);
+                }
+              }
+            }
+          }
+        }
+        flattenedSubWorkflow.edges = subWorkflowEdges;
+      }
+      // --- inputValues 处理结束 ---
 
       // --- 核心：I/O 映射 ---
       const internalNodesMap = new Map(flattenedSubWorkflow.nodes.map(n => [n.id, n])); // 子流扁平化后的节点
-
       // 找到内部的 GroupInput 和 GroupOutput 节点 (假设类型固定)
       // 注意：需要使用 getNodeType 辅助函数
       const internalGroupInput = flattenedSubWorkflow.nodes.find(n => getNodeType(n) === 'core:GroupInput'); // 使用带命名空间的类型

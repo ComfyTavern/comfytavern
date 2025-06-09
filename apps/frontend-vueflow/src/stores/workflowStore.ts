@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core";
 import type { WorkflowStateSnapshot, TabWorkflowState } from "../types/workflowTypes"; // 导入 TabWorkflowState
 import type { HistoryEntry } from "@comfytavern/types"; // <-- Import HistoryEntry
-import { useTabStore } from "./tabStore";
+import { useTabStore, type Tab } from "./tabStore"; // 导入 Tab 类型
 import { ref, nextTick, watch, computed } from "vue";
 import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager"; // <-- 新增，移除了未使用的 TabWorkflowState
 import { useWorkflowHistory } from "@/composables/workflow/useWorkflowHistory"; // 导入 history composable，移除了 TItem
@@ -13,7 +13,9 @@ import { useWorkflowGrouping } from "@/composables/group/useWorkflowGrouping"; /
 import { useWorkflowLifecycleCoordinator } from "@/composables/workflow/useWorkflowLifecycleCoordinator"; // 导入生命周期协调器
 import { useWorkflowInteractionCoordinator } from "@/composables/workflow/useWorkflowInteractionCoordinator"; // 导入交互协调器
 import { sendMessage } from "@/composables/useWebSocket"; // 导入共享的 sendMessage
-import { WebSocketMessageType } from "@comfytavern/types"; // 导入消息类型
+import { WebSocketMessageType, DataFlowType, BuiltInSocketMatchCategory } from "@comfytavern/types"; // 导入消息类型 和类型定义
+import type { GroupInterfaceInfo, WorkflowStorageObject, GroupSlotInfo } from "@comfytavern/types"; // 类型导入, 重新加入 GroupSlotInfo, 移除了未使用的 ComfyWorkflowStorageNode
+// import { getEffectiveDefaultValue } from "@comfytavern/utils"; // 移除了未使用的导入
 import { klona } from "klona";
 import { useDialogService } from '../services/DialogService'; // 导入 DialogService
 
@@ -44,6 +46,9 @@ export const useWorkflowStore = defineStore("workflow", () => {
   const workflowGrouping = useWorkflowGrouping(); // <-- 实例化分组 composable
   const workflowLifecycleCoordinator = useWorkflowLifecycleCoordinator(); // <-- 实例化生命周期协调器
   const workflowInteractionCoordinator = useWorkflowInteractionCoordinator(); // <-- 实例化交互协调器
+
+  // --- 跟踪模板变更的状态 ---
+  const changedTemplateWorkflowIds = ref(new Set<string>());
 
   // --- 历史记录管理 ---
   // 获取历史记录管理器实例（包含操作共享历史状态的方法）
@@ -643,6 +648,7 @@ export const useWorkflowStore = defineStore("workflow", () => {
   return {
     // --- 全局状态 ---
     availableWorkflows, // 直接导出 ref
+    changedTemplateWorkflowIds: computed(() => changedTemplateWorkflowIds.value), // 暴露只读的集合
 
     // --- 状态和 Getter（来自 useWorkflowManager）---
     getActiveTabState: workflowManager.getActiveTabState,
@@ -684,7 +690,28 @@ export const useWorkflowStore = defineStore("workflow", () => {
 
     // --- 接口管理（来自 useWorkflowInterfaceManagement）---
     // 包装这些以确保正确记录历史
-    updateWorkflowInterface: workflowInteractionCoordinator.updateWorkflowInterfaceAndRecord, // 使用协调器的函数
+    updateWorkflowInterface: async (
+      internalId: string,
+      updateFn: (
+        currentInputs: Record<string, GroupSlotInfo>,
+        currentOutputs: Record<string, GroupSlotInfo>
+      ) => {
+        inputs: Record<string, GroupSlotInfo>;
+        outputs: Record<string, GroupSlotInfo>;
+      },
+      entry: HistoryEntry
+    ) => {
+      // 首先调用协调器的原始函数
+      await workflowInteractionCoordinator.updateWorkflowInterfaceAndRecord(
+        internalId,
+        updateFn,
+        entry
+      );
+      // 然后，如果这个工作流本身可能作为模板被引用，则标记它已更改
+      // 这里的 internalId 就是被修改的工作流的 ID，也就是潜在的 templateId
+      changedTemplateWorkflowIds.value.add(internalId);
+      console.debug(`[WorkflowStore] Template ${internalId} marked as changed after interface update.`);
+    },
     removeEdgesForHandle: workflowInterfaceManagement.removeEdgesForHandle, // <-- 导出 removeEdgesForHandle
 
     // --- 用户操作（现在来自管理器/分组和包装器）---
@@ -747,7 +774,249 @@ export const useWorkflowStore = defineStore("workflow", () => {
       workflowInteractionCoordinator.connectEdgeToInputAndRecord, // 新增
     moveAndReconnectEdgeAndRecord:
       workflowInteractionCoordinator.moveAndReconnectEdgeAndRecord, // 新增
-  
+
+    // --- NodeGroup 实例值与接口同步相关 Actions ---
+
+    /**
+     * 标记一个模板工作流的接口已发生变更。
+     * @param templateId 模板工作流的 ID。
+     */
+    markTemplateAsChanged: (templateId: string) => {
+      changedTemplateWorkflowIds.value.add(templateId);
+    },
+
+    /**
+     * 更新 NodeGroup 实例特定输入槽的覆盖值，并记录历史。
+     * @param internalId 当前标签页的内部 ID。
+     * @param nodeId NodeGroup 实例的 ID。
+     * @param slotKey 输入槽的 key。
+     * @param newValue 新的覆盖值。
+     */
+    updateNodeGroupInputValueAndRecord: async (internalId: string, nodeId: string, slotKey: string, newValue: any) => {
+      const currentSnapshot = workflowManager.getCurrentSnapshot(internalId);
+      if (!currentSnapshot) {
+        console.error(`[WorkflowStore:updateNodeGroupInputValueAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
+        return;
+      }
+
+      const nextSnapshot = klona(currentSnapshot);
+      const nodeToUpdate = nextSnapshot.elements.find(
+        (el) => el.id === nodeId && !("source" in el) && el.type === "core:NodeGroup"
+      ) as VueFlowNode | undefined;
+
+      if (!nodeToUpdate) {
+        console.error(`[WorkflowStore:updateNodeGroupInputValueAndRecord] 在快照中未找到 NodeGroup 实例 ${nodeId}。`);
+        return;
+      }
+
+      nodeToUpdate.data = nodeToUpdate.data || {};
+      nodeToUpdate.data.inputValues = nodeToUpdate.data.inputValues || {};
+      
+      const oldValue = klona(nodeToUpdate.data.inputValues[slotKey]); // 克隆旧值以用于历史记录
+      nodeToUpdate.data.inputValues[slotKey] = newValue;
+
+      await workflowManager.setElements(internalId, nextSnapshot.elements);
+      
+      const finalSnapshot = workflowManager.getCurrentSnapshot(internalId);
+      if (finalSnapshot) {
+        const nodeLabel = nodeToUpdate.data?.displayName || (nodeToUpdate as any).label || nodeToUpdate.id;
+        const historyEntry: HistoryEntry = {
+          actionType: "modify",
+          objectType: "nodeData", // 或者更具体的 'nodeGroupInstanceInput'
+          summary: `更新节点组 '${nodeLabel}' 输入 '${slotKey}' 的值`,
+          details: {
+            nodeId,
+            path: `data.inputValues.${slotKey}`,
+            oldValue,
+            newValue: klona(newValue), // 克隆新值
+            context: 'nodeGroupInstanceInput'
+          },
+          timestamp: Date.now(),
+        };
+        historyManager.recordSnapshot(internalId, historyEntry, finalSnapshot);
+      } else {
+         console.error(`[WorkflowStore:updateNodeGroupInputValueAndRecord] 应用更改后无法获取标签页 ${internalId} 的快照。历史记录未保存。`);
+      }
+    },
+
+    /**
+     * 清除 NodeGroup 实例特定输入槽的覆盖值（使其恢复为使用模板默认值），并记录历史。
+     * @param internalId 当前标签页的内部 ID。
+     * @param nodeId NodeGroup 实例的 ID。
+     * @param slotKey 输入槽的 key。
+     */
+    clearNodeGroupInputValueAndRecord: async (internalId: string, nodeId: string, slotKey: string) => {
+      const currentSnapshot = workflowManager.getCurrentSnapshot(internalId);
+      if (!currentSnapshot) {
+        console.error(`[WorkflowStore:clearNodeGroupInputValueAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
+        return;
+      }
+
+      const nextSnapshot = klona(currentSnapshot);
+      const nodeToUpdate = nextSnapshot.elements.find(
+        (el) => el.id === nodeId && !("source" in el) && el.type === "core:NodeGroup"
+      ) as VueFlowNode | undefined;
+
+      if (!nodeToUpdate || !nodeToUpdate.data?.inputValues || !(slotKey in nodeToUpdate.data.inputValues)) {
+        console.warn(`[WorkflowStore:clearNodeGroupInputValueAndRecord] NodeGroup 实例 ${nodeId} 或其 inputValues 或 slotKey ${slotKey} 未找到/无覆盖值。`);
+        return;
+      }
+      
+      const oldValue = klona(nodeToUpdate.data.inputValues[slotKey]); // 克隆旧值
+      delete nodeToUpdate.data.inputValues[slotKey];
+      if (Object.keys(nodeToUpdate.data.inputValues).length === 0) {
+        delete nodeToUpdate.data.inputValues; // 如果为空则移除整个对象
+      }
+
+      await workflowManager.setElements(internalId, nextSnapshot.elements);
+
+      const finalSnapshot = workflowManager.getCurrentSnapshot(internalId);
+      if (finalSnapshot) {
+        const nodeLabel = nodeToUpdate.data?.displayName || (nodeToUpdate as any).label || nodeToUpdate.id;
+        const historyEntry: HistoryEntry = {
+          actionType: "modify", // 或者 'clear'
+          objectType: "nodeData", // 或者 'nodeGroupInstanceInput'
+          summary: `清除节点组 '${nodeLabel}' 输入 '${slotKey}' 的覆盖值`,
+          details: {
+            nodeId,
+            path: `data.inputValues.${slotKey}`,
+            oldValue,
+            // newValue is implicitly the template default, not stored here
+            context: 'nodeGroupInstanceInputClear'
+          },
+          timestamp: Date.now(),
+        };
+        historyManager.recordSnapshot(internalId, historyEntry, finalSnapshot);
+      } else {
+        console.error(`[WorkflowStore:clearNodeGroupInputValueAndRecord] 应用更改后无法获取标签页 ${internalId} 的快照。历史记录未保存。`);
+      }
+    },
+
+    /**
+     * 同步 NodeGroup 实例的接口和实例值。
+     * @param internalId 包含 NodeGroup 实例的工作流的标签页 ID。
+     * @param nodeGroupInstanceId NodeGroup 实例的 ID。
+     * @param referencedWorkflowId 被引用的模板工作流的 ID。
+     */
+    synchronizeGroupNodeInterfaceAndValues: async (internalId: string, nodeGroupInstanceId: string, referencedWorkflowId: string) => {
+      const currentElements = workflowManager.getElements(internalId); // 获取的是深拷贝
+      const nodeToUpdate = currentElements.find(
+        (el) => el.id === nodeGroupInstanceId && el.type === "core:NodeGroup"
+      ) as VueFlowNode | undefined;
+
+      if (!nodeToUpdate || !nodeToUpdate.data) {
+        console.error(`[WorkflowStore:synchronizeGroupNodeInterfaceAndValues] 未找到 NodeGroup 实例 ${nodeGroupInstanceId} 或其数据。`);
+        return;
+      }
+
+      const activeTab = tabStore.tabs.find((t: Tab) => t.internalId === internalId); // 直接在 tabStore.tabs (数组) 上调用 find
+      if (!activeTab?.projectId) {
+        console.error(`[WorkflowStore:synchronizeGroupNodeInterfaceAndValues] 无法获取项目 ID 用于加载模板工作流 ${referencedWorkflowId}。`);
+        return;
+      }
+      const projectId = activeTab.projectId;
+
+      let templateWorkflowData: WorkflowStorageObject | null = null;
+      try {
+        // 调用 workflowData.loadWorkflow 并获取其 loadedData 属性
+        const loadResult = await workflowData.loadWorkflow(internalId, projectId, referencedWorkflowId);
+        if (loadResult.success && loadResult.loadedData) {
+          templateWorkflowData = loadResult.loadedData;
+        } else {
+          console.warn(`[WorkflowStore:synchronizeGroupNodeInterfaceAndValues] 从 workflowData.loadWorkflow 加载模板 ${referencedWorkflowId} 失败或未返回数据。`);
+        }
+      } catch (err) {
+        console.error(`[WorkflowStore:synchronizeGroupNodeInterfaceAndValues] 加载模板工作流 ${referencedWorkflowId} 时发生错误:`, err);
+      }
+
+      if (!templateWorkflowData) {
+        console.warn(`[WorkflowStore:synchronizeGroupNodeInterfaceAndValues] 无法加载模板工作流 ${referencedWorkflowId} 的数据。同步中止。`);
+        // 可选：通知用户模板丢失
+        return;
+      }
+      
+      const snapshotBeforeSync = workflowManager.getCurrentSnapshot(internalId);
+      if (!snapshotBeforeSync) {
+        console.error(`[WorkflowStore:synchronizeGroupNodeInterfaceAndValues] 无法获取同步前的快照。历史记录将不准确。`);
+        // 不中止，但历史记录会有问题
+      }
+
+      const oldGroupInterface = klona(nodeToUpdate.data.groupInterface || { inputs: {}, outputs: {} });
+      const oldInputValues = klona(nodeToUpdate.data.inputValues || {});
+
+      const newGroupInterface: GroupInterfaceInfo = {
+        inputs: klona(templateWorkflowData.interfaceInputs || {}),
+        outputs: klona(templateWorkflowData.interfaceOutputs || {}),
+      };
+
+      const newInputValues: Record<string, any> = {};
+      const lostInputValues: Record<string, any> = {};
+
+      for (const [slotKey, oldValue] of Object.entries(oldInputValues)) {
+        const newSlotDef = newGroupInterface.inputs?.[slotKey];
+        const isNewSlotConvertible = newSlotDef &&
+          (newSlotDef.dataFlowType === DataFlowType.CONVERTIBLE_ANY ||
+           newSlotDef.matchCategories?.includes(BuiltInSocketMatchCategory.BEHAVIOR_CONVERTIBLE));
+
+        if (newSlotDef && !isNewSlotConvertible) {
+          const oldSlotDef = oldGroupInterface.inputs?.[slotKey];
+          // TODO: 实现更完善的类型兼容性检查和转换逻辑 (参考设计文档附录 A)
+          if (oldSlotDef?.dataFlowType === newSlotDef.dataFlowType) {
+            newInputValues[slotKey] = oldValue;
+          } else {
+            lostInputValues[slotKey] = {
+              value: oldValue,
+              reason: 'type_incompatible',
+              oldType: oldSlotDef?.dataFlowType,
+              newType: newSlotDef.dataFlowType
+            };
+          }
+        } else {
+          lostInputValues[slotKey] = {
+            value: oldValue,
+            reason: 'slot_deleted_or_became_convertible_in_template'
+          };
+        }
+      }
+      
+      // 应用变更到 currentElements (这是克隆的，所以可以直接修改)
+      const nodeInClonedElements = currentElements.find(el => el.id === nodeGroupInstanceId) as VueFlowNode | undefined;
+      if (nodeInClonedElements && nodeInClonedElements.data) {
+        nodeInClonedElements.data.groupInterface = newGroupInterface;
+        if (Object.keys(newInputValues).length > 0) {
+          nodeInClonedElements.data.inputValues = newInputValues;
+        } else {
+          delete nodeInClonedElements.data.inputValues; // 如果为空则移除
+        }
+      }
+      
+      // 在应用变更到 store 之前记录历史 (使用同步前的快照)
+      if (snapshotBeforeSync) {
+        const nodeLabel = nodeToUpdate.data?.displayName || (nodeToUpdate as any).label || nodeToUpdate.id;
+        const historyEntry: HistoryEntry = {
+          actionType: 'sync',
+          objectType: 'nodeGroupInstance',
+          summary: `同步节点组 ${nodeLabel} 的接口与实例值`,
+          details: {
+            nodeId: nodeGroupInstanceId,
+            tabId: internalId,
+            oldGroupInterface: klona(oldGroupInterface),
+            newGroupInterface: klona(newGroupInterface),
+            oldInputValues: klona(oldInputValues),
+            newInputValues: klona(newInputValues),
+            lostInputValues: klona(lostInputValues)
+          },
+          timestamp: Date.now(),
+        };
+        historyManager.recordSnapshot(internalId, historyEntry, snapshotBeforeSync);
+      }
+
+      await workflowManager.setElements(internalId, currentElements); // 应用修改后的元素
+
+      changedTemplateWorkflowIds.value.delete(referencedWorkflowId); // 从集合中移除
+      console.info(`[WorkflowStore:synchronizeGroupNodeInterfaceAndValues] NodeGroup ${nodeGroupInstanceId} 已与模板 ${referencedWorkflowId} 同步。`);
+    },
+
     // --- 内部辅助函数（为特定用例导出，如 EditorView 事件处理程序）---
     // ensureHistoryAndRecord, // 已移除：现在是协调器的内部函数
   };

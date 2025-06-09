@@ -94,7 +94,7 @@
     </div>
   </template>
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, markRaw, watch, nextTick, provide } from "vue"; // watch 已经存在，无需重复导入
+import { ref, onMounted, onUnmounted, computed, markRaw, watch, nextTick, provide } from "vue"; // watch 已经存在，无需重复导入, 移除 ComputedRef
 import Canvas from "../components/graph/Canvas.vue";
 import HierarchicalMenu from '../components/common/HierarchicalMenu.vue';
 import type { MenuItem as HierarchicalMenuItem } from '../components/common/HierarchicalMenu.vue';
@@ -340,6 +340,79 @@ onMounted(async () => {
 
   // 初始化路由处理
   initializeRouteHandling();
+
+  // --- NodeGroup 同步逻辑 ---
+  const performNodeGroupSyncCheck = async (tabId: string | null | undefined) => {
+    if (!tabId) return;
+
+    // 等待 tab 加载完成
+    // isTabLoaded 是一个函数，其响应性依赖于其内部使用的 store 状态 (getAllTabStates)
+    // 我们需要确保在 isTabLoaded 变为 true 后执行
+    if (!workflowStore.isTabLoaded(tabId)) {
+      // console.debug(`[EditorView] Tab ${tabId} not loaded for NodeGroup sync. Waiting...`);
+      // 使用一个临时的 watcher 来等待加载完成
+      const unwatch = watch(() => workflowStore.isTabLoaded(tabId), (isLoaded) => {
+        if (isLoaded) {
+          // console.debug(`[EditorView] Tab ${tabId} is NOW loaded. Proceeding with NodeGroup sync.`);
+          unwatch(); // 加载后停止监听
+          executeSyncLogic(tabId);
+        }
+      });
+      return; // 等待 watcher 触发
+    }
+    
+    // 如果已加载，直接执行
+    executeSyncLogic(tabId);
+  };
+
+  const executeSyncLogic = async (tabId: string) => {
+    const elements = workflowStore.getElements(tabId);
+    if (!elements || elements.length === 0) {
+      // console.debug(`[EditorView] No elements in tab ${tabId} for NodeGroup sync.`);
+      return;
+    }
+
+    const changedTemplates = workflowStore.changedTemplateWorkflowIds; // 移除显式类型注解，让 TS 推断
+    if (changedTemplates.size === 0) { // 直接访问 .size
+      // console.debug("[EditorView] No templates marked as changed. Skipping NodeGroup sync.");
+      return;
+    }
+
+    console.debug(`[EditorView] Performing NodeGroup sync check for tab ${tabId}. Changed templates:`, Array.from(changedTemplates)); // 直接使用 changedTemplates
+
+    for (const el of elements) {
+      if (el.type === 'core:NodeGroup' && el.data?.configValues?.referencedWorkflowId) {
+        const nodeGroup = el as Node; // VueFlowNode
+        const referencedWorkflowId = nodeGroup.data.configValues.referencedWorkflowId as string;
+        
+        if (changedTemplates.has(referencedWorkflowId)) { // 直接调用 .has()
+          console.info(`[EditorView] NodeGroup ${nodeGroup.id} in tab ${tabId} references changed template ${referencedWorkflowId}. Triggering sync.`);
+          try {
+            // 确保在调用异步操作前，tabId 和 nodeId 仍然有效且相关
+            // （虽然在这个上下文中它们应该是稳定的）
+            await workflowStore.synchronizeGroupNodeInterfaceAndValues(tabId, nodeGroup.id, referencedWorkflowId);
+            console.info(`[EditorView] Sync completed for NodeGroup ${nodeGroup.id}.`);
+          } catch (error) {
+            console.error(`[EditorView] Error synchronizing NodeGroup ${nodeGroup.id}:`, error);
+          }
+        }
+      }
+    }
+  };
+
+  // 初始加载时检查
+  if (activeTabId.value) {
+    performNodeGroupSyncCheck(activeTabId.value);
+  }
+
+  // 监听活动标签页变化
+  watch(activeTabId, (newTabId, oldTabId) => {
+    if (newTabId && newTabId !== oldTabId) {
+      performNodeGroupSyncCheck(newTabId);
+    }
+  });
+  // --- NodeGroup 同步逻辑结束 ---
+
 });
 // 组件卸载
 onUnmounted(() => {

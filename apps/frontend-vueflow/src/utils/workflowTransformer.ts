@@ -82,16 +82,23 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
       return { id: vueNode.id, type: "error", position: vueNode.position };
     }
 
-    const inputValues: Record<string, any> = {};
-    // 检查 vueNode.data 和 vueNode.data.inputs 是否存在，并且不是 GroupInput 或 GroupOutput 节点 (它们的 inputs/outputs 代表接口，不存值)
-    if (
+    let inputValues: Record<string, any> = {}; // 修改为 let 以允许重新赋值
+    // 根据节点类型处理输入值，特别是 NodeGroup 的覆盖值
+
+    if (nodeType === "core:NodeGroup") {
+      // 对于 NodeGroup，其 vueNode.data.inputValues 字段直接包含应持久化的覆盖值。
+      // 这些值已经是与模板默认值不同的值，因此直接克隆。
+      if (vueNode.data?.inputValues && Object.keys(vueNode.data.inputValues).length > 0) {
+        inputValues = klona(vueNode.data.inputValues); // 使用 klona 进行深拷贝
+      }
+    } else if (
       nodeDef.inputs &&
       vueNode.data?.inputs &&
-      nodeType !== "core:GroupInput" &&
-      nodeType !== "core:GroupOutput" &&
-      nodeType !== "core:NodeGroup" // 阻止为 NodeGroup 提取 inputValues
+      nodeType !== "core:GroupInput" && // GroupInput/Output 的 inputs/outputs 代表接口, 不直接存储值
+      nodeType !== "core:GroupOutput"
+      // core:NodeGroup 已在上面的 if 分支中处理，此处无需重复检查
     ) {
-
+      // 现有通用逻辑：从 vueNode.data.inputs 提取与默认值不同的输入值
       Object.entries(vueNode.data.inputs).forEach(([inputName, inputData]) => {
         // inputData is now an object { value: ..., description: ..., ... }
         const inputDef = nodeDef.inputs?.[inputName];
@@ -159,7 +166,7 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
           );
         }
       }); // End of Object.entries loop for inputs
-    } // End of if (nodeDef.inputs && ...)
+    } // End of if/else if block for inputValues processing
 
 
     // Prepare custom slot descriptions
