@@ -110,7 +110,7 @@ const stats = computed((): StatItem[] => {
 
     if (children.length > 0) {
       componentStatItems.push({
-        label: '组件实例统计', // 顶级标签
+        label: '各类节点中所用组件实例数量', // 顶级标签
         count: children.reduce((sum, item) => sum + item.count, 0), // 总实例数
         children: children,
         expanded: true, // 默认展开
