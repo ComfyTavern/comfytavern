@@ -6,11 +6,12 @@
         class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex-grow">
         统计当前画布数据
       </button>
-      <button @click="copyStatsToClipboard" title="复制统计数据"
-        :disabled="!stats.length || loading"
+      <button @click="copyStatsToClipboard" title="复制统计数据" :disabled="!stats.length || loading"
         class="p-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+          stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
         </svg>
       </button>
     </div>
@@ -23,35 +24,71 @@
           <div @click="toggleItem(item)"
             class="flex justify-between items-center p-2 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
             :class="{ 'bg-gray-50 dark:bg-gray-700/50': item.children && item.children.length > 0 }">
-            <span class="font-medium text-gray-700 dark:text-gray-300">
-              <span v-if="item.children && item.children.length > 0" class="mr-1 inline-block w-4 text-center">
-                {{ item.expanded ? '▼' : '►' }}
+            <span class="font-medium text-gray-700 dark:text-gray-300 flex items-start">
+              <!-- 箭头/占位符容器 (固定宽度，防止被压缩) -->
+              <span class="shrink-0">
+                <span v-if="item.children && item.children.length > 0"
+                  class="mr-1 inline-flex items-center justify-center w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform duration-150"
+                  :class="[item.expanded ? 'rotate-0' : '-rotate-90']">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-full w-full" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd"
+                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                      clip-rule="evenodd" />
+                  </svg>
+                </span>
+                <span v-else class="mr-1 inline-block w-5"></span> <!-- 占位符 -->
               </span>
-              <span v-else class="mr-1 inline-block w-4"></span>
-              {{ item.label }}
+
+              <!-- 文本内容容器 -->
+              <span class="flex flex-col">
+                <span>{{ item.label }}</span>
+                <span v-if="item.originalType" class="text-xs text-gray-400 dark:text-gray-500">
+                  ({{ item.originalType }})
+                </span>
+              </span>
             </span>
             <span class="text-gray-600 dark:text-gray-400">{{ item.count }}</span>
           </div>
+          <!-- 子级列表 -->
           <ul v-if="item.expanded && item.children"
-            class="pl-3 mt-1 space-y-1 border-l border-gray-200 dark:border-gray-600 ml-1">
+            class="pl-1 mt-1 space-y-1 border-l border-gray-200 dark:border-gray-600 ml-1">
             <li v-for="(child, childIndex) in item.children" :key="childIndex">
               <div @click="toggleItem(child)"
                 class="flex justify-between items-center p-1.5 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                 :class="{ 'bg-gray-50 dark:bg-gray-700/50': child.children && child.children.length > 0 }">
-                <span class="text-gray-600 dark:text-gray-300">
-                  <span v-if="child.children && child.children.length > 0" class="mr-1 inline-block w-4 text-center">
-                    {{ child.expanded ? '▼' : '►' }}
+                <span class="text-gray-600 dark:text-gray-300 flex items-start">
+                  <!-- 箭头/占位符容器 (固定宽度，防止被压缩) -->
+                  <span class="shrink-0">
+                    <span v-if="child.children && child.children.length > 0"
+                      class="mr-1 inline-flex items-center justify-center w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform duration-150"
+                      :class="[child.expanded ? 'rotate-0' : '-rotate-90']">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-full w-full" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                          d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                          clip-rule="evenodd" />
+                      </svg>
+                    </span>
+                    <span v-else class="mr-1 inline-block w-5"></span> <!-- 占位符 -->
                   </span>
-                  <span v-else class="mr-1 inline-block w-4"></span>
-                  {{ child.label }}
+
+                  <!-- 文本内容容器 -->
+                  <span class="flex flex-col">
+                    <span>{{ child.label }}</span>
+                    <span v-if="child.originalType" class="text-xs text-gray-400 dark:text-gray-500">
+                      ({{ child.originalType }})
+                    </span>
+                  </span>
                 </span>
                 <span class="text-gray-500 dark:text-gray-400">{{ child.count }}</span>
               </div>
+              <!-- 孙级列表 -->
               <ul v-if="child.expanded && child.children"
-                class="pl-3 mt-1 space-y-1 border-l border-gray-200 dark:border-gray-600 ml-1">
+                class="pl-1 mt-1 space-y-1 border-l border-gray-200 dark:border-gray-600 ml-1">
                 <li v-for="(grandChild, grandChildIndex) in child.children" :key="grandChildIndex">
+                  <!-- 孙级通常没有 originalType 和 children，保持简单显示 -->
                   <div class="flex justify-between items-center p-1 rounded">
-                    <span class="text-gray-500 dark:text-gray-400 ml-2">{{ grandChild.label }}</span>
+                    <span class="text-gray-500 dark:text-gray-400 ml-6">{{ grandChild.label }}</span> <!-- 增加缩进 -->
                     <span class="text-gray-500 dark:text-gray-400">{{ grandChild.count }}</span>
                   </div>
                 </li>
@@ -71,30 +108,34 @@
 import { computed } from 'vue';
 import { useVueFlow } from '@vue-flow/core';
 import { useClipboard } from '@/composables/useClipboard';
-import { useDialogService } from '@/services/DialogService'; // 新增导入
+import { useDialogService } from '@/services/DialogService';
 import { useNodeStore } from '@/stores/nodeStore';
 import { useTabStore } from '@/stores/tabStore';
 import { usePerformanceStatsStore } from '@/stores/performanceStatsStore';
 import type { Node, Edge } from '@vue-flow/core';
-import type { InputDefinition, OutputDefinition } from '@comfytavern/types'; // 引入 DataFlowTypeName
-import { getInputComponent } from '@/components/graph/inputs'; // +++ 导入 getInputComponent
+import type { InputDefinition, OutputDefinition } from '@comfytavern/types';
+import { getInputComponent } from '@/components/graph/inputs';
 
+// !!! 修改点: 移除 isNodeTypeEntry !!!
 export interface StatItem {
   label: string;
   count: number;
   expanded?: boolean;
   children?: StatItem[];
+  originalType?: string; // 用于存储原始节点类型，当 displayName 不同时
+  // isNodeTypeEntry?: boolean; // <-- 已移除
 }
+// !!! 修改结束 !!!
+
 
 const { getNodes, getEdges } = useVueFlow();
 const nodeStore = useNodeStore();
 const tabStore = useTabStore();
 const performanceStatsStore = usePerformanceStatsStore();
-const dialogService = useDialogService(); // 新增导入
+const dialogService = useDialogService();
 
 const { writeText, error: clipboardError, isSupported: clipboardIsSupported } = useClipboard();
 
-// 从 store 获取当前激活标签页的统计信息
 const currentTabId = computed(() => tabStore.activeTab?.internalId);
 
 const stats = computed((): StatItem[] => {
@@ -107,18 +148,17 @@ const stats = computed((): StatItem[] => {
   if (componentRawStats && Object.keys(componentRawStats).length > 0) {
     const children: StatItem[] = Object.entries(componentRawStats)
       .map(([type, count]) => ({ label: type, count }))
-      .sort((a, b) => a.label.localeCompare(b.label)); // 按类型名称排序
+      .sort((a, b) => a.label.localeCompare(b.label));
 
     if (children.length > 0) {
       componentStatItems.push({
-        label: '各类节点中所用组件实例数量', // 顶级标签
-        count: children.reduce((sum, item) => sum + item.count, 0), // 总实例数
+        label: '各类节点中所用组件实例数量',
+        count: children.reduce((sum, item) => sum + item.count, 0),
         children: children,
-        expanded: true, // 默认展开
+        expanded: true,
       });
     }
   }
-  // 将组件统计放在画布统计之前或之后，根据偏好调整
   return [...canvasStats, ...componentStatItems];
 });
 
@@ -133,12 +173,11 @@ const collected = computed(() => {
 });
 
 const toggleItem = (item: StatItem) => {
+  // 只有包含子项时才允许切换展开状态
   if (item.children && item.children.length > 0) {
     item.expanded = !item.expanded;
-    // 注意：这个修改是针对 computed 返回的数组中的对象的，
-    // 如果希望这个状态持久化，StatItem 自身也需要被 store 管理，或者在 setStats 时深拷贝。
-    // 目前，这个展开状态只在当前组件实例生命周期内有效，或者如果 KeepAlive 缓存了组件。
   }
+  // 对于没有子项的条目，点击无效果，避免不必要的响应式更新
 };
 
 const collectStats = async () => {
@@ -150,16 +189,14 @@ const collectStats = async () => {
 
   performanceStatsStore.setLoading(tabId, true);
 
-  // VueFlow 的 getNodes/getEdges 应该是响应式的
   const nodes: Node[] = getNodes.value;
   const edges: Edge[] = getEdges.value;
 
-  // 初始化用于存储组件使用情况的记录
   const collectedComponentUsage: Record<string, number> = {};
 
   if (!nodes || nodes.length === 0) {
     performanceStatsStore.setStats(tabId, []);
-    performanceStatsStore.setComponentUsageStats(tabId, {}); // 画布为空时，组件使用也为空
+    performanceStatsStore.setComponentUsageStats(tabId, {});
     performanceStatsStore.setLoading(tabId, false);
     return;
   }
@@ -168,17 +205,39 @@ const collectStats = async () => {
 
   // 1. 节点总数
   const nodeCount = nodes.length;
-  const nodeStatsItem: StatItem = { label: '节点总数', count: nodeCount, children: [], expanded: true };
+  const nodeStatsItem: StatItem = { label: '节点类型总数', count: nodeCount, children: [], expanded: true };
 
   // 2. 各类型节点数量
-  const nodeTypes: Record<string, number> = {};
+  const nodeTypes: Record<string, { count: number, definition: any | null }> = {}; // 存储计数和定义
   nodes.forEach(node => {
     const type = node.type || '未知类型';
-    nodeTypes[type] = (nodeTypes[type] || 0) + 1;
+    if (!nodeTypes[type]) {
+      nodeTypes[type] = { count: 0, definition: nodeStore.getNodeDefinitionByFullType(type) };
+    }
+    nodeTypes[type].count += 1;
   });
-  Object.entries(nodeTypes).forEach(([type, count]) => {
-    nodeStatsItem.children?.push({ label: type, count });
-  });
+
+  // 按 label 排序
+  Object.entries(nodeTypes)
+    .map(([type, { count, definition: nodeDef }]) => {
+      let statLabel = type;
+      let originalTypeForDisplay: string | undefined = undefined;
+      if (nodeDef && nodeDef.displayName && nodeDef.displayName !== type) {
+        statLabel = nodeDef.displayName;
+        originalTypeForDisplay = type;
+      }
+      // !!! 修改点: 移除 isNodeTypeEntry: true !!!
+      return {
+        label: statLabel,
+        count,
+        originalType: originalTypeForDisplay,
+        // isNodeTypeEntry: true, // <-- 已移除
+      };
+      // !!! 修改结束 !!!
+    })
+    .sort((a, b) => a.label.localeCompare(b.label)) // 排序
+    .forEach(item => nodeStatsItem.children?.push(item));
+
   calculatedStats.push(nodeStatsItem);
 
   // 3. 连线总数
@@ -188,11 +247,11 @@ const collectStats = async () => {
   // 4. 槽位统计 (包括输入、输出、配置)
   let totalInputSlots = 0;
   let totalOutputSlots = 0;
-  let totalConfigSlotInstances = 0; // 新增: 配置槽位实例总数
+  let totalConfigSlotInstances = 0;
 
   const inputSlotTypes: Record<string, number> = {};
   const outputSlotTypes: Record<string, number> = {};
-  const configSlotKeyCounts: Record<string, number> = {}; // 新增: 各配置槽位键名的计数
+  const configSlotKeyCounts: Record<string, number> = {};
 
   await nodeStore.ensureDefinitionsLoaded();
 
@@ -200,7 +259,6 @@ const collectStats = async () => {
     const nodeDefinition = nodeStore.getNodeDefinitionByFullType(node.type as string);
 
     if (nodeDefinition) {
-      // 处理输入和输出槽位 (来自 nodeDefinition.inputs 和 nodeDefinition.outputs)
       const processNormalSlots = (slotDefinitions: Record<string, InputDefinition | OutputDefinition> | undefined, isInput: boolean) => {
         if (slotDefinitions) {
           Object.values(slotDefinitions).forEach((slotDef: InputDefinition | OutputDefinition) => {
@@ -219,57 +277,41 @@ const collectStats = async () => {
       processNormalSlots(nodeDefinition.inputs, true);
       processNormalSlots(nodeDefinition.outputs, false);
 
-      // 处理配置槽位 (来自 nodeDefinition.configSchema) 并统计其使用的UI组件
       if (nodeDefinition.configSchema) {
-        Object.values(nodeDefinition.configSchema).forEach((configDef: InputDefinition) => { // 遍历 InputDefinition
-          totalConfigSlotInstances++; // 仍然计数配置槽位实例总数
+        Object.values(nodeDefinition.configSchema).forEach((configDef: InputDefinition) => {
+          totalConfigSlotInstances++;
 
-          // 统计配置项本身的 displayName 或 key (原有逻辑保留，用于槽位统计部分)
           const configKeyForDisplay = configDef.displayName || (Object.keys(nodeDefinition.configSchema!).find(key => nodeDefinition.configSchema![key] === configDef)) || '未知配置项';
           configSlotKeyCounts[configKeyForDisplay] = (configSlotKeyCounts[configKeyForDisplay] || 0) + 1;
 
-          // 修改：使用 getInputComponent 来推断并统计实际使用的输入组件名称
           const componentObject = getInputComponent(configDef.dataFlowType, configDef.config, configDef.matchCategories);
           if (componentObject) {
             const componentName = componentObject.name || componentObject.type?.name || componentObject.__name || 'UnknownComponent';
-            // 排除一些辅助性或非直接输入类型的组件名称
             if (componentName !== 'InlineConnectionSorter' && componentName !== 'NodeInputActionsBar' && componentName !== 'UnknownComponent') {
               collectedComponentUsage[componentName] = (collectedComponentUsage[componentName] || 0) + 1;
-              console.log(`[PerformancePanel] Node ${node.id} config item '${configKeyForDisplay}' (DataFlowType: ${configDef.dataFlowType}) renders as component: ${componentName}`);
+              // console.log(`[PerformancePanel] Node ${node.id} config item '${configKeyForDisplay}' (DataFlowType: ${configDef.dataFlowType}) renders as component: ${componentName}`);
             } else if (componentName === 'UnknownComponent') {
-              console.warn(`[PerformancePanel] Node ${node.id} config item '${configKeyForDisplay}' (DataFlowType: ${configDef.dataFlowType}) resolved to an unknown component. Object:`, componentObject);
+              // console.warn(`[PerformancePanel] Node ${node.id} config item '${configKeyForDisplay}' (DataFlowType: ${configDef.dataFlowType}) resolved to an unknown component. Object:`, componentObject);
             }
           }
         });
       }
 
-      // 新增：处理 inputs 中的内联组件
       if (nodeDefinition.inputs) {
-        Object.entries(nodeDefinition.inputs).forEach(([inputKey, inputDef]) => {
-          // Skip if the input is connected, as no inline component will be rendered.
-          // This check needs access to the edges or a pre-calculated connection status.
-          // For now, we assume that if an input *can* have an inline component, we count it
-          // if getInputComponent returns a component.
-          // A more accurate count would require checking `node.data.inputValues[inputKey]`
-          // or if an edge is connected to this specific input handle.
-          // However, the goal here is to count *potential* rendered components based on definition.
-
+        Object.entries(nodeDefinition.inputs).forEach(([_inputKey, inputDef]) => {
           const componentObject = getInputComponent(inputDef.dataFlowType, inputDef.config, inputDef.matchCategories);
           if (componentObject) {
             const componentName = componentObject.name || componentObject.type?.name || componentObject.__name || 'UnknownComponent';
-            // 同样，排除一些辅助性或非直接输入类型的组件名称
             if (componentName !== 'InlineConnectionSorter' && componentName !== 'NodeInputActionsBar' && componentName !== 'UnknownComponent') {
               collectedComponentUsage[componentName] = (collectedComponentUsage[componentName] || 0) + 1;
-              // const inputKeyForDisplay = inputDef.displayName || inputKey;
-              // console.log(`[PerformancePanel] Node ${node.id} input item '${inputKeyForDisplay}' (DataFlowType: ${inputDef.dataFlowType}) renders as component: ${componentName}`);
             } else if (componentName === 'UnknownComponent') {
-              const inputKeyForDisplay = inputDef.displayName || inputKey;
-              console.warn(`[PerformancePanel] Node ${node.id} input item '${inputKeyForDisplay}' (DataFlowType: ${inputDef.dataFlowType}) resolved to an unknown component. Object:`, componentObject);
+              // const inputKeyForDisplay = inputDef.displayName || inputKey;
+              // console.warn(`[PerformancePanel] Node ${node.id} input item '${inputKeyForDisplay}' (DataFlowType: ${inputDef.dataFlowType}) resolved to an unknown component. Object:`, componentObject);
             }
           }
         });
       }
-    } else { // 如果没有 nodeDefinition，尝试从 node.data 回退 (主要针对输入输出，配置项必须有定义)
+    } else {
       const inputsFromData = node.data?.inputs;
       const outputsFromData = node.data?.outputs;
 
@@ -296,16 +338,13 @@ const collectStats = async () => {
     }
   });
 
-  // 总槽位数 = 输入 + 输出 + 配置项实例
   const overallTotalSlots = totalInputSlots + totalOutputSlots + totalConfigSlotInstances;
   const slotStatsItem: StatItem = { label: '槽位总数', count: overallTotalSlots, children: [], expanded: true };
 
-  // 1. 输入槽位子项
   const inputSlotChildren: StatItem[] = [];
   Object.entries(inputSlotTypes).sort(([a], [b]) => a.localeCompare(b)).forEach(([type, count]) => {
     inputSlotChildren.push({ label: type, count });
   });
-  // 总是显示输入槽位类别，即使数量为0
   slotStatsItem.children?.push({
     label: '输入槽位',
     count: totalInputSlots,
@@ -313,12 +352,10 @@ const collectStats = async () => {
     expanded: false
   });
 
-  // 2. 输出槽位子项
   const outputSlotChildren: StatItem[] = [];
   Object.entries(outputSlotTypes).sort(([a], [b]) => a.localeCompare(b)).forEach(([type, count]) => {
     outputSlotChildren.push({ label: type, count });
   });
-  // 总是显示输出槽位类别，即使数量为0
   slotStatsItem.children?.push({
     label: '输出槽位',
     count: totalOutputSlots,
@@ -326,12 +363,10 @@ const collectStats = async () => {
     expanded: false
   });
 
-  // 3. 配置槽位子项
   const configSlotChildren: StatItem[] = [];
   Object.entries(configSlotKeyCounts).sort(([a], [b]) => a.localeCompare(b)).forEach(([key, count]) => {
-    configSlotChildren.push({ label: key, count }); // label 是配置项的 displayName 或 key
+    configSlotChildren.push({ label: key, count });
   });
-  // 总是显示配置槽位类别，即使数量为0
   slotStatsItem.children?.push({
     label: '配置槽位',
     count: totalConfigSlotInstances,
@@ -340,30 +375,48 @@ const collectStats = async () => {
   });
 
   calculatedStats.push(slotStatsItem);
-  // 已移除之前独立的 "5. 配置项总数" 部分
 
   performanceStatsStore.setStats(tabId, calculatedStats);
-  // 将收集到的组件使用数据设置到 store
   performanceStatsStore.setComponentUsageStats(tabId, collectedComponentUsage);
 
-  // 打印统计数据到控制台，以格式化的 JSON 字符串形式输出，方便复制
-  console.groupCollapsed('统计数据 (PerformancePanel)');
-  console.log(JSON.stringify(stats.value, null, 2));
-  console.groupEnd();
+  // console.groupCollapsed('统计数据 (PerformancePanel)');
+  // console.log(JSON.stringify(stats.value, null, 2));
+  // console.groupEnd();
+  // 延迟结束加载状态，给UI一点反应时间
+  setTimeout(() => {
+    performanceStatsStore.setLoading(tabId, false);
+  }, 100);
 };
 
+// !!! 修改点: 清理复制的 JSON !!!
 const copyStatsToClipboard = async () => {
   if (!stats.value || stats.value.length === 0) {
     dialogService.showWarning('没有可复制的统计数据。', '提示');
     return;
   }
-  // clipboardIsSupported 来自 useClipboard，它不是 ref，直接使用
   if (!clipboardIsSupported) {
     dialogService.showError('您的浏览器不支持或未授权剪贴板写入操作。', '错误');
     return;
   }
 
-  const statsJson = JSON.stringify(stats.value, null, 2);
+  // 使用 JSON.stringify 的 replacer 函数来过滤掉不需要的字段
+  const statsJson = JSON.stringify(stats.value, (key, value) => {
+    // 过滤掉 UI 状态字段 'expanded'
+    if (key === 'expanded') {
+      return undefined;
+    }
+    // 过滤掉空的 children 数组
+    if (key === 'children' && Array.isArray(value) && value.length === 0) {
+      return undefined;
+    }
+    // 过滤掉值为 undefined 的 originalType
+    if (key === 'originalType' && value === undefined) {
+      return undefined;
+    }
+    // isNodeTypeEntry 已经不存在，无需过滤
+    return value;
+  }, 2); // 缩进 2 个空格
+
   await writeText(statsJson);
 
   if (clipboardError.value) {
@@ -373,11 +426,10 @@ const copyStatsToClipboard = async () => {
     dialogService.showSuccess('统计数据已复制到剪贴板！', '成功');
   }
 };
+// !!! 修改结束 !!!
 
 </script>
 
 <style scoped>
-.performance-panel {
-  /* 可以添加特定于此面板的样式 */
-}
+/* 保持样式不变 */
 </style>
