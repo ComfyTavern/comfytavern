@@ -17,6 +17,7 @@
 - **模型注册服务 (`ModelRegistryService`)**: 统一管理模型信息，结合预设库和激活注册表，并支持从渠道动态发现模型。
 - **模型/渠道路由服务 (`ModelRouterService`)**: **新增核心组件**。在运行时根据节点的**能力请求**和用户的**全局偏好/规则**，选择合适的**模型 (`model_id`)** 和**渠道组 (`channel_group_ref`)**。
 - **重试与 Key 选择逻辑 (`RetryHandler` & `KeySelector`)**: **新增逻辑** (可内聚在 `ModelRouterService` 或 `ExecutionEngine` 中)。负责根据选定的渠道组执行**故障转移**，并根据渠道配置选择**具体的 API Key**。
+- **Tokenization 服务 (`TokenizationService`)**: **新增核心服务**。负责提供全局的 `token` 计算能力。详见 [全局 Tokenization 服务设计方案](./tokenization-service-plan.md)。
 - **用户偏好/路由规则存储 (DB/Config)**: **新增配置项**。存储用户定义的模型和渠道组选择规则。
 - **执行上下文 (`context`)**: 在工作流执行期间，由 `ExecutionEngine` 注入，包含对上述服务的引用。
 
@@ -310,6 +311,13 @@ export interface ActivatedModelInfo {
    * 例如: ["fast-response", "low-cost", "high-quality", "my-project-x"]
    */
   tags?: string[];
+  /**
+   * 可选: 指定此模型应使用的分词器标识符。
+   * 这通常是 Hugging Face Hub 上的模型/分词器名称 (e.g., "gpt2", "bert-base-uncased")。
+   * TokenizationService 将使用此 ID 来加载正确的分词器。
+   * 如果未提供，可以尝试根据 model_id 推断。
+   */
+  tokenizer_id?: string;
   // 可选: 其他用户自定义元数据
 }
 ```
