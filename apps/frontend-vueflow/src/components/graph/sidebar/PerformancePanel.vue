@@ -98,7 +98,27 @@ const currentTabId = computed(() => tabStore.activeTab?.internalId);
 
 const stats = computed((): StatItem[] => {
   if (!currentTabId.value) return [];
-  return performanceStatsStore.getStats(currentTabId.value) || [];
+
+  const canvasStats = performanceStatsStore.getStats(currentTabId.value) || [];
+  const componentRawStats = performanceStatsStore.getComponentStats(currentTabId.value);
+
+  const componentStatItems: StatItem[] = [];
+  if (componentRawStats && Object.keys(componentRawStats).length > 0) {
+    const children: StatItem[] = Object.entries(componentRawStats)
+      .map(([type, count]) => ({ label: type, count }))
+      .sort((a, b) => a.label.localeCompare(b.label)); // 按类型名称排序
+
+    if (children.length > 0) {
+      componentStatItems.push({
+        label: '组件实例统计', // 顶级标签
+        count: children.reduce((sum, item) => sum + item.count, 0), // 总实例数
+        children: children,
+        expanded: true, // 默认展开
+      });
+    }
+  }
+  // 将组件统计放在画布统计之前或之后，根据偏好调整
+  return [...canvasStats, ...componentStatItems];
 });
 
 const loading = computed(() => {
