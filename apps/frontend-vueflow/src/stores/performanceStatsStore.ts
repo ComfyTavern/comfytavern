@@ -82,6 +82,10 @@ export const usePerformanceStatsStore = defineStore('performanceStats', () => {
     return componentCountsByTab.value.get(tabInternalId);
   }
 
+  function setComponentUsageStats(tabInternalId: string, componentUsage: Record<string, number>): void {
+    componentCountsByTab.value.set(tabInternalId, componentUsage);
+  }
+
   return {
     // statsByTab, // 不直接暴露 Map，通过 getter 操作
     // collectedByTab,
@@ -96,5 +100,6 @@ export const usePerformanceStatsStore = defineStore('performanceStats', () => {
     incrementComponentCount,
     decrementComponentCount,
     getComponentStats,
+    setComponentUsageStats, // 导出新添加的 action
   };
 });

@@ -76,7 +76,8 @@ import { useNodeStore } from '@/stores/nodeStore';
 import { useTabStore } from '@/stores/tabStore';
 import { usePerformanceStatsStore } from '@/stores/performanceStatsStore';
 import type { Node, Edge } from '@vue-flow/core';
-import type { InputDefinition, OutputDefinition } from '@comfytavern/types';
+import type { InputDefinition, OutputDefinition } from '@comfytavern/types'; // 引入 DataFlowTypeName
+import { getInputComponent } from '@/components/graph/inputs'; // +++ 导入 getInputComponent
 
 export interface StatItem {
   label: string;
@@ -153,8 +154,12 @@ const collectStats = async () => {
   const nodes: Node[] = getNodes.value;
   const edges: Edge[] = getEdges.value;
 
+  // 初始化用于存储组件使用情况的记录
+  const collectedComponentUsage: Record<string, number> = {};
+
   if (!nodes || nodes.length === 0) {
     performanceStatsStore.setStats(tabId, []);
+    performanceStatsStore.setComponentUsageStats(tabId, {}); // 画布为空时，组件使用也为空
     performanceStatsStore.setLoading(tabId, false);
     return;
   }
@@ -214,22 +219,56 @@ const collectStats = async () => {
       processNormalSlots(nodeDefinition.inputs, true);
       processNormalSlots(nodeDefinition.outputs, false);
 
-      // 处理配置槽位 (来自 nodeDefinition.configSchema)
+      // 处理配置槽位 (来自 nodeDefinition.configSchema) 并统计其使用的UI组件
       if (nodeDefinition.configSchema) {
-        Object.keys(nodeDefinition.configSchema).forEach(configKey => {
-          totalConfigSlotInstances++;
-          const configDef = nodeDefinition.configSchema![configKey];
-          // 优先使用 displayName，如果不存在则用 key 作为统计标签
-          if (configDef) {
-            const keyForDisplay = configDef.displayName || configKey;
-            configSlotKeyCounts[keyForDisplay] = (configSlotKeyCounts[keyForDisplay] || 0) + 1;
-          } else {
-            // 后备：如果 configDef 意外地未定义，则直接使用 configKey
-            configSlotKeyCounts[configKey] = (configSlotKeyCounts[configKey] || 0) + 1;
+        Object.values(nodeDefinition.configSchema).forEach((configDef: InputDefinition) => { // 遍历 InputDefinition
+          totalConfigSlotInstances++; // 仍然计数配置槽位实例总数
+
+          // 统计配置项本身的 displayName 或 key (原有逻辑保留，用于槽位统计部分)
+          const configKeyForDisplay = configDef.displayName || (Object.keys(nodeDefinition.configSchema!).find(key => nodeDefinition.configSchema![key] === configDef)) || '未知配置项';
+          configSlotKeyCounts[configKeyForDisplay] = (configSlotKeyCounts[configKeyForDisplay] || 0) + 1;
+
+          // 修改：使用 getInputComponent 来推断并统计实际使用的输入组件名称
+          const componentObject = getInputComponent(configDef.dataFlowType, configDef.config, configDef.matchCategories);
+          if (componentObject) {
+            const componentName = componentObject.name || componentObject.type?.name || componentObject.__name || 'UnknownComponent';
+            // 排除一些辅助性或非直接输入类型的组件名称
+            if (componentName !== 'InlineConnectionSorter' && componentName !== 'NodeInputActionsBar' && componentName !== 'UnknownComponent') {
+              collectedComponentUsage[componentName] = (collectedComponentUsage[componentName] || 0) + 1;
+              console.log(`[PerformancePanel] Node ${node.id} config item '${configKeyForDisplay}' (DataFlowType: ${configDef.dataFlowType}) renders as component: ${componentName}`);
+            } else if (componentName === 'UnknownComponent') {
+              console.warn(`[PerformancePanel] Node ${node.id} config item '${configKeyForDisplay}' (DataFlowType: ${configDef.dataFlowType}) resolved to an unknown component. Object:`, componentObject);
+            }
           }
         });
       }
 
+      // 新增：处理 inputs 中的内联组件
+      if (nodeDefinition.inputs) {
+        Object.entries(nodeDefinition.inputs).forEach(([inputKey, inputDef]) => {
+          // Skip if the input is connected, as no inline component will be rendered.
+          // This check needs access to the edges or a pre-calculated connection status.
+          // For now, we assume that if an input *can* have an inline component, we count it
+          // if getInputComponent returns a component.
+          // A more accurate count would require checking `node.data.inputValues[inputKey]`
+          // or if an edge is connected to this specific input handle.
+          // However, the goal here is to count *potential* rendered components based on definition.
+
+          const componentObject = getInputComponent(inputDef.dataFlowType, inputDef.config, inputDef.matchCategories);
+          if (componentObject) {
+            const componentName = componentObject.name || componentObject.type?.name || componentObject.__name || 'UnknownComponent';
+            // 同样，排除一些辅助性或非直接输入类型的组件名称
+            if (componentName !== 'InlineConnectionSorter' && componentName !== 'NodeInputActionsBar' && componentName !== 'UnknownComponent') {
+              collectedComponentUsage[componentName] = (collectedComponentUsage[componentName] || 0) + 1;
+              // const inputKeyForDisplay = inputDef.displayName || inputKey;
+              // console.log(`[PerformancePanel] Node ${node.id} input item '${inputKeyForDisplay}' (DataFlowType: ${inputDef.dataFlowType}) renders as component: ${componentName}`);
+            } else if (componentName === 'UnknownComponent') {
+              const inputKeyForDisplay = inputDef.displayName || inputKey;
+              console.warn(`[PerformancePanel] Node ${node.id} input item '${inputKeyForDisplay}' (DataFlowType: ${inputDef.dataFlowType}) resolved to an unknown component. Object:`, componentObject);
+            }
+          }
+        });
+      }
     } else { // 如果没有 nodeDefinition，尝试从 node.data 回退 (主要针对输入输出，配置项必须有定义)
       const inputsFromData = node.data?.inputs;
       const outputsFromData = node.data?.outputs;
@@ -304,6 +343,13 @@ const collectStats = async () => {
   // 已移除之前独立的 "5. 配置项总数" 部分
 
   performanceStatsStore.setStats(tabId, calculatedStats);
+  // 将收集到的组件使用数据设置到 store
+  performanceStatsStore.setComponentUsageStats(tabId, collectedComponentUsage);
+
+  // 打印统计数据到控制台，以格式化的 JSON 字符串形式输出，方便复制
+  console.groupCollapsed('统计数据 (PerformancePanel)');
+  console.log(JSON.stringify(stats.value, null, 2));
+  console.groupEnd();
 };
 
 const copyStatsToClipboard = async () => {

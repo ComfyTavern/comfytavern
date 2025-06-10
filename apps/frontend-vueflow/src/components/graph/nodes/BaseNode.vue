@@ -11,7 +11,7 @@ import { useTabStore } from "../../../stores/tabStore";
 import { useExecutionStore } from "../../../stores/executionStore";
 import { useProjectStore } from '@/stores/projectStore'; // 新增 (useTabManagement 移除)
 import { useUiStore } from "../../../stores/uiStore"; // +++ 导入 UI Store
-import { usePerformanceStatsStore } from '@/stores/performanceStatsStore'; // 新增：导入性能统计 store
+// import { usePerformanceStatsStore } from '@/stores/performanceStatsStore'; // 已移除：不再在此处统计组件
 
 // 项目类型和工具函数
 import {
@@ -67,7 +67,7 @@ const tabStore = useTabStore();
 const { activeTabId } = storeToRefs(tabStore);
 const projectStore = useProjectStore();
 const { currentProjectId } = storeToRefs(projectStore); // 只解构 currentProjectId
-const performanceStatsStore = usePerformanceStatsStore(); // 新增：实例化性能统计 store
+// const performanceStatsStore = usePerformanceStatsStore(); // 已移除：不再在此处统计组件
 
 // VueFlow 和工作流管理器
 const vueFlowInstance = useVueFlow(); // 确保 vueFlowInstance 在此作用域
@@ -555,20 +555,20 @@ onMounted(() => {
     executionStore.registerNodeClientScriptExecutor(props.id, executeClientHook as any);
   }
 
-  // 组件实例计数：增加
-  if (activeTabId.value && props.type) {
-    performanceStatsStore.incrementComponentCount(activeTabId.value, props.type as string);
-  }
+  // 组件实例计数：增加 (已移除，由 PerformancePanel 统一处理)
+  // if (activeTabId.value && props.type) {
+  //   performanceStatsStore.incrementComponentCount(activeTabId.value, props.type as string);
+  // }
 });
 
 onUnmounted(() => {
   // 当节点卸载时，从 store 中注销其执行器
   executionStore.unregisterNodeClientScriptExecutor(props.id);
 
-  // 组件实例计数：减少
-  if (activeTabId.value && props.type) {
-    performanceStatsStore.decrementComponentCount(activeTabId.value, props.type as string);
-  }
+  // 组件实例计数：减少 (已移除，由 PerformancePanel 统一处理)
+  // if (activeTabId.value && props.type) {
+  //   performanceStatsStore.decrementComponentCount(activeTabId.value, props.type as string);
+  // }
 });
 
 // 新增：处理来自 NodeInputActionsBar 的事件

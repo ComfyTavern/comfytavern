@@ -55,7 +55,7 @@ export interface SelectInputProps extends InputProps {
 }
 
 // 定义输入类型枚举
-export type InputType = 'STRING' | 'INTEGER' | 'FLOAT' | 'BOOLEAN' | 'COMBO' | 'HISTORY' | 'CODE' | 'BUTTON' | 'RESOURCE_SELECTOR' | 'OBJECT' | 'JSON' // Removed: EMBEDDED_GROUP_SELECTOR
+export type InputType = 'STRING' | 'INTEGER' | 'FLOAT' | 'BOOLEAN' | 'COMBO' | 'CODE' | 'BUTTON' | 'RESOURCE_SELECTOR' | 'OBJECT' | 'JSON' // Removed: EMBEDDED_GROUP_SELECTOR
 
 // 定义组件获取器类型
 // 使用更通用的类型以避免复杂的联合类型问题
@@ -68,7 +68,6 @@ export let inputComponentMap: Record<string, ComponentGetter> = { // 改为 let,
   'FLOAT': () => NumberInput,
   'BOOLEAN': () => BooleanToggle,
   'COMBO': () => SelectInput,
-  'HISTORY': () => null, // HISTORY 类型数据是数组，不适合直接用 TextAreaInput 编辑，除非有特定组件或转换逻辑
   'CODE': () => CodeInput, // 新增 CODE 类型映射
   'BUTTON': () => ButtonInput, // 新增 BUTTON 类型映射
   'RESOURCE_SELECTOR': () => ResourceSelectorInput, // 移除 as any
