@@ -216,7 +216,10 @@ import { useNodeStore } from "@/stores/nodeStore";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer.vue";
 import type { Node as VueFlowNode } from "@vue-flow/core";
 
-const panelMode = ref<"singlePreview" | "groupOverview">("singlePreview");
+const panelMode = useLocalStorage<"singlePreview" | "groupOverview">(
+  "rightPreviewPanelMode", // 用于 localStorage 的键名
+  "singlePreview" // 默认值
+);
 const groupOutputItemCollapseState = useLocalStorage(
   "groupOutputItemCollapseStatePerWorkflow",
   {} as Record<string, Record<string, boolean>>
