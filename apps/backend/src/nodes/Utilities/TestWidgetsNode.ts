@@ -47,7 +47,7 @@ export const definition: NodeDefinition = {
       displayName: '多行文本',
       description: '多行文本输入测试',
       required: true,
-      matchCategories: ['UiBlock'], // 添加 UiBlock
+      matchCategories: ['UiBlock', "CanPreview"], // 添加 UiBlock
       config: {
         default: '这是默认的\n多行文本',
         multiline: true,

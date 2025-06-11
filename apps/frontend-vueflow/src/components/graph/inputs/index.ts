@@ -10,7 +10,8 @@ import ButtonInput from './ButtonInput.vue' // 新增 ButtonInput 导入
 import ResourceSelectorInput from './ResourceSelectorInput.vue' // 导入资源选择器
 import JsonInlineViewer from './JsonInlineViewer.vue' // 导入 JSON 内联查看器
 import InlineRegexRuleDisplay from './InlineRegexRuleDisplay.vue'; // ++ 导入内联正则规则显示组件
-import { DataFlowType, BuiltInSocketMatchCategory } from '@comfytavern/types'; // 新增导入
+import { DataFlowType, BuiltInSocketMatchCategory, type DataFlowTypeName } from '@comfytavern/types'; // 新增导入 DataFlowTypeName
+import type { Component } from 'vue'; // 导入 Vue Component 类型
 
 // 导出组件
 export {
@@ -85,45 +86,70 @@ export const registerInputComponent = (type: string, componentGetter: ComponentG
 }
 
 // 获取适合指定类型的组件
-export const getInputComponent = (type: string, config?: any, matchCategories?: string[]) => { // 增加 matchCategories 参数
-  // 优先处理 display_only
-  if (config?.display_only) {
-    return TextDisplay;
-  }
+export const getInputComponent = (
+    type: DataFlowTypeName, // 使用强类型
+    config?: Record<string, any>,
+    matchCategories?: string[]
+): Component | null => {
+    const cats = matchCategories || [];
+    const cfg = config || {};
 
-  // 新增：专门处理按钮的逻辑
-  // 确保 DataFlowType 和 BuiltInSocketMatchCategory 已导入
-  if (type === DataFlowType.WILDCARD && matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)) {
-    const getter = inputComponentMap['BUTTON']; // 直接使用 'BUTTON' 键
-    return getter ? getter(config) : null;
-  }
-
-  // ++ 新增：根据 matchCategories 处理 InlineRegexRuleDisplay
-  if (type === DataFlowType.ARRAY && matchCategories?.includes(BuiltInSocketMatchCategory.REGEX_RULE_ARRAY)) {
-    return InlineRegexRuleDisplay;
-  }
-
-  // 使用修改后的 inputComponentMap
-  if (type in inputComponentMap) {
-    const getter = inputComponentMap[type]; // 直接使用 type 作为 key
-    return getter ? getter(config) : null; // 调用 getter 并处理可能为 null 的情况
-  }
-
-  // 特殊处理 OBJECT 类型，确保它们能被正确映射
-  // JSON 字符串通常作为 STRING 类型处理，但如果直接有 JSON 类型，也应映射到 JsonInlineViewer
-  if (type === DataFlowType.OBJECT || type === 'JSON') { // 'JSON' 是 inputComponentMap 中的键
-    const getter = inputComponentMap[type];
-    if (getter) {
-      return getter(config);
+    // 1. 特殊用途的内联组件
+    if (type === DataFlowType.WILDCARD && cats.includes(BuiltInSocketMatchCategory.TRIGGER)) {
+        return ButtonInput;
     }
-  }
+    if (type === DataFlowType.ARRAY && cats.includes(BuiltInSocketMatchCategory.REGEX_RULE_ARRAY)) {
+        return InlineRegexRuleDisplay;
+    }
 
-  // 对于未知类型或any类型，不返回任何组件
-  if (!type || type === 'any' || type.toLowerCase() === 'any') {
-    return null;
-  }
-  return null; // 不默认使用任何输入组件
-}
+    // 2. 基于 config.suggestions 的 SelectInput
+    if (cfg.suggestions && Array.isArray(cfg.suggestions) && cfg.suggestions.length > 0 &&
+        (type === DataFlowType.STRING || type === DataFlowType.INTEGER || type === DataFlowType.FLOAT)) {
+        return SelectInput;
+    }
+
+    // 3. 根据 DataFlowType 和其他条件选择内联组件
+    switch (type) {
+        case DataFlowType.STRING:
+            if (cats.includes(BuiltInSocketMatchCategory.CODE)) return null; // 代码编辑外部化
+            if (cfg.multiline === true) return TextAreaInput; // 多行文本内联编辑
+            return StringInput; // 单行文本内联编辑
+
+        case DataFlowType.INTEGER:
+        case DataFlowType.FLOAT:
+            // suggestions 已被上面处理 (SelectInput)
+            return NumberInput;
+
+        case DataFlowType.BOOLEAN:
+            return BooleanToggle;
+
+        case DataFlowType.OBJECT:
+            // 使用现有的 JsonInlineViewer，它已支持内联编辑
+            if (cats.includes(BuiltInSocketMatchCategory.JSON)) return JsonInlineViewer;
+            return null; // 其他 Object 类型可能需要外部编辑器
+
+        case DataFlowType.ARRAY: // 未被 REGEX_RULE_ARRAY 捕获的
+            // 通用数组可能没有标准内联编辑器，依赖外部
+            return null;
+
+        case DataFlowType.CONVERTIBLE_ANY:
+            return null; // 不直接渲染
+
+        default:
+            // 尝试从 inputComponentMap (由 registerInputComponent 填充) 中查找自定义组件
+            // 注意：这里的 type 是 DataFlowTypeName，而 inputComponentMap 的键是 string
+            // 如果 registerInputComponent 注册时使用的键与 DataFlowTypeName 的值一致，则可以匹配
+            if (type in inputComponentMap) {
+                const getter = inputComponentMap[type as string];
+                if (getter) {
+                    console.warn(`[getInputComponent] Using custom component for type: ${type} from inputComponentMap.`);
+                    return getter(cfg);
+                }
+            }
+            console.warn(`[getInputComponent] No specific INLINE component registered or found for DataFlowType: ${type}. Config:`, cfg, "Categories:", cats);
+            return null;
+    }
+};
 
 export default {
   install: (app: any) => {
