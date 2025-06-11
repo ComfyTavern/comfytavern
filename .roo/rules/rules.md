@@ -239,6 +239,58 @@ src/
 - **通用类型导入**：`@comfytavern/types`是通用类型的导入路径，通过`index.ts`统一注册了所有通用类型定义。
 - **工作流数据转换**：我们以画布数据为单一事实来源的，这个`workflowTransformer.ts`转换仅保存/加载和创建执行负载才会用。
 
+### 10. Tooltip 使用规范 (v-comfy-tooltip)
+
+为了优化性能并统一管理 Tooltip，项目引入了全局 Tooltip 服务。对于简单的静态文本提示，推荐使用 `v-comfy-tooltip` Vue 指令。
+
+- **核心组件与状态管理**:
+
+  - 全局状态由 [`apps/frontend-vueflow/src/stores/tooltipStore.ts`](apps/frontend-vueflow/src/stores/tooltipStore.ts:1) 管理。
+  - Tooltip 的渲染由全局唯一的 [`apps/frontend-vueflow/src/components/common/TooltipRenderer.vue`](apps/frontend-vueflow/src/components/common/TooltipRenderer.vue:1) 组件负责。
+  - 指令逻辑位于 [`apps/frontend-vueflow/src/directives/vComfyTooltip.ts`](apps/frontend-vueflow/src/directives/vComfyTooltip.ts:1)。
+  - 指令已在 [`apps/frontend-vueflow/src/main.ts`](apps/frontend-vueflow/src/main.ts:1) 中全局注册为 `comfy-tooltip`。
+
+- **基本用法**:
+
+  1.  **简单文本提示**:
+
+      ```html
+      <button v-comfy-tooltip="'这是一个简单的提示'">按钮</button>
+      ```
+
+  2.  **带配置的提示**:
+      ```html
+      <div
+        v-comfy-tooltip="{
+        content: '这是一个更复杂的提示',
+        placement: 'top-start',
+        delayShow: 500,
+        interactive: true,
+        showCopyButton: true,
+        maxWidth: '400px'
+      }"
+      >
+        Hover Me
+      </div>
+      ```
+
+- **配置选项**:
+  主要的配置选项可以在 [`apps/frontend-vueflow/src/stores/tooltipStore.ts`](apps/frontend-vueflow/src/stores/tooltipStore.ts:1) 中的 `DEFAULT_TOOLTIP_OPTIONS` 和 `TooltipOptions` 接口查看，例如：
+
+  - `content: string` (必需，除非指令值直接是字符串)
+  - `placement: Placement` (可选, e.g., 'top', 'bottom', 'left', 'right', 'top-start', etc.)
+  - `delayShow: number` (可选, 毫秒)
+  - `delayHide: number` (可选, 毫秒)
+  - `interactive: boolean` (可选, Tooltip 是否可交互)
+  - `showCopyButton: boolean` (可选, 是否显示复制按钮)
+  - `triggerType: 'hover' | 'click' | 'focus' | Array<'hover' | 'click' | 'focus'>` (可选, 触发方式)
+  - `maxWidth: string | number` (可选, 最大宽度)
+  - `offsetValue: number` (可选, 偏移量)
+
+- **适用场景**:
+  - 主要用于替换原先大量独立使用的 `<Tooltip>` 组件实例，特别是内容简单、静态或易于作为字符串处理的场景。
+  - 对于内容结构复杂、高度依赖当前组件上下文的 Tooltip（如 Handle 提示），可能仍需评估是否适用或需要特殊处理。
+
 ## CONVERTIBLE_ANY 类型详细说明
 
 本部分详细解释 `CONVERTIBLE_ANY` 类型的行为特性，主要供 AI 系统理解及开发者参考。

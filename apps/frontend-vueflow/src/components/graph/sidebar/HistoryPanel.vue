@@ -16,24 +16,31 @@
       scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
     }" class="flex-1" defer>
       <ul class="space-y-2">
-        <Tooltip v-for="item in reversedHistoryItems" :key="item.originalIndex" :content="generateTooltipContent(item)"
-          placement="left" :showDelay="100" :offsetValue="10" width="auto" :showCopyButton="true" :interactive="true">
-          <li class="history-item p-2 rounded cursor-pointer transition-colors duration-150" :class="{
+        <li v-for="item in reversedHistoryItems" :key="item.originalIndex"
+          v-comfy-tooltip="{
+            content: generateTooltipContent(item),
+            placement: 'left',
+            delayShow: 100,
+            offset: 10,
+            width: 'auto',
+            copyButton: true,
+            interactive: true
+          }"
+          class="history-item p-2 rounded cursor-pointer transition-colors duration-150" :class="{
             'bg-blue-100 dark:bg-blue-900 text-blue-ID_MAX_LEN00 dark:text-blue-200 font-medium':
               item.originalIndex === currentHistory.currentIndex,
             'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300':
               item.originalIndex !== currentHistory.currentIndex,
             'opacity-50': item.originalIndex > currentHistory.currentIndex,
           }" @click="handleHistoryClick(item.originalIndex)">
-            <span class="mr-2 w-6 text-right text-gray-500 dark:text-gray-400">{{
-              item.originalIndex
-            }}</span>
-            <span class="mr-2">{{
-              item.originalIndex === currentHistory.savedIndex ? "💾" : "•"
-            }}</span>
-            <span class="flex-1 truncate">{{ item.entry?.summary || "未命名操作" }}</span>
-          </li>
-        </Tooltip>
+          <span class="mr-2 w-6 text-right text-gray-500 dark:text-gray-400">{{
+            item.originalIndex
+          }}</span>
+          <span class="mr-2">{{
+            item.originalIndex === currentHistory.savedIndex ? "💾" : "•"
+          }}</span>
+          <span class="flex-1 truncate">{{ item.entry?.summary || "未命名操作" }}</span>
+        </li>
       </ul>
     </OverlayScrollbarsComponent>
   </div>
@@ -42,7 +49,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
-import Tooltip from "../../common/Tooltip.vue";
+// import Tooltip from "../../common/Tooltip.vue"; // Tooltip 组件不再直接使用
 // Import OverlayScrollbars and theme
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";

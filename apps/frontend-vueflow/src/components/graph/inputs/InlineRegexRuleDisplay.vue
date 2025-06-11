@@ -4,15 +4,15 @@
       <template #item="{ element: rule, index }">
         <div class="rule-item">
           <span class="rule-index">{{ index + 1 }}.</span>
-          <Tooltip :content="getRuleTooltip(rule)" placement="top" :show-delay="300">
-            <span class="rule-name">{{ rule.name }}</span>
-          </Tooltip>
+          <span class="rule-name" v-comfy-tooltip="{ content: getRuleTooltip(rule), placement: 'top', delayShow: 300 }">
+            {{ rule.name }}
+          </span>
           <input
             type="checkbox"
             :checked="rule.enabled !== false"
             @change="toggleRuleEnabled(index)"
             class="rule-enabled-toggle"
-            title="启用/禁用此规则"
+            v-comfy-tooltip="'启用/禁用此规则'"
           />
           <!-- 未来可以添加删除按钮 -->
         </div>
@@ -29,7 +29,7 @@
 import { ref, watch, type PropType } from 'vue';
 import draggable from 'vuedraggable';
 import { klona } from 'klona/full';
-import Tooltip from '../../common/Tooltip.vue'; // 假设 Tooltip 组件路径
+// import Tooltip from '../../common/Tooltip.vue'; // Tooltip 组件不再直接使用
 import type { RegexRule } from '@comfytavern/types'; // 从共享类型导入
 
 const props = defineProps({

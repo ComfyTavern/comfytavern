@@ -3,15 +3,14 @@
     <div class="panel-header">
       <div class="header-top">
         <div class="panel-title">节点库</div>
-        <Tooltip content="重新加载节点定义">
-          <button
-            @click="reloadNodes"
-            :disabled="nodeLoading || localLoading"
-            class="reload-button"
-          >
-            🔄
-          </button>
-        </Tooltip>
+        <button
+          @click="reloadNodes"
+          :disabled="nodeLoading || localLoading"
+          class="reload-button"
+          v-comfy-tooltip="'重新加载节点定义'"
+        >
+          🔄
+        </button>
       </div>
       <div class="panel-search">
         <input type="text" v-model="searchQuery" placeholder="搜索节点..." class="search-input" />
@@ -70,11 +69,9 @@
               <div v-if="node.description" class="node-description">{{ node.description }}</div>
             </div>
             <div class="node-actions">
-              <Tooltip content="点击或拖拽添加到画布">
-                <div class="node-drag-handle" @click.stop="addNodeToCanvas(node.type)">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                </div>
-              </Tooltip>
+              <div class="node-drag-handle" @click.stop="addNodeToCanvas(node.type)" v-comfy-tooltip="'点击或拖拽添加到画布'">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              </div>
             </div>
           </div>
 
@@ -136,14 +133,13 @@
                       </div>
                     </div>
                     <div class="node-actions">
-                      <Tooltip content="点击或拖拽添加到画布">
-                        <div
-                          class="node-drag-handle"
-                          @click.stop="addNodeToCanvas(`${namespace}:${node.type}`)"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                        </div>
-                      </Tooltip>
+                      <div
+                        class="node-drag-handle"
+                        @click.stop="addNodeToCanvas(`${namespace}:${node.type}`)"
+                        v-comfy-tooltip="'点击或拖拽添加到画布'"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -168,7 +164,7 @@ import { useApi } from "../../../utils/api";
 import useDragAndDrop from "../../../composables/canvas/useDnd";
 import { useThemeStore } from "../../../stores/theme";
 import { storeToRefs } from "pinia";
-import Tooltip from "@/components/common/Tooltip.vue";
+// import Tooltip from "@/components/common/Tooltip.vue"; // Tooltip 组件不再直接使用
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
 

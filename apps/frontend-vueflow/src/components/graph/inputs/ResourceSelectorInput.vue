@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue' // Removed nextTick, Removed shallowRef
 // import { useElementBounding } from '@vueuse/core' // Removed useElementBounding
-import Tooltip from '../../common/Tooltip.vue'
+// import Tooltip from '../../common/Tooltip.vue'; // Tooltip 组件不再直接使用
 import SuggestionDropdown from '../../common/SuggestionDropdown.vue' // Import SuggestionDropdown
 // import { useWorkflowGrouping } from '@/composables/useWorkflowGrouping'; // No longer needed here
 import { listWorkflowsApi } from '@/api/workflow' // Corrected API function name
@@ -256,18 +256,17 @@ const handleClearResource = () => {
     <!-- 1. 类型选择器 (Button as a simple button) -->
     <!-- 1. 类型图标按钮 (触发资源列表) -->
     <div class="relative flex-shrink-0">
-      <Tooltip :content="`选择 ${primaryTypeLabel}`" placement="top">
-        <!-- Click triggers openSuggestions for the primary type -->
-        <button :disabled="isEffectivelyDisabled" @click="handlePrimaryTypeSelect"
-          class="type-selector-button flex items-center justify-between px-1 py-1 text-xs w-[40px] border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-          <!-- Display icon for the primary accepted type -->
-          <span v-html="primaryTypeIcon" class="flex-shrink-0 w-4 h-4 text-gray-700 dark:text-gray-300"></span>
-          <!-- Chevron Down Icon -->
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 text-gray-500 dark:text-gray-400 flex-shrink-0">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-          </svg>
-        </button>
-      </Tooltip>
+      <!-- Click triggers openSuggestions for the primary type -->
+      <button :disabled="isEffectivelyDisabled" @click="handlePrimaryTypeSelect"
+        v-comfy-tooltip="{ content: `选择 ${primaryTypeLabel}`, placement: 'top' }"
+        class="type-selector-button flex items-center justify-between px-1 py-1 text-xs w-[40px] border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+        <!-- Display icon for the primary accepted type -->
+        <span v-html="primaryTypeIcon" class="flex-shrink-0 w-4 h-4 text-gray-700 dark:text-gray-300"></span>
+        <!-- Chevron Down Icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 text-gray-500 dark:text-gray-400 flex-shrink-0">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+        </svg>
+      </button>
       <!-- Removed Type Selection Dropdown -->
     </div>
 
@@ -305,26 +304,24 @@ const handleClearResource = () => {
     <!-- 3. 操作按钮 (文件选择 & 清除) -->
     <div class="flex-shrink-0 flex items-center">
       <!-- 文件系统选择按钮 -->
-      <Tooltip content="从文件系统选择" placement="top">
-        <button @click="handleSystemFileSelect" :disabled="isEffectivelyDisabled"
-          class="action-button p-1 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-          <!-- Heroicon: document-add -->
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-        </button>
-      </Tooltip>
+      <button @click="handleSystemFileSelect" :disabled="isEffectivelyDisabled"
+        v-comfy-tooltip="{ content: '从文件系统选择', placement: 'top' }"
+        class="action-button p-1 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+        <!-- Heroicon: document-add -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      </button>
       <!-- 清除按钮 (仅在有值且未禁用时显示) -->
-      <Tooltip v-if="internalValue && !isEffectivelyDisabled" content="清除选择" placement="top">
-         <button @click="handleClearResource"
-           class="action-button p-1 rounded text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
-           <!-- Heroicon: x -->
-           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-           </svg>
-         </button>
-      </Tooltip>
+       <button v-if="internalValue && !isEffectivelyDisabled" @click="handleClearResource"
+         v-comfy-tooltip="{ content: '清除选择', placement: 'top' }"
+         class="action-button p-1 rounded text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
+         <!-- Heroicon: x -->
+         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+         </svg>
+       </button>
     </div>
   </div>
 </template>

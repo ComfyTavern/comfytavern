@@ -11,6 +11,7 @@ import { initializeWebSocket, closeWebSocket } from './composables/useWebSocket'
 import DialogContainer from './components/common/DialogContainer.vue'; // 导入对话框容器组件
 import BaseModal from './components/common/BaseModal.vue'; // 导入模态框组件
 import SettingsLayout from './components/settings/SettingsLayout.vue'; // 导入设置布局组件
+import TooltipRenderer from './components/common/TooltipRenderer.vue'; // + 导入全局 Tooltip 渲染器
 
 // 初始化主题状态管理
 const themeStore = useThemeStore()
@@ -98,6 +99,8 @@ onUnmounted(() => {
     <RouterView />
     <!-- 全局对话框和通知容器 -->
     <DialogContainer />
+    <!-- 全局 Tooltip 渲染器 -->
+    <TooltipRenderer />
 
     <!-- 全局设置模态框 -->
     <BaseModal

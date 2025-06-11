@@ -724,34 +724,44 @@ const handleActionTriggered = (payload: {
             d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
         </svg>
         <!-- 优先显示错误 Tooltip -->
-        <Tooltip v-if="nodeExecutionStatus === ExecutionStatus.ERROR && nodeExecutionError"
-          :content="`执行错误: ${nodeExecutionError}`" placement="top" :maxWidth="400" type="error" :showCopyButton="true"
-          :interactive="true">
-          <!-- 错误时标题也显示红色 -->
-          <span class="node-title truncate text-red-600 dark:text-red-400">{{
-            label || "未命名节点"
-          }}</span>
-        </Tooltip>
-        <!-- 其次，如果需要显示 Tooltip (有描述 或 自定义标签与默认不同)，使用 content prop -->
-        <Tooltip v-else-if="tooltipContentForNodeTitle" :content="tooltipContentForNodeTitle" placement="top"
-          :maxWidth="400" :showDelay="300" :showCopyButton="true" :interactive="true">
-          <!-- Tooltip 触发器：节点标题 -->
-          <span class="node-title truncate">{{ label || "未命名节点" }}</span>
-        </Tooltip>
+        <span v-if="nodeExecutionStatus === ExecutionStatus.ERROR && nodeExecutionError"
+          class="node-title truncate text-red-600 dark:text-red-400"
+          v-comfy-tooltip="{
+            content: `执行错误: ${nodeExecutionError}`,
+            placement: 'top',
+            maxWidth: 400,
+            copyButton: true,
+            interactive: true
+          }">
+          {{ label || "未命名节点" }}
+        </span>
+        <!-- 其次，如果需要显示 Tooltip (有描述 或 自定义标签与默认不同)，使用 v-comfy-tooltip -->
+        <span v-else-if="tooltipContentForNodeTitle" class="node-title truncate" v-comfy-tooltip="{
+          content: tooltipContentForNodeTitle,
+          placement: 'top',
+          maxWidth: 400,
+          delayShow: 300,
+          showCopyButton: true,
+          interactive: true
+        }">
+          {{ label || "未命名节点" }}
+        </span>
         <!-- 最后，如果不需要 Tooltip，直接显示普通标题 -->
         <span v-else class="node-title truncate">{{ label || "未命名节点" }}</span>
       </div>
       <!-- 头部右侧：跳转按钮和分类 -->
       <div class="flex items-center gap-1 flex-shrink-0">
         <!-- 跳转到引用的工作流按钮 -->
-        <Tooltip v-if="referencedWorkflowId" content="跳转到引用的工作流" placement="top" :maxWidth="400">
-          <button
-            @click.stop="openReferencedWorkflow"
-            class="p-0.5 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-          </button>
-        </Tooltip>
+        <button v-if="referencedWorkflowId" v-comfy-tooltip="{ content: '跳转到引用的工作流', placement: 'top', maxWidth: 400 }"
+          @click.stop="openReferencedWorkflow"
+          class="p-0.5 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+        </button>
         <span v-if="data.category" class="node-category whitespace-nowrap">{{ data.category }}</span>
       </div>
     </div>
@@ -780,21 +790,21 @@ const handleActionTriggered = (payload: {
           <div class="param-header">
             <div class="flex items-center justify-end gap-2 mr-2 flex-grow min-w-0">
               <!-- 使用 formatDescription 处理 Tooltip 内容 -->
-              <Tooltip :content="
-                // Use final description from output object
-                formatDescription(output.description) || output.displayName || String(output.key)
-                " placement="top" :maxWidth="400" :showDelay="300">
-                <div class="param-name truncate text-right">
-                  <!-- 显示时也优先显示格式化后的 description -->
-                  {{
-                    output.displayName || // Use final description from output object
-                    formatDescription(output.description) ||
-                    String(output.key)
-                  }}
-                </div>
-              </Tooltip>
+              <div class="param-name truncate text-right" v-comfy-tooltip="{
+                content: formatDescription(output.description) || output.displayName || String(output.key),
+                placement: 'top',
+                maxWidth: 400,
+                delayShow: 300
+              }">
+                <!-- 显示时也优先显示格式化后的 description -->
+                {{
+                  output.displayName || // Use final description from output object
+                  formatDescription(output.description) ||
+                  String(output.key)
+                }}
+              </div>
             </div>
-            <!-- 使用 Tooltip 包裹 Handle 以显示类型、输出值，并添加右键菜单事件 -->
+            <!-- 使用 Tooltip 包裹 Handle 以显示类型、输出值，并添加右键菜单事件 (Handle Tooltip 暂时保留旧组件) -->
             <div class="relative flex-shrink-0 flex items-center"
               @contextmenu.prevent.stop="emitSlotContextMenu($event, String(output.key), 'source')">
               <!-- Handle 的容器 -->
@@ -828,20 +838,21 @@ const handleActionTriggered = (payload: {
                   </div>
                 </template>
                 <!-- Tooltip 的触发器是 Handle -->
-                <Handle v-if="output.hideHandle !== true" :id="String(output.key)" type="source" :position="Position.Right" :class="[
-                  styles.handle,
-                  styles.handleRight,
-                  getHandleTypeClass(output.dataFlowType),
-                  isAnyType(output.dataFlowType) && styles.handleAny, // 条件性添加类名
-                  (
-                    workflowManager.activePreviewTarget.value?.nodeId === props.id &&
-                    workflowManager.activePreviewTarget.value?.slotKey === String(output.key) &&
-                    output.dataFlowType !== DataFlowType.WILDCARD && // 新增条件：非 WILDCARD
-                    output.dataFlowType !== DataFlowType.CONVERTIBLE_ANY // 新增条件：非 CONVERTIBLE_ANY
-                  )
-                    ? styles.handleAsPreviewIcon // 应用眼睛图标样式
-                    : {}
-                ]" @click="handleOutputAltClick(output, $event)" />
+                <Handle v-if="output.hideHandle !== true" :id="String(output.key)" type="source"
+                  :position="Position.Right" :class="[
+                    styles.handle,
+                    styles.handleRight,
+                    getHandleTypeClass(output.dataFlowType),
+                    isAnyType(output.dataFlowType) && styles.handleAny, // 条件性添加类名
+                    (
+                      workflowManager.activePreviewTarget.value?.nodeId === props.id &&
+                      workflowManager.activePreviewTarget.value?.slotKey === String(output.key) &&
+                      output.dataFlowType !== DataFlowType.WILDCARD && // 新增条件：非 WILDCARD
+                      output.dataFlowType !== DataFlowType.CONVERTIBLE_ANY // 新增条件：非 CONVERTIBLE_ANY
+                    )
+                      ? styles.handleAsPreviewIcon // 应用眼睛图标样式
+                      : {}
+                  ]" @click="handleOutputAltClick(output, $event)" />
               </Tooltip>
             </div>
           </div>
@@ -900,25 +911,14 @@ const handleActionTriggered = (payload: {
             :style="input.multi ? multiInputSlotContainerStyle[String(input.key)] : {}">
             <!-- 单输入 Handle -->
             <template v-if="!input.multi">
-              <Tooltip v-if="input.dataFlowType" placement="left" :maxWidth="400">
-                <template #content>
-                  <span>{{ input.dataFlowType }}</span>
-                </template>
-                <Handle :id="String(input.key)" type="target" :position="Position.Left" :class="[
-                  styles.handle,
-                  styles.handleLeft,
-                  getHandleTypeClass(input.dataFlowType),
-                  isAnyType(input.dataFlowType) && styles.handleAny,
-                ]" :style="getStandardHandleStyles(false)"
-                  @contextmenu.prevent.stop="emitSlotContextMenu($event, String(input.key), 'target')" />
-              </Tooltip>
-              <Handle v-else :id="String(input.key)" type="target" :position="Position.Left" :class="[
+              <Handle :id="String(input.key)" type="target" :position="Position.Left" :class="[
                 styles.handle,
                 styles.handleLeft,
                 getHandleTypeClass(input.dataFlowType),
                 isAnyType(input.dataFlowType) && styles.handleAny,
               ]" :style="getStandardHandleStyles(false)"
-                @contextmenu.prevent.stop="emitSlotContextMenu($event, String(input.key), 'target')" />
+                @contextmenu.prevent.stop="emitSlotContextMenu($event, String(input.key), 'target')"
+                v-comfy-tooltip="input.dataFlowType ? { content: input.dataFlowType, placement: 'left', maxWidth: 400 } : undefined" />
             </template>
             <!-- 多输入 - 渲染多个子 Handle 和一个主 Handle -->
             <template v-else>
@@ -933,18 +933,14 @@ const handleActionTriggered = (payload: {
                   zIndex: 1 // 确保子Handle在主Handle之上，以便交互
                 }"
                 @contextmenu.prevent.stop="emitSlotContextMenu($event, `${String(input.key)}__${index - 1}`, 'target')">
-                <Tooltip placement="left" :maxWidth="400">
-                  <template #content>
-                    <span>{{ input.dataFlowType }} (插槽 {{ index }})</span>
-                  </template>
-                  <Handle :id="`${String(input.key)}__${index - 1}`" type="target" :position="Position.Left" :class="[
-                    styles.handle,
-                    styles.handleLeft,
-                    styles.childHandle, // 这个类将在 CSS 中定义背景色等
-                    getHandleTypeClass(input.dataFlowType),
-                    isAnyType(input.dataFlowType) && styles.handleAny,
-                  ]" :style="getStandardHandleStyles(true)" />
-                </Tooltip>
+                <Handle :id="`${String(input.key)}__${index - 1}`" type="target" :position="Position.Left" :class="[
+                  styles.handle,
+                  styles.handleLeft,
+                  styles.childHandle, // 这个类将在 CSS 中定义背景色等
+                  getHandleTypeClass(input.dataFlowType),
+                  isAnyType(input.dataFlowType) && styles.handleAny,
+                ]" :style="getStandardHandleStyles(true)"
+                  v-comfy-tooltip="{ content: `${input.dataFlowType} (插槽 ${index})`, placement: 'left', maxWidth: 400 }" />
               </div>
             </template>
           </div>
@@ -962,28 +958,30 @@ const handleActionTriggered = (payload: {
                 input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)
               ) // 非 CodeInput 类型
             " class="col-span-2 text-left flex items-center h-4">
-              <Tooltip :content="formatDescription(input.description) || input.displayName || String((input as any).key)
-                " placement="top" :maxWidth="400">
-                <div class="param-name truncate text-left">
-                  {{
-                    input.displayName || formatDescription(input.description) || String((input as any).key)
-                  }}
-                </div>
-              </Tooltip>
+              <div class="param-name truncate text-left" v-comfy-tooltip="{
+                content: formatDescription(input.description) || input.displayName || String((input as any).key),
+                placement: 'top',
+                maxWidth: 400
+              }">
+                {{
+                  input.displayName || formatDescription(input.description) || String((input as any).key)
+                }}
+              </div>
             </div>
             <!-- CodeInput 参数名称特殊处理，可能需要更多空间 -->
             <div v-else-if="
               input.dataFlowType === DataFlowType.STRING &&
               input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)
             " class="col-span-2 text-left flex items-center h-4">
-              <Tooltip :content="formatDescription(input.description) || input.displayName || String((input as any).key)
-                " placement="top" :maxWidth="400">
-                <div class="param-name truncate text-left">
-                  {{
-                    input.displayName || formatDescription(input.description) || String((input as any).key)
-                  }}
-                </div>
-              </Tooltip>
+              <div class="param-name truncate text-left" v-comfy-tooltip="{
+                content: formatDescription(input.description) || input.displayName || String((input as any).key),
+                placement: 'top',
+                maxWidth: 400
+              }">
+                {{
+                  input.displayName || formatDescription(input.description) || String((input as any).key)
+                }}
+              </div>
             </div>
 
             <!-- 内联输入组件 或 动作按钮容器 -->
@@ -992,33 +990,23 @@ const handleActionTriggered = (payload: {
               props.type !== 'core:GroupOutput' &&
               !(input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)) && // 不是按钮类型
               (!isInputConnected(String(input.key)) || isMultiInput(input)) // 未连接或允许多重连接
-            "
-                  class="flex items-center h-full col-span-3 pr-2 justify-end"
-                  :class="{ 'h-auto py-0.5': !isSimpleInlineInput(input) }" @mousedown.stop
-            >
+            " class="flex items-center h-full col-span-3 pr-2 justify-end"
+              :class="{ 'h-auto py-0.5': !isSimpleInlineInput(input) }" @mousedown.stop>
               <!-- 情况1: 简单内联输入 -->
-              <template v-if="isSimpleInlineInput(input) && getInputComponent(input.dataFlowType, input.config, input.matchCategories) && !shouldShowSorter(input)">
-                <component
-                  :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
+              <template
+                v-if="isSimpleInlineInput(input) && getInputComponent(input.dataFlowType, input.config, input.matchCategories) && !shouldShowSorter(input)">
+                <component :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
                   :model-value="getInputValue(String((input as any).key))"
-                  v-bind="inputPropsMap[String((input as any).key)]?.props"
-                  :node-id="props.id"
-                  :input-key="String((input as any).key)"
-                  :input-definition="input"
+                  v-bind="inputPropsMap[String((input as any).key)]?.props" :node-id="props.id"
+                  :input-key="String((input as any).key)" :input-definition="input"
                   @update:modelValue="updateInputValue(String((input as any).key), $event)"
                   @blur="($event: any) => handleComponentBlur(String((input as any).key), String($event))"
-                  class="w-full max-w-full"
-                />
+                  class="w-full max-w-full" />
               </template>
               <!-- 情况2: 显示 NodeInputActionsBar (如果不是简单内联输入且不显示 Sorter) -->
               <template v-else-if="!isSimpleInlineInput(input) && !shouldShowSorter(input)">
-                <NodeInputActionsBar
-                  :node-id="props.id"
-                  :input-key="String(input.key)"
-                  :input-definition="input"
-                  :input-value="getInputValue(String(input.key))"
-                  @action-triggered="handleActionTriggered"
-                />
+                <NodeInputActionsBar :node-id="props.id" :input-key="String(input.key)" :input-definition="input"
+                  :input-value="getInputValue(String(input.key))" @action-triggered="handleActionTriggered" />
               </template>
               <!-- 其他情况，例如已连接且非多输入，则不显示控件 -->
               <div v-else class="h-4"></div>
@@ -1313,11 +1301,13 @@ export default {
 }
 
 .custom-node.preview-clean-reused {
-  @apply opacity-75; /* 降低透明度表示复用 */
+  @apply opacity-75;
+  /* 降低透明度表示复用 */
 }
+
 /* 如果 clean_reused 也被选中，确保选中效果依然明显 */
 .custom-node.selected.preview-clean-reused {
-    @apply opacity-100 ring-2 ring-blue-500 dark:ring-blue-400;
+  @apply opacity-100 ring-2 ring-blue-500 dark:ring-blue-400;
 }
 
 .custom-node.preview-stale-unsafe-reused {

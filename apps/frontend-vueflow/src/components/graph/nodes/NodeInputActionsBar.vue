@@ -2,7 +2,7 @@
 import { computed, ref, toRefs } from "vue";
 import type { InputDefinition, NodeInputAction } from "@comfytavern/types";
 import { BuiltInSocketMatchCategory, DataFlowType } from "@comfytavern/types"; // 确保路径正确, 添加 DataFlowType
-import Tooltip from "../../common/Tooltip.vue"; // + 导入 Tooltip
+// import Tooltip from "../../common/Tooltip.vue"; // Tooltip 组件不再直接使用
 // - 移除 MarkdownRenderer 的直接导入，因为 Tooltip 内部会处理
 // import { useNodeState } from "@/composables/useNodeState"; // 稍后用于 showConditionKey
 
@@ -199,36 +199,32 @@ const handleActionClick = (action: NodeInputAction) => {
 <template>
   <div v-if="visibleActions.length > 0" class="node-input-actions-bar">
     <template v-for="action in displayedActions" :key="action.id">
-      <!-- 标准预览按钮，使用 Tooltip -->
-      <Tooltip
+      <!-- 标准预览按钮，使用 v-comfy-tooltip -->
+      <button
         v-if="action.id === 'builtin_preview'"
-        placement="top"
-        :maxWidth="600"
-        :showDelay="300"
-        :interactive="true"
-        :content="previewContentForTooltip"
-        :allowHtml="true"
+        class="action-button"
+        v-comfy-tooltip="{
+          content: previewContentForTooltip,
+          placement: 'top',
+          maxWidth: 600,
+          delayShow: 300,
+          interactive: true,
+        }"
+        @click="handleActionClick(action)"
       >
-        <!-- 内容现在由 previewContentForTooltip 提供，并由 Tooltip.vue 内部渲染 -->
-        <button
-          class="action-button"
-          :title="action.tooltip"
-          @click="handleActionClick(action)"
-        >
-          <component
-            :is="iconComponents[action.icon] || iconComponents.QuestionMarkCircleIcon"
-            v-if="action.icon"
-            class="icon heroicon h-4 w-4 text-current"
-            aria-hidden="true"
-          />
-          <span v-else-if="action.label" class="label">{{ action.label }}</span>
-        </button>
-      </Tooltip>
+        <component
+          :is="iconComponents[action.icon] || iconComponents.QuestionMarkCircleIcon"
+          v-if="action.icon"
+          class="icon heroicon h-4 w-4 text-current"
+          aria-hidden="true"
+        />
+        <span v-else-if="action.label" class="label">{{ action.label }}</span>
+      </button>
       <!-- 其他操作按钮 -->
       <button
         v-else
         class="action-button"
-        :title="action.tooltip"
+        v-comfy-tooltip="action.tooltip"
         @click="handleActionClick(action)"
       >
         <component
@@ -243,7 +239,7 @@ const handleActionClick = (action: NodeInputAction) => {
     <button
       v-if="hasMoreActions"
       class="action-button more-button"
-      :title="isExpanded ? '收起' : '更多操作'"
+      v-comfy-tooltip="isExpanded ? '收起' : '更多操作'"
       @click="toggleExpand"
     >
       <component

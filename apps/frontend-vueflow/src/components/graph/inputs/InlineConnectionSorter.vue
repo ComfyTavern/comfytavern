@@ -6,16 +6,17 @@
           <span class="connection-index">{{ index + 1 }}.</span>
           <div class="tooltip-flex-wrapper">
             <!-- Tooltip now wraps the button or the text, let's keep it on text for now -->
-            <Tooltip :content="getSourceTooltip(element)" placement="top" :show-delay="300">
-              <span class="connection-label-container">
-                <span class="source-node-label-part" :title="element.sourceNodeLabel">
-                  {{ element.sourceNodeLabel }}
-                </span>
-                <span class="source-handle-label-part" v-if="element.sourceHandleId" :title="element.sourceHandleLabel">
-                  ({{ element.sourceHandleLabel }})
-                </span>
+            <span
+              class="connection-label-container"
+              v-comfy-tooltip="{ content: getSourceTooltip(element), placement: 'top', delayShow: 300 }"
+            >
+              <span class="source-node-label-part" :title="element.sourceNodeLabel">
+                {{ element.sourceNodeLabel }}
               </span>
-            </Tooltip>
+              <span class="source-handle-label-part" v-if="element.sourceHandleId" :title="element.sourceHandleLabel">
+                ({{ element.sourceHandleLabel }})
+              </span>
+            </span>
           </div>
           <button @click.stop="handleDisconnectEdge(element)" class="disconnect-button" title="断开此连接">
             &times;
@@ -37,7 +38,7 @@ import { useMultiInputConnectionActions } from '@/composables/node/useMultiInput
 import { useTabStore } from '@/stores/tabStore';
 import { useWorkflowManager } from '@/composables/workflow/useWorkflowManager'; // 导入 useWorkflowManager
 import { useWorkflowHistory } from '@/composables/workflow/useWorkflowHistory'; // 导入 useWorkflowHistory
-import Tooltip from '@/components/common/Tooltip.vue';
+// import Tooltip from '@/components/common/Tooltip.vue'; // Tooltip 组件不再直接使用
 import { useSlotDefinitionHelper } from '@/composables/node/useSlotDefinitionHelper'; // 导入插槽定义辅助函数
 import { useWorkflowStore } from '@/stores/workflowStore'; // 导入工作流存储
 

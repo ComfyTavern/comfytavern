@@ -3,46 +3,38 @@
     <!-- 左侧图标栏 -->
     <div class="sidebar-icon-bar">
       <!-- 返回主页按钮 -->
-      <Tooltip content="返回主页" triggerClass="w-full">
-        <RouterLink to="/" class="icon-button">
-          <span class="text-xl">🏠</span>
-          <span class="tab-label">返回</span>
-        </RouterLink>
-      </Tooltip>
+      <RouterLink to="/" class="icon-button w-full" v-comfy-tooltip="'返回主页'">
+        <span class="text-xl">🏠</span>
+        <span class="tab-label">返回</span>
+      </RouterLink>
 
       <!-- 中间标签按钮 -->
       <div class="tab-buttons-container">
-        <Tooltip v-for="tab in tabs" :key="tab.id" :content="tab.title" triggerClass="w-full">
-          <button class="icon-button" :class="{ 'active': activeTab === tab.id }" @click="setActiveTab(tab.id)">
-            <span class="tab-icon">{{ tab.icon }}</span>
-            <span class="tab-label">{{ tab.label }}</span>
-          </button>
-        </Tooltip>
+        <button v-for="tab in tabs" :key="tab.id" class="icon-button w-full" :class="{ 'active': activeTab === tab.id }" @click="setActiveTab(tab.id)" v-comfy-tooltip="tab.title">
+          <span class="tab-icon">{{ tab.icon }}</span>
+          <span class="tab-label">{{ tab.label }}</span>
+        </button>
       </div>
 
       <!-- 底部控制按钮 -->
       <div class="bottom-buttons-container">
         <!-- 主题切换按钮 -->
-        <Tooltip content="切换主题" triggerClass="w-full">
-          <button class="icon-button" @click="themeStore.toggleTheme()">
-            <span class="tab-icon">
-              <span v-if="themeStore.theme === 'system'">💻</span>
-              <span v-else-if="themeStore.theme === 'light'">☀️</span>
-              <span v-else>🌙</span>
-            </span>
-            <span class="tab-label">
-              {{ themeStore.theme === 'system' ? '系统' : themeStore.theme === 'dark' ? '暗色' : '亮色' }}
-            </span>
-          </button>
-        </Tooltip>
+        <button class="icon-button w-full" @click="themeStore.toggleTheme()" v-comfy-tooltip="'切换主题'">
+          <span class="tab-icon">
+            <span v-if="themeStore.theme === 'system'">💻</span>
+            <span v-else-if="themeStore.theme === 'light'">☀️</span>
+            <span v-else>🌙</span>
+          </span>
+          <span class="tab-label">
+            {{ themeStore.theme === 'system' ? '系统' : themeStore.theme === 'dark' ? '暗色' : '亮色' }}
+          </span>
+        </button>
 
         <!-- 设置按钮 -->
-        <Tooltip content="设置" triggerClass="w-full">
-          <button class="icon-button" @click="uiStore.openSettingsModal({ width: '800px', height: '75vh' })">
-            <span class="tab-icon">⚙️</span>
-            <span class="tab-label">设置</span>
-          </button>
-        </Tooltip>
+        <button class="icon-button w-full" @click="uiStore.openSettingsModal({ width: '800px', height: '75vh' })" v-comfy-tooltip="'设置'">
+          <span class="tab-icon">⚙️</span>
+          <span class="tab-label">设置</span>
+        </button>
       </div>
     </div>
 
@@ -65,7 +57,7 @@ import GroupIOEdit from './GroupIOEdit.vue'; // <-- 导入接口编辑器
 import HistoryPanel from './HistoryPanel.vue'; // <-- 导入历史记录面板
 import WorkflowInfoPanel from './WorkflowInfoPanel.vue'; // <-- 导入工作流信息面板
 import PerformancePanel from './PerformancePanel.vue'; // <-- 导入性能面板
-import Tooltip from '@/components/common/Tooltip.vue'; // 导入 Tooltip 组件
+// import Tooltip from '@/components/common/Tooltip.vue'; // 导入 Tooltip 组件
 // import BaseModal from '../../common/BaseModal.vue'; // 不再需要
 // import SettingsLayout from '../../settings/SettingsLayout.vue'; // 不再需要
 import type { FrontendNodeDefinition } from '../../../stores/nodeStore';

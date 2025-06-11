@@ -31,85 +31,84 @@
       />
     </template>
     <template v-else>
-      <Tooltip :content="tooltipContent" placement="top" :show-delay="500" trigger-class="w-full">
+      <div
+        v-comfy-tooltip="{ content: tooltipContent, placement: 'top', delayShow: 500 }"
+        class="flex items-stretch rounded overflow-hidden border border-gray-300 dark:border-gray-600 group focus-within:ring-1 focus-within:ring-blue-300 dark:focus-within:ring-blue-700 focus-within:border-transparent w-full"
+        :class="[
+          sizeClasses.displayWrapper,
+          {
+            'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default':
+              props.readonly && !props.disabled,
+            'opacity-50 cursor-not-allowed': props.disabled,
+          }
+        ]"
+      >
+        <!-- 减少按钮 -->
+        <button
+          class="flex items-center justify-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 active:bg-gray-200 dark:active:bg-gray-500 transition-colors duration-200 focus:outline-none border-r border-gray-300 dark:border-gray-600"
+          :class="sizeClasses.stepperButton"
+          @click.stop="stepValue(-1)"
+          :disabled="props.disabled || props.readonly"
+        >
+          <svg
+            class="w-2.5 h-2.5 transform rotate-90"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M6 9L12 15L18 9"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+
+        <!-- 数值显示 -->
         <div
-          class="flex items-stretch rounded overflow-hidden border border-gray-300 dark:border-gray-600 group focus-within:ring-1 focus-within:ring-blue-300 dark:focus-within:ring-blue-700 focus-within:border-transparent"
+          ref="valueDisplayRef"
+          class="flex flex-1 items-center select-none text-gray-900 dark:text-gray-100 text-right transition-colors duration-200 bg-white dark:bg-gray-700"
           :class="[
-            sizeClasses.displayWrapper,
+            sizeClasses.valueDisplay,
             {
-              'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default':
-                props.readonly && !props.disabled,
-              'opacity-50 cursor-not-allowed': props.disabled,
+              'opacity-50 cursor-not-allowed': props.disabled, // Highest precedence for disabled
+              'opacity-75 cursor-default': props.readonly && !props.disabled, // Readonly takes precedence over interactive if not disabled
+              'cursor-ew-resize': !props.disabled && !props.readonly, // Draggable only if not disabled or readonly
+              'border-red-500 dark:border-red-700': hasError,
+              'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600':
+                hasSuggestions && !props.disabled && !props.readonly && !isDragging, // Click to open suggestions
             }
           ]"
+          @mousedown.stop="handleMouseDown"
         >
-          <!-- 减少按钮 -->
-          <button
-            class="flex items-center justify-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 active:bg-gray-200 dark:active:bg-gray-500 transition-colors duration-200 focus:outline-none border-r border-gray-300 dark:border-gray-600"
-            :class="sizeClasses.stepperButton"
-            @click.stop="stepValue(-1)"
-            :disabled="props.disabled || props.readonly"
-          >
-            <svg
-              class="w-2.5 h-2.5 transform rotate-90"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M6 9L12 15L18 9"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
-
-          <!-- 数值显示 -->
-          <div
-            ref="valueDisplayRef"
-            class="flex flex-1 items-center select-none text-gray-900 dark:text-gray-100 text-right transition-colors duration-200 bg-white dark:bg-gray-700"
-            :class="[
-              sizeClasses.valueDisplay,
-              {
-                'opacity-50 cursor-not-allowed': props.disabled, // Highest precedence for disabled
-                'opacity-75 cursor-default': props.readonly && !props.disabled, // Readonly takes precedence over interactive if not disabled
-                'cursor-ew-resize': !props.disabled && !props.readonly, // Draggable only if not disabled or readonly
-                'border-red-500 dark:border-red-700': hasError,
-                'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600':
-                  hasSuggestions && !props.disabled && !props.readonly && !isDragging, // Click to open suggestions
-              }
-            ]"
-            @mousedown.stop="handleMouseDown"
-          >
-            {{ formatDisplayValue(displayValue) }}
-          </div>
-
-          <!-- 增加按钮 -->
-          <button
-            class="flex items-center justify-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 active:bg-gray-200 dark:active:bg-gray-500 transition-colors duration-200 focus:outline-none border-l border-gray-300 dark:border-gray-600"
-            :class="sizeClasses.stepperButton"
-            @click.stop="stepValue(1)"
-            :disabled="props.disabled || props.readonly"
-          >
-            <svg
-              class="w-2.5 h-2.5 transform -rotate-90"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M6 9L12 15L18 9"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
+          {{ formatDisplayValue(displayValue) }}
         </div>
-      </Tooltip>
+
+        <!-- 增加按钮 -->
+        <button
+          class="flex items-center justify-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 active:bg-gray-200 dark:active:bg-gray-500 transition-colors duration-200 focus:outline-none border-l border-gray-300 dark:border-gray-600"
+          :class="sizeClasses.stepperButton"
+          @click.stop="stepValue(1)"
+          :disabled="props.disabled || props.readonly"
+        >
+          <svg
+            class="w-2.5 h-2.5 transform -rotate-90"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M6 9L12 15L18 9"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
     </template>
 
     <!-- Suggestion Dropdown Component (Rendered outside the main input structure) -->
@@ -139,7 +138,7 @@
 import { ref, watch, onUnmounted, nextTick, computed } from "vue";
 import { useVueFlow } from "@vue-flow/core";
 import SuggestionDropdown from "../../common/SuggestionDropdown.vue";
-import Tooltip from "../../common/Tooltip.vue";
+// import Tooltip from "../../common/Tooltip.vue"; // Tooltip 组件不再直接使用
 
 interface Props {
   modelValue: number;

@@ -7,7 +7,7 @@ import { DataFlowType, type DataFlowTypeName, type GroupSlotInfo, type HistoryEn
 import { createHistoryEntry, getEffectiveDefaultValue } from "@comfytavern/utils"; // <-- Import createHistoryEntry
 import { useGroupIOState } from "@/composables/group/useGroupIOState";
 import { useGroupIOActions } from "@/composables/group/useGroupIOActions";
-import Tooltip from "@/components/common/Tooltip.vue";
+// import Tooltip from "@/components/common/Tooltip.vue"; // Tooltip 组件不再直接使用
 import styles from "@/components/graph/nodes/handleStyles.module.css";
 // Import OverlayScrollbars and theme
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
@@ -641,16 +641,15 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
         <div>
           <div class="flex justify-between items-center">
             <h4 class="font-medium mb-1 text-xs uppercase text-gray-500">输入 (Inputs)</h4>
-            <Tooltip content="按名称排序输入">
-              <button @click="sortInputs"
-                class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
-                  stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-                </svg>
-              </button>
-            </Tooltip>
+            <button @click="sortInputs"
+              v-comfy-tooltip="'按名称排序输入'"
+              class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+              </svg>
+            </button>
           </div>
           <div v-if="Object.keys(filteredInputs).length === 0" class="text-gray-400 italic text-xs px-1">
             无输入接口
@@ -666,9 +665,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
                 <li @click="selectInput(String(key))"
                   class="cursor-pointer px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex justify-between items-center"
                   :class="{ 'bg-blue-100 dark:bg-blue-900': selectedInputKey === key }">
-                  <Tooltip :content="`${input.displayName} (${String(key)})`">
-                    <span class="truncate">{{ input.displayName || key }}</span>
-                  </Tooltip>
+                  <span class="truncate" v-comfy-tooltip="{ content: `${input.displayName} (${String(key)})` }">{{ input.displayName || key }}</span>
                   <div class="flex items-center space-x-1.5 flex-shrink-0">
                     <span class="text-xs text-gray-500">{{ input.dataFlowType }}</span>
                     <span :class="getHandleClasses(input, true)" style="
@@ -711,16 +708,15 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
         <div>
           <div class="flex justify-between items-center">
             <h4 class="font-medium mb-1 text-xs uppercase text-gray-500">输出 (Outputs)</h4>
-            <Tooltip content="按名称排序输出">
-              <button @click="sortOutputs"
-                class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
-                  stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-                </svg>
-              </button>
-            </Tooltip>
+            <button @click="sortOutputs"
+              v-comfy-tooltip="'按名称排序输出'"
+              class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+              </svg>
+            </button>
           </div>
           <div v-if="Object.keys(filteredOutputs).length === 0" class="text-gray-400 italic text-xs px-1">
             无输出接口
@@ -736,9 +732,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
                 <li @click="selectOutput(String(key))"
                   class="cursor-pointer px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex justify-between items-center"
                   :class="{ 'bg-blue-100 dark:bg-blue-900': selectedOutputKey === key }">
-                  <Tooltip :content="`${output.displayName} (${String(key)})`">
-                    <span class="truncate">{{ output.displayName || key }}</span>
-                  </Tooltip>
+                  <span class="truncate" v-comfy-tooltip="{ content: `${output.displayName} (${String(key)})` }">{{ output.displayName || key }}</span>
                   <div class="flex items-center space-x-1.5 flex-shrink-0">
                     <span class="text-xs text-gray-500">{{ output.dataFlowType }}</span>
                     <span :class="getHandleClasses(output, false)" style="
@@ -794,30 +788,26 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
         <!-- 输入编辑表单 -->
         <div v-if="selectedInputKey && selectedInputData" class="space-y-2">
           <div class="flex justify-between items-center mb-1">
-            <Tooltip content="接口 Key (唯一标识符)">
-              <span class="font-mono text-xs bg-gray-200 dark:bg-gray-600 px-1 rounded">{{
-                selectedInputKey
-              }}</span>
-            </Tooltip>
+            <span class="font-mono text-xs bg-gray-200 dark:bg-gray-600 px-1 rounded" v-comfy-tooltip="'接口 Key (唯一标识符)'">{{
+              selectedInputKey
+            }}</span>
             <div class="flex items-center space-x-2">
-              <Tooltip content="上移">
-                <button @click="moveSlot(selectedInputKey, 'up', 'input')" :disabled="!canMoveInputUp"
-                  class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 disabled:text-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:disabled:text-gray-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
-                  </svg>
-                </button>
-              </Tooltip>
-              <Tooltip content="下移">
-                <button @click="moveSlot(selectedInputKey, 'down', 'input')" :disabled="!canMoveInputDown"
-                  class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 disabled:text-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:disabled:text-gray-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-              </Tooltip>
+              <button @click="moveSlot(selectedInputKey, 'up', 'input')" :disabled="!canMoveInputUp"
+                v-comfy-tooltip="'上移'"
+                class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 disabled:text-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:disabled:text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                </svg>
+              </button>
+              <button @click="moveSlot(selectedInputKey, 'down', 'input')" :disabled="!canMoveInputDown"
+                v-comfy-tooltip="'下移'"
+                class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 disabled:text-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:disabled:text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
               <button @click="removeInput(selectedInputKey)" class="text-red-500 hover:text-red-700 text-xs">
                 删除此输入
               </button>
@@ -900,30 +890,26 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
         <!-- 输出编辑表单 -->
         <div v-if="selectedOutputKey && selectedOutputData" class="space-y-2">
           <div class="flex justify-between items-center mb-1">
-            <Tooltip content="接口 Key (唯一标识符)">
-              <span class="font-mono text-xs bg-gray-200 dark:bg-gray-600 px-1 rounded">{{
-                selectedOutputKey
-              }}</span>
-            </Tooltip>
+            <span class="font-mono text-xs bg-gray-200 dark:bg-gray-600 px-1 rounded" v-comfy-tooltip="'接口 Key (唯一标识符)'">{{
+              selectedOutputKey
+            }}</span>
             <div class="flex items-center space-x-2">
-              <Tooltip content="上移">
-                <button @click="moveSlot(selectedOutputKey, 'up', 'output')" :disabled="!canMoveOutputUp"
-                  class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 disabled:text-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:disabled:text-gray-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
-                  </svg>
-                </button>
-              </Tooltip>
-              <Tooltip content="下移">
-                <button @click="moveSlot(selectedOutputKey, 'down', 'output')" :disabled="!canMoveOutputDown"
-                  class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 disabled:text-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:disabled:text-gray-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-              </Tooltip>
+              <button @click="moveSlot(selectedOutputKey, 'up', 'output')" :disabled="!canMoveOutputUp"
+                v-comfy-tooltip="'上移'"
+                class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 disabled:text-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:disabled:text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                </svg>
+              </button>
+              <button @click="moveSlot(selectedOutputKey, 'down', 'output')" :disabled="!canMoveOutputDown"
+                v-comfy-tooltip="'下移'"
+                class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 disabled:text-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:disabled:text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
               <button @click="removeOutput(selectedOutputKey)" class="text-red-500 hover:text-red-700 text-xs">
                 删除此输出
               </button>
