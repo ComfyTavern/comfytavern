@@ -68,7 +68,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'request-add-node', payload: { fullNodeType: string; screenPosition: XYPosition }): void; // 修改事件定义
+  (e: 'request-add-node', payload: { fullNodeType: string }): void; // screenPosition 不再需要
   (e: 'add-group'): void;
   // (e: 'copy'): void; // 将由内部处理
   // (e: 'paste'): void; // 将由内部处理
@@ -239,7 +239,7 @@ const handleMouseLeaveBaseMenu = (event: MouseEvent) => {
 const onCascadingNodeSelect = (item: CascadingMenuItemType) => {
   if (item.id) {
     // emit('add-node', item.id); // 旧的 emit
-    emit('request-add-node', { fullNodeType: item.id, screenPosition: props.position }); // 新的 emit
+    emit('request-add-node', { fullNodeType: item.id }); // screenPosition 不再需要
   }
   closeAllContextMenus(); // This will emit 'close'
 };

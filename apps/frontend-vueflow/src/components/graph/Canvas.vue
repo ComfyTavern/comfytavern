@@ -59,7 +59,7 @@ import { useWorkflowStore } from "../../stores/workflowStore"; // 导入 Workflo
 import { useTabStore } from "../../stores/tabStore"; // 导入 TabStore
 import useDragAndDrop from "../../composables/canvas/useDnd";
 import { useCanvasKeyboardShortcuts } from "../../composables/canvas/useCanvasKeyboardShortcuts"; // <-- Import the composable
-import { useContextMenuPositioning } from "../../composables/canvas/useContextMenuPositioning"; // <-- Import the new composable
+import { useContextMenuPositioning, getEventClientPosition } from "../../composables/canvas/useContextMenuPositioning"; // <-- Import the new composable and getEventClientPosition
 import { Background } from "@vue-flow/background";
 import { Controls } from "@vue-flow/controls";
 import { MiniMap } from "@vue-flow/minimap";
@@ -252,6 +252,7 @@ const onSelectAll = () => {
 const showPaneContextMenu = ref(false);
 const showNodeContextMenu = ref(false);
 const showSlotContextMenu = ref(false); // 添加插槽菜单状态
+const rawInteractionPosition = ref<XYPosition>({ x: 0, y: 0 }); // 存储原始交互的视口坐标
 // const contextMenuPosition = ref({ x: 0, y: 0 }); // Moved to useContextMenuPositioning
 const selectedNodeId = ref("");
 const selectedNodeType = ref<string | undefined>(undefined); // 用于存储右键点击节点的类型
@@ -293,16 +294,16 @@ const closeNodeContextMenu = () => closeContextMenu(showNodeContextMenu);
 const closeSlotContextMenu = () => closeContextMenu(showSlotContextMenu);
 
 // 转发来自 ContextMenu 的节点添加请求给父组件 (EditorView)
-const forwardRequestAddNode = (payload: { fullNodeType: string; screenPosition: XYPosition }) => {
+const forwardRequestAddNode = (payload: { fullNodeType: string }) => { // screenPosition 不再由 ContextMenu 传递
   console.debug(`[Canvas] forwardRequestAddNode received payload:`, payload);
-  if (!payload || !payload.fullNodeType || !payload.screenPosition) {
+  if (!payload || !payload.fullNodeType) {
     console.error("[Canvas] Invalid payload for forwarding request-add-node:", payload);
     return;
   }
 
-  // `project` 函数将屏幕坐标转换为流程图坐标
-  const flowPosition = project(payload.screenPosition);
-  console.debug(`[Canvas] Calculated flowPosition for context menu add:`, flowPosition);
+  // 使用存储的原始交互视口坐标
+  const flowPosition = project(rawInteractionPosition.value);
+  console.debug(`[Canvas] Calculated flowPosition for context menu add (using rawInteractionPosition):`, flowPosition);
 
   emit("request-add-node-to-workflow", {
     fullNodeType: payload.fullNodeType,
@@ -313,7 +314,8 @@ const forwardRequestAddNode = (payload: { fullNodeType: string; screenPosition: 
 
 // 添加节点组
 const addGroup = () => {
-  const position = project(contextMenuPosition.value) as XYPosition;
+  // 使用原始交互位置来确定组节点的位置
+  const position = project(rawInteractionPosition.value) as XYPosition;
 
   // 创建一个组节点
   const groupNode: Node = {
@@ -345,7 +347,8 @@ const copySelected = () => {
 const paste = () => {
   if (copiedNodes.value.length === 0) return;
 
-  const position = project(contextMenuPosition.value) as XYPosition;
+  // 使用原始交互位置来确定粘贴的基准位置
+  const position = project(rawInteractionPosition.value) as XYPosition;
   // Calculate average position of copied nodes to paste relative to context menu
   let avgX = 0;
   let avgY = 0;
@@ -484,13 +487,12 @@ onNodeContextMenu(({ event, node }) => {
   event.preventDefault();
   event.stopPropagation();
 
+  rawInteractionPosition.value = getEventClientPosition(event); // 存储原始视口坐标
   selectedNodeId.value = node.id;
   selectedNodeType.value = node.type; // 获取并存储节点类型
 
   // 计算当前选中的节点数量
   const selectedNodes = getNodes.value.filter((n) => n.selected);
-  // 如果被右键点击的节点当前未被选中，但存在其他选中节点，则只考虑被点击的节点（表现为单选菜单）
-  // 只有当被右键点击的节点本身就在多选集合中时，才真正按多选处理
   const isClickedNodeSelected = selectedNodes.some((n) => n.id === node.id);
   if (selectedNodes.length > 1 && isClickedNodeSelected) {
     currentNodeSelectionCount.value = selectedNodes.length;
@@ -499,17 +501,13 @@ onNodeContextMenu(({ event, node }) => {
   }
   // console.debug(`[Canvas] Node context menu on ${node.id}. Effective selection count: ${currentNodeSelectionCount.value}`);
 
-  const position = calculateContextMenuPosition(event);
-  if (position) {
-    closeAllContextMenus();
-    showNodeContextMenu.value = true;
-  } else {
-    // Fallback or error handling if position couldn't be calculated
-    // Optionally, show the menu at the raw event position as a fallback
-    // contextMenuPosition.value = getEventClientPosition(event); // Need getEventClientPosition if using fallback
-    closeAllContextMenus();
-    showNodeContextMenu.value = true; // Still show menu, maybe at last known position or raw coords
-  }
+  // NodeContextMenu 默认宽度约 180px, 高度根据选项变化，预估 250px
+  calculateContextMenuPosition(event, 180, 250);
+  // contextMenuPosition.value 已在 calculateContextMenuPosition 内部更新
+  closeAllContextMenus();
+  showNodeContextMenu.value = true;
+  // Fallback or error handling if position couldn't be calculated (calculateContextMenuPosition now always returns a position)
+  // No explicit 'else' needed as calculateContextMenuPosition handles edge cases.
 });
 
 // 画布右键菜单事件
@@ -517,15 +515,14 @@ onPaneContextMenu((event) => {
   event.preventDefault();
   event.stopPropagation();
 
-  const position = calculateContextMenuPosition(event);
-  if (position) {
-    closeAllContextMenus();
-    showPaneContextMenu.value = true;
-  } else {
-    // Fallback or error handling
-    closeAllContextMenus();
-    showPaneContextMenu.value = true; // Still show menu
-  }
+  rawInteractionPosition.value = getEventClientPosition(event); // 存储原始视口坐标
+  // ContextMenu 默认宽度约 250px, 高度根据选项变化，预估 350px
+  calculateContextMenuPosition(event, 250, 350);
+  // contextMenuPosition.value 已在 calculateContextMenuPosition 内部更新
+  closeAllContextMenus();
+  showPaneContextMenu.value = true;
+  // Fallback or error handling (calculateContextMenuPosition now always returns a position)
+  // No explicit 'else' needed.
 });
 
 // 辅助函数：获取事件坐标，兼容鼠标和触摸事件 - Moved to useContextMenuPositioning.ts
@@ -548,22 +545,18 @@ const handleSlotContextMenu = (event: CustomEvent) => {
 
   // console.debug('Canvas received slot-contextmenu:', detail);
 
+  rawInteractionPosition.value = getEventClientPosition(mouseEvent); // 存储原始视口坐标
   slotContextMenuContext.value = {
     nodeId: detail.nodeId,
     handleId: detail.handleId,
     handleType: detail.handleType,
   };
 
-  // 使用新的 Composable 计算位置
-  const position = calculateContextMenuPosition(mouseEvent);
-  if (position) {
-    closeAllContextMenus();
-    showSlotContextMenu.value = true;
-  } else {
-    // Fallback or error handling
-    closeAllContextMenus();
-    showSlotContextMenu.value = true; // Still show menu
-  }
+  // SlotContextMenu 默认宽度约 180px, 高度根据选项变化，预估 100px
+  calculateContextMenuPosition(mouseEvent, 180, 100); // 更新 contextMenuPosition ref
+  // contextMenuPosition.value 已在 calculateContextMenuPosition 内部更新
+  closeAllContextMenus();
+  showSlotContextMenu.value = true;
 };
 
 // 处理插槽断开连接
