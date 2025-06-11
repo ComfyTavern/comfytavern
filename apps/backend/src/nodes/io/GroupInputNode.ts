@@ -36,7 +36,7 @@ export class GroupInputNodeImpl {
   }
 }
 
-// Renamed export to 'definition'
+
 export const definition: NodeDefinition = {
   type: 'GroupInput', // Base type name
   // namespace will be set to 'core' (or similar) via index.ts registerer

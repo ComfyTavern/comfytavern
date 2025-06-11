@@ -33,7 +33,7 @@ export class HistoryNodeImpl {
   }
 }
 
-// Renamed export to 'definition'
+
 export const definition: NodeDefinition = {
   type: 'History', // Base type name
   // namespace will be set via index.ts registerer (e.g., 'builtin')
@@ -49,7 +49,7 @@ export const definition: NodeDefinition = {
       required: false,
       matchCategories: ['ComboOption'],
       config: {
-        suggestions: ['user', 'assistant', 'system'] // Renamed from options
+        suggestions: ['user', 'assistant', 'system'] 
       }
     },
     content1: {
@@ -68,7 +68,7 @@ export const definition: NodeDefinition = {
       required: false,
       matchCategories: ['ComboOption'],
       config: {
-        suggestions: ['user', 'assistant', 'system'] // Renamed from options
+        suggestions: ['user', 'assistant', 'system'] 
       }
     },
     content2: {
@@ -87,7 +87,7 @@ export const definition: NodeDefinition = {
       required: false,
       matchCategories: ['ComboOption'],
       config: {
-        suggestions: ['user', 'assistant', 'system'] // Renamed from options
+        suggestions: ['user', 'assistant', 'system'] 
       }
     },
     content3: {
@@ -106,7 +106,7 @@ export const definition: NodeDefinition = {
       required: false,
       matchCategories: ['ComboOption'],
       config: {
-        suggestions: ['user', 'assistant', 'system'] // Renamed from options
+        suggestions: ['user', 'assistant', 'system'] 
       }
     },
     content4: {

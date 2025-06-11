@@ -393,7 +393,7 @@ export const useExecutionStore = defineStore('execution', () => {
     // Expose tab-specific states and actions
     tabExecutionStates, // Expose the whole map if needed, or prefer specific getters
     // Actions
-    prepareForNewExecution, // Renamed from resetExecutionState
+    prepareForNewExecution, 
     handlePromptAccepted,
     updateWorkflowStatus,
     updateNodeExecuting,

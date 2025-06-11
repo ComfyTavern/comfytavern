@@ -185,7 +185,7 @@ export class OpenAIChatNodeImpl {
   }
 }
 
-// Renamed export to 'definition'
+
 export const definition: NodeDefinition = {
   type: 'OpenAIChat', // Base type name
   // namespace will be set via index.ts registerer (e.g., 'builtin')

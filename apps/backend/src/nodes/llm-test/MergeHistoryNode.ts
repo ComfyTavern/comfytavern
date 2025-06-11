@@ -28,7 +28,7 @@ export class MergeHistoryNodeImpl {
   }
 }
 
-// Renamed export to 'definition'
+
 export const definition: NodeDefinition = {
   type: 'MergeHistory', // Base type name
   // namespace will be set via index.ts registerer (e.g., 'builtin')

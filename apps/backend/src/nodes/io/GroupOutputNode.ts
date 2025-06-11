@@ -7,7 +7,7 @@ export class GroupOutputNodeImpl {
   }
 }
 
-// Renamed export to 'definition'
+
 export const definition: NodeDefinition = {
   type: 'GroupOutput', // Base type name
   // namespace will be set to 'core' (or similar) via index.ts registerer

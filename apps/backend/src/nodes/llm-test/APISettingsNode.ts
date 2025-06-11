@@ -65,7 +65,7 @@ export class APISettingsNodeImpl {
   }
 }
 
-// Renamed export to 'definition'
+
 export const definition: NodeDefinition = {
   type: 'APISettings', // Base type name
   // namespace will be set via index.ts registerer (e.g., 'builtin')
