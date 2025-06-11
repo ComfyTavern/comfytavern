@@ -14,8 +14,8 @@ const frontendPort = config.server.frontend.port;
 // 读取根目录的 package.json 文件以获取应用版本
 const rootPackageJsonPath = fileURLToPath(new URL('../../package.json', import.meta.url));
 const packageJson = JSON.parse(fs.readFileSync(rootPackageJsonPath, 'utf-8'));
-// 使用 'Version' (大写 V) 获取版本号，如果不存在则默认为 'unknown'
-const appVersion = packageJson.Version || 'unknown';
+// 使用 'version' (小写 v) 获取版本号，如果不存在则默认为 'unknown'
+const appVersion = packageJson.version || 'unknown';
 
 // 自定义启动日志相关
 const customLogPrintedKey = Symbol('customLogPrintedKeyForComfyTavern');

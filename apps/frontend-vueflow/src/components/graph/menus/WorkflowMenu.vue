@@ -272,7 +272,7 @@ const handleSaveAs = async () => {
   const newWorkflowDataObject: Omit<WorkflowObject, "id"> = {
     name: sanitizedName,
     description: originalWorkflowMeta.description || "",
-    version: "1.0.0", // 新副本通常从版本1开始
+    version: import.meta.env.VITE_APP_VERSION || "unknown",
     nodes: coreWorkflowParts.nodes,
     edges: coreWorkflowParts.edges,
     viewport: coreWorkflowParts.viewport,
