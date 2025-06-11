@@ -83,7 +83,7 @@ The following are commonly used configuration items within an `InputDefinition`'
 | `multiline`                | `boolean` | Whether it's a multi-line input. `true` usually renders as a text area, `false` as a single-line input field.                                                                                                                               | `STRING`                            |
 | `placeholder`              | `string`  | Placeholder text for the input field.                                                                                                                                                                                                       | `STRING`, `INTEGER`, `FLOAT`        |
 | `languageHint`             | `string`  | Specifies the language for a code editor (e.g., `'javascript'`, `'python'`, `'json'`, `'markdown'`). When `dataFlowType` is `STRING`, this configuration is used to specify the code editor and its language highlighting for the frontend. | `STRING`                            |
-| `suggestions`              | `any[]`   | Provides a list of suggested values. The frontend can render this as a combo-box/select.                                                                                                                                                    | `STRING`, `INTEGER`, `FLOAT`        |
+| `suggestions`              | `any[]`   | Provides a list of suggested values. If the slot's `matchCategories` includes `ComboOption`, it renders as a pure dropdown select. Otherwise, for `STRING`, `INTEGER`, `FLOAT` types, it renders as an input field allowing free-form entry with suggestions. | `STRING`, `INTEGER`, `FLOAT`        |
 | `min`, `max`, `step`       | `number`  | Minimum, maximum, and step values for numeric types. Can be used for rendering sliders, etc.                                                                                                                                                | `INTEGER`, `FLOAT`                  |
 | `label`                    | `string`  | Primarily used for the display text of buttons (`Trigger` type).                                                                                                                                                                            | `WILDCARD` (with `Trigger`)         |
 | `readOnly` / `displayOnly` | `boolean` | Indicates the input is read-only; the frontend should render it as non-editable text.                                                                                                                                                       | `STRING`, etc.                      |
@@ -114,7 +114,8 @@ For example:
 
 *   `dataFlowType: 'STRING'`, `config: { multiline: true }` -> Multi-line text input.
 *   `dataFlowType: 'STRING'`, `matchCategories: ['Code']`, `config: { languageHint: 'javascript' }` -> JavaScript code editor (in the bottom docked editor).
-*   `dataFlowType: 'INTEGER'`, `config: { suggestions: [1, 2, 3], default: 1 }` -> Integer input with suggestions or a dropdown.
+*   `dataFlowType: 'INTEGER'`, `config: { suggestions: [1, 2, 3], default: 1 }` -> Integer input with suggestions (allows free-form entry while showing suggestions).
+*   `dataFlowType: 'STRING'`, `matchCategories: ['ComboOption']`, `config: { suggestions: ['OptionA', 'OptionB'], default: 'OptionA' }` -> Pure dropdown select.
 *   `dataFlowType: 'WILDCARD'`, `matchCategories: ['Trigger']`, `config: { label: 'Execute' }` -> A button displaying "Execute".
 
 ### 2.4. Input Action Buttons (`actions`)

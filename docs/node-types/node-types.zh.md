@@ -83,7 +83,7 @@
 | `multiline`                | `boolean` | 是否为多行输入。`true` 通常渲染为文本区域，`false` 为单行输入框。                                                                                                       | `STRING`                           |
 | `placeholder`              | `string`  | 输入框的占位提示文本。                                                                                                                                                  | `STRING`, `INTEGER`, `FLOAT`       |
 | `languageHint`             | `string`  | 指定代码编辑器应使用的语言（如 `'javascript'`, `'python'`, `'json'`, `'markdown'`）。当 `dataFlowType` 为 `STRING` 时，此配置用于指定前端使用的代码编辑器及其语言高亮。 | `STRING`                           |
-| `suggestions`              | `any[]`   | 提供一个建议值列表。前端可渲染为下拉选择框 (combo-box/select)。                                                                                                         | `STRING`, `INTEGER`, `FLOAT`       |
+| `suggestions`              | `any[]`   | 提供一个建议值列表。如果插槽的 `matchCategories` 中包含 `ComboOption`，则渲染为纯下拉选择框。否则，对于 `STRING`, `INTEGER`, `FLOAT` 类型，会渲染为允许自由输入并提供建议的输入框。 | `STRING`, `INTEGER`, `FLOAT`       |
 | `min`, `max`, `step`       | `number`  | 用于数字类型的最小值、最大值和步长。可用于渲染滑块等 UI。                                                                                                               | `INTEGER`, `FLOAT`                 |
 | `label`                    | `string`  | 主要用于按钮 (`Trigger` 类型) 的显示文本。                                                                                                                              | `WILDCARD` (配合 `Trigger`)        |
 | `readOnly` / `displayOnly` | `boolean` | 指示输入为只读，前端应渲染为不可编辑的文本展示。                                                                                                                        | `STRING`, 等                       |
@@ -114,7 +114,8 @@
 
 *   `dataFlowType: 'STRING'`, `config: { multiline: true }` -> 多行文本输入框。
 *   `dataFlowType: 'STRING'`, `matchCategories: ['Code']`, `config: { languageHint: 'javascript' }` -> JavaScript 代码编辑器 (在底部停靠编辑器中)。
-*   `dataFlowType: 'INTEGER'`, `config: { suggestions: [1, 2, 3], default: 1 }` -> 带建议的整数输入或下拉选择。
+*   `dataFlowType: 'INTEGER'`, `config: { suggestions: [1, 2, 3], default: 1 }` -> 带建议的整数输入框 (允许自由输入，同时显示建议)。
+*   `dataFlowType: 'STRING'`, `matchCategories: ['ComboOption']`, `config: { suggestions: ['选项A', '选项B'], default: '选项A' }` -> 纯下拉选择框。
 *   `dataFlowType: 'WILDCARD'`, `matchCategories: ['Trigger']`, `config: { label: '执行' }` -> 一个显示为 "执行" 的按钮。
 
 ### 2.4. 输入操作按钮 (`actions`)
