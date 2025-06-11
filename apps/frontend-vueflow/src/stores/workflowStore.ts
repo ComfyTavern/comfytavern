@@ -370,10 +370,19 @@ export const useWorkflowStore = defineStore("workflow", () => {
       defaultName = `新工作流 ${timestamp}`;
     }
 
-    const promptMessage = isSaveAs ? "输入新的工作流名称:" : "输入工作流名称:";
-    const newName = prompt(promptMessage, defaultName);
+    const title = isSaveAs ? "另存为工作流" : "保存工作流";
+    const message = isSaveAs ? "请输入新的工作流名称:" : "请输入工作流名称:";
 
-    if (newName && newName.trim()) {
+    const newName = await dialogService.showInput({
+      title: title,
+      message: message,
+      initialValue: defaultName,
+      inputPlaceholder: "工作流名称",
+      confirmText: "确定",
+      cancelText: "取消",
+    });
+
+    if (newName !== null && newName.trim()) { // dialogService.showInput 在取消时返回 null
       const finalName = newName.trim();
       try {
         const success = await workflowLifecycleCoordinator.saveWorkflow(finalName);
