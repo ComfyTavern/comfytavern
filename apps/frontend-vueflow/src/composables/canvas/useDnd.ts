@@ -49,7 +49,7 @@ export default function useDragAndDrop() {
         const DND_MIME_TYPE = "application/x-comfytavern-node-drag-data";
 
         try {
-          console.debug(`[useDnd] onDragStart: Attempting to set data with DND_MIME_TYPE. nodeDataStr (first 100 chars): "${nodeDataStr.substring(0,100)}..."`);
+          console.debug(`[useDnd] onDragStart: Attempting to set data with DND_MIME_TYPE. nodeDataStr (first 100 chars): "${nodeDataStr.substring(0, 100)}..."`);
           event.dataTransfer.setData(DND_MIME_TYPE, nodeDataStr);
           // 验证是否设置成功 (注意：某些浏览器可能不允许在 dragstart 中立即 getData)
           // console.debug(`[useDnd] onDragStart: Data set for ${DND_MIME_TYPE}. Trying to getData immediately (may not work):`, event.dataTransfer.getData(DND_MIME_TYPE));
@@ -57,7 +57,7 @@ export default function useDragAndDrop() {
         } catch (e) {
           console.error(`[useDnd] onDragStart: 无法设置 ${DND_MIME_TYPE} 数据类型:`, e);
         }
-        
+
         // 移除了对 application/vueflow, text/plain, application/json 的设置，以增强隔离性
         // 如果需要，可以保留一个通用类型作为后备，但优先使用特定类型
 
@@ -69,26 +69,49 @@ export default function useDragAndDrop() {
           // 基本样式
           dragIcon.style.position = "absolute";
           dragIcon.style.top = "-1000px"; // 移出屏幕外，避免闪烁
-          dragIcon.style.padding = "5px 10px";
-          dragIcon.style.backgroundColor = "rgba(100, 100, 255, 0.8)"; // 半透明蓝色背景
-          dragIcon.style.color = "white";
-          dragIcon.style.borderRadius = "4px";
-          dragIcon.style.fontSize = "12px";
-          dragIcon.style.fontFamily = "sans-serif";
+          dragIcon.style.fontFamily = "sans-serif"; // 保持字体设置
           dragIcon.style.whiteSpace = "nowrap";
           dragIcon.style.pointerEvents = "none"; // 确保不干扰拖放事件
+          dragIcon.style.display = "flex"; // 使用 flex 布局对齐图标和文本
+          dragIcon.style.alignItems = "center"; // 垂直居中
+          dragIcon.style.padding = "8px 12px"; // 调整内边距
+          dragIcon.style.borderRadius = "8px"; // 调整圆角，同 context-menu-base
+          dragIcon.style.fontSize = "13px"; // 调整字体大小
 
-          // 添加 SVG 图标 (示例：一个简单的矩形代表节点)
-          // 你可以在这里根据 nodeData.type 或 category 选择不同的 SVG
+          // 判断暗色模式
+          const isDarkMode = document.documentElement.classList.contains('dark');
+
+          if (isDarkMode) {
+            dragIcon.style.backgroundColor = "rgba(31, 41, 55, 0.9)"; // 对应 dark:bg-gray-800，稍作透明
+            dragIcon.style.color = "rgba(229, 231, 235, 1)"; // 对应 dark:text-gray-200
+            dragIcon.style.border = "1px solid rgba(55, 65, 81, 0.9)"; // 对应 dark:border-gray-700
+          } else {
+            dragIcon.style.backgroundColor = "rgba(255, 255, 255, 0.9)"; // 对应 bg-white，稍作透明
+            dragIcon.style.color = "rgba(55, 65, 81, 1)"; // 对应 text-gray-700
+            dragIcon.style.border = "1px solid rgba(229, 231, 235, 0.9)"; // 对应 border-gray-200
+          }
+          // 统一的阴影，参考 context-menu-base 但可以略微调整
+          dragIcon.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)";
+
+
+          // 添加 SVG 图标 (示例：一个更通用的拖拽图标或节点图标)
+          // 这里使用一个简单的方块加号图标，示意“添加节点”
           const svgIcon = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="${isDarkMode ? 'rgba(209, 213, 229, 1)' : 'rgba(75, 85, 99, 1)'}" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round"
+                style="margin-right: 8px; vertical-align: middle;">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="18" x2="12" y2="12"></line>
+              <line x1="9" y1="15" x2="15" y2="15"></line>
             </svg>
           `;
 
           // 设置内容，可以包含节点类型或名称
           const nodeLabel = nodeData.displayName || nodeData.type || "节点";
-          dragIcon.innerHTML = `${svgIcon} 正在拖放: ${nodeLabel}`;
+          // dragIcon.textContent = `拖放: ${nodeLabel}`; // 如果只用文本
+          dragIcon.innerHTML = `${svgIcon}<span>拖放: ${nodeLabel}</span>`; // 使用 innerHTML 包含 SVG
 
           // 添加到 body 以便 setDragImage 可以引用
           document.body.appendChild(dragIcon);
@@ -218,11 +241,11 @@ export default function useDragAndDrop() {
       onDragEnd(); // 清理 useDnd 相关的拖拽状态
       return;
     }
-    
+
     // 如果事件是针对 useDnd 的，则阻止默认行为并处理它
     event.preventDefault();
     console.debug(`[useDnd] onDrop: Event accepted. MIME type "${DND_MIME_TYPE}" found. Processing node drop.`);
-    
+
     let nodeData: DraggedNodeData | null = null; // 使用定义的接口
 
     try {
@@ -234,7 +257,7 @@ export default function useDragAndDrop() {
           const data = event.dataTransfer.getData(DND_MIME_TYPE);
           if (data && data.length > 0) { // 确保数据不是空字符串
             nodeDataStr = data;
-            console.debug(`[useDnd] onDrop: 成功从 ${DND_MIME_TYPE} 获取数据: "${data.substring(0,100)}..."`);
+            console.debug(`[useDnd] onDrop: 成功从 ${DND_MIME_TYPE} 获取数据: "${data.substring(0, 100)}..."`);
           } else {
             // 这不应该发生，因为我们已经在开始时检查了 types.includes(DND_MIME_TYPE)
             // 并且如果类型存在，getData 通常应该返回非空字符串（除非 setData 时设置了空字符串）
@@ -244,13 +267,13 @@ export default function useDragAndDrop() {
           // 理论上，如果 types.includes 是 true，getData 不应该抛出“类型未设置”的错误，但可能因其他原因失败
           console.warn(`[useDnd] onDrop: 获取 ${DND_MIME_TYPE} 数据时发生异常:`, e);
         }
-        
+
         if (nodeDataStr) {
           try {
             nodeData = JSON.parse(nodeDataStr);
             console.debug("[useDnd] onDrop: 成功解析通过特定MIME类型获取的拖拽数据:", nodeData);
           } catch (e: any) {
-            console.error(`[useDnd] onDrop: 解析从 ${DND_MIME_TYPE} 获取的JSON数据失败 ("${nodeDataStr.substring(0,100)}..."):`, e.message);
+            console.error(`[useDnd] onDrop: 解析从 ${DND_MIME_TYPE} 获取的JSON数据失败 ("${nodeDataStr.substring(0, 100)}..."):`, e.message);
             nodeData = null;
           }
         } else {
@@ -320,7 +343,7 @@ export default function useDragAndDrop() {
               ...newNode.data,
               inputs: workflowData.interfaceOutputs || {}, // Use current interface outputs
             };
-             console.debug(`[useDnd] Initialized GroupOutput (${newNode.id}) inputs from workflow interface.`);
+            console.debug(`[useDnd] Initialized GroupOutput (${newNode.id}) inputs from workflow interface.`);
           }
         } else {
           console.warn(`[useDnd] Could not get workflow data for tab ${currentTabId} to initialize Group IO node.`);
