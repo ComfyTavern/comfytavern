@@ -9,6 +9,7 @@ import type Canvas from '@/components/graph/Canvas.vue';
 // --- Added missing type imports ---
 import type { HistoryEntry } from '@comfytavern/types';
 import { nanoid } from 'nanoid'; // <-- 导入 nanoid
+import type { XYPosition } from '@vue-flow/core'; // +++ 导入 XYPosition
 // --- Added missing function import ---
 import { createHistoryEntry, getEffectiveDefaultValue } from '@comfytavern/utils';
 
@@ -31,8 +32,8 @@ export function useCanvasInteraction(
   const activeTabId = computed(() => tabStore.activeTabId);
 
   // 从面板添加节点 (nodeType is now fullType, e.g., "core:MergeNode")
-  const handleAddNodeFromPanel = async (fullNodeType: string) => {
-    // // console.log(`[useCanvasInteraction] handleAddNodeFromPanel called for type: ${fullNodeType}`);
+  const handleAddNodeFromPanel = async (fullNodeType: string, position?: XYPosition) => { // +++ 添加可选的 position 参数
+    // // console.log(`[useCanvasInteraction] handleAddNodeFromPanel called for type: ${fullNodeType}, position: ${JSON.stringify(position)}`);
     // Use the store function to get definition by full type
     const nodeDef = nodeStore.getNodeDefinitionByFullType(fullNodeType);
 
@@ -99,42 +100,51 @@ export function useCanvasInteraction(
     let y = 160;
     let positionCalculated = false;
 
-    try {
-      const canvasComponentInstance = canvasRef.value;
-      const canvasElement = canvasComponentInstance?.$el as HTMLElement | undefined;
+    // +++ 如果提供了 position 参数，则使用它，否则执行旧的计算逻辑
+    if (position) {
+      x = position.x;
+      y = position.y;
+      positionCalculated = true;
+      // // console.debug(`[useCanvasInteraction] Position provided: (${x}, ${y})`);
+    } else {
+      try {
+        const canvasComponentInstance = canvasRef.value;
+        const canvasElement = canvasComponentInstance?.$el as HTMLElement | undefined;
 
-      if (canvasElement && typeof canvasElement.getBoundingClientRect === 'function') {
-        const canvasRect = canvasElement.getBoundingClientRect();
-        if (canvasRect.width > 0 && canvasRect.height > 0) {
-          const screenCenterX = canvasRect.left + canvasRect.width / 2;
-          const screenCenterY = canvasRect.top + canvasRect.height / 2;
-          const flowCenter = screenToFlowCoordinate({ x: screenCenterX, y: screenCenterY });
-          const targetX = flowCenter.x - 100;
-          const targetY = flowCenter.y - 100;
-          x = Math.round(targetX / 8) * 8;
-          y = Math.round(targetY / 8) * 8;
-          positionCalculated = true;
-          // // console.debug(`[useCanvasInteraction] Position calculated via ref/screenToFlow: Snapped(${x}, ${y})`);
+        if (canvasElement && typeof canvasElement.getBoundingClientRect === 'function') {
+          const canvasRect = canvasElement.getBoundingClientRect();
+          if (canvasRect.width > 0 && canvasRect.height > 0) {
+            const screenCenterX = canvasRect.left + canvasRect.width / 2;
+            const screenCenterY = canvasRect.top + canvasRect.height / 2;
+            const flowCenter = screenToFlowCoordinate({ x: screenCenterX, y: screenCenterY });
+            const targetX = flowCenter.x - 100; // 默认偏移量
+            const targetY = flowCenter.y - 100; // 默认偏移量
+            x = Math.round(targetX / 8) * 8;
+            y = Math.round(targetY / 8) * 8;
+            positionCalculated = true;
+            // // console.debug(`[useCanvasInteraction] Position calculated via ref/screenToFlow: Snapped(${x}, ${y})`);
+          } else {
+            // // console.debug("[useCanvasInteraction] canvasRect dimensions are zero, skipping ref method.");
+          }
         } else {
-          // // console.debug("[useCanvasInteraction] canvasRect dimensions are zero, skipping ref method.");
+          // // console.debug("[useCanvasInteraction] canvasElement or getBoundingClientRect not available via ref.");
         }
-      } else {
-        // // console.debug("[useCanvasInteraction] canvasElement or getBoundingClientRect not available via ref.");
+      } catch (e) {
+        console.error("[useCanvasInteraction] Error calculating node position using ref/screenToFlowCoordinate:", e);
+        positionCalculated = false;
       }
-    } catch (e) {
-      console.error("[useCanvasInteraction] Error calculating node position using ref/screenToFlowCoordinate:", e);
-      positionCalculated = false;
-    }
 
-    if (!positionCalculated) {
-      // // console.debug("[useCanvasInteraction] Position calculation failed, using hardcoded defaults.");
+      if (!positionCalculated) {
+        // // console.debug("[useCanvasInteraction] Position calculation failed, using hardcoded defaults.");
+        // x, y 保留初始的 256, 160
+      }
     }
 
     const newNode: Node = {
       id: nanoid(10), // <-- 使用 nanoid 生成 ID
       type: fullNodeType, // Use the full type received
       label: nodeDef.displayName || nodeDef.type, // Use base type for default label if no displayName
-      position: { x, y },
+      position: { x, y }, // 使用最终计算或提供的 x, y
       data: nodeData, // nodeData is derived from nodeDef
     };
 
