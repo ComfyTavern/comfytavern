@@ -1,9 +1,11 @@
 <template>
   <div class="boolean-toggle">
     <label class="relative inline-flex items-center" :class="sizeClasses.cursor">
-      <input type="checkbox" :checked="modelValue" @change="toggle" class="sr-only peer" :disabled="props.disabled || props.readonly">
-      <div class="rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:border-white after:content-[''] after:absolute after:bg-white after:border-gray-300 after:border after:rounded-full after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"
-           :class="sizeClasses.wrapper">
+      <input type="checkbox" :checked="modelValue" @change="toggle" class="sr-only peer"
+        :disabled="props.disabled || props.readonly">
+      <div
+        class="rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:border-white after:content-[''] after:absolute after:bg-white after:border-gray-300 after:border after:rounded-full after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"
+        :class="sizeClasses.wrapper">
       </div>
     </label>
     <div v-if="props.hasError" class="text-xs text-red-500 dark:text-red-400 mt-1">
@@ -45,7 +47,7 @@ const sizeClasses = computed(() => {
   // small
   return {
     ...base,
-    wrapper: "w-8 h-4 after:top-[1px] after:left-[1px] after:h-3 after:w-3 peer-checked:after:translate-x-4",
+    wrapper: "w-8 h-4 after:top-[1px] after:left-[1px] after:h-3.5 after:w-3.5 peer-checked:after:translate-x-4",
   };
 });
 
