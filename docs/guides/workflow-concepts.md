@@ -9,6 +9,7 @@
 - **可视化编排**：提供直观的图形界面，让创作者可以像搭建流程图一样设计 AI 应用逻辑。
 - **模块化与复用**：将复杂任务分解为可管理的节点，并支持通过“节点组”复用已有的工作流。
 - **驱动应用面板**：工作流是 ComfyTavern 中 AI 应用面板（迷你应用）背后的主要驱动力，负责处理用户交互、数据流转和 AI 功能调用。
+- **承载 Agent 核心逻辑**: 工作流现在也是 Agent 核心逻辑（包括自主审议、技能执行、学习反思）的关键承载机制，是 Agent 实例行为的直接执行者。
 
 ### 1.1. 工作流的开发者视角：异步函数的类比
 
@@ -20,7 +21,7 @@
 - **封装与复用 (Encapsulation & Reusability)**: 通过节点组 ([`core:NodeGroup`](docs/guides/workflow-concepts.md:131))，一个工作流可以被封装成一个独立的、可复用的单元，就像一个可被多次调用的函数。其他工作流可以“调用”这个节点组，向其传递输入，并获取其输出。
 - **内部逻辑 (Internal Logic)**: 工作流内部的节点和边的连接，定义了数据处理和控制流程，这可以看作是函数体内的具体实现逻辑。
 
-将工作流视为异步函数，不仅能帮助开发者利用已有的编程经验来理解其运作方式，还能更好地将其融入到更广泛的软件开发实践中，例如将其作为后端服务的一个可调用单元，或者在前端应用中与之进行异步交互。
+将工作流视为异步函数，不仅能帮助开发者利用已有的编程经验来理解其运作方式，还能更好地将其融入到更广泛的软件开发实践中。例如，可以将其作为后端服务的一个可调用单元，或者在前端应用中与之进行异步交互。在 Agent 架构中，这种类比尤为贴切：Agent 的核心审议循环可以被视为一个由 `AgentRuntime` 持续调用的、高度复杂的“主异步函数”，而 Agent 的技能工作流则类似于这个主函数内部按需调用的、封装了特定功能的“子异步函数”。
 
 ## 2. 工作流的构成元素
 
@@ -81,6 +82,48 @@
 - **`previewTarget`: `{ nodeId: string, slotKey: string } | null`**
   - (可选) 标记工作流中用于实时预览的特定输出节点及其插槽。这对于调试和快速查看中间结果非常有用。
 
+### 2.5. 工作流在 Agent 系统中的核心应用
+
+随着 Agent 系统的引入，工作流在 ComfyTavern 中扮演了更加核心和多样化的角色，成为实现 Agent 自主行为的关键组件。Agent 的设计与工作流紧密集成，主要体现在以下几个方面：
+
+#### 2.5.1. 核心审议工作流 (Core Deliberation Workflow)
+
+- **定义与角色**: 这是 Agent 的“大脑”或中央处理单元。它负责接收来自环境的感知信息（如世界状态变化、其他 Agent 的事件）、处理 Agent 自身的内部状态（PrivateState）、结合当前的目标和动机，进行复杂的推理和规划，并最终输出 Agent 的下一步行动决策。
+- **驱动方式**: 该工作流由 Agent 的运行时实例管理器 (`AgentRuntime`) 持续驱动。驱动模式通常是混合的：响应外部事件或内部状态变化（事件驱动），并辅以一个可配置的较低频率的周期性执行（定时驱动），以确保 Agent 即使在没有外部刺激时也能进行状态评估和目标推进。
+- **典型输入**: 其输入通常非常丰富，整合了 Agent 决策所需的各种上下文信息，例如：
+  - 当前场景的共享**世界状态 (`WorldState`)**。
+  - Agent 自身的**私有状态 (`PrivateState`)**，包含其短期记忆、情绪、任务进度等。
+  - Agent 当前激活的**目标与动机 (`ActiveGoals/Motivations`)**。
+  - 从事件总线接收到的**感知事件 (`IncomingEvents`)**。
+  - Agent Profile 中声明的**可用能力 (`AvailableCapabilities`)**，包括技能工作流和原子工具列表。
+  - 从知识库检索到的相关信息。
+  (更详细的输入上下文可参考 [`DesignDocs/architecture/agent_architecture_v3_consolidated.md`](../../DesignDocs/architecture/agent_architecture_v3_consolidated.md:94) 中的 2.1.1 节)
+- **典型输出**: Agent 的决策指令，这通常表现为对 `AgentRuntime` 的一组请求，例如：
+  - 需要调用的**技能工作流 ID** 及其输入参数。
+  - 需要执行的**原子工具**及其参数。
+  - 需要向事件总线发布的**事件内容**。
+  - 需要更新的**私有状态 (`PrivateState`)** 内容。
+  - 一个明确的“进入反思/学习阶段”的信号。
+- **与 Agent Profile 的关系**: 每个 Agent Profile (`agent_profile.json`) 都会通过 `core_deliberation_workflow_id` 字段明确指定其核心审议工作流的定义文件。
+
+#### 2.5.2. 技能工作流 (Skill Workflows)
+
+- **定义与角色**: 技能工作流封装了 Agent 可执行的多步骤、可复用的复杂操作序列。它们是 Agent 将决策转化为具体行动、与环境进行复杂交互或执行特定任务的主要方式。
+- **调用方式**: 由 Agent 的核心审议工作流在其决策逻辑中，根据当前目标和规划决定调用哪个技能工作流，并为其提供必要的输入参数。
+- **示例**: 例如，一个 NPC Agent 可能拥有“与玩家对话”、“提供任务”、“进行交易”、“在区域内巡逻”等技能，每个技能都由一个专门的工作流实现。
+- **与 Agent Profile 的关系**: Agent Profile 的 `skill_workflow_ids_inventory` 字段会列出该 Agent 类型所掌握的所有技能工作流的 ID。
+
+#### 2.5.3. 反思/学习工作流 (Reflection/Learning Workflow)
+
+- **定义与角色**: 这是一种特殊类型的技能工作流，专用于 Agent 的学习与反思机制。当 Agent 完成一个重要任务、经历一次显著成功或失败，或被外部请求进行反思时，会调用此工作流。
+- **核心逻辑**: 反思工作流通常会分析 Agent 近期的行动序列、结果、相关上下文信息，试图从中提取经验教训、评估策略有效性、识别新知识或模式，并可能将这些反思成果（如新的最佳实践、失败原因分析、对目标的修正建议）结构化地贡献回知识库。
+
+#### 2.5.4. (附带提及) 场景生命周期工作流
+
+- 虽然不直接属于 Agent 自身的能力，但场景 (`Scene`) 也可以在其生命周期的特定阶段（如 `on_scene_start`, `on_scene_end`）调用工作流。这些场景级工作流可以用于初始化 Agent 的运行环境、设置全局事件、或执行不适合由单个 Agent 完成的宏观编排逻辑，从而与场景内的 Agent 行为形成协同。
+
+理解工作流在 Agent 系统中的这些多样化应用，对于设计和实现强大、灵活的自主 Agent至关重要。
+
 ## 3. 工作流的生命周期与数据流
 
 工作流在其生命周期中会经历创建、编辑、存储、加载和执行等阶段，并在不同阶段以不同的数据结构表示。
@@ -126,6 +169,16 @@
     2.  接着，使用 [`transformVueFlowToExecutionPayload()`](../../apps/frontend-vueflow/src/utils/workflowTransformer.ts:683) 将上述核心数据转换为后端执行引擎所需的 `WorkflowExecutionPayload` 格式。此格式更精简，只包含执行必需的节点 ID、类型、输入、配置和边连接信息。
   - **接口映射**: 构建 `outputInterfaceMappings` 对象，它告诉后端如何将扁平化后工作流内部节点的输出映射到原始工作流（或顶层工作流）的 `interfaceOutputs`。
   - **WebSocket 通信**: 将 `WorkflowExecutionPayload`（包含节点、边、接口输入、输出接口映射和元数据）通过 WebSocket 以 `PROMPT_REQUEST` 消息类型发送给后端。
+
+- **由 AgentRuntime 触发执行 (后端)**:
+  - `AgentRuntime` 是驱动 Agent 相关工作流（特别是核心审议工作流和技能工作流）的主要调用者。
+  - 当 `AgentRuntime` 需要执行一个工作流时（例如，驱动一次审议循环，或执行一个 Agent 决策调用的技能），它会：
+    1. 准备特定于 Agent 当前状态和环境的上下文作为工作流的输入。这可能包括 Agent 的 `PrivateState` 快照、从 `WorldStateService` 获取的相关世界信息、当前激活的目标、触发审议的事件等。
+    2. 将工作流定义（或其 ID）以及准备好的输入上下文，提交给平台统一的 `ExecutionEngine`。
+  - `ExecutionEngine` 负责实际执行工作流的 DAG 逻辑，并将执行结果（或错误）返回给 `AgentRuntime`。
+  - `AgentRuntime` 再根据工作流的执行结果进行后续处理，例如更新 Agent 的 `PrivateState`、向事件总线发布事件，或将审议结果作为下一次审议的输入等。
+  - 核心审议工作流可能会被 `AgentRuntime` 以事件驱动或周期性的方式持续执行。技能工作流则通常在审议核心做出决策后按需调用。
+
 - **执行处理 (后端 [`apps/backend/src/ExecutionEngine.ts`](../../apps/backend/src/ExecutionEngine.ts:1))**:
   - `ExecutionEngine` 实例被创建来处理该执行请求。
   - **拓扑排序**: 对接收到的节点和边进行拓扑排序，以确定无环的节点执行顺序。
@@ -147,6 +200,7 @@
   - `groupInterface` 属性是子工作流接口定义的副本，它允许节点组实例：1) 在加载时快速显示其应有的输入输出插槽；2) 允许用户直接在节点组实例的 `data.inputs` 中为这些接口输入（如果它们支持直接编辑，如文本或数字输入）设置和存储值。
   - 前端使用 [`useGroupIOSlots.ts`](../../apps/frontend-vueflow/src/composables/group/useGroupIOSlots.ts:1) 和相关的 Composable 函数来管理节点组的接口显示和用户交互。
   - 当被引用的子工作流（模板）的接口发生变化时，可以通过 [`workflowStore.synchronizeGroupNodeInterfaceAndValues()`](../../apps/frontend-vueflow/src/stores/workflowStore.ts:472) 方法来同步更新所有使用该模板的 NodeGroup 实例的接口定义和输入值，确保一致性。
+  - 在 Agent 架构中，Agent 的复杂技能（Skill Workflows）也非常适合通过节点组进行封装。这不仅提高了技能的模块化程度，也使得这些技能更容易在不同的 Agent Profile 之间共享和复用。例如，一个通用的“文本摘要技能”或“图像生成技能”可以被封装为节点组，供多个不同类型的 Agent 调用。
 - **节点绕过 (Bypass)**:
   - 节点可以被标记为“绕过”。当一个节点被绕过时，它的 `execute()` 方法不会被调用。
   - 数据如何通过被绕过的节点取决于其节点定义中的 `bypassBehavior`：
