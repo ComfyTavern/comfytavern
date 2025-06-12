@@ -44,14 +44,14 @@ Agent 不再是简单响应事件的脚本执行器，而是拥有内在“心�
 
 ### 1.2. 世界环境 (World Environment)
 
-*   **1.2.1. 世界状态 (`WorldStateService`)**: 保持 v6.1 的设计，作为全局共享状态中心，但其更新更多由 Agent 审议决策后发起。
+*   **1.2.1. 世界状态 (`WorldStateService`)**: 作为全局共享状态中心，但其更新更多由 Agent 审议决策后发起。
 *   **1.2.2. 知识库 (Knowledge Base - CAIU)**:
     *   **定位**: Agent 的“长期记忆”和“集体大脑”。存储结构化知识、世界设定、角色信息、Agent 贡献的经验、目标定义等。
     *   **CAIU 设计**: [`DesignDocs/architecture/knowledgebase-architecture.md`](DesignDocs/architecture/knowledgebase-architecture.md:1) 中定义的 CAIU 结构非常适合，特别是其元数据和动态引用 `{{{ }}}` 机制。
     *   **增强方向**:
         *   明确支持 `entry_type` 如 `goal`, `best_practice`, `reflection_note`, `failed_lesson`，以促进 Agent 学习和经验共享。
         *   细化 Agent 对 KB 的写入/更新/评论权限和流程。
-*   **1.2.3. 智能事件总线 (`IntelligentEventBus`)**: 保持 v6.1 设计，用于 Agent 间的结构化消息传递（请求、结果、状态变更通知）。
+*   **1.2.3. 智能事件总线 (`IntelligentEventBus`)**: 用于 Agent 间的结构化消息传递（请求、结果、状态变更通知）。
 
 ### 1.3. 交互层 (Interaction Layer)
 
