@@ -33,7 +33,7 @@
 {
   "id": "caiu_unique_identifier_uuid", // 知识库内唯一ID
   "version": 1, // CAIU自身版本，便于未来升级结构
-  "entry_type": "lore_detail", // 条目类型: e.g., "fact", "dialogue_snippet", "character_profile_element", "character_trait", "lore_detail", "image_description", "audio_cue", "instruction"
+  "entry_type": "lore_detail", // 条目类型: e.g., "fact", "dialogue_snippet", "character_profile_element", "character_trait", "lore_detail", "image_description", "audio_cue", "instruction", "goal_definition", "best_practice_summary", "failed_lesson_analysis", "reflection_note", "observation_log"
   "displayName": "Optional User-Friendly Name", // 用户可读的显示名称
 
   "content": {
@@ -172,8 +172,8 @@
 - **Agent 作为知识贡献者**: AI Agent 在运行过程中，可以根据新的信息、交互结果或内部推理，自主决定创建新的 CAIU 条目、更新现有条目或标记过时条目。
 - **标准化的工具接口**: 为了实现这一点，Agent 将通过一套标准化的工具接口（可称为“Agent 能力接口”或“Agent 工具集”）来操作知识库。这些工具封装了与知识库文件（本地或全局）的交互逻辑。
 - **结构化与一致性**: 这些工具将确保 Agent 提交的数据符合 CAIU 的 JSON Schema，并能自动处理部分元数据（例如，将 `source` 标记为 `"agent_generated"`，自动记录时间戳、管理版本等），从而维护知识库的结构化和一致性。
-- **主动交互**: 这种交互通常由 Agent 在其“思考”或决策逻辑中主动发起，是对工作流驱动的知识检索和应用的补充与扩展，赋予了 Agent 更高的自主性和适应性。
-- **后续设计**: 具体的工具定义（如用于 CAIU 创建、读取、更新、删除的工具）、调用协议以及相关的权限管理机制，将在后续的专门设计文档中进行详细规划。
+- **主动交互**: 这种交互通常由 Agent 在其“思考”或决策逻辑中主动发起，是对工作流驱动的知识检索和应用的补充与扩展，赋予了 Agent 更高的自主性和适应性。Agent 的学习与反思机制 (详见 Agent v3 架构报告 [`../agent_architecture_v3_consolidated.md#215-学习与反思机制-learning--reflection`](../agent_architecture_v3_consolidated.md:156)) 是其贡献知识（如 `best_practice_summary`, `failed_lesson_analysis`, `reflection_note`）的主要驱动力。Agent Profile (`agent_profile.json`) 中也会定义 Agent 对知识库的访问权限 (详见 Agent v3 架构报告 [`../agent_architecture_v3_consolidated.md#22-agent-定义-agent_profilejson---schema-详解`](../agent_architecture_v3_consolidated.md:185))。
+- **后续设计**: 具体的工具定义（如用于 CAIU 创建、读取、更新、删除的工具，对应 Agent Profile 中声明的 `tool_ids_inventory`）、调用协议以及相关的权限管理机制，将在后续的专门设计文档中进行详细规划。
 
 - **类型**:
   - **全局/共享知识库**: 独立于任何特定项目，可被多个项目引用。有统一的发现和管理机制。

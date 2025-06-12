@@ -2,20 +2,20 @@
 
 ## 1. 目标
 
-设计并实现一个灵活、可扩展的系统，用于在 ComfyTavern 工作流中调用不同提供商（包括官方 API、中转 API、本地模型服务等）的 LLM（及相关模型，如 Embedding），同时允许用户方便地管理模型、渠道（API 端点和凭证）以及模型能力。核心目标是实现模型、能力、渠道和通信协议（适配器）的解耦。
+设计并实现一个灵活、可扩展的系统，用于在 ComfyTavern 工作流中调用不同提供商（包括官方 API、中转 API、本地模型服务等）的 LLM（及相关模型，如 Embedding），同时允许用户方便地管理模型、渠道（API 端点和凭证）以及模型能力。**Agent 的核心审议工作流是本系统的一个主要“用户”或“消费者”**，因此，核心目标是实现模型、能力、渠道和通信协议（适配器）的解耦，以高效支持 Agent 及其他工作流对 LLM 服务的调用需求。
 
 ## 2. 核心组件
 
 系统主要由以下几个核心组件构成：
 
-- **通用 LLM 请求节点 (`GenericLlmRequestNode`)**: 工作流中的统一入口，负责声明所需**能力**和偏好，接收标准化输入/输出。**不再负责选择具体模型或渠道**。
+- **通用 LLM 请求节点 (`GenericLlmRequestNode`)**: 工作流中的统一入口，负责声明所需**能力**和偏好，接收标准化输入/输出。**不再负责选择具体模型或渠道**。当此节点被用于 Agent 的核心审议工作流时，其声明的“能力”反映了 Agent 审议逻辑对 LLM 功能的需求。
 - **LLM API 适配器 (`ILlmApiAdapter` & Implementations)**: 封装与特定 API 格式（如 OpenAI, Anthropic, Gemini, Ollama 等）的通信细节。接收**单一、具体的渠道配置和 API Key**。
 - **适配器注册表 (`LlmApiAdapterRegistry`)**: 管理可用的适配器实例。
 - **API 配置服务 (`ApiConfigService`)**: 管理用户配置的 **API 渠道 (`ApiCredentialConfig`)** 和 **渠道组 (`ApiChannelGroup`)**。
 - **模型能力预设库 (`default_models.json`)**: 定义基于模型名称模式匹配的规则，用于预填充模型的能力、图标、分组等。
 - **激活模型注册表 (SQLite DB)**: 存储用户明确选择并激活的模型及其最终确认的**能力 (`capabilities`)**。
 - **模型注册服务 (`ModelRegistryService`)**: 统一管理模型信息，结合预设库和激活注册表，并支持从渠道动态发现模型。
-- **模型/渠道路由服务 (`ModelRouterService`)**: **新增核心组件**。在运行时根据节点的**能力请求**和用户的**全局偏好/规则**，选择合适的**模型 (`model_id`)** 和**渠道组 (`channel_group_ref`)**。
+- **模型/渠道路由服务 (`ModelRouterService`)**: **新增核心组件**。在运行时根据节点的**能力请求**（例如，来自 Agent 核心审议工作流中 `GenericLlmRequestNode` 的能力声明）和用户的**全局偏好/规则**，选择合适的**模型 (`model_id`)** 和**渠道组 (`channel_group_ref`)**。
 - **重试与 Key 选择逻辑 (`RetryHandler` & `KeySelector`)**: **新增逻辑** (可内聚在 `ModelRouterService` 或 `ExecutionEngine` 中)。负责根据选定的渠道组执行**故障转移**，并根据渠道配置选择**具体的 API Key**。
 - **Tokenization 服务 (`TokenizationService`)**: **新增核心服务**。负责提供全局的 `token` 计算能力。详见 [全局 Tokenization 服务设计方案](./tokenization-service-plan.md)。
 - **用户偏好/路由规则存储 (DB/Config)**: **新增配置项**。存储用户定义的模型和渠道组选择规则。
@@ -361,9 +361,9 @@ export interface ActivatedModelInfo {
 
 ### 4.2. 工作流执行流程 (运行时)
 
-1.  **节点输入:** 用户在 `GenericLlmRequestNode` 上配置：
+1.  **节点输入:** 用户在 `GenericLlmRequestNode` 上配置（或者当此节点在 Agent 的核心审议工作流中时，这些配置可能由 Agent Profile 或审议逻辑间接提供）：
 
-- `required_capabilities: string[]`: 必须满足的能力列表 (e.g., `['llm', 'chat']`)。通过 Tag 输入框配置，详见 [LLM 适配器 - Tag 输入框方案](./llm-adapter-tag-input-plan.md)。
+- `required_capabilities: string[]`: 必须满足的能力列表 (e.g., `['llm', 'chat']`, `['llm', 'vision', 'planning']`)。通过 Tag 输入框配置，详见 [LLM 适配器 - Tag 输入框方案](./llm-adapter-tag-input-plan.md)。Agent Profile 中对 LLM 的需求也应能映射到这些能力标签上。
 - `preferred_model_or_tags?: string[]`: (可选) 倾向于选择的模型 ID 或自定义标签。路由服务会优先匹配此处的模型 ID，其次使用标签进行偏好排序。通过 Tag 输入框配置，详见 [LLM 适配器 - Tag 输入框方案](./llm-adapter-tag-input-plan.md)。
 - `performance_preference?: 'latency' | 'cost' | 'quality'`: (可选) 优化目标提示。
 - `messages`: 输入的 `CustomMessage[]`。
@@ -372,7 +372,7 @@ export interface ActivatedModelInfo {
 2.  **引擎调用:** `ExecutionEngine` 调用节点的 `execute` 方法，传入上述输入和包含各服务引用的 `context`。
 3.  **路由与执行逻辑 (由 `ModelRouterService` 和 `RetryHandler` 协调):**
     a. **路由选择 (由 `ModelRouterService` 执行):**
-    i. 接收节点的请求（能力、偏好、消息、参数）。
+    i. 接收节点的请求（能力、偏好、消息、参数）。当调用来自 Agent 的核心审议工作流时，这些请求反映了 Agent 当前决策周期对 LLM 的具体需求。
     ii. 从 `context.ModelRegistryService` 查询满足 `required_capabilities` 的**激活模型**。
     iii. (可选) 根据 `preferred_model_tags` 和 `performance_preference` 筛选/排序候选模型。
     iv. 根据用户的**全局偏好/路由规则** (从 `context` 获取)，从候选模型中确定最终的 `selected_model_id`。

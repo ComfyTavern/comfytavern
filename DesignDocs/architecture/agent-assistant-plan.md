@@ -1,8 +1,10 @@
 # Agent 助手（辅助创作）功能规划概要 (V3 - 基于逻辑指令与 JSON Patch)
 
-## 1. 核心目标：
+## 1. 核心目标与 Agent v3 架构定位：
 
-构建一个内置于 ComfyTavern 的智能助手 (Agent)，能够理解创作者的自然语言指令，通过生成结构化的**逻辑操作指令**（以 JSON Patch 格式承载）来辅助其快速创建和编辑 AI 工作流。Agent 的核心决策逻辑将由一个或多个内置工作流驱动，并利用检索增强生成 (RAG) 动态获取相关节点信息。
+构建一个内置于 ComfyTavern 的智能助手 (以下简称“创作助手 Agent”)，它本身即为 **ComfyTavern Agent v3 架构 ([`../agent_architecture_v3_consolidated.md`](../agent_architecture_v3_consolidated.md:1)) 的一个具体应用实例**。此创作助手 Agent 能够理解创作者的自然语言指令，通过生成结构化的**逻辑操作指令**（以 JSON Patch 格式承载）来辅助其快速创建和编辑 AI 工作流。
+
+该创作助手 Agent 的核心决策逻辑将由其专属的**核心审议工作流 (Core Deliberation Workflow)** 驱动，该工作流会利用检索增强生成 (RAG) 从节点知识库动态获取相关节点信息作为决策上下文。其设计和实现将遵循 Agent v3 架构定义的核心原则，包括 Agent 定义 (Profile)、运行时 (Runtime)、审议循环、技能调用等。
 
 ## 2. 关键能力设想：
 
@@ -20,23 +22,23 @@
 
 ## 3. 技术实现思路：
 
-### a. Agent 核心工作流 (后端)
+### a. 创作助手 Agent 的核心审议工作流 (Core Deliberation Workflow - 后端)
 
-1.  **输入**：
-    - 用户的自然语言指令。
-    - 当前活动工作流的完整 JSON 定义。
-2.  **上下文构建 (RAG)**：
-    - Agent 对用户指令进行初步解析，提取关键词和功能描述。
-    - 使用这些信息从“节点知识库”（例如，基于向量的检索引擎）中检索一小部分最相关的节点定义。
-    - 准备 LLM 需要的上下文，包括：
+1.  **输入 (Input to Deliberation Loop)**：
+    - 用户的自然语言指令 (作为一种主要的感知事件 `IncomingEvent`)。
+    - 当前活动工作流的完整 JSON 定义 (作为 `WorldState` 的一部分或特定上下文输入)。
+2.  **审议过程中的上下文构建 (Context Building within Deliberation - RAG)**：
+    - 创作助手 Agent 的核心审议工作流对用户指令进行初步解析，提取关键词和功能描述。
+    - 调用“知识库查询技能”或使用内置节点，从“节点知识库”（例如，基于向量的检索引擎）中检索一小部分最相关的节点定义。
+    - 准备传递给核心 LLM（审议工作流中的关键节点）的上下文，包括：
       - 用户的原始请求。
       - 当前工作流的 JSON。
       - 检索到的相关节点定义列表 (名称、描述、命名空间、类型、输入、输出、参数等)。
-      - 关于如何生成 JSON Patch 指令的说明或示例。
-3.  **LLM 调用**：
-    - 通过 [`LLM 适配器架构`](DesignDocs/architecture/llm-adapter-architecture-plan.md) 将上下文和任务指令（例如：“请根据用户需求、当前工作流状态和可用节点，生成 JSON Patch 指令来修改工作流”）发送给 LLM。
-4.  **JSON Patch 指令生成**：
-    - LLM 输出符合 JSON Patch (RFC 6902) 格式的逻辑操作指令数组。
+      - 关于如何生成 JSON Patch 指令的说明或示例 (可能来自知识库或 Prompt 工程)。
+3.  **LLM 推理与规划 (LLM-driven Reasoning & Planning)**：
+    - 核心审议工作流通过 [`LLM 适配器架构`](DesignDocs/architecture/llm-adapter-architecture-plan.md) 将构建好的上下文和任务指令（例如：“请根据用户需求、当前工作流状态和可用节点，生成 JSON Patch 指令来修改工作流”）发送给 LLM。
+4.  **决策输出：JSON Patch 指令生成 (Decision Output)**：
+    - LLM 输出符合 JSON Patch (RFC 6902) 格式的逻辑操作指令数组，这构成了创作助手 Agent 的主要“行动决策”。
     - **节点添加指令 (`value` 对象)**：
       - 可包含 `localId` (LLM 生成的临时 ID，用于同批次指令内引用)。
       - 必须包含 `type` (带命名空间)。
