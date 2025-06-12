@@ -64,8 +64,9 @@
 
   "usage_metadata": {
     // 条目使用时的元数据
-    "priority": 100, // 插入优先级 (数字越大/越小越优先，需统一约定)
-    "placement": "before_prompt", // 插入位置: "before_prompt", "after_prompt", "system_context", "scratchpad_notes"
+    "priority": 100, // 插入优先级 (数字越大/越小越优先，需统一约定), 作用域为处理它的节点或逻辑块内部
+    "placement": "before_prompt", // 插入位置的提示: "before_prompt", "after_prompt", "system_context", "scratchpad_notes" (实际位置由组装器逻辑决定)
+    "role": "system", // 内容注入时扮演的角色:"null", "system", "user", "assistant", (未来可能支持 "tool")。未设置时默认为 null ，根据上下文自动确定。
     "once_per_session": false, // 是否仅在会话中激活一次
     "exclude_from_history": false, // 是否在注入后从后续的聊天历史中排除此条目内容（用于一次性指令等）
     "prefix": {
@@ -90,7 +91,7 @@
       "aspect:personality",
       "@ref"
     ], // 标签，用于组织、过滤，并可结合工作流上下文实现动态知识筛选（如不同视角、角色认知差异等）。其中 "@ref" 等特殊前缀的标签可用于标记此条目为可供动态引用的内容片段。
-    "source": "manual_entry", // 来源: "manual_entry", "agent_generated", "st_import_v1", "rag_chunk_id_xyz" (agent_generated: 由AI Agent在运行过程中自主创建或更新)
+    "source": "manual_entry", // 来源: "manual_entry", "agent_generated", "imported_from:sillytavern:v1.x", "rag_chunk_id_xyz" (agent_generated: 由AI Agent在运行过程中自主创建或更新)
     "created_at": "iso_timestamp",
     "updated_at": "iso_timestamp",
     "author_notes": "This entry describes the ancient red dragon of Mount Cinder.", // 作者备注
@@ -100,7 +101,8 @@
   },
 
   "extensions": {
-    // (可选) 用于未来扩展或特定插件的数据
+    // (可选) 用于未来扩展、特定插件的数据，或从外部数据源导入时存储其特有元数据 (例如，从 SillyTavern 导入时的 st_import_metadata)。
+    // "st_import_metadata": { ... },
     // "my_plugin_data": { ... }
   }
 }
@@ -318,10 +320,15 @@
 
 - **知识源节点**: 在工作流中，知识源节点（如 "Static Knowledge Base Node", "RAG Source Node"）的配置界面应允许用户方便地选择项目已引用的知识库，或浏览并添加新的全局知识库到项目中。
 
-## 4. ST 兼容性策略总结
+## 4. ST 兼容性策略概要
 
-- **ST 世界书**: 通过转换工具导入为 ComfyTavern KB 格式 (CAIU 结构)。
-- **ST 角色卡**: 提取核心信息，转换为 ComfyTavern 知识库中一组专门的、结构化的 CAIU 条目（例如，使用特定标签如 "character_definition" 或特定 `entry_type`），用于完整描述角色。这些 CAIU 条目可以被项目中的工作流和 Agent 动态检索和使用。
+本知识库架构旨在通过其灵活的 CAIU 结构（特别是 `extensions` 字段和可自定义的 `entry_type` 及 `tags`）来适应从外部数据源（如 SillyTavern）导入的知识。
+
+- **ST 世界书 (Lorebook)** 和 **ST 角色卡 (Character Card)** 中的文本内容和核心元数据，可以通过专门的导入转换工具映射为 ComfyTavern 的 CAIU 结构。
+- ST 特有的行为逻辑参数（如精确的插入位置、时效性规则等）可以存储在 CAIU 的 `extensions` 字段内，供可选的、专门的“ST 行为模拟工作流节点”或高级「核心上下文组装器」逻辑使用。
+- 详细的 SillyTavern 资产导入与转换策略，包括具体的字段映射、关键组件设计（如「核心上下文组装器」）以及“ST 行为模拟节点”的构想，请参阅专门的兼容性策略文档：[`../compatibility/sillytavern-import-strategy.md`](../compatibility/sillytavern-import-strategy.md)。
+
+本知识库的核心设计侧重于 ComfyTavern 的原生功能和未来扩展性，同时为兼容和迁移现有 ST 资产提供了必要的数据结构支持。
 
 ## 5. 后续步骤与开放问题
 
