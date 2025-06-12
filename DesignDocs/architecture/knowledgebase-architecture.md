@@ -65,8 +65,9 @@
   "usage_metadata": {
     // 条目使用时的元数据
     "priority": 100, // 插入优先级 (数字越大/越小越优先，需统一约定), 作用域为处理它的节点或逻辑块内部
-    "placement": "before_prompt", // 插入位置的提示: "before_prompt", "after_prompt", "system_context", "scratchpad_notes" (实际位置由组装器逻辑决定)
+    //"placement": "before_prompt", // (已废弃) 插入位置的提示。其功能由 `tags` 结合组装器模板和工作流编排取代。
     "role": "system", // 内容注入时扮演的角色:"null", "system", "user", "assistant", (未来可能支持 "tool")。未设置时默认为 null ，根据上下文自动确定。
+    "depth_offset": null, // (可选, number) 如果设置，则此 CAIU 将采用深度偏移插入方式。值为非负整数，0 表示插入到当前处理列表的最末尾，正数 N 表示插入到倒数第 N 条消息之前。
     "once_per_session": false, // 是否仅在会话中激活一次
     "exclude_from_history": false, // 是否在注入后从后续的聊天历史中排除此条目内容（用于一次性指令等）
     "prefix": {

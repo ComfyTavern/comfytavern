@@ -16,7 +16,7 @@
 **2. ComfyTavern 核心概念回顾 (与 ST 映射相关)**
     2.1. Agent Profile
     2.2. 知识库 (Knowledge Base) 与 CAIU (Curated Atomic Info Units)
-        2.2.1. CAIU 的核心字段回顾 (特别是 `usage_metadata` 将包含 `role`)
+        2.2.1. CAIU 的核心字段回顾 (特别是 `usage_metadata` 将包含 `role`, 新增 `depth_offset`，并废弃ST的 `placement`)
     2.3. 工作流 (Workflow) 与核心节点
         2.3.1. 「核心上下文组装器」(Context Assembler) 节点
     2.4. 会话状态 (Session State)
@@ -37,16 +37,21 @@
             - ST Keywords -> `CAIU.activation_criteria.keywords` / `key_groups`
             - ST Vectorized -> `CAIU.activation_criteria.use_semantic_search`
             - ST Constant -> `CAIU.management_metadata.tags` (如 `activation:constant`)
-            - ST Order/Priority -> `CAIU.usage_metadata.priority`
-            - **ST `role` -> `CAIU.usage_metadata.role` (值为 "system", "user", "assistant")**
-        4.2.3. **复杂行为参数的存储 (于 `CAIU.extensions.st_import_metadata`)**
-            - `original_st_placement` (ST 原始插入位置，包括 `@D` 值)
-            - `original_st_role` (ST 原始 `role` 数值，用于数据保真和调试)
-            - `sticky_turns`, `cooldown_turns`, `delay_messages`
-            - `inclusion_group_id`
-            - `recursive_scan_enabled`
-            - `character_filter_allow`, `character_filter_deny`
-        4.2.4. 说明：这些 `st_import_metadata` 主要供可选的“ST行为模拟节点”使用。
+            - ST `order` -> `CAIU.usage_metadata.priority` (用于在同一逻辑块内或同一 `depth_offset` 插入点排序)
+            - ST `position` (非4时) -> `CAIU.management_metadata.tags` (如 `st_content_category:persona_supplement`)
+            - ST `position: 4` + ST `depth` -> `CAIU.usage_metadata.depth_offset`
+            - **ST `role` -> `CAIU.usage_metadata.role` (值为 "system", "user", "assistant", "null")**
+        4.2.3. **ST 特定行为参数的存储 (于 `CAIU.extensions.st_import_metadata`)**
+            - `original_st_position_enum_value` (ST 原始 `position` 枚举值)
+            - `original_st_depth_value` (ST 原始 `depth` 值, 无论是否激活 `depth_offset`)
+            - `original_st_role_value` (ST 原始 `role` 数值，用于数据保真和调试)
+            - `original_st_priority_value` (ST 原始 `order` 值)
+            - 时效性参数: `sticky_turns`, `cooldown_turns`, `delay_messages`
+            - 分组参数: `inclusion_group_id`, `groupOverride`, `groupWeight`, `useGroupScoring`
+            - 递归扫描参数: `recursive_scan_enabled`, `excludeRecursion`, `preventRecursion`, `delayUntilRecursion`
+            - 匹配选项: `caseSensitive`, `matchWholeWords`
+            - 其他: `scanDepth`, `character_filter_allow`, `character_filter_deny`, `automationId`
+        4.2.4. 说明：`extensions.st_import_metadata` 中存储的所有 ST 特定行为参数，均由可选的“ST行为模拟节点”簇或专用节点负责解释和执行。核心组装器不直接处理这些扩展数据。
     4.3. **对话补全预设 (Prompt Completion Presets) 的转换**
         (详细内容待填充，需注意组装器如何处理带 `role` 的 CAIU)
 
@@ -59,11 +64,13 @@
         5.2.3. 配置参数与内部逻辑：
             - **组装模板/规则集**
             - 针对不同 `entry_type` 或 `tags` 的 CAIU 的格式化规则
-            - 处理 `CAIU.usage_metadata.priority` (块内排序)
-            - **处理 `CAIU.usage_metadata.role`：能够根据此字段将 CAIU 内容包装成特定角色的消息块。**
-            - 处理 `CAIU.extensions.st_import_metadata.original_st_placement` (特别是 `@D` 的算法化插入)
+            - 处理 `CAIU.usage_metadata.priority` (在同一逻辑块内或同一 `depth_offset` 插入点进行排序)。
+            - **处理 `CAIU.usage_metadata.role`：能够根据此字段将 CAIU 内容包装成特定角色的消息块，并配合 `depth_offset` 使用。**
+            - **处理原生的 `CAIU.usage_metadata.depth_offset`：将设置了此字段的 CAIU 按其值精确插入到当前逻辑块正在构建（或基于）的消息列表的指定倒序位置。**
+            - **不处理** `CAIU.extensions.st_import_metadata` 中的任何 ST 特定行为参数。
+            - **不直接处理** 源自 ST `position:5` (如 `st_content_category:pre_send_modifier`) 或 `position:6` (如 `st_content_category:post_receive_modifier`) 的特殊注入逻辑。
         5.2.4. **输出端口：理想情况下为结构化的 `List<{role: string, content: string}>`，或可配置为单一字符串 Prompt。**
-        5.2.5. 与 ST 预设中 Context Order 的映射关系。
+        5.2.5. 与 ST 预设中 Context Order 的映射关系（ST模块顺序 -> 组装器模板；ST模块内容 -> 通过`tags`筛选CAIU到组装器输入端口）。
     5.3. **(可选) “ST行为模拟节点”簇设计构想**
         (详细内容待填充)
 
@@ -129,12 +136,13 @@ ComfyTavern 的知识库是结构化和情境化知识的存储与管理单元�
     *   `content`: 包含 `mime_type`, `value` (文本内容或描述), `path` (媒体路径) 等。
     *   `activation_criteria`: 定义条目如何被激活，包括 `keywords`, `key_groups`, `use_semantic_search`, `semantic_threshold`, `trigger_probability` 等。
     *   `usage_metadata`: 定义条目在被使用时的行为特性：
-        *   `priority`: 块内插入优先级（数字越大/越小越优先，需统一约定，作用域局部）。
-        *   `placement`: 建议的插入位置的提示 (如 `before_prompt`, `after_history`，实际位置由组装器逻辑决定)。
-        *   `role`: **(核心新增)** 定义此 CAIU 内容注入上下文时应扮演的角色，如 `"system"`, `"user"`, `"assistant"`。这将直接影响最终 Prompt 的结构，特别是对于使用结构化消息 API 的 LLM。
+        *   `priority: number`: 排序优先级。用于对不使用 `depth_offset` 的 CAIU 在其逻辑块内排序，或对具有相同 `depth_offset` 值的多个 CAIU 进行排序。 (源自 ST `order`)
+        *   `role: "system" | "user" | "assistant" | "null"`: 定义此 CAIU 内容注入上下文时应扮演的角色。
+        *   `depth_offset?: number`: (可选) 如果设置，则此 CAIU 将采用深度偏移插入方式。值为非负整数，0 表示插入到当前处理列表的最末尾，正数 N 表示插入到倒数第 N 条消息之前。 (源自 ST `position:4` + `depth`)
         *   `prefix`/`suffix`: 内容的前后缀包裹。
-    *   `management_metadata`: 管理性信息，如 `tags` (非常重要，用于组织、过滤、触发特定逻辑), `source` (如 `imported_from:sillytavern`), `author_notes` 等。
-    *   `extensions`: 用于存储特定于源系统（如 ST）的原始参数或 CT 核心 Schema 未直接包含的补充元数据。例如，`extensions.st_import_metadata` 将用于存放 ST Lorebook 的黏性轮数、冷却时间、原始插入位置等。
+        *   (`placement` 字段已废弃，其功能由 `tags` 结合组装器模板和工作流编排取代)
+    *   `management_metadata`: 管理性信息，如 `tags` (非常重要，用于组织、过滤、触发特定逻辑，包括源自 ST `position` 的内容性质分类标签如 `st_content_category:*`), `source` (如 `imported_from:sillytavern`), `author_notes` 等。
+    *   `extensions`: 用于存储特定于源系统（如 ST）的原始参数或 CT 核心 Schema 未直接包含的补充元数据。例如，`extensions.st_import_metadata` 将用于存放所有未直接映射到 CT 原生核心字段的 ST Lorebook 参数（如时效性、高级分组、递归控制、原始 `position` 和 `depth` 值等），这些参数由专门的“ST行为模拟节点”簇处理。
 
 ST 角色卡的描述、性格、对话示例以及 Lorebook 的所有条目，都将主要转换为一系列具有不同 `entry_type` 和元数据的 CAIU。
 
@@ -143,9 +151,10 @@ ST 角色卡的描述、性格、对话示例以及 Lorebook 的所有条目，�
 ComfyTavern 的核心是基于可视化工作流的 AI 逻辑编排。工作流由一系列相互连接的节点组成，每个节点执行特定的功能。
 
 *   **知识检索节点**: 负责从知识库中根据条件（关键词、语义相似度、标签等）检索相关的 CAIU 列表。
-*   **状态管理/过滤节点**: (可选，或作为组装器内部逻辑) 负责根据会话状态或 CAIU 的特定元数据（如 `st_import_metadata` 中的时效性参数）对检索到的 CAIU 列表进行过滤。
-*   **「核心上下文组装器」(Context Assembler) 节点**: 这是实现灵活且强大上下文构建的关键。它接收来自不同来源（历史记录、Agent Profile 信息、多个知识检索节点的输出、静态文本等）的结构化数据块，并根据其内部配置的模板/规则集，算法化地将这些数据块排序、格式化（包括处理 `CAIU.usage_metadata.role` 来构建消息块），并最终组装成发送给 LLM 的 Prompt (理想情况下是结构化的消息列表)。
+*   **状态管理/过滤节点 (“ST行为模拟节点”簇的一部分)**: 负责根据会话状态和 `CAIU.extensions.st_import_metadata` 中的时效性参数（黏性、冷却、延迟）等对 CAIU 列表进行过滤。
+*   **「核心上下文组装器」(Context Assembler) 节点**: 这是实现灵活且强大上下文构建的关键。它接收来自不同来源（例如，通过其命名输入端口连接的、已按 `tags` 筛选的 CAIU 列表、消息列表等）的结构化数据块，并根据其内部配置的“组装模板/规则集”，算法化地将这些数据块排序（使用 `priority`）、格式化（使用 `role`），并应用 `depth_offset` 机制，最终组装成发送给 LLM 的 Prompt (理想情况下是结构化的消息列表)。**它不直接处理 `extensions.st_import_metadata`。**
 *   **LLM 调用节点**: 负责将组装好的 Prompt 发送给指定的 LLM，并获取回复。它会处理 LLM 的采样参数等配置。
+*   **专用消息处理节点 (“ST行为模拟节点”簇的一部分或通用节点)**: 负责处理带有特殊 `tags` (如 `st_content_category:pre_send_modifier`, `st_content_category:post_receive_modifier`) 的 CAIU，在核心组装器之外的流程阶段对消息进行修改。
 
 ST 的对话补全预设中的上下文模块顺序和 LLM 参数，将主要映射到「核心上下文组装器」和 `LLM 调用节点` 的配置。ST Lorebook 中的复杂行为逻辑（如时效性、递归、分组等）则需要通过 CAIU 的元数据提示，并由工作流中的特定节点（如状态管理节点或组装器内部逻辑，甚至是专门的“ST行为模拟节点”）来配合实现。
 
@@ -305,7 +314,7 @@ SillyTavern 的角色卡定义了 AI 角色的基础。在 ComfyTavern 中，这
 *   **ST (高级) `Author's Note / Character Note` (作者注释)**
     *   **CT 映射**: 转换为 `entry_type: st_authors_note` 的 CAIU。
     *   `management_metadata.tags`: 添加 `note_type:author`。
-    *   `usage_metadata.priority` 和 `usage_metadata.placement` (或 `extensions.st_import_metadata.original_st_placement`) 需要根据其在 ST 中的预期插入位置进行设置，并由「核心上下文组装器」解析。
+    *   `usage_metadata.priority` (源自 ST `order`) 和 `management_metadata.tags` (源自 ST `position`，如 `st_content_category:authors_note_context`) 需要根据其在 ST 中的预期进行设置。「核心上下文组装器」将依据其组装模板和这些 `tags` 来决定其归属的逻辑块，并依据 `priority` 在块内排序。
     *   `usage_metadata.role`: 通常为 `"system"`。
 
 通过以上映射，ST 角色卡的核心信息被分解并结构化为 ComfyTavern Agent Profile 和一系列具有明确元数据和预期用途的 CAIU 条目。这些 CAIU 将作为后续工作流构建上下文的基础数据源。
@@ -313,7 +322,10 @@ SillyTavern 的角色卡定义了 AI 角色的基础。在 ComfyTavern 中，这
 
 SillyTavern 的世界信息/Lorebook 是其动态上下文管理的核心，允许基于关键词、语义或特定条件注入背景知识。将其转换为 ComfyTavern 的 CAIU 结构，并保留其行为逻辑，是兼容性策略中的重点和难点。
 
-*   **核心原则**: 每个 ST Lorebook 条目都将转换为一个独立的 ComfyTavern CAIU 条目。ST 条目的行为逻辑主要通过 CAIU 的 `activation_criteria`、`usage_metadata`（尤其是新增的 `role` 字段）以及 `extensions.st_import_metadata` 中存储的原始 ST 参数来体现，并最终由工作流中的节点（特别是「核心上下文组装器」和可能的“ST行为模拟节点”）来解释和执行。
+*   **核心原则**: 每个 ST Lorebook 条目都将转换为一个独立的 ComfyTavern CAIU 条目。ST 条目的行为逻辑通过以下方式在 CT 中体现：
+    *   **CT 原生核心字段**: ST `order` -> CT `priority`；ST `role` -> CT `role`；ST `position:4` + `depth` -> CT `depth_offset`。这些由「核心上下文组装器」原生处理。
+    *   **`CAIU.management_metadata.tags`**: ST `position` (非4值) -> CT `tags` (如 `st_content_category:*`)，用于内容分类，供知识检索节点和组装器模板使用。
+    *   **`CAIU.extensions.st_import_metadata`**: 存储所有其他未直接映射到 CT 原生核心字段的 ST 特定参数（如时效性、高级分组、递归、匹配选项、原始 `position` 和 `depth` 值等）。这些**完全由**工作流中可选的“ST行为模拟节点”簇或专用节点解释和执行。
 
 *   **ST Lorebook 条目字段到 CT CAIU 字段的映射**:
 
@@ -354,78 +366,91 @@ SillyTavern 的世界信息/Lorebook 是其动态上下文管理的核心，允�
         *   如果 `CAIU.usage_metadata.role` 被设为 `"user"` 或 `"assistant"`，通常意味着其内容会成为显式的聊天历史。
 
     *   **ST `order` (插入顺序/优先级)**
-        *   **CT 映射**: `CAIU.usage_metadata.priority`。强调其作用域是**块内排序**。
-        *   同时在 `CAIU.extensions.st_import_metadata.original_st_priority` 中记录原始值。
+        *   **CT 映射**: `CAIU.usage_metadata.priority: number`。
+        *   **作用域**: 用于对不使用 `depth_offset` 的 CAIU 在其逻辑块内（由 `tags` 和组装器模板决定）进行排序；或者对具有相同 `depth_offset` 值的多个 CAIU 进行排序。
+        *   在 `CAIU.extensions.st_import_metadata.original_st_priority_value` 中记录原始 ST `order` 值。
 
-    *   **ST `position` (插入位置)**
-        *   **CT 映射**: 这是一个提示性信息，用于指导「核心上下文组装器」。
-            *   ST 的 `position` 值 (如 0: Top, 1: Before Char, 2: After Char, 3: Before History, 4: After History 等) 需要转换为 CT 中有意义的 `CAIU.usage_metadata.placement` 字符串 (如 `"system_context_top"`, `"before_persona"`, `"after_persona"`, `"before_history"`, `"after_history"`) 或特定的 `tags`。
-            *   在 `CAIU.extensions.st_import_metadata.original_st_placement_enum_value` 中记录原始 ST 枚举值。
-            *   「核心上下文组装器」将主要依赖这些元数据和其自身的组装模板来决定 CAIU 的最终位置。
+    *   **ST `position` (插入位置模式)**
+        *   **CT 映射**:
+            *   **当 ST `position: 4` (启用 `@D` 深度插入模式时)**:
+                *   对应的 CT CAIU 将设置 `usage_metadata.depth_offset` 字段，其值为 ST `depth` 字段的值。
+                *   ST `role` (0, 1, 2, null) 映射到 `CAIU.usage_metadata.role`，「核心上下文组装器」在执行 `depth_offset` 插入时会使用此 `role`。
+            *   **当 ST `position != 4` 时 (其他位置模式，如 0, 1, 2, 3, 5, 6)**:
+                *   对应的 CT CAIU **不会**设置 `usage_metadata.depth_offset`。
+                *   ST `position` 的值将转换为 `CAIU.management_metadata.tags` 中的一个或多个**内容性质分类标签**。例如：
+                    *   `position:0` (Top/Before Persona) -> `tag: "st_content_category:persona_supplement"`
+                    *   `position:1` (After Persona) -> `tag: "st_content_category:persona_elaboration"`
+                    *   `position:2` (Before Author's Note) -> `tag: "st_content_category:pre_authors_note"`
+                    *   `position:3` (After Author's Note) -> `tag: "st_content_category:post_authors_note"`
+                    *   `position:5` (↑EM / Before Send) -> `tag: "st_content_category:pre_send_modifier"` (其特殊行为由专用节点处理)
+                    *   `position:6` (↓EM / After Receive) -> `tag: "st_content_category:post_receive_modifier"` (其特殊行为由专用节点处理)
+                *   这些 `tags` 将被知识检索节点用于筛选，并将结果送入「核心上下文组装器」的不同输入端口，由组装器的模板决定这些逻辑块的最终顺序。
+            *   `CAIU.usage_metadata.placement` 字段已废弃。
+            *   在 `CAIU.extensions.st_import_metadata.original_st_position_enum_value` 中记录原始 ST `position` 枚举值。
 
     *   **ST `disable` (是否禁用)**
         *   **CT 映射**: `CAIU.management_metadata.is_enabled: false` (如果 ST 中为 true)。
 
     *   **ST `excludeRecursion` / `preventRecursion` / `delayUntilRecursion` (递归控制)**
-        *   **CT 映射**: 这些复杂的递归行为控制参数，主要存储在 `CAIU.extensions.st_import_metadata` 中，例如：
-            *   `st_exclude_from_recursive_search: true/false`
-            *   `st_prevent_triggering_recursion: true/false`
-            *   `st_delay_activation_in_recursion: true/false`
-        *   这些参数将由专门的“ST行为模拟节点”（如果实现）或高级组装器逻辑来解释和处理。CT 原生的递归知识检索可能采用不同的机制。
+        *   **CT 映射**: 这些参数存储在 `CAIU.extensions.st_import_metadata` 中 (如 `recursive_scan_params: { exclude: ..., prevent: ..., delay_in_recursion: ... }`)。
+        *   这些参数**完全由**专门的“ST行为模拟节点”（例如 `ST Recursive Scan Emulation Node`）解释和处理。
 
     *   **ST `probability` / `useProbability` (触发概率)**
         *   **CT 映射**: `CAIU.activation_criteria.trigger_probability` (0.0 到 1.0)。
         *   如果 ST `useProbability` 为 false，则 CT `trigger_probability` 设为 1.0。
 
-    *   **ST `depth` (插入深度 `@D`)**
-        *   **CT 映射**: 存储在 `CAIU.extensions.st_import_metadata.insertion_depth_d_value: number`。
-        *   「核心上下文组装器」需要能够读取此值，并结合 `CAIU.usage_metadata.role`，在结构化的消息列表中精确地将此 CAIU 内容插入到从后往前数第 `D` 条消息之前。
+    *   **ST `depth` (插入深度值)**
+        *   **CT 映射**:
+            *   当 ST `position == 4` 时，ST `depth` 的值被映射到 CT `CAIU.usage_metadata.depth_offset: number`。
+            *   当 ST `position != 4` 时，ST `depth` 字段的值通常被忽略，但其原始值仍记录在 `CAIU.extensions.st_import_metadata.original_st_depth_value` 中以备查验。
+        *   「核心上下文组装器」原生支持处理 `CAIU.usage_metadata.depth_offset`。
 
     *   **ST `group` (包含组 ID)**
         *   **CT 映射**:
-            *   在 `CAIU.management_metadata.tags` 中添加一个代表组的标签，例如 `inclusion_group:${group_id}`。
-            *   原始 `group_id` 也可存入 `CAIU.extensions.st_import_metadata.inclusion_group_id`。
-            *   组内条目的优选逻辑由工作流中的“分组过滤节点”或「核心上下文组装器」根据 `CAIU.usage_metadata.priority` 实现（同一 `inclusion_group:*` 标签的 CAIU 中，只保留优先级最高的）。
+            *   在 `CAIU.management_metadata.tags` 中添加一个代表组的标签，例如 `st_inclusion_group:${group_id}`。
+            *   原始 `group_id` 存储在 `CAIU.extensions.st_import_metadata.inclusion_group_params: { id: ... }`。
+            *   组内条目的优选逻辑**完全由**专门的“ST行为模拟节点”（例如 `ST Inclusion Group Filter Node`）根据 `CAIU.usage_metadata.priority` 和 `extensions.st_import_metadata` 中的其他组相关参数（如 `groupOverride`, `groupWeight`）来实现。
 
     *   **ST `groupOverride` / `groupWeight` / `useGroupScoring` (组内高级行为)**
-        *   **CT 映射**: 这些更细致的组内行为参数，主要存储在 `CAIU.extensions.st_import_metadata` 中，供专门的模拟节点或高级组装逻辑使用。
+        *   **CT 映射**: 这些参数存储在 `CAIU.extensions.st_import_metadata.inclusion_group_params` 对象中。
+        *   **完全由** “ST Inclusion Group Filter Node” 解释和处理。
 
     *   **ST `scanDepth` (扫描深度)**
-        *   **CT 映射**: 这是一个对知识检索行为的提示。可以存储在 `CAIU.extensions.st_import_metadata.scan_depth_limit: number`。
-        *   CT 的知识检索节点在进行关键词或语义匹配时，可以参考此值来限制其在聊天历史中回溯的范围（如果该节点支持此配置）。
+        *   **CT 映射**: 存储在 `CAIU.extensions.st_import_metadata.scan_depth_limit: number`。
+        *   此参数由支持它的“ST行为模拟节点”或特定的知识检索节点解释，用于限制在消息列表中回溯查找激活条件的范围。
 
     *   **ST `caseSensitive` / `matchWholeWords` (匹配选项)**
-        *   **CT 映射**: 这些是关键词匹配时的行为选项。
-            *   可以尝试在 `CAIU.activation_criteria.keywords` 的结构中加入修饰符（如果检索节点支持），或者更通用地存储在 `CAIU.extensions.st_import_metadata.match_options: { case_sensitive: true/false, whole_words: true/false }`。
-            *   CT 的知识检索节点需要能够读取并应用这些匹配选项。
+        *   **CT 映射**: 这些参数存储在 `CAIU.extensions.st_import_metadata.match_options: { case_sensitive: true/false, whole_words: true/false }`。
+        *   由支持这些选项的知识检索节点或“ST行为模拟节点”读取和应用。
 
     *   **ST `automationId` (自动化ID，不常用)**
         *   **CT 映射**: 可忽略，或存储在 `CAIU.extensions.st_import_metadata.automation_id` 中备查。
 
     *   **ST `role` (注入角色)**
-        *   **CT 映射**: `CAIU.usage_metadata.role: "system" | "user" | "assistant"`。
-            *   ST `role: 0` (System/Default) -> `"system"`
-            *   ST `role: 1` (User) -> `"user"`
-            *   ST `role: 2` (AI/Model) -> `"assistant"`
-        *   同时在 `CAIU.extensions.st_import_metadata.original_st_role` 中记录原始数值。
-        *   这是确保「核心上下文组装器」能正确构建结构化消息列表的关键。
+        *   **CT 映射**: `CAIU.usage_metadata.role: "system" | "user" | "assistant" | "null"`。
+            *   ST `role: 0` (System/Default) 映射到 CT `"system"`。
+            *   ST `role: 1` (User) 映射到 CT `"user"`。
+            *   ST `role: 2` (AI/Model) 映射到 CT `"assistant"`。
+            *   ST `role: null` 映射到 CT `"null"` (字符串 "null")。
+        *   在 `CAIU.extensions.st_import_metadata.original_st_role_value` 中记录原始 ST `role` 数值 (包括 `null`)。
+        *   「核心上下文组装器」在处理 `depth_offset` 插入或常规块内容时，会使用此 `CAIU.usage_metadata.role`。
 
     *   **ST `sticky` (黏性轮数)**
-        *   **CT 映射**: `CAIU.extensions.st_import_metadata.sticky_turns: number`。
-        *   工作流中的“状态管理节点”或「核心上下文组装器」（如果能访问会话状态）将负责根据此值和当前会话状态（如 `turn_count`）来实现黏性逻辑。
+        *   **CT 映射**: `CAIU.extensions.st_import_metadata.time_based_behavior: { sticky_turns?: number, cooldown_turns?: number, delay_messages?: number }`。
+        *   这些时效性参数**完全由**专门的“ST行为模拟节点”（例如 `ST Time-Based Filter Node`）结合会话状态（如 `turn_count`, `message_count`）来解释和执行。
 
     *   **ST `cooldown` (冷却轮数)**
-        *   **CT 映射**: `CAIU.extensions.st_import_metadata.cooldown_turns: number`。
-        *   实现方式同 `sticky`。
+        *   **CT 映射**: 同 `sticky`，存储在 `CAIU.extensions.st_import_metadata.time_based_behavior` 对象中。
+        *   由 `ST Time-Based Filter Node` 处理。
 
     *   **ST `delay` (延迟消息数)**
-        *   **CT 映射**: `CAIU.extensions.st_import_metadata.delay_messages: number`。
-        *   实现方式同 `sticky`，但依赖会话状态中的 `message_count`。
+        *   **CT 映射**: 同 `sticky`，存储在 `CAIU.extensions.st_import_metadata.time_based_behavior` 对象中。
+        *   由 `ST Time-Based Filter Node` 处理，依赖会话状态中的 `message_count`。
 
     *   **ST `displayIndex` (UI显示顺序，非核心逻辑)**
         *   **CT 映射**: 可忽略，或存储在 `CAIU.extensions.st_import_metadata.ui_display_index` 中，供知识库编辑器参考。
 
-通过这种方式，ST Lorebook 的每个条目都被转换为一个富含元数据的 CAIU。其核心内容和基础激活条件（关键词、向量化）直接映射到 CAIU 的标准字段，而更复杂的、依赖 ST 特定引擎行为的规则（时效性、精确插入、递归控制、高级分组等）则被封装在 `extensions.st_import_metadata` 中。这些扩展元数据为可选的“ST行为模拟节点”或高级「核心上下文组装器」逻辑提供了必要的数据输入，使得 ComfyTavern 可以在需要时尽可能地复现 ST 的行为，同时其核心架构依然保持简洁和通用。
+通过这种方式，ST Lorebook 的每个条目都被转换为一个富含元数据的 CAIU。其核心内容、基础激活条件（关键词、向量化）、排序优先级 (`priority`)、注入角色 (`role`) 以及可选的精确深度偏移插入 (`depth_offset`) 直接映射到 CT CAIU 的原生核心字段，由「核心上下文组装器」等标准 CT 组件处理。ST `position` (非4时) 主要转换为 `tags` 用于内容分类。所有其他 ST 特有的复杂行为规则（如时效性、高级分组、递归控制、精确的 `position:5/6` 注入逻辑等）则被封装在 `CAIU.extensions.st_import_metadata` 中，并**完全由**可选的“ST行为模拟节点”簇或相应的专用节点来解释和执行。这种分离确保了 CT 核心架构的简洁性和通用性，同时为需要高度 ST 兼容性的用户提供了强大的可选路径。
 ### 4.3. 对话补全预设 (Prompt Completion Presets) 的转换
 
 SillyTavern 的对话补全预设（通常称为“上层预设”）是用户对 LLM 交互进行最终控制的层面，它定义了 LLM 的采样参数以及最终 Prompt 的结构和内容顺序。在 ComfyTavern 中，这些功能主要由工作流中的 `LLM Call` 节点和「核心上下文组装器」节点的配置来承载。
@@ -441,9 +466,9 @@ SillyTavern 的对话补全预设（通常称为“上层预设”）是用户�
         1.  **组装模板/规则集**: ST 的模块顺序（例如，`System Preamble -> World Info (Before Persona) -> Persona -> World Info (After Persona) -> Chat History -> User Input -> World Info (Last) -> Assistant Prefix`）需要被转换为「核心上下文组装器」节点内部的一个**可配置的组装模板或规则序列**。
             *   这个模板定义了不同逻辑块（对应 ST 的模块）的排列顺序。
             *   例如，组装器可能有一个配置项，允许用户通过拖拽或编辑一个列表来定义这些块的顺序：`["persona_block", "lore_block_before_history", "history_block", "lore_block_after_history", "user_input_block"]`。
-        2.  **CAIU 元数据的利用**: 「核心上下文组装器」在填充这些逻辑块时，会依赖 CAIU 的 `usage_metadata.placement` 提示（来自 ST Lorebook 的 `position`）、`usage_metadata.role`、`management_metadata.tags` (如 `aspect:description`, `aspect:scenario`) 等元数据，来决定哪些 CAIU 应该被放入哪个逻辑块。
+        2.  **CAIU 元数据的利用**: 「核心上下文组装器」在填充这些逻辑块时，会依赖连接到其命名输入端口的 CAIU 列表（这些列表由上游知识检索节点根据 `CAIU.management_metadata.tags` 等进行筛选，其中 `tags` 可包含源自 ST `position` 的内容性质分类标签如 `st_content_category:*`）。它还会使用 `CAIU.usage_metadata.role` 和 `CAIU.usage_metadata.priority`。
         3.  **模块启用/禁用**: ST 中可以开关某些模块的包含。在 CT 中，这可以通过：
-            *   「核心上下文组装器」配置中对特定逻辑块的启用/禁用开关。
+            *   「核心上下文组装器」的组装模板中是否包含某个逻辑块的定义。
             *   或者，通过工作流逻辑（例如，条件节点）来决定是否将某一类 CAIU（如“对话示例”）送入组装器。
     *   **导入逻辑**: 导入 ST 预设时，其 Context Order 配置应被解析，并用于生成「核心上下文组装器」节点的推荐默认配置（特别是其内部的组装模板/规则）。
 
@@ -452,9 +477,9 @@ SillyTavern 的对话补全预设（通常称为“上层预设”）是用户�
         *   **选项1 (推荐)**: 转换为具有特定 `entry_type` (如 `st_custom_prompt_injection`) 的 CAIU 条目。
             *   `CAIU.content.value`: 静态文本内容。
             *   `CAIU.usage_metadata.role`: 映射 ST 中指定的 User/AI/System 角色。
-            *   `CAIU.usage_metadata.priority` 和 `CAIU.usage_metadata.placement` (或 `extensions.st_import_metadata.original_st_placement_hint`) 需要根据其在 ST Prompt Manager 中的预期位置进行设置，并由「核心上下文组装器」解析。
-            *   `CAIU.management_metadata.tags`: 添加如 `source:st_preset_custom_text`。
-        *   **选项2**: 在为导入 Agent 生成的推荐工作流中，直接创建“静态文本输入”节点，并将其连接到「核心上下文组装器」的适当输入端口。组装器需要能够处理这些直接的文本输入，并根据其连接的端口或元数据（如果节点允许配置 `role`）来决定其在 Prompt 中的角色和位置。
+            *   `CAIU.usage_metadata.priority` 需要根据其在 ST Prompt Manager 中的预期顺序进行设置。
+            *   `CAIU.management_metadata.tags`: 添加如 `source:st_preset_custom_text` 和相应的 `st_content_category:*` 标签，以帮助「核心上下文组装器」将其分配到正确的逻辑块。
+        *   **选项2**: 在为导入 Agent 生成的推荐工作流中，直接创建“静态文本输入”节点，并将其连接到「核心上下文组装器」的适当命名输入端口。组装器根据其连接的端口和组装模板来决定其在 Prompt 中的角色和位置。
     *   **考量**: 选项1 更符合将所有可注入内容 CAIU 化的原则，便于统一管理和检索。
 
 *   **ST 实用提示词模板 / 格式化模板** (如 `wi_format_textarea` 定义 Lorebook 条目如何被包裹)
@@ -551,7 +576,7 @@ SillyTavern 的对话补全预设（通常称为“上层预设”）是用户�
 *   **核心职责**: 根据用户定义的组装模板/规则和输入的结构化数据块，算法化地、有序地构建最终的 Prompt 内容。
 *   **灵活性**: 允许用户通过配置而非修改工作流连线来调整 Prompt 中各个逻辑块的顺序和包含与否。
 *   **结构化输出**: 理想情况下，应能输出结构化的消息列表 (如 `List<{role: string, content: string}>`)，以完美适配现代 Chat Completion API。同时，也应能配置为输出单一的、格式化的字符串 Prompt，以兼容旧式 API。
-*   **元数据驱动**: 充分利用 CAIU 的元数据 (`usage_metadata.role`, `usage_metadata.priority`, `usage_metadata.placement` 提示, `extensions.st_import_metadata` 等) 来指导内容的筛选、排序和格式化。
+*   **元数据驱动**: 充分利用 CAIU 的核心元数据 (`usage_metadata.role`, `usage_metadata.priority`, `usage_metadata.depth_offset?`, `management_metadata.tags`) 来指导内容的筛选、排序和格式化。**不直接读取或解释 `extensions.st_import_metadata`。**
 
 #### 5.2.2. 输入端口 (概念性)
 
@@ -595,22 +620,21 @@ SillyTavern 的对话补全预设（通常称为“上层预设”）是用户�
 
 *   **B. CAIU 处理逻辑 (针对每个逻辑块内处理 `List<CAIUObject>`)**:
     *   **1. 筛选 (Filtering)**:
-        *   (可选，也可由前置节点完成) 根据 `CAIU.management_metadata.tags` 和 `CAIU.entry_type`，以及逻辑块的定义，筛选出应归属于当前逻辑块的 CAIU。
-        *   (可选，需 `session_state` 输入) 根据 `CAIU.extensions.st_import_metadata` 中的时效性参数 (`sticky_turns`, `cooldown_turns`, `delay_messages`) 和当前会话状态，过滤掉不应激活的 CAIU。
-        *   (可选) 处理包含组 (Inclusion Groups) 逻辑：对于具有相同 `inclusion_group:*` 标签的 CAIU，只保留 `priority` 最高的。
-    *   **2. 排序 (Sorting)**:
-        *   根据 `CAIU.usage_metadata.priority` 对筛选后的 CAIU 列表进行**块内排序**。
+        *   「核心上下文组装器」假定输入到其命名端口的 CAIU 列表已经是经过上游知识检索节点根据 `CAIU.management_metadata.tags` (包括 `st_content_category:*` 等) 和 `entry_type` 筛选过的，以匹配当前逻辑块的定义。
+        *   **不处理**任何基于 `extensions.st_import_metadata` 的过滤逻辑（如时效性、包含组等），这些应由专门的“ST行为模拟节点”在上游完成。
+    *   **2. 排序与精确插入 (Sorting & Precise Insertion)**:
+        *   a. 首先，将当前逻辑块中所有**不包含** `usage_metadata.depth_offset` 的 CAIU 根据其 `usage_metadata.priority` 进行排序，形成一个初步的消息序列。
+        *   b. 然后，获取当前逻辑块中所有**包含** `usage_metadata.depth_offset` 的 CAIU。对于这些 CAIU，根据其 `depth_offset` 值（以及在同一 `depth_offset` 内的 `priority`）将它们精确地插入到步骤 (a) 生成的序列中（或者，如果该逻辑块是基于一个外部传入的消息列表构建的，如历史记录，则插入到该外部列表中）。
     *   **3. 格式化与角色分配 (Formatting & Role Assignment)**:
-        *   对每个 CAIU，根据其 `CAIU.usage_metadata.role` (`"system"`, `"user"`, `"assistant"`)，将其内容包装成一个消息对象 `{role: string, content: string}`。
+        *   对每个 CAIU，根据其 `CAIU.usage_metadata.role` (`"system"`, `"user"`, `"assistant"`, `"null"`)，将其内容包装成一个消息对象 `{role: string, content: string}`。
         *   应用 `CAIU.usage_metadata.prefix` 和 `CAIU.usage_metadata.suffix` (如果定义)。
         *   应用针对特定 `entry_type` 或 `tags` 的全局格式化规则（如果节点配置了此类规则，例如 ST 的 `wi_format_textarea`）。
     *   **4. 内容合并 (Content Aggregation for a Block)**:
-        *   将处理后的、属于当前逻辑块的所有 CAIU 消息对象（或其 `content` 字符串，取决于输出目标）聚合成该逻辑块的最终内容。
+        *   将经过上述处理（排序、精确插入、格式化）后属于当前逻辑块的所有 CAIU 消息对象（或其 `content` 字符串，取决于输出目标）聚合成该逻辑块的最终内容。
 
-*   **C. 特殊位置插入逻辑 (如 ST 的 `@D`)**:
-    *   当组装器构建聊天历史块 (`history_block`) 时，它会遍历输入的 `history_messages` 列表。
-    *   同时，它会检查所有已激活且具有 `CAIU.extensions.st_import_metadata.insertion_depth_d_value` 的 CAIU。
-    *   如果某个 CAIU 的 `insertion_depth_d_value` 为 `D`，则该 CAIU（已根据其 `role` 格式化为消息对象）将被算法化地插入到从后往前数第 `D` 条历史消息之前的位置。这要求组装器能够操作结构化的消息列表。
+*   **C. 处理 `depth_offset` (已整合入上述 B.2.b)**:
+    *   「核心上下文组装器」原生支持 `CAIU.usage_metadata.depth_offset`。当 CAIU 设置此字段时，它会根据该值（0=最末尾，正数N=倒数第N条前）和 `priority`（同`depth_offset`时排序）被插入到当前逻辑块正在构建的（或基于的）消息列表中。
+    *   这不依赖于 `extensions`，而是 CT 的核心功能。
 
 *   **D. 输出模式配置**:
     *   **`output_mode: "structured_list"` (推荐默认)**: 输出 `List<{role: string, content: string}>`。
@@ -638,12 +662,13 @@ SillyTavern 的对话补全预设（通常称为“上层预设”）是用户�
 
 #### 5.3.1. 设计目标与定位
 
-*   **目标**: 为用户提供一种在 ComfyTavern 工作流中“精确”模拟 ST Lorebook 特定高级行为（如时效性、递归扫描、高级分组、精确插入位置等）的选项。
+*   **目标**: 为用户提供一种在 ComfyTavern 工作流中模拟 ST Lorebook 特定高级行为的选项，这些行为未被 CT 原生核心字段直接覆盖。
 *   **定位**:
-    *   **可选组件**: 这些节点不是 CT 核心上下文构建流程的必需品，用户可以选择是否使用它们。
-    *   **补充而非替代**: 它们是对「核心上下文组装器」和标准知识检索节点的补充，专注于处理 ST 特有的、难以通过通用元数据完全表达的逻辑。
-    *   **数据驱动**: 严格依赖 `CAIU.extensions.st_import_metadata` 中的数据。如果这些元数据不存在或不完整，模拟节点的行为可能不符合预期。
-    *   **透明度**: 节点应清晰地在其配置和文档中说明它模拟了 ST 的哪些行为以及它如何使用 `st_import_metadata`。
+    *   **可选组件**: 这些节点不是 CT 核心上下文构建流程的必需品。
+    *   **补充核心功能**: 它们处理 ST 特有的逻辑，这些逻辑通过 `CAIU.extensions.st_import_metadata` 存储。
+    *   **数据驱动**: 完全依赖 `CAIU.extensions.st_import_metadata` 中的数据。
+    *   **透明度**: 节点清晰说明其模拟的 ST 行为及使用的 `st_import_metadata` 参数。
+    *   **职责**: 包括但不限于处理时效性 (`sticky_turns`, `cooldown_turns`, `delay_messages`)、高级包含组逻辑 (`inclusion_group_id`, `groupOverride` 等)、递归扫描 (`recursive_scan_enabled` 等)、特定匹配选项 (`caseSensitive` 等)，以及源自 ST `position:5` (如 `st_content_category:pre_send_modifier`) 和 `position:6` (如 `st_content_category:post_receive_modifier`) 的特殊消息注入/修改逻辑。
 
 #### 5.3.2. 潜在的节点示例及其功能
 
@@ -692,8 +717,7 @@ SillyTavern 的对话补全预设（通常称为“上层预设”）是用户�
     *   **注意**: 这是一个计算密集型操作，需要谨慎设计以避免性能问题。
 
 *   **D. `ST Precise Placement Assembler Node` (ST 精确放置组装器 - 可选变体)**
-    *   这可能是「核心上下文组装器」的一个特殊版本或模式，它更严格地遵循 `CAIU.extensions.st_import_metadata.original_st_placement_enum_value` 和 `original_st_priority` 来尝试复现 ST 的文本块精确堆叠顺序，而不是 CT 组装器默认的、可能更灵活的基于逻辑块模板的组装方式。
-    *   它可能牺牲一部分 CT 组装器的灵活性，以换取对 ST 布局的更高保真度。
+    *   由于 `CAIU.usage_metadata.placement` 已废弃，此类节点不再需要。ST 的布局主要通过「核心上下文组装器」的模板、CAIU 的 `tags`（源自 ST `position`）、`priority`（源自 ST `order`）以及原生的 `depth_offset`（源自 ST `position:4` + `depth`）来实现。ST 特有的、无法通过这些机制表达的精确堆叠或注入逻辑（如 `position:5/6`）将由其他专用模拟节点处理。
 
 #### 5.3.3. 在工作流中的使用
 
@@ -804,8 +828,12 @@ SillyTavern 的对话补全预设（通常称为“上层预设”）是用户�
     *   解析大型 ST 文件（尤其是包含大量 Lorebook 条目或复杂预设的）的性能。
     *   包含大量 CAIU 的知识库在工作流中进行检索和过滤的性能。
     *   “ST行为模拟节点”（特别是递归扫描）的潜在性能瓶颈。
-*   **CAIU `usage_metadata.role` 的最终确定**:
-    *   虽然目前倾向于在 `usage_metadata` 中添加 `role` 字段，但其最终名称（是 `role`, `injection_role`, `as_role` 还是其他）和确切的允许值（是否需要支持 `"tool"` 等未来可能的角色）需要最终敲定，并同步更新到核心的 [`DesignDocs/architecture/knowledgebase-architecture.md`](DesignDocs/architecture/knowledgebase-architecture.md)。
+*   **CAIU `usage_metadata` 字段的最终确定**:
+    *   `role`: 确认允许值包含 `"null"`。
+    *   `priority`: 确认其作用域。
+    *   `depth_offset?`: 新增此可选字段，定义其行为。
+    *   `placement`: 确认废弃。
+    *   这些都需要在核心的 [`DesignDocs/architecture/knowledgebase-architecture.md`](DesignDocs/architecture/knowledgebase-architecture.md) 中明确。
 *   **版本控制与兼容性维护**:
     *   ST 本身也在不断发展，其文件格式和特性可能会发生变化。如何维护导入工具对不同版本 ST 资产的兼容性？
     *   CT 自身的 CAIU Schema 和工作流节点也可能演进。如何处理已导入资产的向前兼容性？
