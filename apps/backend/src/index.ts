@@ -5,11 +5,15 @@ import { fileURLToPath } from 'node:url';
 
 import { cors } from '@elysiajs/cors';
 
-import { CUSTOM_NODE_PATHS, FRONTEND_URL, PORT, WORKFLOWS_DIR } from './config'; // 导入 CUSTOM_NODE_PATHS
+import { CUSTOM_NODE_PATHS, FRONTEND_URL, PORT, WORKFLOWS_DIR, MULTI_USER_MODE, ACCESS_PASSWORD_HASH, SINGLE_USER_PATH } from './config'; // 导入新增配置
 import { characterApiRoutes } from './routes/characterRoutes'; // 导入角色卡路由
 import { executionApiRoutes } from './routes/executionRoutes';
 import { clientScriptRoutes, nodeApiRoutes } from './routes/nodeRoutes';
-import { addProjectRoutes } from './routes/projectRoutes';
+import { projectRoutesPlugin } from './routes/projectRoutes'; // 修改导入名称
+import { DatabaseService } from './services/DatabaseService';
+import { authMiddleware } from './middleware/authMiddleware';
+import { authRoutes } from './routes/authRoutes';
+import { userKeysRoutes } from './routes/userKeysRoutes'; // 导入 userKeysRoutes
 import { globalWorkflowRoutes } from './routes/workflowRoutes';
 import { ConcurrencyScheduler } from './services/ConcurrencyScheduler';
 import { NodeLoader } from './services/NodeLoader';
@@ -73,6 +77,36 @@ try {
   console.error("Failed to read application version from package.json:", error);
 }
 
+// --- 确定用户操作模式 ---
+let currentUserMode: 'LocalNoPassword' | 'LocalWithPassword' | 'MultiUserShared';
+
+if (MULTI_USER_MODE) {
+  currentUserMode = 'MultiUserShared';
+} else {
+  if (ACCESS_PASSWORD_HASH && ACCESS_PASSWORD_HASH.trim() !== '') {
+    currentUserMode = 'LocalWithPassword';
+  } else {
+    currentUserMode = 'LocalNoPassword';
+  }
+}
+console.log(`[ComfyTavern Backend] Determined user operation mode: ${currentUserMode}`);
+if (currentUserMode === 'LocalNoPassword' || currentUserMode === 'LocalWithPassword') {
+  console.log(`[ComfyTavern Backend] Single user data path: ${SINGLE_USER_PATH}`);
+}
+
+// --- 初始化数据库服务 ---
+try {
+  await DatabaseService.initialize(currentUserMode);
+  console.log('[ComfyTavern Backend] DatabaseService initialized successfully.');
+} catch (error) {
+  console.error('[ComfyTavern Backend] Failed to initialize DatabaseService:', error);
+  process.exit(1); // 如果数据库初始化失败，则退出应用
+}
+
+// --- 后续将在此处进行认证服务的初始化 ---
+// AuthService.initialize(currentUserMode);
+
+
 // 移除旧的 Elysia t 定义的 Schema
 // const WorkflowDataSchema = t.Object({ ... })
 // const WorkflowUpdateSchema = t.Intersect([ ... ])
@@ -89,6 +123,9 @@ const app = new Elysia()
       preflight: true, // 启用预检请求支持
     })
   )
+  .use(authMiddleware) // 应用认证中间件
+  .use(authRoutes) // 挂载认证路由
+  .use(userKeysRoutes) // 挂载用户密钥管理路由
   .use(nodeApiRoutes) // 挂载节点 API 路由
   .use(clientScriptRoutes) // 挂载客户端脚本路由
   .use(globalWorkflowRoutes) // 挂载全局工作流路由
@@ -101,7 +138,8 @@ const app = new Elysia()
   // --- 结束 API 路由定义 ---
 
   // 新增：重启服务器的 API 端点
-  .post("/api/server/restart", async ({ set }) => {
+  .post("/api/server/restart", async (context: import('elysia').Context) => { // 为 context 添加类型
+    const { set } = context; // 从 context 解构 set
     console.log("Received request to restart server...");
     try {
       // 尝试通过修改 index.ts 的时间戳来触发 bun run --watch 重启
@@ -124,15 +162,13 @@ const app = new Elysia()
   });
 
 // --- WebSocket 路由已移至 websocket/handler.ts ---
-
 // --- 挂载项目路由 ---
 // 注意：这需要在 app 实例创建之后，并且在 .listen() 之前
-addProjectRoutes(app, {
-  appVersion,
-  // projectsBaseDir is now imported directly in projectRoutes.ts
-  // getProjectWorkflowsDir is now imported directly in projectRoutes.ts
-  // syncReferencingNodeGroups is now imported directly in projectRoutes.ts
-});
+// addProjectRoutes(app, { // 旧的调用方式
+//   appVersion,
+// });
+// 使用新的插件方式
+app.use(projectRoutesPlugin({ appVersion }));;
 
 // --- 实例化管理器 ---
 // WebSocketManager 需要 HTTP 服务器，在 listen 回调中附加

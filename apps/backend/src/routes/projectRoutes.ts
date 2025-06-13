@@ -85,17 +85,17 @@ const CreateProjectBodySchema = z.object({
   name: z.string().min(1, { message: "Project name cannot be empty." }),
 });
 
-// 导出挂载项目路由的函数
-export const addProjectRoutes = (
-  app: Elysia,
-  // 从依赖中移除 projectsBaseDir
-  // 从依赖中移除服务函数
+// 导出项目路由插件函数
+export const projectRoutesPlugin = (
   { appVersion }: ProjectRoutesDependencies
-): Elysia => {
-  return app.group(
-    "/api/projects",
-    (group) =>
-      group
+) =>
+  new Elysia({ prefix: '/api/projects', name: 'project-routes', seed: 'comfy.project.routes' })
+    // 路由处理函数可以直接从上下文中解构 userContext (如果 authMiddleware 已应用)
+    // 例如: async ({ params, set, userContext }) => { ... }
+    .group(
+      "", // 前缀已在 Elysia 实例上设置，组路径为空
+      (group) =>
+        group
         // GET /api/projects - 列出所有项目
         .get("/", async ({ set }) => {
           console.log(`[GET /api/projects] 尝试通过服务列出所有项目。`);
@@ -589,4 +589,4 @@ export const addProjectRoutes = (
           }
         ) // End of DELETE /:projectId/workflows/:workflowId
   ); // End of group
-};
+// }; // 不再是函数直接返回 app

@@ -15,6 +15,14 @@ export const MAX_CONCURRENT_WORKFLOWS = executionConfig.max_concurrent_workflows
 // 这些路径应该是相对于项目根目录的
 export const CUSTOM_NODE_PATHS: string[] = (config as any).customNodePaths || [];
 
+// 新增用户管理配置
+// 确保在访问嵌套属性前检查 userManagement 是否存在
+const userManagementConfig = (config as any).userManagement || {};
+export const MULTI_USER_MODE: boolean = userManagementConfig.multiUserMode === true; // 明确转换为布尔值，默认为 false
+export const ACCESS_PASSWORD_HASH: string | null = userManagementConfig.accessPasswordHash || null;
+// 根据设计文档 (line 73, 79), singleUserPath 用于文件数据，用户身份ID固定为 'default_user'
+export const SINGLE_USER_PATH: string = userManagementConfig.singleUserPath || "default_user_data";
+
 // 定义并导出路径常量
 // 使用 path.resolve 确保得到绝对路径
 // process.cwd() 在这里指向 apps/backend 目录

@@ -8,8 +8,11 @@
   },
   "dependencies": {
     "@comfytavern/types": "workspace:*",
-    "@elysiajs/static": "^1.2.0",
     "@elysiajs/cors": "^1.1.0",
+    "@elysiajs/static": "^1.2.0",
+    "@types/crypto-js": "^4.2.2",
+    "crypto-js": "^4.2.0",
+    "drizzle-orm": "^0.44.2",
     "elysia": "^1.2.25",
     "nanoid": "^5.1.5",
     "openai": "^4.87.3"
