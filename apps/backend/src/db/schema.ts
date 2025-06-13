@@ -7,6 +7,7 @@ export const users = sqliteTable('users', {
   uid: text('uid').primaryKey(), // 用户唯一标识符 (多用户模式下为 UUID，单用户模式下为 'default_user')
   username: text('username').notNull().unique(), // 用户名 (单用户模式下可为 'default_user' 或可配置名称)
   passwordHash: text('password_hash'), // 用户密码的哈希值 (多用户模式下 NOT NULL，单用户模式下可为 NULL)
+  avatarUrl: text('avatar_url'), // 用户头像 URL (可选)
   isAdmin: integer('is_admin', { mode: 'boolean' }).notNull().default(false), // 是否为管理员 (仅多用户模式有意义)
   createdAt: text('created_at').notNull(), // 用户记录创建时间 (ISO 8601)
   updatedAt: text('updated_at'), // 用户记录最后更新时间 (ISO 8601, 可选)

@@ -2,6 +2,7 @@ import { Elysia } from 'elysia'; // 移除未使用的 t
 import { promises as fs } from 'node:fs';
 import path, { dirname, join } from 'node:path'; // 移除未使用的 basename, extname
 import { fileURLToPath } from 'node:url';
+import { staticPlugin } from '@elysiajs/static'; // + 引入静态服务插件
 
 import { cors } from '@elysiajs/cors';
 
@@ -124,6 +125,12 @@ const app = new Elysia()
       preflight: true, // 启用预检请求支持
     })
   )
+  .use(staticPlugin({ // + 配置静态服务
+    assets: join(__dirname, "../../..", "public"), // 指向 项目根目录/public
+    prefix: '', // URL 直接从 public 目录的根开始，例如 /avatars/file.png
+    alwaysStatic: false, // 仅当找不到API路由时才提供静态文件
+    // noCache: process.env.NODE_ENV === 'development', // 开发模式下可以考虑禁用缓存
+  }))
   .use(applyAuthMiddleware) // Apply the middleware functionally via .use()
   .use(authRoutes) // 挂载认证路由
   .use(userKeysRoutes) // 挂载用户密钥管理路由
