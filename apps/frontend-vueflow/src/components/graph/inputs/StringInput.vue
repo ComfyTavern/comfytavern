@@ -3,7 +3,7 @@
     <input ref="inputRef" type="text" :value="props.modelValue" :placeholder="props.placeholder"
       v-comfy-tooltip="props.placeholder" :disabled="props.disabled" :readonly="props.readonly" @change="handleChange"
       class="flex-1 rounded border transition-colors duration-200 min-w-0 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-1 focus:ring-inset focus:ring-blue-300 dark:focus:ring-blue-700 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
-      :class="(sizeClasses.input,
+      :class="[sizeClasses.input, // 修正：使用数组来合并 class
         {
           'border-red-500 dark:border-red-700': props.hasError,
           'rounded-r-none': hasSuggestions,
@@ -11,7 +11,7 @@
             props.readonly && !props.disabled,
           'disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed':
             props.disabled,
-        })
+        }]
         " autocomplete="off" />
     <!-- Dropdown Trigger -->
     <button v-if="hasSuggestions" ref="triggerRef" type="button" @click.stop="toggleDropdown"

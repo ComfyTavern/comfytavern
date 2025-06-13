@@ -38,6 +38,10 @@ function addEventListeners(el: HTMLElement, data: ElementData) {
   const showTooltip = () => {
     // 确保在调用 show 之前，el 仍然在 DOM 中 (虽然 mounted 保证了这一点)
     if (!el.isConnected) return;
+    // 新增：检查 content 是否为空或仅包含空白
+    if (!data.content || data.content.trim() === '') {
+      return; // 如果内容为空，则不显示 tooltip
+    }
     tooltipStore.show({
       targetElement: el,
       content: data.content,
