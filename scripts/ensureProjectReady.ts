@@ -1,6 +1,7 @@
 // scripts/ensureProjectReady.ts
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const dbFileName = 'app.sqlite';
 const dbDir = path.resolve(process.cwd(), 'data');
@@ -16,12 +17,21 @@ function setupDatabase(): boolean {
 
   console.log(`[ensureProjectReady] 步骤 1: 生成数据库迁移文件 (bun run db:generate)`);
   try {
-    const generateResult = Bun.spawnSync(['bun', 'run', 'db:generate'], {
-      stdio: ['inherit', 'inherit', 'inherit'] as any, // 使用 as any 绕过顽固的 TS 类型问题
+    const generateResult = spawnSync('bunx', ['drizzle-kit', 'generate'], {
+      stdio: 'pipe',
       cwd: projectRoot,
+      encoding: 'utf-8'
     });
-    if (generateResult.exitCode !== 0) {
-      console.error(`[ensureProjectReady] bun run db:generate 命令执行失败。退出码: ${generateResult.exitCode}`);
+
+    if (generateResult.stdout) {
+      console.log(generateResult.stdout);
+    }
+    if (generateResult.stderr) {
+      console.error(generateResult.stderr);
+    }
+
+    if (generateResult.status !== 0) {
+      console.error(`[ensureProjectReady] bun run db:generate 命令执行失败。退出码: ${generateResult.status}`);
       return false;
     }
     console.log(`[ensureProjectReady] bun run db:generate 命令执行成功。`);
@@ -32,12 +42,12 @@ function setupDatabase(): boolean {
 
   console.log(`[ensureProjectReady] 步骤 2: 应用数据库迁移 (bun run db:migrate)`);
   try {
-    const migrateResult = Bun.spawnSync(['bun', 'run', 'db:migrate'], {
-      stdio: ['inherit', 'inherit', 'inherit'] as any, // 使用 as any 绕过顽固的 TS 类型问题
+    const migrateResult = spawnSync('bun', ['run', 'db:migrate'], {
+      stdio: 'inherit',
       cwd: projectRoot,
     });
-    if (migrateResult.exitCode !== 0) {
-      console.error(`[ensureProjectReady] bun run db:migrate 命令执行失败。退出码: ${migrateResult.exitCode}`);
+    if (migrateResult.status !== 0) {
+      console.error(`[ensureProjectReady] bun run db:migrate 命令执行失败。退出码: ${migrateResult.status}`);
       return false;
     }
     console.log(`[ensureProjectReady] bun run db:migrate 命令执行成功。`);
