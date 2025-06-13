@@ -1,10 +1,218 @@
 # 更新记录
+## 2025 年 6 月 13 日
+
+- feat(projectRoutes): 添加用户认证支持并更新.gitignore
+  - 在项目路由中添加用户认证支持，包括从上下文中提取用户ID并验证
+  - 更新.gitignore以忽略userData目录
+- fix(vComfyTooltip): 检查空内容时不显示工具提示
+  - 修复工具提示在内容为空时仍会显示的问题，同时修正 StringInput 组件中 class 的合并方式
+- feat(用户设置): 添加初始用户名设置功能并改进相关组件
+  - 在uiStore中添加初始用户名设置模态框状态和方法
+  - 创建InitialUsernameSetupModal组件用于用户名设置
+  - 扩展BaseModal组件支持无样式模式和自定义类
+  - 为TextAreaInput组件添加尺寸控制功能
+  - 在TestPanelView中添加测试用例和设置面板
+- refactor(auth): 重构认证中间件为函数式插件并改进错误处理
+  - 将认证中间件从Elysia实例重构为函数式插件，确保derive方法正确执行
+  - 改进错误处理逻辑，统一错误对象结构
+  - 添加调试日志以跟踪认证流程
+  - 更新相关路由和主应用以使用新的中间件形式
+- refactor(SideBar): 移除 Tooltip 组件改用 v-comfy-tooltip 指令
+  - 简化侧边栏按钮实现，使用内置指令替代外部组件，减少依赖
+- feat(启动脚本): 添加项目环境准备步骤并整合数据库初始化
+  - 添加 prepare:project 脚本用于检查并初始化数据库
+  - 删除冗余的 cleanup_and_generate.ps1 脚本
+  - 在启动流程中增加环境准备检查
+- refactor: 优化项目配置并添加数据库迁移支持
+  - 添加drizzle.config.ts配置文件用于数据库迁移
+  - 更新.gitignore忽略本地生成的数据文件
+  - 在package.json中添加数据库相关脚本
+  - 创建cleanup_and_generate.ps1脚本用于清理和生成操作
+  - 更新README.md添加镜像源安装说明
+  - 调整前端组件属性命名以保持一致性
+- feat(用户资料): 添加用户名修改功能及相关组件
+  - 实现用户资料管理功能，包括：
+  - 1. 后端添加用户资料路由和用户名更新接口
+  - 2. 前端新增用户资料API和store操作
+  - 3. 创建初始用户名设置模态框
+  - 4. 扩展设置组件支持自定义保存逻辑
+  - 5. 数据库schema添加updatedAt字段
+  - 这些改动使得本地模式用户可以修改默认用户名，并在首次使用时强制设置昵称
+- feat(auth): 实现用户认证和密钥凭证管理功能
+  - 添加用户认证相关API和状态管理，包括：
+  - - 用户上下文获取API
+  - - 服务API密钥和外部凭证的CRUD操作API
+  - - Pinia store管理认证状态和密钥凭证
+  - - 在App初始化时自动获取用户上下文
+- feat(backend): 实现用户认证与密钥管理功能
+  - - 新增用户认证中间件及路由
+  - - 添加数据库服务与用户管理配置
+  - - 实现服务API密钥和外部凭证管理
+  - - 引入加密服务处理敏感数据
+  - - 重构项目路由为插件形式
+  - - 更新依赖以支持新功能
+- docs(用户系统): 本地用户系统设计方案已更新至v3。 该方案详细阐述了三种用户操作模式、两种核心密钥（服务 API 密钥和外部服务凭
+  - ）的管理机制、基于 SQLite 的数据存储模型、具体的后端 API 设计、前端实现要点、安全性考量以及分阶段的实施路线图。
+  - 此设计旨在提供一个安全、灵活且可扩展的用户系统，为 ComfyTavern 项目的后续开发提供了清晰的架构指导。
+
+## 2025 年 6 月 12 日
+
+- docs(architecture): 更新知识库架构文档，废弃placement字段并新增depth_offset
+  - - 废弃usage_metadata中的placement字段，其功能由tags结合组装器模板替代
+  - - 新增depth_offset字段支持深度偏移插入方式
+  - - 完善SillyTavern导入策略文档，详细说明ST字段到CAIU的映射关系
+  - - 明确核心上下文组装器对原生字段的处理规则
+- docs(knowledgebase-architecture): 更新知识库架构文档以支持ST资产导入
+  - - 在 `usage_metadata` 部分增加了 `role` 字段，用于指定内容注入时扮演的角色，包括 "null", "system", "user", "assistant", 未来可能支持 "
+  - ool"。未设置时默认为 "null"，根据上下文自动确定。
+  - - 修改了 `source` 字段的描述，增加了 "imported_from:sillytavern:v1.x" 作为来源选项，用于标记从 SillyTavern 导入的内容。
+  - - 在 `extensions` 部分增加了对从外部数据源导入时存储其特有元数据的说明，例如，从 SillyTavern 导入时的 `st_import_metadata`。
+  - - 更新了 ST 兼容性策略的描述，强调通过 CAIU 结构的灵活性来适应从外部数据源导入的知识。
+  - - 增加了对 ST 世界书 (Lorebook) 和角色卡 (Character Card) 的文本内容和核心元数据的导入转换说明。
+  - - 添加了对 ST 特有行为逻辑参数的存储说明，这些参数可以存储在 CAIU 的 `extensions` 字段内，供专门的工作流节点使用。
+  - - 提供了详细的兼容性策略文档链接，以便进一步了解资产导入与转换的具体策略和设计。
+- docs(兼容性):将 SillyTavern 资产导入与 ComfyTavern 兼容性策略的初步内容撰写完成。
+- docs(架构): 添加Agent工具调用协议设计文档
+  - 添加Agent工具调用协议的设计文档，定义LLM输出工具调用指令的XML格式规范，包括`<ACTION>`标签的使用、参数传递方式、错误处理机制等。文档详
+  - 说明了协议的设计目标、解析流程、Prompt工程指南及示例，为Agent与工具/技能的交互提供标准化方案。
+- docs(架构): 更新应用面板与Agent集成的设计文档
+  - 补充应用面板与Agent交互的设计细节，包括安全考量、执行流程和知识库架构
+  - 更新Agent助手功能规划以对齐v3架构，完善LLM适配器文档中对Agent支持的描述
+- docs(architecture): 更新架构文档以整合Agent系统
+  - 更新项目架构、场景架构和工作流概念文档，全面整合Agent系统设计。主要变更包括：
+  - 1. 在项目架构中新增Agent Profile定义管理，更新project.json schema
+  - 2. 在场景架构中强化Agent实例托管功能，定义scene.json schema
+  - 3. 在工作流概念中扩展Agent核心逻辑承载机制
+  - 4. 统一目录结构和文档格式，保持一致性
+  - 这些变更为实现自主Agent系统提供完整的文档基础和架构支持。
+- docs(architecture): 更新 Agent 架构文档以包含知识库质量管理与遗忘机制
+  - - 为确保知识库的质量，防止低效或错误的“经验”污染共享知识，引入“管理员/策展人”角色或机制，定期审核、整合与校验 Agent 贡献的知识。
+  - - 描述“遗忘”机制实现方式，强调其作为个体特性而非直接物理删除知识库条目的方法。
+- docs(architecture): 修改 AgentRuntime 的驱动机制描述
+  - - 将 `AgentRuntime` 的驱动审议循环机制从仅基于事件驱动扩展为混合驱动模式，包括事件驱动、低频定时驱动和自主休眠/唤醒。
+  - - 详细说明混合驱动模式中的各个驱动方式及其具体实现细节。
+- docs(architecture): 更新 WorldState 的原子性更新与并发控制描述
+  - - 拓展 WorldState 的原子性更新描述，强调通过系统设计和任务流编排规避并发写冲突。
+  - - 增加并发控制的详细说明，包括乐观锁和悲观锁的具体实现机制。
+- docs(architecture): 丰富 Agent 安全与权限控制内容
+  - - 强调安全与权限控制体系的重要性，并将其列为一个持续的过程。
+  - - 扩展具体措施，包括沙箱化环境和资源限制的细化，以及审核、过滤或标记机制的描述。
+  - - 增加防止恶意或滥用 Agent 的防护措施描述，强调安全边界的设定和维护的重要性。
+- docs(architecture): 增强 Agent 行为可观测性与调试描述
+  - - 强调审议过程不应是完全的黑箱，并明确平台将提供强大的行为可观测性工具和机制。
+  - - 描述官方模板内置可视化和调试支持的具体实现方式。
+  - - 强调对于第三方开发者，平台提供基础设施，由开发者决定暴露何种程度的可解释性信息。
+- docs(architecture): 修正格式错误
+  - - 修正文档中的格式错误，将多余的引号和代码块闭合符删除，确保文档格式一致。
+- docs:整理格式
+- docs: 添加 ComfyTavern Agent 架构详细规划报告 (v3 - 整合版)
+  - 本报告详细阐述了 ComfyTavern 平台 Agent 系统的统一架构设计。核心结论包括：
+  - - Agent 定义与实例的分离。
+  - - 自主 Agent 模型，以目标驱动的审议循环为核心。
+  - - 场景作为 Agent 运行时实例的宿主环境和生命周期管理者。
+  - - 模块化与可扩展性设计，清晰的层级划分和组件职责。
+  - - 模板化赋能，为复杂的多 Agent 协作场景提供官方应用模板。
+  - 报告还对现有设计文档进行了修订建议，以确保平台知识体系的一致性，并展望了未来的发展方向，包括多 Agent 协作的实现模式、学习与反思机制、A
+  - ent 安全与权限控制等。
+- docs(architecture): 新增动态世界模拟引擎架构文档v2并更新原文档
+  - 新增 agent-architecture-plan-v2.md 详细描述多Agent协同的动态世界模拟引擎设计
+  - 更新 agent-architecture-plan.md 扩展核心机制与工程实现细节
+
+## 2025 年 6 月 11 日
+
+- docs(guides): 添加客户端脚本指南文档
+  - 添加详细的客户端脚本开发指南，解释其工作原理、编写方法和最佳实践
+- docs(guides): 添加工作流历史记录与状态管理指南文档
+- feat(拖拽): 改进拖拽节点的视觉反馈和暗色模式支持
+  - - 调整拖拽图标样式，支持暗色模式适配
+  - - 优化拖拽提示的SVG图标和布局
+  - - 统一拖拽元素的样式与上下文菜单保持一致
+  - - 改进日志输出的格式和可读性
+- feat(canvas): 支持从画布添加节点时指定位置
+  - 现在 handleAddNodeFromPanel 接受可选的 position 参数，允许从画布添加节点时指定具体位置，而不再总是使用中心位置
+- refactor(context-menu): 重构上下文菜单定位逻辑使用视口坐标
+  - - 将菜单定位逻辑改为基于视口坐标而非容器相对坐标
+  - - 移除不再需要的 screenPosition 参数传递
+  - - 导出 getEventClientPosition 工具函数
+  - - 添加 rawInteractionPosition 存储原始交互位置
+  - - 优化菜单边界检查逻辑确保始终显示在视口内
+- style(components): 调整布尔切换和字符串输入组件的样式
+  - - 优化布尔切换组件的滑块大小和位置
+  - - 重构字符串输入组件的类名结构，添加工具提示功能
+  - - 统一代码格式，提高可读性
+- refactor(nodes): 清理节点定义文件中的注释和格式
+  - 移除多个节点定义文件中的冗余注释和临时标记
+  - 统一代码格式和引号使用
+  - 更新OpenAINode的模型配置和描述
+  - 优化TestWidgetsNode的输入输出定义
+- fix(输入组件): 根据matchCategories区分纯下拉选择和带建议输入框
+  - 当插槽的matchCategories包含ComboOption时，渲染为纯下拉选择框，否则对于STRING/INTEGER/FLOAT类型渲染为允许自由输入并提供建议的输入框。同
+  - 时更新相关文档说明。
+- feat(输入组件): 优化输入组件选择逻辑
+  - 重构getInputComponent函数，使用更清晰的类型检查和条件分支结构。改进组件匹配逻辑。
+- fix(版本管理): 修复版本号获取和使用不一致的问题
+  - 将package.json中的版本号字段从'Version'改为'version'以匹配标准命名
+  - 使用import.meta.env.VITE_APP_VERSION作为工作流版本号来源
+- feat(workflowStore): 替换prompt为dialogService实现工作流保存命名
+  - 使用dialogService.showInput替换原生prompt，提供更好的用户体验和界面一致性。处理取消操作时返回null的情况。
+- feat(侧边栏): 使用本地存储保存预览面板模式状态
+  - 将预览面板模式从ref改为useLocalStorage，以持久化用户选择的显示模式
+- feat(tooltip): 实现全局 Tooltip 服务并替换多处独立组件
+  - 新增全局 Tooltip 服务，包含 Pinia 状态管理、指令和渲染器组件
+  - 移除多处独立 Tooltip 组件，改用 v-comfy-tooltip 指令
+  - 添加相关设计文档和类型定义，优化性能与一致性
+- docs(architecture): 添加场景架构设计文档
+  - 添加 ComfyTavern 场景架构的详细设计文档，阐述其作为状态机编排引擎的核心定位、构成元素及交互模型
+- docs(guides): 添加工作流概念详解文档
+  - 新增 ComfyTavern 工作流概念的详细说明文档，涵盖工作流定义、构成元素、生命周期、关键特性等内容，帮助开发者理解核心机制
+
+## 2025 年 6 月 10 日
+
+- docs(架构): 拆分项目架构和知识库架构设计文档
+- refactor(架构设计): 重构API服务与集成接口文档为前端API适配管理器设计
+  - 将原有API服务与集成接口文档拆分为更清晰的前端API适配管理器设计文档，重点实现纯前端的数据转换层。新增ApiAdapterManager核心服务概念，明
+  - 适配器转换规则与面板API交互方式，同时保留后端HTTP API的简洁设计。文档结构调整为更合理的章节划分，包含核心概念、面板API、适配器规则、前
+  - 后端交互等完整设计。
+- fix(llm-test): 智能处理 base_url 的版本路径
+  - 根据用户建议改进 base_url 处理逻辑：
+  - - 自动检测路径是否包含版本信息
+  - - 对裸域名自动追加 /v1
+  - - 保留自定义路径不变
+  - - 对无效 URL 发出警告
+- feat(architecture): 新增全局 Tokenization 服务设计方案
+  - 添加 TokenizationService 作为核心组件，用于统一处理 token 计算需求
+- docs: 更新 README 文档内容与结构
+  - - 添加项目状态徽章和许可证信息
+  - - 重构核心特性描述，突出平台定位与架构优势
+  - - 完善快速开始指南和开发环境配置说明
+  - - 新增工作流创建教程和临时 API 配置方法
+  - - 更新技术栈和路线图信息
+- feat(PerformancePanel): 改进性能统计面板的UI和功能
+  - - 使用SVG图标替换文本箭头，提升视觉一致性
+  - - 优化树形结构缩进和间距，提高可读性
+  - - 添加节点原始类型显示功能
+  - - 清理复制的JSON数据，移除不必要字段
+  - - 改进组件统计逻辑，更准确计算渲染组件
+- feat(性能统计): 重构组件使用统计逻辑并移除无用代码
+  - - 在 PerformancePanel 中实现组件使用统计功能，通过分析节点配置和输入定义收集实际渲染的组件信息
+  - - 移除 BaseNode 中分散的组件计数逻辑，改为统一在 PerformancePanel 中处理
+  - - 添加 setComponentUsageStats 方法到性能统计 store
+  - - 清理输入类型定义中无用的 HISTORY 类型
+- fix(PerformancePanel): 修正组件实例统计标签描述更准确
+- feat(性能统计): 添加组件实例统计功能
+  - 在性能面板中新增组件实例统计功能，跟踪不同组件类型的实例数量。修改BaseNode组件在挂载和卸载时更新计数，并在PerformanceStatsStore中添加
+  - 关状态和方法管理组件计数数据。
+- feat(性能统计): 添加性能统计面板及相关功能
+  - - 新增性能统计面板组件，用于展示节点和槽位统计数据
+  - - 创建性能统计store管理各标签页的统计数据
+  - - 在tabStore中集成性能统计清理功能
+  - - 实现数据收集、展示和复制到剪贴板功能
 
 ## 2025 年 6 月 9 日
 
 - refactor(workflow): 清理调试日志并优化节点组输入顺序处理
-  移除冗余的调试日志代码，添加处理节点组输入顺序的功能
-  添加辅助函数用于提取父级句柄键，确保节点组创建时输入顺序正确
+  - 移除冗余的调试日志代码，添加处理节点组输入顺序的功能
+  - 添加辅助函数用于提取父级句柄键，确保节点组创建时输入顺序正确
 - feat(NodeGroup): 实现节点组实例输入值覆盖和模板同步功能
   - 新增 NodeGroup 实例输入值覆盖功能，允许用户为实例设置特定值
   - 实现模板工作流接口变更时自动同步到 NodeGroup 实例
@@ -14,15 +222,37 @@
   - 在 workflowStore 中添加模板变更跟踪和同步相关操作
   - 添加设计文档说明 NodeGroup 实例配置与同步机制
 - docs: 添加 CONVERTIBLE_ANY 类型详细说明
-  本部分详细解释 `CONVERTIBLE_ANY` 类型的行为特性，主要供 AI 系统理解及开发者参考。
+  - 本部分详细解释 `CONVERTIBLE_ANY` 类型的行为特性，主要供 AI 系统理解及开发者参考。
   - `CONVERTIBLE_ANY` (`BEHAVIOR_CONVERTIBLE`) 的特性与应用：解释了 `CONVERTIBLE_ANY` 类型的核心行为和规则，包括彻底的类型转换、禁止互连及动态占位符再生机制等。
   - 针对节点组（`core:NodeGroup`）的外部接口行为：描述了 `NodeGroup` 节点在外部接口上如何处理 `CONVERTIBLE_ANY` 插槽，确保其“不可见性”和无持久值”的特性。
 - docs: 移除关于节点组节点的描述
 - feat(剪贴板): 实现系统剪贴板与本地剪贴板功能
-  新增 useClipboard 和 useCanvasClipboard composables 用于处理剪贴板操作
-  重构上下文菜单和快捷键逻辑以支持两种剪贴板模式
-  添加工作流片段序列化和反序列化工具函数
-  优化节点样式和菜单交互体验
+  - 新增 useClipboard 和 useCanvasClipboard composables 用于处理剪贴板操作
+  - 重构上下文菜单和快捷键逻辑以支持两种剪贴板模式
+  - 添加工作流片段序列化和反序列化工具函数
+  - 优化节点样式和菜单交互体验
+- enhance(marked-renderer): 优化 Markdown 渲染和 Tooltip 交互逻辑
+  - - 将 `Marked` 实例的创建和配置移出 `computed`，只执行一次，提高性能和避免不必要的重复计算。
+  - - 优化 `MarkdownRenderer` 中的链接渲染逻辑，确保链接在新标签页打开，并对 `href` 和 `title` 进行净化。
+  - - 引入 `markedHighlight` 扩展，提高代码块高亮的错误处理能力。
+  - - 简化 `Tooltip` 组件中的样式和结构，移除不必要的注释，提高代码可读性。
+  - - 优化 `Tooltip` 组件的交互逻辑，仅在 `interactive` 模式下初始化浮动元素悬停检测，并在组件卸载时清除监听器。
+  - - 修改 `useNodeResize` 中的节点宽度获取逻辑，直接从 `activeTabState` 获取元素，避免 `getElements()` 的深拷贝，提高性能。
+  - - 在 `measureTextWidth` 函数中引入缓存机制，存储已计算的文本宽度，减少重复计算，提高性能。设置缓存大小限制，防止内存无限增长。
+- refactor(workflowTransformer): 重构 workflowTransformer 以优化缓存和辅助函数
+  - 移除了不必要的 nodeStore 获取，引入了缓存机制以提高 Node Definitions Map 的性能。
+  - 重构了 `_createBaseStorageNodeProperties` 函数，用于提取节点的基础属性到 WorkflowStorageNode 格式。
+  - 重构了 `_extractInputValuesForStorage` 函数，用于提取节点的 inputValues，区分了 core 和 fragment 模式。
+  - 重构了 `_extractCustomSlotDescriptionsForStorage` 函数，用于提取节点的 customSlotDescriptions。
+  - 重构了 `_createBaseVueFlowNodeData` 函数，用于创建 VueFlowNode.data 的基础部分。
+  - 重构了 `_populateVueFlowNodeSlots` 函数，用于填充 VueFlowNode.data 的 inputs 和 outputs，不处理 NodeGroup 的异步接口加载。
+  - 优化了 `transformVueFlowToCoreWorkflow` 函数，使用缓存的 Node Definitions Map。
+  - 优化了 `transformWorkflowToVueFlow` 函数，使用缓存加载函数并改进了 slot 类型处理。
+  - 优化了 `extractGroupInterface` 函数，使用 klona 复制 inputs 和 outputs。
+  - 优化了 `transformVueFlowToExecutionPayload` 函数，直接从 coreWorkflow 提取数据。
+  - 优化了 `serializeWorkflowFragment` 函数，使用辅助函数提取节点属性。
+  - 优化了 `deserializeWorkflowFragment` 函数，使用辅助函数创建和填充节点数据。
+  - 确保在 `deserializeWorkflowFragment` 中对 position 进行深拷贝以避免位置冲突。
 
 ## 2025 年 6 月 8 日
 
