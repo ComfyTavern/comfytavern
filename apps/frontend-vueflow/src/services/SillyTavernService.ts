@@ -1,12 +1,20 @@
 import type { CharacterCardUI, ApiCharacterEntry } from '@comfytavern/types';
+import { useApi } from '../utils/api'; // + 导入 useApi
+import { getApiBaseUrl } from '../utils/urlUtils'; // + 导入 getApiBaseUrl
 
 // 本地 BackendCharacterData 接口已移除，使用共享的 ApiCharacterEntry
 
 // Buffer, extract, PNGtext 不再需要前端导入
 
-// 后端API的基础URL，可以考虑放到环境变量或配置文件中
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3233';
+// 后端API的基础URL将通过 getApiBaseUrl() 获取或由 useApi 内部处理
 
+// 定义通用的服务器响应包装类型 (临时，理想情况下应在 @comfytavern/types 中)
+interface ServerResponseWrapper<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  details?: string;
+}
 
 /**
  * SillyTavern服务 - 处理SillyTavern相关内容的加载和管理
@@ -51,7 +59,9 @@ export class SillyTavernService {
     // }
     // 注意：后端返回的字段名可能与 CharacterCardUI 不完全一致，需要适配
 
-    const imageUrl = backendChar.imageName ? `${API_BASE_URL}/api/characters/image/${backendChar.imageName}` : '';
+    const baseUrl = getApiBaseUrl(); // + 使用工具函数获取基础URL
+    // + 对 imageName 进行编码，因为它是URL路径的一部分，后端会解码
+    const imageUrl = backendChar.imageName ? `${baseUrl}/characters/image/${encodeURIComponent(backendChar.imageName)}` : '';
     
     // 确保返回的字段符合 CharacterCardUI 接口
     return {
@@ -83,21 +93,28 @@ export class SillyTavernService {
 
 
   public async loadCharacterCards(): Promise<CharacterCardUI[]> {
+    const { get } = useApi();
     try {
-      const response = await fetch(`${API_BASE_URL}/api/characters`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(`获取角色卡失败: ${response.status} ${errorData.message || response.statusText}`);
-      }
-      const result = await response.json();
-      if (result.success && Array.isArray(result.data)) {
-        return result.data.map((charData: ApiCharacterEntry) => this.mapBackendCharToUI(charData));
+      // 使用 useApi().get，路径相对于 axios 实例的 baseURL。
+      // 后端 /api/characters 应该已经通过 authMiddleware 处理了用户认证。
+      const response = await get<ServerResponseWrapper<ApiCharacterEntry[]>>('characters');
+
+      if (response.success && Array.isArray(response.data)) {
+        return response.data.map((charData: ApiCharacterEntry) => this.mapBackendCharToUI(charData));
       } else {
-        console.error('从后端获取的角色卡数据格式不正确:', result);
+        console.error('从后端获取的角色卡数据格式不正确或请求失败:', response.message || '未知错误', response);
         return [];
       }
-    } catch (error) {
-      console.error('加载角色卡失败:', error);
+    } catch (error: any) {
+      // Axios错误通常在 error.response.data 中包含后端返回的错误信息
+      const backendMessage = error.response?.data?.message;
+      const backendDetails = error.response?.data?.details;
+      console.error(
+        '加载角色卡失败:',
+        backendMessage || error.message,
+        backendDetails ? `Details: ${backendDetails}` : '',
+        error.response?.data || error // 记录整个错误对象或响应数据以供调试
+      );
       return []; // 出错时返回空数组，或者可以调用 getDefaultCharacters
     }
   }

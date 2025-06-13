@@ -3,23 +3,26 @@ import { Elysia, t } from 'elysia';
 import { promises as fs } from 'node:fs';
 import path, { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-// @ts-ignore // png-chunk-text 可能没有完美的 TS 类型
 import PNGtext from 'png-chunk-text';
-// @ts-ignore // png-chunks-extract 可能没有完美的 TS 类型
 import extract from 'png-chunks-extract';
 
-import { SILLYTAVERN_DIR } from '../config'; // 导入 SILLYTAVERN_DIR
+// 移除全局 SILLYTAVERN_DIR 的导入，将使用用户特定的库路径
+// import { SILLYTAVERN_DIR } from '../config';
+import { getUserDataRoot, ensureDirExists } from '../utils/fileUtils'; // + 导入用户数据根目录和目录确保函数
+import type { UserContext } from '@comfytavern/types'; // + 导入 UserContext 类型
 
 import type { CharacterCard, ApiCharacterEntry } from '@comfytavern/types'; // 导入 ApiCharacterEntry
 
 // 获取当前文件的目录 (ES Module)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename); // apps/backend/src/routes
+// const __filename = fileURLToPath(import.meta.url); // 不再直接需要
+// const __dirname = dirname(__filename); // apps/backend/src/routes // 不再直接需要
 
-// 角色卡数据目录
-const CHARACTER_CARD_DIR = path.join(SILLYTAVERN_DIR, 'CharacterCard');
+// + 定义用户库中角色卡的子目录名
+const USER_LIBRARY_DIR_NAME = 'library';
+const USER_CHARACTER_CARDS_SUBDIR = 'SillyTavern/CharacterCard';
 
-console.log(`[CharacterRoutes] Character card directory set to: ${CHARACTER_CARD_DIR}`);
+// 全局 CHARACTER_CARD_DIR 将被替换为用户特定的路径
+// console.log(`[CharacterRoutes] Global character card directory (SILLYTAVERN_DIR) is no longer used directly.`);
 
 // 辅助函数：从PNG图片中提取角色卡数据
 async function readCharacterDataFromPng(filePath: string): Promise<CharacterCard | null> {
@@ -64,28 +67,39 @@ export const characterApiRoutes = new Elysia({ prefix: '/api/characters' })
     set.status = 500;
     return { success: false, message: '服务器内部错误' };
   })
-  .get('/', async ({ set }) => {
+  .get('/', async ({ set, userContext }: { set: any; userContext: UserContext | null }) => { // + 添加 userContext
+    if (!userContext?.currentUser) {
+      set.status = 401;
+      console.warn('[CharacterRoutes] GET / - User not authenticated or currentUser is null.');
+      return { success: false, message: '用户未认证' };
+    }
+
+    let userId: string;
+    const currentUser = userContext.currentUser;
+    if ('id' in currentUser) { // DefaultUserIdentity
+      userId = currentUser.id;
+    } else if ('uid' in currentUser) { // AuthenticatedMultiUserIdentity
+      userId = currentUser.uid;
+    } else {
+      set.status = 500; // Or 400 if it's a malformed context
+      console.error('[CharacterRoutes] GET / - Failed to determine user ID from currentUser:', currentUser);
+      return { success: false, message: '无法从用户上下文中确定用户ID' };
+    }
+
+    const userCharacterCardDirPath = path.join(getUserDataRoot(), userId, USER_LIBRARY_DIR_NAME, USER_CHARACTER_CARDS_SUBDIR);
+
     try {
-      console.log(`[CharacterRoutes] Attempting to read directory: ${CHARACTER_CARD_DIR}`);
-      try {
-        await fs.access(CHARACTER_CARD_DIR);
-      } catch (accessError: any) {
-        if (accessError.code === 'ENOENT') {
-          console.log(`[CharacterRoutes] Character card directory not found, creating: ${CHARACTER_CARD_DIR}`);
-          try {
-            await fs.mkdir(CHARACTER_CARD_DIR, { recursive: true });
-            console.log(`[CharacterRoutes] Successfully created directory: ${CHARACTER_CARD_DIR}`);
-          } catch (mkdirError: any) {
-            console.error(`[CharacterRoutes] Failed to create directory ${CHARACTER_CARD_DIR}:`, mkdirError);
-            // 如果创建目录失败，则抛出错误，让外层catch处理
-            throw mkdirError;
-          }
-        } else {
-          // 如果是其他访问错误，也抛出
-          throw accessError;
-        }
-      }
-      const files = await fs.readdir(CHARACTER_CARD_DIR);
+      await ensureDirExists(userCharacterCardDirPath);
+      console.log(`[CharacterRoutes] GET / - User character card directory for user '${userId}': ${userCharacterCardDirPath}`);
+    } catch (dirError: any) {
+      console.error(`[CharacterRoutes] GET / - Failed to ensure user character card directory ${userCharacterCardDirPath} for user '${userId}':`, dirError);
+      set.status = 500;
+      return { success: false, message: '无法创建或访问用户角色卡目录', details: dirError.message };
+    }
+
+    try {
+      // console.log(`[CharacterRoutes] Attempting to read directory: ${userCharacterCardDirPath}`); // 日志已在上面确保目录时输出
+      const files = await fs.readdir(userCharacterCardDirPath);
       const characterCardsData: any[] = []; // 稍后定义更严格的类型
       const processedPngFiles = new Set<string>(); // 跟踪已从PNG处理的文件名（不含扩展名）
 
@@ -93,7 +107,7 @@ export const characterApiRoutes = new Elysia({ prefix: '/api/characters' })
       for (const file of files) {
         if (file.toLowerCase().endsWith('.png')) {
           const baseName = file.substring(0, file.length - 4);
-          const filePath = path.join(CHARACTER_CARD_DIR, file);
+          const filePath = path.join(userCharacterCardDirPath, file); // + 使用用户特定路径
           const pngData = await readCharacterDataFromPng(filePath);
 
           if (pngData) {
@@ -127,7 +141,7 @@ export const characterApiRoutes = new Elysia({ prefix: '/api/characters' })
       for (const file of files) {
         if (file.toLowerCase().endsWith('.json')) {
           const baseName = file.substring(0, file.length - 5);
-          const filePath = path.join(CHARACTER_CARD_DIR, file);
+          const filePath = path.join(userCharacterCardDirPath, file); // + 使用用户特定路径
           
           try {
             const jsonContent = await fs.readFile(filePath, 'utf-8');
@@ -244,32 +258,56 @@ export const characterApiRoutes = new Elysia({ prefix: '/api/characters' })
       console.log('[CharacterRoutes] Returning final characters summary to frontend:', JSON.stringify(summaryLog, null, 2));
       return { success: true, data: trulyFinalCharacters };
     } catch (error: any) {
-      console.error('[CharacterRoutes] GET / - Error reading character directory:', error);
+      console.error(`[CharacterRoutes] GET / - Error reading character directory for user '${userId}':`, error);
       set.status = 500;
-      return { success: false, message: '无法读取角色卡目录', details: error.message };
+      return { success: false, message: '无法读取用户角色卡目录', details: error.message };
     }
-  })
-  .get('/image/:imageName', async ({ params, set }) => {
-    const { imageName: encodedImageName } = params; // 接收编码后的文件名
-    const imageName = decodeURIComponent(encodedImageName); // 进行URL解码
-
-    // 安全检查：防止路径遍历 (对解码后的 imageName 进行检查)
-    if (imageName.includes('..') || imageName.includes('/')) {
-      set.status = 400;
-      return { success: false, message: '无效的图片名称 (路径遍历)' };
+  }) // Correctly closes .get('/')
+  .get('/image/:imageName', async ({ params, set, userContext }: { params: { imageName: string }; set: any; userContext: UserContext | null }) => {
+    if (!userContext?.currentUser) {
+      set.status = 401;
+      console.warn('[CharacterRoutes] GET /image - User not authenticated or currentUser is null.');
+      return { success: false, message: '用户未认证，无法获取图片' };
     }
 
-    const imagePath = path.join(CHARACTER_CARD_DIR, imageName); // 使用解码后的文件名构造路径
-    console.log(`[CharacterRoutes] Image request: Received encoded="${encodedImageName}", decoded="${imageName}", Constructed path="${imagePath}"`);
+    let userId: string;
+    const currentUser = userContext.currentUser;
+    if ('id' in currentUser) { // DefaultUserIdentity
+      userId = currentUser.id;
+    } else if ('uid' in currentUser) { // AuthenticatedMultiUserIdentity
+      userId = currentUser.uid;
+    } else {
+      set.status = 500;
+      console.error('[CharacterRoutes] GET /image - Failed to determine user ID from currentUser:', currentUser);
+      return { success: false, message: '无法从用户上下文中确定用户ID以获取图片' };
+    }
     
-    try {
-      // console.log(`[CharacterRoutes] Attempting to serve image: ${imagePath}`);
-      // 检查文件是否存在
+    const userCharacterCardDirPath = path.join(getUserDataRoot(), userId, USER_LIBRARY_DIR_NAME, USER_CHARACTER_CARDS_SUBDIR);
+    
+    try { // This try is for ensureDirExists
+      await ensureDirExists(userCharacterCardDirPath);
+    } catch (dirError: any) {
+      console.error(`[CharacterRoutes] GET /image - Failed to ensure user character card directory ${userCharacterCardDirPath} for user '${userId}' for image:`, dirError);
+      set.status = 500;
+      return { success: false, message: '无法访问用户角色卡目录以获取图片', details: dirError.message };
+    }
+
+    const { imageName: encodedImageName } = params;
+    const imageName = decodeURIComponent(encodedImageName);
+
+    if (imageName.includes('..') || imageName.includes('/') || imageName.startsWith('.')) {
+      set.status = 400;
+      return { success: false, message: '无效的图片名称' };
+    }
+
+    const imagePath = path.join(userCharacterCardDirPath, imageName);
+    console.log(`[CharacterRoutes] Image request for user '${userId}': Received encoded="${encodedImageName}", decoded="${imageName}", Constructed path="${imagePath}"`);
+    
+    try { // This try is for serving the image
       await fs.access(imagePath);
       console.log(`[CharacterRoutes] Image file found at: ${imagePath}`);
-      const fileStream = await fs.readFile(imagePath); // Elysia 可以直接处理 Buffer
+      const fileStream = await fs.readFile(imagePath);
       
-      // 根据文件扩展名设置 Content-Type
       const ext = path.extname(imageName).toLowerCase();
       if (ext === '.png') {
         set.headers['Content-Type'] = 'image/png';
@@ -278,18 +316,18 @@ export const characterApiRoutes = new Elysia({ prefix: '/api/characters' })
       } else if (ext === '.webp') {
         set.headers['Content-Type'] = 'image/webp';
       } else {
-        set.status = 415; // 不支持的媒体类型
+        set.status = 415;
         return { success: false, message: '不支持的图片格式' };
       }
       
-      return fileStream; // 直接返回 Buffer
+      return fileStream;
     } catch (error: any) {
       if (error.code === 'ENOENT') {
         console.warn(`[CharacterRoutes] GET /image/${imageName} - Image not found: ${imagePath}`);
         set.status = 404;
         return { success: false, message: '图片未找到' };
       }
-      console.error(`[CharacterRoutes] GET /image/${imageName} - Error serving image:`, error);
+      console.error(`[CharacterRoutes] GET /image/${imageName} - Error serving image for user '${userId}':`, error);
       set.status = 500;
       return { success: false, message: '无法提供图片', details: error.message };
     }

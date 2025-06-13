@@ -1,3 +1,6 @@
+/// <reference path="./png-chunk-text.d.ts" />
+/// <reference path="./png-chunks-extract.d.ts" />
+
 /**
  * @fileoverview This file is the entry point for all shared types
  * in the @comfytavern/types package. It re-exports types from other
