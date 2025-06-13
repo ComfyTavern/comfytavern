@@ -29,7 +29,6 @@ export class AuthService {
       }
     }
     console.log(`[AuthService] Initialized. Current operation mode: ${this.currentMode}`);
-    console.log(`[AuthService] 有一说一，这里的初始化确实有运行，但是下面那个getUserContext为啥没成功。`);
   }
 
   public static getCurrentOperationMode(): 'LocalNoPassword' | 'LocalWithPassword' | 'MultiUserShared' {
