@@ -138,6 +138,13 @@ export interface StoredExternalCredential extends ExternalCredentialMetadata {
   encryptedCredential: string; // 使用主加密密钥加密后的完整凭证内容
 }
 
+export const CreateExternalCredentialPayloadSchema = z.object({
+  serviceName: z.string().min(1, { message: '服务名称不能为空' }),
+  displayName: z.string().optional(),
+  credential: z.string().min(1, { message: '凭证内容不能为空' }),
+});
+export type CreateExternalCredentialPayload = z.infer<typeof CreateExternalCredentialPayloadSchema>;
+
 // --- 服务 API 密钥模型 ---
 
 /**
@@ -166,6 +173,12 @@ export interface StoredServiceApiKey extends ServiceApiKeyMetadata {
 export interface ServiceApiKeyWithSecret extends ServiceApiKeyMetadata {
   secret: string; // 完整、明文的 API 密钥，仅在生成时一次性显示
 }
+
+export const CreateServiceApiKeyPayloadSchema = z.object({
+  name: z.string().optional(),
+  // scopes: z.array(z.string()).optional(), // 预留，与后端保持一致
+});
+export type CreateServiceApiKeyPayload = z.infer<typeof CreateServiceApiKeyPayloadSchema>;
 
 // --- 用户身份模型 ---
 

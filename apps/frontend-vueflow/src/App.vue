@@ -6,6 +6,7 @@ import { useWorkflowStore } from './stores/workflowStore' // 导入工作流状�
 import { useTabStore } from './stores/tabStore' // 导入标签页状态管理
 import { useProjectStore } from './stores/projectStore'; // 导入项目状态管理
 import { useUiStore } from './stores/uiStore'; // 导入 UI Store
+import { useAuthStore } from './stores/authStore'; // + 导入 authStore
 import { storeToRefs } from 'pinia'
 import { initializeWebSocket, closeWebSocket } from './composables/useWebSocket'; // <-- ADDED: Import WebSocket functions
 import DialogContainer from './components/common/DialogContainer.vue'; // 导入对话框容器组件
@@ -18,8 +19,9 @@ const themeStore = useThemeStore()
 const workflowStore = useWorkflowStore()
 const tabStore = useTabStore()
 const uiStore = useUiStore(); // 初始化 UI Store
-
 const projectStore = useProjectStore();
+const authStore = useAuthStore(); // + 初始化 authStore
+
 const { isDark } = storeToRefs(themeStore)
 const { activeTabId } = storeToRefs(tabStore);
 const { currentProjectId } = storeToRefs(projectStore); // 获取当前项目 ID 的响应式引用
@@ -28,7 +30,7 @@ const { isSettingsModalVisible, settingsModalProps } = storeToRefs(uiStore); // 
 onMounted(async () => {
   themeStore.initTheme();
   initializeWebSocket(); // <-- ADDED: Initialize WebSocket connection
-
+  await authStore.fetchUserContext(); // + 获取用户上下文
 
   // 应用主题类名到 body，确保初始背景一致
   document.body.classList.toggle('light-theme', !themeStore.isDark);
