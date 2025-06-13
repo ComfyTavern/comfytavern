@@ -2,7 +2,7 @@
 import { RouterLink } from 'vue-router'
 import { useThemeStore } from '../stores/theme'
 import { computed, onMounted } from 'vue'
-import Tooltip from '@/components/common/Tooltip.vue'; // 导入 Tooltip 组件
+// import Tooltip from '@/components/common/Tooltip.vue'; // 移除 Tooltip 组件导入
 
 const themeStore = useThemeStore()
 
@@ -77,22 +77,20 @@ const textClasses = computed(() => themeStore.collapsed
     <!-- 底部按钮区域 -->
     <div class="p-2 space-y-2">
       <!-- 主题切换按钮 -->
-      <Tooltip content="切换主题">
-        <div class="w-full p-2 rounded flex items-center cursor-pointer" :class="[
+      <div v-comfy-tooltip="'切换主题'" class="w-full p-2 rounded flex items-center cursor-pointer" :class="[
           themeStore.collapsed ? 'justify-center' : 'justify-start',
           themeStore.isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100' // 亮色主题 hover 调整
         ]" @click="themeStore.toggleTheme()">
-          <span class="inline text-lg">
-            <span v-if="themeStore.theme === 'system'">💻</span>
-            <span v-else-if="themeStore.theme === 'light'">☀️</span>
-            <span v-else>🌙</span>
-          </span>
-          <span class="text-sm transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
-            :class="textClasses">
-            {{ themeStore.theme === 'system' ? '跟随系统' : themeStore.theme === 'dark' ? '暗色模式' : '亮色模式' }}
-          </span>
-        </div>
-      </Tooltip>
+        <span class="inline text-lg">
+          <span v-if="themeStore.theme === 'system'">💻</span>
+          <span v-else-if="themeStore.theme === 'light'">☀️</span>
+          <span v-else>🌙</span>
+        </span>
+        <span class="text-sm transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
+          :class="textClasses">
+          {{ themeStore.theme === 'system' ? '跟随系统' : themeStore.theme === 'dark' ? '暗色模式' : '亮色模式' }}
+        </span>
+      </div>
 
       <!-- 设置按钮 -->
       <RouterLink to="/home/settings" class="w-full p-2 rounded flex items-center mt-2" :class="[
@@ -105,33 +103,31 @@ const textClasses = computed(() => themeStore.collapsed
       </RouterLink>
 
       <!-- 折叠按钮 -->
-      <Tooltip content="折叠/展开侧边栏">
-        <button @click="themeStore.toggleCollapsed()" class="w-full p-2 rounded flex items-center mt-2" :class="[
+      <button v-comfy-tooltip="'折叠/展开侧边栏'" @click="themeStore.toggleCollapsed()" class="w-full p-2 rounded flex items-center mt-2" :class="[
           themeStore.collapsed ? 'justify-center' : 'justify-start',
           themeStore.isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100' // 亮色主题 hover 调整
         ]">
-          <span role="img" aria-label="sidebar" class="text-lg p-1" v-if="themeStore.collapsed">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
-              focusable="false" aria-hidden="true">
-              <path fill-rule="evenodd" clip-rule="evenodd"
-                d="M5 2h14a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Zm1 2a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H6Z"
-                fill="currentColor"></path>
-            </svg>
-          </span>
-          <span role="img" aria-label="sidebar" class="text-lg p-1" v-else>
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
-              focusable="false" aria-hidden="true">
-              <path fill-rule="evenodd" clip-rule="evenodd"
-                d="M5 2h14a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Zm1 2a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H6Z"
-                fill="currentColor"></path>
-            </svg>
-          </span>
-          <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
-            :class="textClasses">
-            {{ themeStore.collapsed ? '展开' : '折叠' }}
-          </span>
-        </button>
-      </Tooltip>
+        <span role="img" aria-label="sidebar" class="text-lg p-1" v-if="themeStore.collapsed">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
+            focusable="false" aria-hidden="true">
+            <path fill-rule="evenodd" clip-rule="evenodd"
+              d="M5 2h14a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Zm1 2a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H6Z"
+              fill="currentColor"></path>
+          </svg>
+        </span>
+        <span role="img" aria-label="sidebar" class="text-lg p-1" v-else>
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
+            focusable="false" aria-hidden="true">
+            <path fill-rule="evenodd" clip-rule="evenodd"
+              d="M5 2h14a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Zm1 2a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H6Z"
+              fill="currentColor"></path>
+          </svg>
+        </span>
+        <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
+          :class="textClasses">
+          {{ themeStore.collapsed ? '展开' : '折叠' }}
+        </span>
+      </button>
     </div>
   </div>
 </template>
