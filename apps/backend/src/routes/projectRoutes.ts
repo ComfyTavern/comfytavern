@@ -1,7 +1,7 @@
-import { CreateWorkflowObjectSchema, GroupInterfaceInfo, ProjectMetadata, ProjectMetadataSchema, UpdateWorkflowObjectSchema, WorkflowObject, WorkflowObjectSchema, WorkflowStorageObject } from '@comfytavern/types';
+import { CreateWorkflowObjectSchema, GroupInterfaceInfo, ProjectMetadata, ProjectMetadataSchema, UpdateWorkflowObjectSchema, WorkflowObject, WorkflowObjectSchema, WorkflowStorageObject, UserContext } from '@comfytavern/types';
 import path, { basename, extname, join } from 'node:path';
 import { promises as fs } from 'node:fs';
-import { Elysia, t } from 'elysia';
+import { Elysia, t, type Context as ElysiaBaseContext } from 'elysia';
 import { z } from 'zod'; // 导入 z 以使用 Zod
 
 import { createProject, createWorkflow, deleteWorkflowToRecycleBin, getProjectMetadata, getProjectWorkflowsDir, getWorkflow, listProjects, listWorkflows, ProjectConflictError, ProjectCreationError, ProjectMetadataError, ProjectNotFoundError, syncReferencingNodeGroups, updateProjectMetadata, updateWorkflow, WorkflowConflictError, WorkflowCreationError, WorkflowDeletionError, WorkflowLoadError, WorkflowNotFoundError, WorkflowUpdateError } from '../services/projectService'; // 从服务层导入相关函数和错误类型
@@ -85,33 +85,69 @@ const CreateProjectBodySchema = z.object({
   name: z.string().min(1, { message: "Project name cannot be empty." }),
 });
 
+// 辅助函数：从 UserContext 中安全地提取 userId
+function getUserIdFromContext(userContext: UserContext | null): string | null {
+  if (!userContext || !userContext.currentUser) {
+    return null;
+  }
+  // 'id' 属性用于 DefaultUserIdentity (LocalNoPasswordUserContext, LocalWithPasswordUserContext)
+  if ('id' in userContext.currentUser && userContext.currentUser.id === "default_user") {
+    return userContext.currentUser.id;
+  }
+  // 'uid' 属性用于 AuthenticatedMultiUserIdentity (MultiUserSharedContext)
+  if ('uid' in userContext.currentUser && typeof userContext.currentUser.uid === 'string') {
+    return userContext.currentUser.uid;
+  }
+  return null;
+}
+
+// 定义一个辅助类型，用于路由处理函数的上下文，确保 userContext 被识别
+// Elysia 通常会自动推断 params, body 等，这里我们主要关注 userContext 的显式声明
+interface AuthenticatedContext extends ElysiaBaseContext { // 继承基础上下文类型
+    userContext: UserContext | null; // 明确 userContext 的类型
+    // set: ElysiaBaseContext['set']; // set 通常会被正确推断，如果需要可以显式声明
+}
+
+
 // 导出项目路由插件函数
 export const projectRoutesPlugin = (
   { appVersion }: ProjectRoutesDependencies
 ) =>
   new Elysia({ prefix: '/api/projects', name: 'project-routes', seed: 'comfy.project.routes' })
     // 路由处理函数可以直接从上下文中解构 userContext (如果 authMiddleware 已应用)
-    // 例如: async ({ params, set, userContext }) => { ... }
     .group(
       "", // 前缀已在 Elysia 实例上设置，组路径为空
       (group) =>
         group
         // GET /api/projects - 列出所有项目
-        .get("/", async ({ set }) => {
+        .get("/", async (ctx) => { // 让 Elysia 推断大部分 ctx 类型，我们稍后检查 userContext
+          const { set, userContext } = ctx as AuthenticatedContext; // 类型断言以访问 userContext
           console.log(`[GET /api/projects] 尝试通过服务列出所有项目。`);
           try {
-            const projects = await listProjects();
+            const userId = getUserIdFromContext(userContext);
+            if (!userId) {
+              set.status = 401; // Unauthorized
+              console.error("[GET /api/projects] 未经授权的访问：无法确定 userId。");
+              return { error: "未经授权的访问：无法确定 userId。" };
+            }
+            const projects = await listProjects(userId);
             console.log(`[GET /api/projects] 成功列出 ${projects.length} 个项目。`);
             return projects;
           } catch (error: any) {
             console.error("[GET /api/projects] 通过服务列出项目时出错:", error.message);
             set.status = 500; // 内部服务器错误
-            // 返回一个标准的错误响应结构
             return { error: "由于内部错误，列出项目失败。" };
           }
         })
         // POST /api/projects - 创建新项目
-        .post("/", async ({ body, set }) => {
+        .post("/", async (ctx) => { // 让 Elysia 推断 ctx
+          const { body, set, userContext } = ctx as AuthenticatedContext; // 类型断言
+          const userId = getUserIdFromContext(userContext);
+          if (!userId) {
+            set.status = 401; // Unauthorized
+            console.error("[POST /api/projects] 未经授权的访问：无法确定 userId。");
+            return { error: "未经授权的访问：无法确定 userId。" };
+          }
           // 使用 Zod Schema 验证请求体
           const validationResult = CreateProjectBodySchema.safeParse(body);
           if (!validationResult.success) {
@@ -138,7 +174,7 @@ export const projectRoutesPlugin = (
 
           try {
             // 调用服务层函数来创建项目
-            const newProjectMetadata = await createProject(projectId, projectName, appVersion);
+            const newProjectMetadata = await createProject(userId, projectId, projectName, appVersion);
 
             set.status = 201; // 已创建
             console.log(
@@ -175,7 +211,14 @@ export const projectRoutesPlugin = (
         // GET /api/projects/:projectId/metadata - 获取项目元数据
         .get(
           "/:projectId/metadata",
-          async ({ params: { projectId: rawProjectId }, set }) => {
+          async (ctx) => { // 让 Elysia 推断 ctx
+            const { params: { projectId: rawProjectId }, set, userContext } = ctx as AuthenticatedContext & { params: { projectId: string } }; // 类型断言
+            const userId = getUserIdFromContext(userContext);
+            if (!userId) {
+              set.status = 401; // Unauthorized
+              console.error(`[GET /${rawProjectId}/metadata] 未经授权的访问：无法确定 userId。`);
+              return { error: "未经授权的访问：无法确定 userId。" };
+            }
             const operationName = `GET /${rawProjectId}/metadata`;
             const safeIdResult = getSafeProjectIdOrErrorResponse(rawProjectId, set, operationName);
             if (typeof safeIdResult !== "string") {
@@ -187,7 +230,7 @@ export const projectRoutesPlugin = (
               `[${operationName}] 尝试通过服务获取项目 ID '${safeProjectId}' 的元数据。`
             );
             try {
-              const metadata = await getProjectMetadata(safeProjectId);
+              const metadata = await getProjectMetadata(userId, safeProjectId);
               console.log(
                 `[${operationName}] 成功获取项目 ID '${safeProjectId}' 的元数据。`
               );
@@ -224,7 +267,14 @@ export const projectRoutesPlugin = (
         // PUT /api/projects/:projectId/metadata - 更新项目元数据
         .put(
           "/:projectId/metadata",
-          async ({ params: { projectId: rawProjectId }, body, set }) => {
+          async (ctx) => { // 让 Elysia 推断 ctx
+            const { params: { projectId: rawProjectId }, body, set, userContext } = ctx as AuthenticatedContext & { params: { projectId: string } }; // 类型断言
+            const userId = getUserIdFromContext(userContext);
+            if (!userId) {
+              set.status = 401; // Unauthorized
+              console.error(`[PUT /${rawProjectId}/metadata] 未经授权的访问：无法确定 userId。`);
+              return { error: "未经授权的访问：无法确定 userId。" };
+            }
             const operationName = `PUT /${rawProjectId}/metadata`;
             const safeIdResult = getSafeProjectIdOrErrorResponse(rawProjectId, set, operationName);
             if (typeof safeIdResult !== "string") {
@@ -249,7 +299,7 @@ export const projectRoutesPlugin = (
               `[${operationName}] 尝试通过服务更新项目 ID '${safeProjectId}' 的元数据。`
             );
             try {
-              const updatedMetadata = await updateProjectMetadata(safeProjectId, validatedData);
+              const updatedMetadata = await updateProjectMetadata(userId, safeProjectId, validatedData);
               console.log(
                 `[${operationName}] 成功更新项目 ID '${safeProjectId}' 的元数据。`
               );
@@ -287,7 +337,14 @@ export const projectRoutesPlugin = (
         // GET /api/projects/:projectId/workflows - 列出项目内的工作流
         .get(
           "/:projectId/workflows",
-          async ({ params: { projectId: rawProjectId }, set }) => {
+          async (ctx) => { // 让 Elysia 推断 ctx
+            const { params: { projectId: rawProjectId }, set, userContext } = ctx as AuthenticatedContext & { params: { projectId: string } }; // 类型断言
+            const userId = getUserIdFromContext(userContext);
+            if (!userId) {
+              set.status = 401; // Unauthorized
+              console.error(`[GET /${rawProjectId}/workflows] 未经授权的访问：无法确定 userId。`);
+              return { error: "未经授权的访问：无法确定 userId。" };
+            }
             const operationName = `GET /${rawProjectId}/workflows`;
             const safeIdResult = getSafeProjectIdOrErrorResponse(rawProjectId, set, operationName);
             if (typeof safeIdResult !== "string") {
@@ -299,7 +356,7 @@ export const projectRoutesPlugin = (
               `[${operationName}] 尝试通过服务列出项目 ID '${safeProjectId}' 的工作流。`
             );
             try {
-              const workflows = await listWorkflows(safeProjectId);
+              const workflows = await listWorkflows(userId, safeProjectId);
               console.log(
                 `[${operationName}] 成功列出项目 ID '${safeProjectId}' 的 ${workflows.length} 个工作流。`
               );
@@ -321,7 +378,14 @@ export const projectRoutesPlugin = (
         // POST /api/projects/:projectId/workflows - 创建项目内的新工作流
         .post(
           "/:projectId/workflows",
-          async ({ params: { projectId: rawProjectId }, body, set }) => {
+          async (ctx) => { // 让 Elysia 推断 ctx
+            const { params: { projectId: rawProjectId }, body, set, userContext } = ctx as AuthenticatedContext & { params: { projectId: string } }; // 类型断言
+            const userId = getUserIdFromContext(userContext);
+            if (!userId) {
+              set.status = 401; // Unauthorized
+              console.error(`[POST /${rawProjectId}/workflows] 未经授权的访问：无法确定 userId。`);
+              return { error: "未经授权的访问：无法确定 userId。" };
+            }
             const operationName = `POST /${rawProjectId}/workflows`;
             const safeIdResult = getSafeProjectIdOrErrorResponse(rawProjectId, set, operationName);
             if (typeof safeIdResult !== "string") {
@@ -348,6 +412,7 @@ export const projectRoutesPlugin = (
             try {
               // appVersion 可从闭包中获取
               const newWorkflow = await createWorkflow(
+                userId,
                 safeProjectId,
                 validatedWorkflowData,
                 appVersion
@@ -391,7 +456,14 @@ export const projectRoutesPlugin = (
         // GET /api/projects/:projectId/workflows/:workflowId - 加载项目内指定工作流
         .get(
           "/:projectId/workflows/:workflowId",
-          async ({ params: { projectId: rawProjectId, workflowId: rawWorkflowIdParam }, set }) => {
+          async (ctx) => { // 让 Elysia 推断 ctx
+            const { params: { projectId: rawProjectId, workflowId: rawWorkflowIdParam }, set, userContext } = ctx as AuthenticatedContext & { params: { projectId: string, workflowId: string } }; // 类型断言
+            const userId = getUserIdFromContext(userContext);
+            if (!userId) {
+              set.status = 401; // Unauthorized
+              console.error(`[GET /${rawProjectId}/workflows/${rawWorkflowIdParam}] 未经授权的访问：无法确定 userId。`);
+              return { error: "未经授权的访问：无法确定 userId。" };
+            }
             const operationName = `GET /${rawProjectId}/workflows/${rawWorkflowIdParam}`;
 
             const safeProjectIdResult = getSafeProjectIdOrErrorResponse(
@@ -418,7 +490,7 @@ export const projectRoutesPlugin = (
               `[${operationName}] 尝试通过服务获取项目 '${safeProjectId}' 中的工作流 '${safeWorkflowId}'。`
             );
             try {
-              const workflow = await getWorkflow(safeProjectId, safeWorkflowId);
+              const workflow = await getWorkflow(userId, safeProjectId, safeWorkflowId);
               console.log(
                 `[${operationName}] 成功获取项目 '${safeProjectId}' 中的工作流 '${safeWorkflowId}'。`
               );
@@ -447,11 +519,19 @@ export const projectRoutesPlugin = (
         // PUT /api/projects/:projectId/workflows/:workflowId - 更新项目内的工作流
         .put(
           "/:projectId/workflows/:workflowId",
-          async ({
-            params: { projectId: rawProjectId, workflowId: rawWorkflowIdParam },
-            body,
-            set,
-          }) => {
+          async (ctx) => { // 让 Elysia 推断 ctx
+            const {
+              params: { projectId: rawProjectId, workflowId: rawWorkflowIdParam },
+              body,
+              set,
+              userContext,
+            } = ctx as AuthenticatedContext & { params: { projectId: string, workflowId: string } }; // 类型断言
+            const userId = getUserIdFromContext(userContext);
+            if (!userId) {
+              set.status = 401; // Unauthorized
+              console.error(`[PUT /${rawProjectId}/workflows/${rawWorkflowIdParam}] 未经授权的访问：无法确定 userId。`);
+              return { error: "未经授权的访问：无法确定 userId。" };
+            }
             const operationName = `PUT /${rawProjectId}/workflows/${rawWorkflowIdParam}`;
 
             const safeProjectIdResult = getSafeProjectIdOrErrorResponse(
@@ -497,6 +577,7 @@ export const projectRoutesPlugin = (
             try {
               // appVersion 可从闭包中获取
               const updatedWorkflow = await updateWorkflow(
+                userId,
                 safeProjectId,
                 safeWorkflowId,
                 validatedUpdateData,
@@ -536,7 +617,14 @@ export const projectRoutesPlugin = (
         // DELETE /api/projects/:projectId/workflows/:workflowId - 删除项目内的工作流
         .delete(
           "/:projectId/workflows/:workflowId",
-          async ({ params: { projectId: rawProjectId, workflowId: rawWorkflowIdParam }, set }) => {
+          async (ctx) => { // 让 Elysia 推断 ctx
+            const { params: { projectId: rawProjectId, workflowId: rawWorkflowIdParam }, set, userContext } = ctx as AuthenticatedContext & { params: { projectId: string, workflowId: string } }; // 类型断言
+            const userId = getUserIdFromContext(userContext);
+            if (!userId) {
+              set.status = 401; // Unauthorized
+              console.error(`[DELETE /${rawProjectId}/workflows/${rawWorkflowIdParam}] 未经授权的访问：无法确定 userId。`);
+              return { error: "未经授权的访问：无法确定 userId。" };
+            }
             const operationName = `DELETE /${rawProjectId}/workflows/${rawWorkflowIdParam}`;
 
             const safeProjectIdResult = getSafeProjectIdOrErrorResponse(
@@ -559,7 +647,7 @@ export const projectRoutesPlugin = (
               `[${operationName}] 尝试通过服务删除项目 '${safeProjectId}' 中的工作流 '${safeWorkflowId}'。`
             );
             try {
-              await deleteWorkflowToRecycleBin(safeProjectId, safeWorkflowId);
+              await deleteWorkflowToRecycleBin(userId, safeProjectId, safeWorkflowId);
 
               set.status = 204; // 无内容
               console.log(
