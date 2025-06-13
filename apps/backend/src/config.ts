@@ -23,6 +23,12 @@ export const ACCESS_PASSWORD_HASH: string | null = userManagementConfig.accessPa
 // 根据设计文档 (line 73, 79), singleUserPath 用于文件数据，用户身份ID固定为 'default_user'
 export const SINGLE_USER_PATH: string = userManagementConfig.singleUserPath || "default_user_data";
 
+// 新增安全配置的读取
+const securityConfig = (config as any).security || {};
+export const ENABLE_CREDENTIAL_ENCRYPTION: boolean = securityConfig.enableCredentialEncryption === true; // 明确转为布尔值，默认为 false 如果未配置或配置非 true
+// export const MEK_ENV_VAR_NAME: string = securityConfig.masterEncryptionKeyEnvVar || 'COMFYTAVERN_MASTER_ENCRYPTION_KEY'; // 从配置中读取环境变量名，提供默认值
+export const MASTER_ENCRYPTION_KEY: string | undefined = securityConfig.masterEncryptionKeyValue || undefined; // 从配置中直接读取密钥值，如果为空字符串则为 undefined
+
 // 定义并导出路径常量
 // 使用 path.resolve 确保得到绝对路径
 // process.cwd() 在这里指向 apps/backend 目录

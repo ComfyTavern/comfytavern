@@ -1,29 +1,50 @@
-import { AES, enc, mode, pad } from 'crypto-js';
-import { Buffer } from 'node:buffer'; // 用于 Base64 编码/解码和随机字节生成
+import { AES, enc, mode, pad } from "crypto-js";
+import { Buffer } from "node:buffer"; // 用于 Base64 编码/解码和随机字节生成
+import { ENABLE_CREDENTIAL_ENCRYPTION, MASTER_ENCRYPTION_KEY } from "../config"; // 新增导入
 
-// 主加密密钥 (MEK) - 从环境变量读取
-const MEK_ENV_VAR = 'COMFYTAVERN_MASTER_ENCRYPTION_KEY';
-let masterEncryptionKey: string | undefined; // 初始化为 undefined，以便首次检查
+// 主加密密钥 (MEK) - 从配置读取
+let masterEncryptionKey: string | undefined;
+// mekStatus: 'initial' -> 尚未检查
+//            'loaded' -> 密钥已加载
+//            'disabled_by_config' -> 配置中禁用了加密
+//            'key_not_set' -> 配置中启用但环境变量未设置密钥
+let mekStatus: "initial" | "loaded" | "disabled_by_config" | "key_not_set" = "initial";
 
-function getMasterEncryptionKey(): string {
-  if (masterEncryptionKey) {
+function getMasterEncryptionKey(): string | undefined {
+  // 如果已经有明确状态（非 initial），则直接根据状态返回
+  if (mekStatus === "loaded" && masterEncryptionKey) {
     return masterEncryptionKey;
   }
-  const mek = process.env[MEK_ENV_VAR];
-  if (!mek) {
-    const errorMessage = `[CryptoService] CRITICAL ERROR: Master Encryption Key (MEK) environment variable "${MEK_ENV_VAR}" is not set. External service credentials cannot be encrypted or decrypted. Please set this environment variable to a strong, random key (e.g., 32 bytes, base64 encoded).`;
-    console.error(errorMessage);
-    // 在生产环境中，这应该导致应用启动失败或进入安全模式
-    throw new Error(errorMessage);
+  if (mekStatus === "disabled_by_config" || mekStatus === "key_not_set") {
+    return undefined;
   }
-  // crypto-js 会将字符串密钥直接用于加密算法。
-  // AES-256 需要 32 字节 (256 位) 的密钥。
-  // 如果 mek 是 Base64 编码的32字节随机数据，解码后应为32字节。
-  // 或者，如果 mek 是一个足够长的密码，可以考虑使用 KDF (如 PBKDF2) 从它派生出32字节的密钥。
-  // 为简单起见，这里直接使用 mek 字符串作为密钥。crypto-js 内部会处理。
-  // 重要的是用户提供的 MEK 字符串本身具有高熵。
+
+  // 首次检查或状态为 initial
+  if (!ENABLE_CREDENTIAL_ENCRYPTION) {
+    console.warn(
+      `[CryptoService] Credential encryption is DISABLED via configuration (config.security.enableCredentialEncryption is false). Encryption features will not be available.`
+    );
+    mekStatus = "disabled_by_config";
+    masterEncryptionKey = undefined;
+    return undefined;
+  }
+  // 配置中启用了加密，现在检查配置中的密钥值
+  const mek = MASTER_ENCRYPTION_KEY; // 直接使用从配置导入的密钥
+  if (!mek) {
+    // mek 可能是 undefined 或空字符串
+    console.warn(
+      `[CryptoService] Credential encryption is ENABLED in config, but Master Encryption Key (MEK) is not set in the configuration file (config.security.masterEncryptionKeyValue). Encryption features are disabled.`
+    );
+    mekStatus = "key_not_set";
+    masterEncryptionKey = undefined;
+    return undefined;
+  }
+
   masterEncryptionKey = mek;
-  console.log(`[CryptoService] Master Encryption Key (MEK) loaded from environment variable "${MEK_ENV_VAR}".`);
+  mekStatus = "loaded";
+  console.log(
+    `[CryptoService] Master Encryption Key (MEK) loaded from configuration file (config.security.masterEncryptionKeyValue). Encryption features are enabled.`
+  );
   return masterEncryptionKey;
 }
 
@@ -36,7 +57,7 @@ export class CryptoService {
    */
   static async hash(plaintext: string): Promise<string> {
     if (!plaintext) {
-      throw new Error('[CryptoService] Plaintext for hashing cannot be empty.');
+      throw new Error("[CryptoService] Plaintext for hashing cannot be empty.");
     }
     return Bun.password.hash(plaintext);
   }
@@ -51,13 +72,13 @@ export class CryptoService {
     if (!plaintext || !hash) {
       // Bun.password.verify might throw or return false for empty/null hash.
       // Explicitly returning false for clarity and to avoid potential issues.
-      console.warn('[CryptoService] Attempted to verify with empty plaintext or hash.');
+      console.warn("[CryptoService] Attempted to verify with empty plaintext or hash.");
       return false;
     }
     try {
       return await Bun.password.verify(plaintext, hash);
     } catch (error) {
-      console.error('[CryptoService] Error during password verification:', error);
+      console.error("[CryptoService] Error during password verification:", error);
       return false; // Treat verification errors as mismatch
     }
   }
@@ -72,16 +93,22 @@ export class CryptoService {
    * @throws Error if MEK is not set.
    */
   static encryptCredential(plaintext: string): string {
-    const mek = getMasterEncryptionKey(); // Ensures MEK is loaded or throws
-    
+    const mek = getMasterEncryptionKey();
+    if (!mek) {
+      // 如果 MEK 未设置，则抛出错误，而不是尝试加密
+      throw new Error(
+        "[CryptoService] Cannot encrypt credential. Master Encryption Key (MEK) is not configured. Encryption is disabled."
+      );
+    }
+
     // Generate a 16-byte (128-bit) random IV
     const ivBuffer = Buffer.from(crypto.getRandomValues(new Uint8Array(16)));
-    const iv = enc.Hex.parse(ivBuffer.toString('hex'));
+    const iv = enc.Hex.parse(ivBuffer.toString("hex"));
 
     const encrypted = AES.encrypt(plaintext, enc.Utf8.parse(mek), {
-        iv: iv,
-        mode: mode.CBC,
-        padding: pad.Pkcs7
+      iv: iv,
+      mode: mode.CBC,
+      padding: pad.Pkcs7,
     });
 
     const ivHex = enc.Hex.stringify(iv);
@@ -99,54 +126,67 @@ export class CryptoService {
    * @throws Error if MEK is not set, format is invalid, or decryption fails.
    */
   static decryptCredential(encryptedString: string): string {
-    const mek = getMasterEncryptionKey(); // Ensures MEK is loaded or throws
-
-    if (!encryptedString || typeof encryptedString !== 'string' || !encryptedString.includes(':')) {
-      throw new Error('[CryptoService] Invalid encrypted string format. Expected "iv_hex:ciphertext_base64".');
+    const mek = getMasterEncryptionKey();
+    if (!mek) {
+      // 如果 MEK 未设置，则抛出错误
+      throw new Error(
+        "[CryptoService] Cannot decrypt credential. Master Encryption Key (MEK) is not configured. Decryption is disabled."
+      );
     }
 
-    const parts = encryptedString.split(':');
+    if (!encryptedString || typeof encryptedString !== "string" || !encryptedString.includes(":")) {
+      throw new Error(
+        '[CryptoService] Invalid encrypted string format. Expected "iv_hex:ciphertext_base64".'
+      );
+    }
+
+    const parts = encryptedString.split(":");
     if (parts.length !== 2) {
-      throw new Error('[CryptoService] Invalid encrypted string format. Expected "iv_hex:ciphertext_base64".');
+      throw new Error(
+        '[CryptoService] Invalid encrypted string format. Expected "iv_hex:ciphertext_base64".'
+      );
     }
 
     const ivHex = parts[0];
     const ciphertextBase64 = parts[1];
 
     if (!ivHex || !ciphertextBase64) {
-        throw new Error('[CryptoService] Invalid encrypted string format. IV or Ciphertext is missing.');
+      throw new Error(
+        "[CryptoService] Invalid encrypted string format. IV or Ciphertext is missing."
+      );
     }
 
     const iv = enc.Hex.parse(ivHex);
     const ciphertext = enc.Base64.parse(ciphertextBase64);
 
-    const decrypted = AES.decrypt({ ciphertext: ciphertext } as any, enc.Utf8.parse(mek), { // `as any` to satisfy CipherParams structure for crypto-js
-        iv: iv,
-        mode: mode.CBC,
-        padding: pad.Pkcs7
+    const decrypted = AES.decrypt({ ciphertext: ciphertext } as any, enc.Utf8.parse(mek), {
+      // `as any` to satisfy CipherParams structure for crypto-js
+      iv: iv,
+      mode: mode.CBC,
+      padding: pad.Pkcs7,
     });
 
     try {
-        const plaintext = enc.Utf8.stringify(decrypted);
-        if (!plaintext && encryptedString) { // If plaintext is empty but original encrypted string was not, it's likely a decryption failure
-            throw new Error('Decryption resulted in empty plaintext, possibly due to incorrect key or corrupted data.');
-        }
-        return plaintext;
+      const plaintext = enc.Utf8.stringify(decrypted);
+      if (!plaintext && encryptedString) {
+        // If plaintext is empty but original encrypted string was not, it's likely a decryption failure
+        throw new Error(
+          "Decryption resulted in empty plaintext, possibly due to incorrect key or corrupted data."
+        );
+      }
+      return plaintext;
     } catch (error) {
-        // This catch block handles errors from enc.Utf8.stringify if decrypted WordArray is invalid
-        console.error('[CryptoService] Error stringifying decrypted data:', error);
-        throw new Error('[CryptoService] Decryption failed. The key may be incorrect or the data corrupted.');
+      // This catch block handles errors from enc.Utf8.stringify if decrypted WordArray is invalid
+      console.error("[CryptoService] Error stringifying decrypted data:", error);
+      throw new Error(
+        "[CryptoService] Decryption failed. The key may be incorrect or the data corrupted."
+      );
     }
   }
 }
 
-// Initial check for MEK when the module is loaded.
-// This helps to identify configuration issues early.
-try {
-  getMasterEncryptionKey();
-} catch (e) {
-  // The error is already logged by getMasterEncryptionKey.
-  // We don't want to crash the app here if it's just loading,
-  // but subsequent calls to encrypt/decrypt will fail if MEK isn't fixed.
-  console.warn(`[CryptoService] Initial check for MEK failed. Credential encryption/decryption will not work until "${MEK_ENV_VAR}" is correctly set.`);
-}
+// 调整模块加载时的初始检查逻辑
+// getMasterEncryptionKey() 会在首次调用时打印适当的日志（已加载或未设置）
+// 所以这里不需要额外的 try-catch 或日志。
+// 确保 getMasterEncryptionKey 被调用一次以触发初始日志记录和状态设置。
+getMasterEncryptionKey();

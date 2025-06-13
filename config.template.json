@@ -18,5 +18,9 @@
     "multiUserMode": false,
     "singleUserPath": "default_user_data",
     "accessPasswordHash": null
+  },
+  "security": {
+    "enableCredentialEncryption": false,
+    "masterEncryptionKeyValue": ""
   }
 }
