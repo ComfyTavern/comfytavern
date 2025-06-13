@@ -8,7 +8,10 @@ import { generateSafeWorkflowFilename, sanitizeProjectId } from "../utils/helper
 // import { PROJECTS_BASE_DIR } from "../config"; // 不再直接使用全局项目基础目录
 
 // --- 新增：用户特定路径常量和辅助函数 ---
-const USER_DATA_ROOT = "userData";
+// 使用 path.resolve 和 __dirname 确保 USER_DATA_ROOT 指向项目根目录下的 userData
+// __dirname for apps/backend/src/services/projectService.ts is e.g., /path/to/ComfyTavern/apps/backend/src/services
+// ../../../../ moves up to the project root /path/to/ComfyTavern
+const USER_DATA_ROOT = path.resolve(__dirname, "../../../../userData");
 const PROJECTS_DIR_NAME = "projects";
 const LIBRARY_DIR_NAME = "library";
 const WORKFLOWS_DIR_NAME = "workflows";
