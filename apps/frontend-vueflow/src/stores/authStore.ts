@@ -17,6 +17,7 @@ import {
   createExternalCredential,
   deleteExternalCredential,
 } from '@/api/userKeysApi';
+import { updateDefaultUsername } from '@/api/userProfileApi'; // + 导入更新用户名的 API 调用
 
 interface AuthState {
   userContext: UserContext | null;
@@ -133,6 +134,29 @@ export const useAuthStore = defineStore('auth', {
     // 用于UI显示后清除密钥
     clearNewlyCreatedApiKeySecret() {
       this.newlyCreatedApiKeySecret = null;
-    }
+    },
+
+    async updateUsername(newUsername: string): Promise<{ success: boolean; message: string; username?: string }> {
+      if (!this.userContext || !this.currentUser || (this.currentMode !== 'LocalNoPassword' && this.currentMode !== 'LocalWithPassword')) {
+        console.warn('[AuthStore] updateUsername called in invalid state or mode.');
+        return { success: false, message: '无法更新用户名：无效的状态或模式。' };
+      }
+      // 理论上，在这些模式下，currentUser.id 总是 'default_user'
+      // 后端 API 会做最终校验
+
+      try {
+        const response = await updateDefaultUsername({ username: newUsername });
+        if (response.success) {
+          await this.fetchUserContext(); // 成功后刷新整个用户上下文
+        }
+        return response; // 返回 API 的原始响应
+      } catch (error: any) {
+        console.error('更新用户名失败 (store action):', error);
+        // error 可能已经是 { success: false, message: string } 的结构
+        return error && typeof error.message === 'string'
+          ? { success: false, message: error.message, ...(error.details && { details: error.details }) }
+          : { success: false, message: '更新用户名时发生未知错误。' };
+      }
+    },
   },
 });

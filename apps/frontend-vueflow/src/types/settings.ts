@@ -30,6 +30,7 @@ export interface SettingItemConfig {
   storeName?: string; // 如果一个设置项不属于默认的 settingsStore，可以指定 (可选)
   // validationRules?: any; // 校验规则 (可选)
   // componentProps?: Record<string, any>; // 传递给自定义渲染组件的 props (如果 type 是某种 custom-component)
+  onSave?: (key: string, newValue: any, oldValue?: any) => Promise<void | boolean | { success: boolean; message?: string }>; // 自定义保存逻辑
 }
 
 // 设置页面的导航分区定义

@@ -9,6 +9,7 @@ export const users = sqliteTable('users', {
   passwordHash: text('password_hash'), // 用户密码的哈希值 (多用户模式下 NOT NULL，单用户模式下可为 NULL)
   isAdmin: integer('is_admin', { mode: 'boolean' }).notNull().default(false), // 是否为管理员 (仅多用户模式有意义)
   createdAt: text('created_at').notNull(), // 用户记录创建时间 (ISO 8601)
+  updatedAt: text('updated_at'), // 用户记录最后更新时间 (ISO 8601, 可选)
 });
 
 // 服务 API 密钥表

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
-import { onMounted, onUnmounted, watch } from 'vue' // <-- ADDED: onUnmounted
+import { onMounted, onUnmounted, watch, ref, watchEffect } from 'vue' // + Import ref, watchEffect
 import { useThemeStore } from './stores/theme'
 import { useWorkflowStore } from './stores/workflowStore' // 导入工作流状态管理
 import { useTabStore } from './stores/tabStore' // 导入标签页状态管理
 import { useProjectStore } from './stores/projectStore'; // 导入项目状态管理
 import { useUiStore } from './stores/uiStore'; // 导入 UI Store
 import { useAuthStore } from './stores/authStore'; // + 导入 authStore
+import InitialUsernameSetupModal from './components/auth/InitialUsernameSetupModal.vue'; // + Import modal
 import { storeToRefs } from 'pinia'
 import { initializeWebSocket, closeWebSocket } from './composables/useWebSocket'; // <-- ADDED: Import WebSocket functions
 import DialogContainer from './components/common/DialogContainer.vue'; // 导入对话框容器组件
@@ -26,6 +27,9 @@ const { isDark } = storeToRefs(themeStore)
 const { activeTabId } = storeToRefs(tabStore);
 const { currentProjectId } = storeToRefs(projectStore); // 获取当前项目 ID 的响应式引用
 const { isSettingsModalVisible, settingsModalProps } = storeToRefs(uiStore); // 获取设置模态框的显示状态和属性
+const { userContext, currentUser, isLoadingContext } = storeToRefs(authStore); // + Add currentUser, isLoadingContext
+
+const showInitialUsernameModal = ref(false); // + Ref for modal visibility
 
 onMounted(async () => {
   themeStore.initTheme();
@@ -94,6 +98,35 @@ watch(currentProjectId, async (newProjectId, oldProjectId) => {
 onUnmounted(() => {
   closeWebSocket(); // <-- ADDED: Close WebSocket connection
 });
+
+// + Watch for conditions to show initial username setup modal
+watchEffect(() => {
+  if (!isLoadingContext.value && userContext.value && currentUser.value) {
+    if (
+      userContext.value.mode === 'LocalNoPassword' &&
+      currentUser.value.username === '本地用户' // USERNAME_DEFAULT from backend
+    ) {
+      showInitialUsernameModal.value = true;
+    } else {
+      // 如果条件不再满足（例如用户通过其他方式改了名，或模式改变），确保模态框关闭
+      // 但通常这个模态框只出现一次，成功后就不再满足条件
+      showInitialUsernameModal.value = false;
+    }
+  }
+});
+
+const handleModalClosed = () => {
+  showInitialUsernameModal.value = false;
+  // 如果用户只是关闭了模态框（如果允许）而没有保存，
+  // 并且条件仍然满足，它可能会再次打开。
+  // 但当前模态框设计为不可随意关闭，只能通过保存。
+};
+
+const handleModalSaved = () => {
+  showInitialUsernameModal.value = false;
+  // 保存后，authStore.currentUser.username 会更新，
+  // watchEffect 会检测到条件不再满足，不会再次打开模态框。
+};
 </script>
 
 <template>
@@ -114,6 +147,14 @@ onUnmounted(() => {
     >
       <SettingsLayout />
     </BaseModal>
+
+    <!-- + Initial Username Setup Modal -->
+    <InitialUsernameSetupModal
+      :visible="showInitialUsernameModal"
+      :initial-username="currentUser?.username"
+      @close="handleModalClosed"
+      @saved="handleModalSaved"
+    />
   </div>
 </template>
 

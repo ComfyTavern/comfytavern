@@ -46,12 +46,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineComponent, defineAsyncComponent, markRaw } from 'vue';
+import { ref, computed, defineComponent, defineAsyncComponent, markRaw, watch } from 'vue';
 import type { SettingsSection, SettingItemConfig } from '@/types/settings';
 import SettingsPanel from './SettingsPanel.vue';
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
 import { useThemeStore } from '@/stores/theme';
+import { useAuthStore } from '@/stores/authStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { storeToRefs } from 'pinia';
 
 // --- 占位符组件 ---
@@ -65,8 +67,42 @@ const PlaceholderComponent = defineComponent({
 // === 定义所有设置分区 ===
 
 // 1. 数据驱动的配置示例
+const authStore = useAuthStore();
+const settingsStore = useSettingsStore();
+const { currentUser } = storeToRefs(authStore);
+
+
 const userSettingsConfig: SettingItemConfig[] = [
-  { key: 'user.nickname', type: 'string', label: '昵称', description: '您在平台中显示的名称。', defaultValue: '姐姐', category: '基础信息' },
+  {
+    key: 'user.nickname',
+    type: 'string',
+    label: '昵称',
+    description: '您在平台中显示的名称。',
+    defaultValue: currentUser.value?.username || '本地用户', // 尝试从 authStore 获取初始值
+    category: '基础信息',
+    async onSave(key, newValue) {
+      if (key === 'user.nickname' && typeof newValue === 'string') {
+        try {
+          // uiStore.showLoading('正在保存昵称...'); // 可选
+          const result = await authStore.updateUsername(newValue);
+          if (!result.success) {
+            console.error('Failed to update username (onSave):', result.message);
+            // uiStore.showToast({ type: 'error', message: `更新昵称失败: ${result.message || '未知错误'}` });
+            return { success: false, message: result.message || '更新昵称失败' };
+          }
+          // uiStore.showToast({ type: 'success', message: '昵称更新成功！' });
+          return { success: true };
+        } catch (error: any) {
+          console.error('Error in onSave for user.nickname:', error);
+          // uiStore.showToast({ type: 'error', message: `更新昵称时出错: ${error.message || '未知错误'}` });
+          return { success: false, message: error.message || '更新昵称时发生未知错误' };
+        } finally {
+          // uiStore.hideLoading(); // 可选
+        }
+      }
+      return { success: true }; // 默认其他 key 保存成功
+    },
+  },
   { key: 'user.avatar', type: 'string', label: '头像URL', description: '一个指向您头像图片的链接。', defaultValue: '', category: '基础信息' },
 ];
 
@@ -107,6 +143,19 @@ const activeSection = computed(() =>
 
 const themeStore = useThemeStore();
 const { isDark } = storeToRefs(themeStore);
+
+// 新增: 监听 authStore 中用户名的变化，并同步到 settingsStore
+// 这确保了 SettingControl 能通过 settingsStore.getSetting 获取到最新的昵称
+watch(
+  () => currentUser.value?.username, // 使用 storeToRefs 获取的 currentUser
+  (newUsername) => {
+    if (newUsername !== undefined && newUsername !== settingsStore.getSetting('user.nickname', '')) {
+      // console.log(`SettingsLayout: authStore.currentUser.username changed to "${newUsername}". Updating settingsStore['user.nickname'].`);
+      settingsStore.updateSetting('user.nickname', newUsername);
+    }
+  },
+  { immediate: true } // 立即执行一次，以在组件挂载后同步初始值
+);
 </script>
 
 <style scoped>
