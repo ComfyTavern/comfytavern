@@ -10,14 +10,14 @@
       @input="handleInput"
       @focus="handleFocus"
       @blur="handleBlur"
-      class="custom-textarea w-full p-1 text-sm rounded border transition-colors duration-200 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-700 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
-      :class="{
+      class="custom-textarea w-full rounded border transition-colors duration-200 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-700 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+      :class="[sizeClasses.textarea, { // 应用 sizeClasses 并移除静态 p-1 text-sm
         'border-red-500 dark:border-red-700': props.hasError,
         'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default focus:ring-0 focus:border-gray-300 dark:focus:border-gray-600':
           props.readonly && !props.disabled,
         'disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed':
           props.disabled,
-      }"
+      }]"
     />
     <div v-if="props.hasError" class="text-xs text-red-500 dark:text-red-400 mt-1">
       {{ props.errorMessage }}
@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, onMounted, onUnmounted, nextTick, computed } from "vue"; // 导入 computed
 
 // 移除了 isDraggingResize 和 initialHeightOnMouseDown
 const initialValueOnFocus = ref<string | null>(null); // Store initial text value on focus
@@ -39,6 +39,7 @@ interface Props {
   errorMessage?: string;
   rows?: number;
   readonly?: boolean;
+  size?: "small" | "large"; // 添加 size prop
   // preferFloatingEditor?: boolean // 移除
   // nodeId: string // 移除
   // inputKey: string // 移除
@@ -53,6 +54,7 @@ const props = withDefaults(defineProps<Props>(), {
   errorMessage: "",
   rows: 5,
   readonly: false,
+  size: "small", // 设置 size 默认值
 });
 
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
@@ -105,6 +107,18 @@ const handleBlur = () => {
 };
 
 // 移除了 handlePreview 和 handleEdit 方法
+
+const sizeClasses = computed(() => {
+  if (props.size === "large") {
+    return {
+      textarea: "px-3 py-2 text-sm", // 大尺寸样式
+    };
+  }
+  // Default 'small'
+  return {
+    textarea: "px-2 py-1 text-xs", // 小尺寸样式
+  };
+});
 </script>
 
 <style scoped>

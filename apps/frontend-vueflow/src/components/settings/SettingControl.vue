@@ -13,6 +13,7 @@
       v-model="currentValue"
       :id="itemConfig.key"
       class="w-full"
+      size="large"
     />
     <NumberInput
       v-else-if="itemConfig.type === 'number'"

@@ -1,5 +1,10 @@
 <template>
   <div class="p-6 max-w-5xl mx-auto">
+    <InitialUsernameSetupModal
+      :visible="isInitialUsernameSetupModalVisible"
+      @close="isInitialUsernameSetupModalVisible = false; uiStoreResult = '初始用户名设置模态框已关闭 (事件)。'"
+      @saved="isInitialUsernameSetupModalVisible = false; uiStoreResult = '初始用户名已保存 (事件)。'"
+    />
     <h1 class="text-3xl font-bold mb-8 text-gray-900 dark:text-gray-100">弹窗与UI组件测试面板</h1>
 
     <!-- DialogService 测试 -->
@@ -52,6 +57,7 @@
           <div class="space-y-4">
             <button @click="openSettings" class="btn btn-indigo w-full">打开设置模态框 (App.vue 管理)</button>
             <button @click="openRegexEditor" class="btn btn-pink w-full">打开正则编辑器模态框</button>
+            <button @click="openInitialUsernameSetup" class="btn btn-sky w-full">打开初始用户名设置</button>
           </div>
         </div>
       </div>
@@ -63,6 +69,23 @@
       </div>
     </section>
 
+    <!-- SettingsControl 测试 (使用 SettingsPanel) -->
+    <section class="mt-12">
+      <h2 class="text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200 border-b pb-2">SettingControl (通过 SettingsPanel) 测试</h2>
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+        <SettingsPanel :config="testSettingItems" />
+      </div>
+      <!-- 用于验证 settingsStore 中的值是否正确更新 -->
+      <div class="mt-8 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+        <h3 class="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">SettingsStore 当前值 (验证用):</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div v-for="config in testSettingItems" :key="`debug-${config.key}`" class="bg-gray-100 dark:bg-gray-700 p-3 rounded">
+            <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ config.label }} ({{ config.key }})</p>
+            <pre class="mt-1 text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{{ settingsStore.getSetting(config.key, config.defaultValue) }}</pre>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -70,13 +93,74 @@
 import { ref, watch } from 'vue';
 import { useDialogService } from '@/services/DialogService';
 import { useUiStore } from '@/stores/uiStore';
+// import { useAuthStore } from '@/stores/authStore'; // authStore 暂时不需要直接在此处调用特定方法来显示模态框
+import InitialUsernameSetupModal from '@/components/auth/InitialUsernameSetupModal.vue'; // + 导入模态框组件
 import type { RegexRule } from '@comfytavern/types';
+// import SettingControl from '@/components/settings/SettingControl.vue'; // 不再直接使用
+import SettingsPanel from '@/components/settings/SettingsPanel.vue'; // + 导入 SettingsPanel
+import type { SettingItemConfig } from '@/types/settings';
+import { useSettingsStore } from '@/stores/settingsStore';
 
 const dialogService = useDialogService();
 const uiStore = useUiStore();
+// const authStore = useAuthStore(); // 暂时注释掉，如果模态框内部需要，它自己会导入
+const settingsStore = useSettingsStore();
 
 const dialogServiceResult = ref('等待操作...');
 const uiStoreResult = ref('等待操作...');
+const isInitialUsernameSetupModalVisible = ref(false); // + 控制模态框显示的状态
+
+const testSettingItems = ref<SettingItemConfig[]>([
+  {
+    key: 'testPanel.stringInput',
+    type: 'string',
+    label: '字符串输入 (String)',
+    description: '用于测试单行文本输入。',
+    defaultValue: '你好，咕咕！',
+    category: 'testControls',
+  },
+  {
+    key: 'testPanel.textareaInput',
+    type: 'textarea',
+    label: '文本域输入 (Textarea)',
+    description: '用于测试多行文本输入。',
+    defaultValue: '这是一个\n多行文本示例。\n咕咕咕~',
+    category: 'testControls',
+  },
+  {
+    key: 'testPanel.numberInput',
+    type: 'number',
+    label: '数字输入 (Number)',
+    description: '用于测试数字输入，带范围和步长。',
+    defaultValue: 42,
+    min: 0,
+    max: 100,
+    step: 1,
+    category: 'testControls',
+  },
+  {
+    key: 'testPanel.booleanToggle',
+    type: 'boolean',
+    label: '布尔切换 (Boolean)',
+    description: '用于测试开关状态。',
+    defaultValue: true,
+    category: 'testControls',
+  },
+  {
+    key: 'testPanel.selectInput',
+    type: 'select',
+    label: '选择框 (Select)',
+    description: '用于测试下拉选择。',
+    defaultValue: 'option2',
+    options: [
+      { label: '选项 A (option1)', value: 'option1' },
+      { label: '选项 B (option2)', value: 'option2' },
+      { label: '选项 C (option3)', value: 'option3' },
+      { label: '选项 D (原计划禁用)', value: 'option4' },
+    ],
+    category: 'testControls',
+  },
+]);
 
 const veryLongText = `收到了，姐姐。这是一个用于测试 UI 组件的面板，结构很清晰。咕~\n\n整体来看，这个测试面板的设计目标明确，将 \`DialogService\` 的瞬时交互（如确认框、通知）和 \`UiStore\` 控制的全局状态模态框（如设置、编辑器）分离开来，这是很好的实践。前者是命令式的，后者是声明式的，各司其职。\n\n代码写得很规整，不过从逻辑和代码复用的角度，有几个可以琢磨的地方：\n\n### 1. \`DialogService\` 的 \`async/await\` 与错误处理\n\n*   **重复的 \`try...catch\` 结构**：在 \`showMessageDialog\`、\`showConfirmDialog\` 等异步函数中，你都使用了相似的 \`try...catch\` 结构来更新 \`dialogServiceResult\`。这种重复的模式是“样板代码”（Boilerplate Code），可以被抽象出来。\n\n    可以考虑创建一个辅助函数来包装 \`dialogService\` 的调用，从而简化代码。\n\n    例如，可以这样封装：\n    \`\`\`typescript\n    async function handleDialog<T>(\n      action: () => Promise<T>,\n      resultUpdater: (result: string) => void,\n      successMessageFactory: (result: T) => string,\n      initialMessage: string = \'等待响应...\'\n    ) {\n      resultUpdater(initialMessage);\n      try {\n        const result = await action();\n        resultUpdater(successMessageFactory(result));\n      } catch (error) {\n        // 如果用户取消操作（通常是 reject），也在这里捕获\n        if (error === \'cancelled\') { // 假设 DialogService 在取消时 reject(\'cancelled\')\n             resultUpdater(\'操作已取消。\');\n        } else {\n             resultUpdater(\`操作失败: \${error}\`);\n        }\n      }\n    }\n\n    // 使用示例\n    const showConfirmDialog = async () => {\n      await handleDialog(\n        () => dialogService.showConfirm({ title: \'确认操作\', message: \'您确定吗？\' }),\n        (res) => dialogServiceResult.value = res,\n        (confirmed) => \`确认对话框：用户选择 -> \${confirmed} ? \'确认\' : \'取消\'}\`,\n        \'等待确认对话框响应...\'\n      );\n    };\n    \`\`\`\n    这样一来，每个按钮的点击事件处理器都会变得非常简洁。\n\n*   **取消操作的语义**：目前来看，当用户点击“取消”或关闭对话框时，Promise 很可能会被 \`reject\`，然后进入 \`catch\` 块。从语义上讲，用户主动取消并非一个程序“错误”（Error）。更清晰的设计是让 \`showConfirm\` 或 \`showInput\` 在用户取消时 \`resolve(null)\` 或 \`resolve(false)\`。这样 \`catch\` 就可以专门用来处理网络中断、组件加载失败等真正的异常情况。当然，这取决于 \`DialogService\` 的内部实现。\n\n### 2. \`UiStore\` 的状态反馈\n\n*   你在注释里提到了 \`// 为简单起见，这里只记录打开操作\`，这很诚实。要实现完整的反馈闭环（即模态框关闭后更新 \`uiStoreResult\`），确实需要监听 \`uiStore\` 的状态。\n\n    使用 Vue 的 \`watch\` 是一个很直接的方案：\n    \`\`\`typescript\n    import { watch } from \'vue\';\n\n    watch(\n      () => uiStore.isSettingsModalVisible,\n      (isVisible, wasVisible) => {\n        if (wasVisible && !isVisible) {\n          uiStoreResult.value = \'设置模态框已关闭。\';\n        }\n      }\n    );\n    \`\`\`\n    这样，组件就能响应 store 的变化，而不是依赖于模态框自身的回调，逻辑会更符合 Pinia 的数据驱动思想。\n\n### 3. 一些小细节\n\n*   **超长文本占位符**：\`veryLongText\` 的内容是 “这里是超长文本占位符，请替换成你准备的小作文。”。既然是测试，不如直接放一段真正的长文本，比如“道可道，非常道；名可名，非常名”之类的，或者直接用经典的 “Lorem Ipsum”。这样测试时能更直观地看到长文本在对话框和通知中的实际渲染效果，比如滚动条是否出现、文本是否正确换行等。\n*   **CSS 样式**：使用 \`@apply\` 将 Tailwind 的原子类组合成 \`.btn-*\` 这样的组件类，是保持模板（template）整洁和语义化的好方法。这对于维护和主题化都很有利，没什么问题。\n\n总的来说，这个测试组件已经非常完备和实用了。上面的一些想法主要是从代码复用和设计模式的角度出发，供姐姐参考。\n\n咕~ 如果需要我帮忙实现那个简化 \`try...catch\` 的辅助函数，或者有其他问题，随时可以叫我。`; // 示例长文本
 
@@ -274,6 +358,11 @@ const openRegexEditor = () => {
   });
 };
 
+const openInitialUsernameSetup = () => {
+  uiStoreResult.value = '尝试打开初始用户名设置模态框...';
+  isInitialUsernameSetupModalVisible.value = true; // + 更新 ref 来显示模态框
+};
+
 // --- UiStore 状态监听 ---
 watch(
   () => uiStore.isSettingsModalVisible,
@@ -354,5 +443,9 @@ watch(
 
 .btn-lime {
   @apply bg-lime-500 hover:bg-lime-600 focus:ring-lime-400;
+}
+
+.btn-sky {
+  @apply bg-sky-500 hover:bg-sky-600 focus:ring-sky-400;
 }
 </style>

@@ -8,12 +8,21 @@
       @click="props.closeOnBackdropClick && handleClose()"
     >
       <div
-        class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 transition-all duration-300 flex flex-col"
-        :class="{ 'opacity-0 scale-95': !showContentTransition, 'opacity-100 scale-100': showContentTransition }"
+        class="relative transition-all duration-300 flex flex-col"
+        :class="[
+          props.bare
+            ? ''
+            : 'bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700',
+          props.dialogClass,
+          { 'opacity-0 scale-95': !showContentTransition, 'opacity-100 scale-100': showContentTransition }
+        ]"
         :style="{ width: props.width || 'max-w-md', height: props.height }"
         @click.stop
       >
-        <div v-if="props.title || props.showCloseButton" class="flex justify-between items-center p-4 border-b dark:border-gray-700">
+        <div v-if="props.title || props.showCloseButton"
+             class="flex justify-between items-center p-4"
+             :class="{ 'border-b dark:border-gray-700': !props.bare && (props.title || props.showCloseButton) }"
+        >
           <h3 v-if="props.title" class="text-lg font-medium text-gray-900 dark:text-gray-100">
             {{ props.title }}
           </h3>
@@ -59,11 +68,17 @@ const props = withDefaults(defineProps<{
   closeOnBackdropClick?: boolean;
   // 用于内部渲染 DialogService 传递过来的组件
   _contentDefinition?: { component: VueComponent, props?: Record<string, any> };
+  bare?: boolean; // 新增 prop，用于无样式模式
+  dialogClass?: string;
+  contentClass?: string;
 }>(), {
   showCloseButton: true,
   closeOnBackdropClick: true,
   width: 'max-w-md', // 默认宽度
-  height: '75vh', // 默认固定高度，可以根据需要调整
+  height: 'auto', // 默认高度调整为auto，除非显式设置
+  bare: false, // bare prop 默认值为 false
+  dialogClass: '',
+  contentClass: '',
 });
 
 const emit = defineEmits<{

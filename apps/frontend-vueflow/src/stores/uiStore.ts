@@ -19,6 +19,9 @@ interface UiStoreState {
   };
   baseZIndex: number; // 新增：基础 z-index
   currentMaxZIndex: number; // 新增：当前最大 z-index
+  // + 用于初始用户名设置模态框
+  isInitialUsernameSetupModalVisible: boolean;
+  initialUsernameForSetup: string | null;
 }
 
 const defaultSettingsModalProps = {
@@ -36,6 +39,9 @@ export const useUiStore = defineStore('ui', {
     settingsModalProps: { ...defaultSettingsModalProps }, // 初始化
     baseZIndex: BASE_Z_INDEX,
     currentMaxZIndex: BASE_Z_INDEX,
+    // + 初始化新增状态
+    isInitialUsernameSetupModalVisible: false,
+    initialUsernameForSetup: null,
   }),
   actions: {
     getNextZIndex(): number {
@@ -73,6 +79,16 @@ export const useUiStore = defineStore('ui', {
       this.isSettingsModalVisible = false;
       // 关闭时重置为默认尺寸，可选行为
       this.settingsModalProps = { ...defaultSettingsModalProps };
+    },
+
+    // + 控制初始用户名设置模态框的方法
+    openInitialUsernameSetupModal(payload?: { initialUsername?: string }) {
+      this.initialUsernameForSetup = payload?.initialUsername || null;
+      this.isInitialUsernameSetupModalVisible = true;
+    },
+    closeInitialUsernameSetupModal() {
+      this.isInitialUsernameSetupModalVisible = false;
+      this.initialUsernameForSetup = null; // 关闭时清除，确保下次打开是干净状态
     },
   },
 });
