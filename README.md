@@ -151,16 +151,20 @@ bun install --registry https://registry.npmmirror.com
 
 
 **启动应用:**
-| 平台 | 命令 |
-| :---------- | :------------ |
-| Windows | `.\start.bat` |
-| Linux/macOS | `./start.sh` |
+| 平台 | 命令 | 描述 |
+| :---------- | :------------ | :---------- |
+| Windows | `.\start.bat` | 完整启动 (包含依赖检查和项目准备) |
+| Linux/macOS | `./start.sh` | 完整启动 (包含依赖检查和项目准备) |
+| Windows | `.\start_fast.bat` | 快速启动 (跳过依赖检查和项目准备) |
+| Linux/macOS | `./start_fast.sh` | 快速启动 (跳过依赖检查和项目准备) |
 
 **启动开发模式:**
-| 平台 | 命令 |
-| :---------- | :---------------- |
-| Windows | `.\start.bat dev` |
-| Linux/macOS | `./start.sh dev` |
+| 平台 | 命令 | 描述 |
+| :---------- | :---------------- | :---------- |
+| Windows | `.\start.bat dev` | 完整启动开发模式 |
+| Linux/macOS | `./start.sh dev` | 完整启动开发模式 |
+| Windows | `.\start_fast.bat dev` | 快速启动开发模式 |
+| Linux/macOS | `./start_fast.sh dev` | 快速启动开发模式 |
 
 **默认地址:**
 
