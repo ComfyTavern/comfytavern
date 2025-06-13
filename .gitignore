@@ -49,4 +49,4 @@ config.json
 # 本地生成的数据 (例如用户数据)
 data/
 userData/
-apps/backend/drizzle/migrations
+# apps/backend/drizzle/migrations
