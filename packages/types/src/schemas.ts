@@ -186,6 +186,7 @@ export type CreateServiceApiKeyPayload = z.infer<typeof CreateServiceApiKeyPaylo
  * 代表一个可以拥有两种密钥的用户身份的基础接口
  */
 export interface UserIdentityBase {
+  avatarUrl?: string; // 用户头像 URL (可选)
   serviceApiKeys: ServiceApiKeyMetadata[]; // 用户拥有的服务 API 密钥列表 (仅元数据)
   externalCredentials: ExternalCredentialMetadata[]; // 用户拥有的外部服务凭证列表 (仅元数据)
 }

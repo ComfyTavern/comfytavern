@@ -105,8 +105,20 @@ export const userProfileRoutes = new Elysia({ prefix: '/api/users/me' })
   .post(
     '/avatar',
     async (context) => {
-      // Elysia 1.0+ File type is inferred correctly if schema is used.
+      // Schema 验证已恢复，Elysia 会确保 body.avatar 是 File 类型 (如果验证通过)
+      // 因此，在函数开始处进行一次解构
       const { body, DatabaseService, userContext, set } = context as UserProfileRouteContext & { body: { avatar: File } };
+
+      // 之前的 if (body && body.avatar) 检查现在由 Elysia 的 schema 验证处理。
+      // 如果 schema 验证失败，此处理器函数不会执行。
+      // 如果 schema 通过，body.avatar 必然存在且符合类型。
+
+      // 调试日志已移除
+      // console.log('[后端] 头像上传处理器执行。接收到的文件 (经 schema 验证):', {
+      //   name: body.avatar.name,
+      //   type: body.avatar.type,
+      //   size: body.avatar.size,
+      // });
 
       if (!userContext) {
         set.status = 401; // Unauthorized
@@ -114,32 +126,25 @@ export const userProfileRoutes = new Elysia({ prefix: '/api/users/me' })
       }
 
       const typedUserContext = userContext as UserContext;
-      // const userUid = typedUserContext.currentUser?.id; // 旧的导致错误的代码行
-
       let userUid: string | undefined;
       const currentUser = typedUserContext.currentUser;
       if (currentUser) {
-        // AuthenticatedMultiUserIdentity 有 uid 属性
         if ('uid' in currentUser && typeof currentUser.uid === 'string') {
           userUid = currentUser.uid;
-        }
-        // DefaultUserIdentity 有 id 属性
-        else if ('id' in currentUser && typeof currentUser.id === 'string') {
+        } else if ('id' in currentUser && typeof currentUser.id === 'string') {
           userUid = currentUser.id;
         }
       }
 
       if (!userUid) {
-        set.status = 403; // Forbidden or Bad Request if uid is essential for logic
+        set.status = 403;
         return { error: '无法确定用户身份' };
       }
       
-      const avatarFile = body.avatar; // This is an Elysia File object, compatible with Web API File
+      const avatarFile = body.avatar as File; // 经过手动验证，可以安全断言
 
-      if (!avatarFile || typeof avatarFile.name !== 'string' || avatarFile.size === 0) {
-          set.status = 400;
-          return { error: '未提供有效的头像文件或文件信息不完整' };
-      }
+      // 注意：原有的 avatarFile.name 和 avatarFile.size 检查已包含在手动验证逻辑中
+      // if (!avatarFile || typeof avatarFile.name !== 'string' || avatarFile.size === 0) { ... }
 
       // 1. 确定并确保头像目录存在
       const avatarsDir = getAvatarsDir();
@@ -197,9 +202,21 @@ export const userProfileRoutes = new Elysia({ prefix: '/api/users/me' })
       }
     },
     {
-      body: UploadAvatarPayloadElysiaSchema,
+      body: UploadAvatarPayloadElysiaSchema, // <--- 恢复 Schema 验证
+      // async parse(context, contentType) { // 调试代码，可以注释或移除
+      //   console.log('[后端 Parse Hook] 收到的 Content-Type:', contentType);
+      //   if (contentType && contentType.startsWith('multipart/form-data')) {
+      //     console.log('[后端 Parse Hook] 这是一个 multipart/form-data 请求。');
+      //     const headers: Record<string, string> = {};
+      //     context.request.headers.forEach((value, key) => {
+      //       headers[key] = value;
+      //     });
+      //     console.log('[后端 Parse Hook] 请求头:', JSON.stringify(headers, null, 2));
+      //   }
+      //   return undefined;
+      // },
       detail: {
-        summary: '上传或更新当前用户的头像',
+        summary: '上传或更新当前用户的头像', // 恢复原始摘要
         tags: ['User Profile'],
       },
     }

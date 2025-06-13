@@ -1,5 +1,5 @@
-// 新增：模块顶层日志，用于跟踪文件加载/重载
-console.log(`[DEBUG AuthService.ts module] File parsed/re-parsed at: ${new Date().toISOString()}`);
+// 模块顶层日志已移除
+// console.log(`[DEBUG AuthService.ts module] File parsed/re-parsed at: ${new Date().toISOString()}`);
 
 import {
   LocalNoPasswordUserContext,
@@ -78,6 +78,7 @@ export class AuthService {
         const defaultUserIdentity: DefaultUserIdentity = {
           id: USERS_UID_DEFAULT,
           username: defaultUserRecord.username || USERNAME_DEFAULT,
+          avatarUrl: defaultUserRecord.avatarUrl || undefined, // 从数据库记录中获取 avatarUrl
           serviceApiKeys: (defaultUserRecord.serviceApiKeys || []).map(k => ({
             id: k.id,
             name: k.name ?? undefined,

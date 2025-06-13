@@ -103,7 +103,14 @@ const userSettingsConfig: SettingItemConfig[] = [
       return { success: true }; // 默认其他 key 保存成功
     },
   },
-  { key: 'user.avatar', type: 'string', label: '头像URL', description: '一个指向您头像图片的链接。', defaultValue: '', category: '基础信息' },
+  {
+    key: 'user.avatar',
+    type: 'avatar', // <--- 修改类型
+    label: '头像', // <--- 修改标签
+    description: '设置您的个人头像。', // <--- 修改描述
+    category: '基础信息',
+    // defaultValue 已移除，将从 authStore 动态获取
+  },
 ];
 
 const displaySettingsConfig: SettingItemConfig[] = [
