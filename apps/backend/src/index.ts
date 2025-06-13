@@ -11,7 +11,7 @@ import { executionApiRoutes } from './routes/executionRoutes';
 import { clientScriptRoutes, nodeApiRoutes } from './routes/nodeRoutes';
 import { projectRoutesPlugin } from './routes/projectRoutes'; // 修改导入名称
 import { DatabaseService } from './services/DatabaseService';
-import { authMiddleware } from './middleware/authMiddleware';
+import { applyAuthMiddleware } from './middleware/authMiddleware'; // Changed to import the function
 import { authRoutes } from './routes/authRoutes';
 import { userKeysRoutes } from './routes/userKeysRoutes'; // 导入 userKeysRoutes
 import { userProfileRoutes } from './routes/userProfileRoutes'; // + 导入 userProfileRoutes
@@ -104,8 +104,8 @@ try {
   process.exit(1); // 如果数据库初始化失败，则退出应用
 }
 
-// --- 后续将在此处进行认证服务的初始化 ---
-// AuthService.initialize(currentUserMode);
+// AuthService 会在其静态块中自行初始化，无需显式调用
+// console.log('[ComfyTavern Backend] AuthService is self-initializing via static block.');
 
 
 // 移除旧的 Elysia t 定义的 Schema
@@ -124,7 +124,7 @@ const app = new Elysia()
       preflight: true, // 启用预检请求支持
     })
   )
-  .use(authMiddleware) // 应用认证中间件
+  .use(applyAuthMiddleware) // Apply the middleware functionally via .use()
   .use(authRoutes) // 挂载认证路由
   .use(userKeysRoutes) // 挂载用户密钥管理路由
   .use(userProfileRoutes) // + 挂载用户配置路由

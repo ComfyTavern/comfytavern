@@ -2,71 +2,62 @@ import { Elysia, type Context as ElysiaContext } from 'elysia';
 import { AuthService } from '../services/AuthService';
 import type { UserContext, DefaultUserIdentity, AuthenticatedMultiUserIdentity } from '@comfytavern/types';
 
-// 定义将通过中间件添加到 Elysia 上下文的属性类型
 export interface AuthContext {
   userContext: UserContext | null;
-  authError: Error | null;
+  authError: { message: string; name?: string; stack?: string } | null;
 }
 
-// Elysia 插件风格的中间件定义
-export const authMiddleware = new Elysia({ name: 'authMiddleware', seed: 'comfytavern.auth' })
-    .decorate('AuthService', AuthService) // AuthService 类本身被装饰到上下文中
-    .derive(async (
-        // 修正 elysiaCtx 类型：AuthService 应该直接在上下文的第一级
-        elysiaCtx: ElysiaContext & { store: any; AuthService: typeof AuthService }
-      ) => {
-      // 从上下文中解构 request 和 AuthService (它现在是类，因为我们装饰的是类)
+export function applyAuthMiddleware(app: Elysia): Elysia {
+  app
+    .decorate('AuthService', AuthService)
+    .derive(async (elysiaCtx: ElysiaContext & { store: any; AuthService: typeof AuthService }) => {
       const { request, AuthService: AuthServiceFromCtx } = elysiaCtx;
       let derivedUserContext: UserContext | null = null;
-      let derivedAuthError: Error | null = null;
+      let derivedAuthError: Error | null = null; // Internal variable to track errors
+      let derivedAuthErrorInfo: AuthContext['authError'] = null;
 
       try {
         const authorizationHeader = request.headers.get('Authorization');
-
         if (authorizationHeader && authorizationHeader.toLowerCase().startsWith('bearer ')) {
           const apiKeySecret = authorizationHeader.substring(7);
-          
-          // AuthServiceFromCtx 是 AuthService 类，其方法是静态的
           const authenticatedUserIdentity = await AuthServiceFromCtx.authenticateViaApiKey(apiKeySecret);
           
           if (authenticatedUserIdentity) {
-            const userId = 'id' in authenticatedUserIdentity
-              ? (authenticatedUserIdentity as DefaultUserIdentity).id
-              : (authenticatedUserIdentity as AuthenticatedMultiUserIdentity).uid;
-            console.log(`[AuthMiddleware] User authenticated via API Key (user ID: ${userId}). Context construction for API key auth needs full implementation.`);
-            // TODO: 真正基于 API Key 认证的用户身份去构建 UserContext
-            derivedUserContext = await AuthServiceFromCtx.getUserContext(elysiaCtx);
+            // TODO: Refine UserContext creation based on the specific API key authenticated identity
+            // For now, fetching generic context or assuming API key implies a certain user context.
+            derivedUserContext = await AuthServiceFromCtx.getUserContext(elysiaCtx); 
           } else {
-            console.log('[AuthMiddleware] API Key provided but authentication failed or not implemented.');
+            // API Key provided but authentication failed or not fully implemented.
+            // If API key auth were mandatory and failed, we might set derivedAuthError here.
+            // Example: derivedAuthError = new Error("Invalid API Key");
+            // This would then be handled by the error processing logic below.
           }
         }
 
-        if (!derivedUserContext) {
-          // 如果没有通过 API Key 认证，则正常获取用户上下文
+        // If no user context from API key auth, and no error explicitly set by API key auth failure
+        if (!derivedUserContext && !derivedAuthError) { 
           derivedUserContext = await AuthServiceFromCtx.getUserContext(elysiaCtx);
         }
 
       } catch (error) {
-        console.error('[AuthMiddleware] Error during user context derivation:', error);
+        // Catch errors from AuthService.getUserContext or other await calls within the try block
         derivedAuthError = error instanceof Error ? error : new Error(String(error));
+        derivedAuthErrorInfo = { message: derivedAuthError.message, name: derivedAuthError.name, stack: derivedAuthError.stack };
       }
       
-      return {
-        userContext: derivedUserContext,
-        authError: derivedAuthError,
-      }; // Elysia 会自动推断返回类型并合并到上下文中
+      // If, after all attempts, user context is still null, and no specific error was processed by the catch block
+      // (or if derivedAuthError was set by non-throwing API key logic)
+      if (!derivedUserContext && !derivedAuthError) {
+        const err = new Error('User context could not be determined by the authentication middleware.');
+        // derivedAuthError = err; // Update internal error state
+        derivedAuthErrorInfo = { message: err.message, name: err.name, stack: err.stack }; 
+      } else if (derivedAuthError && !derivedAuthErrorInfo) {
+        // This ensures that if derivedAuthError was set (e.g., by a non-throwing API key failure path)
+        // but not processed by the catch block, derivedAuthErrorInfo is still populated.
+        derivedAuthErrorInfo = { message: derivedAuthError.message, name: derivedAuthError.name, stack: derivedAuthError.stack };
+      }
+      
+      return { userContext: derivedUserContext, authError: derivedAuthErrorInfo };
     });
-
-/*
-  // 可选的 onBeforeHandle 钩子示例 (已注释掉)
-  // .onBeforeHandle((context) => {
-  //   const { userContext, authError, set, path, request } = context as ElysiaContext & AuthContext & { store: any; decorator: { AuthService: typeof AuthService }};
-  //   // ... (检查逻辑)
-  // });
-*/
-
-// 使用方法 (在 apps/backend/src/index.ts 中):
-// import { authMiddleware } from './middleware/authMiddleware';
-// const app = new Elysia()
-//   .use(authMiddleware)
-// ;
+  return app;
+}

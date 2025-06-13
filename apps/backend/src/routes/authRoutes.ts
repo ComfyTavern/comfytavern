@@ -8,8 +8,8 @@ export const authRoutes = new Elysia({ prefix: '/api/auth', name: 'auth-routes',
     async (context) => {
       const { userContext, authError } = context as unknown as AuthContext; // 类型断言访问中间件注入的属性
 
-      if (authError) {
-        console.error('[AuthRoutes] Error relayed from authMiddleware for /api/auth/current:', authError);
+      if (authError) { // authError 现在是 { message: string; ... } | null
+        console.error('[AuthRoutes] Error relayed from authMiddleware for /api/auth/current:', authError.message);
         context.set.status = 500;
         return { error: 'Failed to determine user context due to an internal error.', details: authError.message };
       }

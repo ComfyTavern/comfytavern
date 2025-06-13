@@ -1,3 +1,6 @@
+// 新增：模块顶层日志，用于跟踪文件加载/重载
+console.log(`[DEBUG AuthService.ts module] File parsed/re-parsed at: ${new Date().toISOString()}`);
+
 import {
   LocalNoPasswordUserContext,
   DefaultUserIdentity,
@@ -26,6 +29,7 @@ export class AuthService {
       }
     }
     console.log(`[AuthService] Initialized. Current operation mode: ${this.currentMode}`);
+    console.log(`[AuthService] 有一说一，这里的初始化确实有运行，但是下面那个getUserContext为啥没成功。`);
   }
 
   public static getCurrentOperationMode(): 'LocalNoPassword' | 'LocalWithPassword' | 'MultiUserShared' {
@@ -41,7 +45,11 @@ export class AuthService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     elysiaContext?: any
   ): Promise<UserContext> {
+    // 新增日志：方法执行的绝对入口点
+    console.log(`[AuthService.getUserContext] Method execution started (absolute entry) at: ${new Date().toISOString()}`);
     const mode = this.currentMode;
+    // 日志，打印 getUserContext 方法开始时获取到的 mode 值
+    console.log(`[AuthService.getUserContext] Method invoked. Current mode determined as: '${mode}'`);
 
     try {
       if (mode === 'LocalNoPassword') {
@@ -59,6 +67,9 @@ export class AuthService {
             },
           },
         });
+
+        // 新增日志，检查从数据库查询到的原始记录
+        // console.log('[AuthService.getUserContext] Raw defaultUserRecord from DB:', JSON.stringify(defaultUserRecord, null, 2));
 
         if (!defaultUserRecord) {
           console.error('[AuthService] CRITICAL: Default user not found in database for LocalNoPassword mode. DatabaseService might not have initialized correctly.');

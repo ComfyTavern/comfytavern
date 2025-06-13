@@ -291,6 +291,45 @@ src/
   - 主要用于替换原先大量独立使用的 `<Tooltip>` 组件实例，特别是内容简单、静态或易于作为字符串处理的场景。
   - 对于内容结构复杂、高度依赖当前组件上下文的 Tooltip（如 Handle 提示），可能仍需评估是否适用或需要特殊处理。
 
+## Elysia.js 使用注意事项
+
+### 插件中 `derive` 方法不执行的问题
+
+- **现象**: 当一个 Elysia 插件被定义为一个独立的 Elysia 实例（例如 `const myPlugin = new Elysia().decorate(...).derive(...)`），并通过主应用的 `.use(myPlugin)` 来注册时，该插件内部的 `.derive()` 方法可能不会被执行。
+- **排查**:
+  - 确认插件已在主应用中正确 `.use()`。
+  - 在插件的 `.derive()` 方法内部以及插件模块的顶层添加日志，确认模块是否加载、`derive` 是否进入。
+  - 在主应用实例上直接使用 `.derive()` 添加一个简单的派生属性，以确认主实例的 `derive` 功能是否正常。
+- **解决方案/推荐模式**:
+
+  - 将插件的实现方式从一个独立的 Elysia 实例改为一个“函数式插件”。即，导出一个函数，该函数接收主 `app` Elysia 实例作为参数，并直接在该实例上调用 `.decorate()` 和 `.derive()` 等方法。
+  - 示例：
+
+    ```typescript
+    // my-plugin.ts
+    import { Elysia } from "elysia";
+    // ... other imports
+
+    export function applyMyPlugin(app: Elysia): Elysia {
+      app.decorate("myService" /* ... */).derive(async (context) => {
+        console.log("Functional plugin derive executed!");
+        // ... 派生逻辑 ...
+        return { derivedProperty: "value" };
+      });
+      return app;
+    }
+
+    // main-app.ts
+    import { Elysia } from "elysia";
+    import { applyMyPlugin } from "./my-plugin";
+
+    const app = new Elysia();
+    app.use(applyMyPlugin); // 或者 applyMyPlugin(app); 如果函数不返回 app
+    // ...
+    ```
+
+  - 这种函数式应用插件的方式，在我们遇到的场景中，能够确保 `.derive()` 方法被正确执行。
+
 ## CONVERTIBLE_ANY 类型详细说明
 
 本部分详细解释 `CONVERTIBLE_ANY` 类型的行为特性，主要供 AI 系统理解及开发者参考。
