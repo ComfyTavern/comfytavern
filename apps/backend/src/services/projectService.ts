@@ -4,14 +4,11 @@ import { promises as fs } from "node:fs";
 import isEqual from "lodash/isEqual";
 import { z } from "zod"; // 导入 zod
 
-import { generateSafeWorkflowFilename, sanitizeProjectId } from "../utils/helpers"; // <-- 添加 generateSafeWorkflowFilename
-// import { PROJECTS_BASE_DIR } from "../config"; // 不再直接使用全局项目基础目录
+import { generateSafeWorkflowFilename, sanitizeProjectId } from "../utils/helpers";
+import { getUserDataRoot as getGlobalUserDataRoot } from '../utils/fileUtils'; // + 导入
 
-// --- 新增：用户特定路径常量和辅助函数 ---
-// 使用 path.resolve 和 __dirname 确保 USER_DATA_ROOT 指向项目根目录下的 userData
-// __dirname for apps/backend/src/services/projectService.ts is e.g., /path/to/ComfyTavern/apps/backend/src/services
-// ../../../../ moves up to the project root /path/to/ComfyTavern
-const USER_DATA_ROOT = path.resolve(__dirname, "../../../../userData");
+// --- 用户特定路径常量和辅助函数 ---
+// USER_DATA_ROOT 现在从 fileUtils 获取
 const PROJECTS_DIR_NAME = "projects";
 const LIBRARY_DIR_NAME = "library";
 const WORKFLOWS_DIR_NAME = "workflows";
@@ -23,7 +20,7 @@ const RECYCLE_BIN_DIR_NAME = ".recycle_bin";
  * @returns 用户项目数据的基础目录路径 (e.g., userData/default_user/projects)。
  */
 function getUserProjectsRoot(userId: string): string {
-  return path.join(USER_DATA_ROOT, userId, PROJECTS_DIR_NAME);
+  return path.join(getGlobalUserDataRoot(), userId, PROJECTS_DIR_NAME);
 }
 
 /**
@@ -32,7 +29,7 @@ function getUserProjectsRoot(userId: string): string {
  * @returns 用户库数据的基础目录路径 (e.g., userData/default_user/library)。
  */
 function getUserLibraryRoot(userId: string): string {
-  return path.join(USER_DATA_ROOT, userId, LIBRARY_DIR_NAME);
+  return path.join(getGlobalUserDataRoot(), userId, LIBRARY_DIR_NAME);
 }
 
 /**
@@ -75,7 +72,7 @@ export async function ensureUserLibraryDirExists(userId: string): Promise<void> 
  */
 export async function ensureUserRootDirs(userId: string): Promise<void> {
   const logPrefix = `[Service:ensureUserRootDirs]`;
-  const userBaseDir = path.join(USER_DATA_ROOT, userId);
+  const userBaseDir = path.join(getGlobalUserDataRoot(), userId); // 使用导入的函数
   const userProjectsDir = getUserProjectsRoot(userId); // userData/<userId>/projects
   const userLibraryDir = getUserLibraryRoot(userId);   // userData/<userId>/library
 
@@ -1214,7 +1211,7 @@ export async function deleteWorkflowToRecycleBin(
   const filePath = path.join(projectWorkflowsDir, `${workflowId}.json`);
 
   // 定义用户特定的回收站路径
-  const userRecycleBinRoot = path.join(USER_DATA_ROOT, userId, RECYCLE_BIN_DIR_NAME);
+  const userRecycleBinRoot = path.join(getGlobalUserDataRoot(), userId, RECYCLE_BIN_DIR_NAME); // 使用导入的函数
   const recycleBinProjectDir = path.join(userRecycleBinRoot, projectId);
   const recycleBinWorkflowsDir = path.join(recycleBinProjectDir, WORKFLOWS_DIR_NAME);
   const recycleBinPath = path.join(recycleBinWorkflowsDir, `${workflowId}_${Date.now()}.json`);

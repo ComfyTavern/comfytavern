@@ -2,12 +2,24 @@ import { Elysia } from 'elysia'; // 移除未使用的 t
 import { promises as fs } from 'node:fs';
 import path, { dirname, join } from 'node:path'; // 移除未使用的 basename, extname
 import { fileURLToPath } from 'node:url';
-import { staticPlugin } from '@elysiajs/static'; // + 引入静态服务插件
+import { staticPlugin } from '@elysiajs/static';
 
 import { cors } from '@elysiajs/cors';
+import { ensureDirExists, getPublicDir, getLogDir, getUserDataRoot, getDataDir } from './utils/fileUtils'; // + 导入 getDataDir
 
-import { CUSTOM_NODE_PATHS, FRONTEND_URL, PORT, WORKFLOWS_DIR, MULTI_USER_MODE, ACCESS_PASSWORD_HASH, SINGLE_USER_PATH } from './config'; // 导入新增配置
-import { characterApiRoutes } from './routes/characterRoutes'; // 导入角色卡路由
+// 从 config.ts 导入的 WORKFLOWS_DIR, PROJECTS_BASE_DIR 等已经是绝对路径了
+import {
+  CUSTOM_NODE_PATHS,
+  FRONTEND_URL,
+  PORT,
+  WORKFLOWS_DIR, // 现在是全局工作流目录
+  PROJECTS_BASE_DIR,
+  LOG_DIR as APP_LOG_DIR, // 从 config.ts 导入，可能已被覆盖
+  MULTI_USER_MODE,
+  ACCESS_PASSWORD_HASH,
+  SINGLE_USER_PATH
+} from './config';
+import { characterApiRoutes } from './routes/characterRoutes';
 import { executionApiRoutes } from './routes/executionRoutes';
 import { clientScriptRoutes, nodeApiRoutes } from './routes/nodeRoutes';
 import { projectRoutesPlugin } from './routes/projectRoutes'; // 修改导入名称
@@ -57,14 +69,7 @@ if (CUSTOM_NODE_PATHS && CUSTOM_NODE_PATHS.length > 0) {
 // const projectsBaseDir = PROJECTS_BASE_DIR; // 使用导入的常量
 
 // Helper function getProjectWorkflowsDir 已移至 services/projectService.ts
-// 确保工作流目录存在
-try {
-  await fs.access(WORKFLOWS_DIR); // 使用导入的常量
-  console.log(`Workflow directory found: ${WORKFLOWS_DIR}`);
-} catch (error) {
-  console.log(`Workflow directory not found, creating: ${WORKFLOWS_DIR}`);
-  await fs.mkdir(WORKFLOWS_DIR, { recursive: true });
-}
+// 移除此处手动创建 WORKFLOWS_DIR 的逻辑，将在下面统一处理
 
 // 读取根目录的 package.json 获取应用版本
 let appVersion = "unknown";
@@ -115,6 +120,27 @@ try {
 // Zod schemas 从 @comfytavern/types 导入
 
 // 函数 syncReferencingNodeGroups 已移至 services/projectService.ts
+
+// 在启动 Elysia 应用前确保所有必要的应用目录存在
+const essentialDirs = [
+  { name: "Public", path: getPublicDir() },
+  { name: "Log", path: APP_LOG_DIR }, // 使用从 config.ts 来的 LOG_DIR
+  { name: "Global Workflows", path: WORKFLOWS_DIR }, // 使用从 config.ts 来的 WORKFLOWS_DIR
+  { name: "Projects Base", path: PROJECTS_BASE_DIR }, // 使用从 config.ts 来的 PROJECTS_BASE_DIR
+  { name: "User Data Root", path: getUserDataRoot() },
+  { name: "Application Data", path: getDataDir() } // + 添加应用数据目录 (用于数据库等)
+];
+
+for (const dir of essentialDirs) {
+  try {
+    await ensureDirExists(dir.path);
+    console.log(`[ComfyTavern Backend] ${dir.name} directory ensured: ${dir.path}`);
+  } catch (error) {
+    console.error(`[ComfyTavern Backend] Failed to ensure ${dir.name} directory ${dir.path}:`, error);
+    process.exit(1); // 如果无法创建关键目录，则退出
+  }
+}
+
 const app = new Elysia()
   .use(
     cors({
@@ -125,8 +151,8 @@ const app = new Elysia()
       preflight: true, // 启用预检请求支持
     })
   )
-  .use(staticPlugin({ // + 配置静态服务
-    assets: join(__dirname, "../../..", "public"), // 指向 项目根目录/public
+  .use(staticPlugin({
+    assets: getPublicDir(), // 使用确保存在的 publicDir
     prefix: '', // URL 直接从 public 目录的根开始，例如 /avatars/file.png
     alwaysStatic: false, // 仅当找不到API路由时才提供静态文件
     // noCache: process.env.NODE_ENV === 'development', // 开发模式下可以考虑禁用缓存

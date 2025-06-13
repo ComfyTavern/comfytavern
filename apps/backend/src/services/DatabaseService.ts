@@ -6,30 +6,28 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 
 import * as schema from '../db/schema';
-import { PROJECTS_BASE_DIR } from '../config'; // 仍然需要它来定位项目根目录
+import { getDataDir as getGlobalDataDir } from '../utils/fileUtils'; // + 导入
 
 // 常量可以后续移到专门的文件，例如 src/constants/userConstants.ts
 export const USERS_UID_DEFAULT = 'default_user';
 export const USERNAME_DEFAULT = '本地用户'; // 或从配置读取
 
 // 数据库文件路径配置
-// PROJECTS_BASE_DIR 指向 e:/rc20/ComfyTavern/projects
-// 我们希望数据库在 e:/rc20/ComfyTavern/data/app.sqlite
-const DATA_DIR = path.resolve(PROJECTS_BASE_DIR, '..', 'data'); // 从 projects 目录回退一级到根，然后进入 data
-const DB_FILE_PATH = path.join(DATA_DIR, 'app.sqlite');
+const APP_DATA_DIR = getGlobalDataDir(); // 使用 fileUtils 获取 data 目录
+const DB_FILE_PATH = path.join(APP_DATA_DIR, 'app.sqlite');
 
 let dbInstance: BunSQLiteDatabase<typeof schema>;
 
 async function ensureDbDirectoryExists(): Promise<void> {
   try {
-    await fs.access(DATA_DIR);
+    await fs.access(APP_DATA_DIR); // 使用 APP_DATA_DIR
   } catch (error) {
     // 类型守卫，确保 error 是一个有 code属性的对象 (例如 NodeJS.ErrnoException)
     if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
-      console.log(`[DatabaseService] Data directory not found (${DATA_DIR}), creating...`);
-      await fs.mkdir(DATA_DIR, { recursive: true });
+      console.log(`[DatabaseService] Data directory not found (${APP_DATA_DIR}), creating...`);
+      await fs.mkdir(APP_DATA_DIR, { recursive: true });
     } else {
-      console.error(`[DatabaseService] Error accessing data directory ${DATA_DIR}:`, error);
+      console.error(`[DatabaseService] Error accessing data directory ${APP_DATA_DIR}:`, error);
       throw error; // 如果不是 ENOENT，则重新抛出错误
     }
   }
@@ -52,7 +50,8 @@ export class DatabaseService {
     dbInstance = drizzle(sqlite, { schema, logger: process.env.NODE_ENV === 'development' }); // 开发模式下启用日志
 
     // TODO: 运行 Drizzle migrations
-    // const migrationsFolder = path.resolve(PROJECTS_BASE_DIR, '../drizzle/migrations'); // 假设迁移文件在项目根目录的 drizzle/migrations 文件夹
+    // const projectRootDir = path.resolve(APP_DATA_DIR, '..'); // 从 data 目录回退一级到项目根目录
+    // const migrationsFolder = path.resolve(projectRootDir, 'drizzle/migrations');
     // console.log(`[DatabaseService] Running migrations from: ${migrationsFolder}`);
     // try {
     //   await migrate(dbInstance, { migrationsFolder });

@@ -1,9 +1,10 @@
 import Elysia, { t } from 'elysia'; // <--- 确保导入 t
 import { z } from 'zod';
-import path from 'node:path'; // + 导入 path
-import { promises as fs } from 'node:fs'; // + 导入 fs
-import { fileURLToPath } from 'node:url'; // + 导入 fileURLToPath
+import path from 'node:path';
+import { promises as fs } from 'node:fs'; // + 重新导入 fs
+import { fileURLToPath } from 'node:url';
 import { DatabaseService, USERS_UID_DEFAULT } from '../services/DatabaseService';
+import { ensureDirExists, getAvatarsDir } from '../utils/fileUtils';
 import * as schema from '../db/schema';
 import { eq } from 'drizzle-orm';
 import type { UserContext, DefaultUserIdentity } from '@comfytavern/types';
@@ -140,22 +141,17 @@ export const userProfileRoutes = new Elysia({ prefix: '/api/users/me' })
           return { error: '未提供有效的头像文件或文件信息不完整' };
       }
 
-      // 1. 确定路径
-      // __dirname for apps/backend/src/routes/userProfileRoutes.ts
-      const currentFileDir = path.dirname(fileURLToPath(import.meta.url));
-      const USER_UPLOADS_ROOT = path.resolve(currentFileDir, "../../..", "public");
-      const avatarsDir = path.join(USER_UPLOADS_ROOT, "avatars");
-
-      // 2. 确保目录存在
+      // 1. 确定并确保头像目录存在
+      const avatarsDir = getAvatarsDir();
       try {
-        await fs.mkdir(avatarsDir, { recursive: true });
+        await ensureDirExists(avatarsDir);
       } catch (dirError: any) {
-        console.error(`[UserProfileRoutes:AvatarUpload] 创建头像目录失败: ${avatarsDir}`, dirError.message);
+        console.error(`[UserProfileRoutes:AvatarUpload] 确保头像目录失败: ${avatarsDir}`, dirError.message);
         set.status = 500;
-        return { error: '创建头像目录失败' };
+        return { error: '处理头像目录失败' };
       }
 
-      // 3. 生成文件名和路径
+      // 2. 生成文件名和路径
       const fileExtension = path.extname(avatarFile.name) || '.png'; // Default to .png if no extension
       // Using userUid ensures that each user has at most one avatar, overwriting the old one.
       const filename = `${userUid}${fileExtension}`;
