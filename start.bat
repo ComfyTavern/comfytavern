@@ -42,6 +42,14 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+echo 正在准备项目环境 (如果数据库不存在，将进行设置)...
+bun run prepare:project
+if %errorlevel% neq 0 (
+    echo 错误：项目准备步骤失败
+    pause
+    exit /b 1
+)
+
 echo 正在检查并安装依赖...
 bun install
 if %errorlevel% neq 0 (
