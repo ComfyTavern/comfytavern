@@ -207,6 +207,22 @@ bun install --registry https://registry.npmmirror.com
 **关于 `config.json`**:
 首次启动应用时，系统会自动根据 [`config.template.json`](./config.template.json) 在项目根目录创建 `config.json` 文件。此文件包含了应用运行的一些基础设置，比如应用端口。
 
+**数据库**:
+
+本项目使用 SQLite 数据库存储数据。
+
+- **首次启动与初始化**:
+  当您首次运行项目（例如通过 `.\start.bat` 或 `./start.sh`）时，系统会自动检测数据库文件是否存在。如果不存在，它将自动创建数据库并应用最新的表结构。这个过程由 [`scripts/ensureProjectReady.ts`](scripts/ensureProjectReady.ts:1) 脚本处理，通常您无需手动干预。
+
+- **数据库升级 (版本更新后)**:
+  如果您更新了项目版本，并且该更新包含了对数据库表结构的更改（例如，添加了新的表或修改了现有表的字段），您可能需要手动应用这些数据库迁移。
+  我们提供了一个专门的脚本来处理这种情况。您可以通过以下命令来升级数据库：
+
+  ```bash
+  bun run db:upgrade
+  ```
+  这个命令会生成新的迁移文件（如果需要）并应用所有待处理的迁移，确保您的数据库结构与最新代码保持一致。
+
 ---
 
 ### 🤝 贡献与反馈

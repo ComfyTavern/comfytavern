@@ -18,7 +18,8 @@
     "start": "bun run --cwd apps/backend start",
     "start:backend": "bun run --cwd apps/backend start",
     "db:generate": "bun run ./node_modules/drizzle-kit/bin.cjs generate --config ./drizzle.config.ts",
-    "db:migrate": "bun run ./node_modules/drizzle-kit/bin.cjs migrate --config ./drizzle.config.ts"
+    "db:migrate": "bun run ./node_modules/drizzle-kit/bin.cjs migrate --config ./drizzle.config.ts",
+    "db:upgrade": "bun scripts/upgradeDatabase.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
