@@ -5,8 +5,8 @@
     title="欢迎！请设置您的昵称"
     width="400px"
     @update:visible="!$event && emit('close')"
-    :closable="false"
-    :mask-closable="false"
+    :showCloseButton="false"
+    :closeOnBackdropClick="false"
   >
     <div class="modal-content p-6">
       <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">

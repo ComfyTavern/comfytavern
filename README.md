@@ -136,13 +136,19 @@ cd comfytavern
 ```
 
 - **下载 ZIP:**
-  下载 [GitHub 仓库打包](https://github.com/ComfyTavern/comfytavern/archive/refs/heads/main.zip) 并解压后进入。
+  - 下载 [GitHub 仓库打包](https://github.com/ComfyTavern/comfytavern/archive/refs/heads/main.zip) 
+  - 将其解压后，进入解压好的comfytavern文件夹。
 
 **安装:**
 
 ```bash
 bun install
 ```
+如果遇到网络问题，可以尝试使用镜像源安装：
+```bash
+bun install --registry https://registry.npmmirror.com
+```
+
 
 **启动应用:**
 | 平台 | 命令 |

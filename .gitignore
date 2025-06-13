@@ -46,3 +46,6 @@ projects/*
 .obsidian
 # 实际配置文件 (不应提交)
 config.json
+# 本地生成的数据 (例如数据库)
+data/
+apps/backend/drizzle/migrations
