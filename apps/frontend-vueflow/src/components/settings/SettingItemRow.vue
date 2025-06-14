@@ -108,9 +108,6 @@ const onAvatarError = (event: Event) => {
 };
 
 const handleUploadAvatar = () => {
-  // TODO: 实现头像上传/编辑逻辑
-  // 目前可以弹出一个提示，例如：
-  // alert('头像编辑功能正在开发中，咕~'); // 旧的占位逻辑
   isAvatarEditorVisible.value = true; // 打开模态框
 };
 

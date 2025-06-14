@@ -114,12 +114,6 @@ export function useWorkflowData() {
     const currentData = state.workflowData; // 读取当前元数据
 
     if (isNewOrSaveAs) {
-      // 调用者 (EditorView) 负责提示并提供 newName。
-      // 如果 newName 在这里缺失，是调用逻辑错误，但我们继续执行，
-      // 让 API 调用（如果后端 schema 需要 name）可能失败。
-      // console.error(`useWorkflowData: Workflow name required for new workflow (tab ${internalId}).`); // 移除冗余检查
-      // alert('请输入工作流名称。'); // 移除冗余弹窗
-      // return false; // 移除冗余返回
       // 1. 使用新的转换函数获取核心数据
       const coreWorkflowData = transformVueFlowToCoreWorkflow(flowExport);
       // 2. 组合核心数据和元数据
@@ -146,11 +140,6 @@ export function useWorkflowData() {
           `[saveWorkflow] New workflow saved successfully (tab ${internalId}, project ${projectId}):`,
           savedWorkflow
         );
-
-        // --- 移除触发项目元数据更新 ---
-        // --- 移除刷新列表和更新标签页 ---
-        // await fetchAvailableWorkflows(); // 让调用者处理
-        // tabStore.updateTab(...) // 让调用者处理
 
         return savedWorkflow; // 返回保存后的数据
       } catch (error) {

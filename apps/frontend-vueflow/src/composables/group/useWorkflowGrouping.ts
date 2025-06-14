@@ -374,7 +374,6 @@ async function updateNodeGroupWorkflowReferenceLogic(
 
       // 添加日志显示断开数量
       console.info(`[updateNodeGroupWorkflowReferenceLogic] ${message}`);
-      // alert(`节点组接口已更新。${message}。`); // 移除阻塞UI的alert
     } else {
       console.debug(
         `[updateNodeGroupWorkflowReferenceLogic] 所有连接均与新接口兼容` // 保持与中文环境一致
