@@ -92,7 +92,7 @@ interface Props {
   /** Tooltip 显示的文本内容 (如果未使用 content 插槽) */
   content?: string;
   /** Tooltip 的位置 (来自 @floating-ui) */
-  placement?: Placement;
+  placement?: string; // 改为 string 类型
   /** Tooltip 相对于触发元素的偏移量 */
   offsetValue?: number;
   /** 显示 Tooltip 的延迟时间 (毫秒) */
@@ -427,8 +427,8 @@ const { floatingStyles } = useFloating(
   referenceRef, // 触发 Tooltip 的参考元素
   floatingRef, // Tooltip 内容的浮动元素
   {
-    // 动态计算 placement
-    placement: computed(() => props.placement),
+    // 动态计算 placement, 并断言回 Placement 类型
+    placement: computed(() => props.placement as Placement),
     // 当元素挂载时，自动更新位置
     whileElementsMounted: autoUpdate,
     // 应用上面定义的中间件
