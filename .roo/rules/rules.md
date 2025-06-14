@@ -291,6 +291,181 @@ src/
   - 主要用于替换原先大量独立使用的 `<Tooltip>` 组件实例，特别是内容简单、静态或易于作为字符串处理的场景。
   - 对于内容结构复杂、高度依赖当前组件上下文的 Tooltip（如 Handle 提示），可能仍需评估是否适用或需要特殊处理。
 
+### 11. 对话框与通知服务规范 (DialogService)
+
+`DialogService` ([`apps/frontend-vueflow/src/services/DialogService.ts`](apps/frontend-vueflow/src/services/DialogService.ts:1)) 是一个全局服务，用于在前端应用中显示模态对话框和非模态通知。它通过 Pinia store (`useDialogService`) 提供。
+
+#### 11.1 服务引入与使用
+
+首先，在你的 Vue 组件或 Composable 中引入服务：
+
+```typescript
+import { useDialogService } from '@/services/DialogService'; // 路径根据实际项目结构调整
+
+const dialogService = useDialogService();
+```
+
+#### 11.2 对话框 (Dialogs)
+
+对话框是模态的，会覆盖在页面内容之上，需要用户交互后才能关闭。服务管理一个对话框队列，一次只显示一个。
+
+##### 11.2.1 `showMessage(options: UniversalDialogOptions): Promise<void>`
+
+显示一个简单的消息对话框，通常只有一个“确定”按钮。
+
+-   **`options`**: [`UniversalDialogOptions`](apps/frontend-vueflow/src/services/DialogService.ts:14)
+    -   `title?: string` (默认: '消息')
+    -   `message?: string` (必需)
+    -   `confirmText?: string` (默认: '确定')
+    -   `showCloseIcon?: boolean` (默认: `true`)
+    -   `closeOnBackdrop?: boolean` (默认: `true` for message)
+    -   `autoClose?: number` (毫秒, 0 表示不自动关闭, 默认: 0)
+-   **返回**: `Promise<void>`，当对话框关闭时 resolve。
+
+**示例**:
+
+```typescript
+async function showInfoMessage() {
+  try {
+    await dialogService.showMessage({
+      title: '提示',
+      message: '操作已成功完成。'
+    });
+    console.log('消息框已关闭');
+  } catch (error) {
+    // 通常 showMessage 不会 reject，除非内部导入组件失败
+    console.error('显示消息框失败:', error);
+  }
+}
+```
+
+##### 11.2.2 `showConfirm(options: UniversalDialogOptions): Promise<boolean>`
+
+显示一个确认对话框，通常有“确定”和“取消”按钮。
+
+-   **`options`**: [`UniversalDialogOptions`](apps/frontend-vueflow/src/services/DialogService.ts:14)
+    -   `title?: string` (默认: '确认')
+    -   `message?: string` (必需)
+    -   `confirmText?: string` (默认: '确定')
+    -   `cancelText?: string` (默认: '取消')
+    -   `showCancelButton?: boolean` (默认由 Dialog.vue 内部根据 type='confirm' 控制显示)
+    -   `showCloseIcon?: boolean` (默认: `true`)
+    -   `closeOnBackdrop?: boolean` (默认: `false` for confirm)
+    -   `dangerConfirm?: boolean` (默认: `false`, 确认按钮是否为危险操作样式)
+-   **返回**: `Promise<boolean>`，用户点击“确定”时 resolve `true`，点击“取消”或关闭时 resolve `false`。
+
+**示例**:
+
+```typescript
+async function confirmDeletion() {
+  const confirmed = await dialogService.showConfirm({
+    title: '确认删除',
+    message: '您确定要删除这条记录吗？此操作不可撤销。',
+    dangerConfirm: true,
+    confirmText: '删除',
+  });
+
+  if (confirmed) {
+    console.log('用户确认删除');
+    // 执行删除操作
+  } else {
+    console.log('用户取消删除');
+  }
+}
+```
+
+##### 11.2.3 `showInput(options: UniversalDialogOptions): Promise<string | null>`
+
+显示一个带输入框的对话框。
+
+-   **`options`**: [`UniversalDialogOptions`](apps/frontend-vueflow/src/services/DialogService.ts:14)
+    -   `title?: string` (默认: '请输入')
+    -   `message?: string` (可选，输入框上方的提示信息)
+    -   `confirmText?: string` (默认: '确定')
+    -   `cancelText?: string` (默认: '取消')
+    -   `initialValue?: string` (默认: `''`)
+    -   `inputPlaceholder?: string` (默认: '请输入内容...')
+    -   `inputType?: 'text' | 'password' | 'number' | 'textarea'` (默认: `'text'`)
+    -   `inputRows?: number` (当 `inputType` 为 `'textarea'` 时生效, 默认: 3)
+-   **返回**: `Promise<string | null>`，用户点击“确定”时 resolve 输入的字符串，点击“取消”或关闭时 resolve `null`。
+
+**示例**:
+
+```typescript
+async function requestUsername() {
+  const username = await dialogService.showInput({
+    title: '设置用户名',
+    message: '请输入您的新用户名：',
+    initialValue: '默认用户',
+    inputPlaceholder: '至少3个字符',
+  });
+
+  if (username !== null) {
+    console.log('用户输入:', username);
+    // 处理用户名
+  } else {
+    console.log('用户取消输入');
+  }
+}
+```
+
+#### 11.3 通知 (Toasts)
+
+通知（也称 Toasts）是短暂的、非模态的消息，通常用于显示操作结果或系统状态。它们会出现在屏幕的指定位置，并在一段时间后自动消失。
+
+##### 11.3.1 `showToast(options: ToastOptions): string`
+
+显示一个通用的通知。
+
+-   **`options`**: [`ToastOptions`](apps/frontend-vueflow/src/services/DialogService.ts:36)
+    -   `title?: string`
+    -   `message: string` (必需)
+    -   `type?: 'info' | 'success' | 'warning' | 'error'` (默认: `'info'`)
+    -   `duration?: number` (毫秒, 默认: 3000)
+    -   `position?: ToastPosition` (默认: `'top-right'`)
+        -   `ToastPosition`: `'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center'` ([`apps/frontend-vueflow/src/services/DialogService.ts:11`](apps/frontend-vueflow/src/services/DialogService.ts:11))
+-   **返回**: `string`，通知的唯一 ID。
+
+**示例**:
+
+```typescript
+dialogService.showToast({
+  title: '更新成功',
+  message: '您的个人资料已保存。',
+  type: 'success',
+  position: 'top-center',
+  duration: 5000,
+});
+```
+
+##### 11.3.2 便捷方法
+
+为常见的通知类型提供了便捷方法：
+
+-   `showSuccess(message: string, title?: string, duration?: number): string`
+-   `showError(message: string, title?: string, duration?: number): string`
+-   `showWarning(message: string, title?: string, duration?: number): string`
+-   `showInfo(message: string, title?: string, duration?: number): string`
+
+**示例**:
+
+```typescript
+dialogService.showSuccess('用户登录成功！');
+dialogService.showError('网络连接失败，请稍后再试。', '错误');
+```
+
+#### 11.4 状态与组件
+
+-   **状态管理**: 服务通过 Pinia store 管理对话框队列 (`dialogQueue`) 和当前活动对话框 (`activeDialog`)，以及通知列表 (`toasts`)。这些状态通常由服务内部管理，开发者无需直接操作。
+-   **对话框组件**: 实际的对话框 UI 由 [`apps/frontend-vueflow/src/components/common/Dialog.vue`](apps/frontend-vueflow/src/components/common/Dialog.vue:1) 组件渲染，该组件由服务动态导入。
+-   **通知组件**: 通知 UI 由 [`apps/frontend-vueflow/src/components/common/ToastNotification.vue`](apps/frontend-vueflow/src/components/common/ToastNotification.vue:1) 渲染，并通过 [`apps/frontend-vueflow/src/components/common/DialogContainer.vue`](apps/frontend-vueflow/src/components/common/DialogContainer.vue:1) 在应用顶层管理和显示。
+
+#### 11.5 注意事项
+
+-   **动态导入**: 对话框组件 (`Dialog.vue`) 是按需动态导入的，这意味着第一次调用相关 `show` 方法时可能会有轻微延迟。
+-   **Promise 处理**: 所有 `showConfirm` 和 `showInput` 方法都返回 Promise，请确保正确处理其 `resolve` 和 `reject`（尽管 `reject` 场景较少，主要为组件加载失败）。`showMessage` 的 Promise 主要用于知道何时关闭。
+-   **上下文**: 由于是全局服务，确保在合适的 Vue 上下文中使用（例如在 `setup` 函数或组件方法中）。
+
 ## Elysia.js 使用注意事项
 
 ### 插件中 `derive` 方法不执行的问题
