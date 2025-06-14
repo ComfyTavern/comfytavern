@@ -4,136 +4,270 @@ markmap:
   initialExpandLevel: 5 # 初始展开层级，设为较大值尝试默认展开所有
 ---
 
-# ComfyTavern 项目结构脑图 (Markmind)
+# ComfyTavern 项目结构与技术概览
 
-- ComfyTavern 项目
-  - 项目概览
-    - 名称: comfytavern
-    - 版本: 0.0.3
-    - 描述: LLM驱动可视化创作引擎...
-    - 目标: 面向创作者的引擎, 预设模板, 规则集, 上下文管理, 非线性对话, Agent助手, 插件系统规划...
-    - 结构: Monorepo (Bun Workspaces)
-    - 状态: 早期开发 (beta), Vue Flow 主要方向
-  - 主要技术栈
-    - 核心运行时: Bun
-    - 语言: TypeScript (ESNext, strict)
-    - 后端 (apps/backend): Elysia.js
-    - 前端 (apps/frontend-vueflow)
-      - 框架: Vue.js 3
-      - 构建工具: Vite
-      - 图形库: VueFlow (@vue-flow/core)
-      - 状态管理: Pinia
-      - UI/样式: Tailwind CSS, DaisyUI
-      - 路由: Vue Router
-    - 共享包 (packages)
-      - @comfytavern/types: Zod
-    - 数据存储: 文件系统 (JSON)
-    - 通信: RESTful API, WebSocket
-  - 核心模块
-    - 后端 (apps/backend)
-      - 核心功能
-        - 节点管理 (NodeManager, NodeLoader, 动态加载)
-        - 项目管理 (projectRoutes, projectService, CRUD, projects/ 目录)
-        - 工作流管理 (项目内 CRUD, JSON 存储)
-        - 工作流执行 (ExecutionEngine, 拓扑排序, 输入/输出处理)
-        - API 服务 (routes/, RESTful)
-        - WebSocket 服务 (websocket/handler, /ws, 实时状态)
-      - 关键文件/目录: src/index.ts, src/config.ts, src/nodes/, src/routes/, src/services/, src/websocket/, src/ExecutionEngine.ts
-      - 技术栈: Elysia.js, Bun, TypeScript
-      - API 结构
-        - GET /api/nodes (获取定义)
-        - GET /client-scripts/* (获取节点脚本)
-        - GET /api/workflows (列出全局工作流)
-        - /api/projects/{projectId}/... (项目及工作流 CRUD)
-        - POST /api/server/restart (尝试重启)
-        - /ws (WebSocket 端点)
-    - 前端 (apps/frontend-vueflow)
-      - 核心功能
-        - 工作流画布 (Canvas.vue, VueFlow 核心库, 交互)
-        - 节点系统 (BaseNode.vue, 输入控件, 拖拽创建 useDnd, 属性编辑 NodePanel, 分组 useWorkflowGrouping)
-        - 连接管理 (useCanvasConnections, 验证 useNodeGroupConnectionValidation)
-        - 状态管理 (重构: `useWorkflowManager` 封装核心逻辑, 协调器处理交互/生命周期, Pinia stores/ 辅助)
-        - 交互增强 (ContextMenu, 快捷键 useCanvasKeyboardShortcuts, 结构化撤销/重做, 历史记录侧边栏 `HistoryPanel`)
-        - 数据同步 (API api/, WebSocket `useWebSocket` - 适配单例模式, 修复历史记录问题)
-        - 项目管理 (URL加载, ProjectListView, tabStore, useProjectManagement, 元数据更新API)
-        - SillyTavern 集成 (CharacterCardView, SillyTavernService)
-        - UI/UX 改进 (`MarkdownRenderer`, `Tooltip` 改进, 保存流程优化)
-        - 插件系统 (设计文档与规划)
-      - 关键文件/目录: src/main.ts, src/App.vue, src/components/graph/, src/composables/, src/stores/, src/api/, src/views/
-      - 技术栈: Vue 3, Vite, VueFlow, Pinia, Vue Router, Tailwind, DaisyUI, TypeScript, Axios
-      - 组件 (src/components/)
-        - 核心 (graph/)
-          - Canvas.vue (核心画布)
-          - StatusBar.vue (状态栏)
-          - TabBar.vue (标签页)
-          - 输入控件 (inputs/ - BooleanToggle, CodeInput, NumberInput, ...)
-          - 菜单 (menus/ - ContextMenu, NodeContextMenu, SlotContextMenu, ...)
-          - 节点 (nodes/BaseNode.vue - 基础节点)
-          - 侧边栏 (sidebar/ - NodePanel, NodePreviewPanel, SidebarManager, GroupIOEdit, HistoryPanel, WorkflowInfoPanel, ...)
-        - 通用 (common/ - SuggestionDropdown, Tooltip, MarkdownRenderer)
-        - 图标 (icons/)
-      - Composables (src/composables/)
-        - 画布 (canvas/) (useCanvasConnections, useCanvasInteraction, useCanvasKeyboardShortcuts, useContextMenuPositioning, useDnd, useEdgeStyles)
-        - 节点 (node/) (useNodeActions, useNodeClientScript, useNodeGroupConnectionValidation, useNodeProps, useNodeResize, useNodeState - 记录历史, useUniqueNodeId)
-        - 节点组 (group/) (useGroupInterfaceSync, useGroupIOActions, useGroupIOSlots, useGroupIOState, useWorkflowGrouping)
-        - 工作流 (workflow/) (useWorkflowData, useWorkflowHistory - 辅助, useWorkflowInteractionCoordinator, useWorkflowInterfaceManagement, useWorkflowLifecycleCoordinator, useWorkflowManager - 核心入口, useWorkflowViewManagement)
-        - 编辑器 (editor/) (新增分组: useEditorState, useInterfaceWatcher, useKeyboardShortcuts, useProjectManagement, useRouteHandler - 重构, useTabManagement - 重构)
-        - 根目录 (composables/) (新增分组: useWebSocket - 适配单例)
-      - Stores (src/stores/)
-        - useWorkflowStore (状态存储库 & 协调层, 核心逻辑移至 Composables)
-        - useExecutionStore (执行状态管理)
-        - useNodeStore (节点定义加载/管理)
-        - useTabStore (标签页状态管理)
-        - useProjectStore (项目数据管理)
-        - useThemeStore (主题/布局状态)
-        - (useCounterStore - 示例)
-      - Utils (src/utils/)
-        - api.ts (useApi 封装 Axios)
-        - deepClone.ts (JSON 实现)
-        - nodeUtils.ts (getNodeType)
-        - textUtils.ts (measureTextWidth, 字体常量)
-        - urlUtils.ts (动态 URL 生成 - API, WS, Backend)
-        - workflowTransformer.ts (前后端格式转换 - VueFlow <-> CoreWorkflow)
-      - Router (src/router/)
-        - 规则: /, /projects, /characters, /about, /projects/:projectId/editor/:workflowId? (workflowId 可选)
-        - 视图: HomeView, ProjectListView, CharacterCardView, AboutView, EditorView
-        - 模式: WebHistory
-        - 守卫: EditorView (更新: 进入前加载项目数据, 需 projectId, 错误处理, 避免重复加载)
-        - 懒加载: AboutView
-      - API (src/api/)
-        - workflow.ts (listWorkflowsApi, loadWorkflowApi, saveWorkflowApi, deleteWorkflowApi, 未来可能增加项目元数据更新等)
-        - 使用 useApi 工具
-        - 错误处理, 日志, 类型安全
-      - Services (src/services/)
-        - SillyTavernService.ts (加载本地角色卡 - PNG/JSON, 非实时 API)
-        - WebSocket 通信由 useWebSocket 处理 (适配单例, 事件解耦)
-      - Types (src/types/)
-        - workflowTypes.ts (WorkflowData - 含组增强字段, TabWorkflowState - 组件状态存data, WorkflowStateSnapshot - 历史快照, HistoryState - 用快照, EdgeStyleProps, ...)
-        - SillyTavern.ts
-        - 声明文件 (.d.ts - png-chunk-text, png-chunks-extract)
-      - Views (src/views/)
-        - EditorView (重构: 核心逻辑拆分到 composables/editor/, 集成 Canvas, Sidebar, StatusBar)
-        - ProjectListView (项目列表展示与创建)
-        - HomeView (受URL加载影响), AboutView, CharacterCardView (辅助页面)
-        - SideBar.vue (可重用侧边栏组件)
-      - 入口与根组件
-        - main.ts (初始化 Vue, Pinia, Router, 导入全局 CSS)
-        - App.vue (根容器, RouterView, 初始化全局状态, WebSocket 初始化/关闭, 主题/项目切换监听, 启动画面)
-    - 共享包 (packages)
-      - @comfytavern/types (packages/types)
-        - 用途: 共享 TS 类型和 Zod 验证模式 (含前端移入的核心类型)
-        - 核心内容: node.ts (NodeDefinition, Input/OutputDefinition, ExecutionStatus, WebSocketMessageType, ...), schemas.ts (Zod 模式: WorkflowNodeSchema, WorkflowEdgeSchema, WorkflowObjectSchema, ProjectMetadataSchema, ...)
-      - @comfytavern/utils (packages/utils)
-        - 用途: 共享工具函数 (目前为空)
-    - 文档 (docs/ - 排除整理/old)
-      - 架构与规划 (action-plan-project-refactor, backend计划, frontend-vueflow计划, plugin-system-plan, project-architecture-plan, refactor-history-architecture-plan, refactor-workflowStore-plan)
-      - 规范 (backend规范)
-      - 分析与笔记 (comfyui笔记, composables-overview, graph_components_report, my-schema-flow-history-analysis)
-      - 问题修复 (fix-groupio-initial-slot-disappearance)
-    - 启动与构建
-      - 主入口: server.ts (管理前后端子进程)
-      - 启动脚本: start.bat / start.sh (支持 dev/prod, vueflow 参数)
-      - package.json 脚本 (根目录): dev, build, start, dev:frontend, build:backend, start:frontend, start:backend, ...
-      - 开发服务器端口
-        - 前端 (Vite): 5573 (代理 API/WS 到后端)
-        - 后端 (Elysia): 3233
+## 1. 项目概述 (Project Overview)
+- 定位: AI 创作与应用平台，提供可视化节点编辑器和易用的交互式应用面板。
+- 核心价值:
+    - **面向创作者**:
+        - 强大的工作流编排能力 (基于 VueFlow)。
+        - 灵活创建、修改和管理 AI 工作流。
+        - 丰富的内置节点和易于扩展的自定义节点。
+    - **面向最终用户**:
+        - 即用型 AI 应用面板 (主要用户体验方向, 尤其移动端)。
+        - 将复杂工作流封装成独立、友好的交互界面。
+        - 示例场景: AI 聊天机器人, 互动叙事, 创意辅助, 轻量级游戏等。
+- 目标愿景: 让用户“即开即用”地享受 AI 功能，兼具开发者友好的扩展性。
+
+## 2. 核心架构与技术栈 (Core Architecture & Tech Stack)
+- **整体架构**:
+    - Monorepo (使用 Bun Workspaces 管理 `apps/` 和 `packages/`)。
+- **前端 (`apps/frontend-vueflow`)**:
+    - **核心框架**: Vue 3 (Composition API, `<script setup>` 语法)。
+    - **构建工具**: Vite (快速开发和构建)。
+    - **语言**: TypeScript (类型安全)。
+    - **节点编辑器**: VueFlow (`@vue-flow/core`)。
+    - **状态管理**: Pinia (Vue 官方推荐)。
+    - **路由**: Vue Router (单页应用导航)。
+    - **样式**: Tailwind CSS (功能类优先), DaisyUI (组件库, 较少提及，主要为Tailwind)。
+    - **HTTP客户端**: Axios (与后端 API 通信)。
+    - **UI增强库**:
+        - `@floating-ui/vue` (Tooltip, 上下文菜单定位)。
+        - `overlayscrollbars-vue` (自定义滚动条)。
+        - CodeMirror (富文本代码编辑器)。
+- **后端 (`apps/backend`)**:
+    - **核心框架**: Elysia.js (基于 Bun 的高性能框架)。
+    - **运行时**: Bun (JavaScript/TypeScript 运行时, 打包器, 测试器, 包管理器)。
+    - **语言**: TypeScript。
+    - **ORM与数据库**:
+        - Drizzle ORM (类型安全的 SQL 查询构建器)。
+        - SQLite (默认开发数据库)。
+        - Drizzle Kit (数据库迁移工具)。
+    - **数据验证**: Zod (Schema 定义与验证)。
+- **共享包 (`packages/`)**:
+    - **`@comfytavern/types`**: 共享 TypeScript 类型定义和 Zod Schemas。
+    - **`@comfytavern/utils`**: 通用工具函数 (前端后端复用)。
+- **通信机制**:
+    - **RESTful API**: 用于常规的客户端-服务器数据交换。
+    - **WebSocket**: 用于工作流执行状态、日志等的实时双向通信。
+
+## 3. 前端应用 (`apps/frontend-vueflow`)
+- **核心职责**:
+    - 图形化工作流编排界面。
+    - 用户界面 (GUI) 提供。
+    - 与后端 API 通信。
+    - 实时状态展示 (通过 WebSocket)。
+    - 应用级状态管理。
+    - 应用面板交互界面。
+- **`src/` 目录结构与核心模块**:
+    - **`main.ts` & `App.vue`**: 应用入口与根组件。
+        - `main.ts`: 初始化 Vue 实例, 注册 Pinia, Vue Router, 全局指令 (`v-comfy-tooltip`), 导入全局 CSS。
+        - `App.vue`: 定义顶层布局, 承载 `<RouterView>`, 包含全局 UI 组件 (DialogContainer, TooltipRenderer, SettingsModal), 执行全局初始化逻辑 (主题, WebSocket, 用户上下文)。
+    - **`api/`**: API 客户端模块。
+        - `utils/api.ts`: 封装 Axios 的 `useApi` Composable (提供 `get`, `post`, `put`, `del` 方法)。
+        - `authApi.ts`: 用户认证相关。
+        - `userKeysApi.ts`: 用户 API 密钥和外部凭证管理。
+        - `userProfileApi.ts`: 用户个人资料更新 (用户名, 头像)。
+        - `workflow.ts`: 工作流 CRUD 操作。
+        - `projectApi.ts` (从 `projectStore.ts` 推断): 项目元数据和列表。
+        - `characterApi.ts` (从 `SillyTavernService.ts` 推断): 角色卡数据。
+        - `nodeDefinitionApi.ts` (从 `nodeStore.ts` 推断): 节点定义。
+    - **`assets/`**: 静态资源 (CSS, 图片, 字体)。
+    - **`components/`**: 可复用 Vue 组件。
+        - `auth/`: `InitialUsernameSetupModal.vue`。
+        - `common/`: `BaseModal.vue`, `Dialog.vue`, `MarkdownRenderer.vue`, `RichCodeEditor.vue`, `TooltipRenderer.vue`, `HierarchicalMenu.vue`, `DialogContainer.vue`, `ToastNotification.vue`。
+        - `graph/`: 画布及节点相关。
+            - `Canvas.vue` (VueFlow 封装, 自定义背景, 控制器, 小地图, 右键菜单, 拖拽放置, 快捷键)。
+            - `StatusBar.vue`, `TabBar.vue`。
+            - `nodes/BaseNode.vue` (所有自定义节点的基座)。
+            - `inputs/`: `StringInput.vue`, `NumberInput.vue`, `CodeInput.vue`, `BooleanToggle.vue`, `SelectInput.vue`, `TextAreaInput.vue` 等。
+            - `sidebar/`: `NodePanel.vue`, `WorkflowPanel.vue`, `WorkflowInfoPanel.vue`, `HistoryPanel.vue`, `PerformancePanel.vue`, `SidebarManager.vue`, `NodePreviewPanel.vue`, `RightPreviewPanel.vue`。
+            - `editor/`: `DockedEditorWrapper.vue`。
+        - `icons/`: SVG 图标组件。
+        - `modals/`: `AvatarEditorModal.vue`, `RegexEditorModal.vue`。
+        - `settings/`: `SettingsLayout.vue`, `SettingsPanel.vue`, `SettingGroup.vue`, `SettingItemRow.vue`, `SettingControl.vue`。
+        - `CharacterCard.vue`, `CharacterCardPreview.vue`。
+    - **`composables/`**: Vue Composition API 函数 (Hooks)。
+        - 通用: `useClipboard.ts`, `useWebSocket.ts`。
+        - `canvas/`: `useCanvasInteraction.ts`, `useCanvasConnections.ts`, `useCanvasKeyboardShortcuts.ts`, `useDnd.ts`。
+        - `editor/`: `useEditorState.ts`, `useTabManagement.ts`, `useKeyboardShortcuts.ts` (全局保存), `useProjectManagement.ts`, `useRouteHandler.ts`, `useInterfaceWatcher.ts`。
+        - `group/`: `useWorkflowGrouping.ts`, `useGroupInterfaceSync.ts`。
+        - `node/`: `useNodeActions.ts`, `useNodeState.ts`, `useNodeClientScript.ts`, `useSlotDefinitionHelper.ts`。
+        - `workflow/`:
+            - `useWorkflowManager.ts` (核心状态管理器, 取代旧 `workflowStore` 大部分职责)。
+            - `useWorkflowHistory.ts` (撤销/重做)。
+            - `useWorkflowData.ts` (数据加载/保存, 格式转换)。
+            - `useWorkflowExecution.ts` (执行逻辑, 扁平化, 发送请求)。
+            - `useWorkflowLifecycleCoordinator.ts` (协调工作流生命周期操作)。
+            - `useWorkflowViewManagement.ts` (视图相关, VueFlow实例, 视口)。
+            - `useWorkflowInteractionCoordinator.ts` (协调用户交互导致的状态变更)。
+    - **`constants/`**: 应用常量 (e.g., `handleConstants.ts`)。
+    - **`directives/`**: 自定义 Vue 指令 (e.g., `vComfyTooltip.ts`)。
+    - **`router/`**: Vue Router 配置。
+        - `index.ts`: 定义路由表 (根路径重定向, HomeLayout嵌套路由, 编辑器动态路由), 导航守卫 (`beforeEnter` for Editor route to load project)。
+    - **`services/`**: 前端应用级服务。
+        - `DialogService.ts`: 全局模态对话框和通知服务 (基于 Pinia store `useDialogService`)。
+        - `SillyTavernService.ts`: 处理 SillyTavern 角色卡数据获取与转换。
+    - **`stores/`**: Pinia 状态管理模块。
+        - `authStore.ts`: 用户认证, 上下文, API密钥, 凭证。
+        - `executionStore.ts`: 工作流执行状态 (按标签页), 节点状态, 输出, 流式内容。
+        - `nodeStore.ts`: 节点定义列表, 加载, 搜索。
+        - `performanceStatsStore.ts`: 前端性能统计。
+        - `projectStore.ts`: 当前项目元数据, 可用项目列表。
+        - `settingsStore.ts`: 应用级用户设置 (持久化到 localStorage)。
+        - `tabStore.ts`: 编辑器标签页管理, 与路由同步。
+        - `theme.ts`: 主题 (暗/亮/系统), 侧边栏折叠状态 (持久化到 localStorage)。
+        - `tooltipStore.ts`: 全局 Tooltip 状态与定位 (与 `v-comfy-tooltip` 指令配合)。
+        - `uiStore.ts`: 全局 UI 元素状态 (模态框可见性, z-index管理)。
+        - `workflowStore.ts`: (旧版核心, 现主要通过组合 `workflow/` 下的Composables实现) 协调工作流图谱状态和操作。
+    - **`types/`**: 前端应用特有的 TypeScript 类型。
+    - **`utils/`**: 通用辅助函数。
+        - `api.ts` (已在 `api/` 中描述)。
+        - `deepClone.ts`: 简单深拷贝。
+        - `nodeUtils.ts`: `getNodeType`, `parseSubHandleId`。
+        - `textUtils.ts`: `measureTextWidth`, `generateSafeWorkflowFilename`, `stripMarkdown`。
+        - `urlUtils.ts`: `getApiBaseUrl`, `getBackendBaseUrl`, `getWebSocketUrl`。
+        - `workflowFlattener.ts`: 递归扁平化含 NodeGroup 的工作流。
+        - `workflowTransformer.ts`: 前后端工作流数据格式转换, 序列化/反序列化片段。
+    - **`views/`**: 页面级 Vue 组件 (由 Router 渲染)。
+        - `AboutView.vue`, `CharacterCardView.vue`, `EditorView.vue` (核心编辑器界面), `HomeLayout.vue` (布局容器), `HomeView.vue` (仪表盘), `ProjectListView.vue`, `SettingsView.vue`, `SideBar.vue` (全局侧边栏), `TestPanelView.vue` (开发测试用)。
+
+## 4. 后端应用 (`apps/backend`)
+- **核心职责**:
+    - 提供 RESTful API 服务。
+    - 执行 AI 工作流 (核心引擎)。
+    - 数据持久化 (项目, 工作流, 用户数据等)。
+    - 用户认证与管理。
+    - WebSocket 实时通信服务。
+- **`src/` 目录结构与核心模块**:
+    - **`index.ts`**: 应用入口。
+        - 创建 Elysia 实例。
+        - 注册插件: CORS, Swagger (`@elysiajs/swagger`), 自定义认证插件 (`authPlugin`), WebSocket 插件 (`websocketPlugin`)。
+        - 挂载 API 路由。
+        - 配置全局错误处理器 (`errorHandler`)。
+        - 启动 HTTP 服务器。
+    - **`config.ts`**: 配置管理。
+        - `ConfigManager` 类: 加载、验证 (使用 Zod `ConfigSchema`) 和提供配置。
+        - 从 `config.json` (基于 `config.template.json`) 读取配置。
+    - **`db/`**: 数据库交互。
+        - `index.ts`: 初始化 Drizzle ORM 实例, 建立数据库连接 (SQLite)。
+        - `schema.ts`: 定义所有数据库表结构 (使用 Drizzle ORM 语法)。
+        - `migrations/`: Drizzle Kit 生成的 SQL 数据库迁移文件。
+    - **`middleware/`**: Elysia 中间件。
+        - `authMiddleware.ts`: 处理用户认证, 验证令牌, 注入用户上下文到请求。
+        - `errorHandler.ts`: 全局错误处理逻辑, 统一错误响应格式。
+    - **`nodes/`**: 节点系统。
+        - `NodeRegistry.ts`: 注册、管理和获取节点定义。
+        - `definitions/`: 内置节点类型的具体实现。
+            - `core/`: `GroupInputNode`, `GroupOutputNode`, `NodeGroupNode`, `PassthroughNode`。
+            - `utility/`: `ConstantNode`, `DebugLogNode`, `RegexReplaceNode`。
+            - `llm/`: `OpenAIChatNode`。
+        - `loadCustomNodes.ts`: 从指定路径加载用户自定义节点。
+    - **`routes/`**: API 路由定义 (使用 Elysia 风格)。
+        - `index.ts`: 聚合所有子路由模块并统一导出。
+        - `authRoutes.ts`: 用户认证、上下文获取。
+        - `characterRoutes.ts`: SillyTavern 角色卡相关。
+        - `nodeRoutes.ts`: 获取节点定义列表。
+        - `projectRoutes.ts`: 项目 CRUD。
+        - `userRoutes.ts`: 用户信息、API密钥、凭证管理。
+        - `workflowRoutes.ts`: 工作流 CRUD。
+        - `executionRoutes.ts`: 工作流执行历史、状态查询。
+    - **`services/`**: 业务逻辑服务层。
+        - `AuthService.ts`: 处理用户认证、密码、会话、API密钥生成与验证。
+        - `ConcurrencyScheduler.ts`: 管理工作流执行的排队、并发限制和调度。
+        - `CryptoService.ts`: 提供密码哈希、数据加密/解密功能。
+        - `DatabaseService.ts`: 封装通用的数据库操作 (基于 Drizzle)。
+        - `FileStorageService.ts`: 处理文件存储 (项目、工作流、用户头像等)。
+        - `LoggingService.ts`: (推断存在) 应用日志记录。
+        - `ProjectManagementService.ts`: 项目相关的业务逻辑。
+        - `UserService.ts`: 用户账户管理、资料更新。
+        - `WorkflowManagementService.ts`: 工作流相关的业务逻辑。
+    - **`websocket/`**: WebSocket 通信处理。
+        - `handler.ts` (`createWebsocketHandler`): 定义 WebSocket 连接的 `open`, `message`, `close`, `error` 事件处理器。处理客户端消息分发 (如 `PROMPT_REQUEST` 到 `ConcurrencyScheduler`)。
+        - `WebSocketManager.ts`: 中心化管理所有活跃 WebSocket 连接, 分配客户端 ID, 提供消息广播和单点发送功能。
+    - **`ExecutionEngine.ts`**: 工作流执行引擎。
+        - 核心逻辑: 拓扑排序节点, 迭代执行节点, 处理节点输入/输出, 管理执行上下文, 状态更新 (通过 WebSocket), 错误处理, 支持流式输出 (`yield`), Bypass 行为, 节点组展开 (依赖前端扁平化或后端实现)。
+    - **`types/`**: 后端特有的 TypeScript 类型 (较少, 优先使用 `@comfytavern/types`)。
+
+## 5. 共享包 (`packages/`)
+- **`@comfytavern/types`** (`packages/types/src/`):
+    - `schemas.ts`: 定义核心数据结构的 Zod Schemas (e.g., `ProjectMetadataSchema`, `WorkflowObjectSchema`, `NodeDefinition`, `UserContext`, `WebSocketMessage` 等) 并推断 TypeScript 类型。
+    - `index.ts`: 统一导出所有类型、接口和 Zod schemas。
+    - `common.ts`: 通用类型 (`NanoId`, `ExecutionStatus`, `DataFlowType`, `BuiltInSocketMatchCategory`)。
+    - `node.ts`: 节点与插槽定义 (`InputDefinition`, `OutputDefinition`, `GroupSlotInfoSchema`)。
+    - `workflow.ts`: 工作流画布元素类型 (`WorkflowNodeSchema`, `WorkflowEdgeSchema`)。
+    - `history.ts`: 操作历史记录类型 (`HistoryEntry`)。
+    - `execution.ts`: 工作流执行与 WebSocket 消息类型。
+    - `SillyTavern.ts`: SillyTavern 角色卡兼容类型。
+    - `png-chunk-text.d.ts`, `png-chunks-extract.d.ts`: PNG 元数据处理库的类型声明。
+- **`@comfytavern/utils`** (`packages/utils/src/`):
+    - `defaultValueUtils.ts`: `getEffectiveDefaultValue` (根据输入定义获取默认值)。
+    - `historyUtils.ts`: `createHistoryEntry` (创建标准历史记录条目)。
+    - `stringUtils.ts`: `parseEscapedCharacters` (解析字符串转义序列)。
+
+## 6. 开发规范与流程 (Development Lifecycle)
+- **环境搭建** (`DesignDocs/整理/Development/EnvironmentSetup.md`):
+    - **先决条件**: Node.js, Bun, Git, VSCode + 推荐插件 (ESLint, Prettier, Volar, Tailwind IntelliSense)。
+    - **步骤**: 克隆仓库 -> `bun install` -> 复制 `config.template.json` 为 `config.json` 并配置 -> 分别启动前端 (`bun run dev:frontend` 或 `bun --cwd apps/frontend-vueflow dev`) 和后端 (`bun run dev:backend`) 开发服务器 -> 数据库迁移 (`bun run db:migrate`)。
+- **编码规范** (`DesignDocs/整理/Development/CodingStandards.md`):
+    - **格式化**: Prettier (保存时自动格式化)。
+    - **Linting**: ESLint, WebHint (`.hintrc`), TypeScript 类型检查 (`vue-tsc`, `tsc --noEmit`)。
+    - **TypeScript**: 优先 `interface`, 避免 `enum` (用 `as const` 对象)。组件 Props/Emits 和节点类必须有完整类型定义。
+    - **Vue 3**: `<script setup>`, Composition API, `ref`/`reactive`, `computed`, `watch`/`watchEffect` (注意清理副作用), VueUse 推荐。
+    - **命名约定**: 目录 (kebab-case), 文件 (PascalCase/camelCase), 代码内 (camelCase, PascalCase, SCREAMING_SNAKE_CASE)。
+    - **注释**: **必须中文**。推荐 JSDoc 风格。
+    - **Git提交**: Conventional Commits 规范。
+    - **其他重要规范引用**: 性能优化, Pinia, 节点开发, WebSocket, Tailwind CSS, Tooltip (`v-comfy-tooltip`), DialogService, Elysia.js 注意事项, `CONVERTIBLE_ANY` 类型说明。
+- **测试策略** (`DesignDocs/整理/Development/Testing.md`):
+    - **框架与工具**: Vitest (前端测试框架), `@vue/test-utils` (Vue 组件测试), `jsdom` (模拟浏览器环境)。
+    - **测试类型**: 单元测试, 组件测试, 集成测试 (E2E 测试规划中)。
+    - **运行测试**: `cd apps/frontend-vueflow; bun run test:unit` (支持 `--watch`, `--coverage`)。
+    - **最佳实践**: 清晰命名, AAA模式, 独立性, 可重复性, 关注行为, Mock外部依赖, 小而专注, 及时更新。
+    - **Mocking**: Vitest 内置 (`vi.mock`, `vi.fn`, `vi.spyOn`)。
+- **部署流程** (`DesignDocs/整理/Development/Deployment.md`):
+    - **构建生产版本**:
+        - 前端: `bun run build:frontend` (Vite 执行代码分割, Tree Shaking, 资源哈希等优化)。产物在 `apps/frontend-vueflow/dist`。
+        - 后端: `NODE_ENV=production bun src/index.ts` (直接运行) 或 `bun build ./src/index.ts --outdir ./dist --target bun` (构建独立包)。
+    - **部署策略**: Docker 容器化 (推荐, 但项目中未直接提供 Dockerfile), 虚拟机/裸金属服务器。
+    - **环境变量**: `NODE_ENV`, `PORT_FRONTEND`, `PORT_BACKEND`, `DATABASE_URL`, `JWT_SECRET`, `LOG_LEVEL`, `CORS_ORIGIN` 等。通过 `.env` 文件 (不提交到 VCS) 或其他安全方式管理。
+    - **Web服务器 (前端)**: Nginx (推荐, 提供 SPA 路由回退, Gzip, 缓存策略配置示例)。
+    - **后端服务管理**: PM2 (推荐, 自动重启, 日志管理, 监控), systemd, supervisord。
+    - **CI/CD 流程考量**: 代码拉取 -> 环境设置 -> 依赖安装 -> Lint & Test -> 构建 -> (可选) Docker镜像构建与推送 -> 部署 -> 通知。
+    - **部署后检查与监控**: 基本功能验证, 日志收集 (ELK, Loki), APM (Sentry, Datadog), 错误追踪 (Sentry)。
+    - **回滚策略**: 手动回滚旧版本产物/镜像, CI/CD 流程回滚, 蓝绿/金丝雀发布 (高级)。
+
+## 7. 核心特性详解
+- **工作流编排**:
+    - **VueFlow 画布**: 节点拖拽、连接、配置。
+    - **节点定义**: 包含输入 (inputs)、输出 (outputs)、配置项 (config)、执行逻辑 (execute)。
+    - **节点组 (`core:NodeGroup`)**: 实现工作流的嵌套和复用。
+        - 内部包含 `core:GroupInput` 和 `core:GroupOutput` 节点定义其接口。
+        - 外部表现为一个普通节点，引用一个子工作流。
+    - **`CONVERTIBLE_ANY` 类型**: 特殊的万能插槽类型 (`*`)，连接时会彻底转变为对方的具体类型，并动态再生新的 `CONVERTIBLE_ANY` 占位符 (特定于组IO节点内部接口)。禁止两个 `CONVERTIBLE_ANY` 互连。NodeGroup 外部接口不显示 `*`。
+- **AI 应用面板**:
+    - ComfyTavern 的主要用户体验方向，将复杂工作流封装成易于使用的交互式应用。
+    - 示例: AI 聊天机器人 (参考 SillyTavern), 互动叙事, 创意辅助工具。
+- **实时通信 (WebSocket)**:
+    - 用于工作流执行状态的实时更新、节点执行日志的流式传输、实时交互反馈 (如中断执行)、错误通知。
+    - **消息协议**: 基于 JSON，包含 `type` (来自 `WebSocketMessageType`) 和 `payload`。
+        - 客户端 -> 服务器: `PROMPT_REQUEST`, `INTERRUPT_REQUEST`, `BUTTON_CLICK`。
+        - 服务器 -> 客户端: `PROMPT_ACCEPTED_RESPONSE`, `EXECUTION_UPDATE`, `NODE_OUTPUT`, `LOG_MESSAGE`, `EXECUTION_COMPLETE`, `ERROR` 等。
+- **数据持久化**:
+    - **项目与工作流数据**: 主要存储在 SQLite 数据库中，通过 Drizzle ORM 进行操作。工作流数据也可以嵌入 PNG 图片元数据中。
+    - **用户配置**: 前端设置 (如主题) 使用 `localStorage` 持久化。
+    - **用户凭证**: 安全存储 (具体机制依赖 `CryptoService`)。
+- **用户系统**:
+    - **认证模式**:
+        - `LocalNoPassword` (默认单用户，无密码)。
+        - `LocalWithPassword` (单用户，有主密码，用于加密敏感数据)。
+        - `MultiUserShared` (多用户共享模式，规划中)。
+    - **用户上下文 (`UserContext`)**: 包含用户身份、认证模式、API密钥元数据、外部凭证元数据。
+    - **API 密钥与外部凭证管理**: 用户可以创建和管理用于访问 ComfyTavern 服务或其他外部服务的密钥/凭证。
+
+## 8. 未来展望 (Future Directions)
+- **Agent Architecture**: 更智能的代理或助手功能。
+- **Knowledge Base Integration**: 集成知识库以增强 AI 能力。
+- **Enhanced Application Panels**: 提升应用面板的创建和交互体验。
+- **Multi-User Mode Full Implementation**: 完善多用户共享模式的功能。
+- **Advanced Analytics and Monitoring**: 更深入的应用分析和性能监控。
+- **国际化 (i18n)** 和 **可访问性 (a11y)** 改进。
