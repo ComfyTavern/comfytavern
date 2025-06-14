@@ -1,3 +1,4 @@
+```mermaid
 flowchart TD
 %% 定义暗色主题样式
 classDef user fill:#2D3748,stroke:#4299E1,stroke-width:2px,shape:ellipse,color:#EDF2F7
@@ -135,3 +136,4 @@ classDef kb fill:#2D3748,stroke:#48BB78,stroke-width:2px,shape:hexagon,color:#ED
 
     %% 美化暗色箭头
     linkStyle default stroke:#718096,stroke-width:2px,arrowhead-width:10,arrowhead-length:8
+```
