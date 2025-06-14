@@ -7,15 +7,15 @@
 
     <!-- Avatar Control -->
     <div v-if="itemConfig.type === 'avatar'" class="control-area avatar-control-area">
+      <button class="btn btn-secondary btn-sm" @click="handleUploadAvatar">
+        编辑头像
+      </button>
       <img
         :src="displayedAvatarUrl"
         alt="用户头像"
         class="avatar-preview"
         @error="onAvatarError"
       />
-      <button class="btn btn-secondary btn-sm" @click="handleUploadAvatar">
-        编辑头像
-      </button>
     </div>
 
     <!-- Default Control -->
