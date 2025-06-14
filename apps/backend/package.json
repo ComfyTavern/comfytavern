@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "1.0.50",
+  "version": "0.1.2",
   "scripts": {
     "dev": "NODE_ENV=development bun run --watch src/index.ts",
     "start": "NODE_ENV=production bun src/index.ts",
