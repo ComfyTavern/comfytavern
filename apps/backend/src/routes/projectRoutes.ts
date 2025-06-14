@@ -1,12 +1,34 @@
 import { CreateWorkflowObjectSchema, GroupInterfaceInfo, ProjectMetadata, ProjectMetadataSchema, UpdateWorkflowObjectSchema, WorkflowObject, WorkflowObjectSchema, WorkflowStorageObject, UserContext } from '@comfytavern/types';
-import path, { basename, extname, join } from 'node:path';
-import { promises as fs } from 'node:fs';
+// import path, { basename, extname, join } from 'node:path'; // 不再直接使用 path 模块进行路径操作
+// import { promises as fs } from 'node:fs'; // fs 操作已移至 service 层
 import { Elysia, t, type Context as ElysiaBaseContext } from 'elysia';
 import { z } from 'zod'; // 导入 z 以使用 Zod
 
-import { createProject, createWorkflow, deleteWorkflowToRecycleBin, getProjectMetadata, getProjectWorkflowsDir, getWorkflow, listProjects, listWorkflows, ProjectConflictError, ProjectCreationError, ProjectMetadataError, ProjectNotFoundError, syncReferencingNodeGroups, updateProjectMetadata, updateWorkflow, WorkflowConflictError, WorkflowCreationError, WorkflowDeletionError, WorkflowLoadError, WorkflowNotFoundError, WorkflowUpdateError } from '../services/projectService'; // 从服务层导入相关函数和错误类型
+import {
+  createProject,
+  createWorkflow,
+  deleteWorkflowToRecycleBin,
+  getProjectMetadata,
+  // getProjectWorkflowsDir, // 不再需要，路径由服务层管理
+  getWorkflow,
+  listProjects,
+  listWorkflows,
+  ProjectConflictError,
+  ProjectCreationError,
+  ProjectMetadataError,
+  ProjectNotFoundError,
+  syncReferencingNodeGroups,
+  updateProjectMetadata,
+  updateWorkflow,
+  WorkflowConflictError,
+  WorkflowCreationError,
+  WorkflowDeletionError,
+  WorkflowLoadError,
+  WorkflowNotFoundError,
+  WorkflowUpdateError
+} from '../services/projectService'; // 从服务层导入相关函数和错误类型
 import { generateSafeWorkflowFilename, sanitizeProjectId, sanitizeWorkflowIdFromParam } from '../utils/helpers';
-import { PROJECTS_BASE_DIR } from '../config'; // 导入项目基础目录
+// import { PROJECTS_BASE_DIR } from '../config'; // 不再需要，路径由服务层管理
 
 
 // 移除了错误的 SetElysia 导入

@@ -1,6 +1,5 @@
-import type { NodeDefinition, CustomMessage } from '@comfytavern/types';
-import { promises as fs } from 'fs';
-import path from 'path';
+import type { NodeDefinition, CustomMessage, UserContext } from '@comfytavern/types'; // + Import UserContext
+import { famService } from '../../services/FileManagerService'; // + Import famService
 
 // Placeholder for validation function (can be more sophisticated)
 function isValidCustomMessageArray(data: any): data is CustomMessage[] {
@@ -15,19 +14,35 @@ function isValidCustomMessageArray(data: any): data is CustomMessage[] {
 class HistoryLoaderNodeImpl {
   static async execute(inputs: Record<string, any>, context: any): Promise<Record<string, any>> {
     const nodeData = context?.nodeData;
-    const historyResourcePath = nodeData?.historyResource;
+    const historyResourcePath = nodeData?.historyResource as string | undefined;
 
     if (!historyResourcePath) {
       console.error(`HistoryLoader (${context?.nodeId}): Missing history resource path.`);
-      // Throw error instead of returning
       throw new Error('History resource not selected');
     }
 
-    console.log(`HistoryLoader (${context?.nodeId}): Loading history from: ${historyResourcePath}`);
+    const userContext = context?.userContext as UserContext | undefined;
+    let userId: string | null = null;
+    if (userContext?.currentUser) {
+      if ('id' in userContext.currentUser) {
+        userId = userContext.currentUser.id;
+      } else if ('uid' in userContext.currentUser) {
+        userId = userContext.currentUser.uid;
+      }
+    }
+
+    if (historyResourcePath.startsWith('user://') && !userId) {
+      console.error(`HistoryLoader (${context?.nodeId}): User ID is required for user-specific resource path: ${historyResourcePath}`);
+      throw new Error('User context is required to load this user-specific history.');
+    }
+    
+    console.log(`HistoryLoader (${context?.nodeId}): Loading history from logical path: ${historyResourcePath} (User: ${userId || 'shared/system'})`);
 
     try {
-      // TODO: 确认资源路径格式和加载方式
-      const fileContent = await fs.readFile(historyResourcePath, 'utf-8');
+      const fileContent = await famService.readFile(userId, historyResourcePath, 'utf-8');
+      if (typeof fileContent !== 'string') {
+        throw new Error('Failed to read history file content as string.');
+      }
       const historyData = JSON.parse(fileContent);
 
       // Validate if the loaded data conforms to CustomMessage[]

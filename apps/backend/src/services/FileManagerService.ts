@@ -22,6 +22,7 @@ export interface ListItem {
 export interface WriteOptions {
   encoding?: 'utf-8' | 'binary'; // 保持与 readFile 一致
   overwrite?: boolean; // 默认 true，如果 false且文件已存在则抛错
+  append?: boolean; // 新增：是否追加到文件末尾，默认为 false
 }
 
 export interface DeleteOptions {
@@ -275,27 +276,33 @@ export class FileManagerService implements FAMService {
     userId: string | null,
     logicalPath: string,
     data: string | Buffer,
-    options?: WriteOptions // 接口定义是可选的，这里处理默认值
+    options?: WriteOptions
   ): Promise<void> {
-    const writeOptions: Required<WriteOptions> = {
+    const writeOptions: Required<Omit<WriteOptions, 'append'>> & Pick<WriteOptions, 'append'> = {
       overwrite: options?.overwrite ?? true,
       encoding: options?.encoding ?? 'utf-8',
+      append: options?.append ?? false,
     };
 
     try {
       const physicalPath = await this.resolvePath(userId, logicalPath);
 
-      if (!writeOptions.overwrite) {
-        const fileExists = await this.exists(userId, logicalPath);
-        if (fileExists) {
-          throw new Error(`File already exists at logical path: ${logicalPath} and overwrite is false.`);
-        }
-      }
-
-      // 确保目标文件的父目录存在
+      // 确保目标文件的父目录存在 (对于追加和覆盖写入都需要)
       await this._ensurePhysicalDirExists(physicalPath);
 
-      await fs.writeFile(physicalPath, data, writeOptions.encoding === "binary" ? null : writeOptions.encoding);
+      if (writeOptions.append) {
+        // 追加模式
+        await fs.appendFile(physicalPath, data, writeOptions.encoding === "binary" ? undefined : writeOptions.encoding);
+      } else {
+        // 覆盖或创建模式
+        if (!writeOptions.overwrite) {
+          const fileExists = await this.exists(userId, logicalPath); // this.exists 内部会调用 resolvePath
+          if (fileExists) {
+            throw new Error(`File already exists at logical path: ${logicalPath} and overwrite is false.`);
+          }
+        }
+        await fs.writeFile(physicalPath, data, writeOptions.encoding === "binary" ? null : writeOptions.encoding);
+      }
     } catch (error: any) {
       // 如果是 resolvePath 或 exists 内部抛出的已知错误类型，直接重新抛出
       if (error.message.startsWith('File already exists') || error.message.startsWith('Invalid logical path') || error.message.startsWith('UserId is required') || error.message.startsWith('Unknown scheme') || error.message.startsWith('Path traversal attempt detected') || error.message.startsWith('Unknown system area')) {

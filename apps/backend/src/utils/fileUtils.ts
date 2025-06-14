@@ -44,14 +44,6 @@ export function getPublicDir(): string {
 }
 
 /**
- * 获取项目根目录下 public/avatars 目录的路径。
- * @returns public/avatars 目录的绝对路径。
- */
-export function getAvatarsDir(): string {
-  return path.join(getPublicDir(), 'avatars');
-}
-
-/**
  * 获取项目根目录下 logs/executions 目录的路径。
  * @returns logs/executions 目录的绝对路径。
  */
@@ -68,44 +60,11 @@ export function getLibraryBaseDir(): string {
 }
 
 /**
- * 获取项目根目录下 library/workflows 目录的路径。
- * @returns library/workflows 目录的绝对路径。
- */
-export function getWorkflowsDir(): string {
-  return path.join(getLibraryBaseDir(), 'workflows');
-}
-
-/**
- * 获取项目根目录下 library/SillyTavern 目录的路径。
- * @returns library/SillyTavern 目录的绝对路径。
- */
-export function getSillyTavernDir(): string {
-  return path.join(getLibraryBaseDir(), 'SillyTavern');
-}
-
-/**
- * 获取项目根目录下 projects 目录的路径 (所有项目的基础目录)。
- * @returns projects 目录的绝对路径。
- */
-export function getProjectsBaseDir(): string {
-  return path.join(getProjectRootDir(), 'projects');
-}
-
-/**
  * 获取项目根目录下 userData 目录的路径。
  * @returns userData 目录的绝对路径。
  */
 export function getUserDataRoot(): string {
   return path.join(getProjectRootDir(), 'userData');
-}
-
-/**
- * 获取特定用户的项目数据目录路径。
- * @param userPath 通常是用户的唯一标识符或 'default_user_data'
- * @returns 特定用户的项目数据目录的绝对路径。
- */
-export function getUserSpecificDataDir(userPath: string): string {
-  return path.join(getUserDataRoot(), userPath);
 }
 
 /**

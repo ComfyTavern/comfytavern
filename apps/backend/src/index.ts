@@ -5,15 +5,19 @@ import { fileURLToPath } from 'node:url';
 import { staticPlugin } from '@elysiajs/static';
 
 import { cors } from '@elysiajs/cors';
-import { ensureDirExists, getPublicDir, getLogDir, getUserDataRoot, getDataDir } from './utils/fileUtils'; // + 导入 getDataDir
+// ensureDirExists, getLogDir, getUserDataRoot, getDataDir will be replaced by famService for directory creation
+// getPublicDir is still needed for staticPlugin
+// getProjectRootDir is needed for package.json path
+import { getPublicDir, getProjectRootDir } from './utils/fileUtils';
+import { famService } from './services/FileManagerService'; // + Import famService
 
 // 从 config.ts 导入的 WORKFLOWS_DIR, PROJECTS_BASE_DIR 等已经是绝对路径了
 import {
   CUSTOM_NODE_PATHS,
   FRONTEND_URL,
   PORT,
-  WORKFLOWS_DIR, // 现在是全局工作流目录
-  PROJECTS_BASE_DIR,
+  // WORKFLOWS_DIR, // 移除导入
+  // PROJECTS_BASE_DIR, // 移除导入
   LOG_DIR as APP_LOG_DIR, // 从 config.ts 导入，可能已被覆盖
   MULTI_USER_MODE,
   ACCESS_PASSWORD_HASH,
@@ -74,8 +78,8 @@ if (CUSTOM_NODE_PATHS && CUSTOM_NODE_PATHS.length > 0) {
 // 读取根目录的 package.json 获取应用版本
 let appVersion = "unknown";
 try {
-  // package.json 在项目根目录，即 workflowsDir 的上两级目录
-  const packageJsonPath = path.resolve(WORKFLOWS_DIR, "../../package.json"); // 使用导入的常量
+  // package.json 在项目根目录
+  const packageJsonPath = path.join(getProjectRootDir(), "package.json"); // 使用 getProjectRootDir
   const packageJsonContent = await fs.readFile(packageJsonPath, "utf-8");
   const packageJson = JSON.parse(packageJsonContent);
   appVersion = packageJson.version || "unknown";
@@ -122,21 +126,23 @@ try {
 // 函数 syncReferencingNodeGroups 已移至 services/projectService.ts
 
 // 在启动 Elysia 应用前确保所有必要的应用目录存在
-const essentialDirs = [
-  { name: "Public", path: getPublicDir() },
-  { name: "Log", path: APP_LOG_DIR }, // 使用从 config.ts 来的 LOG_DIR
-  { name: "Global Workflows", path: WORKFLOWS_DIR }, // 使用从 config.ts 来的 WORKFLOWS_DIR
-  { name: "Projects Base", path: PROJECTS_BASE_DIR }, // 使用从 config.ts 来的 PROJECTS_BASE_DIR
-  { name: "User Data Root", path: getUserDataRoot() },
-  { name: "Application Data", path: getDataDir() } // + 添加应用数据目录 (用于数据库等)
+// 旧的 essentialDirs 物理路径检查将被替换为 FAMService 逻辑路径创建
+const logicalDirsToEnsure = [
+  { name: "System Public", logicalPath: 'system://public/' },
+  // FileManagerService maps system://logs/ to the physical logs/executions directory
+  { name: "System Logs", logicalPath: 'system://logs/' },
+  { name: "System Data", logicalPath: 'system://data/' },
+  { name: "Shared Library Workflows", logicalPath: 'shared://library/workflows/' },
+  // User-specific directories (like user://projects/) are created on-demand by famService
+  // when accessed with a userId. The root userData directory's existence is handled by famService's setup.
 ];
 
-for (const dir of essentialDirs) {
+for (const dir of logicalDirsToEnsure) {
   try {
-    await ensureDirExists(dir.path);
-    console.log(`[ComfyTavern Backend] ${dir.name} directory ensured: ${dir.path}`);
+    await famService.createDir(null, dir.logicalPath); // userId is null for system/shared paths
+    console.log(`[ComfyTavern Backend] ${dir.name} directory ensured via FAMService: ${dir.logicalPath}`);
   } catch (error) {
-    console.error(`[ComfyTavern Backend] Failed to ensure ${dir.name} directory ${dir.path}:`, error);
+    console.error(`[ComfyTavern Backend] Failed to ensure ${dir.name} directory ${dir.logicalPath} via FAMService:`, error);
     process.exit(1); // 如果无法创建关键目录，则退出
   }
 }

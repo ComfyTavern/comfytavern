@@ -1,38 +1,45 @@
-import path, { basename, extname } from 'node:path'; // 移除未使用的 join
-import { promises as fs } from 'node:fs';
+import { basename, extname } from 'node:path'; // path.join 等不再需要
+// import { promises as fs } from 'node:fs'; // 将替换为 FAMService
 import { Elysia, t } from 'elysia';
 
 import { sanitizeWorkflowIdFromParam } from '../utils/helpers'; // 导入辅助函数
-import { WORKFLOWS_DIR } from '../config'; // 从配置导入全局工作流目录
+// import { WORKFLOWS_DIR } from '../config'; // 全局工作流目录将通过 FAMService 逻辑路径处理
+import { famService } from '../services/FileManagerService'; // 导入 FAMService
 
 
 // 导入辅助函数
 
 // 全局工作流目录现在从 config.ts 导入
-// const workflowsDir = WORKFLOWS_DIR;
+// const workflowsDir = WORKFLOWS_DIR; // 将使用逻辑路径 shared://library/workflows/
 
 export const globalWorkflowRoutes = new Elysia({ prefix: '/api/workflows' })
   // GET /api/workflows - 列出所有全局工作流
-  .get('/', async ({ set }) => { // 注意：这里使用的是导入的 WORKFLOWS_DIR
+  .get('/', async ({ set }) => {
+    const logicalWorkflowsDir = 'shared://library/workflows/';
     try {
-      const files = await fs.readdir(WORKFLOWS_DIR);
-      const workflowFiles = files.filter(file => extname(file).toLowerCase() === '.json');
-      const workflows = await Promise.all(workflowFiles.map(async (file) => {
-        const id = basename(file, '.json');
-        const filePath = path.join(WORKFLOWS_DIR, file);
+      const dirItems = await famService.listDir(null, logicalWorkflowsDir); // userId is null for shared resources
+      const workflowFileItems = dirItems.filter(item => item.type === 'file' && extname(item.name).toLowerCase() === '.json');
+      
+      const workflows = await Promise.all(workflowFileItems.map(async (item) => {
+        const id = basename(item.name, '.json');
+        const logicalWorkflowPath = item.path; // item.path is the full logical path from listDir
         let name = id;
         try {
-          const fileContent = await fs.readFile(filePath, 'utf-8');
-          const workflowData = JSON.parse(fileContent);
-          name = workflowData.name || id;
+          const fileContentBuffer = await famService.readFile(null, logicalWorkflowPath, 'utf-8');
+          if (typeof fileContentBuffer === 'string') {
+            const workflowData = JSON.parse(fileContentBuffer);
+            name = workflowData.name || id;
+          } else {
+            console.error(`Error reading global workflow file ${logicalWorkflowPath} as string for listing: content is Buffer.`);
+          }
         } catch (readError) {
-          console.error(`Error reading global workflow file ${file} for listing:`, readError);
+          console.error(`Error reading/parsing global workflow file ${logicalWorkflowPath} for listing:`, readError);
         }
         return { id, name };
       }));
       return workflows;
     } catch (error) {
-      console.error('Error listing global workflows from:', WORKFLOWS_DIR, error);
+      console.error(`Error listing global workflows from ${logicalWorkflowsDir}:`, error);
       set.status = 500;
       return { error: 'Failed to list global workflows' };
     }

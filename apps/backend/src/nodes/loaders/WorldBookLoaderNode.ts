@@ -1,25 +1,41 @@
-import type { NodeDefinition } from '@comfytavern/types';
-import { promises as fs } from 'fs';
-import path from 'path';
-
+import type { NodeDefinition, UserContext } from '@comfytavern/types'; // + Import UserContext
+import { famService } from '../../services/FileManagerService'; // + Import famService
 // import yaml from 'js-yaml'; // 可选：如果需要支持 YAML
 
 class WorldBookLoaderNodeImpl {
   static async execute(inputs: Record<string, any>, context: any): Promise<Record<string, any>> {
     const nodeData = context?.nodeData;
-    const worldBookResourcePath = nodeData?.worldBookResource;
+    const worldBookResourcePath = nodeData?.worldBookResource as string | undefined; // worldBookResource is a string (logical path)
 
     if (!worldBookResourcePath) {
       console.error(`WorldBookLoader (${context?.nodeId}): Missing world book resource path.`);
-      // Throw error instead of returning
       throw new Error('World book resource not selected');
     }
 
-    console.log(`WorldBookLoader (${context?.nodeId}): Loading world book from: ${worldBookResourcePath}`);
+    const userContext = context?.userContext as UserContext | undefined;
+    let userId: string | null = null;
+    if (userContext?.currentUser) {
+      if ('id' in userContext.currentUser) {
+        userId = userContext.currentUser.id;
+      } else if ('uid' in userContext.currentUser) {
+        userId = userContext.currentUser.uid;
+      }
+    }
+
+    // 如果资源路径以 user:// 开头，则 userId 必须存在
+    if (worldBookResourcePath.startsWith('user://') && !userId) {
+      console.error(`WorldBookLoader (${context?.nodeId}): User ID is required for user-specific resource path: ${worldBookResourcePath}`);
+      throw new Error('User context is required to load this user-specific world book.');
+    }
+    
+    console.log(`WorldBookLoader (${context?.nodeId}): Loading world book from logical path: ${worldBookResourcePath} (User: ${userId || 'shared/system'})`);
 
     try {
-      // TODO: 确认资源路径格式和加载方式
-      const fileContent = await fs.readFile(worldBookResourcePath, 'utf-8');
+      const fileContent = await famService.readFile(userId, worldBookResourcePath, 'utf-8');
+      if (typeof fileContent !== 'string') {
+        // Should not happen with 'utf-8' encoding, but as a safeguard
+        throw new Error('Failed to read world book content as string.');
+      }
       let worldBookData;
       // TODO: 添加对不同文件格式的判断和解析 (e.g., YAML)
       // if (worldBookResourcePath.endsWith('.yaml') || worldBookResourcePath.endsWith('.yml')) {

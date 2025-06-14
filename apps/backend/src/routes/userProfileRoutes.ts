@@ -1,12 +1,13 @@
 import Elysia, { t } from 'elysia'; // <--- 确保导入 t
 import { z } from 'zod';
-import path from 'node:path';
-import { promises as fs } from 'node:fs'; // + 重新导入 fs
-import { fileURLToPath } from 'node:url';
+import { extname as pathExtname } from 'node:path'; // 只导入 extname，其他由 FAMService 处理
+// import { promises as fs } from 'node:fs'; // 将替换为 FAMService
+// import { fileURLToPath } from 'node:url'; // 似乎未使用
 import { DatabaseService, USERS_UID_DEFAULT } from '../services/DatabaseService';
-import { ensureDirExists, getAvatarsDir } from '../utils/fileUtils';
+// import { ensureDirExists, getAvatarsDir } from '../utils/fileUtils'; // 将替换为 FAMService
 import * as schema from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { famService } from '../services/FileManagerService'; // 导入 FAMService
 import type { UserContext, DefaultUserIdentity } from '@comfytavern/types';
 import type { AuthContext } from '../middleware/authMiddleware';
 import type { Context as ElysiaContext } from 'elysia';
@@ -146,34 +147,32 @@ export const userProfileRoutes = new Elysia({ prefix: '/api/users/me' })
       // 注意：原有的 avatarFile.name 和 avatarFile.size 检查已包含在手动验证逻辑中
       // if (!avatarFile || typeof avatarFile.name !== 'string' || avatarFile.size === 0) { ... }
 
-      // 1. 确定并确保头像目录存在
-      const avatarsDir = getAvatarsDir();
+      // 1. 确定并确保头像目录存在 (使用 FAMService)
+      const logicalAvatarsDir = 'system://public/avatars/';
       try {
-        await ensureDirExists(avatarsDir);
+        await famService.createDir(null, logicalAvatarsDir); // userId is null for system paths
       } catch (dirError: any) {
-        console.error(`[UserProfileRoutes:AvatarUpload] 确保头像目录失败: ${avatarsDir}`, dirError.message);
+        console.error(`[UserProfileRoutes:AvatarUpload] 确保头像目录失败: ${logicalAvatarsDir}`, dirError.message);
         set.status = 500;
         return { error: '处理头像目录失败' };
       }
 
-      // 2. 生成文件名和路径
-      const fileExtension = path.extname(avatarFile.name) || '.png'; // Default to .png if no extension
-      // Using userUid ensures that each user has at most one avatar, overwriting the old one.
+      // 2. 生成文件名和逻辑路径
+      const fileExtension = pathExtname(avatarFile.name) || '.png'; // Default to .png if no extension
       const filename = `${userUid}${fileExtension}`;
-      const filePath = path.join(avatarsDir, filename);
+      const logicalFilePath = `system://public/avatars/${filename}`;
 
-      // 4. 保存文件
+      // 4. 保存文件 (使用 FAMService)
       try {
-        // Elysia's File object has arrayBuffer() method
-        await fs.writeFile(filePath, Buffer.from(await avatarFile.arrayBuffer()));
+        await famService.writeFile(null, logicalFilePath, Buffer.from(await avatarFile.arrayBuffer()), { encoding: 'binary' });
       } catch (saveError: any) {
-        console.error(`[UserProfileRoutes:AvatarUpload] 保存头像文件失败: ${filePath}`, saveError.message);
+        console.error(`[UserProfileRoutes:AvatarUpload] 保存头像文件失败: ${logicalFilePath}`, saveError.message);
         set.status = 500;
         return { error: '保存头像文件失败' };
       }
 
       // 5. 更新数据库
-      const avatarUrl = `/avatars/${filename}`; // URL path for client access
+      const avatarUrl = `/avatars/${filename}`; // URL path for client access remains the same
       const db = DatabaseService.getDb();
       try {
         const result = await db
@@ -184,9 +183,7 @@ export const userProfileRoutes = new Elysia({ prefix: '/api/users/me' })
 
         if (result.length === 0) {
           set.status = 404;
-          // If user was authenticated, they should exist. This might indicate a deeper issue.
-          // Attempt to delete the uploaded file if DB update fails for a non-existent user.
-          try { await fs.unlink(filePath); } catch (e) { /* ignore cleanup error */ }
+          try { await famService.delete(null, logicalFilePath); } catch (e) { /* ignore cleanup error */ }
           return { error: '用户未找到，无法更新头像URL' };
         }
         
@@ -196,8 +193,7 @@ export const userProfileRoutes = new Elysia({ prefix: '/api/users/me' })
       } catch (dbError: any) {
         console.error(`[UserProfileRoutes:AvatarUpload] 更新数据库头像URL失败 for user ${userUid}`, dbError.message);
         set.status = 500;
-        // Attempt to delete the orphaned file if DB update fails
-        try { await fs.unlink(filePath); } catch (e) { /* ignore cleanup error */ }
+        try { await famService.delete(null, logicalFilePath); } catch (e) { /* ignore cleanup error */ }
         return { error: '更新头像信息时发生数据库错误' };
       }
     },

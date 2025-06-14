@@ -1,8 +1,9 @@
-import fs from 'fs/promises';
-import path from 'path';
+// import fs from 'fs/promises'; // 将替换为 FAMService
+// import path from 'path'; // 将替换为 FAMService 或不再需要
 import { Stream } from 'node:stream'; // 用于 instanceof 检查
 import { NanoId, ExecutionStatus, WorkflowExecutionPayload, ChunkPayload } from '@comfytavern/types'; // 添加了 ChunkPayload
-import { LOG_DIR } from '../config'; // 从 config.ts 导入日志目录
+// import { LOG_DIR } from '../config'; // 日志路径将通过 FAMService 的逻辑路径管理
+import { famService } from './FileManagerService'; // 导入 FAMService
 
 interface LogEntry {
   timestamp: string;
@@ -23,11 +24,12 @@ class LoggingServiceController {
   }
 
   private async ensureBaseLogDir(): Promise<void> {
+    const logicalBaseLogDir = 'system://logs/executions/';
     try {
-      await fs.mkdir(LOG_DIR, { recursive: true });
-      // console.log(`[LoggingService] 基础日志目录已确保: ${LOG_DIR}`);
+      await famService.createDir(null, logicalBaseLogDir);
+      // console.log(`[LoggingService] 基础日志目录已确保: ${logicalBaseLogDir}`);
     } catch (error) {
-      console.error('[LoggingService] 创建基础日志目录失败:', LOG_DIR, error);
+      console.error(`[LoggingService] 创建基础日志目录 ${logicalBaseLogDir} 失败:`, error);
     }
   }
 
@@ -35,15 +37,13 @@ class LoggingServiceController {
     this.currentPromptId = promptId;
     this.executionStartTime = Date.now();
     const date = new Date(this.executionStartTime);
-    // 格式化日期为 YYYY-MM-DD
     const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-    // 格式化时间为 HH-MM-SS
     const timeString = `${date.getHours().toString().padStart(2, '0')}-${date.getMinutes().toString().padStart(2, '0')}-${date.getSeconds().toString().padStart(2, '0')}`;
 
-    const executionLogDir = path.join(LOG_DIR, dateString);
+    const logicalExecutionDateDir = `system://logs/executions/${dateString}/`;
     try {
-      await fs.mkdir(executionLogDir, { recursive: true });
-      this.logFilePath = path.join(executionLogDir, `execution-${promptId}-${timeString}.log`);
+      await famService.createDir(null, logicalExecutionDateDir);
+      this.logFilePath = `system://logs/executions/${dateString}/execution-${promptId}-${timeString}.log`;
       // console.log(`[LoggingService] Prompt ${promptId} 的日志文件已初始化: ${this.logFilePath}`);
 
       const initialLog: LogEntry = {
@@ -74,7 +74,8 @@ class LoggingServiceController {
     }
     try {
       const logString = JSON.stringify(entry) + '\n';
-      await fs.appendFile(this.logFilePath, logString);
+      // 使用 FAMService writeFile 并设置 append 选项
+      await famService.writeFile(null, this.logFilePath, logString, { append: true, encoding: 'utf-8' });
     } catch (error) {
       console.error('[LoggingService] 写入日志文件失败:', this.logFilePath, error, '条目:', JSON.stringify(entry).substring(0, 200));
     }

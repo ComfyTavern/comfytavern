@@ -1,6 +1,5 @@
-import type { NodeDefinition } from '@comfytavern/types';
-import { promises as fs } from 'fs'; // Node.js file system module
-import path from 'path'; // Node.js path module
+import type { NodeDefinition, UserContext } from '@comfytavern/types'; // + Import UserContext
+import { famService } from '../../services/FileManagerService'; // + Import famService
 
 // 假设 context 中会包含项目根目录等信息用于解析相对路径
 // 或者 RESOURCE_SELECTOR 返回的是可以直接访问的绝对路径或标识符
@@ -8,25 +7,35 @@ import path from 'path'; // Node.js path module
 class PresetLoaderNodeImpl {
   static async execute(inputs: Record<string, any>, context: any): Promise<Record<string, any>> {
     const nodeData = context?.nodeData;
-    const presetResourcePath = nodeData?.presetResource; // 从配置中获取选择的资源路径/ID
+    const presetResourcePath = nodeData?.presetResource as string | undefined; // 从配置中获取选择的资源路径/ID
 
     if (!presetResourcePath) {
       console.error(`PresetLoader (${context?.nodeId}): Missing preset resource path in configuration.`);
-      // Throw error instead of returning
       throw new Error('Preset resource not selected');
     }
 
-    console.log(`PresetLoader (${context?.nodeId}): Attempting to load preset from: ${presetResourcePath}`);
+    const userContext = context?.userContext as UserContext | undefined;
+    let userId: string | null = null;
+    if (userContext?.currentUser) {
+      if ('id' in userContext.currentUser) {
+        userId = userContext.currentUser.id;
+      } else if ('uid' in userContext.currentUser) {
+        userId = userContext.currentUser.uid;
+      }
+    }
+
+    if (presetResourcePath.startsWith('user://') && !userId) {
+      console.error(`PresetLoader (${context?.nodeId}): User ID is required for user-specific resource path: ${presetResourcePath}`);
+      throw new Error('User context is required to load this user-specific preset.');
+    }
+
+    console.log(`PresetLoader (${context?.nodeId}): Attempting to load preset from logical path: ${presetResourcePath} (User: ${userId || 'shared/system'})`);
 
     try {
-      // TODO: 实际的文件加载逻辑需要根据 presetResourcePath 的具体格式来确定
-      // 假设它是一个相对于项目根目录的路径，并且 context 提供了 projectRoot
-      // const projectRoot = context?.projectRoot || process.cwd(); // 获取项目根目录，需要确认 context 提供
-      // const absolutePath = path.resolve(projectRoot, presetResourcePath);
-
-      // 暂时假设 presetResourcePath 是可以直接访问的文件路径
-      // 注意：直接访问文件系统可能存在安全风险，实际应用中应通过受控的服务进行
-      const fileContent = await fs.readFile(presetResourcePath, 'utf-8');
+      const fileContent = await famService.readFile(userId, presetResourcePath, 'utf-8');
+      if (typeof fileContent !== 'string') {
+        throw new Error('Failed to read preset file content as string.');
+      }
       const presetData = JSON.parse(fileContent);
 
       console.log(`PresetLoader (${context?.nodeId}): Preset loaded successfully.`);

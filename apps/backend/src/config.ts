@@ -2,9 +2,9 @@ import config from '../../../config.json';
 import {
   getLogDir,
   getLibraryBaseDir,
-  getWorkflowsDir as getGlobalWorkflowsDir, // 全局库的工作流
-  getSillyTavernDir as getGlobalSillyTavernDir, // 全局库的SillyTavern
-  getProjectsBaseDir,
+  // getWorkflowsDir as getGlobalWorkflowsDir, // 全局库的工作流 - 移除
+  // getSillyTavernDir as getGlobalSillyTavernDir, // 全局库的SillyTavern - 移除
+  // getProjectsBaseDir, // 移除
   // getUserDataRoot, // USER_DATA_ROOT 将在下面根据模式定义
   // getUserSpecificDataDir // 这个主要在 service层面使用
 } from './utils/fileUtils';
@@ -41,9 +41,9 @@ export const MASTER_ENCRYPTION_KEY: string | undefined = securityConfig.masterEn
 
 // 使用 fileUtils 获取标准目录路径
 export const LIBRARY_BASE_DIR = getLibraryBaseDir(); // 全局库根目录
-export const WORKFLOWS_DIR = getGlobalWorkflowsDir(); // 全局库的工作流目录
-export const SILLYTAVERN_DIR = getGlobalSillyTavernDir(); // 全局库的 SillyTavern 目录
-export const PROJECTS_BASE_DIR = getProjectsBaseDir(); // 所有项目的基础目录 (内部会按用户组织)
+// export const WORKFLOWS_DIR = getGlobalWorkflowsDir(); // 全局库的工作流目录 - 移除
+// export const SILLYTAVERN_DIR = getGlobalSillyTavernDir(); // 全局库的 SillyTavern 目录 - 移除
+// export const PROJECTS_BASE_DIR = getProjectsBaseDir(); // 所有项目的基础目录 (内部会按用户组织) - 移除
 
 // USER_DATA_ROOT 和 SINGLE_USER_SPECIFIC_DATA_DIR 的定义保持不变，因为它们依赖 MULTI_USER_MODE
 // 并且 SINGLE_USER_PATH 是一个标识符，而不是一个完整的路径片段。
