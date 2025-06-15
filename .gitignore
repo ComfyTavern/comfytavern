@@ -51,4 +51,4 @@ data/
 userData/
 # apps/backend/drizzle/migrations
 
-public/*
+public/avatars
