@@ -32,6 +32,7 @@ import { applyAuthMiddleware } from './middleware/authMiddleware'; // Changed to
 import { authRoutes } from './routes/authRoutes';
 import { userKeysRoutes } from './routes/userKeysRoutes'; // 导入 userKeysRoutes
 import { userProfileRoutes } from './routes/userProfileRoutes'; // + 导入 userProfileRoutes
+import { fileManagerRoutes } from './routes/fileManagerRoutes'; // ++ 导入文件管理路由
 import { globalWorkflowRoutes } from './routes/workflowRoutes';
 import { ConcurrencyScheduler } from './services/ConcurrencyScheduler';
 import { NodeLoader } from './services/NodeLoader';
@@ -167,6 +168,7 @@ const app = new Elysia()
   .use(authRoutes) // 挂载认证路由
   .use(userKeysRoutes) // 挂载用户密钥管理路由
   .use(userProfileRoutes) // + 挂载用户配置路由
+  .use(fileManagerRoutes) // ++ 挂载文件管理路由
   .use(nodeApiRoutes) // 挂载节点 API 路由
   .use(clientScriptRoutes) // 挂载客户端脚本路由
   .use(globalWorkflowRoutes) // 挂载全局工作流路由
