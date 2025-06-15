@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import EditorView from '../views/EditorView.vue'
 import ProjectListView from '../views/ProjectListView.vue'
 import CharacterCardView from '../views/CharacterCardView.vue'
+import FileManagerPage from '../views/FileManagerPage.vue' // 导入文件管理器页面
 import HomeLayout from '../views/HomeLayout.vue' // 导入新的布局组件
 import { useProjectStore } from '../stores/projectStore' // 导入项目 store
 
@@ -46,6 +47,11 @@ const router = createRouter({
           path: 'settings/test-panel', // 新增测试面板路由
           name: 'settings-test-panel',
           component: () => import('../views/TestPanelView.vue'),
+        },
+        {
+          path: 'files', // 文件管理器路由
+          name: 'files',
+          component: FileManagerPage,
         },
       ],
     },
