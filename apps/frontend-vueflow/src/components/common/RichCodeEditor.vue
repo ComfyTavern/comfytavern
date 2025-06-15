@@ -1,5 +1,5 @@
 <template>
-  <div class="rich-code-editor-wrapper" ref="wrapperRef" :class="{ dark: themeStore.isDark }">
+  <div class="rich-code-editor-wrapper" ref="wrapperRef" :class="{ dark: themeStore.currentAppliedMode === 'dark' }">
     <div v-if="breadcrumbData" class="breadcrumb-bar">
       <span v-if="breadcrumbData.workflowName" class="breadcrumb-item">{{
         breadcrumbData.workflowName
@@ -108,7 +108,7 @@ onMounted(() => {
   const currentConfig = props.config || {};
 
   const extensions = [
-    themeCompartment.of(themeStore.isDark ? vscodeDark : vscodeLight),
+    themeCompartment.of(themeStore.currentAppliedMode === 'dark' ? vscodeDark : vscodeLight),
     editableCompartment.of(EditorView.editable.of(!(currentConfig.readOnly ?? false))),
     lineNumbersCompartment.of(currentConfig.lineNumbers ?? true ? lineNumbers() : []),
     foldGutterCompartment.of(currentConfig.foldGutter ?? true ? foldGutter() : []),
@@ -334,11 +334,11 @@ watch(
 );
 
 watch(
-  () => themeStore.isDark,
-  (isDark) => {
+  () => themeStore.currentAppliedMode, // 监听 currentAppliedMode
+  (newMode) => { // newMode 将是 'light' 或 'dark'
     if (editorView.value) {
       editorView.value.dispatch({
-        effects: themeCompartment.reconfigure(isDark ? vscodeDark : vscodeLight),
+        effects: themeCompartment.reconfigure(newMode === 'dark' ? vscodeDark : vscodeLight),
       });
     }
   }
@@ -391,25 +391,19 @@ defineExpose({
   display: flex;
   flex-direction: column;
   height: 100%;
-  @apply border border-gray-300; /* 默认亮色边框 */
+  @apply border border-border-base; /* 使用主题变量定义边框 */
   transition: border-color 0.2s ease-in-out;
 }
-.rich-code-editor-wrapper.dark {
-  @apply border-gray-600; /* 暗色模式下的边框 */
-}
+/* .dark specific styles for border are removed as theme variables handle it */
 .rich-code-editor-wrapper.is-focused {
-  @apply border border-blue-500; /* 聚焦时边框宽度保持为1px，仅改变颜色 */
+  @apply border-primary; /* 聚焦时边框颜色使用 primary */
 }
-.rich-code-editor-wrapper.dark.is-focused {
-  @apply border border-blue-400; /* 暗色模式下聚焦时边框宽度保持为1px，仅改变颜色 */
-}
+/* .dark.is-focused specific styles are removed */
 
 .breadcrumb-bar {
+  @apply bg-neutral text-secondary border-b border-border-base;
   padding: 8px 12px;
-  background-color: #252526;
-  border-bottom: 1px solid #3c3c3c;
   font-size: 0.9em;
-  color: #d4d4d4;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -420,8 +414,8 @@ defineExpose({
 }
 
 .breadcrumb-separator {
+  @apply text-muted;
   margin: 0 4px;
-  color: #858585;
 }
 
 .editor-container {
@@ -462,7 +456,6 @@ defineExpose({
   width: auto;
   min-width: 350px;
   z-index: 20;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border-radius: 6px;
+  @apply shadow-lg rounded-md; /* 使用 Tailwind 的 shadow 和 rounded */
 }
 </style>

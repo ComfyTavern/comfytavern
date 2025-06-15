@@ -238,7 +238,7 @@ defineExpose({ menuElement });
   position: relative;
   /* 为了子菜单定位和箭头定位 */
   /* 确保文字颜色继承或在此处明确设置 */
-  @apply text-gray-800 dark:text-gray-100;
+  @apply text-base;
   /* 尝试更亮的颜色 */
 }
 
@@ -248,7 +248,7 @@ defineExpose({ menuElement });
 }
 
 .cascading-menu li.context-menu-item .label {
-  @apply text-gray-800 dark:text-gray-300;
+  @apply text-base;
   flex-grow: 1;
 }
 
@@ -256,14 +256,14 @@ defineExpose({ menuElement });
   margin-left: auto;
   padding-left: 0.75rem;
   font-size: 0.8em;
-  @apply text-gray-600 dark:text-gray-300;
+  @apply text-muted;
   /* color: #888; */
 }
 
 .cascading-menu li.context-menu-item.active {
   /* background-color: #e0e0e0; */
   /* dark:bg-gray-700 is good from original context menu */
-  @apply bg-gray-100 dark:bg-gray-700;
+  @apply bg-primary bg-opacity-[var(--ct-menu-item-active-bg-opacity)];
 }
 
 .cascading-menu li.separator {
@@ -281,7 +281,7 @@ defineExpose({ menuElement });
 
 .context-menu-separator-line {
   /* 来自 ContextMenu.vue 的样式 */
-  @apply my-1 border-t border-gray-200 dark:border-gray-700;
+  @apply my-1 border-t border-border-base;
   margin-left: -0.75rem;
   /* px-3 from context-menu-item */
   margin-right: -0.75rem;

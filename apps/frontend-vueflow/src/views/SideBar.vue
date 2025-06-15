@@ -97,7 +97,7 @@ function cycleDisplayMode() {
 </script>
 
 <template>
-  <div class="fixed left-0 top-0 bottom-0 flex flex-col z-10 transition-all duration-300 ease-in-out bg-background-surface text-text-base"
+  <div class="fixed left-0 top-0 bottom-0 flex flex-col z-10 transition-all duration-300 ease-in-out bg-background-surface text-base"
     :class="[ uiStore.isMainSidebarCollapsed ? 'w-16' : 'w-64' ]">
     <!-- 用户头像和名称 -->
     <div class="p-2 flex flex-col items-center mt-2 mb-2">
@@ -109,7 +109,7 @@ function cycleDisplayMode() {
       />
       <div
         v-if="displayedUsername"
-        class="mt-2 text-sm font-medium transition-opacity duration-150 ease-in-out overflow-hidden whitespace-nowrap text-text-muted"
+        class="mt-2 text-sm font-medium transition-opacity duration-150 ease-in-out overflow-hidden whitespace-nowrap text-muted"
         :class="[
           uiStore.isMainSidebarCollapsed ? 'opacity-0 max-h-0' : 'opacity-100 max-h-10 delay-150'
         ]"

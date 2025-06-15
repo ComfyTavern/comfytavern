@@ -7,17 +7,15 @@
   <Teleport to="body">
     <div v-if="isTooltipVisible" ref="floatingRef"
       :style="[floatingStyles, { width: computedWidth, maxWidth: computedMaxWidth }]" :class="[
-        'tooltip-content rounded shadow-lg border relative', // 添加 relative 定位以支持复制按钮定位
-        isDark
-          ? 'bg-gray-700 text-gray-100 border-gray-600' // 暗色模式样式
-          : 'bg-white text-gray-900 border-gray-300', // 亮色模式样式
+        'tooltip-content rounded shadow-lg border relative',
+        'bg-neutral text-neutral-content border-border-base', // 使用主题变量
       ]" style="z-index: 100; overflow: hidden">
       <!-- 复制按钮 -->
       <div class="relative">
         <button v-if="props.showCopyButton && (content || $slots.content)"
           class="copy-button absolute right-1 top-1 p-1 rounded-md hover:bg-opacity-10 hover:bg-gray-500 transition-colors group"
           @click="copyContent" style="z-index: 101; pointer-events: auto">
-          <svg class="w-4 h-4" :class="isDark ? 'text-gray-300' : 'text-gray-600'" xmlns="http://www.w3.org/2000/svg"
+          <svg class="w-4 h-4 text-secondary" xmlns="http://www.w3.org/2000/svg"
             fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path v-if="!copySuccess" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -25,15 +23,14 @@
           </svg>
           <!-- 自定义提示 -->
           <div
-            class="absolute right-full top-1/2 transform -translate-y-1/2 mr-2 px-2 py-1 rounded text-xs whitespace-nowrap transition-all duration-200 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0"
-            :class="isDark ? 'bg-gray-600 text-gray-100' : 'bg-gray-200 text-gray-800'">
+            class="absolute right-full top-1/2 transform -translate-y-1/2 mr-2 px-2 py-1 rounded text-xs whitespace-nowrap transition-all duration-200 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 bg-neutral text-neutral-content">
             {{ copyButtonTitle }}
           </div>
         </button>
       </div>
 
       <OverlayScrollbarsComponent :options="{
-        scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
+        scrollbars: { autoHide: 'scroll', theme: isCurrentlyDark ? 'os-theme-light' : 'os-theme-dark' },
         overflow: { y: 'scroll' }, // 始终允许垂直滚动
         paddingAbsolute: true, // 让内边距作用于滚动内容而非滚动条本身
       }" :style="{ maxHeight: computedMaxHeight }" class="p-2" defer>
@@ -83,7 +80,7 @@ import {
 } from "@floating-ui/vue";
 import { useElementHover } from "@vueuse/core"; // 保留用于 floatingRef
 import { useThemeStore } from "@/stores/theme";
-import { storeToRefs } from "pinia";
+// import { storeToRefs } from "pinia"; // storeToRefs 不再直接需要 isDark
 import MarkdownRenderer from "./MarkdownRenderer.vue";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue"; // 导入滚动条组件
 import "overlayscrollbars/overlayscrollbars.css"; // 导入滚动条 CSS
@@ -183,7 +180,7 @@ const longPressDuration = 500; // 长按时长 (毫秒)
 
 // --- 主题集成 ---
 const themeStore = useThemeStore();
-const { isDark } = storeToRefs(themeStore); // 获取 isDark 状态
+const isCurrentlyDark = computed(() => themeStore.currentAppliedMode === 'dark');
 // --- 主题集成结束 ---
 
 // --- 视口尺寸与最大高度 ---

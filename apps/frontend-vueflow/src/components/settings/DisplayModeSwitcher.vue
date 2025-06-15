@@ -1,6 +1,6 @@
 <template>
   <div class="display-mode-switcher">
-    <label class="block text-sm font-medium text-text-base mb-1">显示模式:</label>
+    <label class="block font-medium text-base mb-1">显示模式:</label>
     <div class="flex space-x-2 rounded-md p-0.5 bg-background-surface" role="group">
       <button
         v-for="modeOption in modeOptions"
@@ -11,7 +11,7 @@
           'px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150 ease-in-out',
           displayMode === modeOption.value
             ? 'bg-primary text-white shadow-sm' // 选中状态
-            : 'text-text-base hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50' // 未选中状态
+            : 'text-base hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50' // 未选中状态
         ]"
       >
         {{ modeOption.label }}

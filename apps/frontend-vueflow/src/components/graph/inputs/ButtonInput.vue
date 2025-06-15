@@ -5,10 +5,10 @@
             bg-primary hover:brightness-95 dark:hover:brightness-95
             text-primary-content
             border-transparent
-            disabled:bg-background-base/60
-            disabled:text-text-muted/70
+            disabled:bg-background-base disabled:bg-opacity-[var(--ct-disabled-opacity)]
+            disabled:text-muted disabled:text-opacity-[var(--ct-disabled-opacity)]
             disabled:cursor-not-allowed
-            focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 focus:ring-offset-background-surface">
+            focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-[var(--ct-focus-ring-opacity)] focus:ring-offset-1 focus:ring-offset-background-surface">
       {{ label || 'Trigger' }} <!-- Provide a default label -->
     </button>
   </div>

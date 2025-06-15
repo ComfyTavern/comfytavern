@@ -195,15 +195,15 @@ async function execCommand(command: 'undo' | 'redo' | 'cut' | 'copy' | 'paste' |
 
 <style scoped>
 .context-menu {
-  @apply absolute bg-gray-800 text-white rounded-md shadow-lg p-1 z-[1000] min-w-[160px] border border-gray-700;
+  @apply absolute bg-background-surface text-base rounded-md shadow-lg p-1 z-[1000] min-w-[160px] border border-border-base;
 }
 .context-menu-item {
-  @apply block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-700 rounded cursor-pointer focus:outline-none focus:bg-gray-700;
+  @apply block w-full text-left px-3 py-1.5 text-sm hover:bg-primary hover:bg-opacity-[var(--ct-component-hover-bg-opacity)] focus:bg-primary focus:bg-opacity-[var(--ct-component-hover-bg-opacity)] rounded cursor-pointer focus:outline-none;
 }
 .context-menu-item:disabled {
   @apply opacity-50 cursor-not-allowed hover:bg-transparent;
 }
 .context-menu-divider {
-  @apply border-t border-gray-600 my-1 mx-1;
+  @apply border-t border-border-base my-1 mx-1;
 }
 </style>

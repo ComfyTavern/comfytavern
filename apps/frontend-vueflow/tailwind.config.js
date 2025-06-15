@@ -12,24 +12,25 @@ export default {
       fontSize: { // 保留现有的 fontSize 扩展
         'xxs': ['0.65rem', { lineHeight: '0.85rem' }],
       },
-      colors: { // 新增或覆盖颜色定义以使用 CSS 变量
-        'primary': 'var(--ct-primary)',
-        'secondary': 'var(--ct-secondary)',
-        'accent': 'var(--ct-accent)',
-        'background-base': 'var(--ct-background-base)',
-        'background-surface': 'var(--ct-background-surface)',
-        'text-base': 'var(--ct-text-base)',
-        'text-muted': 'var(--ct-text-muted)',
-        'border-base': 'var(--ct-border-base)',
+      colors: { // 颜色定义使用新的 HSL 通道变量和 <alpha-value>
+        'primary': 'hsl(var(--ct-primary-hsl) / <alpha-value>)',
+        'secondary': 'hsl(var(--ct-secondary-hsl) / <alpha-value>)',
+        'accent': 'hsl(var(--ct-accent-hsl) / <alpha-value>)',
+        'background-base': 'hsl(var(--ct-background-base-hsl) / <alpha-value>)',
+        'background-surface': 'hsl(var(--ct-background-surface-hsl) / <alpha-value>)',
+        'text-base': 'hsl(var(--ct-text-base-hsl) / <alpha-value>)',
+        'text-secondary': 'hsl(var(--ct-text-secondary-hsl) / <alpha-value>)',
+        'muted': 'hsl(var(--ct-text-muted-hsl) / <alpha-value>)',
+        'border-base': 'hsl(var(--ct-border-base-hsl) / <alpha-value>)',
+        'backdrop': 'hsl(var(--ct-backdrop-bg-hsl) / <alpha-value>)', // 新增 backdrop 颜色
         
-        // 状态颜色，与 theme-variables.css 和主题 JSON 中的定义对应
-        // 提供回退值是个好习惯，尽管我们的系统应该总能提供这些变量
-        'info': 'var(--ct-info, var(--ct-primary))',
-        'success': 'var(--ct-success, #28a745)',
-        'warning': 'var(--ct-warning, #ffc107)',
-        'error': 'var(--ct-error, #dc3545)',
-        'neutral': 'var(--ct-neutral, var(--ct-text-base))',
-        'primary-content': 'var(--ct-primary-content)', // 新增 primary-content
+        // 状态颜色
+        'info': 'hsl(var(--ct-info-hsl) / <alpha-value>)',
+        'success': 'hsl(var(--ct-success-hsl) / <alpha-value>)',
+        'warning': 'hsl(var(--ct-warning-hsl) / <alpha-value>)',
+        'error': 'hsl(var(--ct-error-hsl) / <alpha-value>)',
+        'neutral': 'hsl(var(--ct-neutral-hsl) / <alpha-value>)',
+        'primary-content': 'hsl(var(--ct-primary-content-hsl) / <alpha-value>)',
       },
     },
   },
@@ -37,34 +38,34 @@ export default {
   daisyui: {
     themes: [ // 定义 DaisyUI 使用的“桥接”主题
       {
-        mytheme_light: { // 对应我们的亮色模式
-          "primary": "var(--ct-primary)",
-          "secondary": "var(--ct-secondary)",
-          "accent": "var(--ct-accent)",
-          "neutral": "var(--ct-neutral)", // 使用我们定义的 --ct-neutral
-          "base-100": "var(--ct-background-base)", // DaisyUI 的基础背景
-          "base-200": "var(--ct-background-surface)", // DaisyUI 的次级背景
-          "info": "var(--ct-info)",
-          "success": "var(--ct-success)",
-          "warning": "var(--ct-warning)",
-          "error": "var(--ct-error)",
-          "primary-content": "var(--ct-primary-content)", // 新增
+        mytheme_light: { // 对应我们的亮色模式, 固定 alpha 为 1
+          "primary": "hsl(var(--ct-primary-hsl) / 1)",
+          "secondary": "hsl(var(--ct-secondary-hsl) / 1)",
+          "accent": "hsl(var(--ct-accent-hsl) / 1)",
+          "neutral": "hsl(var(--ct-neutral-hsl) / 1)",
+          "base-100": "hsl(var(--ct-background-base-hsl) / 1)",
+          "base-200": "hsl(var(--ct-background-surface-hsl) / 1)",
+          "info": "hsl(var(--ct-info-hsl) / 1)",
+          "success": "hsl(var(--ct-success-hsl) / 1)",
+          "warning": "hsl(var(--ct-warning-hsl) / 1)",
+          "error": "hsl(var(--ct-error-hsl) / 1)",
+          "primary-content": "hsl(var(--ct-primary-content-hsl) / 1)",
           // 如果需要 DaisyUI 的颜色亮度变体 (e.g., primary-focus),
           // 可以在此也用 CSS 变量定义它们，或者在 theme-variables.css 中定义这些派生变量
           // 例如: "primary-focus": "var(--ct-primary-focus)",
         },
-        mytheme_dark: { // 对应我们的暗色模式
-          "primary": "var(--ct-primary)",
-          "secondary": "var(--ct-secondary)",
-          "accent": "var(--ct-accent)",
-          "neutral": "var(--ct-neutral)",
-          "base-100": "var(--ct-background-base)",
-          "base-200": "var(--ct-background-surface)",
-          "info": "var(--ct-info)",
-          "success": "var(--ct-success)",
-          "warning": "var(--ct-warning)",
-          "error": "var(--ct-error)",
-          "primary-content": "var(--ct-primary-content)", // 新增
+        mytheme_dark: { // 对应我们的暗色模式, 固定 alpha 为 1
+          "primary": "hsl(var(--ct-primary-hsl) / 1)",
+          "secondary": "hsl(var(--ct-secondary-hsl) / 1)",
+          "accent": "hsl(var(--ct-accent-hsl) / 1)",
+          "neutral": "hsl(var(--ct-neutral-hsl) / 1)",
+          "base-100": "hsl(var(--ct-background-base-hsl) / 1)",
+          "base-200": "hsl(var(--ct-background-surface-hsl) / 1)",
+          "info": "hsl(var(--ct-info-hsl) / 1)",
+          "success": "hsl(var(--ct-success-hsl) / 1)",
+          "warning": "hsl(var(--ct-warning-hsl) / 1)",
+          "error": "hsl(var(--ct-error-hsl) / 1)",
+          "primary-content": "hsl(var(--ct-primary-content-hsl) / 1)",
           // "primary-focus": "var(--ct-primary-focus)",
         }
       }

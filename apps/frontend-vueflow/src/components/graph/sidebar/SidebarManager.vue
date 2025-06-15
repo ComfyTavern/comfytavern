@@ -184,30 +184,30 @@ defineExpose({
 
 <style scoped>
 .sidebar-manager {
-  @apply h-full flex bg-white dark:bg-gray-800;
+  @apply h-full flex bg-background-base;
 }
 
 .sidebar-icon-bar {
-  @apply flex flex-col w-12 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 items-center py-1 transition-all duration-300 ease-in-out;
+  @apply flex flex-col w-12 border-r border-border-base bg-background-surface items-center py-1 transition-all duration-300 ease-in-out;
   /* py-2 -> py-1 */
   /* 添加过渡 */
 }
 
 .icon-button {
-  @apply flex flex-col items-center justify-center w-full py-1 px-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer;
+  @apply flex flex-col items-center justify-center w-full py-1 px-1 text-muted hover:bg-neutral hover:bg-opacity-[var(--ct-component-hover-bg-opacity)] transition-colors cursor-pointer;
   /* py-2 -> py-1 */
   /* 调整内边距 */
 }
 
 .icon-button.active {
-  @apply text-blue-500 dark:text-blue-400 bg-gray-100 dark:bg-gray-700 relative;
+  @apply text-primary bg-primary bg-opacity-[var(--ct-menu-item-active-bg-opacity)] relative;
   /* 移除边框，用背景色区分 */
 }
 
 /* 可选：为激活状态添加一个细微的指示器 */
 .icon-button.active::before {
   content: '';
-  @apply absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-blue-500 dark:bg-blue-400 rounded-r-sm;
+  @apply absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-primary rounded-r-sm;
 }
 
 
@@ -227,13 +227,13 @@ defineExpose({
 }
 
 .bottom-buttons-container {
-  @apply mt-auto flex flex-col items-center w-full border-t border-gray-200 dark:border-gray-700 pt-1;
+  @apply mt-auto flex flex-col items-center w-full border-t border-border-base pt-1;
   /* pt-2 -> pt-1 */
   /* 底部按钮容器 */
 }
 
 .sidebar-content {
-  @apply flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out border-l border-gray-200 dark:border-gray-700;
+  @apply flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out border-l border-border-base;
   /* 添加 flex-shrink-0 和过渡 */
 }
 

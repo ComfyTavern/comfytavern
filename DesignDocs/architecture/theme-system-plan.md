@@ -234,8 +234,21 @@ interface ThemePreset {
     *   **显示模式切换器**: 一个按钮或一组按钮，用于在 '浅色模式', '深色模式', '跟随系统' 之间切换，调用 `themeStore.setDisplayMode(mode)`。
 
 6.  **代码梳理 (初步):**
-    *   识别几个关键组件或页面（如主布局、侧边栏、按钮）。
-    *   尝试将其中的硬编码颜色或 Tailwind 特定颜色类（如 `bg-blue-500`, `text-gray-800`）替换为使用 Tailwind 配置中映射到 CSS 变量的类（如 `bg-primary`, `text-text-base`）。
+    *   目标：将项目中的硬编码颜色或旧的 Tailwind 特定颜色类替换为使用新主题系统中定义的语义化颜色类。
+    *   **已迁移/部分迁移的组件 (截至 `2a3c9ab` 及后续工作):**
+        *   [`apps/frontend-vueflow/src/components/common/BaseModal.vue`](apps/frontend-vueflow/src/components/common/BaseModal.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/inputs/ButtonInput.vue`](apps/frontend-vueflow/src/components/graph/inputs/ButtonInput.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/sidebar/SidebarManager.vue`](apps/frontend-vueflow/src/components/graph/sidebar/SidebarManager.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/views/HomeLayout.vue`](apps/frontend-vueflow/src/views/HomeLayout.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/common/CascadingMenu.vue`](apps/frontend-vueflow/src/components/common/CascadingMenu.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/common/EditorContextMenu.vue`](apps/frontend-vueflow/src/components/common/EditorContextMenu.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/common/MarkdownRenderer.vue`](apps/frontend-vueflow/src/components/common/MarkdownRenderer.vue:1) (通过 [`apps/frontend-vueflow/src/assets/styles/shared.css`](apps/frontend-vueflow/src/assets/styles/shared.css:1) 实现基础元素主题化，完成)
+        *   [`apps/frontend-vueflow/src/components/common/Tooltip.vue`](apps/frontend-vueflow/src/components/common/Tooltip.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/common/RichCodeEditor.vue`](apps/frontend-vueflow/src/components/common/RichCodeEditor.vue:1) (完成)
+    *   **待处理组件范围 (下一步):**
+        *   所有在 commit `2a3c9ab` 中初步迁移的组件均已复查并完成迁移。
+        *   需要进一步梳理项目，识别其他需要迁移到新主题系统的组件。
+        *   ... (后续根据实际情况添加更多组件)
 
 ### 阶段二：颜色自定义与用户主题
 

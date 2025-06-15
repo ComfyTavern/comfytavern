@@ -2,49 +2,92 @@
 /* 这些是基础回退值，会被 themeStore 动态应用的主题覆盖 */
 
 :root {
-  /* 默认亮色主题变量 */
-  --ct-primary: hsla(211, 100%, 50%, 1); /* 关键操作、高亮元素 */
-  --ct-secondary: hsla(208, 7%, 46%, 1); /* 辅助元素、次级按钮 */
-  --ct-accent: hsla(192, 78%, 41%, 1); /* 强调色 */
-  --ct-background-base: hsla(0, 0%, 100%, 1); /* 最底层的背景色 */
-  --ct-background-surface: hsla(210, 17%, 98%, 1); /* 卡片、面板等表层元素的背景色 */
-  --ct-text-base: hsla(210, 10%, 15%, 1); /* 主要文本颜色 */
-  --ct-text-muted: hsla(208, 7%, 46%, 1); /* 次要或辅助性文本颜色 */
-  --ct-border-base: hsla(210, 16%, 91%, 1); /* 主要边框颜色 */
+  /* 默认亮色主题变量 - HSL 通道 */
+  --ct-primary-hsl: 211 100% 50%; /* 关键操作、高亮元素 */
+  --ct-secondary-hsl: 208 7% 46%; /* 辅助元素、次级按钮 */
+  --ct-accent-hsl: 192 78% 41%; /* 强调色 */
+  --ct-background-base-hsl: 0 0% 100%; /* 最底层的背景色 */
+  --ct-background-surface-hsl: 210 17% 98%; /* 卡片、面板等表层元素的背景色 */
+  --ct-text-base-hsl: 210 10% 15%; /* 主要文本颜色 */
+  --ct-text-secondary-hsl: 210 9% 30%; /* 次主要文本颜色 */
+  --ct-text-muted-hsl: 208 7% 46%; /* 次要或辅助性文本颜色 */
+  --ct-border-base-hsl: 210 16% 91%; /* 主要边框颜色 */
 
-  /* 状态颜色 (DaisyUI 桥接可能需要) */
-  --ct-info: hsla(192, 78%, 41%, 1); /* 信息状态，可与 accent 或 primary 关联 */
-  --ct-success: hsla(134, 61%, 40%, 1); /* 成功状态 */
-  --ct-warning: hsla(45, 100%, 51%, 1); /* 警告状态 */
-  --ct-error: hsla(354, 70%, 54%, 1); /* 错误状态 */
+  /* 状态颜色 - HSL 通道 */
+  --ct-info-hsl: 192 78% 41%;
+  --ct-success-hsl: 134 61% 40%;
+  --ct-warning-hsl: 45 100% 51%;
+  --ct-error-hsl: 354 70% 54%;
 
-  /* 其他 DaisyUI 可能需要的语义颜色，可以先用基础色占位 */
-  --ct-neutral: var(--ct-text-base); /* DaisyUI neutral 常用于文本或中性背景 */
-  --ct-primary-content: hsla(0, 0%, 100%, 1); /* 针对 primary 背景的文本颜色 */
-  /* --ct-primary-focus: color-mix(in srgb, var(--ct-primary) 80%, black); */
-  /* --ct-primary-content: white; */
+  /* 内容颜色等 - HSL 通道 */
+  --ct-primary-content-hsl: 0 0% 100%; /* 针对 primary 背景的文本颜色 */
+  --ct-neutral-hsl: 210 10% 15%; /* DaisyUI neutral 常用于文本或中性背景, 初始值同 text-base */
+
+  /* 默认透明度变量 */
+  --ct-menu-item-active-bg-opacity: 0.1;
+  --ct-component-hover-bg-opacity: 0.05;
+  --ct-panel-bg-opacity: 1; /* 面板通常不透明或由特定主题定义 */
+  --ct-disabled-opacity: 0.5; /* 通用禁用透明度 */
+
+  /* 边框透明度变量 */
+  --ct-border-base-opacity: 1;       /* 基础边框透明度 */
+  --ct-border-primary-opacity: 1;    /* 基于主色的边框透明度 */
+  --ct-border-secondary-opacity: 1;  /* 基于次要色的边框透明度 */
+  --ct-border-accent-opacity: 1;     /* 基于强调色的边框透明度 */
+  --ct-border-decorative-opacity: 0.5; /* 装饰性边框透明度 */
+
+  /* 遮罩层 */
+  --ct-backdrop-bg-hsl: 0 0% 0%; /* 遮罩层背景颜色 HSL (默认黑色) */
+  --ct-backdrop-opacity: 0.5; /* 遮罩层透明度 */
+
+  /* 焦点状态 */
+  --ct-focus-ring-opacity: 0.5; /* 焦点环透明度 */
+ 
+  /* --ct-primary-focus: color-mix(in srgb, hsl(var(--ct-primary-hsl)), black 20%); */
   /* ... 更多 DaisyUI 特定变量可以根据需要添加和映射 ... */
 }
 
 html.dark {
-  /* 默认暗色主题变量 */
-  --ct-primary: hsla(207, 90%, 63%, 1); /* 亮一些的蓝色，适应暗色背景 */
-  --ct-secondary: hsla(210, 6%, 56%, 1);
-  --ct-accent: hsla(187, 68%, 54%, 1);
-  --ct-background-base: hsla(0, 0%, 7%, 1); /* 非常深的灰色，接近纯黑 */
-  --ct-background-surface: hsla(0, 0%, 12%, 1); /* 比 base 稍亮的深灰色 */
-  --ct-text-base: hsla(0, 0%, 88%, 1); /* 浅灰色文本 */
-  --ct-text-muted: hsla(0, 0%, 63%, 1); /* 中灰色文本 */
-  --ct-border-base: hsla(0, 0%, 26%, 1); /* 暗色模式下的边框 */
+  /* 默认暗色主题变量 - HSL 通道 */
+  --ct-primary-hsl: 207 90% 63%;
+  --ct-secondary-hsl: 210 6% 56%;
+  --ct-accent-hsl: 187 68% 54%;
+  --ct-background-base-hsl: 0 0% 7%;
+  --ct-background-surface-hsl: 0 0% 12%;
+  --ct-text-base-hsl: 0 0% 88%;
+  --ct-text-secondary-hsl: 0 0% 75%; /* 次主要文本颜色 */
+  --ct-text-muted-hsl: 0 0% 63%;
+  --ct-border-base-hsl: 0 0% 26%;
 
-  /* 暗色模式下的状态颜色 */
-  --ct-info: hsla(187, 68%, 54%, 1);
-  --ct-success: hsla(130, 57%, 49%, 1);
-  --ct-warning: hsla(42, 96%, 50%, 1);
-  --ct-error: hsla(0, 94%, 65%, 1);
+  /* 暗色模式下的状态颜色 - HSL 通道 */
+  --ct-info-hsl: 187 68% 54%;
+  --ct-success-hsl: 130 57% 49%;
+  --ct-warning-hsl: 42 96% 50%;
+  --ct-error-hsl: 0 94% 65%;
 
-  --ct-primary-content: hsla(0, 0%, 100%, 1); /* 针对 primary 背景的文本颜色 */
-  --ct-neutral: var(--ct-text-base);
-  /* --ct-primary-focus: color-mix(in srgb, var(--ct-primary) 80%, black); */
-  /* --ct-primary-content: black; */
+  /* 内容颜色等 - HSL 通道 */
+  --ct-primary-content-hsl: 0 0% 100%;
+  --ct-neutral-hsl: 0 0% 88%; /* 初始值同 text-base */
+
+  /* 暗色模式下的默认透明度变量 (可以与亮色不同，或由主题JSON覆盖) */
+  --ct-menu-item-active-bg-opacity: 0.2;
+  --ct-component-hover-bg-opacity: 0.1;
+  --ct-panel-bg-opacity: 1;
+  /* --ct-disabled-opacity: 0.5; (通常此值不随亮暗模式改变，除非特定设计) */
+
+  /* 暗色模式下的边框透明度变量 (可以与亮色不同，或由主题JSON覆盖) */
+  --ct-border-base-opacity: 1;
+  --ct-border-primary-opacity: 1;
+  --ct-border-secondary-opacity: 1;
+  --ct-border-accent-opacity: 1;
+  --ct-border-decorative-opacity: 0.5;
+
+  /* 遮罩层 (暗色模式下通常与亮色模式一致，或由主题JSON覆盖) */
+  /* --ct-backdrop-bg-hsl: 0 0% 0%; (如果与 :root 不同则取消注释) */
+  /* --ct-backdrop-opacity: 0.5; (如果与 :root 不同则取消注释) */
+
+  /* 焦点状态 (暗色模式下通常与亮色模式一致，或由主题JSON覆盖) */
+  /* --ct-focus-ring-opacity: 0.5; (如果与 :root 不同则取消注释) */
+ 
+  /* --ct-primary-focus: color-mix(in srgb, hsl(var(--ct-primary-hsl)), white 20%); */
 }
