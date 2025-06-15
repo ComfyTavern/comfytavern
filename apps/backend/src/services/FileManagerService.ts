@@ -473,6 +473,54 @@ export class FileManagerService implements FAMService {
       const sourcePhysicalPath = await this.resolvePath(userId, sourceLogicalPath);
       const destinationPhysicalPath = await this.resolvePath(userId, destinationLogicalPath);
 
+      // --- 开始：添加受保护路径检查 ---
+      const normalizedSourcePath = sourceLogicalPath.endsWith('/') ? sourceLogicalPath.slice(0, -1) : sourceLogicalPath;
+      const normalizedDestPath = destinationLogicalPath.endsWith('/') ? destinationLogicalPath.slice(0, -1) : destinationLogicalPath;
+
+      let isProtected = false;
+      let protectionMessage = '';
+
+      // 检查1: 是否尝试重命名 system:// 下的任何路径
+      if (normalizedSourcePath.startsWith('system://')) {
+        isProtected = true;
+        protectionMessage = `Renaming of system path '${normalizedSourcePath}' is not allowed.`;
+      } else {
+        // 检查2: 固定的顶级路径和其下的固定子目录
+        const fixedPathsToProtect = [
+          // Top level
+          'user://projects',
+          'user://library',
+          'shared://library',
+          // Shared library subdirectories
+          'shared://library/workflows',
+          'shared://library/knowledgebases',
+          'shared://library/SillyTavern', // 根据文档，历史遗留，作为固定资产保护
+          // User library subdirectories
+          'user://library/templates',
+          'user://library/knowledgebases',
+        ];
+
+        if (fixedPathsToProtect.includes(normalizedSourcePath)) {
+          isProtected = true;
+          protectionMessage = `Renaming of protected path '${normalizedSourcePath}' is not allowed.`;
+        } else {
+          // 检查3: user://projects/{projectId}/<fixed_subdir>
+          // 匹配 user://projects/ANY_PROJECT_ID/workflows or /outputs or /assets
+          const projectSubDirPattern = /^user:\/\/projects\/([^/]+)\/(workflows|outputs|assets)$/;
+          const match = normalizedSourcePath.match(projectSubDirPattern);
+          if (match) {
+            isProtected = true;
+            protectionMessage = `Renaming of project structural directory '${normalizedSourcePath}' is not allowed.`;
+          }
+        }
+      }
+
+      if (isProtected && normalizedSourcePath.toLowerCase() !== normalizedDestPath.toLowerCase()) {
+        // 只有当确定是受保护路径，并且源路径和目标路径确实不同（不仅仅是大小写或尾部斜杠）时，才抛出错误
+        throw new Error(protectionMessage);
+      }
+      // --- 结束：添加受保护路径检查 ---
+
       // 1. 检查源是否存在
       if (!await this.exists(userId, sourceLogicalPath)) {
         throw new Error(`Source path does not exist: ${sourceLogicalPath}`);
