@@ -1,4 +1,4 @@
-import { CreateWorkflowObject, GroupInterfaceInfo, NodeGroupData, ProjectMetadata, ProjectMetadataSchema, UpdateWorkflowObject, WorkflowNode, WorkflowObject, WorkflowObjectSchema, WorkflowStorageObject, } from "@comfytavern/types";
+import { CreateWorkflowObject, GroupInterfaceInfo, NodeGroupData, ProjectMetadata, ProjectMetadataSchema, UpdateWorkflowObject, WorkflowNode, WorkflowObject, WorkflowObjectSchema, WorkflowStorageObject, FAMItem } from "@comfytavern/types"; // + FAMItem
 import { basename, extname } from "node:path"; // path.join 等不再需要，由 FAMService 处理
 // import { promises as fs } from "node:fs"; // FAMService 将处理文件操作
 import isEqual from "lodash/isEqual";
@@ -92,10 +92,10 @@ export async function syncReferencingNodeGroups(
       return; // 目录不存在，无需继续
     }
 
-    const dirItems = await famService.listDir(userId, logicalWorkflowsDir);
+    const dirItems: FAMItem[] = await famService.listDir(userId, logicalWorkflowsDir);
     const workflowFiles = dirItems.filter(
-      (item) =>
-        item.type === "file" &&
+      (item: FAMItem) => // Explicitly type item
+        item.itemType === "file" && // Changed from item.type
         extname(item.name).toLowerCase() === ".json" &&
         basename(item.name, ".json") !== updatedWorkflowId // 排除自身
     );
@@ -103,7 +103,7 @@ export async function syncReferencingNodeGroups(
     for (const workflowItem of workflowFiles) {
       const referencingWorkflowId = basename(workflowItem.name, ".json");
       // workflowItem.path 是完整的逻辑路径，例如 user://projects/projId/workflows/wfId.json
-      const logicalWorkflowPath = workflowItem.path;
+      const logicalWorkflowPath = workflowItem.logicalPath; // Changed from workflowItem.path
       let workflowData: WorkflowObject | null = null;
       let needsSave = false;
 
@@ -350,9 +350,9 @@ export async function listProjects(userId: string): Promise<ProjectMetadata[]> {
       return [];
     }
 
-    const dirItems = await famService.listDir(userId, logicalUserProjectsRoot);
+    const dirItems: FAMItem[] = await famService.listDir(userId, logicalUserProjectsRoot);
     const projectDirs = dirItems.filter(
-      (item) => item.type === "directory" && item.name !== RECYCLE_BIN_DIR_NAME
+      (item: FAMItem) => item.itemType === "directory" && item.name !== RECYCLE_BIN_DIR_NAME // Changed from item.type
     );
 
     const projectsPromises = projectDirs.map(async (dirItem): Promise<ProjectMetadata | null> => {
@@ -621,14 +621,14 @@ export async function listWorkflows(userId: string, projectId: string): Promise<
       return [];
     }
 
-    const dirItems = await famService.listDir(userId, logicalProjectWorkflowsDir);
+    const dirItems: FAMItem[] = await famService.listDir(userId, logicalProjectWorkflowsDir);
     const workflowFileItems = dirItems.filter(
-      (item) => item.type === "file" && extname(item.name).toLowerCase() === ".json"
+      (item: FAMItem) => item.itemType === "file" && extname(item.name).toLowerCase() === ".json" // Changed from item.type
     );
 
     const workflowsPromises = workflowFileItems.map(async (item): Promise<ListedWorkflow | null> => {
       const id = basename(item.name, ".json");
-      const logicalWorkflowPath = item.path; // item.path 是完整的逻辑路径
+      const logicalWorkflowPath = item.logicalPath; // item.path 是完整的逻辑路径 -> item.logicalPath
       let name = id;
       let description: string | undefined;
       let creationMethod: string | undefined;

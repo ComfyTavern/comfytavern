@@ -5,6 +5,7 @@ import { Elysia, t } from 'elysia';
 import { sanitizeWorkflowIdFromParam } from '../utils/helpers'; // 导入辅助函数
 // import { WORKFLOWS_DIR } from '../config'; // 全局工作流目录将通过 FAMService 逻辑路径处理
 import { famService } from '../services/FileManagerService'; // 导入 FAMService
+import type { FAMItem } from '@comfytavern/types'; // + FAMItem
 
 
 // 导入辅助函数
@@ -17,12 +18,12 @@ export const globalWorkflowRoutes = new Elysia({ prefix: '/api/workflows' })
   .get('/', async ({ set }) => {
     const logicalWorkflowsDir = 'shared://library/workflows/';
     try {
-      const dirItems = await famService.listDir(null, logicalWorkflowsDir); // userId is null for shared resources
-      const workflowFileItems = dirItems.filter(item => item.type === 'file' && extname(item.name).toLowerCase() === '.json');
+      const dirItems: FAMItem[] = await famService.listDir(null, logicalWorkflowsDir); // userId is null for shared resources
+      const workflowFileItems = dirItems.filter((item: FAMItem) => item.itemType === 'file' && extname(item.name).toLowerCase() === '.json');
       
       const workflows = await Promise.all(workflowFileItems.map(async (item) => {
         const id = basename(item.name, '.json');
-        const logicalWorkflowPath = item.path; // item.path is the full logical path from listDir
+        const logicalWorkflowPath = item.logicalPath; // item.path -> item.logicalPath
         let name = id;
         try {
           const fileContentBuffer = await famService.readFile(null, logicalWorkflowPath, 'utf-8');

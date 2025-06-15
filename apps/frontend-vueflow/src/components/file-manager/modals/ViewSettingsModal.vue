@@ -87,7 +87,7 @@
 import { reactive, watch } from 'vue';
 import BaseModal from '@/components/common/BaseModal.vue';
 import { useFileManagerStore, type ViewSettings } from '@/stores/fileManagerStore';
-import type { FAMListItem } from '@/api/fileManagerApi';
+import type { FAMItem } from '@comfytavern/types';
 
 
 const props = defineProps<{
@@ -103,7 +103,7 @@ const fileManagerStore = useFileManagerStore();
 // Local state for form inputs
 const localSettings = reactive<ViewSettings>({ ...fileManagerStore.viewSettings });
 
-const availableColumns: { label: string; value: keyof FAMListItem | string }[] = [
+const availableColumns: { label: string; value: keyof FAMItem | string }[] = [
   { label: '名称', value: 'name' },
   { label: '大小', value: 'size' },
   { label: '修改日期', value: 'lastModified' },

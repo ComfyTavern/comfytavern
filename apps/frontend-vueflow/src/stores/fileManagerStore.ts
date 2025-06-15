@@ -1,12 +1,9 @@
 // apps/frontend-vueflow/src/stores/fileManagerStore.ts
 import { defineStore } from 'pinia';
-// import { z } from 'zod'; // 保留 Zod 导入，以备将来使用 - 暂时注释避免未使用警告
 import * as fileManagerApi from '@/api/fileManagerApi';
-import type { FAMListItem } from '@/api/fileManagerApi'; // 从本地 api 文件导入临时类型
+import { FAMItemsSchema, type FAMItem } from '@comfytavern/types'; // 导入统一类型和 Schema
 import { useDialogService } from '@/services/DialogService'; // 导入对话框服务
 
-// 暂时将 ZodValidatedFAMListItem 等同于 FAMListItem
-type ZodValidatedFAMListItem = FAMListItem;
 
 export interface RecentAccessItem {
   logicalPath: string;
@@ -26,9 +23,9 @@ export interface FilterOptions {
 
 export interface ViewSettings {
   mode: 'list' | 'grid'; // 视图模式
-  sortField: keyof ZodValidatedFAMListItem | 'name' | 'size' | 'lastModified' | 'itemType'; // 排序字段
+  sortField: keyof FAMItem | 'name' | 'size' | 'lastModified' | 'itemType'; // 排序字段, FAMItem 替换 ZodValidatedFAMListItem
   sortDirection: 'asc' | 'desc'; // 排序方向
-  visibleColumns: Array<keyof ZodValidatedFAMListItem | string>; // 列表视图下可见的列 (string 用于自定义列)
+  visibleColumns: Array<keyof FAMItem | string>; // 列表视图下可见的列, FAMItem 替换 ZodValidatedFAMListItem
   thumbnailSize: 'small' | 'medium' | 'large'; // 网格视图缩略图大小
   informationDensity: 'compact' | 'comfortable' | 'spacious'; // 信息密度
 }
@@ -36,8 +33,8 @@ export interface ViewSettings {
 export interface FileManagerState {
   currentLogicalPath: string;
   currentUserId: string | null; // 从 authStore 获取并初始化
-  items: ZodValidatedFAMListItem[]; // 当前路径下的原始条目列表
-  filteredItems: ZodValidatedFAMListItem[]; // 经过筛选和排序后的条目列表
+  items: FAMItem[]; // 当前路径下的原始条目列表
+  filteredItems: FAMItem[]; // 经过筛选和排序后的条目列表
   selectedItemPaths: string[]; // 选中条目的 logicalPath 数组
   isLoading: boolean;
   error: any | null; // API 请求错误信息
@@ -58,7 +55,7 @@ export interface FileManagerState {
   // 用于右侧/底部详情面板
   isDetailPanelVisible: boolean;
   detailPanelActiveTab: 'properties' | 'preview' | 'actions' | null; // 'actions' 可能是未来扩展
-  selectedItemForDetail: ZodValidatedFAMListItem | null; // 当前详情面板显示的项目
+  selectedItemForDetail: FAMItem | null; // 当前详情面板显示的项目
 
   // 收藏夹路径
   favoritesPaths: string[];
@@ -112,8 +109,8 @@ export const useFileManagerStore = defineStore('fileManager', {
       // 简单示例，实际可能更复杂或固定为 'user://'
       return `user://${state.currentUserId}/`;
     },
-    selectedItems(state): ZodValidatedFAMListItem[] {
-      return state.items.filter(item => state.selectedItemPaths.includes(item.logicalPath));
+    selectedItems(state): FAMItem[] {
+      return state.items.filter((item: FAMItem) => state.selectedItemPaths.includes(item.logicalPath));
     },
     breadcrumbsSegments(state): { label: string; path: string }[] {
       if (!state.currentLogicalPath) return [];
@@ -145,7 +142,7 @@ export const useFileManagerStore = defineStore('fileManager', {
     },
     availableFileTypes(state): string[] {
       const types = new Set<string>();
-      state.items.forEach(item => {
+      state.items.forEach((item: FAMItem) => {
         if (item.itemType === 'file' && item.name.includes('.')) {
           const ext = item.name.substring(item.name.lastIndexOf('.')).toLowerCase();
           if (ext) types.add(ext);
@@ -223,9 +220,23 @@ export const useFileManagerStore = defineStore('fileManager', {
       this.isLoading = true;
       this.error = null;
       try {
-        const items = await fileManagerApi.listDir(this.currentLogicalPath);
-        // TODO: 在这里使用 Zod schema 验证 items
-        this.items = items as ZodValidatedFAMListItem[]; // 强制转换，直到有Zod
+        const items: FAMItem[] = await fileManagerApi.listDir(this.currentLogicalPath); // listDir 现在返回 FAMItem[]
+        console.log('[FileManagerStore.fetchItems] Raw items from API for path', this.currentLogicalPath, ':', JSON.parse(JSON.stringify(items)));
+        const libraryItem = items.find((it: FAMItem) => it.name === 'library');
+        const projectsItem = items.find((it: FAMItem) => it.name === 'projects');
+        if (libraryItem) {
+          console.log(`[FileManagerStore.fetchItems] 'library' item from API: name=${libraryItem.name}, itemType=${libraryItem.itemType}, logicalPath=${libraryItem.logicalPath}`);
+        }
+        if (projectsItem) {
+          console.log(`[FileManagerStore.fetchItems] 'projects' item from API: name=${projectsItem.name}, itemType=${projectsItem.itemType}, logicalPath=${projectsItem.logicalPath}`);
+        }
+        try {
+          this.items = FAMItemsSchema.parse(items); // 使用 Zod schema 验证和解析
+        } catch (zodError: any) { // Catch ZodError
+          console.error('[FileManagerStore.fetchItems] Zod validation failed for API response:', zodError.errors);
+          this.error = zodError.errors; // Store Zod errors
+          this.items = []; // 验证失败则清空
+        }
         this.applyFiltersAndSort();
       } catch (err) {
         this.error = err;
@@ -263,7 +274,8 @@ export const useFileManagerStore = defineStore('fileManager', {
       }
     },
 
-    async renameItem(itemToRename: ZodValidatedFAMListItem, newName?: string) {
+
+    async renameItem(itemToRename: FAMItem, newName?: string) {
       const dialogService = useDialogService();
       const finalNewName = newName || await dialogService.showInput({
         title: `重命名 ${itemToRename.itemType === 'directory' ? '文件夹' : '文件'}`,
@@ -279,12 +291,12 @@ export const useFileManagerStore = defineStore('fileManager', {
           // 更新选中项和详情（如果被重命名的项是当前选中的）
           if (this.selectedItemForDetail?.logicalPath === itemToRename.logicalPath) {
             const updatedItem = { ...this.selectedItemForDetail, name: finalNewName, logicalPath: itemToRename.logicalPath.substring(0, itemToRename.logicalPath.lastIndexOf('/') + 1) + finalNewName };
-            this.selectedItemForDetail = updatedItem as ZodValidatedFAMListItem;
+            this.selectedItemForDetail = updatedItem as FAMItem; // 类型更新
           }
           this.selectedItemPaths = this.selectedItemPaths.map(p => p === itemToRename.logicalPath ? (itemToRename.logicalPath.substring(0, itemToRename.logicalPath.lastIndexOf('/') + 1) + finalNewName) : p);
 
           await this.fetchItems(); // 刷新列表
-        } catch (err) {
+        } catch (err: any) { // Restored catch block
           this.error = err;
           dialogService.showError(`重命名失败: ${(err as Error).message}`);
         } finally {
@@ -293,7 +305,7 @@ export const useFileManagerStore = defineStore('fileManager', {
       }
     },
 
-    async deleteItems(itemsToDelete?: ZodValidatedFAMListItem[]) {
+    async deleteItems(itemsToDelete?: FAMItem[]) {
       const items = itemsToDelete || this.selectedItems;
       if (items.length === 0) return;
 
@@ -322,7 +334,7 @@ export const useFileManagerStore = defineStore('fileManager', {
       }
     },
 
-    async moveItems(itemsToMove: ZodValidatedFAMListItem[], targetParentPath: string) {
+    async moveItems(itemsToMove: FAMItem[], targetParentPath: string) {
       if (itemsToMove.length === 0 || !targetParentPath) return;
       this.isLoading = true;
       const dialogService = useDialogService();
@@ -341,7 +353,7 @@ export const useFileManagerStore = defineStore('fileManager', {
       }
     },
 
-    async downloadFile(item: ZodValidatedFAMListItem) {
+    async downloadFile(item: FAMItem) {
       if (item.itemType === 'directory') {
         // TODO: 支持下载文件夹 (可能需要后端压缩)
         useDialogService().showInfo('暂不支持下载文件夹。');
@@ -366,7 +378,7 @@ export const useFileManagerStore = defineStore('fileManager', {
       this.selectedItemPaths = paths;
       if (paths.length > 0) {
         // 优先从 filteredItems 中查找，因为用户看到的是这个列表
-        const firstSelectedItem = this.filteredItems.find(item => item.logicalPath === paths[0]) || this.items.find(item => item.logicalPath === paths[0]);
+        const firstSelectedItem = this.filteredItems.find((item: FAMItem) => item.logicalPath === paths[0]) || this.items.find((item: FAMItem) => item.logicalPath === paths[0]);
         this.selectedItemForDetail = firstSelectedItem || null;
         if (firstSelectedItem) {
           this.isDetailPanelVisible = true;
@@ -394,14 +406,14 @@ export const useFileManagerStore = defineStore('fileManager', {
     },
 
     // --- 剪贴板 ---
-    copyToClipboard(items?: ZodValidatedFAMListItem[]) {
+    copyToClipboard(items?: FAMItem[]) {
       const itemsToCopy = items || this.selectedItems;
       if (itemsToCopy.length > 0) {
         this.clipboard = { action: 'copy', sourcePaths: itemsToCopy.map(item => item.logicalPath) };
         useDialogService().showToast({ message: `${itemsToCopy.length} 个项目已复制到剪贴板`, type: 'info' });
       }
     },
-    cutToClipboard(items?: ZodValidatedFAMListItem[]) {
+    cutToClipboard(items?: FAMItem[]) {
       const itemsToCut = items || this.selectedItems;
       if (itemsToCut.length > 0) {
         this.clipboard = { action: 'cut', sourcePaths: itemsToCut.map(item => item.logicalPath) };
@@ -522,11 +534,11 @@ export const useFileManagerStore = defineStore('fileManager', {
       }
       // 新增：按 itemType 筛选
       if (this.filterOptions.itemType) {
-        result = result.filter(item => item.itemType === this.filterOptions.itemType);
+        result = result.filter((item: FAMItem) => item.itemType === this.filterOptions.itemType);
       }
       // fileTypes 筛选主要针对文件
       if (this.filterOptions.fileTypes.length > 0) {
-        result = result.filter(item => {
+        result = result.filter((item: FAMItem) => {
           if (item.itemType === 'directory') return true; // 如果 itemType 筛选已选 'directory'，这里不应再过滤掉它
           // 如果 itemType 筛选是 'file' 或空，则按扩展名过滤文件
           if (item.itemType === 'file') {
@@ -538,13 +550,13 @@ export const useFileManagerStore = defineStore('fileManager', {
       }
       if (this.filterOptions.sizeRange) {
         const [min, max] = this.filterOptions.sizeRange;
-        result = result.filter(item => item.size !== undefined && item.size !== null && item.size >= min && item.size <= max);
+        result = result.filter((item: FAMItem) => item.size !== undefined && item.size !== null && item.size >= min && item.size <= max);
       }
       if (this.filterOptions.dateRange) {
         const [start, end] = this.filterOptions.dateRange;
         const startTime = start.getTime();
         const endTime = end.getTime() + (24 * 60 * 60 * 1000 - 1); // 包含结束日期的全天
-        result = result.filter(item => item.lastModified && item.lastModified >= startTime && item.lastModified <= endTime);
+        result = result.filter((item: FAMItem) => item.lastModified && item.lastModified >= startTime && item.lastModified <= endTime);
       }
       // TODO: showHiddenFiles 筛选 (需要后端支持或文件名约定)
 
@@ -555,8 +567,8 @@ export const useFileManagerStore = defineStore('fileManager', {
         if (a.itemType === 'directory' && b.itemType === 'file') return -1;
         if (a.itemType === 'file' && b.itemType === 'directory') return 1;
 
-        let valA_raw = a[sortField as keyof ZodValidatedFAMListItem];
-        let valB_raw = b[sortField as keyof ZodValidatedFAMListItem];
+        let valA_raw = a[sortField as keyof FAMItem]; // FAMItem 替换 ZodValidatedFAMListItem
+        let valB_raw = b[sortField as keyof FAMItem]; // FAMItem 替换 ZodValidatedFAMListItem
 
         let valA: string | number | boolean;
         let valB: string | number | boolean;
@@ -584,7 +596,7 @@ export const useFileManagerStore = defineStore('fileManager', {
       this.filteredItems = result;
       this.isFilterActive = this.activeFiltersCount > 0; // 更新筛选状态
       // 如果当前选中的项目在筛选后不可见，则清除详情
-      if (this.selectedItemForDetail && !this.filteredItems.find(item => item.logicalPath === this.selectedItemForDetail!.logicalPath)) {
+      if (this.selectedItemForDetail && !this.filteredItems.find((item: FAMItem) => item.logicalPath === this.selectedItemForDetail!.logicalPath)) {
         this.selectedItemForDetail = null;
         // this.isDetailPanelVisible = false; // 可选：筛选后若选中项消失，是否隐藏详情
       }

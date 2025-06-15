@@ -11,13 +11,8 @@ import {
 } from '../utils/fileUtils'; // 路径相对于 apps/backend/src/services/
 
 // 类型定义 (根据文档第 6 节)
-export interface ListItem {
-  name: string;
-  path: string; // 逻辑路径
-  type: "file" | "directory";
-  size?: number;
-  lastModified?: Date;
-}
+// ListItem interface is now replaced by FAMItem from @comfytavern/types
+import type { FAMItem } from '@comfytavern/types';
 
 export interface WriteOptions {
   encoding?: 'utf-8' | 'binary'; // 保持与 readFile 一致
@@ -61,7 +56,7 @@ export interface FAMService {
   ): Promise<void>;
 
   /** 列出目录内容 */
-  listDir(userId: string | null, logicalPath: string): Promise<ListItem[]>;
+  listDir(userId: string | null, logicalPath: string): Promise<FAMItem[]>;
 
   /** 创建目录 (递归创建) */
   createDir(userId: string | null, logicalPath: string): Promise<void>;
@@ -313,7 +308,7 @@ export class FileManagerService implements FAMService {
     }
   }
 
-  async listDir(userId: string | null, logicalPath: string): Promise<ListItem[]> {
+  async listDir(userId: string | null, logicalPath: string): Promise<FAMItem[]> {
     try {
       const physicalPath = await this.resolvePath(userId, logicalPath);
 
@@ -333,7 +328,7 @@ export class FileManagerService implements FAMService {
       }
 
       const dirents = await fs.readdir(physicalPath, { withFileTypes: true });
-      const listItems: ListItem[] = [];
+      const listItems: FAMItem[] = [];
 
       for (const dirent of dirents) {
         const itemName = dirent.name;
@@ -356,15 +351,23 @@ export class FileManagerService implements FAMService {
             console.warn(`[FileManagerService] Could not get stats for ${itemLogicalPath}:`, itemStatError);
           }
         }
-
+ 
+        const itemTypeFromDirent = dirent.isDirectory() ? 'directory' : 'file';
+        console.log(`[FileManagerService.listDir] Processing dirent: name='${itemName}', isDirectory=${dirent.isDirectory()}, determinedType='${itemTypeFromDirent}' for logicalPath='${itemLogicalPath}'`);
+ 
         listItems.push({
+          id: itemLogicalPath, // Use logicalPath as ID
           name: itemName,
-          path: itemLogicalPath,
-          type: dirent.isDirectory() ? 'directory' : 'file',
+          logicalPath: itemLogicalPath,
+          itemType: itemTypeFromDirent,
           size: itemSize,
-          lastModified: itemLastModified,
+          lastModified: itemLastModified ? itemLastModified.getTime() : undefined,
+          isSymlink: dirent.isSymbolicLink(),
+          isWritable: true, // Default, can be refined
+          // mimeType, childrenCount, thumbnailUrl, error can be added later if needed
         });
       }
+      console.log(`[FileManagerService.listDir] For logicalPath='${logicalPath}', returning items:`, JSON.stringify(listItems.map(it => ({ name: it.name, itemType: it.itemType, logicalPath: it.logicalPath, id: it.id }))));
       return listItems;
     } catch (error: any) {
       if (error.message.startsWith('Directory not found') || error.message.startsWith('Not a directory') || error.message.startsWith('Invalid logical path') || error.message.startsWith('UserId is required') || error.message.startsWith('Unknown scheme') || error.message.startsWith('Path traversal attempt detected') || error.message.startsWith('Unknown system area')) {

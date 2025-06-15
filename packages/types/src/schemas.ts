@@ -111,6 +111,35 @@ export const WorkflowExecutionPayloadSchema = z.object({
 });
 // 注意: WorkflowExecutionPayload 类型定义在 execution.ts 中，以避免循环依赖。
 
+// --- File Asset Management (FAM) Schemas ---
+
+/**
+ * Schema 定义：文件资产管理系统中的单个项目（文件或目录）。
+ */
+export const FAMItemSchema = z.object({
+  id: z.string().min(1, { message: "ID 不能为空" }), // 通常等于 logicalPath
+  name: z.string().min(1, { message: "名称不能为空" }),
+  logicalPath: z.string().min(1, { message: "逻辑路径不能为空" }),
+  itemType: z.enum(['file', 'directory'], { message: "项目类型必须是 'file' 或 'directory'" }),
+  size: z.number().nonnegative({ message: "大小不能为负" }).nullable().optional(),
+  lastModified: z.number().int({ message: "最后修改时间必须是整数时间戳" }).nullable().optional(), // Unix timestamp in milliseconds
+  mimeType: z.string().nullable().optional(),
+  isSymlink: z.boolean().nullable().optional().default(false),
+  targetLogicalPath: z.string().nullable().optional(),
+  isWritable: z.boolean().nullable().optional().default(true),
+  childrenCount: z.number().int().nonnegative({ message: "子项目数量不能为负" }).nullable().optional(),
+  thumbnailUrl: z.string().url({ message: "缩略图 URL 必须是有效的 URL" }).nullable().optional(),
+  error: z.string().nullable().optional(),
+});
+export type FAMItem = z.infer<typeof FAMItemSchema>;
+
+/**
+ * Schema 定义：文件资产管理项目列表。
+ */
+export const FAMItemsSchema = z.array(FAMItemSchema);
+export type FAMItems = z.infer<typeof FAMItemsSchema>;
+
+
 // --- 用户系统核心类型定义 ---
 
 // --- 外部服务凭证模型 ---

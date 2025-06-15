@@ -1,37 +1,26 @@
 // apps/frontend-vueflow/src/api/fileManagerApi.ts
 import { useApi } from '@/utils/api';
 import { getApiBaseUrl } from '@/utils/urlUtils';
+import type { FAMItem } from '@comfytavern/types'; // 导入统一的 FAMItem 类型
 
 // 后端 FileManagerService 的 API 前缀，需要与后端实际路由匹配
 // 假设后端 FAMService 统一挂载在 /api/fam 路径下
 const API_PREFIX = '/fam';
 
-// 临时的 FAMListItem 定义，直到后端提供正式类型
-export interface FAMListItem {
-  id: string; // 通常是 logicalPath 或唯一标识符
-  name: string;
-  logicalPath: string;
-  itemType: 'file' | 'directory';
-  size?: number | null;
-  lastModified?: number | null; // 时间戳
-  mimeType?: string | null;
-  isSymlink?: boolean | null;
-  targetLogicalPath?: string | null;
-  isWritable?: boolean;
-  // 根据需要添加更多字段，例如预览URL、图标等
-}
+// 本地 FAMListItem 和 BackendFAMListItem 定义已移除，使用 @comfytavern/types 中的 FAMItem
 
 
 /**
  * 列出指定逻辑路径下的文件和目录。
  * @param logicalPath 要列出内容的逻辑路径 (例如 "user://", "user://some/folder/")
- * @returns Promise<FAMListItem[]> 文件和目录列表
+ * @returns Promise<FAMItem[]> 文件和目录列表
  */
-export async function listDir(logicalPath: string): Promise<FAMListItem[]> {
+export async function listDir(logicalPath: string): Promise<FAMItem[]> {
   const normalizedPath = logicalPath.endsWith('//') ? logicalPath : logicalPath.replace(/\/?$/, '/');
   try {
-    const items = await useApi().get<FAMListItem[]>(`${API_PREFIX}/list/${encodeURIComponent(normalizedPath)}`);
-    return items || [];
+    // 后端现在直接返回 FAMItem[] 结构
+    const items = await useApi().get<FAMItem[]>(`${API_PREFIX}/list/${encodeURIComponent(normalizedPath)}`);
+    return items || []; // 如果 API 返回 null/undefined (虽然不应该)，则返回空数组
   } catch (err) {
     console.error(`[fileManagerApi] Failed to list directory "${normalizedPath}":`, err);
     throw err; // 由调用方处理用户反馈
@@ -42,11 +31,11 @@ export async function listDir(logicalPath: string): Promise<FAMListItem[]> {
  * 在指定的父逻辑路径下创建新目录。
  * @param parentLogicalPath 父目录的逻辑路径
  * @param dirName 新目录的名称
- * @returns Promise<FAMListItem> 创建成功后的目录信息
+ * @returns Promise<FAMItem> 创建成功后的目录信息
  */
-export async function createDir(parentLogicalPath: string, dirName: string): Promise<FAMListItem> {
+export async function createDir(parentLogicalPath: string, dirName: string): Promise<FAMItem> {
   try {
-    const newDir = await useApi().post<FAMListItem>(`${API_PREFIX}/create-dir`, {
+    const newDir = await useApi().post<FAMItem>(`${API_PREFIX}/create-dir`, {
       parentLogicalPath,
       dirName,
     });
@@ -65,12 +54,12 @@ export async function createDir(parentLogicalPath: string, dirName: string): Pro
  * 上传一个或多个文件到指定的逻辑路径。
  * @param targetLogicalPath 文件上传的目标目录逻辑路径
  * @param formData 包含待上传文件的 FormData 对象
- * @returns Promise<FAMListItem[]> 上传成功后的文件信息列表
+ * @returns Promise<FAMItem[]> 上传成功后的文件信息列表
  */
-export async function writeFile(targetLogicalPath: string, formData: FormData): Promise<FAMListItem[]> {
+export async function writeFile(targetLogicalPath: string, formData: FormData): Promise<FAMItem[]> {
   try {
     // useApi hook 或底层 fetch/axios 通常会自动处理 FormData 的 Content-Type
-    const uploadedFiles = await useApi().post<FAMListItem[]>(`${API_PREFIX}/upload/${encodeURIComponent(targetLogicalPath)}`, formData);
+    const uploadedFiles = await useApi().post<FAMItem[]>(`${API_PREFIX}/upload/${encodeURIComponent(targetLogicalPath)}`, formData);
     return uploadedFiles || [];
   } catch (err) {
     console.error(`[fileManagerApi] Failed to upload files to "${targetLogicalPath}":`, err);
@@ -82,11 +71,11 @@ export async function writeFile(targetLogicalPath: string, formData: FormData): 
  * 重命名文件或目录。
  * @param logicalPath 要重命名的文件或目录的当前逻辑路径
  * @param newName 新的名称
- * @returns Promise<FAMListItem> 重命名后的文件或目录信息
+ * @returns Promise<FAMItem> 重命名后的文件或目录信息
  */
-export async function renameFileOrDir(logicalPath: string, newName: string): Promise<FAMListItem> {
+export async function renameFileOrDir(logicalPath: string, newName: string): Promise<FAMItem> {
   try {
-    const renamedItem = await useApi().put<FAMListItem>(`${API_PREFIX}/rename`, {
+    const renamedItem = await useApi().put<FAMItem>(`${API_PREFIX}/rename`, {
       logicalPath,
       newName,
     });
@@ -104,11 +93,11 @@ export async function renameFileOrDir(logicalPath: string, newName: string): Pro
  * 移动一个或多个文件/目录到新的目标父路径。
  * @param sourcePaths 要移动的文件/目录的逻辑路径数组
  * @param targetParentPath 目标父目录的逻辑路径
- * @returns Promise<FAMListItem[]> 移动成功后的文件/目录信息列表 (通常是移动后的新路径项)
+ * @returns Promise<FAMItem[]> 移动成功后的文件/目录信息列表 (通常是移动后的新路径项)
  */
-export async function moveFilesOrDirs(sourcePaths: string[], targetParentPath: string): Promise<FAMListItem[]> {
+export async function moveFilesOrDirs(sourcePaths: string[], targetParentPath: string): Promise<FAMItem[]> {
   try {
-    const movedItems = await useApi().put<FAMListItem[]>(`${API_PREFIX}/move`, {
+    const movedItems = await useApi().put<FAMItem[]>(`${API_PREFIX}/move`, {
       sourcePaths,
       targetParentPath,
     });

@@ -66,7 +66,7 @@
           <div class="property-row">
             <label class="property-label">路径:</label>
             <span class="property-value break-all" :title="selectedItem.logicalPath">{{ selectedItem.logicalPath
-              }}</span>
+            }}</span>
           </div>
           <div class="property-row">
             <label class="property-label">最后修改:</label>
@@ -129,7 +129,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
-import type { FAMListItem } from '@/api/fileManagerApi';
+import type { FAMItem } from '@comfytavern/types';
 import * as fileManagerApi from '@/api/fileManagerApi'; // For potential direct API calls like fetching preview
 import {
   InformationCircleIcon, EyeIcon, /* BoltIcon, */ XMarkIcon, FolderIcon, DocumentIcon, StarIcon, ArrowPathIcon,
@@ -202,7 +202,7 @@ const formatDate = (timestamp?: number | null): string => {
   }
 };
 
-const getItemMimeTypeDisplay = (item: FAMListItem): string => {
+const getItemMimeTypeDisplay = (item: FAMItem): string => {
   if (item.itemType === 'directory') return '文件夹';
   if (item.mimeType) {
     if (item.mimeType.startsWith('image/')) return '图片';
@@ -229,7 +229,7 @@ const getDocumentIcon = (filename: string) => {
   return DocumentIcon;
 };
 
-const fetchPreview = async (item: FAMListItem) => {
+const fetchPreview = async (item: FAMItem) => {
   if (!canPreview.value || !item || item.itemType === 'directory') {
     previewType.value = 'unsupported';
     previewContent.value = null;

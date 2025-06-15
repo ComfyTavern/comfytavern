@@ -48,18 +48,18 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
 import BaseModal from '@/components/common/BaseModal.vue'; // 确保路径正确
-import type { FAMListItem } from '@/api/fileManagerApi';
+import type { FAMItem } from '@comfytavern/types';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
 import { FolderIcon, DocumentIcon, ArrowRightCircleIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps<{
   visible: boolean;
-  itemsToMove: FAMListItem[];
+  itemsToMove: FAMItem[];
 }>();
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'confirmMove', items: FAMListItem[], targetPath: string): void;
+  (e: 'confirmMove', items: FAMItem[], targetPath: string): void;
 }>();
 
 const fileManagerStore = useFileManagerStore();

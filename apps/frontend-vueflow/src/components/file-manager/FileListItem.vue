@@ -43,7 +43,7 @@
       <!-- Placeholder for other custom columns -->
       <td v-else class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
         :class="getColumnWidthClass(columnKey)">
-        {{ 안전하게_항목_속성_가져오기(item, columnKey) }}
+        {{ safelyGetItemProperty(item, columnKey) }}
       </td>
     </template>
 
@@ -59,7 +59,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { FAMListItem } from '@/api/fileManagerApi';
+import type { FAMItem } from '@comfytavern/types';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
 import {
   FolderIcon, DocumentIcon, StarIcon, EllipsisVerticalIcon,
@@ -67,16 +67,16 @@ import {
 } from '@heroicons/vue/24/outline';
 
 const props = defineProps<{
-  item: FAMListItem;
+  item: FAMItem;
   isSelected: boolean;
   visibleColumns: string[]; // Array of column keys to display
 }>();
 
 const emit = defineEmits<{
-  (e: 'itemClick', event: MouseEvent, item: FAMListItem): void;
-  (e: 'itemDblClick', item: FAMListItem): void;
-  (e: 'itemContextMenu', event: MouseEvent, item: FAMListItem, fromButton?: boolean): void;
-  (e: 'toggleSelect', item: FAMListItem): void;
+  (e: 'itemClick', event: MouseEvent, item: FAMItem): void;
+  (e: 'itemDblClick', item: FAMItem): void;
+  (e: 'itemContextMenu', event: MouseEvent, item: FAMItem, fromButton?: boolean): void;
+  (e: 'toggleSelect', item: FAMItem): void;
 }>();
 
 const fileManagerStore = useFileManagerStore();
@@ -104,7 +104,7 @@ const formatDate = (timestamp?: number | null): string => {
   }
 };
 
-const getItemMimeTypeDisplay = (item: FAMListItem): string => {
+const getItemMimeTypeDisplay = (item: FAMItem): string => {
   if (item.itemType === 'directory') return '文件夹';
   if (item.mimeType) {
     if (item.mimeType.startsWith('image/')) return '图片';
@@ -143,10 +143,9 @@ const getColumnWidthClass = (columnKey: string): string => {
   return columnWidths[columnKey] || 'w-auto';
 };
 
-// 안전하게_항목_속성_가져오기 (Safely get item property for custom columns)
 // This is a placeholder. In a real scenario, you'd have a more robust way
 // to map columnKey to item properties or custom render functions.
-const 안전하게_항목_속성_가져오기 = (item: FAMListItem, key: string): string => {
+const safelyGetItemProperty = (item: FAMItem, key: string): string => {
   const value = (item as any)[key];
   if (value === null || typeof value === 'undefined') return '-';
   if (typeof value === 'object') return JSON.stringify(value).substring(0, 30) + "..."; // Simple object display

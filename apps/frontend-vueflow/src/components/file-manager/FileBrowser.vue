@@ -50,8 +50,8 @@
         </thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-600 bg-white dark:bg-gray-800">
           <FileListItem v-for="item in filteredItems" :key="item.logicalPath" :item="item"
-            :is-selected="isSelected(item)" :visible-columns="viewSettings.visibleColumns" @item-click="handleItemClick"
-            @item-dbl-click="handleItemDblClick" @item-context-menu="showItemContextMenu"
+            :is-selected="isSelected(item)" :visible-columns="viewSettings.visibleColumns.map(String)"
+            @item-click="handleItemClick" @item-dbl-click="handleItemDblClick" @item-context-menu="showItemContextMenu"
             @toggle-select="toggleSelectItem" />
         </tbody>
       </table>
@@ -80,8 +80,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useFileManagerStore, type ViewSettings } from '@/stores/fileManagerStore'; // FAMListItem 从 api 导入
-import type { FAMListItem } from '@/api/fileManagerApi'; // 直接从 api 文件导入类型
+import { useFileManagerStore, type ViewSettings } from '@/stores/fileManagerStore';
+import type { FAMItem } from '@comfytavern/types'; // 统一类型 FAMItem 从 @comfytavern/types 导入
 // import { onClickOutside } from '@vueuse/core'; // onClickOutside is handled by FileContextMenu itself
 import {
   ArrowPathIcon, InformationCircleIcon,
@@ -113,7 +113,7 @@ const contextMenu = ref({
   x: 0,
   y: 0,
   items: [] as any[], // TODO: 定义上下文菜单项类型
-  targetItem: null as FAMListItem | null, // 右键点击的目标项目
+  targetItem: null as FAMItem | null, // 右键点击的目标项目
 });
 
 const contextMenuRef = ref<HTMLElement | null>(null); // Typed for FileContextMenu component's root element
@@ -144,20 +144,20 @@ const visibleColumnsList = computed(() => {
 // const formatSize = (bytes?: number | null) => { ... };
 // const formatDate = (timestamp?: number | null) => { ... };
 
-const isSelected = (item: FAMListItem) => {
+const isSelected = (item: FAMItem) => {
   return selectedItemPaths.value.includes(item.logicalPath);
-}; // <--- 添加缺失的右大括号和分号
+};
 
 const toggleSelectAll = (event: Event) => {
   const target = event.target as HTMLInputElement;
   if (target.checked) {
-    fileManagerStore.setSelectedItemPaths(filteredItems.value.map(item => item.logicalPath));
+    fileManagerStore.setSelectedItemPaths(filteredItems.value.map((item: FAMItem) => item.logicalPath));
   } else {
     fileManagerStore.clearSelection();
   }
 };
 
-const toggleSelectItem = (item: FAMListItem) => {
+const toggleSelectItem = (item: FAMItem) => {
   const currentSelection = [...selectedItemPaths.value];
   const index = currentSelection.indexOf(item.logicalPath);
   if (index > -1) {
@@ -168,18 +168,18 @@ const toggleSelectItem = (item: FAMListItem) => {
   fileManagerStore.setSelectedItemPaths(currentSelection);
 };
 
-const handleItemClick = (event: MouseEvent, item: FAMListItem) => {
+const handleItemClick = (event: MouseEvent, item: FAMItem) => {
   if (event.ctrlKey || event.metaKey) { // Ctrl/Cmd click for multi-select
     toggleSelectItem(item);
   } else if (event.shiftKey && selectedItemPaths.value.length > 0) { // Shift click for range select
     const lastSelectedPath = selectedItemPaths.value[selectedItemPaths.value.length - 1];
-    const lastSelectedIndex = filteredItems.value.findIndex(i => i.logicalPath === lastSelectedPath);
-    const currentIndex = filteredItems.value.findIndex(i => i.logicalPath === item.logicalPath);
+    const lastSelectedIndex = filteredItems.value.findIndex((i: FAMItem) => i.logicalPath === lastSelectedPath);
+    const currentIndex = filteredItems.value.findIndex((i: FAMItem) => i.logicalPath === item.logicalPath);
 
     if (lastSelectedIndex !== -1 && currentIndex !== -1) {
       const start = Math.min(lastSelectedIndex, currentIndex);
       const end = Math.max(lastSelectedIndex, currentIndex);
-      const rangePaths = filteredItems.value.slice(start, end + 1).map(i => i.logicalPath);
+      const rangePaths = filteredItems.value.slice(start, end + 1).map((i: FAMItem) => i.logicalPath);
       // 合并现有选择和范围选择，去重
       fileManagerStore.setSelectedItemPaths(Array.from(new Set([...selectedItemPaths.value, ...rangePaths])));
     } else { // Fallback to single select if range calculation fails
@@ -190,7 +190,7 @@ const handleItemClick = (event: MouseEvent, item: FAMListItem) => {
   }
 };
 
-const handleItemDblClick = (item: FAMListItem) => {
+const handleItemDblClick = (item: FAMItem) => {
   if (item.itemType === 'directory') {
     fileManagerStore.navigateTo(item.logicalPath);
   } else {
@@ -210,7 +210,7 @@ const showContextMenu = (event: MouseEvent) => {
   // 如果点击在项目上，则由项目的 @contextmenu 处理
 };
 
-const showItemContextMenu = (event: MouseEvent, item: FAMListItem, fromButton = false) => {
+const showItemContextMenu = (event: MouseEvent, item: FAMItem, fromButton = false) => {
   contextMenu.value = {
     visible: true,
     x: event.clientX,
@@ -240,7 +240,7 @@ const hideContextMenu = () => {
   contextMenu.value.targetItem = null;
 };
 
-const generateItemContextActions = (item: FAMListItem): any[] => {
+const generateItemContextActions = (item: FAMItem): any[] => {
   const actions = [];
   actions.push({ label: '打开', action: 'open', icon: 'FolderOpenIcon' }); // 示例图标
   if (item.itemType === 'file') {
@@ -291,11 +291,11 @@ const handleContextMenuAction = (action: string, _menuItem?: import('./FileConte
       // If context menu was triggered on a specific item, prioritize that.
       // Otherwise, if triggered on blank space but items are selected, delete selected.
       // If triggered on an item that is part of a multi-selection, delete all selected.
-      let itemsToDelete: FAMListItem[] = [];
+      let itemsToDelete: FAMItem[] = [];
       if (targetFileItem) {
         // If the target item is part of the current selection, delete all selected items.
         // Otherwise, just delete the target item.
-        if (selectedItemsFromStore.some(sel => sel.logicalPath === targetFileItem.logicalPath)) {
+        if (selectedItemsFromStore.some((sel: FAMItem) => sel.logicalPath === targetFileItem.logicalPath)) {
           itemsToDelete = selectedItemsFromStore;
         } else {
           itemsToDelete = [targetFileItem];
@@ -306,10 +306,10 @@ const handleContextMenuAction = (action: string, _menuItem?: import('./FileConte
       if (itemsToDelete.length > 0) fileManagerStore.deleteItems(itemsToDelete);
       break;
     case 'move':
-      const itemsToMove = targetFileItem ? (selectedItemsFromStore.some(sel => sel.logicalPath === targetFileItem.logicalPath) ? selectedItemsFromStore : [targetFileItem]) : selectedItemsFromStore;
+      const itemsToMove = targetFileItem ? (selectedItemsFromStore.some((sel: FAMItem) => sel.logicalPath === targetFileItem.logicalPath) ? selectedItemsFromStore : [targetFileItem]) : selectedItemsFromStore;
       if (itemsToMove.length > 0) {
         // TODO: Open MoveModal for itemsToMove
-        console.log('TODO: Open MoveModal for', itemsToMove.map(i => i.name));
+        console.log('TODO: Open MoveModal for', itemsToMove.map((i: FAMItem) => i.name));
         // Example: fileManagerStore.promptMoveItems(itemsToMove);
       }
       break;
@@ -374,7 +374,7 @@ const handleKeydown = (event: KeyboardEvent) => {
       break;
     case 'Enter':
       if (selectedItemPaths.value.length === 1) {
-        const item = filteredItems.value.find(i => i.logicalPath === selectedItemPaths.value[0]);
+        const item = filteredItems.value.find((i: FAMItem) => i.logicalPath === selectedItemPaths.value[0]);
         if (item) {
           handleItemDblClick(item);
           event.preventDefault();
@@ -408,7 +408,7 @@ const navigateSelection = (direction: 1 | -1) => {
   if (selectedItemPaths.value.length > 0) {
     // 确保 selectedItemPaths[0] 存在于 filteredItems 中
     const firstSelectedPath = selectedItemPaths.value[0];
-    currentIndex = items.findIndex(i => i.logicalPath === firstSelectedPath);
+    currentIndex = items.findIndex((i: FAMItem) => i.logicalPath === firstSelectedPath);
   }
 
   let nextIndex: number;

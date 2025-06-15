@@ -4,8 +4,8 @@ import path from 'node:path'; // 只导入 path 用于 extname
 import PNGtext from 'png-chunk-text';
 import extract from 'png-chunks-extract';
 
-import { famService, type ListItem } from '../services/FileManagerService'; // + 导入 famService 和 ListItem
-import type { UserContext } from '@comfytavern/types'; // + 导入 UserContext 类型
+import { famService } from '../services/FileManagerService'; // ListItem 已移除
+import type { UserContext, FAMItem } from '@comfytavern/types'; // + 导入 UserContext 和 FAMItem 类型
 import type { CharacterCard, ApiCharacterEntry } from '@comfytavern/types'; // 导入 ApiCharacterEntry
 
 
@@ -97,8 +97,8 @@ export const characterApiRoutes = new Elysia({ prefix: '/api/characters' })
     }
 
     try {
-      const listItems = await famService.listDir(userId, logicalUserCharacterCardBaseDir); // 确保 famService 已导入
-      const files = listItems.filter((item: ListItem) => item.type === 'file').map((item: ListItem) => item.name); // 添加 ListItem 类型
+      const listItems = await famService.listDir(userId, logicalUserCharacterCardBaseDir); // famService.listDir 现在返回 FAMItem[]
+      const files = listItems.filter((item: FAMItem) => item.itemType === 'file').map((item: FAMItem) => item.name); // 使用 FAMItem 和 itemType
       const characterCardsData: any[] = []; // 稍后定义更严格的类型
       const processedPngFiles = new Set<string>(); // 跟踪已从PNG处理的文件名（不含扩展名）
 

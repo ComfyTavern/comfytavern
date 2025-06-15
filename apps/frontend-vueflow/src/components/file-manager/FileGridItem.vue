@@ -42,7 +42,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { FAMListItem } from '@/api/fileManagerApi';
+import type { FAMItem } from '@comfytavern/types';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
 import {
   FolderIcon, DocumentIcon, StarIcon, EllipsisVerticalIcon,
@@ -50,16 +50,16 @@ import {
 } from '@heroicons/vue/24/outline';
 
 const props = defineProps<{
-  item: FAMListItem;
+  item: FAMItem;
   isSelected: boolean;
   thumbnailSize: 'small' | 'medium' | 'large';
 }>();
 
 const emit = defineEmits<{
-  (e: 'itemClick', event: MouseEvent, item: FAMListItem): void;
-  (e: 'itemDblClick', item: FAMListItem): void;
-  (e: 'itemContextMenu', event: MouseEvent, item: FAMListItem, fromButton?: boolean): void;
-  (e: 'toggleSelect', item: FAMListItem): void;
+  (e: 'itemClick', event: MouseEvent, item: FAMItem): void;
+  (e: 'itemDblClick', item: FAMItem): void;
+  (e: 'itemContextMenu', event: MouseEvent, item: FAMItem, fromButton?: boolean): void;
+  (e: 'toggleSelect', item: FAMItem): void;
 }>();
 
 const fileManagerStore = useFileManagerStore();
