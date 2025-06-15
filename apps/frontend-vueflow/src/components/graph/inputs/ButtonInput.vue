@@ -2,13 +2,13 @@
   <div class="button-input">
     <button type="button" :disabled="disabled" @click.stop="handleClick"
       class="w-full px-3 py-1.5 text-sm font-medium rounded border transition-colors duration-200
-             bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700
-             text-white
-             border-transparent
-             disabled:bg-gray-300 dark:disabled:bg-gray-600
-             disabled:text-gray-500 dark:disabled:text-gray-400
-             disabled:cursor-not-allowed
-             focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-700 focus:ring-offset-1 dark:focus:ring-offset-gray-800">
+            bg-primary hover:brightness-95 dark:hover:brightness-95
+            text-primary-content
+            border-transparent
+            disabled:bg-background-base/60
+            disabled:text-text-muted/70
+            disabled:cursor-not-allowed
+            focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 focus:ring-offset-background-surface">
       {{ label || 'Trigger' }} <!-- Provide a default label -->
     </button>
   </div>

@@ -5,36 +5,38 @@
   "variants": {
     "light": {
       "variables": {
-        "--ct-primary": "#007bff",
-        "--ct-secondary": "#6c757d",
-        "--ct-accent": "#17a2b8",
-        "--ct-background-base": "#ffffff",
-        "--ct-background-surface": "#f8f9fa",
-        "--ct-text-base": "#212529",
-        "--ct-text-muted": "#6c757d",
-        "--ct-border-base": "#dee2e6",
-        "--ct-info": "#17a2b8",
-        "--ct-success": "#28a745",
-        "--ct-warning": "#ffc107",
-        "--ct-error": "#dc3545",
-        "--ct-neutral": "#212529"
+        "--ct-primary": "hsla(211, 100%, 50%, 1)",
+        "--ct-secondary": "hsla(208, 7%, 46%, 1)",
+        "--ct-accent": "hsla(192, 78%, 41%, 1)",
+        "--ct-background-base": "hsla(0, 0%, 100%, 1)",
+        "--ct-background-surface": "hsla(210, 17%, 98%, 1)",
+        "--ct-text-base": "hsla(210, 10%, 15%, 1)",
+        "--ct-text-muted": "hsla(208, 7%, 46%, 1)",
+        "--ct-border-base": "hsla(210, 16%, 91%, 1)",
+        "--ct-info": "hsla(192, 78%, 41%, 1)",
+        "--ct-success": "hsla(134, 61%, 40%, 1)",
+        "--ct-warning": "hsla(45, 100%, 51%, 1)",
+        "--ct-error": "hsla(354, 70%, 54%, 1)",
+        "--ct-neutral": "hsla(210, 10%, 15%, 1)",
+        "--ct-primary-content": "hsla(0, 0%, 100%, 1)"
       }
     },
     "dark": {
       "variables": {
-        "--ct-primary": "#007bff",
-        "--ct-secondary": "#6c757d",
-        "--ct-accent": "#17a2b8",
-        "--ct-background-base": "#121212",
-        "--ct-background-surface": "#1e1e1e",
-        "--ct-text-base": "#e0e0e0",
-        "--ct-text-muted": "#a0a0a0",
-        "--ct-border-base": "#424242",
-        "--ct-info": "#17a2b8",
-        "--ct-success": "#28a745",
-        "--ct-warning": "#ffc107",
-        "--ct-error": "#dc3545",
-        "--ct-neutral": "#e0e0e0"
+        "--ct-primary": "hsla(211, 100%, 50%, 1)",
+        "--ct-secondary": "hsla(208, 7%, 46%, 1)",
+        "--ct-accent": "hsla(192, 78%, 41%, 1)",
+        "--ct-background-base": "hsla(0, 0%, 7%, 1)",
+        "--ct-background-surface": "hsla(0, 0%, 12%, 1)",
+        "--ct-text-base": "hsla(0, 0%, 88%, 1)",
+        "--ct-text-muted": "hsla(0, 0%, 63%, 1)",
+        "--ct-border-base": "hsla(0, 0%, 26%, 1)",
+        "--ct-info": "hsla(192, 78%, 41%, 1)",
+        "--ct-success": "hsla(134, 61%, 40%, 1)",
+        "--ct-warning": "hsla(45, 100%, 51%, 1)",
+        "--ct-error": "hsla(354, 70%, 54%, 1)",
+        "--ct-neutral": "hsla(0, 0%, 88%, 1)",
+        "--ct-primary-content": "hsla(0, 0%, 100%, 1)"
       }
     }
   },

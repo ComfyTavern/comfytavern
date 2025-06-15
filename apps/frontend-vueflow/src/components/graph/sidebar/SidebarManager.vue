@@ -1,5 +1,5 @@
 <template>
-  <div class="sidebar-manager" :class="{ 'dark': isDark }">
+  <div class="sidebar-manager" :class="{ 'dark': currentAppliedMode === 'dark' }">
     <!-- 左侧图标栏 -->
     <div class="sidebar-icon-bar">
       <!-- 返回主页按钮 -->
@@ -19,14 +19,14 @@
       <!-- 底部控制按钮 -->
       <div class="bottom-buttons-container">
         <!-- 主题切换按钮 -->
-        <button class="icon-button w-full" @click="themeStore.toggleTheme()" v-comfy-tooltip="'切换主题'">
+        <button class="icon-button w-full" @click="cycleDisplayMode" v-comfy-tooltip="'切换显示模式'">
           <span class="tab-icon">
-            <span v-if="themeStore.theme === 'system'">💻</span>
-            <span v-else-if="themeStore.theme === 'light'">☀️</span>
-            <span v-else>🌙</span>
+            <span v-if="displayMode === 'system'">💻</span>
+            <span v-else-if="displayMode === 'light'">☀️</span>
+            <span v-else>🌙</span> <!-- displayMode === 'dark' -->
           </span>
           <span class="tab-label">
-            {{ themeStore.theme === 'system' ? '系统' : themeStore.theme === 'dark' ? '暗色' : '亮色' }}
+            {{ displayMode === 'system' ? '系统' : displayMode === 'dark' ? '暗色' : '亮色' }}
           </span>
         </button>
 
@@ -49,7 +49,7 @@
 import { ref, computed, markRaw } from 'vue';
 import { storeToRefs } from 'pinia';
 import { RouterLink } from 'vue-router'; // 确保导入
-import { useThemeStore } from '../../../stores/theme';
+import { useThemeStore, type DisplayMode } from '../../../stores/theme'; // 导入 DisplayMode
 import { useUiStore } from '../../../stores/uiStore'; // 导入 UI Store
 import NodePanel from './NodePanel.vue';
 import WorkflowPanel from './WorkflowPanel.vue'; // 导入工作流面板
@@ -78,8 +78,21 @@ const emit = defineEmits<{
 
 // 主题
 const themeStore = useThemeStore();
-const { isDark } = storeToRefs(themeStore);
+const { displayMode, currentAppliedMode } = storeToRefs(themeStore); // 获取 displayMode 和 currentAppliedMode
 const uiStore = useUiStore(); // 初始化 UI Store
+
+function cycleDisplayMode() {
+  const current = displayMode.value;
+  let nextMode: DisplayMode;
+  if (current === 'system') {
+    nextMode = 'light';
+  } else if (current === 'light') {
+    nextMode = 'dark';
+  } else { // current === 'dark'
+    nextMode = 'system';
+  }
+  themeStore.setDisplayMode(nextMode);
+}
 
 // 定义可用的标签页
 const tabs = ref<SidebarTab[]>([

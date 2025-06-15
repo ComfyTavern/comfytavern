@@ -29,6 +29,7 @@ export default {
         'warning': 'var(--ct-warning, #ffc107)',
         'error': 'var(--ct-error, #dc3545)',
         'neutral': 'var(--ct-neutral, var(--ct-text-base))',
+        'primary-content': 'var(--ct-primary-content)', // 新增 primary-content
       },
     },
   },
@@ -47,10 +48,10 @@ export default {
           "success": "var(--ct-success)",
           "warning": "var(--ct-warning)",
           "error": "var(--ct-error)",
-          // 如果需要 DaisyUI 的颜色亮度变体 (e.g., primary-focus, primary-content),
+          "primary-content": "var(--ct-primary-content)", // 新增
+          // 如果需要 DaisyUI 的颜色亮度变体 (e.g., primary-focus),
           // 可以在此也用 CSS 变量定义它们，或者在 theme-variables.css 中定义这些派生变量
           // 例如: "primary-focus": "var(--ct-primary-focus)",
-          //       "primary-content": "var(--ct-primary-content)",
         },
         mytheme_dark: { // 对应我们的暗色模式
           "primary": "var(--ct-primary)",
@@ -63,8 +64,8 @@ export default {
           "success": "var(--ct-success)",
           "warning": "var(--ct-warning)",
           "error": "var(--ct-error)",
+          "primary-content": "var(--ct-primary-content)", // 新增
           // "primary-focus": "var(--ct-primary-focus)",
-          // "primary-content": "var(--ct-primary-content)",
         }
       }
     ],

@@ -5,36 +5,38 @@
   "variants": {
     "light": {
       "variables": {
-        "--ct-primary": "#33a1c9",
-        "--ct-secondary": "#6cb2eb",
-        "--ct-accent": "#00e1ff",
-        "--ct-background-base": "#e0f2f7",
-        "--ct-background-surface": "#f0faff",
-        "--ct-text-base": "#0d2c3a",
-        "--ct-text-muted": "#4a6e82",
-        "--ct-border-base": "#b0cfe0",
-        "--ct-info": "#00e1ff",
-        "--ct-success": "#28a745",
-        "--ct-warning": "#ffc107",
-        "--ct-error": "#dc3545",
-        "--ct-neutral": "#122a40"
+        "--ct-primary": "hsla(197, 59%, 50%, 1)",
+        "--ct-secondary": "hsla(209, 76%, 67%, 1)",
+        "--ct-accent": "hsla(188, 100%, 50%, 1)",
+        "--ct-background-base": "hsla(195, 53%, 92%, 1)",
+        "--ct-background-surface": "hsla(200, 100%, 97%, 1)",
+        "--ct-text-base": "hsla(200, 52%, 14%, 1)",
+        "--ct-text-muted": "hsla(203, 29%, 40%, 1)",
+        "--ct-border-base": "hsla(205, 43%, 85%, 1)",
+        "--ct-info": "hsla(188, 100%, 50%, 1)",
+        "--ct-success": "hsla(134, 61%, 40%, 1)",
+        "--ct-warning": "hsla(45, 100%, 51%, 1)",
+        "--ct-error": "hsla(354, 70%, 54%, 1)",
+        "--ct-neutral": "hsla(210, 55%, 16%, 1)",
+        "--ct-primary-content": "hsla(0, 0%, 100%, 1)"
       }
     },
     "dark": {
       "variables": {
-        "--ct-primary": "#3395ff",
-        "--ct-secondary": "#559bd4",
-        "--ct-accent": "#50f1ff",
-        "--ct-background-base": "#0a1828",
-        "--ct-background-surface": "#102338",
-        "--ct-text-base": "#d8e8f8",
-        "--ct-text-muted": "#a0b8d0",
-        "--ct-border-base": "#2a4868",
-        "--ct-info": "#50f1ff",
-        "--ct-success": "#40c057",
-        "--ct-warning": "#fab005",
-        "--ct-error": "#fa5252",
-        "--ct-neutral": "#d8e8f8"
+        "--ct-primary": "hsla(213, 100%, 60%, 1)",
+        "--ct-secondary": "hsla(210, 58%, 58%, 1)",
+        "--ct-accent": "hsla(184, 100%, 66%, 1)",
+        "--ct-background-base": "hsla(212, 51%, 10%, 1)",
+        "--ct-background-surface": "hsla(213, 50%, 14%, 1)",
+        "--ct-text-base": "hsla(213, 60%, 91%, 1)",
+        "--ct-text-muted": "hsla(212, 33%, 72%, 1)",
+        "--ct-border-base": "hsla(213, 41%, 29%, 1)",
+        "--ct-info": "hsla(184, 100%, 66%, 1)",
+        "--ct-success": "hsla(130, 57%, 49%, 1)",
+        "--ct-warning": "hsla(42, 96%, 50%, 1)",
+        "--ct-error": "hsla(0, 94%, 65%, 1)",
+        "--ct-neutral": "hsla(213, 60%, 91%, 1)",
+        "--ct-primary-content": "hsla(0, 0%, 100%, 1)"
       }
     }
   },

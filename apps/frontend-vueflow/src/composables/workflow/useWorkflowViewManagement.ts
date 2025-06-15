@@ -1,5 +1,6 @@
 import type { Edge as VueFlowEdge, Node as VueFlowNode } from "@vue-flow/core";
 import { storeToRefs } from "pinia";
+import { computed } from 'vue'; // 导入 computed
 import { useThemeStore } from "../../stores/theme"; // 导入主题 Store
 import type { ManagedVueFlowInstance, Viewport } from "../../types/workflowTypes"; // 导入所需类型
 import { useEdgeStyles } from "../canvas/useEdgeStyles"; // 导入边样式 Composable
@@ -12,7 +13,9 @@ export function useWorkflowViewManagement() {
   const workflowManager = useWorkflowManager(); // 获取管理器 Composable 实例
   const edgeStyles = useEdgeStyles(); // 获取边样式 Composable 实例
   const themeStore = useThemeStore(); // 获取主题 Store 实例
-  const { isDark } = storeToRefs(themeStore); // 获取响应式的 isDark 状态
+  const { currentAppliedMode } = storeToRefs(themeStore); // 获取响应式的 currentAppliedMode 状态
+
+  const isCurrentlyDark = computed(() => currentAppliedMode.value === 'dark'); // 新的计算属性
 
   /**
    * 设置指定标签页的 VueFlow 实例。
@@ -78,7 +81,7 @@ export function useWorkflowViewManagement() {
     if (!state) return;
 
     console.debug(
-      `[useWorkflowViewManagement] 开始为标签页 ${internalId} 更新边样式 (isDark: ${isDark.value})`
+      `[useWorkflowViewManagement] 开始为标签页 ${internalId} 更新边样式 (isDark: ${isCurrentlyDark.value})`
     );
 
     const nodes = state.elements.filter((el): el is VueFlowNode => !("source" in el));
@@ -88,7 +91,7 @@ export function useWorkflowViewManagement() {
       const sourceType = edge.data?.sourceType || "any";
       const targetType = edge.data?.targetType || "any";
       // 使用从 useEdgeStyles 获取的函数
-      const styleProps = edgeStyles.getEdgeStyleProps(sourceType, targetType, isDark.value);
+      const styleProps = edgeStyles.getEdgeStyleProps(sourceType, targetType, isCurrentlyDark.value);
       return {
         ...edge,
         ...styleProps,

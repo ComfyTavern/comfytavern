@@ -12,7 +12,7 @@
         :class="[
           props.bare
             ? ''
-            : 'bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700',
+            : 'bg-background-surface rounded-lg shadow-xl border border-border-base',
           props.dialogClass,
           { 'opacity-0 scale-95': !showContentTransition, 'opacity-100 scale-100': showContentTransition }
         ]"
@@ -21,16 +21,16 @@
       >
         <div v-if="props.title || props.showCloseButton"
              class="flex justify-between items-center p-4"
-             :class="{ 'border-b dark:border-gray-700': !props.bare && (props.title || props.showCloseButton) }"
+             :class="{ 'border-b border-border-base': !props.bare && (props.title || props.showCloseButton) }"
         >
-          <h3 v-if="props.title" class="text-lg font-medium text-gray-900 dark:text-gray-100">
+          <h3 v-if="props.title" class="text-lg font-medium text-text-base">
             {{ props.title }}
           </h3>
           <div v-else></div> <!-- 占位符，保持关闭按钮在右侧 -->
           <button
             v-if="props.showCloseButton"
             @click="handleClose"
-            class="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
+            class="text-text-muted hover:text-text-base focus:outline-none"
           >
             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -46,7 +46,7 @@
         </div>
 
         <!-- 可选的底部按钮区域 -->
-        <div v-if="hasFooterSlot" class="p-4 border-t dark:border-gray-700 flex justify-end space-x-2">
+        <div v-if="hasFooterSlot" class="p-4 border-t border-border-base flex justify-end space-x-2">
           <slot name="footer"></slot>
         </div>
 

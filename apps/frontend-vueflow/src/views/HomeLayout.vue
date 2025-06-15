@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-100 dark:bg-gray-900 flex"> <!-- 改为 flex 布局 -->
+  <div class="min-h-screen bg-background-base flex"> <!-- 改为 flex 布局 -->
     <SideBar />
     <main class="flex-1 overflow-x-hidden overflow-y-auto transition-all duration-300 ease-in-out"
           :style="{ paddingLeft: mainContentPaddingLeft }"> <!-- 主内容区域 -->
