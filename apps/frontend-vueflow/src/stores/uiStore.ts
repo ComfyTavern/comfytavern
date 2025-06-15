@@ -146,44 +146,6 @@ export const useUiStore = defineStore('ui', {
     };
   },
   actions: {
-    // 在 actions 中定义一个方法来初始化媒体查询监听器，或者在 state 函数外部执行，确保只执行一次
-    // Pinia store 的 state 函数在 store 第一次被使用时执行一次。
-    // 我们可以在 state 函数返回的对象之后，但在 defineStore 的 actions/getters 之前设置监听器。
-    // 或者，更符合 Pinia 模式的做法是在 action 中处理，但需要确保这个 action 在应用初始化时被调用。
-    // 一个更简单的方式是直接在 state 函数中设置，因为它只运行一次。
-
-    // 为了确保响应性，isMobileView 应该是一个 ref，或者在 state 中直接更新。
-    // Pinia 的 state 属性本身就是响应式的。
-
-    // 媒体查询监听器应该在 state 函数内部设置，以确保在 store 初始化时正确设置。
-    // Pinia 会处理 state 属性的响应性。
-    // 我们需要在 state 函数中添加监听器逻辑，或者在 store 创建后立即调用的 action 中添加。
-    // 考虑到 state 函数只执行一次，在那里设置监听器是合适的。
-    // (上面的 initialIsMobileView 已经处理了初始值，现在需要添加监听器)
-
-    // Pinia 推荐在 action 中处理副作用，但对于这种全局监听器，
-    // 且其目的是更新 store 的 state，在 store 初始化时设置是可以接受的。
-    // 我们将把监听器设置逻辑移到 state 函数之后，或者通过一个初始化 action。
-    // 让我们尝试在 state 函数中直接设置，如果 Pinia 的设计允许这样做并保持清晰。
-    // Pinia 的 state 是一个函数，它返回初始状态对象。我们不能直接在 state 函数内部修改 this。
-    // 因此，一个常见的模式是创建一个 action 来进行初始化。
-
-    // 修正：将监听器设置移至 actions 中，并确保它在应用启动时被调用一次。
-    // 或者，更简单地，在 state 函数中创建 ref 并返回，然后在外部（例如 App.vue）监听。
-    // 但为了 store 的内聚性，我们尝试在 store 内部完成。
-
-    // 让我们调整 state 的初始化，使其包含监听器逻辑，并确保 this 的正确性。
-    // Pinia state 是一个返回对象的函数，我们不能在其中直接使用 this 来调用 actions 或修改其他 state。
-    // 最好的方式是在 store 创建后，通过一个 action 来设置监听器。
-    // 但为了简单起见，并且因为 state 函数只执行一次，我们可以直接在 state 函数中设置监听器来更新一个 ref，
-    // 然后将这个 ref 作为 state 的一部分。不过 Pinia 的 state 属性已经是响应式的。
-
-    // 再次思考：Pinia 的 state 属性已经是响应式的。
-    // 我们可以在 state 函数中设置 initialIsMobileView。
-    // 然后，我们需要一个地方来添加事件监听器以在运行时更新 isMobileView。
-    // 这通常通过一个 action 完成，该 action 在应用加载时被调用。
-
-    // 让我们在 actions 中添加一个 setupMobileViewListener action。
     setupMobileViewListener() {
       if (typeof window !== 'undefined') {
         const mediaQueryMobile = window.matchMedia('(max-width: 1024px)');
@@ -211,12 +173,6 @@ export const useUiStore = defineStore('ui', {
       // this.regexEditorModalData = null; 
       // 但如果希望保留上次编辑的上下文（例如用户只是意外关闭），则不清除
     },
-    // 如果 RegexEditorModal 内部处理保存逻辑并通过事件冒泡或直接调用节点更新，
-    // 那么这里的 onSave 可能就不需要在 modalData 中传递，而是由 BaseNode 直接处理。
-    // 但如果希望模态框保存后，通过 store 通知 BaseNode 更新，则 onSave 回调有用。
-    // 目前的设计是 BaseNode 触发打开，模态框内部编辑，保存时通过 emit('save') + v-model 更新。
-    // 所以这里的 onSave 暂时作为一种可能性保留。
-
     // 控制设置模态框的方法
     openSettingsModal(props?: { width?: string; height?: string }) {
       if (props) {
