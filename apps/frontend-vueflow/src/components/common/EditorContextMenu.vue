@@ -195,7 +195,7 @@ async function execCommand(command: 'undo' | 'redo' | 'cut' | 'copy' | 'paste' |
 
 <style scoped>
 .context-menu {
-  @apply absolute bg-background-surface text-base rounded-md shadow-lg p-1 z-[1000] min-w-[160px] border border-border-base;
+  @apply absolute bg-background-surface text-text-base rounded-md shadow-lg p-1 z-[1000] min-w-[160px] border border-border-base;
 }
 .context-menu-item {
   @apply block w-full text-left px-3 py-1.5 text-sm hover:bg-primary hover:bg-opacity-[var(--ct-component-hover-bg-opacity)] focus:bg-primary focus:bg-opacity-[var(--ct-component-hover-bg-opacity)] rounded cursor-pointer focus:outline-none;

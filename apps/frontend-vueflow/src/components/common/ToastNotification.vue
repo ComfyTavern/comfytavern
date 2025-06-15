@@ -129,7 +129,7 @@ const emit = defineEmits<{
 
 // 使用主题store
 const themeStore = useThemeStore();
-const isDark = computed(() => themeStore.isDark);
+const isDark = computed(() => themeStore.currentAppliedMode === 'dark');
 
 // 控制内容显示的动画
 const showContent = ref(false);

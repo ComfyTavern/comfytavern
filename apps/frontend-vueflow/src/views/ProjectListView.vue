@@ -11,7 +11,7 @@ import "overlayscrollbars/overlayscrollbars.css";
 const { projects, isLoading, error, createNewProject, openProject } = useProjectManagement();
 const themeStore = useThemeStore(); // 获取 theme store 实例
 const dialogService = useDialogService(); // 获取 DialogService 实例
-const isDark = computed(() => themeStore.isDark);
+const isDark = computed(() => themeStore.currentAppliedMode === 'dark');
 
 const promptAndCreateProject = async () => {
   const projectName = await dialogService.showInput({

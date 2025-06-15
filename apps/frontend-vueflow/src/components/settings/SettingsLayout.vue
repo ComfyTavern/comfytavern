@@ -19,7 +19,7 @@
     <OverlayScrollbarsComponent
       class="settings-content"
       :options="{
-        scrollbars: { autoHide: 'leave', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
+        scrollbars: { autoHide: 'leave', theme: themeStore.currentAppliedMode === 'dark' ? 'os-theme-dark' : 'os-theme-light' },
         overflow: { y: 'scroll' },
         paddingAbsolute: true,
       }"
@@ -149,7 +149,7 @@ const activeSection = computed(() =>
 );
 
 const themeStore = useThemeStore();
-const { isDark } = storeToRefs(themeStore);
+// const isDark = computed(() => themeStore.currentAppliedMode === 'dark');
 
 // 新增: 监听 authStore 中用户名的变化，并同步到 settingsStore
 // 这确保了 SettingControl 能通过 settingsStore.getSetting 获取到最新的昵称
@@ -210,15 +210,14 @@ watch(
 }
 
 .settings-nav li:hover {
-  background-color: var(--ct-bg-hover-ui, #e0e0e0); /* 悬停时的背景色 */
-  color: var(--ct-text-accent);
+  background-color: hsl(var(--ct-primary-hsl) / 0.1); /* 使用 primary 色的浅透明背景作为悬停 */
+  color: hsl(var(--ct-primary-hsl)); /* 悬停时文字颜色变为 primary */
 }
 
 .settings-nav li.active {
-  background-color: var(--ct-accent-color); /* 激活时的背景色 */
-  color: var(--ct-text-on-accent, #ffffff); /* 激活时的文字颜色 */
+  background-color: hsl(var(--ct-primary-hsl)); /* 激活时的背景色 */
+  color: hsl(var(--ct-primary-content-hsl)); /* 激活时的文字颜色 */
   font-weight: 600;
-  /* 移除 border-bottom-color */
   box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* 可选：给激活的标签一点点凸起感 */
 }
 
@@ -233,14 +232,14 @@ watch(
   font-weight: 700; /* 加粗 */
   margin-bottom: 32px; /* 增-大下外边距 */
   padding-bottom: 16px; /* 增-大下内边距 */
-  border-bottom: 1px solid var(--ct-border-color);
+  border-bottom: 1px solid hsl(var(--ct-border-base-hsl)); /* 使用 CSS 变量 */
 }
 
 .placeholder-content,
 .placeholder-component {
   padding: 20px;
-  background-color: var(--ct-bg-hover);
+  background-color: hsl(var(--ct-background-surface-hsl)); /* 使用 surface 背景 */
   border-radius: 8px;
-  border: 1px dashed var(--ct-border-color);
+  border: 1px dashed hsl(var(--ct-border-base-hsl)); /* 使用 CSS 变量 */
 }
 </style>

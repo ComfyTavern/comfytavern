@@ -79,7 +79,7 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
 
 const themeStore = useThemeStore(); // 获取 theme store 实例
-const isDark = computed(() => themeStore.isDark);
+const isDark = computed(() => themeStore.currentAppliedMode === 'dark');
 const { projects, isLoading, error, openProject } = useProjectManagement();
 
 // 计算属性，获取最近修改的最多 6 个项目

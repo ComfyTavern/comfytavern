@@ -251,7 +251,7 @@ export function useWorkflowData() {
       // 使用新的适配器函数加载工作流
       const loadedWorkflowObject = await loadAndAdaptWorkflowApi(projectId, workflowId);
       if (loadedWorkflowObject) {
-        const isDark = themeStore.isDark;
+        const isDark = themeStore.currentAppliedMode === 'dark';
         // 调用已修改的 transformWorkflowToVueFlow，并传递适配后的加载函数
         const { flowData: flowToLoad } = await transformWorkflowToVueFlow(
           loadedWorkflowObject,
@@ -374,7 +374,7 @@ export function useWorkflowData() {
     console.debug(`[useWorkflowData] Attempting to load default workflow for tab ${internalId}.`);
     try {
       const defaultStorageObject = defaultWorkflowData as WorkflowStorageObject;
-      const isDark = themeStore.isDark;
+      const isDark = themeStore.currentAppliedMode === 'dark';
 
       // Mock loader for default workflow, as it shouldn't reference other API-loaded workflows
       const mockLoadWorkflowById = async (

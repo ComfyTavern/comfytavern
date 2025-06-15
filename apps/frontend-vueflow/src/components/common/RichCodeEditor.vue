@@ -401,7 +401,7 @@ defineExpose({
 /* .dark.is-focused specific styles are removed */
 
 .breadcrumb-bar {
-  @apply bg-neutral text-secondary border-b border-border-base;
+  @apply bg-neutral text-text-secondary border-b border-border-base;
   padding: 8px 12px;
   font-size: 0.9em;
   display: flex;
@@ -414,7 +414,7 @@ defineExpose({
 }
 
 .breadcrumb-separator {
-  @apply text-muted;
+  @apply text-text-muted;
   margin: 0 4px;
 }
 

@@ -11,7 +11,8 @@ import 'overlayscrollbars/overlayscrollbars.css'
 const scrollbarRef = ref<InstanceType<typeof OverlayScrollbarsComponent> | null>(null) // 创建模板引用
 const tabStore = useTabStore()
 const themeStore = useThemeStore()
-const { isDark } = storeToRefs(themeStore)
+const { currentAppliedMode } = storeToRefs(themeStore)
+const isDark = computed(() => currentAppliedMode.value === 'dark');
 
 const tabs = computed(() => tabStore.tabs)
 const activeTabId = computed(() => tabStore.activeTabId)

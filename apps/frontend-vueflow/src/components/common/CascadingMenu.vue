@@ -238,7 +238,7 @@ defineExpose({ menuElement });
   position: relative;
   /* 为了子菜单定位和箭头定位 */
   /* 确保文字颜色继承或在此处明确设置 */
-  @apply text-base;
+  @apply text-text-base;
   /* 尝试更亮的颜色 */
 }
 
@@ -248,7 +248,7 @@ defineExpose({ menuElement });
 }
 
 .cascading-menu li.context-menu-item .label {
-  @apply text-base;
+  @apply text-text-base;
   flex-grow: 1;
 }
 
@@ -256,13 +256,11 @@ defineExpose({ menuElement });
   margin-left: auto;
   padding-left: 0.75rem;
   font-size: 0.8em;
-  @apply text-muted;
+  @apply text-text-muted;
   /* color: #888; */
 }
 
 .cascading-menu li.context-menu-item.active {
-  /* background-color: #e0e0e0; */
-  /* dark:bg-gray-700 is good from original context menu */
   @apply bg-primary bg-opacity-[var(--ct-menu-item-active-bg-opacity)];
 }
 

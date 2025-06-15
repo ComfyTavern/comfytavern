@@ -1,11 +1,11 @@
 <template>
-  <div class="workflow-panel p-4 h-full flex flex-col bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-    <h3 class="text-lg font-semibold mb-4 border-b pb-2 dark:border-gray-600">工作流</h3>
+  <div class="workflow-panel p-4 h-full flex flex-col bg-background-surface text-text-base"> {/* text-text-default -> text-text-base */}
+    <h3 class="text-lg font-semibold mb-4 border-b pb-2 border-border-base">工作流</h3>
 
     <!-- 搜索框 (可选) -->
     <div class="mb-3">
       <input type="text" v-model="searchTerm" placeholder="搜索工作流..."
-        class="w-full px-2 py-1 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500">
+        class="w-full px-2 py-1 border rounded bg-background-base border-border-base focus:outline-none focus:ring-1 focus:ring-primary"> {/* bg-background-input -> bg-background-base, border-border-input -> border-border-base */}
     </div>
 
     <!-- 刷新按钮 -->
@@ -25,21 +25,21 @@
     <!-- Remove overflow-y-auto, add flex-1 to OverlayScrollbarsComponent -->
     <OverlayScrollbarsComponent
       :options="{ scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' } }"
-      class="flex-1 border rounded dark:border-gray-600" defer>
-      <div v-if="loadingWorkflows" class="p-4 text-center text-gray-500 dark:text-gray-400">加载中...</div>
-      <div v-else-if="filteredWorkflows.length === 0" class="p-4 text-center text-gray-500 dark:text-gray-400">
+      class="flex-1 border rounded border-border-base" defer>
+      <div v-if="loadingWorkflows" class="p-4 text-center text-text-muted">加载中...</div>
+      <div v-else-if="filteredWorkflows.length === 0" class="p-4 text-center text-text-muted">
         {{ availableWorkflows.length === 0 ? '没有可加载的工作流。' : '没有匹配的工作流。' }}
       </div>
       <ul v-else>
         <li v-for="wf in filteredWorkflows" :key="wf.id"
-          class="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center border-b dark:border-gray-700 last:border-b-0"
+          class="p-3 hover:bg-background-hover cursor-pointer flex justify-between items-center border-b border-border-base last:border-b-0"
           @click="handleLoad(wf.id)">
           <!-- 分开名称 Tooltip 和 状态 Tooltip -->
           <div class="flex items-center flex-grow min-w-0 mr-2"> <!-- 包裹名称和图标 -->
             <Tooltip :content="`点击加载 **${wf.name}**\n\n---\n${wf.description || '没有描述'}`" placement="top-start"
               :offsetValue="8" :showDelay="500" triggerClass="truncate flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                stroke="currentColor" class="w-4 h-4 mr-2 text-gray-400 flex-shrink-0">
+                stroke="currentColor" class="w-4 h-4 mr-2 text-text-muted flex-shrink-0">
                 <path stroke-linecap="round" stroke-linejoin="round"
                   d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75c0-.231-.035-.454-.1-.664M6.75 7.5H18a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25H6.75a2.25 2.25 0 0 1-2.25-2.25v-9a2.25 2.25 0 0 1 2.25-2.25Z" />
               </svg>
@@ -48,13 +48,13 @@
             <!-- 状态徽章 Tooltip 移到外面 -->
             <Tooltip v-if="wf.isOrphanGroup" content="这是一个由“创建组”产生且当前未被引用的工作流" placement="top">
               <span
-                class="ml-2 text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 dark:bg-gray-900 dark:text-yellow-100 flex-shrink-0">
+                class="ml-2 text-xs px-1.5 py-0.5 rounded bg-warning/20 text-warning flex-shrink-0">
                 未使用
               </span>
             </Tooltip>
             <Tooltip v-else-if="wf.referenceCount > 0" :content="`被 ${wf.referenceCount} 个工作流引用`" placement="top">
               <span
-                class="ml-2 text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100 flex-shrink-0">
+                class="ml-2 text-xs px-1.5 py-0.5 rounded bg-primary/20 text-primary flex-shrink-0">
                 {{ wf.referenceCount }}
               </span>
             </Tooltip>
@@ -62,7 +62,7 @@
           <div class="flex items-center flex-shrink-0"> <!-- 包裹按钮 -->
             <Tooltip content="删除">
               <button @click.stop="handleDelete(wf.id)"
-                class="text-red-500 hover:text-red-700 ml-2 p-1 rounded hover:bg-red-100 dark:hover:bg-red-900 opacity-70 hover:opacity-100">
+                class="text-error hover:text-error ml-2 p-1 rounded hover:bg-error-softest opacity-70 hover:opacity-100">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                   stroke="currentColor" class="w-4 h-4">
                   <path stroke-linecap="round" stroke-linejoin="round"
@@ -97,7 +97,7 @@ const tabStore = useTabStore(); // Get tabStore instance
 const projectStore = useProjectStore(); // Get projectStore instance
 const { availableWorkflows } = storeToRefs(workflowStore);
 const themeStore = useThemeStore(); // Get theme store instance
-const { isDark } = storeToRefs(themeStore); // Get isDark state
+const isDark = computed(() => themeStore.currentAppliedMode === 'dark'); // Get isDark state
 const dialogService = useDialogService(); // 获取 DialogService 实例
 // const { activeTabId } = storeToRefs(tabStore); // Removed unused activeTabId
 // const vueFlow = useVueFlow(); // Remove unused variable
@@ -210,6 +210,6 @@ onMounted(() => {
 }
 
 .toolbar-button {
-  @apply px-3 py-1.5 rounded text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm transition-colors;
+  @apply px-3 py-1.5 rounded text-text-base bg-neutral/20 hover:bg-neutral/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm transition-colors; /* text-text-default -> text-text-base, bg-background-neutral-soft -> bg-neutral/20, hover:bg-background-neutral -> hover:bg-neutral/30 */
 }
 </style>

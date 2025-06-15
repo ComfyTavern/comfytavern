@@ -7,7 +7,7 @@
       :snapping-tolerance="10" :selectionMode="SelectionMode.Partial" :connection-line-component="UnplugConnectionLine"
       @edges-change="handleEdgesChange" :panOnDrag="true" :zoomOnScroll="true">
       <!-- 背景 -->
-      <Background :pattern-color="isDark ? '#555' : '#aaa'" :gap="16" />
+      <Background pattern-color="var(--ct-bg-pattern-color, #aaa)" :gap="16" />
 
       <!-- 控制器 -->
       <Controls />
@@ -201,7 +201,7 @@ const {
 // 获取拖拽相关函数
 const { onDragOver, onDragLeave, onDrop } = useDragAndDrop();
 const themeStore = useThemeStore();
-const { isDark } = storeToRefs(themeStore);
+const isDark = computed(() => themeStore.currentAppliedMode === 'dark');
 const nodeStore = useNodeStore();
 const { nodeDefinitions } = storeToRefs(nodeStore); // 从 nodeStore 获取响应式引用
 const workflowStore = useWorkflowStore(); // 实例化 WorkflowStore
@@ -325,8 +325,8 @@ const addGroup = () => {
     style: {
       width: 300,
       height: 200,
-      backgroundColor: isDark.value ? "rgba(55, 65, 81, 0.7)" : "rgba(240, 240, 240, 0.7)", // gray-700 with opacity
-      border: `1px dashed ${isDark.value ? "#4B5563" : "#ccc"}`, // gray-600 for dark mode
+      backgroundColor: "var(--ct-node-group-bg, rgba(240, 240, 240, 0.7))",
+      border: `1px dashed var(--ct-node-group-border-color, #ccc)`,
       borderRadius: "8px",
       padding: "10px",
     },
@@ -730,8 +730,8 @@ const handleCreateFrameForSelection = () => {
     style: {
       width: frameWidth,
       height: frameHeight,
-      backgroundColor: isDark.value ? "rgba(60, 70, 90, 0.3)" : "rgba(220, 220, 240, 0.4)",
-      border: `2px dotted ${isDark.value ? "#6B7280" : "#9CA3AF"}`,
+      backgroundColor: "var(--ct-frame-bg, rgba(220, 220, 240, 0.4))",
+      border: `2px dotted var(--ct-frame-border-color, #9CA3AF)`,
       borderRadius: "12px",
     },
     data: { label: "分组框" },
@@ -807,7 +807,7 @@ onUnmounted(() => {
 
 /* VueFlow容器样式 */
 :deep(.vue-flow) {
-  @apply bg-gray-50 dark:bg-gray-900;
+  @apply bg-background-base; /* 使用语义化背景色 */
 }
 
 /* 连接线样式 */
@@ -816,7 +816,7 @@ onUnmounted(() => {
 }
 
 :deep(.vue-flow__edge.selected) {
-  @apply stroke-blue-500 dark:stroke-blue-400 stroke-2;
+  @apply stroke-primary stroke-2; /* 使用语义化颜色 */
 }
 
 :deep(.vue-flow__edge-path) {
@@ -824,13 +824,8 @@ onUnmounted(() => {
 }
 
 :deep(.vue-flow__connection-path) {
-  stroke: #1890ff;
+  @apply stroke-primary; /* 使用语义化颜色 */
   stroke-width: 2;
-
-  .dark & {
-    stroke: #63b3ed;
-    /* blue-400 */
-  }
 }
 
 /* 覆盖 VueFlow 节点包装器的默认边框 */

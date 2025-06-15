@@ -13,7 +13,7 @@ const characters = ref<CharacterCardUI[]>([]);
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 const themeStore = useThemeStore(); // 获取 theme store 实例
-const isDark = computed(() => themeStore.isDark);
+const isDark = computed(() => themeStore.currentAppliedMode === 'dark');
 
 onMounted(async () => {
   isLoading.value = true;

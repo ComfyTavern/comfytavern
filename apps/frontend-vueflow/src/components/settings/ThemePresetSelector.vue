@@ -1,11 +1,11 @@
 <template>
   <div class="theme-preset-selector">
-    <label for="theme-select" class="block text-sm font-medium text-base mb-1">选择主题:</label>
+    <label for="theme-select" class="block text-sm font-medium text-text-base mb-1">选择主题:</label>
     <select
       id="theme-select"
       v-model="selectedTheme"
       @change="onThemeChange"
-      class="block w-full pl-3 pr-10 py-2 text-base border-border-base focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md bg-background-surface text-base"
+      class="block w-full pl-3 pr-10 py-2 text-text-base border-border-base focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md bg-background-surface"
     >
       <option v-for="theme in availableThemes" :key="theme.id" :value="theme.id">
         {{ theme.name }}

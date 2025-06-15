@@ -20,16 +20,36 @@ export default {
         'background-surface': 'hsl(var(--ct-background-surface-hsl) / <alpha-value>)',
         'text-base': 'hsl(var(--ct-text-base-hsl) / <alpha-value>)',
         'text-secondary': 'hsl(var(--ct-text-secondary-hsl) / <alpha-value>)',
-        'muted': 'hsl(var(--ct-text-muted-hsl) / <alpha-value>)',
+        'text-muted': 'hsl(var(--ct-text-muted-hsl) / <alpha-value>)',
         'border-base': 'hsl(var(--ct-border-base-hsl) / <alpha-value>)',
         'backdrop': 'hsl(var(--ct-backdrop-bg-hsl) / <alpha-value>)', // 新增 backdrop 颜色
         
+        // 新增的变体，使用 primary 的 HSL 值，但固定 alpha
+        'primary-soft': 'hsl(var(--ct-primary-hsl) / 0.3)', // 例如 30% 透明度
+        'primary-softest': 'hsl(var(--ct-primary-hsl) / 0.15)', // 例如 15% 透明度
+
+        'secondary-soft': 'hsl(var(--ct-secondary-hsl) / 0.3)',
+        'secondary-softest': 'hsl(var(--ct-secondary-hsl) / 0.15)',
+
+        'accent-soft': 'hsl(var(--ct-accent-hsl) / 0.3)',
+        'accent-softest': 'hsl(var(--ct-accent-hsl) / 0.15)',
+            
         // 状态颜色
         'info': 'hsl(var(--ct-info-hsl) / <alpha-value>)',
+        'info-soft': 'hsl(var(--ct-info-hsl) / 0.3)',
+        'info-softest': 'hsl(var(--ct-info-hsl) / 0.15)',
         'success': 'hsl(var(--ct-success-hsl) / <alpha-value>)',
+        'success-soft': 'hsl(var(--ct-success-hsl) / 0.3)',
+        'success-softest': 'hsl(var(--ct-success-hsl) / 0.15)',
         'warning': 'hsl(var(--ct-warning-hsl) / <alpha-value>)',
+        'warning-soft': 'hsl(var(--ct-warning-hsl) / 0.3)',
+        'warning-softest': 'hsl(var(--ct-warning-hsl) / 0.15)',
         'error': 'hsl(var(--ct-error-hsl) / <alpha-value>)',
+        'error-soft': 'hsl(var(--ct-error-hsl) / 0.3)',
+        'error-softest': 'hsl(var(--ct-error-hsl) / 0.15)',
         'neutral': 'hsl(var(--ct-neutral-hsl) / <alpha-value>)',
+        'neutral-soft': 'hsl(var(--ct-neutral-hsl) / 0.3)',
+        'neutral-softest': 'hsl(var(--ct-neutral-hsl) / 0.15)',
         'primary-content': 'hsl(var(--ct-primary-content-hsl) / <alpha-value>)',
       },
     },

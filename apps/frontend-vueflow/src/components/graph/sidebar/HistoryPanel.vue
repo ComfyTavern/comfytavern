@@ -1,15 +1,15 @@
 <template>
   <div class="history-panel p-4 h-full flex flex-col">
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-semibold text-gray-ID_MAX_LEN00 dark:text-gray-200">操作历史</h3>
-      <span v-if="currentHistory" class="text-sm text-gray-500 dark:text-gray-400">
+      <h3 class="text-lg font-semibold text-text-strong">操作历史</h3>
+      <span v-if="currentHistory" class="text-sm text-text-muted">
         {{ currentHistory.items.length }} / {{ MAX_HISTORY_LENGTH }}
       </span>
     </div>
-    <div v-if="!activeTabId" class="text-gray-500 dark:text-gray-400 text-center mt-4">
+    <div v-if="!activeTabId" class="text-text-muted text-center mt-4">
       没有活动的标签页。
     </div>
-    <div v-else-if="!currentHistory || currentHistory.items.length === 0" class="text-gray-500 dark:text-gray-400">
+    <div v-else-if="!currentHistory || currentHistory.items.length === 0" class="text-text-muted">
       当前标签页没有历史记录。
     </div>
     <OverlayScrollbarsComponent v-else :options="{
@@ -27,13 +27,13 @@
             interactive: true
           }"
           class="history-item p-2 rounded cursor-pointer transition-colors duration-150" :class="{
-            'bg-blue-100 dark:bg-blue-900 text-blue-ID_MAX_LEN00 dark:text-blue-200 font-medium':
+            'bg-primary-soft text-primary-strong font-medium':
               item.originalIndex === currentHistory.currentIndex,
-            'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300':
+            'hover:bg-background-hover text-text-default':
               item.originalIndex !== currentHistory.currentIndex,
             'opacity-50': item.originalIndex > currentHistory.currentIndex,
           }" @click="handleHistoryClick(item.originalIndex)">
-          <span class="mr-2 w-6 text-right text-gray-500 dark:text-gray-400">{{
+          <span class="mr-2 w-6 text-right text-text-muted">{{
             item.originalIndex
           }}</span>
           <span class="mr-2">{{
@@ -68,7 +68,7 @@ const workflowStore = useWorkflowStore(); // 获取 workflowStore 实例
 
 const { activeTabId } = storeToRefs(tabStore);
 const themeStore = useThemeStore(); // Get theme store instance
-const { isDark } = storeToRefs(themeStore); // Get isDark state
+const isDark = computed(() => themeStore.currentAppliedMode === 'dark'); // Get isDark state
 // useWorkflowHistory 不直接暴露 historyMap，需要通过 getHistoryState 获取
 
 // 获取当前活动标签页的历史记录对象

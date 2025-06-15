@@ -6,7 +6,7 @@ import { useVueFlow, Handle, Position, type NodeProps } from "@vue-flow/core";
 
 // Pinia 和状态存储
 import { storeToRefs } from "pinia";
-import { useThemeStore } from "../../../stores/theme";
+// import { useThemeStore } from "../../../stores/theme"; // 不再需要
 import { useTabStore } from "../../../stores/tabStore";
 import { useExecutionStore } from "../../../stores/executionStore";
 import { useProjectStore } from '@/stores/projectStore'; // 新增 (useTabManagement 移除)
@@ -60,8 +60,8 @@ const nodeRootRef = ref<HTMLDivElement | null>(null); // 节点根元素引用
 
 // 第 4 部分：Composables、Store 实例和 Store Refs
 // Store
-const themeStore = useThemeStore();
-const { isDark } = storeToRefs(themeStore);
+// const themeStore = useThemeStore(); // 不再需要，因为 isDark 已移除
+// const isDark = computed(() => themeStore.currentAppliedMode === 'dark'); // 不再需要，由 Tailwind dark: 前缀自动处理
 const executionStore = useExecutionStore(); // 获取执行状态 Store 实例
 const tabStore = useTabStore();
 const { activeTabId } = storeToRefs(tabStore);
@@ -691,7 +691,7 @@ const handleActionTriggered = (payload: {
       selected,
       'pointer-events-none': isResizing,
       'cursor-move': !isResizing,
-      dark: isDark, // 暗色模式类
+      // dark: isDark, // 暗色模式类 - 移除，由 Tailwind dark: 前缀自动处理
       // 执行状态相关的类
       'node-running': nodeExecutionStatus === ExecutionStatus.RUNNING,
       'node-completed': nodeExecutionStatus === ExecutionStatus.COMPLETE, // Use COMPLETE
@@ -1093,7 +1093,7 @@ export default {
 }
 
 .custom-node {
-  @apply rounded-lg shadow-md border overflow-visible bg-gray-50 border-gray-300 dark:bg-gray-800 dark:border-gray-600;
+  @apply rounded-lg shadow-md border overflow-visible bg-background-surface border-border-base;
   position: relative;
 }
 
@@ -1110,7 +1110,7 @@ export default {
 /* 拖拽手柄视觉元素样式 */
 .resize-handle {
   /* 高度撑满父元素，宽度 w-0.5 (2px)，设置背景色 */
-  @apply h-full w-0.5 bg-[#1890ff] dark:bg-blue-400;
+  @apply h-full w-0.5 bg-primary;
 }
 
 /* 左侧响应区域定位 */
@@ -1144,23 +1144,23 @@ export default {
 }
 
 .custom-node-header {
-  @apply bg-gray-50 dark:bg-gray-700 px-2 py-1 font-medium text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between;
+  @apply bg-background-surface px-2 py-1 font-medium text-text-base border-b border-border-base flex items-center justify-between;
   /* 调整内边距 */
   border-radius: 6px 6px 0 0;
 }
 
 .node-title {
-  @apply text-sm font-medium text-gray-800 dark:text-gray-200;
+  @apply text-sm font-medium text-text-base; /* text-text-node-title -> text-text-base */
 }
 
 /* 节点 ID 徽章样式 */
 .node-id-badge {
-  @apply inline-block bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs font-mono px-1.5 py-0.5 rounded align-middle;
+  @apply inline-block bg-neutral/20 text-neutral text-xs font-mono px-1.5 py-0.5 rounded align-middle; /* bg-background-badge text-text-badge -> bg-neutral/20 text-neutral */
   /* 节点 ID 徽章样式 */
 }
 
 .node-category {
-  @apply text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300;
+  @apply text-xs px-2 py-0.5 rounded bg-primary/20 text-primary; /* bg-primary-soft text-primary-strong -> bg-primary/20 text-primary */
 }
 
 .custom-node-body {
@@ -1169,7 +1169,7 @@ export default {
 }
 
 .node-description {
-  @apply text-sm text-gray-600 dark:text-gray-400 mb-3;
+  @apply text-sm text-text-muted mb-3;
 }
 
 .node-inputs,
@@ -1192,7 +1192,7 @@ export default {
 
 /* 配置项内容容器样式 */
 .config-content {
-  @apply bg-gray-50 dark:bg-gray-700 rounded;
+  @apply bg-background-base rounded;
   /* 移除内边距，由内部组件控制 */
   min-height: 24px;
   /* 保持最小高度 */
@@ -1200,7 +1200,7 @@ export default {
 
 .input-title,
 .output-title {
-  @apply text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 px-2;
+  @apply text-xs font-medium text-text-secondary mb-1 px-2; /* text-text-label -> text-text-secondary */
 }
 
 .node-param {
@@ -1229,7 +1229,7 @@ export default {
 
 /* 多行输入组件容器样式 */
 .param-content {
-  @apply ml-3 mr-3 bg-gray-50 dark:bg-gray-700 rounded;
+  @apply ml-3 mr-3 bg-background-base rounded;
   /* 调整左外边距以对齐 */
   /* 统一内边距 */
   min-height: 32px;
@@ -1237,7 +1237,7 @@ export default {
 
 /* 参数名称样式调整 */
 .param-name {
-  @apply text-gray-700 dark:text-gray-200 font-medium leading-tight;
+  @apply text-text-base font-medium leading-tight; /* text-text-default -> text-text-base */
   /* 调整行高 */
 }
 
@@ -1259,7 +1259,7 @@ export default {
 .inline-input :deep(.input-number),
 .inline-input :deep(.input-text),
 .inline-input :deep(.input-select select) {
-  @apply w-full py-0 px-1 text-xs rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-blue-500 focus:border-blue-500;
+  @apply w-full py-0 px-1 text-xs rounded border-border-base bg-background-base focus:ring-blue-500 focus:border-blue-500; /* border-border-input -> border-border-base, bg-background-input -> bg-background-base */
   /* 调整内边距和高度 */
   height: 16px;
   /* 调整高度 */
@@ -1291,7 +1291,22 @@ export default {
 }
 
 .node-skipped {
-  @apply opacity-60 border-dashed border-gray-400 dark:border-gray-500;
+  opacity: var(--ct-node-skipped-opacity, 0.6); /* 使用 CSS 变量，并提供一个备用值 */
+  @apply border-dashed border-border-base;
+  position: relative; /* 确保伪元素定位正确 */
+}
+
+.custom-node.node-skipped::before { /* 增加 .custom-node 提高特异性 */
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit; /* 继承父节点的圆角, .custom-node 有 rounded-lg */
+  background-color: var(--ct-node-skipped-overlay-color, rgba(128, 128, 128, 0.3)); /* 使用 CSS 变量 */
+  z-index: 1; /* 在内容之上，但在 Handle 等交互元素之下 */
+  pointer-events: none; /* 不阻挡鼠标事件 */
 }
 
 /* --- 预览状态样式 --- */
@@ -1328,7 +1343,7 @@ export default {
 
 /* 插槽名称输入框样式 */
 .param-name-input {
-  @apply w-full p-0.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-gray-700 dark:text-gray-200;
+  @apply w-full p-0.5 text-xs rounded border border-border-base bg-background-base focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-text-base; /* border-border-input -> border-border-base, bg-background-input -> bg-background-base, text-text-input -> text-text-base */
   /* 调整样式使其融入 */
   line-height: normal;
   /* 确保行高正常 */
@@ -1355,7 +1370,7 @@ export default {
 
 /* 节点组信息区域样式 */
 .node-group-info {
-  @apply text-xs text-gray-500 dark:text-gray-400 px-2 py-1 border-t border-gray-200 dark:border-gray-600 flex items-center gap-2;
+  @apply text-xs text-text-muted px-2 py-1 border-t border-border-base flex items-center gap-2; /* border-border-divider -> border-border-base */
 }
 
 .info-item {

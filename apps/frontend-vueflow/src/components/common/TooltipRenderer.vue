@@ -13,8 +13,8 @@
           },
         ]"
         :class="[
-          'comfy-tooltip-renderer fixed shadow-lg border rounded-md',
-          isDark ? 'bg-gray-700 text-gray-100 border-gray-600' : 'bg-white text-gray-900 border-gray-300',
+          'comfy-tooltip-renderer fixed shadow-lg rounded-md',
+          'bg-[hsl(var(--ct-background-surface-hsl))] text-[hsl(var(--ct-text-base-hsl))] border border-[hsl(var(--ct-border-base-hsl))]',
           tooltipStore.options.customClass,
         ]"
         role="tooltip"
@@ -30,13 +30,13 @@
             @click="copyContentToClipboard"
             type="button"
           >
-            <svg class="w-4 h-4" :class="isDark ? 'text-gray-300' : 'text-gray-600'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="w-4 h-4 text-[hsl(var(--ct-text-muted-hsl))]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path v-if="!copySuccess" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
             <div
               class="absolute right-full top-1/2 transform -translate-y-1/2 mr-2 px-2 py-1 rounded text-xs whitespace-nowrap transition-all duration-200 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0"
-              :class="isDark ? 'bg-gray-600 text-gray-100' : 'bg-gray-200 text-gray-800'"
+              :class="['bg-[hsl(var(--ct-background-base-hsl))] text-[hsl(var(--ct-text-secondary-hsl))]']"
             >
               {{ copyButtonTitle }}
             </div>
@@ -76,7 +76,8 @@ import 'overlayscrollbars/overlayscrollbars.css';
 
 const tooltipStore = useTooltipStore();
 const themeStore = useThemeStore();
-const { isDark } = storeToRefs(themeStore);
+const { currentAppliedMode } = storeToRefs(themeStore);
+const isDark = computed(() => currentAppliedMode.value === 'dark');
 
 const floatingRendererRef = ref<HTMLElement | null>(null);
 const copySuccess = ref(false);

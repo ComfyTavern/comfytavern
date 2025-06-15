@@ -1,5 +1,5 @@
 <template>
-  <div class="sidebar-manager" :class="{ 'dark': currentAppliedMode === 'dark' }">
+  <div class="sidebar-manager">
     <!-- 左侧图标栏 -->
     <div class="sidebar-icon-bar">
       <!-- 返回主页按钮 -->
@@ -78,7 +78,7 @@ const emit = defineEmits<{
 
 // 主题
 const themeStore = useThemeStore();
-const { displayMode, currentAppliedMode } = storeToRefs(themeStore); // 获取 displayMode 和 currentAppliedMode
+const { displayMode } = storeToRefs(themeStore); // 获取 displayMode
 const uiStore = useUiStore(); // 初始化 UI Store
 
 function cycleDisplayMode() {
@@ -194,7 +194,7 @@ defineExpose({
 }
 
 .icon-button {
-  @apply flex flex-col items-center justify-center w-full py-1 px-1 text-muted hover:bg-neutral hover:bg-opacity-[var(--ct-component-hover-bg-opacity)] transition-colors cursor-pointer;
+  @apply flex flex-col items-center justify-center w-full py-1 px-1 text-text-muted hover:bg-neutral hover:bg-opacity-[var(--ct-component-hover-bg-opacity)] transition-colors cursor-pointer;
   /* py-2 -> py-1 */
   /* 调整内边距 */
 }

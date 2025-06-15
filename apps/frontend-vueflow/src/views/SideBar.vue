@@ -97,7 +97,7 @@ function cycleDisplayMode() {
 </script>
 
 <template>
-  <div class="fixed left-0 top-0 bottom-0 flex flex-col z-10 transition-all duration-300 ease-in-out bg-background-surface text-base"
+  <div class="fixed left-0 top-0 bottom-0 flex flex-col z-10 transition-all duration-300 ease-in-out bg-background-surface text-text-base"
     :class="[ uiStore.isMainSidebarCollapsed ? 'w-16' : 'w-64' ]">
     <!-- 用户头像和名称 -->
     <div class="p-2 flex flex-col items-center mt-2 mb-2">
@@ -109,7 +109,7 @@ function cycleDisplayMode() {
       />
       <div
         v-if="displayedUsername"
-        class="mt-2 text-sm font-medium transition-opacity duration-150 ease-in-out overflow-hidden whitespace-nowrap text-muted"
+        class="mt-2 text-sm font-medium transition-opacity duration-150 ease-in-out overflow-hidden whitespace-nowrap text-text-muted"
         :class="[
           uiStore.isMainSidebarCollapsed ? 'opacity-0 max-h-0' : 'opacity-100 max-h-10 delay-150'
         ]"
@@ -124,8 +124,8 @@ function cycleDisplayMode() {
       <RouterLink to="/home" custom v-slot="{ navigate, isExactActive }">
         <div @click="navigate" class="w-full p-2 rounded flex items-center cursor-pointer" :class="[
           uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-          'hover:bg-primary/10', // 使用 primary 色的半透明背景作为 hover
-          isExactActive ? 'bg-primary/20' : '' // 激活状态使用更深一点的 primary 半透明背景
+          'hover:bg-primary-softest', // 使用 primary 色的半透明背景作为 hover
+          isExactActive ? 'bg-primary-soft' : '' // 激活状态使用更深一点的 primary 半透明背景
         ]">
           <span class="inline text-lg">🏠</span>
           <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
@@ -135,16 +135,16 @@ function cycleDisplayMode() {
 
       <RouterLink to="/home/projects" class="w-full p-2 rounded flex items-center" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-        'hover:bg-primary/10 active:bg-primary/20'
-      ]" active-class="bg-primary/20">
+        'hover:bg-primary-softest active:bg-primary-soft'
+      ]" active-class="bg-primary-soft">
         <span class="inline text-lg">📁</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">项目</span>
       </RouterLink>
       <RouterLink to="/home/characters" class="w-full p-2 rounded flex items-center" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-        'hover:bg-primary/10 active:bg-primary/20'
-      ]" active-class="bg-primary/20">
+        'hover:bg-primary-softest active:bg-primary-soft'
+      ]" active-class="bg-primary-soft">
         <span class="inline text-lg">🎭</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">角色卡</span>
@@ -152,8 +152,8 @@ function cycleDisplayMode() {
 
       <RouterLink to="/home/files" class="w-full p-2 rounded flex items-center" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-        'hover:bg-primary/10 active:bg-primary/20'
-      ]" active-class="bg-primary/20">
+        'hover:bg-primary-softest active:bg-primary-soft'
+      ]" active-class="bg-primary-soft">
         <span class="inline text-lg">🗂️</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">文件管理</span>
@@ -161,8 +161,8 @@ function cycleDisplayMode() {
 
       <RouterLink to="/home/about" class="w-full p-2 rounded flex items-center" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-        'hover:bg-primary/10 active:bg-primary/20'
-      ]" active-class="bg-primary/20">
+        'hover:bg-primary-softest active:bg-primary-soft'
+      ]" active-class="bg-primary-soft">
         <span class="inline text-lg">ℹ️</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">关于</span>
@@ -174,7 +174,7 @@ function cycleDisplayMode() {
       <!-- 主题切换按钮 -->
       <div v-comfy-tooltip="'切换主题'" class="w-full p-2 rounded flex items-center cursor-pointer" :class="[
           uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-          'hover:bg-primary/10'
+          'hover:bg-primary-softest'
         ]" @click="cycleDisplayMode()">
         <span class="inline text-lg">
           <span v-if="displayMode === 'system'">💻</span>
@@ -190,8 +190,8 @@ function cycleDisplayMode() {
       <!-- 设置按钮 -->
       <RouterLink to="/home/settings" class="w-full p-2 rounded flex items-center mt-2" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-        'hover:bg-primary/10 active:bg-primary/20'
-      ]" active-class="bg-primary/20">
+        'hover:bg-primary-softest active:bg-primary-soft'
+      ]" active-class="bg-primary-soft">
         <span class="inline text-lg">⚙️</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">设置</span>
@@ -200,7 +200,7 @@ function cycleDisplayMode() {
       <!-- 折叠按钮 -->
       <button v-comfy-tooltip="'折叠/展开侧边栏'" @click="uiStore.toggleMainSidebar()" class="w-full p-2 rounded flex items-center mt-2" :class="[ // + 使用 uiStore action
           uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-          'hover:bg-primary/10'
+          'hover:bg-primary-softest'
         ]">
         <span role="img" aria-label="sidebar" class="text-lg p-1" v-if="uiStore.isMainSidebarCollapsed">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"

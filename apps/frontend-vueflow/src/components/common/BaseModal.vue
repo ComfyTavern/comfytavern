@@ -20,17 +20,17 @@
         @click.stop
       >
         <div v-if="props.title || props.showCloseButton"
-             class="flex justify-between items-center p-4"
-             :class="{ 'border-b border-border-base': !props.bare && (props.title || props.showCloseButton) }"
+            class="flex justify-between items-center p-4"
+            :class="{ 'border-b border-border-base': !props.bare && (props.title || props.showCloseButton) }"
         >
-          <h3 v-if="props.title" class="text-lg font-medium text-base">
+          <h3 v-if="props.title" class="text-lg font-medium text-text-base">
             {{ props.title }}
           </h3>
           <div v-else></div> <!-- 占位符，保持关闭按钮在右侧 -->
           <button
             v-if="props.showCloseButton"
             @click="handleClose"
-            class="text-muted hover:text-base focus:outline-none"
+            class="text-text-muted hover:text-text-base focus:outline-none"
           >
             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

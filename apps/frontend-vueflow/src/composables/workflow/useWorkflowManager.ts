@@ -9,7 +9,6 @@ import {
 import { getEffectiveDefaultValue } from "@comfytavern/utils"; // <-- 导入默认值工具
 import type { Edge as VueFlowEdge, Node as VueFlowNode } from "@vue-flow/core";
 import { klona } from "klona";
-import { storeToRefs } from "pinia";
 import { computed, reactive, ref, watch } from "vue"; // Added ref
 import { useTabStore } from "../../stores/tabStore";
 import { useThemeStore } from "../../stores/theme";
@@ -54,7 +53,7 @@ function createWorkflowManager() {
   // --- 依赖项 ---
   const tabStore = useTabStore();
   const themeStore = useThemeStore();
-  const { isDark } = storeToRefs(themeStore);
+  const isDark = computed(() => themeStore.currentAppliedMode === 'dark'); // 使用 themeStore
   const { getEdgeStyleProps } = useEdgeStyles();
   // const workflowDataHandler = useWorkflowData(); // 不再需要
   const nodeStore = useNodeStore(); // 获取 NodeStore 实例

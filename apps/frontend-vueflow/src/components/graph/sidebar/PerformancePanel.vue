@@ -286,7 +286,7 @@ const collectStats = async () => {
 
           const componentObject = getInputComponent(configDef.dataFlowType, configDef.config, configDef.matchCategories);
           if (componentObject) {
-            const componentName = componentObject.name || componentObject.type?.name || componentObject.__name || 'UnknownComponent';
+            const componentName = componentObject.name || (componentObject as any).__name || 'UnknownComponent';
             if (componentName !== 'InlineConnectionSorter' && componentName !== 'NodeInputActionsBar' && componentName !== 'UnknownComponent') {
               collectedComponentUsage[componentName] = (collectedComponentUsage[componentName] || 0) + 1;
               // console.log(`[PerformancePanel] Node ${node.id} config item '${configKeyForDisplay}' (DataFlowType: ${configDef.dataFlowType}) renders as component: ${componentName}`);
@@ -301,7 +301,7 @@ const collectStats = async () => {
         Object.entries(nodeDefinition.inputs).forEach(([_inputKey, inputDef]) => {
           const componentObject = getInputComponent(inputDef.dataFlowType, inputDef.config, inputDef.matchCategories);
           if (componentObject) {
-            const componentName = componentObject.name || componentObject.type?.name || componentObject.__name || 'UnknownComponent';
+            const componentName = componentObject.name || (componentObject as any).__name || 'UnknownComponent';
             if (componentName !== 'InlineConnectionSorter' && componentName !== 'NodeInputActionsBar' && componentName !== 'UnknownComponent') {
               collectedComponentUsage[componentName] = (collectedComponentUsage[componentName] || 0) + 1;
             } else if (componentName === 'UnknownComponent') {

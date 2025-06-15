@@ -347,7 +347,7 @@ function openEditor(context: EditorOpeningContext) {
     // 准备传递给编辑器的配置，包含从全局主题派生的 theme 属性
     const editorConfigWithTheme: EditorInstanceConfig = {
       ...(context.config || {}), // 保留 context 中可能已有的其他配置
-      theme: themeStore.isDark ? "dark" : "light",
+      theme: themeStore.currentAppliedMode,
     };
 
     if (currentEditorMode.value === "single" && richCodeEditorRef.value) {
@@ -611,7 +611,7 @@ onMounted(() => {
 
 <template>
   <!-- v-if="isVisible" 已被移除，因为父组件 EditorView.vue 会通过 v-if="isDockedEditorVisible" 控制此组件的挂载 -->
-  <div class="docked-editor-wrapper-root" :style="panelStyle" :class="{ dark: themeStore.isDark }"
+  <div class="docked-editor-wrapper-root" :style="panelStyle" :class="{ dark: themeStore.currentAppliedMode === 'dark' }"
     @focusin="handleFocusIn">
     <!-- resizer 覆盖在顶部，并添加拖拽图标 -->
     <div class="editor-resizer" @mousedown="startResize">

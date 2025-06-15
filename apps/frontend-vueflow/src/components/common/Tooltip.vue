@@ -8,22 +8,22 @@
     <div v-if="isTooltipVisible" ref="floatingRef"
       :style="[floatingStyles, { width: computedWidth, maxWidth: computedMaxWidth }]" :class="[
         'tooltip-content rounded shadow-lg border relative',
-        'bg-neutral text-neutral-content border-border-base', // 使用主题变量
+        'bg-[hsl(var(--ct-background-surface-hsl))] text-[hsl(var(--ct-text-base-hsl))] border-[hsl(var(--ct-border-base-hsl))]',
       ]" style="z-index: 100; overflow: hidden">
-      <!-- 复制按钮 -->
-      <div class="relative">
-        <button v-if="props.showCopyButton && (content || $slots.content)"
-          class="copy-button absolute right-1 top-1 p-1 rounded-md hover:bg-opacity-10 hover:bg-gray-500 transition-colors group"
-          @click="copyContent" style="z-index: 101; pointer-events: auto">
-          <svg class="w-4 h-4 text-secondary" xmlns="http://www.w3.org/2000/svg"
-            fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path v-if="!copySuccess" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        <!-- 复制按钮 -->
+        <div class="relative">
+          <button v-if="props.showCopyButton && (content || $slots.content)"
+            class="copy-button absolute right-1 top-1 p-1 rounded-md hover:bg-opacity-10 hover:bg-gray-500 transition-colors group"
+            @click="copyContent" style="z-index: 101; pointer-events: auto">
+            <svg class="w-4 h-4 text-[hsl(var(--ct-text-muted-hsl))]" xmlns="http://www.w3.org/2000/svg"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path v-if="!copySuccess" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
           <!-- 自定义提示 -->
           <div
-            class="absolute right-full top-1/2 transform -translate-y-1/2 mr-2 px-2 py-1 rounded text-xs whitespace-nowrap transition-all duration-200 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 bg-neutral text-neutral-content">
+            class="absolute right-full top-1/2 transform -translate-y-1/2 mr-2 px-2 py-1 rounded text-xs whitespace-nowrap transition-all duration-200 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 bg-[hsl(var(--ct-background-base-hsl))] text-[hsl(var(--ct-text-secondary-hsl))]">
             {{ copyButtonTitle }}
           </div>
         </button>

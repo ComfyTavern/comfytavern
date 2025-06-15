@@ -29,7 +29,7 @@
         <span class="icon" v-if="item.icon">{{ item.icon }}</span>
         <span class="flex flex-col">
           <span>{{ item.label }}</span>
-          <span v-if="item.category" class="text-xs text-gray-500">{{ item.category }}</span>
+          <span v-if="item.category" class="text-xs text-text-muted">{{ item.category }}</span>
         </span>
       </div>
     </div>
@@ -43,7 +43,7 @@
     <div v-else class="menu-items">
       <template v-for="(section, sectionKey) in sections" :key="sectionKey">
         <!-- 区段标题 -->
-        <div 
+        <div
           class="menu-section-title"
           @click="toggleSection(sectionKey)"
         >
@@ -55,7 +55,7 @@
         <div v-show="!collapsedSections[sectionKey]" class="menu-section-content">
           <template v-for="(category, categoryKey) in section.categories" :key="categoryKey">
             <!-- 分类标题 -->
-            <div 
+            <div
               class="menu-category-title"
               @click="toggleCategory(`${sectionKey}:${categoryKey}`)"
             >
@@ -74,7 +74,7 @@
                 <span class="icon" v-if="item.icon">{{ item.icon }}</span>
                 <span class="flex flex-col">
                   <span>{{ item.label }}</span>
-                  <span v-if="item.description" class="text-xs text-gray-500">{{ item.description }}</span>
+                  <span v-if="item.description" class="text-xs text-text-muted">{{ item.description }}</span>
                 </span>
               </div>
             </div>
@@ -194,42 +194,40 @@ const onItemSelect = (item: MenuItem) => {
 
 <style scoped>
 .hierarchical-menu {
-  @apply flex flex-col bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-300 dark:border-gray-600;
+  @apply flex flex-col bg-background-surface rounded-lg shadow-lg overflow-hidden border border-border-base;
 }
 
 .menu-search {
-  @apply sticky top-0 p-2 border-b border-gray-200 dark:border-gray-700 bg-inherit z-10;
+  @apply sticky top-0 p-2 border-b border-border-base bg-inherit z-10;
 }
 
 .menu-search-input {
-  @apply w-full px-3 py-1.5 rounded border border-gray-300 dark:border-gray-600
-    bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200
-    focus:border-blue-500 dark:focus:border-blue-400
-    focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 outline-none
-    placeholder-gray-400 dark:placeholder-gray-500 text-sm;
+  @apply w-full px-3 py-1.5 rounded border border-border-base
+    bg-background-base text-text-base
+    focus:border-primary focus:ring-1 focus:ring-primary outline-none
+    placeholder-text-muted text-sm;
 }
 
 .menu-loading,
 .menu-no-results {
-  @apply p-4 text-center text-gray-500 dark:text-gray-400 text-sm;
+  @apply p-4 text-center text-text-muted text-sm;
 }
 
 .menu-items {
-  @apply overflow-y-auto max-h-[calc(400px-3rem)];
+  @apply overflow-y-auto max-h-[calc(400px-3rem)]; /* 400px is an arbitrary max height, 3rem for search bar */
 }
 
 .menu-section-title {
   @apply flex justify-between items-center px-3 py-1.5
-    bg-gray-100 dark:bg-gray-700
-    text-gray-800 dark:text-gray-200 font-medium text-sm
-    cursor-pointer mb-0.5 hover:bg-gray-200 dark:hover:bg-gray-600
+    bg-background-base text-text-base font-medium text-sm
+    cursor-pointer mb-0.5 hover:bg-background-surface
     transition-colors duration-150 ease-in-out;
 }
 
 .menu-category-title {
   @apply flex justify-between items-center px-3 py-1.5
-    text-gray-600 dark:text-gray-400 font-medium text-sm
-    cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700
+    text-text-secondary font-medium text-sm
+    cursor-pointer hover:bg-background-base
     transition-colors duration-150 ease-in-out;
 }
 
@@ -243,20 +241,20 @@ const onItemSelect = (item: MenuItem) => {
 
 .menu-item {
   @apply flex items-center px-3 py-1.5
-    text-sm text-gray-700 dark:text-gray-300
-    hover:bg-gray-50 dark:hover:bg-gray-700
+    text-sm text-text-base
+    hover:bg-background-base
     cursor-pointer transition-colors duration-150 ease-in-out;
 }
 
 .menu-item .icon {
-  @apply mr-2 text-gray-500 dark:text-gray-400 text-base;
+  @apply mr-2 text-text-muted; /* Icon color for menu items */
 }
 
 .search-result {
-  @apply border-b border-gray-100 dark:border-gray-700 last:border-0;
+  @apply border-b border-border-base last:border-0;
 }
 
 .menu-item:hover .icon {
-  @apply text-blue-500 dark:text-blue-400;
+  @apply text-primary; /* Icon color on hover */
 }
 </style>

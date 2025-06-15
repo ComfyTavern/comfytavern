@@ -29,7 +29,7 @@ import { useEdgeStyles } from "../canvas/useEdgeStyles"; // 导入边样式 Comp
 import { getNodeType } from "@/utils/nodeUtils"; // 导入节点类型辅助函数
 import { transformVueFlowToCoreWorkflow } from "@/utils/workflowTransformer"; // <--- 导入转换函数
 import { useWorkflowViewManagement } from "../workflow/useWorkflowViewManagement"; // ADDED: Import view management
-import { nextTick, type Ref, toRaw } from "vue"; // 导入 Ref 类型, toRaw
+import { computed, nextTick, type Ref, toRaw } from "vue"; // 导入 Ref 类型, toRaw, computed
 import { useDialogService } from '../../services/DialogService'; // 导入 DialogService
 
 // New isTypeCompatible function, logic copied from useCanvasConnections.ts
@@ -1146,7 +1146,7 @@ export function useWorkflowGrouping() {
   const themeStore = useThemeStore();
   const projectStore = useProjectStore();
   const { nodeDefinitions } = storeToRefs(nodeStore);
-  const { isDark } = storeToRefs(themeStore);
+  const isDark = computed(() => themeStore.currentAppliedMode === 'dark');
   const { generateUniqueNodeId } = useUniqueNodeId();
   const { getEdgeStyleProps } = useEdgeStyles();
   const workflowDataHandler = useWorkflowData();

@@ -1,5 +1,5 @@
 <template>
-  <div ref="panelRef" v-if="selectedNode" v-show="isSidebarVisible" class="node-preview-panel" :class="{ dark: isDark }"
+  <div ref="panelRef" v-if="selectedNode" v-show="isSidebarVisible" class="node-preview-panel"
     :style="panelStyle">
     <div class="details-header">
       <div class="details-title">{{ selectedNode.displayName || selectedNode.type }}</div>
@@ -82,15 +82,15 @@
             <div
               v-if="selectedNode.configSchema[configKey]!.config?.acceptedTypes && selectedNode.configSchema[configKey]!.config!.acceptedTypes!.length > 0"
               class="param-value-preview mt-1">
-              <span class="text-xs text-gray-500 dark:text-gray-400 mr-1">接受类型:</span>
+              <span class="text-xs text-text-muted mr-1">接受类型:</span>
               <span v-for="accType in selectedNode.configSchema[configKey]!.config!.acceptedTypes" :key="accType.value"
-                class="category-tag !bg-green-100 dark:!bg-green-700 !text-green-700 dark:!text-green-200 mr-1">
+                class="category-tag !bg-success/20 !text-success mr-1"> {/* !bg-success-soft !text-success-strong -> !bg-success/20 !text-success */}
                 {{ accType.label || accType.value }}
               </span>
             </div>
             <div v-else-if="selectedNode.configSchema[configKey]!.config?.placeholder" class="param-value-preview mt-1">
-              <span class="text-xs text-gray-500 dark:text-gray-400">占位提示: </span>
-              <span class="text-xs italic p-1 text-gray-400 dark:text-gray-500">
+              <span class="text-xs text-text-muted">占位提示: </span>
+              <span class="text-xs italic p-1 text-text-muted"> {/* text-text-placeholder -> text-text-muted */}
                 {{ selectedNode.configSchema[configKey]!.config?.placeholder }}
               </span>
             </div>
@@ -118,7 +118,7 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import type { FrontendNodeDefinition } from "../../../stores/nodeStore"; // 确保路径正确
 // import type { InputDefinition } from "@comfytavern/types"; // InputDefinition 未在此处直接使用，移除以避免警告
 import { useThemeStore } from "../../../stores/theme"; // 确保路径正确
-import { storeToRefs } from "pinia";
+// import { storeToRefs } from "pinia"; // storeToRefs is not used
 import MarkdownRenderer from "../../common/MarkdownRenderer.vue"; // 导入 Markdown 渲染器
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import 'overlayscrollbars/overlayscrollbars.css';
@@ -133,7 +133,7 @@ const emit = defineEmits<{
 }>();
 
 const themeStore = useThemeStore();
-const { isDark } = storeToRefs(themeStore);
+const isDark = computed(() => themeStore.currentAppliedMode === 'dark');
 
 const panelRef = ref<HTMLElement | null>(null); // 引用面板元素
 const panelLeft = ref<number | null>(null); // 存储计算出的 left 值
@@ -212,23 +212,23 @@ const closePanel = () => {
 <style scoped>
 .node-preview-panel {
   /* 移除 left-4 */
-  @apply fixed top-20 z-[55] w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col;
+  @apply fixed top-20 z-[55] w-80 bg-background-surface rounded-lg shadow-lg border border-border-base flex flex-col;
   max-height: calc(100vh - 10rem);
   /* 限制最大高度，留出上下边距 */
 }
 
 .details-header {
-  @apply flex justify-between items-center py-1 px-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0;
+  @apply flex justify-between items-center py-1 px-3 border-b border-border-base flex-shrink-0;
   /* 防止头部被压缩 */
 }
 
 .details-title {
-  @apply font-medium text-gray-800 dark:text-gray-200 truncate;
+  @apply font-medium text-text-base truncate; /* text-text-strong -> text-text-base */
   /* 防止标题过长 */
 }
 
 .close-button {
-  @apply text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 ml-2 flex items-center justify-center p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700;
+  @apply text-text-muted hover:text-text-base ml-2 flex items-center justify-center p-1 rounded hover:bg-neutral-softest; /* text-text-icon -> text-text-muted, hover:text-text-icon-hover -> hover:text-text-base, hover:bg-background-hover -> hover:bg-neutral/10 */
   /* 移除 text-3xl, 添加 flex 居中和一些内边距/圆角/悬停效果 */
   /* 增加左边距 */
 }
@@ -241,12 +241,12 @@ const closePanel = () => {
 }
 
 .details-nodetype {
-  @apply text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded inline-block;
+  @apply text-xs text-text-muted mb-2 font-mono px-1 py-0.5 bg-neutral-soft rounded inline-block; /* bg-background-neutral-soft -> bg-neutral/20 */
   /* 添加样式 */
 }
 
 .details-description {
-  @apply text-sm text-gray-600 dark:text-gray-400 mb-4;
+  @apply text-sm text-text-base mb-4; /* text-text-default -> text-text-base */
 }
 
 .details-section {
@@ -254,12 +254,12 @@ const closePanel = () => {
 }
 
 .details-section-title {
-  @apply text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider;
+  @apply text-xs font-medium text-text-secondary uppercase mb-2 tracking-wider; /* text-text-label-uppercase -> text-text-secondary uppercase */
   /* 调整样式 */
 }
 
 .details-param {
-  @apply mb-2 p-2 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600;
+  @apply mb-2 p-2 bg-background-base rounded border border-neutral-soft; /* bg-background-inset -> bg-background-base, border-border-neutral-soft -> border-neutral/30 */
   /* 调整背景色 */
 }
 
@@ -268,15 +268,15 @@ const closePanel = () => {
 }
 
 .param-name {
-  @apply text-sm font-medium text-gray-700 dark:text-gray-200;
+  @apply text-sm font-medium text-text-base; /* text-text-default -> text-text-base */
 }
 
 .param-type {
-  @apply text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded;
+  @apply text-xs px-1.5 py-0.5 bg-primary-soft text-primary rounded; /* bg-primary-soft text-primary-strong -> bg-primary/20 text-primary */
 }
 
 .param-description {
-  @apply text-xs text-gray-500 dark:text-gray-400 mt-1;
+  @apply text-xs text-text-muted mt-1;
   /* 增加上边距 */
 }
 
@@ -286,7 +286,7 @@ const closePanel = () => {
 }
 
 .category-tag {
-  @apply text-xs px-1.5 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md;
+  @apply text-xs px-1.5 py-0.5 bg-neutral-soft text-neutral rounded-md; /* bg-background-badge text-text-badge -> bg-neutral/20 text-neutral */
   /* 类别标签样式 */
 }
 </style>

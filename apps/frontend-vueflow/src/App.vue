@@ -38,8 +38,8 @@ onMounted(async () => {
   uiStore.setupMobileViewListener(); // + 设置移动端视图监听器
 
   // 应用主题类名到 body 的逻辑已由 themeStore.applyCurrentTheme() 在 <html> 上处理
-  // document.body.classList.toggle('light-theme', themeStore.currentAppliedMode.value === 'light');
-  // document.body.classList.toggle('dark-theme', themeStore.currentAppliedMode.value === 'dark');
+  // document.body.classList.toggle('light-theme', themeStore.currentAppliedMode === 'light');
+  // document.body.classList.toggle('dark-theme', themeStore.currentAppliedMode === 'dark');
 
   // 项目加载逻辑已移至路由守卫 (router/index.ts)
   // 初始化标签页和工作流的逻辑将通过 watch(currentProjectId) 触发

@@ -19,7 +19,7 @@ const tabStore = useTabStore();
 
 const { activeTabId } = storeToRefs(tabStore);
 const themeStore = useThemeStore(); // Get theme store instance
-const { isDark } = storeToRefs(themeStore); // Get isDark state
+const isDark = computed(() => themeStore.currentAppliedMode === 'dark'); // Get isDark state
 // 直接获取响应式的 activeTabState
 const activeState = computed(() => workflowStore.getActiveTabState());
 
@@ -640,10 +640,10 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
         <!-- 输入列表 -->
         <div>
           <div class="flex justify-between items-center">
-            <h4 class="font-medium mb-1 text-xs uppercase text-gray-500">输入 (Inputs)</h4>
+            <h4 class="font-medium mb-1 text-xs uppercase text-text-muted">输入 (Inputs)</h4>
             <button @click="sortInputs"
               v-comfy-tooltip="'按名称排序输入'"
-              class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+              class="btn btn-xs btn-ghost p-0 text-text-muted hover:text-text-default">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -651,7 +651,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
               </svg>
             </button>
           </div>
-          <div v-if="Object.keys(filteredInputs).length === 0" class="text-gray-400 italic text-xs px-1">
+          <div v-if="Object.keys(filteredInputs).length === 0" class="text-text-disabled italic text-xs px-1">
             无输入接口
           </div>
           <OverlayScrollbarsComponent v-else :options="{
@@ -663,11 +663,11 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
             <ul class="space-y-1">
               <template v-for="(input, key) in filteredInputs" :key="String(key)">
                 <li @click="selectInput(String(key))"
-                  class="cursor-pointer px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex justify-between items-center"
-                  :class="{ 'bg-blue-100 dark:bg-blue-900': selectedInputKey === key }">
+                  class="cursor-pointer px-2 py-1 rounded hover:bg-background-hover flex justify-between items-center"
+                  :class="{ 'bg-primary-soft': selectedInputKey === key }">
                   <span class="truncate" v-comfy-tooltip="{ content: `${input.displayName} (${String(key)})` }">{{ input.displayName || key }}</span>
                   <div class="flex items-center space-x-1.5 flex-shrink-0">
-                    <span class="text-xs text-gray-500">{{ input.dataFlowType }}</span>
+                    <span class="text-xs text-text-muted">{{ input.dataFlowType }}</span>
                     <span :class="getHandleClasses(input, true)" style="
                         width: 8px !important;
                         height: 8px !important;
@@ -693,10 +693,10 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
               </svg>
             </button>
             <div ref="inputDropdownMenuRef" v-if="showInputDropdown"
-              class="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+              class="absolute z-10 mt-1 w-full bg-background-overlay border border-border-overlay rounded-md shadow-lg max-h-60 overflow-y-auto">
               <ul>
                 <li v-for="type in availableTypes" :key="`add-input-${type}`" @click="handleAddInput(type)"
-                  class="px-3 py-1 text-xs cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600">
+                  class="px-3 py-1 text-xs cursor-pointer hover:bg-background-hover">
                   {{ type }}
                 </li>
               </ul>
@@ -707,10 +707,10 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
         <!-- 输出列表 -->
         <div>
           <div class="flex justify-between items-center">
-            <h4 class="font-medium mb-1 text-xs uppercase text-gray-500">输出 (Outputs)</h4>
+            <h4 class="font-medium mb-1 text-xs uppercase text-text-muted">输出 (Outputs)</h4>
             <button @click="sortOutputs"
               v-comfy-tooltip="'按名称排序输出'"
-              class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+              class="btn btn-xs btn-ghost p-0 text-text-muted hover:text-text-default">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -718,7 +718,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
               </svg>
             </button>
           </div>
-          <div v-if="Object.keys(filteredOutputs).length === 0" class="text-gray-400 italic text-xs px-1">
+          <div v-if="Object.keys(filteredOutputs).length === 0" class="text-text-disabled italic text-xs px-1">
             无输出接口
           </div>
           <OverlayScrollbarsComponent v-else :options="{
@@ -730,11 +730,11 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
             <ul class="space-y-1">
               <template v-for="(output, key) in filteredOutputs" :key="String(key)">
                 <li @click="selectOutput(String(key))"
-                  class="cursor-pointer px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex justify-between items-center"
-                  :class="{ 'bg-blue-100 dark:bg-blue-900': selectedOutputKey === key }">
+                  class="cursor-pointer px-2 py-1 rounded hover:bg-background-hover flex justify-between items-center"
+                  :class="{ 'bg-primary-soft': selectedOutputKey === key }">
                   <span class="truncate" v-comfy-tooltip="{ content: `${output.displayName} (${String(key)})` }">{{ output.displayName || key }}</span>
                   <div class="flex items-center space-x-1.5 flex-shrink-0">
-                    <span class="text-xs text-gray-500">{{ output.dataFlowType }}</span>
+                    <span class="text-xs text-text-muted">{{ output.dataFlowType }}</span>
                     <span :class="getHandleClasses(output, false)" style="
                         width: 8px !important;
                         height: 8px !important;
@@ -760,10 +760,10 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
               </svg>
             </button>
             <div ref="outputDropdownMenuRef" v-if="showOutputDropdown"
-              class="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+              class="absolute z-10 mt-1 w-full bg-background-overlay border border-border-overlay rounded-md shadow-lg max-h-60 overflow-y-auto">
               <ul>
                 <li v-for="type in availableTypes" :key="`add-output-${type}`" @click="handleAddOutput(type)"
-                  class="px-3 py-1 text-xs cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600">
+                  class="px-3 py-1 text-xs cursor-pointer hover:bg-background-hover">
                   {{ type }}
                 </li>
               </ul>
@@ -773,28 +773,28 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
       </div>
 
       <!-- 分隔线 -->
-      <div class="border-t mx-4 my-4"></div>
+      <div class="border-t border-border-divider mx-4 my-4"></div>
 
       <!-- 编辑区域 (底部区域) -->
       <OverlayScrollbarsComponent :options="{
         scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
       }" class="flex-grow flex-shrink-0 px-4 pb-4" defer>
-        <h4 class="font-medium mb-2 text-xs uppercase text-gray-500">编辑接口属性</h4>
+        <h4 class="font-medium mb-2 text-xs uppercase text-text-muted">编辑接口属性</h4>
 
-        <div v-if="!selectedInputKey && !selectedOutputKey" class="text-gray-400 italic text-xs">
+        <div v-if="!selectedInputKey && !selectedOutputKey" class="text-text-disabled italic text-xs">
           请在上方列表中选择一个接口进行编辑。
         </div>
 
         <!-- 输入编辑表单 -->
         <div v-if="selectedInputKey && selectedInputData" class="space-y-2">
           <div class="flex justify-between items-center mb-1">
-            <span class="font-mono text-xs bg-gray-200 dark:bg-gray-600 px-1 rounded" v-comfy-tooltip="'接口 Key (唯一标识符)'">{{
+            <span class="font-mono text-xs bg-background-badge px-1 rounded" v-comfy-tooltip="'接口 Key (唯一标识符)'">{{
               selectedInputKey
             }}</span>
             <div class="flex items-center space-x-2">
               <button @click="moveSlot(selectedInputKey, 'up', 'input')" :disabled="!canMoveInputUp"
                 v-comfy-tooltip="'上移'"
-                class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 disabled:text-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:disabled:text-gray-600">
+                class="btn btn-xs btn-ghost p-0 text-text-muted hover:text-text-default disabled:text-text-disabled">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
                   stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
@@ -802,13 +802,13 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
               </button>
               <button @click="moveSlot(selectedInputKey, 'down', 'input')" :disabled="!canMoveInputDown"
                 v-comfy-tooltip="'下移'"
-                class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 disabled:text-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:disabled:text-gray-600">
+                class="btn btn-xs btn-ghost p-0 text-text-muted hover:text-text-default disabled:text-text-disabled">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
                   stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              <button @click="removeInput(selectedInputKey)" class="text-red-500 hover:text-red-700 text-xs">
+              <button @click="removeInput(selectedInputKey)" class="text-danger hover:text-danger-hover text-xs">
                 删除此输入
               </button>
             </div>
@@ -852,10 +852,10 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
                 @change="handleInputDefaultValueChange"></textarea>
               <input v-else-if="selectedInputData.dataFlowType === DataFlowType.BOOLEAN" v-model="editingDefaultValue"
                 type="checkbox"
-                class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:focus:ring-indigo-600 dark:ring-offset-gray-800"
+                class="h-4 w-4 rounded border-border-input text-primary focus:ring-primary-focus bg-background-input"
                 @change="handleInputDefaultValueChange" />
               <!-- TODO: 添加对 CODE 等类型的默认值支持 (COMBO 已通过 suggestions 处理) -->
-              <span v-else class="text-gray-400 italic text-xs">不支持此类型的默认值</span>
+              <span v-else class="text-text-disabled italic text-xs">不支持此类型的默认值</span>
             </div>
 
             <!-- 最小值输入 (仅数值类型) -->
@@ -890,13 +890,13 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
         <!-- 输出编辑表单 -->
         <div v-if="selectedOutputKey && selectedOutputData" class="space-y-2">
           <div class="flex justify-between items-center mb-1">
-            <span class="font-mono text-xs bg-gray-200 dark:bg-gray-600 px-1 rounded" v-comfy-tooltip="'接口 Key (唯一标识符)'">{{
+            <span class="font-mono text-xs bg-background-badge px-1 rounded" v-comfy-tooltip="'接口 Key (唯一标识符)'">{{
               selectedOutputKey
             }}</span>
             <div class="flex items-center space-x-2">
               <button @click="moveSlot(selectedOutputKey, 'up', 'output')" :disabled="!canMoveOutputUp"
                 v-comfy-tooltip="'上移'"
-                class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 disabled:text-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:disabled:text-gray-600">
+                class="btn btn-xs btn-ghost p-0 text-text-muted hover:text-text-default disabled:text-text-disabled">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
                   stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
@@ -904,13 +904,13 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
               </button>
               <button @click="moveSlot(selectedOutputKey, 'down', 'output')" :disabled="!canMoveOutputDown"
                 v-comfy-tooltip="'下移'"
-                class="btn btn-xs btn-ghost p-0 text-gray-500 hover:text-gray-700 disabled:text-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:disabled:text-gray-600">
+                class="btn btn-xs btn-ghost p-0 text-text-muted hover:text-text-default disabled:text-text-disabled">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
                   stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              <button @click="removeOutput(selectedOutputKey)" class="text-red-500 hover:text-red-700 text-xs">
+              <button @click="removeOutput(selectedOutputKey)" class="text-danger hover:text-danger-hover text-xs">
                 删除此输出
               </button>
             </div>
@@ -935,7 +935,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
         </div>
       </OverlayScrollbarsComponent>
     </div>
-    <div v-else class="px-4 py-4 text-gray-500 italic text-xs">
+    <div v-else class="px-4 py-4 text-text-disabled italic text-xs">
       没有活动的工作流或工作流数据不可用。
     </div>
   </div>
@@ -944,12 +944,12 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
 <style scoped>
 /* 自定义输入样式 (手动替换 DaisyUI) */
 .input-xs {
-  @apply w-full text-xs rounded-md border border-gray-300 dark:border-gray-600 px-2 py-1 bg-white dark:bg-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors;
+  @apply w-full text-xs rounded-md border border-border-base px-2 py-1 bg-background-base focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-colors;
 }
 
 /* 添加 textarea-xs 样式 */
 .textarea-xs {
-  @apply w-full text-xs rounded-md border border-gray-300 dark:border-gray-600 px-2 py-1 bg-white dark:bg-gray-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-y;
+  @apply w-full text-xs rounded-md border border-border-base px-2 py-1 bg-background-base focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-colors resize-y;
   /* 改为 resize-y */
   min-height: calc(1.5rem * 3);
   /* 保持与 rows="3" 大致一致的高度 */
@@ -972,13 +972,13 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
 }
 
 .btn-outline {
-  @apply border border-gray-300 dark:border-gray-600 bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-400;
+  @apply border border-primary bg-transparent text-primary hover:bg-primary hover:bg-opacity-[var(--ct-menu-item-active-bg-opacity)] focus:outline-none focus:ring-1 focus:ring-primary;
   /* 轮廓样式 */
 }
 
 /* 添加 ghost 按钮样式 */
 .btn-ghost {
-  @apply border border-transparent bg-transparent text-current hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply border border-transparent bg-transparent text-current hover:bg-primary hover:bg-opacity-[var(--ct-component-hover-bg-opacity)] focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed;
   /* 幽灵按钮样式 */
 }
 
@@ -998,15 +998,15 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
 }
 
 /* 选中列表项的附加样式 */
-.bg-blue-100 {
-  background-color: #dbeafe;
+/* .bg-blue-100 { */
+  /* background-color: #dbeafe; */ /* 已替换为 bg-primary-soft */
   /* 浅蓝色用于浅色模式 */
-}
+/* } */
 
-.dark .dark\:bg-blue-900 {
-  background-color: #1e3a8a;
+/* .dark .dark\:bg-blue-900 { */
+  /* background-color: #1e3a8a; */ /* 已替换为 bg-primary-soft 的暗色变体 */
   /* 深蓝色用于深色模式 */
-}
+/* } */
 
 /* 确保列表项不会奇怪地收缩 */
 li>span:first-child {

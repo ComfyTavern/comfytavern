@@ -21,7 +21,7 @@ const workflowStore = useWorkflowStore(); // 获取 workflowStore 实例
 const themeStore = useThemeStore(); // 获取 themeStore 实例
 
 const { activeTabId } = storeToRefs(tabStore);
-const { isDark } = storeToRefs(themeStore); // 获取 isDark 状态
+const isDark = computed(() => themeStore.currentAppliedMode === 'dark'); // 获取 isDark 状态
 
 // 获取当前活动标签页的工作流状态
 const activeState = computed(() => {
@@ -238,31 +238,31 @@ const logWorkflowJson = () => {
 
 <template>
   <div class="workflow-info-panel h-full flex flex-col text-sm">
-    <h3 class="text-lg font-semibold mb-4 border-b pb-2 dark:border-gray-600 px-4 pt-4 flex-shrink-0">工作流信息</h3>
+    <h3 class="text-lg font-semibold mb-4 border-b pb-2 border-border-base px-4 pt-4 flex-shrink-0">工作流信息</h3>
 
     <OverlayScrollbarsComponent v-if="workflowData"
       :options="{ scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' } }"
       class="flex-1 px-4 pb-4" defer>
       <div class="space-y-4"> <!-- Inner wrapper for spacing -->
         <div>
-          <label for="workflow-name" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">名称</label>
+          <label for="workflow-name" class="block text-xs font-medium text-text-secondary mb-1">名称</label> {/* text-text-label -> text-text-secondary */}
           <input id="workflow-name" type="text" v-model="editingName" @blur="handleNameBlur" placeholder="工作流名称"
             class="input-sm w-full" />
 
-          <p class="text-xs text-gray-500 mt-1">工作流的显示名称。如果名称冲突，会自动添加后缀。</p>
+          <p class="text-xs text-text-muted mt-1">工作流的显示名称。如果名称冲突，会自动添加后缀。</p>
         </div>
 
         <div>
           <label for="workflow-description"
-            class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">描述</label>
+            class="block text-xs font-medium text-text-secondary mb-1">描述</label> {/* text-text-label -> text-text-secondary */}
           <textarea id="workflow-description" v-model="editingDescription" @blur="handleDescriptionBlur" rows="4"
             placeholder="工作流描述信息..." class="textarea-sm w-full"></textarea>
-          <p class="text-xs text-gray-500 mt-1">详细描述这个工作流的功能和用途。</p>
-          <p class="text-xs text-gray-500 mt-1">支持markdown语法。</p>
+          <p class="text-xs text-text-muted mt-1">详细描述这个工作流的功能和用途。</p>
+          <p class="text-xs text-text-muted mt-1">支持markdown语法。</p>
         </div>
 
         <!-- 可以添加其他信息显示，如 ID, 创建/更新时间等 -->
-        <div class="text-xs text-gray-500 space-y-1 border-t pt-3 mt-4 dark:border-gray-600">
+        <div class="text-xs text-text-muted space-y-1 border-t pt-3 mt-4 border-border-base">
           <p><strong>ID:</strong> {{ workflowData.id }}</p>
           <p v-if="workflowData.createdAt">
             <strong>创建时间:</strong> {{ new Date(workflowData.createdAt).toLocaleString() }}
@@ -277,7 +277,7 @@ const logWorkflowJson = () => {
           <div class="mt-3">
             <button
               @click="logWorkflowJson"
-              class="w-full px-3 py-1.5 text-xs font-medium text-center text-sky-600 bg-transparent border border-sky-600 rounded-md hover:bg-sky-100 dark:text-sky-400 dark:border-sky-400 dark:hover:bg-sky-700/30 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-sky-500 dark:focus:ring-offset-gray-800"
+              class="w-full px-3 py-1.5 text-xs font-medium text-center text-info bg-transparent border border-info rounded-md hover:bg-info-softest focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-info dark:focus:ring-offset-background-surface"
             >
               输出工作流 JSON 到控制台 (Debug)
             </button>
@@ -285,25 +285,25 @@ const logWorkflowJson = () => {
         </div>
 
         <!-- 节点列表 (可收起/展开) -->
-        <div class="border-t pt-3 mt-4 dark:border-gray-600">
-          <div class="flex items-center cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+        <div class="border-t pt-3 mt-4 border-border-base">
+          <div class="flex items-center cursor-pointer hover:text-primary"
             @click="isNodeListExpanded = !isNodeListExpanded">
             <span class="transform transition-transform duration-200 mr-2" :class="{ 'rotate-90': isNodeListExpanded }">
               ▶
             </span>
-            <h2 class="text-xs font-medium uppercase text-gray-600 dark:text-gray-400">
+            <h2 class="text-xs font-medium uppercase text-text-secondary"> {/* text-text-label-uppercase -> text-text-secondary (removed uppercase class as it's already in the text) */}
               工作流节点列表 ({{ nodeCount }})
             </h2>
           </div>
           <OverlayScrollbarsComponent v-if="isNodeListExpanded"
             :options="{ scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' } }"
-            class="mt-2 max-h-60 border rounded dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 p-2 text-xs" defer>
-            <div v-if="workflowNodes.length === 0" class="text-gray-400 italic">
+            class="mt-2 max-h-60 border rounded border-neutral-soft bg-background-base bg-opacity-50 p-2 text-xs" defer> {/* border-border-neutral-soft -> border-neutral/30, bg-background-inset -> bg-background-base */}
+            <div v-if="workflowNodes.length === 0" class="text-text-muted italic"> {/* text-text-placeholder -> text-text-muted */}
               此工作流中没有节点。
             </div>
             <ul v-else class="space-y-1">
               <li v-for="node in workflowNodes" :key="node.id" class="truncate py-0.5">
-                <span class="font-mono text-gray-500 dark:text-gray-400 mr-1">[{{ node.type }}]</span>
+                <span class="font-mono text-text-muted mr-1">[{{ node.type }}]</span>
                 {{ node.label || node.id }}
               </li>
             </ul>
@@ -311,7 +311,7 @@ const logWorkflowJson = () => {
         </div>
       </div>
     </OverlayScrollbarsComponent>
-    <div v-else class="text-gray-500 italic text-center py-6 px-4 flex-1">没有活动的工作流或数据不可用。</div>
+    <div v-else class="text-text-muted italic text-center py-6 px-4 flex-1">没有活动的工作流或数据不可用。</div> {/* text-text-placeholder -> text-text-muted */}
     <!-- Added flex-1 here -->
   </div>
 </template>
@@ -319,10 +319,10 @@ const logWorkflowJson = () => {
 <style scoped>
 /* 使用 Tailwind 的 input 和 textarea 基础样式，并添加 sm 尺寸 */
 .input-sm {
-  @apply block w-full px-2 py-1 text-sm border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500;
+  @apply block w-full px-2 py-1 text-sm border border-border-base rounded-md shadow-sm placeholder-text-muted focus:outline-none focus:ring-primary focus:border-primary bg-background-base text-text-base; /* border-border-input -> border-border-base, placeholder-text-placeholder -> placeholder-text-muted, bg-background-input -> bg-background-base, text-text-input -> text-text-base */
 }
 
 .textarea-sm {
-  @apply block w-full px-2 py-1 text-sm border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500;
+  @apply block w-full px-2 py-1 text-sm border border-border-base rounded-md shadow-sm placeholder-text-muted focus:outline-none focus:ring-primary focus:border-primary bg-background-base text-text-base; /* border-border-input -> border-border-base, placeholder-text-placeholder -> placeholder-text-muted, bg-background-input -> bg-background-base, text-text-input -> text-text-base */
 }
 </style>

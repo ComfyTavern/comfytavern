@@ -1,5 +1,5 @@
 <template>
-  <div class="node-panel" :class="{ dark: isDark }">
+  <div class="node-panel">
     <div class="panel-header">
       <div class="header-top">
         <div class="panel-title">节点库</div>
@@ -30,11 +30,11 @@
       </svg>
       <span v-if="notifiedNodesReloaded">节点已重载，正在刷新列表...</span>
       <span v-else-if="nodeLoading || localLoading">加载节点中...</span>
-      <span v-if="reloadError" class="text-red-500 mt-2">
+      <span v-if="reloadError" class="text-danger mt-2">
         重载失败: {{ reloadError }}
         <button
           @click="reloadNodes"
-          class="ml-2 px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs"
+          class="ml-2 px-2 py-1 bg-primary hover:bg-primary-hover text-text-on-primary rounded-md text-xs"
           :disabled="localLoading"
         >
           重试
@@ -87,7 +87,7 @@
           >
             <!-- Namespace Title Bar -->
             <div
-              class="namespace-title bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded cursor-pointer flex items-center justify-between mb-1"
+              class="namespace-title bg-background-surface/90 px-2 py-1 rounded cursor-pointer flex items-center justify-between mb-1"
               @click="toggleCollapse(namespace)"
             >
               <span>{{ namespace }}</span>
@@ -104,7 +104,7 @@
               >
                 <!-- Category Title Bar -->
                 <div
-                  class="category-title bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded cursor-pointer flex items-center justify-between mt-1"
+                  class="category-title bg-neutral/20 px-2 py-1 rounded cursor-pointer flex items-center justify-between mt-1"
                   @click="toggleCollapse(`${namespace}:${category}`)"
                 >
                   <span>{{ category }}</span>
@@ -205,7 +205,7 @@ const {
   notifiedNodesReloaded, // 新增：监听来自 store 的重载通知状态
   reloadError, // 新增：监听来自 store 的重载错误状态
 } = storeToRefs(nodeStore);
-const { isDark } = storeToRefs(themeStore);
+const isDark = computed(() => themeStore.currentAppliedMode === 'dark');
 
 const localLoading = ref(false); // 用于 reloadNodes API 调用期间的加载状态
 const searchQuery = ref("");
@@ -408,13 +408,13 @@ onMounted(() => {
 
 <style scoped>
 .node-panel {
-  @apply h-full flex flex-col bg-white dark:bg-gray-800;
+  @apply h-full flex flex-col bg-background-surface;
   /* 移除边框和固定宽度，由父组件管理 */
   width: 100%;
 }
 
 .panel-header {
-  @apply flex flex-col p-4 border-b border-gray-200 dark:border-gray-700;
+  @apply flex flex-col p-4 border-b border-border-base;
 }
 
 .header-top {
@@ -422,19 +422,19 @@ onMounted(() => {
 }
 
 .reload-button {
-  @apply p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply p-1 rounded hover:bg-primary hover:bg-opacity-[var(--ct-component-hover-bg-opacity)] text-text-muted disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
 .panel-title {
-  @apply text-lg font-medium text-gray-800 dark:text-gray-200;
+  @apply text-lg font-medium text-text-base; /* text-text-strong -> text-text-base */
 }
 
 .search-input {
-  @apply w-full px-3 py-2 border border-gray-300 bg-white text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400;
+  @apply w-full px-3 py-2 border border-border-base bg-background-base text-text-base rounded-md focus:outline-none focus:ring-2 focus:ring-primary; /* border-border-input -> border-border-base, bg-background-input -> bg-background-base, text-text-input -> text-text-base */
 }
 
 .panel-loading {
-  @apply flex flex-col items-center justify-center p-8 text-gray-500 dark:text-gray-400;
+  @apply flex flex-col items-center justify-center p-8 text-text-muted;
 }
 
 /* Removed .loading-spinner styles */
@@ -448,7 +448,7 @@ onMounted(() => {
 
 .svg-spinner .path {
   /* 使用了之前 CSS 动画中的 blue-500 颜色 */
-  stroke: #3b82f6;
+  stroke: hsl(var(--ct-primary-hsl)); /* 使用 CSS 变量 */
   stroke-linecap: round;
   animation: dash 1.5s ease-in-out infinite;
 }
@@ -487,7 +487,7 @@ onMounted(() => {
 }
 .namespace-title {
   /* Styles added directly in template for background, padding, etc. */
-  @apply text-base font-medium text-gray-700 dark:text-gray-200; /* Added font styling and increased size */
+  @apply text-text-base font-medium;
 }
 
 .node-category-section {
@@ -496,26 +496,24 @@ onMounted(() => {
 }
 .category-title {
   /* Styles added directly in template for background, padding, etc. */
-  @apply text-sm font-medium text-gray-600 dark:text-gray-300; /* Added font styling */
+  @apply text-sm font-medium text-text-secondary; /* text-text-subtle -> text-text-secondary (assuming subtle was meant to be secondary) */
 }
 
 .node-item {
-  @apply flex items-center p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer relative;
+  @apply flex items-center p-2 rounded-md hover:bg-primary hover:bg-opacity-[var(--ct-component-hover-bg-opacity)] cursor-pointer relative;
   transition: all 0.2s;
   /* Removed ml-2 */
 }
 
-.node-item:hover {
-  @apply bg-gray-100 dark:bg-gray-700;
-}
+/* .node-item:hover class is now redundant due to hover: prefix in .node-item */
 
 .node-item.dragging {
-  @apply bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 opacity-70;
+  @apply bg-primary-softest border border-primary-soft opacity-70;
   transform: scale(0.98);
 }
 
 .node-icon {
-  @apply w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md text-gray-700 dark:text-gray-300 mr-3;
+  @apply w-8 h-8 flex items-center justify-center bg-neutral/20 rounded-md text-text-base mr-3; /* bg-background-neutral-soft -> bg-neutral/20, text-text-default -> text-text-base */
 }
 
 .node-actions {
@@ -523,7 +521,7 @@ onMounted(() => {
 }
 
 .node-drag-handle {
-  @apply w-8 h-8 flex text-3xl items-center justify-center text-gray-400 dark:text-gray-500 rounded hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer ml-1 border border-gray-100 dark:border-gray-700;
+  @apply w-8 h-8 flex text-3xl items-center justify-center text-text-muted rounded hover:bg-primary hover:bg-opacity-[var(--ct-component-hover-bg-opacity)] cursor-pointer ml-1 border border-border-base border-opacity-40; /* text-text-icon -> text-text-muted */
   transition: background-color 0.2s;
 }
 
@@ -536,21 +534,21 @@ onMounted(() => {
 }
 
 .node-name {
-  @apply text-sm font-medium text-gray-700 dark:text-gray-200 truncate; /* Added truncate */
+  @apply text-sm font-medium text-text-base truncate; /* text-text-default -> text-text-base, Added truncate */
 }
 
 .node-type {
-  @apply text-xs text-gray-500 dark:text-gray-400 mb-0.5 truncate; /* Added truncate */
+  @apply text-xs text-text-muted mb-0.5 truncate; /* Added truncate */
 }
 
 .node-description {
-  @apply text-xs text-gray-400 dark:text-gray-500 truncate;
+  @apply text-xs text-text-muted truncate; /* text-text-placeholder -> text-text-muted */
   /* max-width: 240px; Removed fixed max-width, rely on parent overflow */
 }
 
 .no-nodes,
 .no-results {
-  @apply p-4 text-center text-gray-500 dark:text-gray-400;
+  @apply p-4 text-center text-text-muted;
 }
 
 /* .node-details 及其子元素的样式已移至 NodePreviewPanel.vue */

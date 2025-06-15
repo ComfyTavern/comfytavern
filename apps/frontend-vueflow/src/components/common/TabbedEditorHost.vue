@@ -1,5 +1,5 @@
 <template>
-  <div class="ct-tabbed-editor-host" :class="{ dark: themeStore.isDark }">
+  <div class="ct-tabbed-editor-host"> <!-- Removed :class="{ dark: isDark }" -->
     <div class="ct-tab-bar">
       <div
         v-for="tab in openTabs"
@@ -35,11 +35,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted, reactive } from 'vue';
+import { ref, watch, nextTick, onMounted, reactive } from 'vue'; // computed removed as isDark is no longer used directly in template
 import RichCodeEditor from './RichCodeEditor.vue';
 import type { TabData } from '@/types/editorTypes';
-import { useThemeStore } from '@/stores/theme'; // 导入主题存储
-// import { storeToRefs } from 'pinia'; // 移除未使用的导入
+// import { useThemeStore } from '@/stores/theme'; // Not directly needed if not using isDark in script
+// import { storeToRefs } from 'pinia'; // Not directly needed
 
 // Props
 const props = defineProps<{
@@ -59,8 +59,9 @@ const emit = defineEmits<{
 const openTabs = ref<TabData[]>([]);
 const activeTabIdInternal = ref<string | undefined>(undefined);
 const editorRefs = reactive<Record<string, InstanceType<typeof RichCodeEditor> | null>>({});
-const themeStore = useThemeStore(); // 获取主题存储实例
-// const { isDark } = storeToRefs(themeStore); // 如果需要在模板外使用 isDark，可以解构
+// const themeStore = useThemeStore(); // No longer needed here
+// const { currentAppliedMode } = storeToRefs(themeStore); // No longer needed here
+// const isDark = computed(() => currentAppliedMode.value === 'dark'); // No longer needed here
 
 // 初始化
 onMounted(() => {
@@ -227,21 +228,17 @@ defineExpose({
   display: flex;
   flex-direction: column;
   height: 100%;
-  @apply bg-white border border-gray-200;
+  @apply bg-background-surface border border-border-base;
 }
-.ct-tabbed-editor-host.dark {
-  @apply bg-gray-800 border-gray-700;
-}
+/* .ct-tabbed-editor-host.dark removed, Tailwind dark: prefix will handle */
 
 .ct-tab-bar {
   display: flex;
   flex-shrink: 0;
   overflow-x: auto;
-  @apply bg-gray-100 border-b border-gray-200;
+  @apply bg-background-base border-b border-border-base;
 }
-.ct-tabbed-editor-host.dark .ct-tab-bar {
-  @apply bg-gray-700 border-gray-600;
-}
+/* .ct-tabbed-editor-host.dark .ct-tab-bar removed */
 
 .ct-tab-item {
   padding: 8px 12px;
@@ -250,36 +247,30 @@ defineExpose({
   align-items: center;
   white-space: nowrap;
   user-select: none;
-  @apply border-r border-gray-200 text-gray-700;
+  @apply border-r border-border-base text-text-base;
 }
-.ct-tabbed-editor-host.dark .ct-tab-item {
-  @apply border-gray-600 text-gray-300;
-}
+/* .ct-tabbed-editor-host.dark .ct-tab-item removed */
 
 .ct-tab-item:hover {
-  @apply bg-gray-200;
+  @apply bg-background-base dark:bg-neutral dark:bg-opacity-[var(--ct-component-hover-bg-opacity)];
 }
-.ct-tabbed-editor-host.dark .ct-tab-item:hover {
-  @apply bg-gray-600 text-white;
-}
+/* .ct-tabbed-editor-host.dark .ct-tab-item:hover removed */
 
 .ct-tab-item.active {
   position: relative;
-  @apply bg-white border-b-transparent text-blue-600; /* 亮色激活时文字用主题色 */
+  @apply bg-background-surface border-b-transparent text-primary;
 }
-.ct-tabbed-editor-host.dark .ct-tab-item.active {
-  @apply bg-gray-800 border-b-transparent text-blue-400; /* 暗色激活时文字用亮蓝色 */
-}
+/* .ct-tabbed-editor-host.dark .ct-tab-item.active removed */
+
 /* 确保激活的tab底部边框与内容区域背景融合 */
 .ct-tab-item.active {
-  border-bottom-color: var(--active-tab-border-color, transparent);
+  /* The border-bottom-color is now effectively transparent due to bg-background-surface */
+  /* and the tab bar having bg-background-base. If a visible line is desired, */
+  /* it would need to be a different color or approach. */
+  /* For fusion, this setup should work if tab content area also has bg-background-surface */
+   border-bottom-color: hsl(var(--ct-background-surface-hsl)); /* Match content background */
 }
-.ct-tabbed-editor-host:not(.dark) .ct-tab-item.active {
-  --active-tab-border-color: theme('colors.white');
-}
-.ct-tabbed-editor-host.dark .ct-tab-item.active {
-  --active-tab-border-color: theme('colors.gray.800');
-}
+/* Removed specific .dark and :not(.dark) for --active-tab-border-color as it's now directly set */
 
 
 .ct-tab-title {
@@ -295,29 +286,22 @@ defineExpose({
   padding: 0 4px;
   margin-left: auto;
   border-radius: 3px;
-  @apply text-gray-500;
+  @apply text-text-muted;
 }
-.ct-tabbed-editor-host.dark .ct-close-tab-btn {
-  @apply text-gray-400;
-}
+/* .ct-tabbed-editor-host.dark .ct-close-tab-btn removed */
 
 .ct-close-tab-btn:hover {
-  @apply bg-gray-300 text-gray-700;
+  @apply bg-background-base text-text-base dark:bg-neutral dark:bg-opacity-[var(--ct-component-hover-bg-opacity)] dark:text-text-base;
 }
-.ct-tabbed-editor-host.dark .ct-close-tab-btn:hover {
-  @apply bg-gray-600 text-white;
-}
+/* .ct-tabbed-editor-host.dark .ct-close-tab-btn:hover removed */
 
 .ct-tab-content {
   flex-grow: 1;
   position: relative;
   overflow: hidden;
-  /* 背景由内部 RichCodeEditor 主题控制 */
-  @apply bg-white;
+  @apply bg-background-surface; /* Content area background */
 }
-.ct-tabbed-editor-host.dark .ct-tab-content {
-   @apply bg-gray-800; /* 与激活tab背景一致 */
-}
+/* .ct-tabbed-editor-host.dark .ct-tab-content removed */
 
 
 .ct-editor-instance-wrapper {
@@ -333,9 +317,7 @@ defineExpose({
   font-style: italic;
   padding: 20px;
   text-align: center;
-  @apply text-gray-500;
+  @apply text-text-muted;
 }
-.ct-tabbed-editor-host.dark .ct-no-tabs-placeholder {
-  @apply text-gray-400;
-}
+/* .ct-tabbed-editor-host.dark .ct-no-tabs-placeholder removed */
 </style>

@@ -171,7 +171,7 @@ let autoCloseTimer: number | null = null;
 
 const uiStore = useUiStore();
 const themeStore = useThemeStore(); // 使用主题 store
-const isDark = computed(() => themeStore.isDark); // 获取暗黑模式状态
+const isDark = computed(() => themeStore.currentAppliedMode === 'dark'); // 获取暗黑模式状态
 const dynamicZIndex = ref(uiStore.baseZIndex);
 
 // 用于复制功能

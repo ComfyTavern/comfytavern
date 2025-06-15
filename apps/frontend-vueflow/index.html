@@ -6,21 +6,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ComfyTavern Flow</title> <!-- 更新标题 -->
     <style>
+      /* Basic body reset, actual background will be set by active mode class or CSS vars later */
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        /* Default background color will be applied by .dark-mode-active or .light-mode-active */
+      }
+
+      body.dark-mode-active {
+        background-color: #111827; /* Hardcoded dark body background for initial paint */
+      }
+      body.light-mode-active {
+        background-color: #f9fafb; /* Hardcoded light body background for initial paint */
+      }
+
       #splash {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: #111827; /* Dark theme background (bg-gray-900) */
+        /* background-color will be set by active mode class */
         z-index: 9999; /* Ensure it's on top */
         display: flex;
         justify-content: center;
         align-items: center;
         transition: opacity 0.3s ease-out; /* Optional: Add fade out transition */
       }
-      /* Simple spinner */
-      #splash::after {
+
+      /* Splash screen styles based on active mode */
+      body.dark-mode-active #splash {
+        background-color: #111827; /* Dark theme splash background */
+      }
+      body.dark-mode-active #splash::after { /* Spinner for dark mode */
         content: '';
         display: block;
         width: 40px;
@@ -30,33 +50,100 @@
         border-radius: 50%;
         animation: spin 1s linear infinite;
       }
+
+      body.light-mode-active #splash {
+        background-color: #f9fafb; /* Light theme splash background */
+      }
+      body.light-mode-active #splash::after { /* Spinner for light mode */
+        content: '';
+        display: block;
+        width: 40px;
+        height: 40px;
+        border: 4px solid #d1d5db; /* gray-300 */
+        border-top-color: #6b7280; /* gray-500 */
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
       @keyframes spin {
         to { transform: rotate(360deg); }
       }
+
       /* Hide splash screen when the app is ready */
       body.app-ready #splash {
         opacity: 0;
         pointer-events: none; /* Prevent interaction after fade out */
       }
-      /* Set body background early to prevent flash */
-      body {
-        background-color: #111827; /* Dark theme background */
-      }
-      /* Apply light theme background if needed, potentially via JS later */
-      body.light-theme {
-         background-color: #f9fafb; /* Light theme background (bg-gray-50) */
-      }
-      body.light-theme #splash {
-         background-color: #f9fafb; /* Light theme splash */
-      }
-       body.light-theme #splash::after {
-         border-color: #d1d5db; /* gray-300 */
-         border-top-color: #6b7280; /* gray-500 */
-       }
-
+      /* Removed old body background and body.light-theme styles as they are now handled by active-mode classes and CSS variables */
     </style>
   </head>
   <body>
+    <script>
+      (function() {
+        try {
+          const displayMode = localStorage.getItem('displayMode') || 'system';
+          const DAISYUI_LIGHT_THEME_NAME = 'mytheme_light';
+          const DAISYUI_DARK_THEME_NAME = 'mytheme_dark';
+          const CACHED_THEME_VARS_KEY = 'comfyTavern_cachedThemeVariables';
+          const CACHED_THEME_MODE_KEY = 'comfyTavern_cachedThemeMode';
+          let modeToApply = 'light';
+
+          if (displayMode === 'system') {
+            modeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          } else {
+            modeToApply = displayMode;
+          }
+
+          let specificThemeApplied = false;
+          try {
+            const cachedMode = localStorage.getItem(CACHED_THEME_MODE_KEY);
+            const cachedVarsString = localStorage.getItem(CACHED_THEME_VARS_KEY);
+
+            if (cachedMode === modeToApply && cachedVarsString) {
+              const variables = JSON.parse(cachedVarsString);
+              if (typeof variables === 'object' && variables !== null) {
+                for (const key in variables) {
+                  if (Object.prototype.hasOwnProperty.call(variables, key)) {
+                    document.documentElement.style.setProperty(key, variables[key]);
+                  }
+                }
+                specificThemeApplied = true;
+                // console.log('[InlineScript] Applied cached theme variables for mode:', modeToApply);
+              }
+            }
+          } catch (err) {
+            // console.error('[InlineScript] Error applying cached theme variables:', err);
+            // specificThemeApplied remains false, will fall back to basic mode setting below
+          }
+
+          // Always apply basic mode classes and data-theme attribute
+          if (modeToApply === 'dark') {
+            document.documentElement.classList.add('dark');
+            document.documentElement.dataset.theme = DAISYUI_DARK_THEME_NAME;
+            if (document.body) { // Check document.body again for safety, though it should exist here
+              document.body.classList.add('dark-mode-active');
+              document.body.classList.remove('light-mode-active');
+            }
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.dataset.theme = DAISYUI_LIGHT_THEME_NAME;
+            if (document.body) {
+              document.body.classList.add('light-mode-active');
+              document.body.classList.remove('dark-mode-active');
+            }
+          }
+        } catch (e) {
+          console.error('Error applying initial theme script:', e);
+          // Fallback to a default or do nothing, allowing CSS defaults to take over
+          document.documentElement.classList.remove('dark'); // Default to light on error
+          document.documentElement.dataset.theme = 'mytheme_light';
+          if (document.body) {
+            document.body.classList.add('light-mode-active');
+            document.body.classList.remove('dark-mode-active');
+          }
+        }
+      })();
+    </script>
     <div id="splash"></div> <!-- Splash screen element -->
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>

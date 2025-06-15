@@ -1,14 +1,14 @@
 <template>
   <div
-    class="file-detail-panel h-full flex flex-col bg-white dark:bg-gray-800 border-l dark:border-gray-700 shadow-lg relative"
+    class="file-detail-panel h-full flex flex-col bg-background-surface border-l border-border-base shadow-lg relative"
     data-testid="fm-detail-panel-component">
     <!-- Resizer Handle -->
     <div
-      class="panel-resizer absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-blue-500/30 transition-colors duration-150 z-10"
+      class="panel-resizer absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary-soft transition-colors duration-150 z-10"
       @mousedown.prevent="startResize" v-comfy-tooltip="'拖动调整宽度'"></div>
 
-    <header class="pl-3 pr-3 py-3 border-b dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-      <h3 class="text-base font-semibold text-gray-800 dark:text-gray-100 truncate ml-1.5" :title="panelTitle">
+    <header class="pl-3 pr-3 py-3 border-b border-border-base flex items-center justify-between flex-shrink-0">
+      <h3 class="text-base font-semibold text-text-base truncate ml-1.5" :title="panelTitle">
         <!-- Added ml-1.5 for spacing from resizer -->
         {{ panelTitle }}
       </h3>
@@ -36,7 +36,7 @@
           </button> -->
         </div>
         <button @click="closePanel"
-          class="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+          class="p-1.5 rounded-md hover:bg-background-base text-text-muted"
           v-comfy-tooltip="'关闭面板'" aria-label="关闭面板">
           <XMarkIcon class="h-5 w-5" />
         </button>
@@ -44,7 +44,7 @@
     </header>
 
     <div class="panel-content flex-1 overflow-y-auto p-4 space-y-4 text-sm">
-      <div v-if="!selectedItem" class="text-center text-gray-500 dark:text-gray-400 py-10">
+      <div v-if="!selectedItem" class="text-center text-text-muted py-10">
         <InformationCircleIcon class="h-10 w-10 mx-auto mb-2 opacity-50" />
         <p>未选择任何项目</p>
       </div>
@@ -56,7 +56,7 @@
             <label class="property-label">名称:</label>
             <div class="property-value flex items-center">
               <component :is="selectedItem.itemType === 'directory' ? FolderIcon : getDocumentIcon(selectedItem.name)"
-                class="h-5 w-5 mr-2 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                class="h-5 w-5 mr-2 text-text-muted flex-shrink-0" />
               <span class="truncate" :title="selectedItem.name">{{ selectedItem.name }}</span>
               <!-- TODO: 内联编辑名称 -->
             </div>
@@ -91,7 +91,7 @@
           <div class="property-row">
             <label class="property-label">收藏:</label>
             <button @click="toggleFavorite" class="btn btn-xs btn-ghost">
-              <StarIcon class="h-4 w-4 mr-1" :class="isFavorite ? 'text-yellow-400 fill-current' : 'text-gray-400'" />
+              <StarIcon class="h-4 w-4 mr-1" :class="isFavorite ? 'text-warning fill-current' : 'text-text-muted'" />
               {{ isFavorite ? '已收藏' : '未收藏' }}
             </button>
           </div>
@@ -100,13 +100,13 @@
 
         <!-- 预览视图 -->
         <div v-if="activeTab === 'preview' && canPreview">
-          <div v-if="previewError" class="text-red-500 dark:text-red-400 p-4 bg-red-50 dark:bg-red-900/30 rounded-md">
+          <div v-if="previewError" class="text-error bg-error-softest p-4 rounded-md">
             <p><strong>预览失败:</strong></p>
             <p>{{ previewError }}</p>
           </div>
           <div v-else-if="isLoadingPreview" class="text-center py-8">
-            <ArrowPathIcon class="h-8 w-8 animate-spin text-blue-500 mx-auto" />
-            <p class="mt-2 text-gray-500 dark:text-gray-400">正在加载预览...</p>
+            <ArrowPathIcon class="h-8 w-8 animate-spin text-primary mx-auto" />
+            <p class="mt-2 text-text-muted">正在加载预览...</p>
           </div>
           <template v-else>
             <!-- 图片预览 -->
@@ -114,11 +114,11 @@
               class="max-w-full h-auto rounded-md shadow" />
             <!-- 文本预览 -->
             <pre v-else-if="previewType === 'text' && typeof previewContent === 'string'"
-              class="text-xs bg-gray-50 dark:bg-gray-900 p-3 rounded-md overflow-auto max-h-[60vh] whitespace-pre-wrap break-all">{{ previewContent }}</pre>
+              class="text-xs bg-background-base p-3 rounded-md overflow-auto max-h-[60vh] whitespace-pre-wrap break-all">{{ previewContent }}</pre>
             <!-- PDF 预览 (可能需要 iframe 或特定库) -->
             <iframe v-else-if="previewType === 'pdf' && previewContent" :src="previewContent"
               class="w-full h-[70vh] border rounded-md" title="PDF预览"></iframe>
-            <div v-else class="text-gray-500 dark:text-gray-400">
+            <div v-else class="text-text-muted">
               此文件类型不支持预览，或预览内容为空。
             </div>
           </template>
@@ -126,7 +126,7 @@
 
         <!-- 操作视图 (未来扩展) -->
         <!-- <div v-if="activeTab === 'actions'">
-          <p class="text-gray-500 dark:text-gray-400">相关操作将显示在此处。</p>
+          <p class="text-text-muted">相关操作将显示在此处。</p>
         </div> -->
       </template>
     </div>
@@ -353,15 +353,15 @@ onUnmounted(() => {
 /* Resizer hover effect is handled by Tailwind classes in the template. */
 
 .property-row {
-  @apply flex flex-col sm:flex-row sm:items-center border-b border-gray-100 dark:border-gray-700/50 pb-2 mb-2;
+  @apply flex flex-col sm:flex-row sm:items-center border-b border-border-base/50 pb-2 mb-2;
 }
 
 .property-label {
-  @apply w-full sm:w-1/3 font-medium text-gray-600 dark:text-gray-400 mb-1 sm:mb-0 flex-shrink-0;
+  @apply w-full sm:w-1/3 font-medium text-text-secondary mb-1 sm:mb-0 flex-shrink-0;
 }
 
 .property-value {
-  @apply w-full sm:w-2/3 text-gray-800 dark:text-gray-200;
+  @apply w-full sm:w-2/3 text-text-base;
 }
 
 /* DaisyUI provides styles for .tabs, .tab, .tab-lifted, .tab-active. */

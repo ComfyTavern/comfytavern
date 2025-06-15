@@ -71,12 +71,26 @@ export const useThemeStore = defineStore('theme', () => {
       Object.entries(variant.variables).forEach(([key, value]) => {
         document.documentElement.style.setProperty(key, value);
       });
+      // 将应用的主题变量和模式缓存到 localStorage
+      try {
+        localStorage.setItem('comfyTavern_cachedThemeVariables', JSON.stringify(variant.variables));
+        localStorage.setItem('comfyTavern_cachedThemeMode', modeToApply);
+      } catch (e) {
+        console.error('[ThemeStore] Error saving theme variables to localStorage:', e);
+      }
     } else {
       // 如果目标变体无效或没有可应用的变量，则不应用任何特定变量。
       // CSS 变量将回退到 theme-variables.css 中定义的 :root 或 html.dark 的值。
       console.warn(`[ThemeStore] Variant "${modeToApply}" for theme "${presetToApply.id}" is invalid or has no variables. CSS defaults will apply. Variant data:`, variant);
       // 当 variant 或其 variables 无效时，不做任何 setProperty 操作。
       // 这将让 theme-variables.css 中定义的默认值生效。
+      // 清除 localStorage 中的缓存变量，但保留模式
+      try {
+        localStorage.removeItem('comfyTavern_cachedThemeVariables');
+        localStorage.setItem('comfyTavern_cachedThemeMode', modeToApply); // 仍然记录当前尝试应用的模式
+      } catch (e) {
+        console.error('[ThemeStore] Error clearing cached theme variables from localStorage:', e);
+      }
     }
     
 
