@@ -1,21 +1,22 @@
 <template>
   <div class="flex h-screen bg-gray-100 dark:bg-gray-900">
-    <!-- 左侧边栏 -->
-    <SideBar />
+    <!-- 左侧边栏 由 HomeLayout 提供 -->
+    <!-- <SideBar /> -->
 
-    <!-- 主要内容区域 -->
-    <div class="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out" :class="themeStore.collapsed ? 'ml-16' : 'ml-64'">
+    <!-- 主要内容区域, HomeLayout 会处理 padding-left -->
+    <div class="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out">
+      <!-- :class="themeStore.collapsed ? 'ml-16' : 'ml-64'" REMOVED -->
       <SettingsLayout />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import SideBar from './SideBar.vue';
+// import SideBar from './SideBar.vue'; // SideBar 由 HomeLayout 提供
 import SettingsLayout from '@/components/settings/SettingsLayout.vue';
-import { useThemeStore } from '@/stores/theme';
+// import { useThemeStore } from '@/stores/theme'; // REMOVED
 
-const themeStore = useThemeStore();
+// const themeStore = useThemeStore(); // REMOVED
 </script>
 
 <style scoped>

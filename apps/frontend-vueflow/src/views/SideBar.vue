@@ -123,6 +123,15 @@ const displayedUsername = computed(() => {
           :class="textClasses">角色卡</span>
       </RouterLink>
 
+      <RouterLink to="/home/files" class="w-full p-2 rounded flex items-center" :class="[
+        themeStore.collapsed ? 'justify-center' : 'justify-start',
+        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
+      ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
+        <span class="inline text-lg">🗂️</span>
+        <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
+          :class="textClasses">文件管理</span>
+      </RouterLink>
+
       <RouterLink to="/home/about" class="w-full p-2 rounded flex items-center" :class="[
         themeStore.collapsed ? 'justify-center' : 'justify-start',
         themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'

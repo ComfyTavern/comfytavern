@@ -2,17 +2,13 @@
   <div
     class="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-950 dark:to-gray-800 perspective-1200 overflow-x-hidden">
 
-    <!-- 左侧边栏 -->
-    <SideBar />
+    <!-- 左侧边栏 由 HomeLayout 提供 -->
+    <!-- <SideBar /> -->
     <OverlayScrollbarsComponent :options="{
       scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
     }" class="h-screen scroll-smooth" defer id="scrollContainer" ref="scrollContainerRef">
-      <!-- 主要内容区域 -->
-      <div class="transition-all duration-500 ease-in-out" :class="[
-        themeStore.collapsed
-          ? 'ml-16 w-[calc(100%-4rem)]'
-          : 'ml-64 w-[calc(100%-16rem)]'
-      ]">
+      <!-- 主要内容区域, HomeLayout 会处理 padding-left -->
+      <div class="w-full"> <!-- 移除 ml-* 和 width 计算, 让其填充父级 main 的可用空间 -->
         <!-- 内容居中容器 -->
         <div class="mx-auto max-w-[1280px] p-6 lg:p-12">
           <!-- 标题部分 -->
@@ -343,7 +339,7 @@
 </template>
 
 <script setup lang="ts">
-import SideBar from "./SideBar.vue";
+// import SideBar from "./SideBar.vue"; // SideBar 由 HomeLayout 提供
 import { computed, onMounted, ref } from "vue";
 import { useThemeStore } from "../stores/theme";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import SideBar from './SideBar.vue';
+// import SideBar from './SideBar.vue'; // SideBar 由 HomeLayout 提供
 import { useThemeStore } from '../stores/theme'; // 导入 theme store
 import CharacterCard from '../components/CharacterCard.vue';
 import { sillyTavernService } from '../services/SillyTavernService';
@@ -32,12 +32,12 @@ onMounted(async () => {
 
 <template>
   <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
-    <!-- 左侧边栏 -->
-    <SideBar />
+    <!-- 左侧边栏 由 HomeLayout 提供 -->
+    <!-- <SideBar /> -->
 
-    <!-- 主要内容区域 -->
-    <div class="p-4 lg:p-6 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out"
-      :class="themeStore.collapsed ? 'ml-16' : 'ml-64'">
+    <!-- 主要内容区域, HomeLayout 会处理 padding-left -->
+    <div class="p-4 lg:p-6 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out">
+      <!-- :class="themeStore.collapsed ? 'ml-16' : 'ml-64'" REMOVED -->
       <h1 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">我的角色卡</h1>
 
       <!-- 加载状态 -->

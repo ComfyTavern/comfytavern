@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import SideBar from './SideBar.vue'; // 侧边栏仍然需要
+// import SideBar from './SideBar.vue'; // 侧边栏由 HomeLayout 提供
 import { useProjectManagement } from '../composables/editor/useProjectManagement';
 import { useThemeStore } from '../stores/theme'; // 导入 theme store
 import { computed } from 'vue';
@@ -37,12 +37,12 @@ const promptAndCreateProject = async () => {
 
 <template>
   <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
-    <!-- 左侧边栏 -->
-    <SideBar />
+    <!-- 左侧边栏 由 HomeLayout 提供 -->
+    <!-- <SideBar /> -->
 
-    <!-- 主要内容区域 -->
-    <div class="p-4 lg:p-6 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out"
-      :class="themeStore.collapsed ? 'ml-16' : 'ml-64'">
+    <!-- 主要内容区域, HomeLayout 会处理 padding-left -->
+    <div class="p-4 lg:p-6 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out">
+      <!-- :class="themeStore.collapsed ? 'ml-16' : 'ml-64'" REMOVED -->
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-gray-800 dark:text-white">我的项目</h1>
         <button @click="promptAndCreateProject" :disabled="isLoading"

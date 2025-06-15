@@ -8,8 +8,8 @@
       class="h-screen"
       defer
     >
-      <div class="p-6 lg:p-8 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out"
-        :class="themeStore.collapsed ? 'ml-16' : 'ml-64'">
+      <div class="p-6 lg:p-8 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out">
+        <!-- :class="themeStore.collapsed ? 'ml-16' : 'ml-64'" REMOVED -->
       <h1
         class="text-5xl font-bold text-center mb-8 pb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-500">
         欢迎使用 ComfyTavern
