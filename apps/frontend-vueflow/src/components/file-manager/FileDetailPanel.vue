@@ -1,8 +1,15 @@
 <template>
-  <div class="file-detail-panel h-full flex flex-col bg-white dark:bg-gray-800 border-l dark:border-gray-700 shadow-lg"
+  <div
+    class="file-detail-panel h-full flex flex-col bg-white dark:bg-gray-800 border-l dark:border-gray-700 shadow-lg relative"
     data-testid="fm-detail-panel-component">
-    <header class="p-3 border-b dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-      <h3 class="text-base font-semibold text-gray-800 dark:text-gray-100 truncate" :title="panelTitle">
+    <!-- Resizer Handle -->
+    <div
+      class="panel-resizer absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-blue-500/30 transition-colors duration-150 z-10"
+      @mousedown.prevent="startResize" v-comfy-tooltip="'拖动调整宽度'"></div>
+
+    <header class="pl-3 pr-3 py-3 border-b dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+      <h3 class="text-base font-semibold text-gray-800 dark:text-gray-100 truncate ml-1.5" :title="panelTitle">
+        <!-- Added ml-1.5 for spacing from resizer -->
         {{ panelTitle }}
       </h3>
       <div class="flex items-center">
@@ -127,8 +134,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onUnmounted } from 'vue'; // + onUnmounted
 import { useFileManagerStore } from '@/stores/fileManagerStore';
+import { useUiStore } from '@/stores/uiStore'; // + 导入 uiStore
 import type { FAMItem } from '@comfytavern/types';
 import * as fileManagerApi from '@/api/fileManagerApi'; // For potential direct API calls like fetching preview
 import {
@@ -137,6 +145,7 @@ import {
 } from '@heroicons/vue/24/outline';
 
 const fileManagerStore = useFileManagerStore();
+const uiStore = useUiStore(); // + 初始化 uiStore
 
 const selectedItem = computed(() => fileManagerStore.selectedItemForDetail);
 const activeTab = computed(() => fileManagerStore.detailPanelActiveTab);
@@ -169,7 +178,8 @@ const setActiveTab = (tab: 'properties' | 'preview' | 'actions') => {
 };
 
 const closePanel = () => {
-  fileManagerStore.toggleDetailPanel(false);
+  // fileManagerStore.toggleDetailPanel(false); // 旧逻辑
+  uiStore.closeFileManagerDetailPanel(); // 新逻辑，调用 uiStore 的 action
 };
 
 const toggleFavorite = () => {
@@ -297,9 +307,57 @@ watch(
   },
   { immediate: true }
 );
+
+// --- Resizing Logic ---
+const isResizing = ref(false);
+const initialMouseX = ref(0);
+const initialPanelWidth = ref(0);
+
+const startResize = (event: MouseEvent) => {
+  isResizing.value = true;
+  initialMouseX.value = event.clientX;
+  initialPanelWidth.value = uiStore.fileManagerDetailPanelWidth;
+
+  document.documentElement.style.cursor = 'col-resize';
+  document.documentElement.style.userSelect = 'none';
+
+  document.addEventListener('mousemove', handleResizing);
+  document.addEventListener('mouseup', stopResizing);
+};
+
+const handleResizing = (event: MouseEvent) => {
+  if (!isResizing.value) return;
+  const deltaX = event.clientX - initialMouseX.value;
+  const newWidth = initialPanelWidth.value - deltaX; // Resizer is on the left, dragging left decreases X (increases width)
+  uiStore.setFileManagerDetailPanelWidth(newWidth);
+};
+
+const stopResizing = () => {
+  if (!isResizing.value) return;
+  isResizing.value = false;
+  document.removeEventListener('mousemove', handleResizing);
+  document.removeEventListener('mouseup', stopResizing);
+
+  document.documentElement.style.cursor = '';
+  document.documentElement.style.userSelect = '';
+};
+
+onUnmounted(() => {
+  if (isResizing.value) {
+    stopResizing(); // Clean up global listeners if unmounted during resize
+  }
+});
 </script>
 
 <style scoped>
+.panel-resizer:hover {
+  /* Tailwind doesn't have a direct class for this subtle effect,
+    but you can use a very light blue or gray.
+    Example: bg-blue-100 dark:bg-blue-900 opacity-50
+    The hover:bg-blue-500/30 in template is more direct.
+  */
+}
+
 .property-row {
   @apply flex flex-col sm:flex-row sm:items-center border-b border-gray-100 dark:border-gray-700/50 pb-2 mb-2;
 }

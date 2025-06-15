@@ -86,6 +86,15 @@
         </span>
       </button>
 
+      <!-- 切换详情面板按钮 -->
+      <button @click="uiStore.toggleFileManagerDetailPanel()" class="btn btn-sm btn-ghost"
+        :class="{ 'btn-active bg-gray-200 dark:bg-gray-600': isDetailPanelOpen }"
+        v-comfy-tooltip="isDetailPanelOpen ? '隐藏详情面板' : '显示详情面板'"
+        data-testid="fm-toggle-detail-panel-btn">
+        <ChevronDoubleRightIcon v-if="isDetailPanelOpen" class="h-5 w-5" /> <!-- Icon to "push panel away" / collapse -->
+        <ChevronDoubleLeftIcon v-else class="h-5 w-5" /> <!-- Icon to "pull panel in" / expand -->
+      </button>
+
       <button @click="openViewSettingsModal" class="btn btn-sm btn-ghost" v-comfy-tooltip="'显示设置'"
         data-testid="fm-view-settings-btn">
         <Cog6ToothIcon class="h-5 w-5" />
@@ -97,17 +106,20 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useFileManagerStore, type ViewSettings } from '@/stores/fileManagerStore';
+import { useUiStore } from '@/stores/uiStore'; // + 导入 uiStore
 import { useDialogService } from '@/services/DialogService'; // 如果需要打开自定义模态框
 import {
   ArrowUpTrayIcon, FolderPlusIcon, ArrowPathIcon, MagnifyingGlassIcon,
   Squares2X2Icon, QueueListIcon, AdjustmentsHorizontalIcon, FunnelIcon, Cog6ToothIcon,
-  ArrowUpIcon, ArrowDownIcon, ChevronDownIcon, ClipboardDocumentIcon
+  ArrowUpIcon, ArrowDownIcon, ChevronDownIcon, ClipboardDocumentIcon,
+  ChevronDoubleLeftIcon, ChevronDoubleRightIcon // + 导入切换详情面板的图标
 } from '@heroicons/vue/24/outline';
 // 假设 StringInput 和 SelectInput 是全局注册或可以这样导入的通用组件
 // import StringInput from '@/components/common/inputs/StringInput.vue'; // 示例路径
 // import SelectInput from '@/components/common/inputs/SelectInput.vue'; // 示例路径
 
 const fileManagerStore = useFileManagerStore();
+const uiStore = useUiStore(); // + 初始化 uiStore
 const dialogService = useDialogService(); // 仅当需要用它打开 FilterModal 等时
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
@@ -117,6 +129,7 @@ const isLoading = computed(() => fileManagerStore.isLoading);
 const viewSettings = computed(() => fileManagerStore.viewSettings);
 const activeFiltersCount = computed(() => fileManagerStore.activeFiltersCount);
 const canPaste = computed(() => !!fileManagerStore.clipboard && fileManagerStore.clipboard.sourcePaths.length > 0);
+const isDetailPanelOpen = computed(() => uiStore.isFileManagerDetailPanelOpen); // + 获取详情面板状态
 
 const sortOptions: { label: string; field: ViewSettings['sortField'] }[] = [
   { label: '名称', field: 'name' },

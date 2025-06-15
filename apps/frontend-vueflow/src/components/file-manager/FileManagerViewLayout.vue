@@ -17,67 +17,67 @@
         <FileToolbar />
       </header>
 
-      <!-- 文件浏览器核心区域 -->
-      <div class="file-browser-container flex-1 overflow-y-auto">
-        <FileBrowser />
+      <!-- 文件浏览器核心区域 和 详情面板 -->
+      <div class="content-body flex flex-1 overflow-hidden">
+        <!-- 文件浏览器核心区域 -->
+        <div class="file-browser-container flex-1 overflow-y-auto">
+          <FileBrowser />
+        </div>
+
+        <!-- 右侧文件详情面板 (可选) -->
+        <aside v-if="isDetailPanelVisible"
+          class="file-detail-panel-container bg-white dark:bg-gray-900 shadow-lg flex-shrink-0 overflow-y-auto border-l border-gray-200 dark:border-gray-700"
+          :style="{ width: `${detailPanelWidth}px` }" data-testid="fm-detail-panel">
+          <FileDetailPanel />
+        </aside>
       </div>
     </main>
-
-    <!-- 右侧/底部文件详情面板 (可选) -->
-    <aside v-if="isDetailPanelVisible"
-      class="file-detail-panel-container bg-white dark:bg-gray-900 shadow-lg transition-transform duration-300 ease-in-out flex-shrink-0 overflow-y-auto"
-      :class="detailPanelClasses" data-testid="fm-detail-panel">
-      <FileDetailPanel />
-    </aside>
+    <!-- 展开按钮已移至 FileToolbar.vue -->
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
-import { useFileManagerStore } from '@/stores/fileManagerStore';
+// import { useFileManagerStore } from '@/stores/fileManagerStore'; // 移除未使用的导入
+import { useUiStore } from '@/stores/uiStore'; // + 导入 uiStore
 
 import SidebarNav from './SidebarNav.vue';
 import FileToolbar from './FileToolbar.vue';
 import FileBrowser from './FileBrowser.vue';
 import FileDetailPanel from './FileDetailPanel.vue';
+// import { ChevronLeftIcon } from '@heroicons/vue/24/outline'; // - 移除未使用的图标
 
-const fileManagerStore = useFileManagerStore();
+// const fileManagerStore = useFileManagerStore(); // 不再直接使用 fileManagerStore 的状态来控制详情面板
+const uiStore = useUiStore(); // + 初始化 uiStore
 
-// 左侧导航栏折叠状态
-const isSidebarCollapsed = ref(false); // TODO: 可以从 store 或用户偏好设置读取初始值
-
-// 详情面板可见性 (从 store 获取)
-const isDetailPanelVisible = computed(() => fileManagerStore.isDetailPanelVisible);
-
-// 详情面板位置 (示例，可以根据屏幕宽度或用户设置动态改变)
-const detailPanelPosition = ref<'right' | 'bottom'>('right'); // Default to right
-
-const detailPanelClasses = computed(() => {
-  if (detailPanelPosition.value === 'right') {
-    return 'w-72 md:w-80 lg:w-96 transform translate-x-0'; // Adjust width as needed
-  }
-  // For bottom panel, it might take full width and a portion of height
-  return 'w-full h-1/3 border-t dark:border-gray-700 fixed bottom-0 left-0 right-0 transform translate-y-0 md:relative md:h-auto md:border-t-0 md:border-l';
+// 左侧导航栏折叠状态 (从 uiStore 获取和设置)
+const isSidebarCollapsed = computed({
+  get: () => uiStore.isFileManagerSidebarCollapsed,
+  set: (value) => uiStore.setFileManagerSidebarCollapsed(value),
 });
 
+// 详情面板可见性 (从 uiStore 获取)
+const isDetailPanelVisible = computed(() => uiStore.isFileManagerDetailPanelOpen);
+const detailPanelWidth = computed(() => uiStore.fileManagerDetailPanelWidth);
 
-// 响应式设计：根据屏幕宽度调整布局
+// detailPanelPosition 和 detailPanelLayoutClasses 不再需要，因为布局已固定
+// const detailPanelPosition = ref<'right' | 'bottom'>('right');
+// const detailPanelLayoutClasses = computed(() => { ... });
+
+
+// 响应式设计：根据屏幕宽度调整布局 (主要调整侧边栏，详情面板位置固定)
 const screenWidth = ref(window.innerWidth);
 const updateScreenWidth = () => screenWidth.value = window.innerWidth;
 
 watch(screenWidth, (newWidth) => {
   if (newWidth < 768) { // Example breakpoint for mobile (e.g., Tailwind's 'md')
-    isSidebarCollapsed.value = true; // Collapse sidebar on small screens
-    if (isDetailPanelVisible.value) { // If detail panel is open on small screen, move to bottom
-      detailPanelPosition.value = 'bottom';
-    }
+    uiStore.setFileManagerSidebarCollapsed(true); // Collapse sidebar on small screens
+    // 详情面板现在固定在右侧，如果小屏幕需要不同行为（如隐藏），可以在这里添加逻辑
+    // 例如: if (isDetailPanelVisible.value) { uiStore.closeFileManagerDetailPanel(); }
   } else {
-    // On larger screens, default to right panel if it was bottom due to screen size
-    if (detailPanelPosition.value === 'bottom' && newWidth >= 768) {
-      detailPanelPosition.value = 'right';
-    }
+    // On larger screens
     // Potentially un-collapse sidebar if it was auto-collapsed, or respect user's choice
-    // isSidebarCollapsed.value = false; // Or load from user preference
+    // uiStore.setFileManagerSidebarCollapsed(false); // 或者从用户偏好加载，或者保持当前状态
   }
 }, { immediate: true });
 

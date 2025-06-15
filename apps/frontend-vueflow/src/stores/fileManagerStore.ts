@@ -53,7 +53,7 @@ export interface FileManagerState {
   viewSettings: ViewSettings;
 
   // 用于右侧/底部详情面板
-  isDetailPanelVisible: boolean;
+  // isDetailPanelVisible: boolean; // 将移至 uiStore 控制
   detailPanelActiveTab: 'properties' | 'preview' | 'actions' | null; // 'actions' 可能是未来扩展
   selectedItemForDetail: FAMItem | null; // 当前详情面板显示的项目
 
@@ -97,7 +97,7 @@ export const useFileManagerStore = defineStore('fileManager', {
       thumbnailSize: 'medium',
       informationDensity: 'comfortable',
     },
-    isDetailPanelVisible: false,
+    // isDetailPanelVisible: false, // 移至 uiStore
     detailPanelActiveTab: null,
     selectedItemForDetail: null,
     favoritesPaths: [], // 从用户配置加载
@@ -380,20 +380,23 @@ export const useFileManagerStore = defineStore('fileManager', {
         // 优先从 filteredItems 中查找，因为用户看到的是这个列表
         const firstSelectedItem = this.filteredItems.find((item: FAMItem) => item.logicalPath === paths[0]) || this.items.find((item: FAMItem) => item.logicalPath === paths[0]);
         this.selectedItemForDetail = firstSelectedItem || null;
+
+        // 面板的可见性由 uiStore 控制，这里只负责更新内容和可能的默认 tab
         if (firstSelectedItem) {
-          this.isDetailPanelVisible = true;
-          if (!this.detailPanelActiveTab) {
-            this.detailPanelActiveTab = 'properties';
-          }
+          // const uiStore = useUiStore(); // 避免在 action 内部直接 useStore，如果需要交互，应通过参数或更高级模式
+          // if (uiStore.isFileManagerDetailPanelOpen && !this.detailPanelActiveTab) {
+          //   this.detailPanelActiveTab = 'properties';
+          // }
+          // 决定是否在选中时自动设置 tab 的逻辑可以放在组件层面或保留当前逻辑
+           if (!this.detailPanelActiveTab) { // 如果面板已打开但没有tab，或者即将因选中而关注，则设置默认tab
+             this.detailPanelActiveTab = 'properties';
+           }
         } else {
-          // 如果找不到选中项的详细信息（理论上不应发生，除非列表不同步）
-          this.selectedItemForDetail = null;
-          this.isDetailPanelVisible = false;
-          this.detailPanelActiveTab = null;
+          this.selectedItemForDetail = null; // 确保清除
+          this.detailPanelActiveTab = null; // 清除 tab
         }
       } else {
         this.selectedItemForDetail = null;
-        this.isDetailPanelVisible = false; // 无选择时可以考虑隐藏详情面板
         this.detailPanelActiveTab = null;
       }
     },
@@ -401,7 +404,7 @@ export const useFileManagerStore = defineStore('fileManager', {
     clearSelection() {
       this.selectedItemPaths = [];
       this.selectedItemForDetail = null;
-      this.isDetailPanelVisible = false;
+      // this.isDetailPanelVisible = false; // 由 uiStore 控制
       this.detailPanelActiveTab = null;
     },
 
@@ -464,24 +467,12 @@ export const useFileManagerStore = defineStore('fileManager', {
     },
 
     // --- 详情面板控制 ---
-    toggleDetailPanel(visible?: boolean) {
-      if (visible !== undefined) {
-        this.isDetailPanelVisible = visible;
-      } else {
-        this.isDetailPanelVisible = !this.isDetailPanelVisible;
-      }
-      if (!this.isDetailPanelVisible) {
-        this.detailPanelActiveTab = null;
-      } else if (this.isDetailPanelVisible && !this.detailPanelActiveTab && this.selectedItemForDetail) {
-        // 如果面板变为可见，且没有活动tab，且有选中项，则默认显示属性
-        this.detailPanelActiveTab = 'properties';
-      }
-    },
+    // toggleDetailPanel action 已移除，由 uiStore 控制
+
     setDetailPanelTab(tab: 'properties' | 'preview' | 'actions' | null) {
       this.detailPanelActiveTab = tab;
-      if (tab !== null && !this.isDetailPanelVisible && this.selectedItemForDetail) {
-        this.isDetailPanelVisible = true; // 如果设置了tab且有选中项，则确保面板可见
-      }
+      // 面板的可见性由 uiStore 控制，此处不再根据 tab 设置来强制打开面板
+      // 如果需要这种行为（例如点击预览tab时自动打开面板），应在调用此action的地方配合调用 uiStore.openFileManagerDetailPanel()
     },
 
     // --- 最近访问 ---

@@ -1,8 +1,7 @@
 <template>
   <div class="file-browser flex flex-col h-full" data-testid="fm-file-browser">
     <!-- 面包屑导航 -->
-    <header
-      class="breadcrumbs-container px-2 py-1.5 border-b dark:border-gray-700 dark:bg-gray-850 flex-shrink-0">
+    <header class="breadcrumbs-container px-2 py-1.5 border-b dark:border-gray-700 dark:bg-gray-850 flex-shrink-0">
       <Breadcrumbs />
     </header>
 
@@ -116,6 +115,9 @@ const contextMenu = ref({
   targetItem: null as FAMItem | null, // 右键点击的目标项目
 });
 
+const clickTimeout = ref<number | null>(null);
+const DOUBLE_CLICK_DELAY = 250; // ms, 可调整
+
 const contextMenuRef = ref<HTMLElement | null>(null); // Typed for FileContextMenu component's root element
 // onClickOutside should now target the FileContextMenu component's root element.
 // This is typically handled by passing the ref to FileContextMenu or FileContextMenu handling it internally.
@@ -169,28 +171,44 @@ const toggleSelectItem = (item: FAMItem) => {
 };
 
 const handleItemClick = (event: MouseEvent, item: FAMItem) => {
-  if (event.ctrlKey || event.metaKey) { // Ctrl/Cmd click for multi-select
-    toggleSelectItem(item);
-  } else if (event.shiftKey && selectedItemPaths.value.length > 0) { // Shift click for range select
-    const lastSelectedPath = selectedItemPaths.value[selectedItemPaths.value.length - 1];
-    const lastSelectedIndex = filteredItems.value.findIndex((i: FAMItem) => i.logicalPath === lastSelectedPath);
-    const currentIndex = filteredItems.value.findIndex((i: FAMItem) => i.logicalPath === item.logicalPath);
+  if (clickTimeout.value) {
+    clearTimeout(clickTimeout.value);
+    clickTimeout.value = null;
+    // This is likely part of a double-click, which will be handled by handleItemDblClick.
+    // We return here to prevent single-click logic from executing.
+    return;
+  }
 
-    if (lastSelectedIndex !== -1 && currentIndex !== -1) {
-      const start = Math.min(lastSelectedIndex, currentIndex);
-      const end = Math.max(lastSelectedIndex, currentIndex);
-      const rangePaths = filteredItems.value.slice(start, end + 1).map((i: FAMItem) => i.logicalPath);
-      // 合并现有选择和范围选择，去重
-      fileManagerStore.setSelectedItemPaths(Array.from(new Set([...selectedItemPaths.value, ...rangePaths])));
-    } else { // Fallback to single select if range calculation fails
+  clickTimeout.value = window.setTimeout(() => {
+    if (event.ctrlKey || event.metaKey) { // Ctrl/Cmd click for multi-select
+      toggleSelectItem(item);
+    } else if (event.shiftKey && selectedItemPaths.value.length > 0) { // Shift click for range select
+      const lastSelectedPath = selectedItemPaths.value[selectedItemPaths.value.length - 1];
+      const lastSelectedIndex = filteredItems.value.findIndex((i: FAMItem) => i.logicalPath === lastSelectedPath);
+      const currentIndex = filteredItems.value.findIndex((i: FAMItem) => i.logicalPath === item.logicalPath);
+
+      if (lastSelectedIndex !== -1 && currentIndex !== -1) {
+        const start = Math.min(lastSelectedIndex, currentIndex);
+        const end = Math.max(lastSelectedIndex, currentIndex);
+        const rangePaths = filteredItems.value.slice(start, end + 1).map((i: FAMItem) => i.logicalPath);
+        // 合并现有选择和范围选择，去重
+        fileManagerStore.setSelectedItemPaths(Array.from(new Set([...selectedItemPaths.value, ...rangePaths])));
+      } else { // Fallback to single select if range calculation fails
+        fileManagerStore.setSelectedItemPaths([item.logicalPath]);
+      }
+    } else { // Single click
       fileManagerStore.setSelectedItemPaths([item.logicalPath]);
     }
-  } else { // Single click
-    fileManagerStore.setSelectedItemPaths([item.logicalPath]);
-  }
+    clickTimeout.value = null;
+  }, DOUBLE_CLICK_DELAY);
 };
 
 const handleItemDblClick = (item: FAMItem) => {
+  if (clickTimeout.value) {
+    clearTimeout(clickTimeout.value);
+    clickTimeout.value = null;
+  }
+
   if (item.itemType === 'directory') {
     fileManagerStore.navigateTo(item.logicalPath);
   } else {
@@ -441,6 +459,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown);
+  if (clickTimeout.value) {
+    clearTimeout(clickTimeout.value);
+  }
 });
 
 </script>
