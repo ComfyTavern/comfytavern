@@ -29,6 +29,11 @@ interface UiStoreState {
 
   // 文件管理器左侧导航栏折叠状态
   isFileManagerSidebarCollapsed: boolean;
+
+  // 新增：主侧边栏折叠状态
+  isMainSidebarCollapsed: boolean;
+  // 新增：是否为移动端视图
+  isMobileView: boolean;
 }
 
 const defaultSettingsModalProps = {
@@ -43,6 +48,7 @@ const MAX_FM_DETAIL_PANEL_WIDTH = 1200; // 最大详情面板宽度 (可根据�
 
 const FM_SIDEBAR_COLLAPSED = 'fm_sidebar_collapsed'; // 已存在的 key
 const FM_DETAIL_PANEL_OPEN = 'fm_detail_panel_open'; // 新增 key
+const MAIN_SIDEBAR_COLLAPSED = 'main_sidebar_collapsed'; // 新增：主侧边栏 localStorage key
 
 export const useUiStore = defineStore('ui', {
   state: (): UiStoreState => {
@@ -94,6 +100,35 @@ export const useUiStore = defineStore('ui', {
     }
     console.log('[uiStore] Final initialDetailPanelOpen state being set:', initialDetailPanelOpen);
 
+    // 初始化主侧边栏状态
+    let initialMainSidebarCollapsed = false; // 默认值
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const storedMainSidebarState = localStorage.getItem(MAIN_SIDEBAR_COLLAPSED);
+      console.log(`[uiStore] Raw value from localStorage for ${MAIN_SIDEBAR_COLLAPSED}:`, storedMainSidebarState);
+      if (storedMainSidebarState !== null) {
+        try {
+          initialMainSidebarCollapsed = JSON.parse(storedMainSidebarState);
+          console.log('[uiStore] Parsed initialMainSidebarCollapsed from localStorage:', initialMainSidebarCollapsed);
+        } catch (error) {
+          console.error('[uiStore] Error parsing stored main sidebar state:', error, `Defaulting to false.`);
+          initialMainSidebarCollapsed = false;
+        }
+      } else {
+        console.log(`[uiStore] No ${MAIN_SIDEBAR_COLLAPSED} found in localStorage, defaulting to false.`);
+        initialMainSidebarCollapsed = false; // 明确默认值
+      }
+    } else {
+      console.log('[uiStore] localStorage not available, defaulting main sidebar to false.');
+      initialMainSidebarCollapsed = false;
+    }
+    console.log('[uiStore] Final initialMainSidebarCollapsed state being set:', initialMainSidebarCollapsed);
+
+    // 初始化移动端视图状态
+    const mediaQueryMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 1024px)') : null;
+    const initialIsMobileView = mediaQueryMobile ? mediaQueryMobile.matches : false;
+    console.log('[uiStore] Initial isMobileView state being set:', initialIsMobileView);
+
+
     return {
       isRegexEditorModalVisible: false,
       regexEditorModalData: null as RegexEditorModalData | null,
@@ -106,9 +141,62 @@ export const useUiStore = defineStore('ui', {
       isFileManagerDetailPanelOpen: initialDetailPanelOpen, // 使用从 localStorage 读取的值
       fileManagerDetailPanelWidth: DEFAULT_FM_DETAIL_PANEL_WIDTH,
       isFileManagerSidebarCollapsed: initialSidebarCollapsed, // 使用从 localStorage 读取的值
+      isMainSidebarCollapsed: initialMainSidebarCollapsed, // 使用从 localStorage 读取的值
+      isMobileView: initialIsMobileView, // 使用初始化的值
     };
   },
   actions: {
+    // 在 actions 中定义一个方法来初始化媒体查询监听器，或者在 state 函数外部执行，确保只执行一次
+    // Pinia store 的 state 函数在 store 第一次被使用时执行一次。
+    // 我们可以在 state 函数返回的对象之后，但在 defineStore 的 actions/getters 之前设置监听器。
+    // 或者，更符合 Pinia 模式的做法是在 action 中处理，但需要确保这个 action 在应用初始化时被调用。
+    // 一个更简单的方式是直接在 state 函数中设置，因为它只运行一次。
+
+    // 为了确保响应性，isMobileView 应该是一个 ref，或者在 state 中直接更新。
+    // Pinia 的 state 属性本身就是响应式的。
+
+    // 媒体查询监听器应该在 state 函数内部设置，以确保在 store 初始化时正确设置。
+    // Pinia 会处理 state 属性的响应性。
+    // 我们需要在 state 函数中添加监听器逻辑，或者在 store 创建后立即调用的 action 中添加。
+    // 考虑到 state 函数只执行一次，在那里设置监听器是合适的。
+    // (上面的 initialIsMobileView 已经处理了初始值，现在需要添加监听器)
+
+    // Pinia 推荐在 action 中处理副作用，但对于这种全局监听器，
+    // 且其目的是更新 store 的 state，在 store 初始化时设置是可以接受的。
+    // 我们将把监听器设置逻辑移到 state 函数之后，或者通过一个初始化 action。
+    // 让我们尝试在 state 函数中直接设置，如果 Pinia 的设计允许这样做并保持清晰。
+    // Pinia 的 state 是一个函数，它返回初始状态对象。我们不能直接在 state 函数内部修改 this。
+    // 因此，一个常见的模式是创建一个 action 来进行初始化。
+
+    // 修正：将监听器设置移至 actions 中，并确保它在应用启动时被调用一次。
+    // 或者，更简单地，在 state 函数中创建 ref 并返回，然后在外部（例如 App.vue）监听。
+    // 但为了 store 的内聚性，我们尝试在 store 内部完成。
+
+    // 让我们调整 state 的初始化，使其包含监听器逻辑，并确保 this 的正确性。
+    // Pinia state 是一个返回对象的函数，我们不能在其中直接使用 this 来调用 actions 或修改其他 state。
+    // 最好的方式是在 store 创建后，通过一个 action 来设置监听器。
+    // 但为了简单起见，并且因为 state 函数只执行一次，我们可以直接在 state 函数中设置监听器来更新一个 ref，
+    // 然后将这个 ref 作为 state 的一部分。不过 Pinia 的 state 属性已经是响应式的。
+
+    // 再次思考：Pinia 的 state 属性已经是响应式的。
+    // 我们可以在 state 函数中设置 initialIsMobileView。
+    // 然后，我们需要一个地方来添加事件监听器以在运行时更新 isMobileView。
+    // 这通常通过一个 action 完成，该 action 在应用加载时被调用。
+
+    // 让我们在 actions 中添加一个 setupMobileViewListener action。
+    setupMobileViewListener() {
+      if (typeof window !== 'undefined') {
+        const mediaQueryMobile = window.matchMedia('(max-width: 1024px)');
+        // 初始设置
+        this.isMobileView = mediaQueryMobile.matches;
+        // 添加监听器
+        mediaQueryMobile.addEventListener('change', (e) => {
+          this.isMobileView = e.matches;
+          console.log('[uiStore] isMobileView changed by listener:', this.isMobileView);
+        });
+      }
+    },
+
     getNextZIndex(): number {
       this.currentMaxZIndex += 10;
       return this.currentMaxZIndex;
@@ -223,6 +311,34 @@ export const useUiStore = defineStore('ui', {
       this.isFileManagerSidebarCollapsed = collapsed;
       // 如果决定在这里持久化（而不是 theme.ts），则需要添加 localStorage.setItem(...)
       console.log(`[uiStore] Sidebar collapsed set. New state: ${this.isFileManagerSidebarCollapsed}`);
+    },
+
+    // 主侧边栏 Actions
+    _saveMainSidebarState(collapsed: boolean) {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          localStorage.setItem(MAIN_SIDEBAR_COLLAPSED, JSON.stringify(collapsed));
+          console.log(`[uiStore] Saved to localStorage (${MAIN_SIDEBAR_COLLAPSED}):`, collapsed);
+        } catch (error) {
+          console.error('[uiStore] Error saving main sidebar state to localStorage:', error);
+        }
+      } else {
+        console.warn('[uiStore] localStorage not available, cannot save main sidebar state.');
+      }
+    },
+    toggleMainSidebar() {
+      console.log(`[uiStore] toggleMainSidebar called. Current state: ${this.isMainSidebarCollapsed}`);
+      this.isMainSidebarCollapsed = !this.isMainSidebarCollapsed;
+      this._saveMainSidebarState(this.isMainSidebarCollapsed);
+      console.log(`[uiStore] Main sidebar collapsed toggled. New state: ${this.isMainSidebarCollapsed}`);
+    },
+    setMainSidebarCollapsed(collapsed: boolean) {
+      console.log(`[uiStore] setMainSidebarCollapsed called with: ${collapsed}. Current state: ${this.isMainSidebarCollapsed}`);
+      if (this.isMainSidebarCollapsed !== collapsed) {
+        this.isMainSidebarCollapsed = collapsed;
+        this._saveMainSidebarState(this.isMainSidebarCollapsed);
+        console.log(`[uiStore] Main sidebar collapsed set. New state: ${this.isMainSidebarCollapsed}`);
+      }
     },
   },
 });

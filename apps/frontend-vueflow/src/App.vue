@@ -35,6 +35,7 @@ onMounted(async () => {
   themeStore.initTheme();
   initializeWebSocket(); // <-- ADDED: Initialize WebSocket connection
   await authStore.fetchUserContext(); // + 获取用户上下文
+  uiStore.setupMobileViewListener(); // + 设置移动端视图监听器
 
   // 应用主题类名到 body，确保初始背景一致
   document.body.classList.toggle('light-theme', !themeStore.isDark);

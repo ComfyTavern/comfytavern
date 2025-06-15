@@ -14,14 +14,16 @@
 
 <script setup lang="ts">
 import SideBar from './SideBar.vue';
-import { useThemeStore } from '../stores/theme'; // 引入 themeStore
+// import { useThemeStore } from '../stores/theme'; // 移除未使用的 themeStore
+import { useUiStore } from '@/stores/uiStore'; // + 引入 uiStore
 import { computed } from 'vue'; // 引入 computed
 
-const themeStore = useThemeStore();
+// const themeStore = useThemeStore(); // 移除未使用的 themeStore 实例化
+const uiStore = useUiStore(); // + 实例化 uiStore
 
 // 根据侧边栏状态计算主内容的左内边距
 const mainContentPaddingLeft = computed(() => {
-  return themeStore.collapsed ? '4rem' : '16rem'; // w-16 is 4rem, w-64 is 16rem
+  return uiStore.isMainSidebarCollapsed ? '4rem' : '16rem'; // + 使用 uiStore.isMainSidebarCollapsed
 });
 </script>
 

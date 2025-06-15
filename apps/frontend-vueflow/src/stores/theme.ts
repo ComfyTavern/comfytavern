@@ -92,36 +92,15 @@ export const useThemeStore = defineStore('theme', () => {
     updateThemeClass()
   }
   
-  // 侧边栏状态管理
-  const collapsed = ref(false)
-  // 记住桌面端的展开状态
-  const desktopCollapsedState = ref(false)
-  // 是否为移动端视图
-  const isMobileView = ref(window.matchMedia('(max-width: 1024px)').matches)
-
-  // 监听窗口大小变化
-  window.matchMedia('(max-width: 1024px)').addEventListener('change', (e) => {
-    isMobileView.value = e.matches
-    // 在移动端自动折叠，在桌面端恢复之前的状态
-    collapsed.value = e.matches ? true : desktopCollapsedState.value
-  })
-
-  // 切换折叠状态
-  function toggleCollapsed() {
-    collapsed.value = !collapsed.value
-    // 在桌面端时保存状态
-    if (!isMobileView.value) {
-      desktopCollapsedState.value = collapsed.value
-    }
-  }
+  // isMobileView 及其监听器已迁移到 uiStore
 
   // 暴露状态和方法
   return {
     theme,
     isDark,
-    collapsed,
-    isMobileView,
-    toggleCollapsed,
+    // collapsed, // 已移除
+    // isMobileView, // 已移除，迁移到 uiStore
+    // toggleCollapsed, // 已移除
     toggleTheme,
     setTheme,
     initTheme
