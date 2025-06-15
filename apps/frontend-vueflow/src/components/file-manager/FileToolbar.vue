@@ -42,9 +42,9 @@
       <div class="relative">
         <input type="text" v-model="searchQuery" placeholder="搜索..." @input="onSearchInputDebounced"
           @keydown.enter="triggerSearch"
-          class="input input-sm input-bordered w-full pr-10 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600" />
+          class="input input-sm input-bordered w-full pr-10 bg-white text-gray-900 border-gray-300 placeholder-gray-400 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:placeholder-gray-500" />
         <MagnifyingGlassIcon
-          class="h-4 w-4 absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+          class="h-4 w-4 absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-500 dark:text-gray-400" />
       </div>
     </div>
 

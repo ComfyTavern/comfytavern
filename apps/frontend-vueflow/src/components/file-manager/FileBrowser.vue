@@ -2,7 +2,7 @@
   <div class="file-browser flex flex-col h-full" data-testid="fm-file-browser">
     <!-- 面包屑导航 -->
     <header
-      class="breadcrumbs-container px-2 py-1.5 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-850 flex-shrink-0">
+      class="breadcrumbs-container px-2 py-1.5 border-b dark:border-gray-700 dark:bg-gray-850 flex-shrink-0">
       <Breadcrumbs />
     </header>
 
@@ -23,8 +23,8 @@
 
       <!-- 列表视图 -->
       <table v-if="!isLoading && viewSettings.mode === 'list' && filteredItems.length > 0"
-        class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
-        <thead class="bg-gray-50 dark:bg-gray-750 sticky top-0 z-[5]">
+        class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm">
+        <thead class="dark:bg-gray-750 sticky top-0 z-[5]">
           <tr>
             <th scope="col" class="px-3 py-2.5 text-left font-semibold text-gray-900 dark:text-gray-100 w-10">
               <input type="checkbox" @change="toggleSelectAll" :checked="allSelected"
@@ -48,7 +48,7 @@
             </th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-600 bg-white dark:bg-gray-800">
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-500 bg-white dark:bg-gray-800">
           <FileListItem v-for="item in filteredItems" :key="item.logicalPath" :item="item"
             :is-selected="isSelected(item)" :visible-columns="viewSettings.visibleColumns.map(String)"
             @item-click="handleItemClick" @item-dbl-click="handleItemDblClick" @item-context-menu="showItemContextMenu"
