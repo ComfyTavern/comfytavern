@@ -153,17 +153,6 @@ watch(currentPath, (newVal) => {
   /* 确保在编辑和非编辑模式下高度一致 */
 }
 
-.input-sm {
-  /* 确保和 FileToolbar 中的搜索框样式一致或相似 */
-  @apply py-1 px-2 text-sm rounded-md;
-}
-
-.btn-xs {
-  /* 确保和 FileToolbar 中的按钮样式一致或相似 */
-  @apply px-2 py-0.5 text-xs rounded;
-}
-
-.btn-ghost {
-  @apply bg-transparent border-transparent shadow-none hover:bg-gray-200 dark:hover:bg-gray-700;
-}
+/* .input-sm, .btn-xs, .btn-ghost 样式由 DaisyUI 或全局 Tailwind 配置提供 */
+/* 在模板中直接使用 input-sm, btn-xs, btn-ghost 类即可 */
 </style>

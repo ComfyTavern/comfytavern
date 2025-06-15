@@ -3,26 +3,26 @@
     class="file-toolbar flex flex-wrap items-center justify-between gap-2 p-2 bg-white dark:bg-gray-800 border-b dark:border-gray-700 shadow-sm">
     <!-- 左侧操作按钮 -->
     <div class="flex items-center gap-1 flex-wrap">
-      <button @click="handleUploadClick" class="btn btn-sm btn-ghost" v-comfy-tooltip="'上传文件'"
+      <button @click="handleUploadClick" class="toolbar-action-btn" v-comfy-tooltip="'上传文件'"
         data-testid="fm-upload-btn">
         <ArrowUpTrayIcon class="h-5 w-5" />
         <span class="ml-1 hidden sm:inline">上传</span>
       </button>
       <input type="file" ref="fileInputRef" @change="handleFileSelected" multiple class="hidden" />
 
-      <button @click="createNewFolder" class="btn btn-sm btn-ghost" v-comfy-tooltip="'新建文件夹'"
+      <button @click="createNewFolder" class="toolbar-action-btn" v-comfy-tooltip="'新建文件夹'"
         data-testid="fm-create-folder-btn">
         <FolderPlusIcon class="h-5 w-5" />
         <span class="ml-1 hidden sm:inline">新建文件夹</span>
       </button>
 
-      <button @click="refreshList" class="btn btn-sm btn-ghost" :disabled="isLoading" v-comfy-tooltip="'刷新'"
+      <button @click="refreshList" class="toolbar-action-btn" :disabled="isLoading" v-comfy-tooltip="'刷新'"
         data-testid="fm-refresh-btn">
         <ArrowPathIcon class="h-5 w-5" :class="{ 'animate-spin': isLoading }" />
         <span class="ml-1 hidden sm:inline">刷新</span>
       </button>
 
-      <button v-if="canPaste" @click="pasteItems" class="btn btn-sm btn-ghost" v-comfy-tooltip="'粘贴'"
+      <button v-if="canPaste" @click="pasteItems" class="toolbar-action-btn" v-comfy-tooltip="'粘贴'"
         data-testid="fm-paste-btn">
         <ClipboardDocumentIcon class="h-5 w-5" />
         <span class="ml-1 hidden sm:inline">粘贴</span>
@@ -50,7 +50,7 @@
 
     <!-- 右侧视图控制和筛选 -->
     <div class="flex items-center gap-1 flex-wrap">
-      <button @click="toggleViewMode" class="btn btn-sm btn-ghost"
+      <button @click="toggleViewMode" class="toolbar-action-btn"
         v-comfy-tooltip="viewSettings.mode === 'list' ? '切换到网格视图' : '切换到列表视图'" data-testid="fm-toggle-view-btn">
         <Squares2X2Icon v-if="viewSettings.mode === 'list'" class="h-5 w-5" />
         <QueueListIcon v-else class="h-5 w-5" />
@@ -58,7 +58,7 @@
 
       <!-- 排序方式选择 -->
       <div class="dropdown dropdown-end">
-        <label tabindex="0" class="btn btn-sm btn-ghost" v-comfy-tooltip="'排序方式'">
+        <label tabindex="0" class="toolbar-action-btn" v-comfy-tooltip="'排序方式'">
           <AdjustmentsHorizontalIcon class="h-5 w-5" />
           <span class="ml-1 hidden md:inline">{{ currentSortLabel }}</span>
           <ChevronDownIcon class="h-4 w-4 ml-1 hidden md:inline" />
@@ -77,7 +77,7 @@
         </ul>
       </div>
 
-      <button @click="openFilterModal" class="btn btn-sm btn-ghost relative" v-comfy-tooltip="'高级筛选'"
+      <button @click="openFilterModal" class="toolbar-action-btn relative" v-comfy-tooltip="'高级筛选'"
         data-testid="fm-filter-btn">
         <FunnelIcon class="h-5 w-5" />
         <span v-if="activeFiltersCount > 0"
@@ -87,15 +87,15 @@
       </button>
 
       <!-- 切换详情面板按钮 -->
-      <button @click="uiStore.toggleFileManagerDetailPanel()" class="btn btn-sm btn-ghost"
+      <button @click="uiStore.toggleFileManagerDetailPanel()" class="toolbar-action-btn"
         :class="{ 'btn-active bg-gray-200 dark:bg-gray-600': isDetailPanelOpen }"
-        v-comfy-tooltip="isDetailPanelOpen ? '隐藏详情面板' : '显示详情面板'"
-        data-testid="fm-toggle-detail-panel-btn">
-        <ChevronDoubleRightIcon v-if="isDetailPanelOpen" class="h-5 w-5" /> <!-- Icon to "push panel away" / collapse -->
+        v-comfy-tooltip="isDetailPanelOpen ? '隐藏详情面板' : '显示详情面板'" data-testid="fm-toggle-detail-panel-btn">
+        <ChevronDoubleRightIcon v-if="isDetailPanelOpen" class="h-5 w-5" />
+        <!-- Icon to "push panel away" / collapse -->
         <ChevronDoubleLeftIcon v-else class="h-5 w-5" /> <!-- Icon to "pull panel in" / expand -->
       </button>
 
-      <button @click="openViewSettingsModal" class="btn btn-sm btn-ghost" v-comfy-tooltip="'显示设置'"
+      <button @click="openViewSettingsModal" class="toolbar-action-btn" v-comfy-tooltip="'显示设置'"
         data-testid="fm-view-settings-btn">
         <Cog6ToothIcon class="h-5 w-5" />
       </button>
@@ -228,49 +228,10 @@ const openViewSettingsModal = () => {
 </script>
 
 <style scoped>
-/* 可以在 Tailwind CSS 中使用 theme 或插件来定义 btn, btn-sm, btn-ghost, input, dropdown 等样式 */
-/* 如果项目中有 DaisyUI 或类似的 UI 库，这些类名可能已经可用 */
-.btn {
-  @apply inline-flex items-center justify-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500;
-  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
-  transition-duration: .15s;
-  transition-timing-function: cubic-bezier(.4, 0, .2, 1);
-}
+/* DaisyUI 提供了 btn, input, dropdown 等组件的样式，这里不再重复定义。 */
+/* 如果需要对 DaisyUI 的组件进行微调，可以在 shared.css 或 tailwind.config.js 中进行。 */
 
-.btn-sm {
-  @apply px-2.5 py-1 text-xs rounded;
-}
-
-.btn-ghost {
-  @apply bg-transparent border-transparent shadow-none hover:bg-gray-100 dark:hover:bg-gray-700;
-}
-
-.input {
-  @apply block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-gray-200;
-}
-
-.input-sm {
-  @apply py-1.5 px-2.5 text-xs;
-}
-
-.input-bordered {
-  @apply border;
-}
-
-.dropdown {
-  @apply relative inline-block;
-}
-
-.dropdown-content {
-  @apply absolute right-0 mt-2 origin-top-right bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-10;
-  /* min-width for dropdown content */
-}
-
-.menu {
-  @apply list-none p-0 m-0;
-}
-
-.menu>li>a {
-  @apply px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center;
+.toolbar-action-btn {
+  @apply btn btn-sm btn-ghost dark:hover:bg-gray-700;
 }
 </style>

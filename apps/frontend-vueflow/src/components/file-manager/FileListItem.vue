@@ -1,5 +1,5 @@
 <template>
-  <tr class="file-list-item hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer"
+  <tr class="file-list-item hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
     :class="{ 'bg-blue-50 dark:bg-blue-900/50': isSelected }" @click.stop="emit('itemClick', $event, item)"
     @dblclick.stop="emit('itemDblClick', item)" @contextmenu.prevent="emit('itemContextMenu', $event, item)"
     :data-path="item.logicalPath" data-testid="fm-list-item">
@@ -155,9 +155,7 @@ const safelyGetItemProperty = (item: FAMItem, key: string): string => {
 </script>
 
 <style scoped>
-.checkbox {
-  /* Tailwind's form plugin or DaisyUI might provide this. Add custom styles if needed. */
-}
+/* .checkbox styles are provided by DaisyUI or Tailwind's form plugin. */
 
 .file-list-item:hover .group-hover\:opacity-100 {
   opacity: 1;

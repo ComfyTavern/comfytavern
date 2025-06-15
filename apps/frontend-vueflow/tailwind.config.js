@@ -8,7 +8,11 @@ export default {
   ],
   darkMode: 'class', // 启用基于类的暗色模式
   theme: {
-    extend: {},
+    extend: {
+      fontSize: {
+        'xxs': ['0.65rem', { lineHeight: '0.85rem' }],
+      },
+    },
   },
   plugins: [daisyui],
   // Optional: Add DaisyUI configuration here if needed

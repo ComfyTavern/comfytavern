@@ -135,37 +135,7 @@ const handleConfirm = () => {
 </script>
 
 <style scoped>
-/* BaseModal 应该处理大部分样式，这里可以添加特定于 MoveModal 的微调 */
-.input {
-  /* 确保与项目中其他 input 样式一致 */
-  @apply block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-gray-200;
-}
-
-.input-sm {
-  @apply py-1.5 px-2.5 text-xs;
-}
-
-.input-bordered {
-  @apply border;
-}
-
-.btn {
-  @apply inline-flex items-center justify-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500;
-}
-
-.btn-sm {
-  @apply px-2.5 py-1 text-xs rounded;
-}
-
-.btn-ghost {
-  @apply bg-transparent border-transparent shadow-none hover:bg-gray-100 dark:hover:bg-gray-700;
-}
-
-.btn-primary {
-  @apply bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 border-blue-600 dark:border-blue-500;
-}
-
-.btn-primary:disabled {
-  @apply bg-blue-300 dark:bg-blue-800 cursor-not-allowed;
-}
+/* BaseModal 应该处理大部分样式。 */
+/* .input*, .btn* 样式由 DaisyUI 或全局 Tailwind 配置提供。 */
+/* 在模板中直接使用 input, input-sm, input-bordered, btn, btn-sm, btn-ghost, btn-primary 类即可。 */
 </style>

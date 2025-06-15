@@ -103,11 +103,6 @@ const getIconComponent = (iconName?: string) => {
 </script>
 
 <style scoped>
-.file-context-menu {
-  /* Ensure it appears above other content */
-}
-
-.context-menu-button:disabled {
-  /* Tailwind's opacity-50 cursor-not-allowed should handle this */
-}
+/* Styles for this component are primarily handled by Tailwind CSS classes in the template. */
+/* Specific layout or appearance adjustments can be added here if necessary. */
 </style>

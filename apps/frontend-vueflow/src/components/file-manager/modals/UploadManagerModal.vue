@@ -315,64 +315,6 @@ const getFileIcon = (filename: string) => {
 </script>
 
 <style scoped>
-.progress {
-  /* Tailwind's DaisyUI plugin might provide this. Add custom styles if needed. */
-  /* For a basic HTML5 progress bar: */
-  appearance: none;
-  border: none;
-  height: 0.5rem;
-  border-radius: 0.25rem;
-  overflow: hidden;
-}
-
-.progress::-webkit-progress-bar {
-  background-color: #e5e7eb;
-  /* gray-200 */
-}
-
-.progress.progress-info::-webkit-progress-value {
-  background-color: #3b82f6;
-  /* blue-500 */
-}
-
-.progress.progress-info::-moz-progress-bar {
-  background-color: #3b82f6;
-  /* blue-500 */
-}
-
-.dark .progress::-webkit-progress-bar {
-  background-color: #4b5563;
-  /* gray-600 */
-}
-
-.dark .progress.progress-info::-webkit-progress-value {
-  background-color: #60a5fa;
-  /* blue-400 */
-}
-
-.dark .progress.progress-info::-moz-progress-bar {
-  background-color: #60a5fa;
-  /* blue-400 */
-}
-
-.btn {
-  /* Basic button styling if not using a UI library like DaisyUI */
-  @apply inline-flex items-center justify-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500;
-}
-
-.btn-sm {
-  @apply px-2.5 py-1 text-xs rounded;
-}
-
-.btn-ghost {
-  @apply bg-transparent border-transparent shadow-none hover:bg-gray-100 dark:hover:bg-gray-700;
-}
-
-.btn-success {
-  @apply bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 border-green-600 dark:border-green-500;
-}
-
-.btn-success:disabled {
-  @apply bg-green-300 dark:bg-green-800 cursor-not-allowed;
-}
+/* .progress* and .btn* styles are provided by DaisyUI. */
+/* In the template, classes like 'progress progress-info', 'btn btn-sm', etc., are used directly. */
 </style>

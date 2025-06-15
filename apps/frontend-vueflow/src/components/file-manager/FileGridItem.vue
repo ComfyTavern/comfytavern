@@ -108,12 +108,6 @@ const getDocumentIcon = (filename: string) => {
   /* The flex-col and justify-center should help with vertical alignment */
 }
 
-.text-xxs {
-  font-size: 0.65rem;
-  line-height: 0.85rem;
-}
-
-.checkbox {
-  /* Tailwind's form plugin or DaisyUI might provide this. Add custom styles if needed. */
-}
+/* .text-xxs is now defined in tailwind.config.js */
+/* .checkbox styles are provided by DaisyUI or Tailwind's form plugin. */
 </style>

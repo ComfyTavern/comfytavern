@@ -350,13 +350,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.panel-resizer:hover {
-  /* Tailwind doesn't have a direct class for this subtle effect,
-    but you can use a very light blue or gray.
-    Example: bg-blue-100 dark:bg-blue-900 opacity-50
-    The hover:bg-blue-500/30 in template is more direct.
-  */
-}
+/* Resizer hover effect is handled by Tailwind classes in the template. */
 
 .property-row {
   @apply flex flex-col sm:flex-row sm:items-center border-b border-gray-100 dark:border-gray-700/50 pb-2 mb-2;
@@ -370,27 +364,8 @@ onUnmounted(() => {
   @apply w-full sm:w-2/3 text-gray-800 dark:text-gray-200;
 }
 
-/* For DaisyUI-like tabs */
-.tabs .tab {
-  @apply px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm;
-}
+/* DaisyUI provides styles for .tabs, .tab, .tab-lifted, .tab-active. */
+/* Customizations for DaisyUI tabs, if necessary, should be in shared.css or tailwind.config.js. */
 
-.tab-lifted.tab-active {
-  @apply bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 border-b-transparent rounded-t-md;
-  /* Simulate uplift */
-  transform: translateY(-1px);
-}
-
-.tab:not(.tab-active) {
-  border-bottom-width: 1px;
-  /* Ensure non-active tabs have a bottom border to align with active one */
-}
-
-.btn-xs {
-  @apply px-2 py-0.5 text-xs rounded;
-}
-
-.btn-ghost {
-  @apply bg-transparent border-transparent shadow-none hover:bg-gray-200 dark:hover:bg-gray-700;
-}
+/* .btn-xs and .btn-ghost styles are provided by DaisyUI. */
 </style>
