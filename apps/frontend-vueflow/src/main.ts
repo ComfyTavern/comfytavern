@@ -4,6 +4,7 @@ import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
 import '@vue-flow/minimap/dist/style.css'
 import './assets/styles/shared.css'
+import './assets/styles/theme-variables.css' // 导入主题 CSS 变量
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'

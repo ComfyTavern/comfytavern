@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import { useThemeStore } from '../stores/theme';
+import { useThemeStore, type DisplayMode } from '../stores/theme'; // Import DisplayMode
 import { useUiStore } from '@/stores/uiStore'; // + 导入 uiStore
 import { computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
@@ -8,7 +8,8 @@ import { storeToRefs } from 'pinia'
 import { getBackendBaseUrl } from '@/utils/urlUtils'
 // import Tooltip from '@/components/common/Tooltip.vue'; // 移除 Tooltip 组件导入
 
-const themeStore = useThemeStore() // themeStore 仍然需要用于 isDark
+const themeStore = useThemeStore();
+const { displayMode } = storeToRefs(themeStore); // currentAppliedMode 在此组件中未直接使用
 const uiStore = useUiStore(); // + 实例化 uiStore
 const authStore = useAuthStore()
 const { currentUser } = storeToRefs(authStore)
@@ -83,28 +84,34 @@ const displayedUsername = computed(() => {
   }
   return currentUser.value?.username || '游客';
 });
+
+// 循环切换显示模式
+function cycleDisplayMode() {
+  const currentMode = displayMode.value;
+  let nextMode: DisplayMode;
+  if (currentMode === 'light') nextMode = 'dark';
+  else if (currentMode === 'dark') nextMode = 'system';
+  else nextMode = 'light';
+  themeStore.setDisplayMode(nextMode);
+}
 </script>
 
 <template>
-  <div class="fixed left-0 top-0 bottom-0 flex flex-col z-10 transition-all duration-300 ease-in-out" :class="[
-    uiStore.isMainSidebarCollapsed ? 'w-16' : 'w-64',
-    themeStore.isDark ? 'bg-gray-800 text-white' : 'bg-white text-gray-800' // isDark 仍由 themeStore 管理
-  ]">
+  <div class="fixed left-0 top-0 bottom-0 flex flex-col z-10 transition-all duration-300 ease-in-out bg-background-surface text-text-base"
+    :class="[ uiStore.isMainSidebarCollapsed ? 'w-16' : 'w-64' ]">
     <!-- 用户头像和名称 -->
     <div class="p-2 flex flex-col items-center mt-2 mb-2">
       <img
         :src="displayedAvatarUrl"
         alt="用户头像"
         @error="onAvatarError"
-        class="w-12 h-12 rounded-full object-cover border-2"
-        :class="themeStore.isDark ? 'border-gray-600' : 'border-gray-300'"
+        class="w-12 h-12 rounded-full object-cover border-2 border-border-base"
       />
       <div
         v-if="displayedUsername"
-        class="mt-2 text-sm font-medium transition-opacity duration-150 ease-in-out overflow-hidden whitespace-nowrap"
+        class="mt-2 text-sm font-medium transition-opacity duration-150 ease-in-out overflow-hidden whitespace-nowrap text-text-muted"
         :class="[
-          uiStore.isMainSidebarCollapsed ? 'opacity-0 max-h-0' : 'opacity-100 max-h-10 delay-150',
-          themeStore.isDark ? 'text-gray-300' : 'text-gray-700'
+          uiStore.isMainSidebarCollapsed ? 'opacity-0 max-h-0' : 'opacity-100 max-h-10 delay-150'
         ]"
         style="transition-property: opacity, max-height;"
       >
@@ -117,8 +124,8 @@ const displayedUsername = computed(() => {
       <RouterLink to="/home" custom v-slot="{ navigate, isExactActive }">
         <div @click="navigate" class="w-full p-2 rounded flex items-center cursor-pointer" :class="[
           uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-          themeStore.isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
-          isExactActive ? (themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200') : ''
+          'hover:bg-primary/10', // 使用 primary 色的半透明背景作为 hover
+          isExactActive ? 'bg-primary/20' : '' // 激活状态使用更深一点的 primary 半透明背景
         ]">
           <span class="inline text-lg">🏠</span>
           <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
@@ -128,16 +135,16 @@ const displayedUsername = computed(() => {
 
       <RouterLink to="/home/projects" class="w-full p-2 rounded flex items-center" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
-      ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
+        'hover:bg-primary/10 active:bg-primary/20'
+      ]" active-class="bg-primary/20">
         <span class="inline text-lg">📁</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">项目</span>
       </RouterLink>
       <RouterLink to="/home/characters" class="w-full p-2 rounded flex items-center" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
-      ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
+        'hover:bg-primary/10 active:bg-primary/20'
+      ]" active-class="bg-primary/20">
         <span class="inline text-lg">🎭</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">角色卡</span>
@@ -145,8 +152,8 @@ const displayedUsername = computed(() => {
 
       <RouterLink to="/home/files" class="w-full p-2 rounded flex items-center" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
-      ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
+        'hover:bg-primary/10 active:bg-primary/20'
+      ]" active-class="bg-primary/20">
         <span class="inline text-lg">🗂️</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">文件管理</span>
@@ -154,8 +161,8 @@ const displayedUsername = computed(() => {
 
       <RouterLink to="/home/about" class="w-full p-2 rounded flex items-center" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
-      ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
+        'hover:bg-primary/10 active:bg-primary/20'
+      ]" active-class="bg-primary/20">
         <span class="inline text-lg">ℹ️</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">关于</span>
@@ -167,24 +174,24 @@ const displayedUsername = computed(() => {
       <!-- 主题切换按钮 -->
       <div v-comfy-tooltip="'切换主题'" class="w-full p-2 rounded flex items-center cursor-pointer" :class="[
           uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-          themeStore.isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100' // 亮色主题 hover 调整
-        ]" @click="themeStore.toggleTheme()">
+          'hover:bg-primary/10'
+        ]" @click="cycleDisplayMode()">
         <span class="inline text-lg">
-          <span v-if="themeStore.theme === 'system'">💻</span>
-          <span v-else-if="themeStore.theme === 'light'">☀️</span>
+          <span v-if="displayMode === 'system'">💻</span>
+          <span v-else-if="displayMode === 'light'">☀️</span>
           <span v-else>🌙</span>
         </span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">
-          {{ themeStore.theme === 'system' ? '跟随系统' : themeStore.theme === 'dark' ? '暗色模式' : '亮色模式' }}
+          {{ displayMode === 'system' ? '跟随系统' : displayMode === 'dark' ? '暗色模式' : '亮色模式' }}
         </span>
       </div>
 
       <!-- 设置按钮 -->
       <RouterLink to="/home/settings" class="w-full p-2 rounded flex items-center mt-2" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-        themeStore.isDark ? 'hover:bg-gray-700 active:bg-gray-700' : 'hover:bg-gray-100 active:bg-gray-200'
-      ]" :active-class="themeStore.isDark ? 'bg-gray-700' : 'bg-gray-200'">
+        'hover:bg-primary/10 active:bg-primary/20'
+      ]" active-class="bg-primary/20">
         <span class="inline text-lg">⚙️</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">设置</span>
@@ -193,7 +200,7 @@ const displayedUsername = computed(() => {
       <!-- 折叠按钮 -->
       <button v-comfy-tooltip="'折叠/展开侧边栏'" @click="uiStore.toggleMainSidebar()" class="w-full p-2 rounded flex items-center mt-2" :class="[ // + 使用 uiStore action
           uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
-          themeStore.isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100' // 亮色主题 hover 调整
+          'hover:bg-primary/10'
         ]">
         <span role="img" aria-label="sidebar" class="text-lg p-1" v-if="uiStore.isMainSidebarCollapsed">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"

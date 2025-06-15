@@ -1,0 +1,48 @@
+/* ComfyTavern 核心主题 CSS 变量定义 */
+/* 这些是基础回退值，会被 themeStore 动态应用的主题覆盖 */
+
+:root {
+  /* 默认亮色主题变量 */
+  --ct-primary: #007bff;          /* 关键操作、高亮元素 */
+  --ct-secondary: #6c757d;        /* 辅助元素、次级按钮 */
+  --ct-accent: #17a2b8;           /* 强调色 */
+  --ct-background-base: #ffffff;    /* 最底层的背景色 */
+  --ct-background-surface: #f8f9fa; /* 卡片、面板等表层元素的背景色 */
+  --ct-text-base: #212529;         /* 主要文本颜色 */
+  --ct-text-muted: #6c757d;        /* 次要或辅助性文本颜色 */
+  --ct-border-base: #dee2e6;        /* 主要边框颜色 */
+
+  /* 状态颜色 (DaisyUI 桥接可能需要) */
+  --ct-info: #17a2b8;             /* 信息状态，可与 accent 或 primary 关联 */
+  --ct-success: #28a745;           /* 成功状态 */
+  --ct-warning: #ffc107;           /* 警告状态 */
+  --ct-error: #dc3545;             /* 错误状态 */
+
+  /* 其他 DaisyUI 可能需要的语义颜色，可以先用基础色占位 */
+  --ct-neutral: var(--ct-text-base); /* DaisyUI neutral 常用于文本或中性背景 */
+  /* --ct-primary-focus: color-mix(in srgb, var(--ct-primary) 80%, black); */
+  /* --ct-primary-content: white; */
+  /* ... 更多 DaisyUI 特定变量可以根据需要添加和映射 ... */
+}
+
+html.dark {
+  /* 默认暗色主题变量 */
+  --ct-primary: #4dabf7;          /* 亮一些的蓝色，适应暗色背景 */
+  --ct-secondary: #868e96;
+  --ct-accent: #3bc9db;
+  --ct-background-base: #121212;    /* 非常深的灰色，接近纯黑 */
+  --ct-background-surface: #1e1e1e; /* 比 base 稍亮的深灰色 */
+  --ct-text-base: #e0e0e0;         /* 浅灰色文本 */
+  --ct-text-muted: #a0a0a0;        /* 中灰色文本 */
+  --ct-border-base: #424242;        /* 暗色模式下的边框 */
+
+  /* 暗色模式下的状态颜色 */
+  --ct-info: #3bc9db;
+  --ct-success: #40c057;
+  --ct-warning: #fab005;
+  --ct-error: #fa5252;
+
+  --ct-neutral: var(--ct-text-base);
+  /* --ct-primary-focus: color-mix(in srgb, var(--ct-primary) 80%, black); */
+  /* --ct-primary-content: black; */
+}

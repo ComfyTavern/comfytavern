@@ -1,0 +1,45 @@
+{
+  "id": "default-light",
+  "name": "默认亮色",
+  "isSystemTheme": true,
+  "variants": {
+    "light": {
+      "variables": {
+        "--ct-primary": "#007bff",
+        "--ct-secondary": "#6c757d",
+        "--ct-accent": "#17a2b8",
+        "--ct-background-base": "#ffffff",
+        "--ct-background-surface": "#f8f9fa",
+        "--ct-text-base": "#212529",
+        "--ct-text-muted": "#6c757d",
+        "--ct-border-base": "#dee2e6",
+        "--ct-info": "#17a2b8",
+        "--ct-success": "#28a745",
+        "--ct-warning": "#ffc107",
+        "--ct-error": "#dc3545",
+        "--ct-neutral": "#212529"
+      }
+    },
+    "dark": {
+      "variables": {
+        "--ct-primary": "#007bff",
+        "--ct-secondary": "#6c757d",
+        "--ct-accent": "#17a2b8",
+        "--ct-background-base": "#121212",
+        "--ct-background-surface": "#1e1e1e",
+        "--ct-text-base": "#e0e0e0",
+        "--ct-text-muted": "#a0a0a0",
+        "--ct-border-base": "#424242",
+        "--ct-info": "#17a2b8",
+        "--ct-success": "#28a745",
+        "--ct-warning": "#ffc107",
+        "--ct-error": "#dc3545",
+        "--ct-neutral": "#e0e0e0"
+      }
+    }
+  },
+  "metadata": {
+    "author": "ComfyTavern Team",
+    "description": "默认的亮色基础主题，提供暗色模式兼容性。"
+  }
+}

@@ -23,7 +23,7 @@ const uiStore = useUiStore(); // 初始化 UI Store
 const projectStore = useProjectStore();
 const authStore = useAuthStore(); // + 初始化 authStore
 
-const { isDark } = storeToRefs(themeStore)
+const { currentAppliedMode } = storeToRefs(themeStore); // 从 isDark 更改为 currentAppliedMode
 const { activeTabId } = storeToRefs(tabStore);
 const { currentProjectId } = storeToRefs(projectStore); // 获取当前项目 ID 的响应式引用
 const { isSettingsModalVisible, settingsModalProps } = storeToRefs(uiStore); // 获取设置模态框的显示状态和属性
@@ -37,9 +37,9 @@ onMounted(async () => {
   await authStore.fetchUserContext(); // + 获取用户上下文
   uiStore.setupMobileViewListener(); // + 设置移动端视图监听器
 
-  // 应用主题类名到 body，确保初始背景一致
-  document.body.classList.toggle('light-theme', !themeStore.isDark);
-  document.body.classList.toggle('dark-theme', themeStore.isDark); // 可选：如果需要为暗色主题设置特定的 body 样式
+  // 应用主题类名到 body 的逻辑已由 themeStore.applyCurrentTheme() 在 <html> 上处理
+  // document.body.classList.toggle('light-theme', themeStore.currentAppliedMode.value === 'light');
+  // document.body.classList.toggle('dark-theme', themeStore.currentAppliedMode.value === 'dark');
 
   // 项目加载逻辑已移至路由守卫 (router/index.ts)
   // 初始化标签页和工作流的逻辑将通过 watch(currentProjectId) 触发
@@ -64,9 +64,9 @@ onMounted(async () => {
   }
 });
 
-// 监听主题变化，更新当前活动标签页的边样式
-watch(isDark, (newIsDarkValue) => {
-  console.debug(`App.vue: isDark changed to ${newIsDarkValue}. Updating edge styles.`);
+// 监听主题变化（实际是亮/暗模式应用的变化），更新当前活动标签页的边样式
+watch(currentAppliedMode, (newModeValue) => {
+  console.debug(`App.vue: currentAppliedMode changed to ${newModeValue}. Updating edge styles.`);
   if (activeTabId.value) {
     workflowStore.updateEdgeStylesForTab(activeTabId.value);
   } else {
@@ -167,7 +167,8 @@ body {
   padding: 0;
   height: 100%;
   overflow: hidden;
-  background-color: aquamarine;
+  /* background-color: aquamarine; */ /* 由 CSS 变量控制 */
+  background-color: var(--ct-background-base); /* 使用主题变量 */
 }
 
 #app {
@@ -175,11 +176,13 @@ body {
   width: 100vw;
 }
 
-@media (prefers-color-scheme: dark) {
-
+/* @media (prefers-color-scheme: dark) { */
+  /* 暗色模式的 body 背景也由 html.dark 和 --ct-background-base 控制 */
+/*
   html,
   body {
     background-color: darkslategray;
   }
 }
+*/
 </style>

@@ -27,3 +27,6 @@ export * from './history';
 
 // 导出所有与 SillyTavern 相关的类型
 export * from './SillyTavern';
+
+// 导出所有与主题系统相关的类型
+export * from './theme';
