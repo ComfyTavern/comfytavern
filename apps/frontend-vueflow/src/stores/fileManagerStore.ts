@@ -23,11 +23,12 @@ export interface FilterOptions {
 
 export interface ViewSettings {
   mode: 'list' | 'grid'; // 视图模式
-  sortField: keyof FAMItem | 'name' | 'size' | 'lastModified' | 'itemType'; // 排序字段, FAMItem 替换 ZodValidatedFAMListItem
+  sortField: keyof FAMItem | 'name' | 'size' | 'lastModified' | 'itemType' | 'extension'; // 排序字段, FAMItem 替换 ZodValidatedFAMListItem, 新增 extension
   sortDirection: 'asc' | 'desc'; // 排序方向
   visibleColumns: Array<keyof FAMItem | string>; // 列表视图下可见的列, FAMItem 替换 ZodValidatedFAMListItem
   thumbnailSize: 'small' | 'medium' | 'large'; // 网格视图缩略图大小
   informationDensity: 'compact' | 'comfortable' | 'spacious'; // 信息密度
+  gridItemSize: number; // 网格视图项目大小
 }
 
 export interface FileManagerState {
@@ -96,6 +97,7 @@ export const useFileManagerStore = defineStore('fileManager', {
       visibleColumns: ['name', 'size', 'lastModified', 'itemType'], // 默认显示列
       thumbnailSize: 'medium',
       informationDensity: 'comfortable',
+      gridItemSize: 96, // 新增：默认网格项目大小
     },
     // isDetailPanelVisible: false, // 移至 uiStore
     detailPanelActiveTab: null,
@@ -558,14 +560,28 @@ export const useFileManagerStore = defineStore('fileManager', {
         if (a.itemType === 'directory' && b.itemType === 'file') return -1;
         if (a.itemType === 'file' && b.itemType === 'directory') return 1;
 
-        let valA_raw = a[sortField as keyof FAMItem]; // FAMItem 替换 ZodValidatedFAMListItem
-        let valB_raw = b[sortField as keyof FAMItem]; // FAMItem 替换 ZodValidatedFAMListItem
+        let valA_raw: any = a[sortField as keyof FAMItem];
+        let valB_raw: any = b[sortField as keyof FAMItem];
+
+        const getExtension = (filename: string | undefined | null): string => {
+          if (typeof filename !== 'string') return '';
+          const lastDot = filename.lastIndexOf('.');
+          if (lastDot === -1 || lastDot === 0 || lastDot === filename.length - 1) {
+            return ''; // 没有扩展名或点在开头/末尾
+          }
+          return filename.substring(lastDot + 1).toLowerCase();
+        };
+
+        if (sortField === 'extension') {
+          valA_raw = getExtension(a.name);
+          valB_raw = getExtension(b.name);
+        }
 
         let valA: string | number | boolean;
         let valB: string | number | boolean;
 
         // 对特定字段进行处理并确保类型安全
-        if (sortField === 'name') {
+        if (sortField === 'name' || sortField === 'itemType' || sortField === 'extension') { // itemType 和 extension 也按字符串处理
           valA = (typeof valA_raw === 'string' ? valA_raw : '').toLowerCase();
           valB = (typeof valB_raw === 'string' ? valB_raw : '').toLowerCase();
         } else if (sortField === 'size' || sortField === 'lastModified') {

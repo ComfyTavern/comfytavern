@@ -60,17 +60,36 @@
       <div class="dropdown dropdown-end">
         <label tabindex="0" class="toolbar-action-btn" v-comfy-tooltip="'排序方式'">
           <AdjustmentsHorizontalIcon class="h-5 w-5" />
-          <span class="ml-1 hidden md:inline">{{ currentSortLabel }}</span>
+          <!-- <span class="ml-1 hidden md:inline">{{ currentSortLabel }}</span> -->
           <ChevronDownIcon class="h-4 w-4 ml-1 hidden md:inline" />
         </label>
-        <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 dark:bg-gray-700 rounded-box w-52 z-[1]">
+        <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 dark:bg-gray-800 rounded-box w-60 z-[1]">
+          <li>
+            <div class="flex items-center justify-between px-1 py-1 text-sm">
+              <span class="text-gray-600 dark:text-gray-300">网格视图尺寸</span>
+              <NumberInput v-model="gridItemSizeProxy" size="small" type="INTEGER" :min="16" :max="256" :step="1"
+                class="w-24" />
+            </div>
+            <label class="label cursor-pointer px-1 py-1 justify-start gap-2 items-center">
+              <span class="label-text text-sm text-gray-700 dark:text-gray-200">反向排序</span>
+              <BooleanToggle :model-value="viewSettings.sortDirection === 'desc'"
+                @update:model-value="handleSortDirectionToggle" size="small" />
+            </label>
+          </li>
+          <li class="menu-title px-1 py-1">
+            <span class="text-xs text-gray-500 dark:text-gray-400">排序依据</span>
+          </li>
           <li v-for="option in sortOptions" :key="option.field">
-            <a @click="changeSort(option.field)"
-              :class="{ 'bg-blue-100 dark:bg-blue-600': viewSettings.sortField === option.field }">
+            <a @click="changeSort(option.field)" :class="{
+              'bg-blue-100 dark:bg-blue-600 text-blue-700 dark:text-blue-200':
+                viewSettings.sortField === option.field,
+              'text-gray-700 dark:text-gray-200': viewSettings.sortField !== option.field,
+            }" class="text-sm py-1.5 px-2">
               {{ option.label }}
               <span v-if="viewSettings.sortField === option.field" class="ml-auto">
-                <ArrowUpIcon v-if="viewSettings.sortDirection === 'asc'" class="h-4 w-4" />
-                <ArrowDownIcon v-else class="h-4 w-4" />
+                <!-- 图标现在由反向排序复选框控制，这里可以显示一个选中标记，或不显示 -->
+                <CheckIcon v-if="viewSettings.sortField === option.field"
+                  class="h-4 w-4 text-blue-600 dark:text-blue-400" />
               </span>
             </a>
           </li>
@@ -92,7 +111,8 @@
         v-comfy-tooltip="isDetailPanelOpen ? '隐藏详情面板' : '显示详情面板'" data-testid="fm-toggle-detail-panel-btn">
         <ChevronDoubleRightIcon v-if="isDetailPanelOpen" class="h-5 w-5" />
         <!-- Icon to "push panel away" / collapse -->
-        <ChevronDoubleLeftIcon v-else class="h-5 w-5" /> <!-- Icon to "pull panel in" / expand -->
+        <ChevronDoubleLeftIcon v-else class="h-5 w-5" />
+        <!-- Icon to "pull panel in" / expand -->
       </button>
 
       <button @click="openViewSettingsModal" class="toolbar-action-btn" v-comfy-tooltip="'显示设置'"
@@ -104,16 +124,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import { useFileManagerStore, type ViewSettings } from '@/stores/fileManagerStore';
-import { useUiStore } from '@/stores/uiStore'; // + 导入 uiStore
-import { useDialogService } from '@/services/DialogService'; // 如果需要打开自定义模态框
+import { ref, computed, watch } from "vue";
+import NumberInput from "@/components/graph/inputs/NumberInput.vue";
+import BooleanToggle from "@/components/graph/inputs/BooleanToggle.vue";
+import { useFileManagerStore, type ViewSettings } from "@/stores/fileManagerStore";
+import { useUiStore } from "@/stores/uiStore"; // + 导入 uiStore
+import { useDialogService } from "@/services/DialogService"; // 如果需要打开自定义模态框
 import {
-  ArrowUpTrayIcon, FolderPlusIcon, ArrowPathIcon, MagnifyingGlassIcon,
-  Squares2X2Icon, QueueListIcon, AdjustmentsHorizontalIcon, FunnelIcon, Cog6ToothIcon,
-  ArrowUpIcon, ArrowDownIcon, ChevronDownIcon, ClipboardDocumentIcon,
-  ChevronDoubleLeftIcon, ChevronDoubleRightIcon // + 导入切换详情面板的图标
-} from '@heroicons/vue/24/outline';
+  ArrowUpTrayIcon,
+  FolderPlusIcon,
+  ArrowPathIcon,
+  MagnifyingGlassIcon,
+  Squares2X2Icon,
+  QueueListIcon,
+  AdjustmentsHorizontalIcon,
+  FunnelIcon,
+  Cog6ToothIcon,
+  ChevronDownIcon,
+  ClipboardDocumentIcon,
+  CheckIcon, //移除了 ArrowUpIcon, ArrowDownIcon
+  ChevronDoubleLeftIcon,
+  ChevronDoubleRightIcon, // + 导入切换详情面板的图标
+} from "@heroicons/vue/24/outline";
 // 假设 StringInput 和 SelectInput 是全局注册或可以这样导入的通用组件
 // import StringInput from '@/components/common/inputs/StringInput.vue'; // 示例路径
 // import SelectInput from '@/components/common/inputs/SelectInput.vue'; // 示例路径
@@ -128,20 +160,38 @@ const searchQuery = ref(fileManagerStore.filterOptions.namePattern); // 与 stor
 const isLoading = computed(() => fileManagerStore.isLoading);
 const viewSettings = computed(() => fileManagerStore.viewSettings);
 const activeFiltersCount = computed(() => fileManagerStore.activeFiltersCount);
-const canPaste = computed(() => !!fileManagerStore.clipboard && fileManagerStore.clipboard.sourcePaths.length > 0);
+const canPaste = computed(
+  () => !!fileManagerStore.clipboard && fileManagerStore.clipboard.sourcePaths.length > 0
+);
 const isDetailPanelOpen = computed(() => uiStore.isFileManagerDetailPanelOpen); // + 获取详情面板状态
 
-const sortOptions: { label: string; field: ViewSettings['sortField'] }[] = [
-  { label: '名称', field: 'name' },
-  { label: '大小', field: 'size' },
-  { label: '修改日期', field: 'lastModified' },
-  { label: '类型', field: 'itemType' },
+const sortOptions: { label: string; field: ViewSettings["sortField"] }[] = [
+  { label: "名称", field: "name" },
+  { label: "扩展名", field: "extension" },
+  { label: "修改日期", field: "lastModified" },
+  { label: "大小", field: "size" }, // 图片中的 "尺寸" 对应这里的 "大小" (文件size)
 ];
 
-const currentSortLabel = computed(() => {
-  const option = sortOptions.find(opt => opt.field === viewSettings.value.sortField);
-  return option ? option.label : '排序';
+let gridItemSizeDebounceTimer: number | undefined;
+const gridItemSizeProxy = computed({
+  get: () => viewSettings.value.gridItemSize || 96,
+  set: (value) => {
+    clearTimeout(gridItemSizeDebounceTimer);
+    gridItemSizeDebounceTimer = window.setTimeout(() => {
+      const numValue = Number(value);
+      if (!isNaN(numValue) && numValue >= 16 && numValue <= 256) {
+        // 假设合理范围 16-256
+        fileManagerStore.updateViewSettings({ gridItemSize: numValue });
+      }
+    }, 500);
+  },
 });
+
+// currentSortLabel 不再使用，因为按钮文本是固定的图标或通用文本
+// const currentSortLabel = computed(() => {
+//   const option = sortOptions.find(opt => opt.field === viewSettings.value.sortField);
+//   return option ? option.label : '排序';
+// });
 
 const handleUploadClick = () => {
   fileInputRef.value?.click();
@@ -153,7 +203,7 @@ const handleFileSelected = (event: Event) => {
     fileManagerStore.uploadFiles(input.files);
   }
   // 重置 input 以便可以再次选择相同文件
-  if (input) input.value = '';
+  if (input) input.value = "";
 };
 
 const createNewFolder = () => {
@@ -180,51 +230,57 @@ const triggerSearch = () => {
   fileManagerStore.searchFiles(searchQuery.value);
 };
 
-
 // 监听 store 中的 namePattern 变化，以防外部修改
-watch(() => fileManagerStore.filterOptions.namePattern, (newNamePattern) => {
-  if (searchQuery.value !== newNamePattern) {
-    searchQuery.value = newNamePattern;
+watch(
+  () => fileManagerStore.filterOptions.namePattern,
+  (newNamePattern) => {
+    if (searchQuery.value !== newNamePattern) {
+      searchQuery.value = newNamePattern;
+    }
   }
-});
-
+);
 
 const toggleViewMode = () => {
-  const newMode = viewSettings.value.mode === 'list' ? 'grid' : 'list';
+  const newMode = viewSettings.value.mode === "list" ? "grid" : "list";
   fileManagerStore.updateViewSettings({ mode: newMode });
 };
 
-const changeSort = (field: ViewSettings['sortField']) => {
-  let direction = viewSettings.value.sortDirection;
-  if (viewSettings.value.sortField === field) {
-    direction = direction === 'asc' ? 'desc' : 'asc';
-  } else {
-    direction = 'asc'; // 默认升序
+const changeSort = (field: ViewSettings["sortField"]) => {
+  const currentSortField = viewSettings.value.sortField;
+  let newDirection = viewSettings.value.sortDirection;
+
+  if (currentSortField !== field) {
+    newDirection = "asc"; // 切换字段时，默认升序
   }
-  fileManagerStore.updateViewSettings({ sortField: field, sortDirection: direction });
+  // 方向由 toggleSortDirection 控制，这里只设置字段和可能的方向重置
+  fileManagerStore.updateViewSettings({ sortField: field, sortDirection: newDirection });
+};
+
+const handleSortDirectionToggle = (isChecked: boolean) => {
+  const newDirection = isChecked ? "desc" : "asc";
+  fileManagerStore.updateViewSettings({ sortDirection: newDirection });
 };
 
 const openFilterModal = () => {
   // 这里将打开 FilterModal.vue
   // 假设 FilterModal 是通过 DialogService 或一个全局状态管理的
   // dialogService.showCustomModal('FilterModal', { /* props */ });
-  console.log('TODO: Open FilterModal');
+  console.log("TODO: Open FilterModal");
   // 临时的:
   if (fileManagerStore.isFilterActive) {
     fileManagerStore.clearFilters();
-    dialogService.showToast({ message: '筛选已清除', type: 'info' });
+    dialogService.showToast({ message: "筛选已清除", type: "info" });
   } else {
-    dialogService.showToast({ message: '打开高级筛选（占位）', type: 'info' });
+    dialogService.showToast({ message: "打开高级筛选（占位）", type: "info" });
   }
 };
 
 const openViewSettingsModal = () => {
   // 这里将打开 ViewSettingsModal.vue
   // dialogService.showCustomModal('ViewSettingsModal', { /* props */ });
-  console.log('TODO: Open ViewSettingsModal');
-  dialogService.showToast({ message: '打开显示设置（占位）', type: 'info' });
+  console.log("TODO: Open ViewSettingsModal");
+  dialogService.showToast({ message: "打开显示设置（占位）", type: "info" });
 };
-
 </script>
 
 <style scoped>
