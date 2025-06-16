@@ -13,9 +13,9 @@
       class="custom-textarea w-full rounded border transition-colors duration-200 bg-background-base dark:bg-background-surface border-border-base text-text-base placeholder-text-muted focus:ring-1 focus:ring-primary/50 focus:border-transparent hover:border-primary"
       :class="[sizeClasses.textarea, { // 应用 sizeClasses 并移除静态 p-1 text-sm
         'border-error': props.hasError,
-        'opacity-75 bg-background-base/70 dark:bg-background-surface/70 cursor-default focus:ring-0 focus:border-border-base':
+        'opacity-75 bg-background-base dark:bg-background-surface/70 cursor-default focus:ring-0 focus:border-border-base':
           props.readonly && !props.disabled,
-        'disabled:bg-background-base/50 dark:disabled:bg-background-surface/50 disabled:text-text-muted disabled:cursor-not-allowed':
+        'disabled:bg-background-base dark:disabled:bg-background-surface/50 disabled:text-text-muted disabled:cursor-not-allowed':
           props.disabled,
       }]"
     />

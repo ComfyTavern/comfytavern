@@ -9,7 +9,7 @@
     <div class="file-list-container flex-1 overflow-auto relative" @contextmenu.prevent="showContextMenu"
       data-testid="fm-file-list-container">
       <div v-if="isLoading"
-        class="loading-overlay absolute inset-0 flex items-center justify-center bg-background-base/70 z-10">
+        class="loading-overlay absolute inset-0 flex items-center justify-center bg-background-base opacity-75 z-10">
         <ArrowPathIcon class="h-8 w-8 animate-spin text-primary" />
       </div>
 

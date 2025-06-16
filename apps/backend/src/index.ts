@@ -21,7 +21,8 @@ import {
   LOG_DIR as APP_LOG_DIR, // 从 config.ts 导入，可能已被覆盖
   MULTI_USER_MODE,
   ACCESS_PASSWORD_HASH,
-  SINGLE_USER_PATH
+  SINGLE_USER_PATH,
+  CORS_ALLOWED_ORIGINS, // + 导入 CORS 白名单
 } from './config';
 import { characterApiRoutes } from './routes/characterRoutes';
 import { executionApiRoutes } from './routes/executionRoutes';
@@ -149,14 +150,33 @@ for (const dir of logicalDirsToEnsure) {
 }
 
 const app = new Elysia()
-  .use(
-    cors({
-      origin: process.argv.includes("dev") ? "*" : FRONTEND_URL,
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // 添加 PUT 和 DELETE 方法支持
-      allowedHeaders: ["Content-Type"],
-      credentials: true,
-      preflight: true, // 启用预检请求支持
-    })
+  app.use(
+    cors((() => {
+      // 构建实际的白名单
+      // 确保 FRONTEND_URL 存在且有效才加入，并对整个列表去重和过滤无效条目
+      const uniqueOrigins = new Set<string>();
+      if (FRONTEND_URL && typeof FRONTEND_URL === 'string' && FRONTEND_URL.trim() !== '') {
+        uniqueOrigins.add(FRONTEND_URL);
+      }
+      if (Array.isArray(CORS_ALLOWED_ORIGINS)) {
+        CORS_ALLOWED_ORIGINS.forEach(origin => {
+          if (origin && typeof origin === 'string' && origin.trim() !== '') {
+            uniqueOrigins.add(origin);
+          }
+        });
+      }
+      const effectiveAllowedOrigins = Array.from(uniqueOrigins);
+  
+      console.log('[ComfyTavern Backend] Effective CORS Allowed Origins:', effectiveAllowedOrigins);
+  
+      return {
+        origin: effectiveAllowedOrigins.length > 0 ? effectiveAllowedOrigins : false, // 如果列表为空，则明确禁止所有跨域
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+        credentials: true,
+        preflight: true,
+      };
+    })())
   )
   .use(staticPlugin({
     assets: getPublicDir(), // 使用确保存在的 publicDir

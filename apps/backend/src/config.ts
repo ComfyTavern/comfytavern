@@ -18,7 +18,16 @@ export const LOG_DIR = executionConfig.logDir
   : getLogDir();
 
 export const PORT = backend.port;
-export const FRONTEND_URL = `http://localhost:${frontend.port}`;
+
+// 优先从环境变量 FRONTEND_URL 获取前端 URL
+// 如果环境变量未设置，则尝试从 config.json 的 server.frontend.baseUrl 获取 (如果存在)
+// 如果两者都未设置，则回退到基于 localhost 和 config.json 中定义的端口进行本地开发
+const configFrontendPort = frontend.port;
+const configFrontendBaseUrl = (frontend as any).baseUrl; // 假设 config.json 中可能有 server.frontend.baseUrl
+export const FRONTEND_URL = process.env.FRONTEND_URL ||
+                            configFrontendBaseUrl ||
+                            `http://localhost:${configFrontendPort}`;
+
 export const MAX_CONCURRENT_WORKFLOWS = executionConfig.max_concurrent_workflows ?? 5; // 从配置读取，提供默认值
 
 // 从 config.json 读取自定义节点路径，如果不存在则默认为空数组
@@ -38,6 +47,9 @@ const securityConfig = (config as any).security || {};
 export const ENABLE_CREDENTIAL_ENCRYPTION: boolean = securityConfig.enableCredentialEncryption === true; // 明确转为布尔值，默认为 false 如果未配置或配置非 true
 // export const MEK_ENV_VAR_NAME: string = securityConfig.masterEncryptionKeyEnvVar || 'COMFYTAVERN_MASTER_ENCRYPTION_KEY'; // 从配置中读取环境变量名，提供默认值
 export const MASTER_ENCRYPTION_KEY: string | undefined = securityConfig.masterEncryptionKeyValue || undefined;
+// 新增：读取 CORS 允许的源白名单，默认为空数组
+export const CORS_ALLOWED_ORIGINS: string[] = Array.isArray(securityConfig.corsAllowedOrigins) ? securityConfig.corsAllowedOrigins : [];
+
 
 // 使用 fileUtils 获取标准目录路径
 export const LIBRARY_BASE_DIR = getLibraryBaseDir(); // 全局库根目录

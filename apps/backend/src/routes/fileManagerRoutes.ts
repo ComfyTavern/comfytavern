@@ -689,11 +689,12 @@ export const fileManagerRoutes = new Elysia({
         else if (ext === "pdf") contentType = "application/pdf";
         // ... 更多类型
 
-        set.headers = {
-          "Content-Type": contentType,
-          "Content-Disposition": `attachment; filename="${encodeURIComponent(fileName)}"`, // 确保文件名编码
-          "Content-Length": String(fileBuffer.length),
-        };
+        // 不直接替换整个 headers 对象，以保留 CORS 中间件设置的头部
+        // set.headers 对象由 Elysia 或上游中间件（如 CORS）初始化
+        // 我们只添加或修改我们关心的头部
+        set.headers['Content-Type'] = contentType;
+        set.headers['Content-Disposition'] = `attachment; filename="${encodeURIComponent(fileName)}"`;
+        set.headers['Content-Length'] = String(fileBuffer.length);
         set.status = 200;
         console.log(
           `[FileManagerRoutes] Successfully prepared file '${logicalPath}' for download for userId: ${userId}`

@@ -20,7 +20,8 @@
         "--ct-error-hsl": "354 70% 54%",
         "--ct-primary-content-hsl": "0 0% 100%",
         "--ct-neutral-hsl": "210 10% 15%",
-
+        "--ct-background-base-opacity": "1",
+ 
         "--ct-menu-item-active-bg-opacity": "0.1",
         "--ct-component-hover-bg-opacity": "0.05",
         "--ct-panel-bg-opacity": "1",
@@ -55,7 +56,8 @@
         "--ct-error-hsl": "0 94% 65%",
         "--ct-primary-content-hsl": "0 0% 100%",
         "--ct-neutral-hsl": "0 0% 88%",
-
+        "--ct-background-base-opacity": "1",
+ 
         "--ct-menu-item-active-bg-opacity": "0.2",
         "--ct-component-hover-bg-opacity": "0.1",
         "--ct-panel-bg-opacity": "1",

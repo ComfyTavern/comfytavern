@@ -21,6 +21,7 @@
   },
   "security": {
     "enableCredentialEncryption": false,
-    "masterEncryptionKeyValue": ""
+    "masterEncryptionKeyValue": "",
+    "corsAllowedOrigins": []
   }
 }

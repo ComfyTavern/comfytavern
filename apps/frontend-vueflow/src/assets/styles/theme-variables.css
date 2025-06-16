@@ -24,6 +24,7 @@
   --ct-neutral-hsl: 210 10% 15%; /* DaisyUI neutral 常用于文本或中性背景, 初始值同 text-text-base */
 
   /* 默认透明度变量 */
+  --ct-background-base-opacity: 1; /* 主要背景色透明度 */
   --ct-menu-item-active-bg-opacity: 0.1;
   --ct-component-hover-bg-opacity: 0.05;
   --ct-panel-bg-opacity: 1; /* 面板通常不透明或由特定主题定义 */
@@ -77,6 +78,7 @@ html.dark {
   --ct-neutral-hsl: 0 0% 88%; /* 初始值同 text-text-base */
 
   /* 暗色模式下的默认透明度变量 (可以与亮色不同，或由主题JSON覆盖) */
+  --ct-background-base-opacity: 1; /* 主要背景色透明度 */
   --ct-menu-item-active-bg-opacity: 0.2;
   --ct-component-hover-bg-opacity: 0.1;
   --ct-panel-bg-opacity: 1;

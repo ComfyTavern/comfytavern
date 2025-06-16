@@ -7,9 +7,9 @@
         {
           'border-error': props.hasError,
           'rounded-r-none': hasSuggestions,
-          'opacity-75 bg-background-base/70 dark:bg-background-surface/70 cursor-default focus:ring-0 focus:border-border-base':
+          'opacity-75 bg-background-base dark:bg-background-surface/70 cursor-default focus:ring-0 focus:border-border-base':
             props.readonly && !props.disabled,
-          'disabled:bg-background-base/50 dark:disabled:bg-background-surface/50 disabled:text-text-muted disabled:cursor-not-allowed':
+          'disabled:bg-background-base dark:disabled:bg-background-surface/50 disabled:text-text-muted disabled:cursor-not-allowed':
             props.disabled,
         }]
         " autocomplete="off" />

@@ -21,9 +21,9 @@
           sizeClasses.editingInput,
           {
             'border-error': hasError,
-            'opacity-75 bg-background-base/70 dark:bg-background-surface/70 cursor-default focus:ring-0 focus:border-border-base': // Simplified readonly bg
+            'opacity-75 bg-background-base dark:bg-background-surface/70 cursor-default focus:ring-0 focus:border-border-base': // Simplified readonly bg
               props.readonly && !props.disabled,
-            'disabled:bg-background-base/50 dark:disabled:bg-background-surface/50 disabled:text-text-muted disabled:cursor-not-allowed': // Simplified disabled bg
+            'disabled:bg-background-base dark:disabled:bg-background-surface/50 disabled:text-text-muted disabled:cursor-not-allowed': // Simplified disabled bg
               props.disabled,
           }
         ]"
@@ -37,7 +37,7 @@
         :class="[
           sizeClasses.displayWrapper,
           {
-            'opacity-75 bg-background-base/70 dark:bg-background-surface/70 cursor-default': // Simplified readonly bg
+            'opacity-75 bg-background-base dark:bg-background-surface/70 cursor-default': // Simplified readonly bg
               props.readonly && !props.disabled,
             'opacity-50 cursor-not-allowed': props.disabled,
           }
