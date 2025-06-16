@@ -38,6 +38,7 @@
       :suggestions="itemConfig.options || []"
       class="w-full"
       size="large"
+      :apply-canvas-scale="false"
     />
     <ButtonGroupInput
       v-else-if="itemConfig.type === 'button-group'"

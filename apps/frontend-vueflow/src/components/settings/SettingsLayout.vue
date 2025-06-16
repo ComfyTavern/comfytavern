@@ -265,7 +265,7 @@ watch(
   margin: 0 42px; /* 左右外边距调整为32px */
   display: inline-flex; /* 让ul根据内容自适应宽度，并可以应用padding和圆角 */
   background-color: transparent; /* 胶囊组的背景色 */
-  border-radius: 9999px; /* 大圆角形成胶囊容器 */
+  border-radius: 8px; /* 修改为圆角矩形容器 */
   gap: 4px; /* 标签之间的间距 */
 }
 
@@ -276,7 +276,7 @@ watch(
   display: flex;
   align-items: center;
   gap: 6px; /* 调整图标和文字间距 */
-  border-radius: 9999px; /* 大圆角形成胶囊标签 */
+  border-radius: 8px; /* 修改为圆角矩形 */
   transition: all 0.2s ease;
   border: 1px solid transparent; /* 添加一个透明边框，防止激活时跳动 */
   /* 移除 border-bottom 和 margin-bottom */

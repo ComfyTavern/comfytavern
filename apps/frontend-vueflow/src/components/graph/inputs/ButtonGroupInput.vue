@@ -70,6 +70,7 @@ const sizeClasses = computed(() => {
 <style scoped>
 .button-group-input {
   display: inline-flex;
+  justify-content: flex-end; /* 让内部按钮组右对齐 */
   border-radius: 0.375rem; /* rounded-md */
   padding: 2px; /* Adjust as needed, creates a slight inset for buttons */
   background-color: var(--ct-background-surface); /* Match DisplayModeSwitcher's container */

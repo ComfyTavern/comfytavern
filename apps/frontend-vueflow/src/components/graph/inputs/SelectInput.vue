@@ -42,6 +42,7 @@
       :target-element="rootRef"
       :trigger-width="dropdownWidth"
       :canvas-scale="currentCanvasScale"
+      :size="props.size"
       @select="handleSuggestionSelect"
       @close="closeDropdown"
     />
@@ -73,6 +74,7 @@ interface Props {
   errorMessage?: string
   readonly?: boolean
   size?: 'small' | 'large'
+  applyCanvasScale?: boolean // 新增 prop，用于控制是否应用画布缩放
 }
 
 // 定义 Props 默认值
@@ -85,6 +87,7 @@ const props = withDefaults(defineProps<Props>(), {
   errorMessage: '',
   readonly: false,
   size: 'small',
+  applyCanvasScale: true, // 默认应用画布缩放
 })
 
 const sizeClasses = computed(() => {
@@ -111,7 +114,12 @@ const dropdownWidth = ref(0)
 
 // Get viewport from VueFlow to access zoom level
 const { viewport } = useVueFlow()
-const currentCanvasScale = computed(() => viewport.value.zoom ?? 1)
+const currentCanvasScale = computed(() => {
+  if (!props.applyCanvasScale) {
+    return 1; // 如果 prop 指示不应用缩放，则强制为 1
+  }
+  return viewport.value.zoom ?? 1; // 否则，使用画布的 zoom 或默认为 1
+})
 
 // 统一处理建议选项
 const normalizedSuggestions = computed<Option[]>(() =>

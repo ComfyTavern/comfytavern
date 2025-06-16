@@ -10,14 +10,14 @@
             transform: `scale(${props.canvasScale})`,
             transformOrigin: 'top left',
           }"
-          class="suggestion-dropdown absolute z-[9999] min-w-[100px] mt-1 max-h-60 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg text-gray-900 dark:text-gray-100 text-xs py-1 focus:outline-none"
+          :class="dropdownSizeClasses.ul"
           tabindex="-1"
           @keydown="handleKeydown"
       >
           <!-- 搜索输入框 -->
           <li
             v-if="searchable"
-            class="sticky top-0 bg-white dark:bg-gray-800 px-2 pt-1 pb-1.5 z-10"
+            class="sticky top-0 bg-background-surface px-2 pt-1 pb-1.5 z-10"
           >
             <input
               ref="searchInputRef"
@@ -26,7 +26,7 @@
               placeholder="搜索..."
               @keydown.stop
               @mousedown.stop
-              class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
+              :class="dropdownSizeClasses.searchInput"
             />
           </li>
           <!-- 使用 filteredSuggestions -->
@@ -34,8 +34,8 @@
             v-for="(suggestion, index) in filteredSuggestions"
             :key="index"
             @mousedown.prevent="selectSuggestion(suggestion)"
-            class="px-3 py-1 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-700 whitespace-nowrap"
-            :class="{ 'bg-blue-200 dark:bg-blue-600': index === highlightedIndex }"
+            :class="[dropdownSizeClasses.listItem, index === highlightedIndex ? dropdownSizeClasses.listItemHighlightedClass : '']"
+            class="cursor-pointer hover:bg-primary-softest dark:hover:bg-primary-soft whitespace-nowrap"
             @mouseenter="highlightedIndex = index"
           >
             {{ suggestion }}
@@ -43,7 +43,7 @@
           <!-- 修改：当过滤后列表为空时显示 -->
           <li
             v-if="!filteredSuggestions || filteredSuggestions.length === 0"
-            class="px-3 py-1 text-gray-500 italic"
+            class="px-3 py-1 text-text-muted italic"
           >
             {{ searchQuery ? "无匹配结果" : "无建议" }}
           </li>
@@ -81,6 +81,7 @@ interface Props {
   triggerWidth?: number; // 触发元素的宽度
   canvasScale?: number; // 可选：用于 CSS transform 的画布缩放比例
   searchable?: boolean; // 是否启用搜索
+  size?: 'small' | 'large'; // 新增 size prop
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -91,6 +92,7 @@ const props = withDefaults(defineProps<Props>(), {
   triggerWidth: 0,
   canvasScale: 1, // 默认缩放比例
   searchable: false, // 默认不启用搜索
+  size: 'small', // 默认尺寸为 small
 });
 
 const emit = defineEmits<{
@@ -105,6 +107,24 @@ const highlightedIndex = ref(-1);
 const searchQuery = ref(""); // 搜索关键词
 
 // Removed theme store logic
+
+const dropdownSizeClasses = computed(() => {
+  if (props.size === 'large') {
+    return {
+      ul: 'suggestion-dropdown absolute z-[9999] min-w-[100px] mt-1 max-h-60 overflow-y-auto bg-background-surface border-border-base rounded shadow-lg text-text-base text-sm py-1.5 focus:outline-none',
+      searchInput: 'w-full px-2 py-1.5 text-sm border-border-base rounded bg-background-base text-text-base focus:outline-none focus:ring-1 focus:ring-primary',
+      listItem: 'px-3 py-2', // py-2 to match h-10 (40px) of large SelectInput button. (2*8px padding + 24px line height approx)
+      listItemHighlightedClass: 'bg-primary-soft text-text-base'
+    };
+  }
+  // small (default)
+  return {
+    ul: 'suggestion-dropdown absolute z-[9999] min-w-[100px] mt-1 max-h-60 overflow-y-auto bg-background-surface border-border-base rounded shadow-lg text-text-base text-xs py-1 focus:outline-none',
+    searchInput: 'w-full px-2 py-1 text-xs border-border-base rounded bg-background-base text-text-base focus:outline-none focus:ring-1 focus:ring-primary',
+    listItem: 'px-3 py-1',
+    listItemHighlightedClass: 'bg-primary-soft text-text-base'
+  };
+});
 
 // 获取 viewport 以检测缩放变化
 const { viewport } = useVueFlow();
@@ -299,8 +319,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .suggestion-dropdown {
-  /* 可以添加特定样式 */
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  /* 可以添加特定样式, 但 box-shadow 已由 ul 上的 shadow-lg 提供 */
 }
 
 .fade-enter-active,
