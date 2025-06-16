@@ -1,5 +1,5 @@
 <template>
-  <div class="workflow-panel p-4 h-full flex flex-col bg-background-surface text-text-base"> 
+  <div class="workflow-panel p-4 h-full flex flex-col text-text-base">
     <h3 class="text-lg font-semibold mb-4 border-b pb-2 border-border-base">工作流</h3>
 
     <!-- 搜索框 (可选) -->

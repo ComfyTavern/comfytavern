@@ -3,12 +3,8 @@
     <div class="panel-header">
       <div class="header-top">
         <div class="panel-title">节点库</div>
-        <button
-          @click="reloadNodes"
-          :disabled="nodeLoading || localLoading"
-          class="reload-button"
-          v-comfy-tooltip="'重新加载节点定义'"
-        >
+        <button @click="reloadNodes" :disabled="nodeLoading || localLoading" class="reload-button"
+          v-comfy-tooltip="'重新加载节点定义'">
           🔄
         </button>
       </div>
@@ -32,37 +28,23 @@
       <span v-else-if="nodeLoading || localLoading">加载节点中...</span>
       <span v-if="reloadError" class="text-danger mt-2">
         重载失败: {{ reloadError }}
-        <button
-          @click="reloadNodes"
+        <button @click="reloadNodes"
           class="ml-2 px-2 py-1 bg-primary hover:bg-primary-hover text-text-on-primary rounded-md text-xs"
-          :disabled="localLoading"
-        >
+          :disabled="localLoading">
           重试
         </button>
       </span>
     </div>
 
-    <OverlayScrollbarsComponent
-      v-else-if="!reloadError"
-      :options="{
-        scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
-      }"
-      class="panel-content-scrollable flex-1"
-      defer
-    >
+    <OverlayScrollbarsComponent v-else-if="!reloadError" :options="{
+      scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
+    }" class="panel-content-scrollable flex-1" defer>
       <!-- Content that needs scrolling -->
       <template v-if="nodeDefinitions?.length">
         <div v-if="searchQuery" class="search-results">
           <!-- 搜索结果标题已移除，直接显示列表 -->
-          <div
-            v-for="node in filteredNodes"
-            :key="node.type"
-            class="node-item"
-            draggable="true"
-            @dragstart="(event) => handleDragStart(event, node)"
-            @dragend="handleDragEnd"
-            @click="selectNode(node)"
-          >
+          <div v-for="node in filteredNodes" :key="node.type" class="node-item" draggable="true"
+            @dragstart="(event) => handleDragStart(event, node)" @dragend="handleDragEnd" @click="selectNode(node)">
             <div class="node-info">
               <div class="node-name">{{ node.displayName || node.type }}</div>
               <div class="node-type">{{ node.category }}</div>
@@ -70,7 +52,12 @@
             </div>
             <div class="node-actions">
               <div class="node-drag-handle" @click.stop="addNodeToCanvas(node.type)" v-comfy-tooltip="'点击或拖拽添加到画布'">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  class="lucide lucide-plus">
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
               </div>
             </div>
           </div>
@@ -80,16 +67,12 @@
 
         <template v-else>
           <!-- Iterate through namespaces -->
-          <div
-            v-for="(categories, namespace) in nodesByNamespaceAndCategory"
-            :key="namespace"
-            class="node-namespace-section"
-          >
+          <div v-for="(categories, namespace) in nodesByNamespaceAndCategory" :key="namespace"
+            class="node-namespace-section">
             <!-- Namespace Title Bar -->
             <div
               class="namespace-title bg-background-surface/90 px-2 py-1 rounded cursor-pointer flex items-center justify-between mb-1"
-              @click="toggleCollapse(namespace)"
-            >
+              @click="toggleCollapse(namespace)">
               <span>{{ namespace }}</span>
               <span class="text-lg">{{ collapsedStates[namespace] ? "▸" : "▾" }}</span>
             </div>
@@ -97,16 +80,12 @@
             <!-- Categories within the namespace (collapsible content) -->
             <div v-show="!collapsedStates[namespace]">
               <!-- Iterate through categories within the namespace -->
-              <div
-                v-for="(nodes, category) in categories"
-                :key="`${namespace}-${category}`"
-                class="node-category-section"
-              >
+              <div v-for="(nodes, category) in categories" :key="`${namespace}-${category}`"
+                class="node-category-section">
                 <!-- Category Title Bar -->
                 <div
-                  class="category-title bg-neutral/20 px-2 py-1 rounded cursor-pointer flex items-center justify-between mt-1"
-                  @click="toggleCollapse(`${namespace}:${category}`)"
-                >
+                  class="category-title  bg-primary/20 px-2 py-1 rounded cursor-pointer flex items-center justify-between mt-1"
+                  @click="toggleCollapse(`${namespace}:${category}`)">
                   <span>{{ category }}</span>
                   <span class="text-lg">{{
                     collapsedStates[`${namespace}:${category}`] ? "▸" : "▾"
@@ -116,15 +95,9 @@
                 <!-- Nodes within the category (collapsible content) -->
                 <div v-show="!collapsedStates[`${namespace}:${category}`]">
                   <!-- Iterate through nodes within the category -->
-                  <div
-                    v-for="node in nodes"
-                    :key="`${namespace}:${node.type}`"
-                    class="node-item"
-                    draggable="true"
-                    @dragstart="(event) => handleDragStart(event, node)"
-                    @dragend="handleDragEnd"
-                    @click="selectNode(node)"
-                  >
+                  <div v-for="node in nodes" :key="`${namespace}:${node.type}`" class="node-item" draggable="true"
+                    @dragstart="(event) => handleDragStart(event, node)" @dragend="handleDragEnd"
+                    @click="selectNode(node)">
                     <div class="node-info">
                       <div class="node-name">{{ node.displayName || node.type }}</div>
                       <div class="node-type">{{ namespace }}:{{ node.type }}</div>
@@ -133,12 +106,14 @@
                       </div>
                     </div>
                     <div class="node-actions">
-                      <div
-                        class="node-drag-handle"
-                        @click.stop="addNodeToCanvas(`${namespace}:${node.type}`)"
-                        v-comfy-tooltip="'点击或拖拽添加到画布'"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                      <div class="node-drag-handle" @click.stop="addNodeToCanvas(`${namespace}:${node.type}`)"
+                        v-comfy-tooltip="'点击或拖拽添加到画布'">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                          class="lucide lucide-plus">
+                          <path d="M5 12h14" />
+                          <path d="M12 5v14" />
+                        </svg>
                       </div>
                     </div>
                   </div>
@@ -408,7 +383,7 @@ onMounted(() => {
 
 <style scoped>
 .node-panel {
-  @apply h-full flex flex-col bg-background-surface;
+  @apply h-full flex flex-col;
   /* 移除边框和固定宽度，由父组件管理 */
   width: 100%;
 }
@@ -426,11 +401,13 @@ onMounted(() => {
 }
 
 .panel-title {
-  @apply text-lg font-medium text-text-base; /* text-text-strong -> text-text-base */
+  @apply text-lg text-text-base font-semibold;
+  /* text-text-strong -> text-text-base */
 }
 
 .search-input {
-  @apply w-full px-3 py-2 border border-border-base bg-background-base text-text-base rounded-md focus:outline-none focus:ring-2 focus:ring-primary; /* border-border-input -> border-border-base, bg-background-input -> bg-background-base, text-text-input -> text-text-base */
+  @apply w-full px-3 py-2 border border-border-base bg-background-base text-text-base rounded-md focus:outline-none focus:ring-2 focus:ring-primary;
+  /* border-border-input -> border-border-base, bg-background-input -> bg-background-base, text-text-input -> text-text-base */
 }
 
 .panel-loading {
@@ -441,14 +418,18 @@ onMounted(() => {
 
 .svg-spinner {
   animation: rotate 2s linear infinite;
-  width: 32px; /* w-8 */
-  height: 32px; /* h-8 */
-  margin-bottom: 0.5rem; /* mb-2 */
+  width: 32px;
+  /* w-8 */
+  height: 32px;
+  /* h-8 */
+  margin-bottom: 0.5rem;
+  /* mb-2 */
 }
 
 .svg-spinner .path {
   /* 使用了之前 CSS 动画中的 blue-500 颜色 */
-  stroke: hsl(var(--ct-primary-hsl)); /* 使用 CSS 变量 */
+  stroke: hsl(var(--ct-primary-hsl));
+  /* 使用 CSS 变量 */
   stroke-linecap: round;
   animation: dash 1.5s ease-in-out infinite;
 }
@@ -464,10 +445,12 @@ onMounted(() => {
     stroke-dasharray: 1, 150;
     stroke-dashoffset: 0;
   }
+
   50% {
     stroke-dasharray: 90, 150;
     stroke-dashoffset: -35;
   }
+
   100% {
     stroke-dasharray: 90, 150;
     stroke-dashoffset: -124;
@@ -477,7 +460,8 @@ onMounted(() => {
 /* .panel-content is now the wrapper inside OverlayScrollbarsComponent */
 .panel-content-scrollable {
   /* flex-1 is applied directly to the component */
-  @apply p-2; /* Keep padding */
+  @apply p-2;
+  /* Keep padding */
 }
 
 /* Removed .section-title styles as they are replaced by title bars */
@@ -485,6 +469,7 @@ onMounted(() => {
 .node-namespace-section {
   /* Removed mb-4, spacing handled by title bar margin */
 }
+
 .namespace-title {
   /* Styles added directly in template for background, padding, etc. */
   @apply text-text-base font-medium;
@@ -494,9 +479,11 @@ onMounted(() => {
   /* Removed ml-2 */
   /* Removed mb-4, spacing handled by title bar margin */
 }
+
 .category-title {
   /* Styles added directly in template for background, padding, etc. */
-  @apply text-sm font-medium text-text-secondary; /* text-text-subtle -> text-text-secondary (assuming subtle was meant to be secondary) */
+  @apply text-sm font-medium text-text-secondary;
+  /* text-text-subtle -> text-text-secondary (assuming subtle was meant to be secondary) */
 }
 
 .node-item {
@@ -513,7 +500,8 @@ onMounted(() => {
 }
 
 .node-icon {
-  @apply w-8 h-8 flex items-center justify-center bg-neutral/20 rounded-md text-text-base mr-3; /* bg-background-neutral-soft -> bg-neutral/20, text-text-default -> text-text-base */
+  @apply w-8 h-8 flex items-center justify-center bg-neutral/20 rounded-md text-text-base mr-3;
+  /* bg-background-neutral-soft -> bg-neutral/20, text-text-default -> text-text-base */
 }
 
 .node-actions {
@@ -521,7 +509,8 @@ onMounted(() => {
 }
 
 .node-drag-handle {
-  @apply w-8 h-8 flex text-3xl items-center justify-center text-text-muted rounded hover:bg-primary hover:bg-opacity-[var(--ct-component-hover-bg-opacity)] cursor-pointer ml-1 border border-border-base border-opacity-40; /* text-text-icon -> text-text-muted */
+  @apply w-8 h-8 flex text-3xl items-center justify-center text-text-muted rounded hover:bg-primary hover:bg-opacity-[var(--ct-component-hover-bg-opacity)] cursor-pointer ml-1 border border-border-base border-opacity-40;
+  /* text-text-icon -> text-text-muted */
   transition: background-color 0.2s;
 }
 
@@ -530,19 +519,23 @@ onMounted(() => {
 }
 
 .node-info {
-  @apply flex-1 overflow-hidden mr-1; /* Added overflow hidden and margin */
+  @apply flex-1 overflow-hidden mr-1;
+  /* Added overflow hidden and margin */
 }
 
 .node-name {
-  @apply text-sm font-medium text-text-base truncate; /* text-text-default -> text-text-base, Added truncate */
+  @apply text-sm font-medium text-text-base truncate;
+  /* text-text-default -> text-text-base, Added truncate */
 }
 
 .node-type {
-  @apply text-xs text-text-muted mb-0.5 truncate; /* Added truncate */
+  @apply text-xs text-text-muted mb-0.5 truncate;
+  /* Added truncate */
 }
 
 .node-description {
-  @apply text-xs text-text-muted truncate; /* text-text-placeholder -> text-text-muted */
+  @apply text-xs text-text-muted truncate;
+  /* text-text-placeholder -> text-text-muted */
   /* max-width: 240px; Removed fixed max-width, rely on parent overflow */
 }
 

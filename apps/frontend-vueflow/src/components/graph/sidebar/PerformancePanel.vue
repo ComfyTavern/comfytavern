@@ -1,13 +1,13 @@
 <template>
   <div class="performance-panel p-4 h-full flex flex-col text-sm">
-    <h3 class="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-200">节点组件统计</h3>
+    <h3 class="text-lg font-semibold mb-4 text-text-base">节点组件统计</h3>
     <div class="flex items-center mb-4 space-x-2">
       <button @click="collectStats"
-        class="px-4 py-2 bg-blue-500 text-primary-content rounded hover:bg-blue-600 transition-colors flex-grow">
+        class="px-4 py-2 bg-primary text-primary-content rounded hover:bg-primary hover:brightness-95 transition-colors flex-grow">
         统计当前画布数据
       </button>
       <button @click="copyStatsToClipboard" title="复制统计数据" :disabled="!stats.length || loading"
-        class="p-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        class="p-2 bg-background-surface text-text-base rounded hover:bg-background-surface hover:brightness-95 dark:hover:brightness-105 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
           stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round"
@@ -16,19 +16,19 @@
       </button>
     </div>
 
-    <div v-if="loading" class="text-gray-500 dark:text-gray-400">正在统计...</div>
+    <div v-if="loading" class="text-text-secondary">正在统计...</div>
 
     <div v-if="!loading && stats.length > 0" class="flex-1 overflow-y-auto">
       <ul class="space-y-1">
         <li v-for="(item, index) in stats" :key="index">
           <div @click="toggleItem(item)"
-            class="flex justify-between items-center p-2 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-            :class="{ 'bg-gray-50 dark:bg-gray-700/50': item.children && item.children.length > 0 }">
-            <span class="font-medium text-gray-700 dark:text-gray-300 flex items-start">
+            class="flex justify-between items-center p-2 rounded cursor-pointer hover:bg-neutral-softest dark:hover:bg-neutral-soft"
+            :class="{ ' bg-primary/20': item.children && item.children.length > 0 }">
+            <span class="font-medium text-text-base flex items-start">
               <!-- 箭头/占位符容器 (固定宽度，防止被压缩) -->
               <span class="shrink-0">
                 <span v-if="item.children && item.children.length > 0"
-                  class="mr-1 inline-flex items-center justify-center w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform duration-150"
+                  class="mr-1 inline-flex items-center justify-center w-5 h-5 text-text-secondary transform transition-transform duration-150"
                   :class="[item.expanded ? 'rotate-0' : '-rotate-90']">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-full w-full" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd"
@@ -42,25 +42,25 @@
               <!-- 文本内容容器 -->
               <span class="flex flex-col">
                 <span>{{ item.label }}</span>
-                <span v-if="item.originalType" class="text-xs text-gray-400 dark:text-gray-500">
+                <span v-if="item.originalType" class="text-xs text-text-muted">
                   ({{ item.originalType }})
                 </span>
               </span>
             </span>
-            <span class="text-gray-600 dark:text-gray-400">{{ item.count }}</span>
+            <span class="text-text-secondary">{{ item.count }}</span>
           </div>
           <!-- 子级列表 -->
           <ul v-if="item.expanded && item.children"
-            class="pl-1 mt-1 space-y-1 border-l border-gray-200 dark:border-gray-600 ml-1">
+            class="pl-1 mt-1 space-y-1 border-l border-border-base ml-1">
             <li v-for="(child, childIndex) in item.children" :key="childIndex">
               <div @click="toggleItem(child)"
-                class="flex justify-between items-center p-1.5 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                :class="{ 'bg-gray-50 dark:bg-gray-700/50': child.children && child.children.length > 0 }">
-                <span class="text-gray-600 dark:text-gray-300 flex items-start">
+                class="flex justify-between items-center p-1.5 rounded cursor-pointer hover:bg-neutral-softest dark:hover:bg-neutral-soft"
+                :class="{ ' bg-primary/30': child.children && child.children.length > 0 }">
+                <span class="text-text-secondary dark:text-text-base flex items-start">
                   <!-- 箭头/占位符容器 (固定宽度，防止被压缩) -->
                   <span class="shrink-0">
                     <span v-if="child.children && child.children.length > 0"
-                      class="mr-1 inline-flex items-center justify-center w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform duration-150"
+                      class="mr-1 inline-flex items-center justify-center w-5 h-5 text-text-secondary transform transition-transform duration-150"
                       :class="[child.expanded ? 'rotate-0' : '-rotate-90']">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-full w-full" viewBox="0 0 20 20"
                         fill="currentColor">
@@ -75,21 +75,21 @@
                   <!-- 文本内容容器 -->
                   <span class="flex flex-col">
                     <span>{{ child.label }}</span>
-                    <span v-if="child.originalType" class="text-xs text-gray-400 dark:text-gray-500">
+                    <span v-if="child.originalType" class="text-xs text-text-muted">
                       ({{ child.originalType }})
                     </span>
                   </span>
                 </span>
-                <span class="text-gray-500 dark:text-gray-400">{{ child.count }}</span>
+                <span class="text-text-secondary">{{ child.count }}</span>
               </div>
               <!-- 孙级列表 -->
               <ul v-if="child.expanded && child.children"
-                class="pl-1 mt-1 space-y-1 border-l border-gray-200 dark:border-gray-600 ml-1">
+                class="pl-1 mt-1 space-y-1 border-l border-border-base ml-1">
                 <li v-for="(grandChild, grandChildIndex) in child.children" :key="grandChildIndex">
                   <!-- 孙级通常没有 originalType 和 children，保持简单显示 -->
                   <div class="flex justify-between items-center p-1 rounded">
-                    <span class="text-gray-500 dark:text-gray-400 ml-6">{{ grandChild.label }}</span> <!-- 增加缩进 -->
-                    <span class="text-gray-500 dark:text-gray-400">{{ grandChild.count }}</span>
+                    <span class="text-text-secondary ml-6">{{ grandChild.label }}</span> <!-- 增加缩进 -->
+                    <span class="text-text-secondary">{{ grandChild.count }}</span>
                   </div>
                 </li>
               </ul>
@@ -98,7 +98,7 @@
         </li>
       </ul>
     </div>
-    <div v-if="!loading && stats.length === 0 && collected" class="text-gray-500 dark:text-gray-400">
+    <div v-if="!loading && stats.length === 0 && collected" class="text-text-secondary">
       没有收集到数据，或者画布为空。
     </div>
   </div>

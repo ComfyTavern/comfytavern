@@ -1,7 +1,7 @@
 <template>
   <div class="history-panel p-4 h-full flex flex-col">
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-semibold text-text-strong">操作历史</h3>
+      <h3 class="text-lg font-semibold text-text-base">操作历史</h3>
       <span v-if="currentHistory" class="text-sm text-text-muted">
         {{ currentHistory.items.length }} / {{ MAX_HISTORY_LENGTH }}
       </span>
@@ -27,9 +27,9 @@
             interactive: true
           }"
           class="history-item p-2 rounded cursor-pointer transition-colors duration-150" :class="{
-            'bg-primary-soft text-primary-strong font-medium':
+            'bg-primary-soft text-primary font-medium':
               item.originalIndex === currentHistory.currentIndex,
-            'hover:bg-background-hover text-text-default':
+            'hover:bg-neutral-softest dark:hover:bg-neutral-soft text-text-base':
               item.originalIndex !== currentHistory.currentIndex,
             'opacity-50': item.originalIndex > currentHistory.currentIndex,
           }" @click="handleHistoryClick(item.originalIndex)">

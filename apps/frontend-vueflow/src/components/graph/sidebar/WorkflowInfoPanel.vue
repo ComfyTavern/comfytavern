@@ -238,14 +238,15 @@ const logWorkflowJson = () => {
 
 <template>
   <div class="workflow-info-panel h-full flex flex-col text-sm">
-    <h3 class="text-lg font-semibold mb-4 border-b pb-2 border-border-base px-4 pt-4 flex-shrink-0">工作流信息</h3>
+    <h3 class="text-lg text-text-base font-semibold mb-4 border-b pb-2 border-border-base px-4 pt-4 flex-shrink-0">工作流信息
+    </h3>
 
     <OverlayScrollbarsComponent v-if="workflowData"
       :options="{ scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' } }"
       class="flex-1 px-4 pb-4" defer>
       <div class="space-y-4"> <!-- Inner wrapper for spacing -->
         <div>
-          <label for="workflow-name" class="block text-xs font-medium text-text-secondary mb-1">名称</label> 
+          <label for="workflow-name" class="block text-xs font-medium text-text-secondary mb-1">名称</label>
           <input id="workflow-name" type="text" v-model="editingName" @blur="handleNameBlur" placeholder="工作流名称"
             class="input-sm w-full" />
 
@@ -253,8 +254,7 @@ const logWorkflowJson = () => {
         </div>
 
         <div>
-          <label for="workflow-description"
-            class="block text-xs font-medium text-text-secondary mb-1">描述</label> 
+          <label for="workflow-description" class="block text-xs font-medium text-text-secondary mb-1">描述</label>
           <textarea id="workflow-description" v-model="editingDescription" @blur="handleDescriptionBlur" rows="4"
             placeholder="工作流描述信息..." class="textarea-sm w-full"></textarea>
           <p class="text-xs text-text-muted mt-1">详细描述这个工作流的功能和用途。</p>
@@ -275,10 +275,8 @@ const logWorkflowJson = () => {
           <!-- 添加节点数量显示 -->
 
           <div class="mt-3">
-            <button
-              @click="logWorkflowJson"
-              class="w-full px-3 py-1.5 text-xs font-medium text-center text-info bg-transparent border border-info rounded-md hover:bg-info-softest focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-info dark:focus:ring-offset-background-surface"
-            >
+            <button @click="logWorkflowJson"
+              class="w-full px-3 py-1.5 text-xs font-medium text-center text-info dark:bg-transparent bg-background-surface border border-info rounded-md hover:bg-info-softest focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-info dark:focus:ring-offset-background-surface">
               输出工作流 JSON 到控制台 (Debug)
             </button>
           </div>
@@ -288,21 +286,22 @@ const logWorkflowJson = () => {
         <div class="border-t pt-3 mt-4 border-border-base">
           <div class="flex items-center cursor-pointer hover:text-primary"
             @click="isNodeListExpanded = !isNodeListExpanded">
-            <span class="transform transition-transform duration-200 mr-2" :class="{ 'rotate-90': isNodeListExpanded }">
+            <span class="transform transition-transform text-xs text-text-muted duration-200 mr-2"
+              :class="{ 'rotate-90': isNodeListExpanded }">
               ▶
             </span>
-            <h2 class="text-xs font-medium uppercase text-text-secondary"> 
+            <h2 class="text-xs font-medium uppercase text-text-secondary">
               工作流节点列表 ({{ nodeCount }})
             </h2>
           </div>
           <OverlayScrollbarsComponent v-if="isNodeListExpanded"
             :options="{ scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' } }"
-            class="mt-2 max-h-60 border rounded border-neutral-soft bg-background-base bg-opacity-50 p-2 text-xs" defer> 
-            <div v-if="workflowNodes.length === 0" class="text-text-muted italic"> 
+            class="mt-2 max-h-60 border rounded border-neutral-soft bg-background-base bg-opacity-50 p-2 text-xs" defer>
+            <div v-if="workflowNodes.length === 0" class="text-text-muted italic">
               此工作流中没有节点。
             </div>
             <ul v-else class="space-y-1">
-              <li v-for="node in workflowNodes" :key="node.id" class="truncate py-0.5">
+              <li v-for="node in workflowNodes" :key="node.id" class="truncate py-0.5 text-text-muted">
                 <span class="font-mono text-text-muted mr-1">[{{ node.type }}]</span>
                 {{ node.label || node.id }}
               </li>
@@ -311,7 +310,7 @@ const logWorkflowJson = () => {
         </div>
       </div>
     </OverlayScrollbarsComponent>
-    <div v-else class="text-text-muted italic text-center py-6 px-4 flex-1">没有活动的工作流或数据不可用。</div> 
+    <div v-else class="text-text-muted italic text-center py-6 px-4 flex-1">没有活动的工作流或数据不可用。</div>
     <!-- Added flex-1 here -->
   </div>
 </template>
@@ -319,10 +318,12 @@ const logWorkflowJson = () => {
 <style scoped>
 /* 使用 Tailwind 的 input 和 textarea 基础样式，并添加 sm 尺寸 */
 .input-sm {
-  @apply block w-full px-2 py-1 text-sm border border-border-base rounded-md shadow-sm placeholder-text-muted focus:outline-none focus:ring-primary focus:border-primary bg-background-base text-text-base; /* border-border-input -> border-border-base, placeholder-text-placeholder -> placeholder-text-muted, bg-background-input -> bg-background-base, text-text-input -> text-text-base */
+  @apply block w-full px-2 py-1 text-sm border border-border-base rounded-md shadow-sm placeholder-text-muted focus:outline-none focus:ring-primary focus:border-primary bg-background-base text-text-base;
+  /* border-border-input -> border-border-base, placeholder-text-placeholder -> placeholder-text-muted, bg-background-input -> bg-background-base, text-text-input -> text-text-base */
 }
 
 .textarea-sm {
-  @apply block w-full px-2 py-1 text-sm border border-border-base rounded-md shadow-sm placeholder-text-muted focus:outline-none focus:ring-primary focus:border-primary bg-background-base text-text-base; /* border-border-input -> border-border-base, placeholder-text-placeholder -> placeholder-text-muted, bg-background-input -> bg-background-base, text-text-input -> text-text-base */
+  @apply block w-full px-2 py-1 text-sm border border-border-base rounded-md shadow-sm placeholder-text-muted focus:outline-none focus:ring-primary focus:border-primary bg-background-base text-text-base;
+  /* border-border-input -> border-border-base, placeholder-text-placeholder -> placeholder-text-muted, bg-background-input -> bg-background-base, text-text-input -> text-text-base */
 }
 </style>
