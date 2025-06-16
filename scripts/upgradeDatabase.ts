@@ -3,6 +3,16 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path'; // 尽管当前 setupDatabase 未直接使用 path，但 projectRoot 依赖，且未来可能用到
 import fs from 'node:fs'; // 导入 fs 模块用于文件系统操作
 
+/**
+ * 检查字符串是否包含非 ASCII 字符。
+ * @param text 要检查的字符串。
+ * @returns 如果包含非 ASCII 字符则返回 true，否则返回 false。
+ */
+function containsNonAscii(text: string): boolean {
+  // eslint-disable-next-line no-control-regex
+  return /[^\x00-\x7F]/.test(text);
+}
+
 const projectRoot = process.cwd();
 
 /**
@@ -32,6 +42,9 @@ function setupDatabase(): boolean {
 
     if (generateResult.status !== 0) {
       console.error(`[upgradeDatabase] bunx drizzle-kit generate 命令执行失败。退出码: ${generateResult.status}`);
+      if (containsNonAscii(projectRoot)) {
+        console.error(`[upgradeDatabase] 检测到项目路径 "${projectRoot}" 包含非 ASCII 字符。drizzle-kit 可能不支持此类路径，这可能是导致生成迁移文件失败的原因。请尝试将项目移动到仅包含 ASCII 字符的纯英文路径下重试。`);
+      }
       return false;
     }
     console.log(`[upgradeDatabase] bunx drizzle-kit generate 命令执行成功。`);
