@@ -4,10 +4,10 @@
     <div class="p-4 sm:p-6 space-y-4 text-sm">
       <p v-if="itemsToMove.length > 0">
         将 {{ itemsToMove.length }} 个项目:
-      <ul class="list-disc list-inside max-h-32 overflow-y-auto bg-gray-50 dark:bg-gray-700 p-2 rounded-md mt-1">
+      <ul class="list-disc list-inside max-h-32 overflow-y-auto bg-background-base p-2 rounded-md mt-1">
         <li v-for="item in itemsToMove" :key="item.logicalPath" class="truncate" :title="item.name">
           <component :is="item.itemType === 'directory' ? FolderIcon : DocumentIcon"
-            class="h-4 w-4 inline-block mr-1.5 align-text-bottom text-gray-500 dark:text-gray-400" />
+            class="h-4 w-4 inline-block mr-1.5 align-text-bottom text-text-muted" />
           {{ item.name }}
         </li>
       </ul>
@@ -15,15 +15,15 @@
       <p v-else>没有选中的项目可移动。</p>
 
       <div>
-        <label for="targetPathInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label for="targetPathInput" class="block text-sm font-medium text-text-base mb-1">
           移动到目标文件夹:
         </label>
         <!-- 简化的路径输入，未来可以替换为路径选择器组件 -->
         <input id="targetPathInput" ref="targetPathInputRef" v-model="targetPath" type="text"
-          class="input input-bordered input-sm w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+          class="input input-bordered input-sm w-full bg-background-base text-text-base border-border-base"
           placeholder="例如: user://documents/new_folder/" @keydown.enter="handleConfirm" />
-        <p v-if="pathError" class="text-xs text-red-500 dark:text-red-400 mt-1">{{ pathError }}</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        <p v-if="pathError" class="text-xs text-error mt-1">{{ pathError }}</p>
+        <p class="text-xs text-text-muted mt-1">
           请输入完整的目标文件夹逻辑路径，并以 / 结尾。
         </p>
       </div>
@@ -31,7 +31,7 @@
     </div>
 
     <template #footer>
-      <div class="flex justify-end space-x-2 p-3 bg-gray-50 dark:bg-gray-750 rounded-b-md">
+      <div class="flex justify-end space-x-2 p-3 bg-background-surface rounded-b-md">
         <button @click="handleClose" class="btn btn-sm btn-ghost" data-testid="fm-move-cancel-btn">
           取消
         </button>

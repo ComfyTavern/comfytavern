@@ -16,14 +16,14 @@
         @blur="endEdit"
         @keydown.enter="endEdit"
         @keydown.esc="cancelEdit"
-        class="w-full rounded border transition-colors duration-200 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-700 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500 text-left"
+        class="w-full rounded border transition-colors duration-200 bg-background-base dark:bg-background-surface border-border-base text-text-base placeholder-text-muted focus:ring-1 focus:ring-primary/50 focus:border-transparent hover:border-primary text-left"
         :class="[
           sizeClasses.editingInput,
           {
-            'border-red-500 dark:border-red-700': hasError,
-            'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default focus:ring-0 focus:border-gray-300 dark:focus:border-gray-600':
+            'border-error': hasError,
+            'opacity-75 bg-background-base/70 dark:bg-background-surface/70 cursor-default focus:ring-0 focus:border-border-base': // Simplified readonly bg
               props.readonly && !props.disabled,
-            'disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed':
+            'disabled:bg-background-base/50 dark:disabled:bg-background-surface/50 disabled:text-text-muted disabled:cursor-not-allowed': // Simplified disabled bg
               props.disabled,
           }
         ]"
@@ -33,11 +33,11 @@
     <template v-else>
       <div
         v-comfy-tooltip="{ content: tooltipContent, placement: 'top', delayShow: 500 }"
-        class="flex items-stretch rounded overflow-hidden border border-gray-300 dark:border-gray-600 group focus-within:ring-1 focus-within:ring-blue-300 dark:focus-within:ring-blue-700 focus-within:border-transparent w-full"
+        class="flex items-stretch rounded overflow-hidden border border-border-base group focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-transparent w-full"
         :class="[
           sizeClasses.displayWrapper,
           {
-            'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default':
+            'opacity-75 bg-background-base/70 dark:bg-background-surface/70 cursor-default': // Simplified readonly bg
               props.readonly && !props.disabled,
             'opacity-50 cursor-not-allowed': props.disabled,
           }
@@ -45,7 +45,7 @@
       >
         <!-- 减少按钮 -->
         <button
-          class="flex items-center justify-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 active:bg-gray-200 dark:active:bg-gray-500 transition-colors duration-200 focus:outline-none border-r border-gray-300 dark:border-gray-600"
+          class="flex items-center justify-center text-text-muted bg-background-base hover:bg-background-hover active:bg-primary/20 transition-colors duration-200 focus:outline-none border-r border-border-base"
           :class="sizeClasses.stepperButton"
           @click.stop="stepValue(-1)"
           :disabled="props.disabled || props.readonly"
@@ -69,15 +69,15 @@
         <!-- 数值显示 -->
         <div
           ref="valueDisplayRef"
-          class="flex flex-1 items-center select-none text-gray-900 dark:text-gray-100 text-right transition-colors duration-200 bg-white dark:bg-gray-700"
+          class="flex flex-1 items-center select-none text-text-base text-right transition-colors duration-200 bg-background-base dark:bg-background-surface"
           :class="[
             sizeClasses.valueDisplay,
             {
               'opacity-50 cursor-not-allowed': props.disabled, // Highest precedence for disabled
               'opacity-75 cursor-default': props.readonly && !props.disabled, // Readonly takes precedence over interactive if not disabled
               'cursor-ew-resize': !props.disabled && !props.readonly, // Draggable only if not disabled or readonly
-              'border-red-500 dark:border-red-700': hasError,
-              'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600':
+              'border-error': hasError,
+              'cursor-pointer hover:bg-background-hover':
                 hasSuggestions && !props.disabled && !props.readonly && !isDragging, // Click to open suggestions
             }
           ]"
@@ -88,7 +88,7 @@
 
         <!-- 增加按钮 -->
         <button
-          class="flex items-center justify-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 active:bg-gray-200 dark:active:bg-gray-500 transition-colors duration-200 focus:outline-none border-l border-gray-300 dark:border-gray-600"
+          class="flex items-center justify-center text-text-muted bg-background-base hover:bg-background-hover active:bg-primary/20 transition-colors duration-200 focus:outline-none border-l border-border-base"
           :class="sizeClasses.stepperButton"
           @click.stop="stepValue(1)"
           :disabled="props.disabled || props.readonly"
@@ -127,7 +127,7 @@
     <!-- Error Message -->
     <div
       v-if="hasError"
-      class="absolute top-full left-0 w-full text-xs text-red-500 dark:text-red-400 mt-1"
+      class="absolute top-full left-0 w-full text-xs text-error mt-1"
     >
       {{ errorMessage }}
     </div>

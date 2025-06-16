@@ -3,25 +3,25 @@
     :close-on-backdrop="!isUploading" data-testid="fm-upload-manager-modal">
     <div class="p-4 sm:p-6 space-y-4 text-sm">
       <div v-if="!filesToUpload || filesToUpload.length === 0"
-        class="text-center py-8 text-gray-500 dark:text-gray-400">
-        <CloudArrowUpIcon class="h-16 w-16 mx-auto mb-3 opacity-50" />
+        class="text-center py-8 text-text-muted">
+        <CloudArrowUpIcon class="h-16 w-16 mx-auto mb-3 opacity-50 text-text-muted" />
         <p>没有待上传的文件。</p>
         <p class="text-xs mt-1">您可以通过文件管理器的“上传”按钮选择文件。</p>
       </div>
 
       <div v-else class="space-y-3">
         <div class="flex justify-between items-center mb-3">
-          <p class="text-gray-700 dark:text-gray-300">
+          <p class="text-text-base">
             目标路径: <strong class="font-mono">{{ targetPathDisplay }}</strong>
           </p>
           <div v-if="overallProgress > 0 && overallProgress < 100 && !allUploadsCompletedOrFailed"
-            class="text-xs text-blue-600 dark:text-blue-400">
+            class="text-xs text-info">
             总体进度: {{ overallProgress.toFixed(0) }}%
           </div>
           <div v-if="allUploadsCompletedOrFailed && !isUploading" class="text-xs">
             <span v-if="successfulUploadsCount === filesToUpload.length"
-              class="text-green-600 dark:text-green-400">全部上传成功!</span>
-            <span v-else class="text-orange-600 dark:text-orange-400">{{ successfulUploadsCount }} / {{
+              class="text-success">全部上传成功!</span>
+            <span v-else class="text-warning">{{ successfulUploadsCount }} / {{
               filesToUpload.length }} 个成功</span>
           </div>
         </div>
@@ -32,39 +32,39 @@
 
         <div class="max-h-[50vh] overflow-y-auto space-y-2 pr-1">
           <div v-for="fileEntry in uploadQueue" :key="fileEntry.id"
-            class="p-2.5 border rounded-md dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+            class="p-2.5 border rounded-md border-border-base bg-background-base">
             <div class="flex items-center justify-between">
               <div class="flex items-center overflow-hidden">
                 <component :is="getFileIcon(fileEntry.file.name)"
-                  class="h-6 w-6 mr-2 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                  class="h-6 w-6 mr-2 text-text-muted flex-shrink-0" />
                 <div class="truncate">
-                  <p class="font-medium text-gray-800 dark:text-gray-100 truncate" :title="fileEntry.file.name">
+                  <p class="font-medium text-text-base truncate" :title="fileEntry.file.name">
                     {{ fileEntry.file.name }}
                   </p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                  <p class="text-xs text-text-muted">
                     {{ formatFileSize(fileEntry.file.size) }}
                   </p>
                 </div>
               </div>
               <div class="flex items-center space-x-2 flex-shrink-0 ml-2">
-                <span v-if="fileEntry.status === 'uploading'" class="text-xs text-blue-500 dark:text-blue-400">
+                <span v-if="fileEntry.status === 'uploading'" class="text-xs text-info">
                   {{ fileEntry.progress.toFixed(0) }}%
                 </span>
                 <CheckCircleIcon v-if="fileEntry.status === 'success'"
-                  class="h-5 w-5 text-green-500 dark:text-green-400" />
-                <XCircleIcon v-if="fileEntry.status === 'error'" class="h-5 w-5 text-red-500 dark:text-red-400"
+                  class="h-5 w-5 text-success" />
+                <XCircleIcon v-if="fileEntry.status === 'error'" class="h-5 w-5 text-error"
                   v-comfy-tooltip="fileEntry.error || '上传失败'" />
-                <ClockIcon v-if="fileEntry.status === 'pending'" class="h-5 w-5 text-gray-400 dark:text-gray-500"
+                <ClockIcon v-if="fileEntry.status === 'pending'" class="h-5 w-5 text-text-muted"
                   v-comfy-tooltip="'等待上传'" />
                 <PauseCircleIcon v-if="fileEntry.status === 'paused'"
-                  class="h-5 w-5 text-yellow-500 dark:text-yellow-400" v-comfy-tooltip="'已暂停'" />
+                  class="h-5 w-5 text-warning" v-comfy-tooltip="'已暂停'" />
 
                 <!-- 单个文件操作按钮 (未来扩展) -->
                 <!-- <button v-if="fileEntry.status === 'pending' || fileEntry.status === 'error'" @click="retryUpload(fileEntry.id)" class="btn btn-xs btn-ghost">重试</button> -->
                 <!-- <button v-if="fileEntry.status === 'uploading'" @click="pauseUpload(fileEntry.id)" class="btn btn-xs btn-ghost">暂停</button> -->
                 <!-- <button v-if="fileEntry.status === 'paused'" @click="resumeUpload(fileEntry.id)" class="btn btn-xs btn-ghost">继续</button> -->
                 <button v-if="canCancel(fileEntry)" @click="cancelUpload(fileEntry.id)"
-                  class="btn btn-xs btn-ghost text-red-500 hover:bg-red-100 dark:hover:bg-red-800"
+                  class="btn btn-xs btn-ghost text-error hover:bg-error/10"
                   v-comfy-tooltip="'取消上传'">
                   <XMarkIcon class="h-4 w-4" />
                 </button>
@@ -72,7 +72,7 @@
             </div>
             <progress v-if="fileEntry.status === 'uploading'" class="progress progress-info w-full h-1 mt-1"
               :value="fileEntry.progress" max="100"></progress>
-            <p v-if="fileEntry.status === 'error'" class="text-xs text-red-500 dark:text-red-400 mt-1 truncate"
+            <p v-if="fileEntry.status === 'error'" class="text-xs text-error mt-1 truncate"
               :title="fileEntry.error || undefined">
               错误: {{ fileEntry.error }}
             </p>
@@ -82,7 +82,7 @@
     </div>
 
     <template #footer>
-      <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-750 rounded-b-md">
+      <div class="flex justify-between items-center p-3 bg-background-surface rounded-b-md">
         <div>
           <button v-if="hasPendingOrPaused" @click="startAllUploads" class="btn btn-sm btn-success mr-2"
             :disabled="isUploading">

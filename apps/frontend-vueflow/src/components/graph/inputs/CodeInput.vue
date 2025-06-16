@@ -3,7 +3,7 @@
     <button
       type="button"
       title="预览代码"
-      class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-700"
+      class="p-1 rounded hover:bg-background-hover focus:outline-none focus:ring-1 focus:ring-primary/50"
       @click="handlePreview"
     >
       <!-- 👁️ -->
@@ -12,7 +12,7 @@
     <button
       type="button"
       title="编辑代码"
-      class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-300 dark:focus:ring-blue-700"
+      class="p-1 rounded hover:bg-background-hover focus:outline-none focus:ring-1 focus:ring-primary/50"
       @click="handleEdit"
     >
       <!-- ✏️ / </> -->

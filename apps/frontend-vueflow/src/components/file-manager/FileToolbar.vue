@@ -1,6 +1,6 @@
 <template>
   <div
-    class="file-toolbar flex flex-wrap items-center justify-between gap-2 p-2 bg-white dark:bg-gray-800 border-b dark:border-gray-700 shadow-sm">
+    class="file-toolbar flex flex-wrap items-center justify-between gap-2 p-2 bg-background-surface border-b border-border-base shadow-sm">
     <!-- 左侧操作按钮 -->
     <div class="flex items-center gap-1 flex-wrap">
       <button @click="handleUploadClick" class="toolbar-action-btn" v-comfy-tooltip="'上传文件'"
@@ -42,9 +42,9 @@
       <div class="relative">
         <input type="text" v-model="searchQuery" placeholder="搜索..." @input="onSearchInputDebounced"
           @keydown.enter="triggerSearch"
-          class="input input-sm input-bordered w-full pr-10 bg-white text-gray-900 border-gray-300 placeholder-gray-400 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:placeholder-gray-500" />
+          class="input input-sm input-bordered w-full pr-10 bg-background-base text-text-base border-border-base placeholder-text-muted" />
         <MagnifyingGlassIcon
-          class="h-4 w-4 absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-500 dark:text-gray-400" />
+          class="h-4 w-4 absolute top-1/2 right-3 transform -translate-y-1/2 text-text-muted" />
       </div>
     </div>
 
@@ -63,33 +63,33 @@
           <!-- <span class="ml-1 hidden md:inline">{{ currentSortLabel }}</span> -->
           <ChevronDownIcon class="h-4 w-4 ml-1 hidden md:inline" />
         </label>
-        <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 dark:bg-gray-800 rounded-box w-60 z-[1]">
+        <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-background-surface rounded-box w-60 z-[1]">
           <li>
             <div class="flex items-center justify-between px-1 py-1 text-sm">
-              <span class="text-gray-600 dark:text-gray-300">网格视图尺寸</span>
+              <span class="text-text-muted">网格视图尺寸</span>
               <NumberInput v-model="gridItemSizeProxy" size="small" type="INTEGER" :min="16" :max="256" :step="1"
                 class="w-24" />
             </div>
             <label class="label cursor-pointer px-1 py-1 justify-start gap-2 items-center">
-              <span class="label-text text-sm text-gray-700 dark:text-gray-200">反向排序</span>
+              <span class="label-text text-sm text-text-base">反向排序</span>
               <BooleanToggle :model-value="viewSettings.sortDirection === 'desc'"
                 @update:model-value="handleSortDirectionToggle" size="small" />
             </label>
           </li>
           <li class="menu-title px-1 py-1">
-            <span class="text-xs text-gray-500 dark:text-gray-400">排序依据</span>
+            <span class="text-xs text-text-muted">排序依据</span>
           </li>
           <li v-for="option in sortOptions" :key="option.field">
             <a @click="changeSort(option.field)" :class="{
-              'bg-blue-100 dark:bg-blue-600 text-blue-700 dark:text-blue-200':
+              'bg-primary/20 text-primary':
                 viewSettings.sortField === option.field,
-              'text-gray-700 dark:text-gray-200': viewSettings.sortField !== option.field,
+              'text-text-base': viewSettings.sortField !== option.field,
             }" class="text-sm py-1.5 px-2">
               {{ option.label }}
               <span v-if="viewSettings.sortField === option.field" class="ml-auto">
                 <!-- 图标现在由反向排序复选框控制，这里可以显示一个选中标记，或不显示 -->
                 <CheckIcon v-if="viewSettings.sortField === option.field"
-                  class="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  class="h-4 w-4 text-primary" />
               </span>
             </a>
           </li>
@@ -100,14 +100,14 @@
         data-testid="fm-filter-btn">
         <FunnelIcon class="h-5 w-5" />
         <span v-if="activeFiltersCount > 0"
-          class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+          class="absolute -top-1 -right-1 bg-error text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
           {{ activeFiltersCount }}
         </span>
       </button>
 
       <!-- 切换详情面板按钮 -->
       <button @click="uiStore.toggleFileManagerDetailPanel()" class="toolbar-action-btn"
-        :class="{ 'btn-active bg-gray-200 dark:bg-gray-600': isDetailPanelOpen }"
+        :class="{ 'btn-active bg-background-base': isDetailPanelOpen }"
         v-comfy-tooltip="isDetailPanelOpen ? '隐藏详情面板' : '显示详情面板'" data-testid="fm-toggle-detail-panel-btn">
         <ChevronDoubleRightIcon v-if="isDetailPanelOpen" class="h-5 w-5" />
         <!-- Icon to "push panel away" / collapse -->
@@ -288,6 +288,6 @@ const openViewSettingsModal = () => {
 /* 如果需要对 DaisyUI 的组件进行微调，可以在 shared.css 或 tailwind.config.js 中进行。 */
 
 .toolbar-action-btn {
-  @apply btn btn-sm btn-ghost dark:hover:bg-gray-700;
+  @apply btn btn-sm btn-ghost hover:bg-primary/10;
 }
 </style>

@@ -2,43 +2,43 @@
   <nav aria-label="Breadcrumb" class="breadcrumbs-nav flex items-center text-sm" data-testid="fm-breadcrumbs">
     <div v-if="!isEditingPath" class="flex items-center space-x-1 flex-wrap">
       <button v-if="canGoUp" @click="goUpDirectory"
-        class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 flex-shrink-0" v-comfy-tooltip="'返回上一级'"
+        class="p-1 rounded hover:bg-background-surface flex-shrink-0" v-comfy-tooltip="'返回上一级'"
         aria-label="返回上一级">
-        <ArrowUpIcon class="h-4 w-4 text-gray-500 dark:text-gray-400" />
+        <ArrowUpIcon class="h-4 w-4 text-text-muted" />
       </button>
       <button v-else class="p-1 rounded flex-shrink-0 opacity-50 cursor-not-allowed" aria-label="已在根目录" disabled>
-        <HomeIcon class="h-4 w-4 text-gray-500 dark:text-gray-400" />
+        <HomeIcon class="h-4 w-4 text-text-muted" />
       </button>
 
       <ol role="list" class="flex items-center space-x-1 flex-wrap">
         <li v-for="(segment, index) in breadcrumbs" :key="segment.path + '-' + index">
           <div class="flex items-center">
             <ChevronRightIcon v-if="index > 0 || (index === 0 && canGoUp)"
-              class="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mx-0.5" />
+              class="h-4 w-4 text-text-muted flex-shrink-0 mx-0.5" />
             <a href="#" @click.prevent="navigateToSegment(segment.path)" @dblclick.prevent="startPathEdit"
-              class="px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-800 dark:hover:text-gray-100 truncate max-w-[150px] sm:max-w-[200px]"
-              :class="{ 'font-semibold text-gray-800 dark:text-gray-100': index === breadcrumbs.length - 1 }"
+              class="px-1.5 py-0.5 rounded text-text-base hover:bg-background-surface hover:text-text-base truncate max-w-[150px] sm:max-w-[200px]"
+              :class="{ 'font-semibold text-text-base': index === breadcrumbs.length - 1 }"
               :title="segment.label">
               {{ segment.label }}
             </a>
           </div>
         </li>
       </ol>
-      <button @click="startPathEdit" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ml-1 flex-shrink-0"
+      <button @click="startPathEdit" class="p-1 rounded hover:bg-background-surface ml-1 flex-shrink-0"
         v-comfy-tooltip="'编辑路径'" aria-label="编辑路径">
-        <PencilIcon class="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+        <PencilIcon class="h-3.5 w-3.5 text-text-muted" />
       </button>
     </div>
 
     <div v-else class="flex items-center w-full">
       <input ref="pathInputRef" type="text" v-model="editablePath" @blur="finishPathEdit(false)"
         @keydown.enter="finishPathEdit(true)" @keydown.esc="cancelPathEdit"
-        class="input input-sm input-bordered w-full dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+        class="input input-sm input-bordered w-full bg-background-surface text-text-base border-border-base"
         placeholder="输入路径..." />
-      <button @click="finishPathEdit(true)" class="btn btn-xs btn-ghost ml-1 text-green-500" v-comfy-tooltip="'确认'">
+      <button @click="finishPathEdit(true)" class="btn btn-xs btn-ghost ml-1 text-success" v-comfy-tooltip="'确认'">
         <CheckIcon class="h-4 w-4" />
       </button>
-      <button @click="cancelPathEdit" class="btn btn-xs btn-ghost ml-1 text-red-500" v-comfy-tooltip="'取消'">
+      <button @click="cancelPathEdit" class="btn btn-xs btn-ghost ml-1 text-error" v-comfy-tooltip="'取消'">
         <XMarkIcon class="h-4 w-4" />
       </button>
     </div>

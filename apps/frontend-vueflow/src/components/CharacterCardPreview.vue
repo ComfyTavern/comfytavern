@@ -40,12 +40,12 @@ const previewCharacters = computed(() => {
 <template>
   <div>
     <!-- 加载状态 -->
-    <div v-if="isLoading" class="text-center text-gray-500 dark:text-gray-400">
+    <div v-if="isLoading" class="text-center text-text-muted">
       正在加载角色卡...
     </div>
 
     <!-- 错误提示 -->
-    <div v-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
+    <div v-if="error" class="bg-error/10 border border-error text-error px-4 py-3 rounded relative mb-4"
       role="alert">
       <strong class="font-bold">加载错误:</strong>
       <span class="block sm:inline"> {{ error }}</span>
@@ -62,10 +62,10 @@ const previewCharacters = computed(() => {
       </div>
       <!-- 右侧渐变遮罩 -->
       <div
-        class="absolute top-0 right-0 bottom-0 w-16 bg-gradient-to-l from-gray-100 dark:from-gray-800 to-transparent pointer-events-none">
+        class="absolute top-0 right-0 bottom-0 w-16 bg-gradient-to-l from-background-base to-transparent pointer-events-none">
       </div>
     </div>
-    <div v-if="!isLoading && characters.length === 0 && !error" class="text-center text-gray-500 dark:text-gray-400">
+    <div v-if="!isLoading && characters.length === 0 && !error" class="text-center text-text-muted">
       没有找到角色卡。
     </div>
     <div v-if="!isLoading && characters.length > 0 && !error" class="mt-4 text-right">

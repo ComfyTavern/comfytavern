@@ -4,11 +4,11 @@
       <input type="checkbox" :checked="modelValue" @change="toggle" class="sr-only peer"
         :disabled="props.disabled || props.readonly">
       <div
-        class="rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:border-white after:content-[''] after:absolute after:bg-white after:border-gray-300 after:border after:rounded-full after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"
+        class="rounded-full peer peer-focus:ring-4 peer-focus:ring-primary/50 dark:peer-focus:ring-primary/70 bg-background-surface/50 dark:bg-background-surface peer-checked:after:border-background-base after:content-[''] after:absolute after:bg-background-base after:border-border-base after:border after:rounded-full after:transition-all peer-checked:bg-primary"
         :class="sizeClasses.wrapper">
       </div>
     </label>
-    <div v-if="props.hasError" class="text-xs text-red-500 dark:text-red-400 mt-1">
+    <div v-if="props.hasError" class="text-xs text-error mt-1">
       {{ props.errorMessage }}
     </div>
   </div>

@@ -1,24 +1,24 @@
 <template>
   <div v-if="visible" ref="contextMenuRef"
-    class="file-context-menu fixed z-[100] bg-white dark:bg-gray-800 shadow-xl rounded-md py-1 border border-gray-200 dark:border-gray-700 text-sm min-w-[180px]"
+    class="file-context-menu fixed z-[100] bg-background-surface shadow-xl rounded-md py-1 border border-border-base text-sm min-w-[180px]"
     :style="{ top: y + 'px', left: x + 'px' }" data-testid="fm-context-menu-component">
     <ul class="max-h-[70vh] overflow-y-auto">
       <template v-for="(menuItem, index) in items" :key="index">
-        <li v-if="menuItem.type === 'divider'" class="my-1 h-px bg-gray-200 dark:bg-gray-700"></li>
+        <li v-if="menuItem.type === 'divider'" class="my-1 h-px bg-border-base"></li>
         <li v-else-if="!menuItem.hidden">
           <button @click.stop="handleAction(menuItem)" :disabled="menuItem.disabled"
             class="context-menu-button w-full text-left px-3 py-1.5 flex items-center space-x-2" :class="[
-              menuItem.danger ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/50' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700',
+              menuItem.danger ? 'text-error hover:bg-error/10' : 'text-text-base hover:bg-primary/10',
               menuItem.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
             ]">
             <component v-if="menuItem.icon" :is="getIconComponent(menuItem.icon)" class="h-4 w-4 flex-shrink-0" />
             <span class="flex-grow">{{ menuItem.label }}</span>
-            <span v-if="menuItem.shortcut" class="text-xs text-gray-400 dark:text-gray-500 ml-auto">{{ menuItem.shortcut
+            <span v-if="menuItem.shortcut" class="text-xs text-text-muted ml-auto">{{ menuItem.shortcut
               }}</span>
           </button>
         </li>
       </template>
-      <li v-if="items.length === 0" class="px-3 py-1.5 text-gray-400 dark:text-gray-500 italic">
+      <li v-if="items.length === 0" class="px-3 py-1.5 text-text-muted italic">
         无可用操作
       </li>
     </ul>

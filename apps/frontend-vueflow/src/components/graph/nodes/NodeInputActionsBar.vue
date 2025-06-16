@@ -273,7 +273,7 @@ const handleActionClick = (action: NodeInputAction) => {
 }
 
 .action-button:hover {
-  background-color: rgba(128, 128, 128, 0.15); /* 使用半透明灰色作为悬停背景 */
+  background-color: var(--ct-background-hover); /* 使用主题定义的悬停背景色 */
 }
 
 .icon {

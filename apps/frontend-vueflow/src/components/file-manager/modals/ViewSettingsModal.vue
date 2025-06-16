@@ -3,9 +3,9 @@
     data-testid="fm-view-settings-modal">
     <div class="p-4 sm:p-6 space-y-5">
       <div>
-        <label for="view-mode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">视图模式</label>
+        <label for="view-mode" class="block text-sm font-medium text-text-base mb-1">视图模式</label>
         <select id="view-mode" v-model="localSettings.mode"
-          class="select select-bordered select-sm w-full dark:bg-gray-700 dark:border-gray-600">
+          class="select select-bordered select-sm w-full bg-background-base border-border-base">
           <option value="list">列表视图</option>
           <option value="grid">网格视图</option>
         </select>
@@ -13,9 +13,9 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label for="sort-field" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">排序字段</label>
+          <label for="sort-field" class="block text-sm font-medium text-text-base mb-1">排序字段</label>
           <select id="sort-field" v-model="localSettings.sortField"
-            class="select select-bordered select-sm w-full dark:bg-gray-700 dark:border-gray-600">
+            class="select select-bordered select-sm w-full bg-background-base border-border-base">
             <option value="name">名称</option>
             <option value="size">大小</option>
             <option value="lastModified">修改日期</option>
@@ -25,9 +25,9 @@
         </div>
         <div>
           <label for="sort-direction"
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">排序方向</label>
+            class="block text-sm font-medium text-text-base mb-1">排序方向</label>
           <select id="sort-direction" v-model="localSettings.sortDirection"
-            class="select select-bordered select-sm w-full dark:bg-gray-700 dark:border-gray-600">
+            class="select select-bordered select-sm w-full bg-background-base border-border-base">
             <option value="asc">升序</option>
             <option value="desc">降序</option>
           </select>
@@ -35,22 +35,22 @@
       </div>
 
       <div v-if="localSettings.mode === 'list'">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">列表视图显示列</label>
-        <div class="space-y-1 max-h-40 overflow-y-auto p-1 rounded-md border dark:border-gray-600">
+        <label class="block text-sm font-medium text-text-base mb-1">列表视图显示列</label>
+        <div class="space-y-1 max-h-40 overflow-y-auto p-1 rounded-md border border-border-base">
           <label v-for="column in availableColumns" :key="column.value"
-            class="flex items-center space-x-2 p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-xs">
+            class="flex items-center space-x-2 p-1.5 hover:bg-background-base rounded text-xs">
             <input type="checkbox" :value="column.value" v-model="localSettings.visibleColumns"
-              class="checkbox checkbox-xs dark:checkbox-primary" :disabled="column.value === 'name'" />
+              class="checkbox checkbox-xs checkbox-primary" :disabled="column.value === 'name'" />
             <span>{{ column.label }}</span>
           </label>
         </div>
       </div>
 
       <div v-if="localSettings.mode === 'grid'">
-        <label for="thumbnail-size" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">缩略图大小
+        <label for="thumbnail-size" class="block text-sm font-medium text-text-base mb-1">缩略图大小
           (网格视图)</label>
         <select id="thumbnail-size" v-model="localSettings.thumbnailSize"
-          class="select select-bordered select-sm w-full dark:bg-gray-700 dark:border-gray-600">
+          class="select select-bordered select-sm w-full bg-background-base border-border-base">
           <option value="small">小</option>
           <option value="medium">中</option>
           <option value="large">大</option>
@@ -59,9 +59,9 @@
 
       <div>
         <label for="information-density"
-          class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">信息密度</label>
+          class="block text-sm font-medium text-text-base mb-1">信息密度</label>
         <select id="information-density" v-model="localSettings.informationDensity"
-          class="select select-bordered select-sm w-full dark:bg-gray-700 dark:border-gray-600">
+          class="select select-bordered select-sm w-full bg-background-base border-border-base">
           <option value="compact">紧凑</option>
           <option value="comfortable">舒适</option>
           <option value="spacious">宽松</option>
@@ -71,7 +71,7 @@
     </div>
 
     <template #footer>
-      <div class="flex justify-end items-center p-3 bg-gray-50 dark:bg-gray-750 rounded-b-md">
+      <div class="flex justify-end items-center p-3 bg-background-surface rounded-b-md">
         <button @click="handleClose" type="button" class="btn btn-sm btn-ghost mr-2">
           取消
         </button>

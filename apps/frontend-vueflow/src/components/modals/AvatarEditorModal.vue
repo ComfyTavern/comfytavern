@@ -190,23 +190,23 @@ const saveAvatar = async () => {
 
 .upload-section, .url-section, .preview-section {
   padding: 10px;
-  border: 1px solid var(--ct-border-color-light);
+  border: 1px solid var(--ct-border-base); /* 使用标准主题变量 */
   border-radius: 8px;
-  background-color: var(--ct-bg-secondary);
+  background-color: var(--ct-background-surface); /* 使用标准主题变量 */
 }
 
 .input-field {
   width: calc(100% - 90px); /* 减去按钮宽度和间距 */
   padding: 8px 12px;
-  border: 1px solid var(--ct-border-color);
+  border: 1px solid var(--ct-border-base); /* 使用标准主题变量 */
   border-radius: 4px;
-  background-color: var(--ct-bg-input);
-  color: var(--ct-text-input);
+  background-color: var(--ct-background-base); /* 使用标准主题变量 */
+  color: var(--ct-text-base); /* 使用标准主题变量 */
 }
 .input-field:focus {
   outline: none;
-  border-color: var(--ct-accent-color);
-  box-shadow: 0 0 0 2px var(--ct-accent-color-light-transparent);
+  border-color: var(--ct-primary); /* 使用标准主题变量 */
+  box-shadow: 0 0 0 2px var(--ct-primary-transparent-20, rgba(var(--ct-primary-rgb), 0.2)); /* 使用标准主题变量, 提供回退 */
 }
 
 
@@ -224,49 +224,26 @@ const saveAvatar = async () => {
   display: block;
   margin: 10px auto;
   border-radius: 8px;
-  border: 2px solid var(--ct-border-color);
+  border: 2px solid var(--ct-border-base); /* 使用标准主题变量 */
   object-fit: contain;
 }
 
 .error-message {
-  color: var(--ct-text-error);
+  color: var(--ct-error); /* 使用标准主题变量 */
   font-size: 0.875rem;
   margin-top: 10px;
   text-align: center;
 }
 
-.btn {
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s ease;
-  border: none;
-}
-.btn-primary {
-  background-color: var(--ct-accent-color);
-  color: var(--ct-text-on-accent);
-}
-.btn-primary:hover {
-  background-color: var(--ct-accent-color-dark);
-}
-.btn-primary:disabled {
-  background-color: var(--ct-bg-btn-disabled);
-  color: var(--ct-text-btn-disabled);
-  cursor: not-allowed;
-}
-.btn-secondary {
-  background-color: var(--ct-bg-btn-secondary);
-  color: var(--ct-text-btn-secondary);
-  border: 1px solid var(--ct-border-color-btn-secondary);
-}
-.btn-secondary:hover {
-  background-color: var(--ct-bg-btn-secondary-hover);
-}
-.btn-sm {
-  padding: 6px 10px;
-  font-size: 0.8rem;
-}
+/* 自定义 .btn, .btn-primary, .btn-secondary, .btn-sm 样式已移除，依赖全局 Tailwind/DaisyUI */
+/* .btn { ... } */
+/* .btn-primary { ... } */
+/* .btn-primary:hover { ... } */
+/* .btn-primary:disabled { ... } */
+/* .btn-secondary { ... } */
+/* .btn-secondary:hover { ... } */
+/* .btn-sm { ... } */
+
 .ml-2 {
   margin-left: 8px;
 }

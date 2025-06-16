@@ -10,16 +10,16 @@
       @input="handleInput"
       @focus="handleFocus"
       @blur="handleBlur"
-      class="custom-textarea w-full rounded border transition-colors duration-200 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-700 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+      class="custom-textarea w-full rounded border transition-colors duration-200 bg-background-base dark:bg-background-surface border-border-base text-text-base placeholder-text-muted focus:ring-1 focus:ring-primary/50 focus:border-transparent hover:border-primary"
       :class="[sizeClasses.textarea, { // 应用 sizeClasses 并移除静态 p-1 text-sm
-        'border-red-500 dark:border-red-700': props.hasError,
-        'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default focus:ring-0 focus:border-gray-300 dark:focus:border-gray-600':
+        'border-error': props.hasError,
+        'opacity-75 bg-background-base/70 dark:bg-background-surface/70 cursor-default focus:ring-0 focus:border-border-base':
           props.readonly && !props.disabled,
-        'disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed':
+        'disabled:bg-background-base/50 dark:disabled:bg-background-surface/50 disabled:text-text-muted disabled:cursor-not-allowed':
           props.disabled,
       }]"
     />
-    <div v-if="props.hasError" class="text-xs text-red-500 dark:text-red-400 mt-1">
+    <div v-if="props.hasError" class="text-xs text-error mt-1">
       {{ props.errorMessage }}
     </div>
   </div>

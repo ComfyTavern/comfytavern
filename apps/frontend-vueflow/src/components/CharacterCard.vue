@@ -90,7 +90,7 @@ const handleMouseLeave = () => {
 // 计算卡片的背景样式
 const backgroundStyle = computed(() => {
   return {
-    backgroundImage: props.image ? `url(${props.image})` : 'linear-gradient(to bottom, #4b6cb7, #182848)',
+    backgroundImage: props.image ? `url(${props.image})` : 'linear-gradient(to bottom, var(--ct-primary), var(--ct-secondary))',
     transform: parallaxTransform.value,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
@@ -100,8 +100,7 @@ const backgroundStyle = computed(() => {
 
 <template>
   <div ref="cardRef" @mousemove="handleMouseMove" @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave"
-    @click="handleCardClick"
-    :class="[
+    @click="handleCardClick" :class="[
       'relative rounded-lg overflow-hidden cursor-pointer card-container transition-all duration-300',
       props.variant === 'full' ? 'w-[268px] h-[420px]' : 'w-32 h-48' // 根据 variant 设置尺寸
     ]">
@@ -132,7 +131,7 @@ const backgroundStyle = computed(() => {
       <!-- 标签 -->
       <div class="flex flex-wrap gap-1 mt-2">
         <span v-for="(tag, index) in tags" :key="index"
-          class="px-2 py-0.5 bg-gray-800 bg-opacity-50 dark:bg-gray-700 dark:bg-opacity-70 text-white rounded-full text-xs">
+          class="px-2 py-0.5 bg-background-surface bg-opacity-50 text-text-base rounded-full text-xs">
           {{ tag }}
         </span>
       </div>
@@ -147,35 +146,34 @@ const backgroundStyle = computed(() => {
 
     <!-- 紧凑模式下的内容 -->
     <div v-else-if="props.variant === 'compact'" class="absolute bottom-0 left-0 right-0 p-2 text-white">
-       <div class="flex justify-between items-center">
-         <h3 class="text-sm font-medium truncate">{{ name }}</h3>
-         <div v-if="favorite" class="text-yellow-400 ml-1 flex-shrink-0 text-xs">
-           <span>⭐</span>
-         </div>
-       </div>
+      <div class="flex justify-between items-center">
+        <h3 class="text-sm font-medium truncate">{{ name }}</h3>
+        <div v-if="favorite" class="text-yellow-400 ml-1 flex-shrink-0 text-xs">
+          <span>⭐</span>
+        </div>
+      </div>
     </div>
 
     <!-- 三点菜单 (只在 full 模式下显示) -->
     <div v-if="props.variant === 'full'" class="absolute top-2 right-2 z-10">
-       <div class="relative group">
-         <button class="p-1 rounded-full bg-gray-800 bg-opacity-50 text-white hover:bg-opacity-70">
-           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-             <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-           </svg>
-         </button>
-         <!-- 下拉菜单 -->
-         <div
-           class="absolute right-0 mt-1 w-36 bg-white dark:bg-gray-800 rounded-md shadow-lg overflow-hidden z-20 invisible group-hover:visible">
-           <div class="py-1">
-             <a v-for="(option, index) in menuOptions" :key="index" href="#"
-               class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-               @click.stop="option.action">
-               {{ option.label }}
-             </a>
-           </div>
-         </div>
-       </div>
-     </div>
+      <div class="relative group">
+        <button class="p-1 rounded-full bg-gray-800 bg-opacity-50 text-white hover:bg-opacity-70">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+          </svg>
+        </button>
+        <!-- 下拉菜单 -->
+        <div
+          class="absolute right-0 mt-1 w-36 bg-background-surface rounded-md shadow-lg overflow-hidden z-20 invisible group-hover:visible">
+          <div class="py-1">
+            <a v-for="(option, index) in menuOptions" :key="index" href="#"
+              class="block px-4 py-2 text-sm text-text-base hover:bg-primary/10" @click.stop="option.action">
+              {{ option.label }}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -221,7 +219,7 @@ const backgroundStyle = computed(() => {
 
 /* 在暗色模式下调整描边颜色 */
 :global(.dark) .card-container:hover .card-border {
-  border-color: rgba(79, 70, 229, 0.4);
-  box-shadow: 0 0 15px rgba(79, 70, 229, 0.3);
+  border-color: rgba(var(--ct-primary-rgb), 0.4);
+  box-shadow: 0 0 15px rgba(var(--ct-primary-rgb), 0.3);
 }
 </style>

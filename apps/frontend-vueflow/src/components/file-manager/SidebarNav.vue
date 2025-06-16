@@ -2,9 +2,9 @@
   <div class="sidebar-nav h-full flex flex-col text-sm" :class="{ 'items-center': collapsed }">
     <!-- 折叠/展开控制按钮 (可选，也可以由父组件控制) -->
     <div class="p-2 flex items-center" :class="collapsed ? 'justify-center' : 'justify-between'">
-      <span v-if="!collapsed" class="font-semibold text-lg text-gray-700 dark:text-gray-200">导航</span>
+      <span v-if="!collapsed" class="font-semibold text-lg text-text-base">导航</span>
       <button @click="toggleCollapse"
-        class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+        class="p-2 rounded-md hover:bg-background-base text-text-muted"
         :title="collapsed ? '展开导航' : '折叠导航'" data-testid="fm-sidebar-toggle">
         <svg v-if="collapsed" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
           fill="currentColor">
@@ -24,14 +24,14 @@
       <!-- 逻辑根路径 -->
       <section>
         <h3 v-if="!collapsed"
-          class="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          class="px-2 py-1 text-xs font-semibold text-text-muted uppercase tracking-wider">
           位置
         </h3>
         <ul>
           <li v-for="item in rootNavigationItems" :key="item.logicalPath">
             <a href="#" @click.prevent="navigateTo(item.logicalPath)"
-              class="flex items-center px-2 py-2 rounded-md hover:bg-blue-100 dark:hover:bg-blue-800 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-300"
-              :class="{ 'bg-blue-50 dark:bg-blue-700 text-blue-600 dark:text-blue-200': isActiveRoot(item.logicalPath), 'justify-center': collapsed }"
+              class="flex items-center px-2 py-2 rounded-md hover:bg-primary/10 text-text-base hover:text-primary"
+              :class="{ 'bg-primary/20 text-primary': isActiveRoot(item.logicalPath), 'justify-center': collapsed }"
               :title="collapsed ? item.label : undefined" v-comfy-tooltip="collapsed ? item.label : ''">
               <component v-if="item.icon && !collapsed" :is="getIconComponent(item.icon)"
                 class="h-5 w-5 mr-3 flex-shrink-0" />
@@ -45,9 +45,9 @@
       <!-- 最近访问 -->
       <section v-if="recentAccessItemsSorted.length > 0">
         <h3 v-if="!collapsed"
-          class="px-2 py-1 mt-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex justify-between items-center">
+          class="px-2 py-1 mt-4 text-xs font-semibold text-text-muted uppercase tracking-wider flex justify-between items-center">
           <span>最近访问</span>
-          <button @click="clearRecentAccess" title="清空最近访问" class="text-xs hover:text-red-500"
+          <button @click="clearRecentAccess" title="清空最近访问" class="text-xs hover:text-error"
             v-comfy-tooltip="'清空最近访问'">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
               stroke="currentColor">
@@ -59,10 +59,10 @@
         <ul v-if="!collapsed">
           <li v-for="item in recentAccessItemsSorted.slice(0, 5)" :key="item.logicalPath">
             <a href="#" @click.prevent="navigateTo(item.logicalPath)"
-              class="flex items-center px-2 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs truncate"
+              class="flex items-center px-2 py-1.5 rounded-md hover:bg-background-base text-text-muted text-xs truncate"
               :title="item.displayName" v-comfy-tooltip="item.displayName">
               <component :is="item.itemType === 'directory' ? FolderIcon : DocumentIcon"
-                class="h-4 w-4 mr-2 flex-shrink-0" />
+                class="h-4 w-4 mr-2 flex-shrink-0 text-text-muted" />
               <span class="truncate">{{ item.displayName }}</span>
             </a>
           </li>
@@ -73,25 +73,25 @@
       <!-- 收藏夹 -->
       <section>
         <h3 v-if="!collapsed"
-          class="px-2 py-1 mt-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          class="px-2 py-1 mt-4 text-xs font-semibold text-text-muted uppercase tracking-wider">
           收藏夹
         </h3>
         <ul v-if="!collapsed">
           <li v-if="favoritesPaths.length === 0 && !collapsed"
-            class="px-2 py-1 text-xs text-gray-400 dark:text-gray-500">
+            class="px-2 py-1 text-xs text-text-muted">
             暂无收藏
           </li>
           <li v-for="favPath in favoritesPaths" :key="favPath">
             <a href="#" @click.prevent="navigateTo(favPath)"
-              class="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs"
+              class="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-background-base text-text-muted text-xs"
               :title="favPath">
               <div class="flex items-center truncate">
-                <StarIcon class="h-4 w-4 mr-2 flex-shrink-0 text-yellow-500" />
+                <StarIcon class="h-4 w-4 mr-2 flex-shrink-0 text-accent" />
                 <span class="truncate">{{ getPathDisplayName(favPath) }}</span>
               </div>
               <button @click.stop.prevent="removeFromFavorites(favPath)"
-                class="ml-2 p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-700" title="取消收藏">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-red-500" viewBox="0 0 20 20"
+                class="ml-2 p-0.5 rounded hover:bg-error/10" title="取消收藏">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-error" viewBox="0 0 20 20"
                   fill="currentColor">
                   <path fill-rule="evenodd"
                     d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -105,9 +105,9 @@
         <ul v-if="collapsed && favoritesPaths.length > 0">
           <li v-for="favPath in favoritesPaths" :key="favPath + '-collapsed'">
             <a href="#" @click.prevent="navigateTo(favPath)"
-              class="flex justify-center items-center px-2 py-2 rounded-md hover:bg-blue-100 dark:hover:bg-blue-800"
+              class="flex justify-center items-center px-2 py-2 rounded-md hover:bg-primary/10"
               :title="getPathDisplayName(favPath)" v-comfy-tooltip="getPathDisplayName(favPath)">
-              <StarIcon class="h-6 w-6 text-yellow-500" />
+              <StarIcon class="h-6 w-6 text-accent" />
             </a>
           </li>
         </ul>

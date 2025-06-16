@@ -1,7 +1,7 @@
 <template>
   <div class="file-browser flex flex-col h-full" data-testid="fm-file-browser">
     <!-- 面包屑导航 -->
-    <header class="breadcrumbs-container px-2 py-1.5 border-b dark:border-gray-700 dark:bg-gray-850 flex-shrink-0">
+    <header class="breadcrumbs-container px-2 py-1.5 border-b border-border-base bg-background-surface flex-shrink-0">
       <Breadcrumbs />
     </header>
 
@@ -9,12 +9,12 @@
     <div class="file-list-container flex-1 overflow-auto relative" @contextmenu.prevent="showContextMenu"
       data-testid="fm-file-list-container">
       <div v-if="isLoading"
-        class="loading-overlay absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-black/50 z-10">
-        <ArrowPathIcon class="h-8 w-8 animate-spin text-blue-500" />
+        class="loading-overlay absolute inset-0 flex items-center justify-center bg-background-base/70 z-10">
+        <ArrowPathIcon class="h-8 w-8 animate-spin text-primary" />
       </div>
 
       <div v-if="!isLoading && filteredItems.length === 0"
-        class="empty-folder-placeholder p-8 text-center text-gray-500 dark:text-gray-400">
+        class="empty-folder-placeholder p-8 text-center text-text-muted">
         <InformationCircleIcon class="h-12 w-12 mx-auto mb-2" />
         <p>此文件夹为空，或没有匹配筛选条件的项目。</p>
         <button v-if="isFilterActive" @click="clearFilters" class="btn btn-sm btn-outline mt-4">清除筛选</button>
@@ -22,17 +22,17 @@
 
       <!-- 列表视图 -->
       <table v-if="!isLoading && viewSettings.mode === 'list' && filteredItems.length > 0"
-        class="min-w-full divide-y divide-gray-200 dark:divide-gray-600 text-sm">
-        <thead class="dark:bg-gray-750 sticky top-0 z-[5]">
+        class="min-w-full divide-y divide-border-base text-sm">
+        <thead class="bg-background-surface sticky top-0 z-[5]">
           <tr>
-            <th scope="col" class="px-3 py-2.5 text-left font-semibold text-gray-900 dark:text-gray-100 w-10">
+            <th scope="col" class="px-3 py-2.5 text-left font-semibold text-text-base w-10">
               <input type="checkbox" @change="toggleSelectAll" :checked="allSelected"
                 :indeterminate="someSelected && !allSelected" class="checkbox checkbox-xs sm:checkbox-sm" />
             </th>
             <!-- 根据 viewSettings.visibleColumns 动态生成表头 -->
             <th v-for="column in visibleColumnsList" :key="column.key" scope="col"
               @click="changeSort(column.key as any)"
-              class="px-3 py-2.5 text-left font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+              class="px-3 py-2.5 text-left font-semibold text-text-base cursor-pointer hover:bg-background-base"
               :class="column.widthClass">
               <div class="flex items-center">
                 {{ column.label }}
@@ -47,7 +47,7 @@
             </th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-500 bg-white dark:bg-gray-800">
+        <tbody class="divide-y divide-border-base bg-background-base">
           <FileListItem v-for="item in filteredItems" :key="item.logicalPath" :item="item"
             :is-selected="isSelected(item)" :visible-columns="viewSettings.visibleColumns.map(String)"
             @item-click="handleItemClick" @item-dbl-click="handleItemDblClick" @item-context-menu="showItemContextMenu"
@@ -480,7 +480,7 @@ onUnmounted(() => {
 }
 
 .context-menu-item {
-  @apply block w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer;
+  @apply block w-full text-left px-3 py-1.5 hover:bg-background-surface cursor-pointer;
 }
 
 .text-xxs {

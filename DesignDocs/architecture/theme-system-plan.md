@@ -235,20 +235,74 @@ interface ThemePreset {
 
 6.  **代码梳理 (初步):**
     *   目标：将项目中的硬编码颜色或旧的 Tailwind 特定颜色类替换为使用新主题系统中定义的语义化颜色类。
-    *   **已迁移/部分迁移的组件 (截至 `2a3c9ab` 及后续工作):**
+    *   注意，EdgeStyles 不属于我们这个主题体系，因此不必修改。
+    *   **已迁移/部分迁移的组件 (截至 `b5e0008`):**
+        *   [`apps/frontend-vueflow/src/App.vue`](apps/frontend-vueflow/src/App.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/auth/InitialUsernameSetupModal.vue`](apps/frontend-vueflow/src/components/auth/InitialUsernameSetupModal.vue:1) (完成)
         *   [`apps/frontend-vueflow/src/components/common/BaseModal.vue`](apps/frontend-vueflow/src/components/common/BaseModal.vue:1) (完成)
-        *   [`apps/frontend-vueflow/src/components/graph/inputs/ButtonInput.vue`](apps/frontend-vueflow/src/components/graph/inputs/ButtonInput.vue:1) (完成)
-        *   [`apps/frontend-vueflow/src/components/graph/sidebar/SidebarManager.vue`](apps/frontend-vueflow/src/components/graph/sidebar/SidebarManager.vue:1) (完成)
-        *   [`apps/frontend-vueflow/src/views/HomeLayout.vue`](apps/frontend-vueflow/src/views/HomeLayout.vue:1) (完成)
         *   [`apps/frontend-vueflow/src/components/common/CascadingMenu.vue`](apps/frontend-vueflow/src/components/common/CascadingMenu.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/common/Dialog.vue`](apps/frontend-vueflow/src/components/common/Dialog.vue:1) (完成)
         *   [`apps/frontend-vueflow/src/components/common/EditorContextMenu.vue`](apps/frontend-vueflow/src/components/common/EditorContextMenu.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/common/HierarchicalMenu.vue`](apps/frontend-vueflow/src/components/common/HierarchicalMenu.vue:1) (完成)
         *   [`apps/frontend-vueflow/src/components/common/MarkdownRenderer.vue`](apps/frontend-vueflow/src/components/common/MarkdownRenderer.vue:1) (通过 [`apps/frontend-vueflow/src/assets/styles/shared.css`](apps/frontend-vueflow/src/assets/styles/shared.css:1) 实现基础元素主题化，完成)
-        *   [`apps/frontend-vueflow/src/components/common/Tooltip.vue`](apps/frontend-vueflow/src/components/common/Tooltip.vue:1) (完成)
         *   [`apps/frontend-vueflow/src/components/common/RichCodeEditor.vue`](apps/frontend-vueflow/src/components/common/RichCodeEditor.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue`](apps/frontend-vueflow/src/components/common/TabbedEditorHost.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/common/ToastNotification.vue`](apps/frontend-vueflow/src/components/common/ToastNotification.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/common/Tooltip.vue`](apps/frontend-vueflow/src/components/common/Tooltip.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/common/TooltipRenderer.vue`](apps/frontend-vueflow/src/components/common/TooltipRenderer.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/file-manager/FileDetailPanel.vue`](apps/frontend-vueflow/src/components/file-manager/FileDetailPanel.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/Canvas.vue`](apps/frontend-vueflow/src/components/graph/Canvas.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue`](apps/frontend-vueflow/src/components/graph/editor/DockedEditorWrapper.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/inputs/ButtonInput.vue`](apps/frontend-vueflow/src/components/graph/inputs/ButtonInput.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/sidebar/GroupIOEdit.vue`](apps/frontend-vueflow/src/components/graph/sidebar/GroupIOEdit.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/sidebar/HistoryPanel.vue`](apps/frontend-vueflow/src/components/graph/sidebar/HistoryPanel.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/sidebar/NodePanel.vue`](apps/frontend-vueflow/src/components/graph/sidebar/NodePanel.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/sidebar/NodePreviewPanel.vue`](apps/frontend-vueflow/src/components/graph/sidebar/NodePreviewPanel.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/sidebar/PerformancePanel.vue`](apps/frontend-vueflow/src/components/graph/sidebar/PerformancePanel.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/sidebar/SidebarManager.vue`](apps/frontend-vueflow/src/components/graph/sidebar/SidebarManager.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/sidebar/WorkflowInfoPanel.vue`](apps/frontend-vueflow/src/components/graph/sidebar/WorkflowInfoPanel.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/sidebar/WorkflowPanel.vue`](apps/frontend-vueflow/src/components/graph/sidebar/WorkflowPanel.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/TabBar.vue`](apps/frontend-vueflow/src/components/graph/TabBar.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/settings/DisplayModeSwitcher.vue`](apps/frontend-vueflow/src/components/settings/DisplayModeSwitcher.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/settings/SettingsLayout.vue`](apps/frontend-vueflow/src/components/settings/SettingsLayout.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/settings/ThemePresetSelector.vue`](apps/frontend-vueflow/src/components/settings/ThemePresetSelector.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/views/AboutView.vue`](apps/frontend-vueflow/src/views/AboutView.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/views/CharacterCardView.vue`](apps/frontend-vueflow/src/views/CharacterCardView.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/views/HomeLayout.vue`](apps/frontend-vueflow/src/views/HomeLayout.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/views/HomeView.vue`](apps/frontend-vueflow/src/views/HomeView.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/views/ProjectListView.vue`](apps/frontend-vueflow/src/views/ProjectListView.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/views/SideBar.vue`](apps/frontend-vueflow/src/views/SideBar.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/CharacterCard.vue`](apps/frontend-vueflow/src/components/CharacterCard.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/CharacterCardPreview.vue`](apps/frontend-vueflow/src/components/CharacterCardPreview.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/file-manager/Breadcrumbs.vue`](apps/frontend-vueflow/src/components/file-manager/Breadcrumbs.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/file-manager/FileBrowser.vue`](apps/frontend-vueflow/src/components/file-manager/FileBrowser.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/file-manager/FileContextMenu.vue`](apps/frontend-vueflow/src/components/file-manager/FileContextMenu.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/file-manager/FileGridItem.vue`](apps/frontend-vueflow/src/components/file-manager/FileGridItem.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/file-manager/FileListItem.vue`](apps/frontend-vueflow/src/components/file-manager/FileListItem.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/file-manager/FileManagerViewLayout.vue`](apps/frontend-vueflow/src/components/file-manager/FileManagerViewLayout.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/file-manager/FileToolbar.vue`](apps/frontend-vueflow/src/components/file-manager/FileToolbar.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/file-manager/SidebarNav.vue`](apps/frontend-vueflow/src/components/file-manager/SidebarNav.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/file-manager/modals/FilterModal.vue`](apps/frontend-vueflow/src/components/file-manager/modals/FilterModal.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/file-manager/modals/MoveModal.vue`](apps/frontend-vueflow/src/components/file-manager/modals/MoveModal.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/file-manager/modals/UploadManagerModal.vue`](apps/frontend-vueflow/src/components/file-manager/modals/UploadManagerModal.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/file-manager/modals/ViewSettingsModal.vue`](apps/frontend-vueflow/src/components/file-manager/modals/ViewSettingsModal.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/inputs/BooleanToggle.vue`](apps/frontend-vueflow/src/components/graph/inputs/BooleanToggle.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/inputs/CodeInput.vue`](apps/frontend-vueflow/src/components/graph/inputs/CodeInput.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/inputs/NumberInput.vue`](apps/frontend-vueflow/src/components/graph/inputs/NumberInput.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/inputs/SelectInput.vue`](apps/frontend-vueflow/src/components/graph/inputs/SelectInput.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/inputs/StringInput.vue`](apps/frontend-vueflow/src/components/graph/inputs/StringInput.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/inputs/TextAreaInput.vue`](apps/frontend-vueflow/src/components/graph/inputs/TextAreaInput.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/graph/nodes/NodeInputActionsBar.vue`](apps/frontend-vueflow/src/components/graph/nodes/NodeInputActionsBar.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/modals/AvatarEditorModal.vue`](apps/frontend-vueflow/src/components/modals/AvatarEditorModal.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/modals/RegexEditorModal.vue`](apps/frontend-vueflow/src/components/modals/RegexEditorModal.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/settings/SettingGroup.vue`](apps/frontend-vueflow/src/components/settings/SettingGroup.vue:1) (完成)
+        *   [`apps/frontend-vueflow/src/components/settings/SettingItemRow.vue`](apps/frontend-vueflow/src/components/settings/SettingItemRow.vue:1) (完成)
     *   **待处理组件范围 (下一步):**
-        *   所有在 commit `2a3c9ab` 中初步迁移的组件均已复查并完成迁移。
-        *   需要进一步梳理项目，识别其他需要迁移到新主题系统的组件。
-        *   ... (后续根据实际情况添加更多组件)
+        *   大部分核心组件已在 commit `b5e0008` 中完成主题迁移。
+        *   持续审查和迁移项目中剩余的、可能未使用新主题系统颜色变量的组件。
+        *   确保新开发的组件从一开始就遵循主题规范。
+        *   ... (后续根据实际情况添加更多组件或细化任务)
 
 ### 阶段二：颜色自定义与用户主题
 

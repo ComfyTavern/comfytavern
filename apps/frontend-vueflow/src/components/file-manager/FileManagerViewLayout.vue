@@ -2,17 +2,17 @@
   <div class="file-manager-layout flex flex-1 overflow-hidden h-full">
     <!-- 左侧导航栏 -->
     <aside
-      class="sidebar-nav-container bg-white dark:bg-gray-900 shadow-lg transition-all duration-300 ease-in-out flex-shrink-0"
+      class="sidebar-nav-container bg-background-surface shadow-lg transition-all duration-300 ease-in-out flex-shrink-0"
       :class="isSidebarCollapsed ? 'w-16 hover:w-64 group' : 'w-64'" data-testid="fm-sidebar-nav">
       <SidebarNav v-model:collapsed="isSidebarCollapsed" />
     </aside>
 
     <!-- 右侧主区域 -->
-    <main class="main-content flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-800"
+    <main class="main-content flex-1 flex flex-col overflow-hidden bg-background-base"
       data-testid="fm-main-content">
       <!-- 顶部工具栏 -->
       <header
-        class="file-toolbar-container bg-white dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 flex-shrink-0"
+        class="file-toolbar-container bg-background-surface border-b border-border-base flex-shrink-0"
         data-testid="fm-toolbar">
         <FileToolbar />
       </header>
@@ -26,7 +26,7 @@
 
         <!-- 右侧文件详情面板 (可选) -->
         <aside v-if="isDetailPanelVisible"
-          class="file-detail-panel-container bg-white dark:bg-gray-900 shadow-lg flex-shrink-0 overflow-y-auto border-l border-gray-200 dark:border-gray-700"
+          class="file-detail-panel-container bg-background-surface shadow-lg flex-shrink-0 overflow-y-auto border-l border-border-base"
           :style="{ width: `${detailPanelWidth}px` }" data-testid="fm-detail-panel">
           <FileDetailPanel />
         </aside>

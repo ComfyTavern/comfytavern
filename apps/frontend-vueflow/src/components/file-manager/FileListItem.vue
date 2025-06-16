@@ -1,11 +1,11 @@
 <template>
-  <tr class="file-list-item hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-    :class="{ 'bg-blue-50 dark:bg-blue-900/50': isSelected }" @click.stop="emit('itemClick', $event, item)"
+  <tr class="file-list-item hover:bg-background-surface cursor-pointer"
+    :class="{ 'bg-primary/10': isSelected }" @click.stop="emit('itemClick', $event, item)"
     @dblclick.stop="emit('itemDblClick', item)" @contextmenu.prevent="emit('itemContextMenu', $event, item)"
     :data-path="item.logicalPath" data-testid="fm-list-item">
     <td class="px-3 py-2 whitespace-nowrap w-10">
       <input type="checkbox" :checked="isSelected" @change.stop="emit('toggleSelect', item)" @click.stop
-        class="checkbox checkbox-xs sm:checkbox-sm rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-500 dark:ring-offset-gray-800 dark:bg-gray-700" />
+        class="checkbox checkbox-xs sm:checkbox-sm rounded border-border-base text-primary focus:ring-primary ring-offset-background-base bg-background-surface" />
     </td>
 
     <!-- Dynamically rendered columns based on viewSettings.visibleColumns -->
@@ -13,35 +13,35 @@
       <td v-if="columnKey === 'name'" class="px-3 py-2 whitespace-nowrap text-sm" :class="getColumnWidthClass('name')">
         <div class="flex items-center">
           <component :is="item.itemType === 'directory' ? FolderIcon : getDocumentIcon(item.name)"
-            class="h-5 w-5 mr-2 text-gray-400 dark:text-gray-500 flex-shrink-0"
-            :class="{ 'text-blue-500 dark:text-blue-400': item.itemType === 'directory' }" />
-          <span class="font-medium text-gray-900 dark:text-gray-100 truncate" :title="item.name">
+            class="h-5 w-5 mr-2 text-text-muted flex-shrink-0"
+            :class="{ 'text-primary': item.itemType === 'directory' }" />
+          <span class="font-medium text-text-base truncate" :title="item.name">
             {{ item.name }}
           </span>
-          <StarIcon v-if="isFavorite" class="h-3.5 w-3.5 ml-1.5 text-yellow-400 flex-shrink-0"
+          <StarIcon v-if="isFavorite" class="h-3.5 w-3.5 ml-1.5 text-accent flex-shrink-0"
             v-comfy-tooltip="'已收藏'" />
         </div>
       </td>
 
-      <td v-else-if="columnKey === 'size'" class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+      <td v-else-if="columnKey === 'size'" class="px-3 py-2 whitespace-nowrap text-sm text-text-muted"
         :class="getColumnWidthClass('size')">
         {{ formatSize(item.size) }}
       </td>
 
       <td v-else-if="columnKey === 'lastModified'"
-        class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+        class="px-3 py-2 whitespace-nowrap text-sm text-text-muted"
         :class="getColumnWidthClass('lastModified')">
         {{ formatDate(item.lastModified) }}
       </td>
 
       <td v-else-if="columnKey === 'itemType'"
-        class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+        class="px-3 py-2 whitespace-nowrap text-sm text-text-muted"
         :class="getColumnWidthClass('itemType')">
         {{ item.itemType === 'directory' ? '文件夹' : getItemMimeTypeDisplay(item) }}
       </td>
 
       <!-- Placeholder for other custom columns -->
-      <td v-else class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+      <td v-else class="px-3 py-2 whitespace-nowrap text-sm text-text-muted"
         :class="getColumnWidthClass(columnKey)">
         {{ safelyGetItemProperty(item, columnKey) }}
       </td>
@@ -49,7 +49,7 @@
 
     <td class="px-3 py-2 whitespace-nowrap text-right text-sm font-medium w-12">
       <button @click.stop="emit('itemContextMenu', $event, item, true)"
-        class="p-1 rounded-full text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300"
+        class="p-1 rounded-full text-text-muted hover:bg-background-surface hover:text-text-base"
         v-comfy-tooltip="'更多操作'">
         <EllipsisVerticalIcon class="h-5 w-5" />
       </button>

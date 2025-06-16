@@ -6,28 +6,28 @@
       :disabled="props.disabled || props.readonly"
       @click.stop="toggleDropdown"
       class="w-full rounded border transition-colors duration-200 flex items-center justify-between text-left
-             bg-white dark:bg-gray-700
-             border-gray-300 dark:border-gray-600
-             text-gray-900 dark:text-gray-100
-             focus:ring-1 focus:ring-inset focus:ring-blue-300 dark:focus:ring-blue-700 focus:border-transparent
-             hover:border-gray-400 dark:hover:border-gray-500"
+             bg-background-base dark:bg-background-surface
+             border-border-base
+             text-text-base
+             focus:ring-1 focus:ring-inset focus:ring-primary/50 focus:border-transparent
+             hover:border-primary"
       :class="[
         sizeClasses.button,
         {
-          'border-red-500 dark:border-red-700': props.hasError,
-          'opacity-75 bg-gray-100 dark:bg-gray-800 cursor-default focus:ring-0 focus:border-gray-300 dark:focus:border-gray-600': props.readonly && !props.disabled,
-          'disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed': props.disabled
+          'border-error': props.hasError,
+          'opacity-75 bg-background-base/70 dark:bg-background-surface/70 cursor-default focus:ring-0 focus:border-border-base': props.readonly && !props.disabled,
+          'disabled:bg-background-base/50 dark:disabled:bg-background-surface/50 disabled:text-text-muted disabled:cursor-not-allowed': props.disabled
         }
       ]"
       aria-haspopup="listbox"
       :aria-expanded="isDropdownVisible"
     >
-      <span :class="{ 'text-gray-500 dark:text-gray-400': !selectedOptionLabel }">
+      <span :class="{ 'text-text-muted': !selectedOptionLabel }">
         {{ selectedOptionLabel || props.placeholder || '请选择' }}
       </span>
       <!-- Dropdown Arrow -->
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-        class="w-3 h-3 text-gray-500 dark:text-gray-400 ml-1 flex-shrink-0">
+        class="w-3 h-3 text-text-muted ml-1 flex-shrink-0">
         <path fill-rule="evenodd"
           d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
           clip-rule="evenodd" />
@@ -47,7 +47,7 @@
     />
 
     <!-- Error Message -->
-    <div v-if="props.hasError" class="absolute top-full left-0 w-full text-xs text-red-500 dark:text-red-400 mt-1">
+    <div v-if="props.hasError" class="absolute top-full left-0 w-full text-xs text-error mt-1">
       {{ props.errorMessage }}
     </div>
   </div>

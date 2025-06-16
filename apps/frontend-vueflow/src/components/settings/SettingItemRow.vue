@@ -204,29 +204,10 @@ const handleSaveAvatar = async (payload: { file?: File }) => {
   border-radius: 50%; /* 圆形 */
   /* border-radius: 0.5rem; */ /* 圆角矩形 */
   object-fit: cover; /* 保证图片不变形 */
-  background-color: var(--ct-bg-muted); /* 图片加载前的背景色 */
-  border: 2px solid var(--ct-border-color);
+  background-color: var(--ct-background-surface); /* 图片加载前的背景色 */
+  border: 2px solid var(--ct-border-base); /* 使用标准主题变量 */
 }
 
-.btn {
-  /* 基础按钮样式，可以从全局样式引入或在这里定义 */
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: background-color 0.2s ease;
-}
-.btn-secondary {
-  background-color: var(--ct-bg-btn-secondary);
-  color: var(--ct-text-btn-secondary);
-  border: 1px solid var(--ct-border-color-btn-secondary);
-}
-.btn-secondary:hover {
-  background-color: var(--ct-bg-btn-secondary-hover);
-}
-.btn-sm {
-  padding: 4px 8px;
-  font-size: 0.8rem;
-}
+/* 自定义 .btn, .btn-secondary, .btn-sm 样式已移除，依赖全局 Tailwind/DaisyUI */
 
 </style>

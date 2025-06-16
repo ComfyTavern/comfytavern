@@ -1,8 +1,8 @@
 <template>
   <div
-    class="file-grid-item group relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/60 cursor-pointer flex flex-col items-center text-center shadow-sm border border-transparent hover:border-gray-200 dark:hover:border-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+    class="file-grid-item group relative p-2 rounded-lg hover:bg-background-surface cursor-pointer flex flex-col items-center text-center shadow-sm border border-transparent hover:border-border-base focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     :class="{
-      'bg-blue-50 dark:bg-blue-800/50 ring-2 ring-blue-500 dark:ring-blue-600': isSelected,
+      'bg-primary/10 ring-2 ring-primary': isSelected,
       'h-32 sm:h-36': thumbnailSizeClass === 'small', // Adjusted for consistency
       'h-40 sm:h-48': thumbnailSizeClass === 'medium',
       'h-48 sm:h-56': thumbnailSizeClass === 'large',
@@ -11,12 +11,12 @@
     data-testid="fm-grid-item" role="button" tabindex="0" :aria-label="item.name" :aria-selected="isSelected">
     <div class="absolute top-1.5 left-1.5 z-20">
       <input type="checkbox" :checked="isSelected" @change.stop="emit('toggleSelect', item)" @click.stop
-        class="checkbox checkbox-xs sm:checkbox-sm rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-500 dark:ring-offset-gray-800 dark:bg-gray-700 opacity-0 group-hover:opacity-100 focus:opacity-100"
+        class="checkbox checkbox-xs sm:checkbox-sm rounded border-border-base text-primary focus:ring-primary ring-offset-background-base bg-background-surface opacity-0 group-hover:opacity-100 focus:opacity-100"
         :class="{ 'opacity-100': isSelected }" aria-label="选择此项目" />
     </div>
     <div class="absolute top-1 right-1 z-20 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
       <button @click.stop="emit('itemContextMenu', $event, item, true)"
-        class="p-1 rounded-full text-gray-400 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-600 dark:hover:text-gray-300"
+        class="p-1 rounded-full text-text-muted hover:bg-background-surface hover:text-text-base"
         v-comfy-tooltip="'更多操作'" aria-label="更多操作">
         <EllipsisVerticalIcon class="h-4 w-4" />
       </button>
@@ -26,16 +26,16 @@
       <component :is="item.itemType === 'directory' ? FolderIcon : getDocumentIcon(item.name)"
         class="mb-1 flex-shrink-0" :class="[
           iconSizeClass,
-          item.itemType === 'directory' ? 'text-blue-500 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'
+          item.itemType === 'directory' ? 'text-primary' : 'text-text-muted'
         ]" aria-hidden="true" />
-      <p class="text-xs font-medium text-gray-800 dark:text-gray-200 truncate w-full px-1" :title="item.name">
+      <p class="text-xs font-medium text-text-base truncate w-full px-1" :title="item.name">
         {{ item.name }}
       </p>
       <p v-if="thumbnailSizeClass !== 'small' && item.itemType === 'file'"
-        class="text-xxs text-gray-500 dark:text-gray-400">
+        class="text-xxs text-text-muted">
         {{ formatSize(item.size) }}
       </p>
-      <StarIcon v-if="isFavorite" class="h-3 w-3 mt-0.5 text-yellow-400 flex-shrink-0" v-comfy-tooltip="'已收藏'" />
+      <StarIcon v-if="isFavorite" class="h-3 w-3 mt-0.5 text-accent flex-shrink-0" v-comfy-tooltip="'已收藏'" />
     </div>
   </div>
 </template>

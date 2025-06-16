@@ -5,15 +5,15 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label for="filter-filename"
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">文件名包含</label>
+            class="block text-sm font-medium text-text-base mb-1">文件名包含</label>
           <input type="text" id="filter-filename" v-model="localFilters.namePattern"
             placeholder="例如: report, image, .txt"
-            class="input input-bordered input-sm w-full dark:bg-gray-700 dark:border-gray-600" />
+            class="input input-bordered input-sm w-full bg-background-base border-border-base" />
         </div>
         <div>
-          <label for="filter-type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">类型</label>
+          <label for="filter-type" class="block text-sm font-medium text-text-base mb-1">类型</label>
           <select id="filter-type" v-model="localFilters.itemType"
-            class="select select-bordered select-sm w-full dark:bg-gray-700 dark:border-gray-600">
+            class="select select-bordered select-sm w-full bg-background-base border-border-base">
             <option value="">任何类型</option>
             <option value="file">文件</option>
             <option value="directory">文件夹</option>
@@ -23,15 +23,15 @@
       </div>
 
       <div>
-        <p class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">大小范围</p>
+        <p class="block text-sm font-medium text-text-base mb-1">大小范围</p>
         <div class="grid grid-cols-2 gap-3 items-center">
           <div>
             <label for="filter-min-size" class="sr-only">最小大小</label>
             <div class="flex items-center">
               <input type="number" id="filter-min-size" v-model.number="minSizeInput" min="0" placeholder="最小"
-                class="input input-bordered input-sm w-full dark:bg-gray-700 dark:border-gray-600" />
+                class="input input-bordered input-sm w-full bg-background-base border-border-base" />
               <select v-model="minSizeUnitInput"
-                class="select select-bordered select-sm ml-2 dark:bg-gray-700 dark:border-gray-600">
+                class="select select-bordered select-sm ml-2 bg-background-base border-border-base">
                 <option value="B">B</option>
                 <option value="KB">KB</option>
                 <option value="MB">MB</option>
@@ -43,9 +43,9 @@
             <label for="filter-max-size" class="sr-only">最大大小</label>
             <div class="flex items-center">
               <input type="number" id="filter-max-size" v-model.number="maxSizeInput" min="0" placeholder="最大"
-                class="input input-bordered input-sm w-full dark:bg-gray-700 dark:border-gray-600" />
+                class="input input-bordered input-sm w-full bg-background-base border-border-base" />
               <select v-model="maxSizeUnitInput"
-                class="select select-bordered select-sm ml-2 dark:bg-gray-700 dark:border-gray-600">
+                class="select select-bordered select-sm ml-2 bg-background-base border-border-base">
                 <option value="B">B</option>
                 <option value="KB">KB</option>
                 <option value="MB">MB</option>
@@ -57,17 +57,17 @@
       </div>
 
       <div>
-        <p class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">修改日期范围</p>
+        <p class="block text-sm font-medium text-text-base mb-1">修改日期范围</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label for="filter-date-after" class="sr-only">在此日期之后</label>
             <input type="date" id="filter-date-after" v-model="modifiedAfterDateInput"
-              class="input input-bordered input-sm w-full dark:bg-gray-700 dark:border-gray-600 dark:[color-scheme:dark]" />
+              class="input input-bordered input-sm w-full bg-background-base border-border-base dark:[color-scheme:dark]" />
           </div>
           <div>
             <label for="filter-date-before" class="sr-only">在此日期之前</label>
             <input type="date" id="filter-date-before" v-model="modifiedBeforeDateInput"
-              class="input input-bordered input-sm w-full dark:bg-gray-700 dark:border-gray-600 dark:[color-scheme:dark]" />
+              class="input input-bordered input-sm w-full bg-background-base border-border-base dark:[color-scheme:dark]" />
           </div>
         </div>
       </div>
@@ -75,16 +75,16 @@
       <div>
         <label class="label cursor-pointer justify-start gap-2">
           <input type="checkbox" v-model="localFilters.showHiddenFiles"
-            class="checkbox checkbox-sm dark:checkbox-primary" />
-          <span class="label-text dark:text-gray-300">显示隐藏文件</span>
+            class="checkbox checkbox-sm checkbox-primary" />
+          <span class="label-text text-text-base">显示隐藏文件</span>
         </label>
       </div>
     </form>
 
     <template #footer>
-      <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-750 rounded-b-md">
+      <div class="flex justify-between items-center p-3 bg-background-surface rounded-b-md">
         <button @click="resetFilters" type="button"
-          class="btn btn-sm btn-ghost text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-700">
+          class="btn btn-sm btn-ghost text-error hover:bg-error/10">
           重置筛选
         </button>
         <div>
