@@ -109,7 +109,7 @@ export class NodeLoader {
 
       console.log(`Finished scanning node directory: ${absoluteDirPath}`);
       // 日志输出修改为显示 fullType
-      console.log('Registered nodes:', nodeManager.getDefinitions().map(n => `${n.namespace}:${n.type}`));
+      // console.log('Registered nodes:', nodeManager.getDefinitions().map(n => `${n.namespace}:${n.type}`)); // 由调用者在所有节点加载完毕后统一打印
     } catch (error: any) { // 明确指定 error 类型
       if (error && error.code === 'ENOENT') {
         // 如果目录不存在，给出更友好的提示，而不是作为严重错误

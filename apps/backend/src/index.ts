@@ -36,6 +36,7 @@ import { fileManagerRoutes } from './routes/fileManagerRoutes'; // ++ 导入文�
 import { globalWorkflowRoutes } from './routes/workflowRoutes';
 import { ConcurrencyScheduler } from './services/ConcurrencyScheduler';
 import { NodeLoader } from './services/NodeLoader';
+import { nodeManager } from './services/NodeManager'; // + 导入 NodeManager
 import { createWebsocketHandler, websocketSchema } from './websocket/handler';
 import { WebSocketManager } from './websocket/WebSocketManager';
 
@@ -69,12 +70,22 @@ if (CUSTOM_NODE_PATHS && CUSTOM_NODE_PATHS.length > 0) {
 } else {
   console.log("[ComfyTavern Backend] No custom node paths configured in config.json.");
 }
-// 工作流和项目目录从 config.ts 导入
-// const workflowsDir = WORKFLOWS_DIR; // 使用导入的常量
-// const projectsBaseDir = PROJECTS_BASE_DIR; // 使用导入的常量
 
-// Helper function getProjectWorkflowsDir 已移至 services/projectService.ts
-// 移除此处手动创建 WORKFLOWS_DIR 的逻辑，将在下面统一处理
+// 在所有节点加载完成后，统一打印注册节点列表
+const definitions = nodeManager.getDefinitions();
+const groupedNodes: Record<string, string[]> = {};
+for (const node of definitions) {
+  const namespace = node.namespace || '_unknown'; // 如果 namespace 未定义，则使用 _core
+  if (!groupedNodes[namespace]) {
+    groupedNodes[namespace] = [];
+  }
+  groupedNodes[namespace].push(node.type);
+}
+console.log(
+  '[ComfyTavern Backend] All nodes loaded. Registered nodes (grouped by namespace):',
+  groupedNodes
+);
+
 
 // 读取根目录的 package.json 获取应用版本
 let appVersion = "unknown";
@@ -147,34 +158,34 @@ for (const dir of logicalDirsToEnsure) {
 }
 
 const app = new Elysia()
-  app.use(
-    cors((() => {
-      // 构建实际的白名单
-      // 确保 FRONTEND_URL 存在且有效才加入，并对整个列表去重和过滤无效条目
-      const uniqueOrigins = new Set<string>();
-      if (FRONTEND_URL && typeof FRONTEND_URL === 'string' && FRONTEND_URL.trim() !== '') {
-        uniqueOrigins.add(FRONTEND_URL);
-      }
-      if (Array.isArray(CORS_ALLOWED_ORIGINS)) {
-        CORS_ALLOWED_ORIGINS.forEach(origin => {
-          if (origin && typeof origin === 'string' && origin.trim() !== '') {
-            uniqueOrigins.add(origin);
-          }
-        });
-      }
-      const effectiveAllowedOrigins = Array.from(uniqueOrigins);
-  
-      console.log('[ComfyTavern Backend] Effective CORS Allowed Origins:', effectiveAllowedOrigins);
-  
-      return {
-        origin: effectiveAllowedOrigins.length > 0 ? effectiveAllowedOrigins : false, // 如果列表为空，则明确禁止所有跨域
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowedHeaders: ["Content-Type", "Authorization"],
-        credentials: true,
-        preflight: true,
-      };
-    })())
-  )
+app.use(
+  cors((() => {
+    // 构建实际的白名单
+    // 确保 FRONTEND_URL 存在且有效才加入，并对整个列表去重和过滤无效条目
+    const uniqueOrigins = new Set<string>();
+    if (FRONTEND_URL && typeof FRONTEND_URL === 'string' && FRONTEND_URL.trim() !== '') {
+      uniqueOrigins.add(FRONTEND_URL);
+    }
+    if (Array.isArray(CORS_ALLOWED_ORIGINS)) {
+      CORS_ALLOWED_ORIGINS.forEach(origin => {
+        if (origin && typeof origin === 'string' && origin.trim() !== '') {
+          uniqueOrigins.add(origin);
+        }
+      });
+    }
+    const effectiveAllowedOrigins = Array.from(uniqueOrigins);
+
+    console.log('[ComfyTavern Backend] Effective CORS Allowed Origins:', effectiveAllowedOrigins);
+
+    return {
+      origin: effectiveAllowedOrigins.length > 0 ? effectiveAllowedOrigins : false, // 如果列表为空，则明确禁止所有跨域
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      credentials: true,
+      preflight: true,
+    };
+  })())
+)
   .use(staticPlugin({
     assets: getPublicDir(), // 使用确保存在的 publicDir
     prefix: '', // URL 直接从 public 目录的根开始，例如 /avatars/file.png
