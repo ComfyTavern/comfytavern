@@ -1,4 +1,121 @@
 # 更新记录
+## 2025 年 6 月 15 日
+
+- refactor(ui): 将侧边栏状态管理迁移到 uiStore
+  - 从 themeStore 迁移 isMobileView 和 collapsed 状态到 uiStore
+  - 添加 setupMobileViewListener 方法用于响应式监听移动端视图变化
+  - 更新 SideBar 和 HomeLayout 组件使用 uiStore 的状态和方法
+  - 在 App.vue 中初始化移动端视图监听器
+- refactor(布局): 重构侧边栏和主内容区域布局结构
+  - 将侧边栏和主内容区域的布局逻辑集中到 HomeLayout 组件中管理
+  - 移除各视图组件中重复的侧边栏导入和边距计算逻辑
+  - 添加主内容区域的内边距动态计算功能
+- feat(文件管理): 新增网格视图尺寸调整和扩展名排序功能
+  - 在视图设置中新增 gridItemSize 属性用于控制网格视图项目大小
+  - 添加扩展名排序选项并实现排序逻辑
+  - 重构排序下拉菜单，增加网格尺寸调整输入框和反向排序开关
+  - 优化排序下拉菜单的样式和交互
+- refactor(file-manager): 移除重复样式并迁移到tailwind配置
+  - 将组件中重复定义的CSS样式移除，统一在tailwind.config.js中配置
+  - 使用DaisyUI提供的组件样式替代自定义样式
+- refactor(file-manager): 重构详情面板状态管理至uiStore
+  - 将文件管理器的详情面板可见性状态从fileManagerStore迁移至uiStore统一管理
+  - 添加详情面板宽度调整功能及持久化支持
+  - 优化点击事件处理逻辑避免与双击冲突
+- style(文件管理器): 调整文件管理器的样式和颜色配置
+  - 优化文件管理器中搜索框、面包屑导航和文件列表的样式，统一亮色和暗色模式下的颜色配置
+- refactor(file-manager): 统一使用FAMItem类型替换本地ListItem定义
+  - 重构文件管理系统相关组件和服务，使用@comfytavern/types中的FAMItem类型替换原有的本地ListItem接口定义。主要变更包括：
+  - 在types包中新增FAMItem类型定义和验证schema
+  - 更新前端组件和后端服务使用统一类型
+  - 修改相关API接口和store逻辑适配新类型
+- fix(FileManagerService): 添加受保护路径的重命名检查
+  - 在文件重命名操作中添加对系统路径、固定路径和项目结构目录的保护检查，防止这些关键路径被意外修改。包括对 system://、user://projects、user://library 等路径的特殊处理，当尝试重命名这些路径时会抛出错误。
+- feat(文件管理): 添加文件管理路由模块
+  - 实现文件管理系统的核心路由功能，包括：
+  - 文件/目录列表查看
+  - 创建目录
+  - 删除文件/目录
+  - 重命名文件/目录
+  - 移动文件/目录
+  - 文件上传下载
+  - 路由前缀为/api/fam，支持用户上下文鉴权和路径编码处理
+- feat(文件管理器): 添加文件管理器页面及组件
+  - 实现文件管理器功能，包括：
+  - 添加文件管理器页面路由和基础布局
+  - 实现文件列表、网格视图和面包屑导航组件
+  - 添加文件操作工具栏和上下文菜单
+  - 实现文件上传、移动、重命名等API接口
+  - 添加视图设置和移动文件模态框
+- docs(frontend): 新增前端文件管理器设计文档
+  - 添加 FAM 系统前端文件管理器的详细设计文档，包含组件结构、状态管理、API 设计和用户流程。文档基于项目现有组件和实践进行设计，确保与现有代码风格一致。
+
+## 2025 年 6 月 14 日
+
+- fix(frontend-vueflow): 修复 Tooltip 组件 placement 类型问题
+  - 将 Tooltip 组件的 placement 属性类型从 Placement 改为 string，并在使用时断言回 Placement 类型
+  - 更新多个包的版本号及依赖
+- refactor: 重构文件系统操作以使用统一的FileManagerService
+  - 移除直接的文件系统操作，统一通过FileManagerService处理
+  - 重构config.ts，移除不再使用的全局路径配置
+  - 更新所有loader节点和路由以使用逻辑路径和FAMService
+  - 为FileManagerService添加append模式支持
+  - 重构日志服务和用户头像上传以使用FAMService
+  - 确保所有系统目录通过FAMService创建
+- feat(文件管理): 实现文件管理服务核心功能
+  - 添加 FileManagerService 实现，支持解析逻辑路径和基本文件操作
+  - 包含路径解析、文件读写、目录操作等功能
+  - 实现安全检查和错误处理机制
+- docs(architecture): 添加统一文件与资产管理系统的设计文档草案
+  - 添加统一文件与资产管理系统的设计文档草案，包含系统架构、核心概念、API设计和实施计划。文档详细描述了文件组织结构、逻辑路径方案以及与现有系统的集成方案。
+- docs: 添加 Mermaid 图表代码块标记
+- docs(DesignDocs): 添加项目架构图及mermaid源码
+  - 添加项目架构的mermaid流程图定义及生成的PNG图片，用于文档说明系统各组件关系
+- docs:移动已实施的到old文件夹
+- chore: 更新所有包的版本号至0.0.8或0.1.2
+- docs(DesignDocs): 更新项目结构脑图文档以反映最新技术架构
+  - 重构项目结构脑图文档，详细描述前后端技术栈、核心模块和开发规范。新增项目概述、核心架构、开发流程和未来展望章节，保持文档与代码实现同步。
+- docs(project): 全面新建和完善项目技术文档体系
+  - 本次提交完成了对 ComfyTavern 项目技术文档的全面整理和撰写工作，主要内容包括：
+  - 根据 [`DesignDocs/DocumentationPlan.md`](DesignDocs/DocumentationPlan.md:1) 的规划，系统性地创建了全新的项目技术文档结构。
+  - 新文档体系覆盖了项目的四大核心模块：
+  - Packages ([`DesignDocs/整理/Packages/`](DesignDocs/整理/Packages/))
+  - Backend ([`DesignDocs/整理/Backend/`](DesignDocs/整理/Backend/))
+  - Frontend ([`DesignDocs/整理/Frontend/`](DesignDocs/整理/Frontend/))
+  - Development ([`DesignDocs/整理/Development/`](DesignDocs/整理/Development/))
+  - 为每个模块撰写了详细的子文档及一个模块概览文档。
+  - 创建了顶层的项目总览文档 [`DesignDocs/整理/ProjectOverview.md`](DesignDocs/整理/ProjectOverview.md:1) 作为整个文档体系的入口。
+  - 共计新增 24 份结构化 Markdown 文档，均存放于 [`DesignDocs/整理/`](DesignDocs/整理/) 目录下。
+  - 这套新文档旨在为项目的现有及未来开发者提供清晰、全面、易于导航的技术参考和开发指引。
+- docs:清理过时文档
+- docs(rules): 添加对话框与通知服务规范文档
+  - 添加 DialogService 的详细使用规范，包括对话框类型、参数说明和示例代码。涵盖消息框、确认框、输入框和通知 toast 的使用方法，以及相关组件和注意事项。
+- refactor: 移除冗余代码和阻塞UI的alert提示
+  - 清理了TODO注释和已实现的占位逻辑
+  - 移除了开发调试用的alert弹窗和冗余的console日志
+  - 简化了工作流数据处理逻辑，移除不必要的检查
+- refactor(SettingItemRow): 调整头像编辑按钮位置至头像预览前
+  - 将头像编辑按钮从头像预览后移动到预览前，提升用户操作体验
+- feat(用户头像): 实现用户头像上传与展示功能
+  - 新增头像上传组件和模态框
+  - 扩展用户身份接口以支持头像URL
+  - 修改设置控件以支持头像类型
+  - 实现头像上传API和后端处理逻辑
+  - 在侧边栏和设置页面展示用户头像
+  - 添加默认头像和错误处理机制
+- feat(backend): 实现用户隔离的角色卡存储和访问
+  - refactor(frontend): 使用统一的API工具和URL处理
+  - docs(types): 添加PNG处理库的类型定义
+  - 后端现在根据用户ID存储角色卡到各自目录，确保数据隔离
+  - 前端改用统一的useApi工具和URL处理函数
+  - 添加了png-chunks-extract和png-chunk-text的类型定义
+  - 改进错误处理和日志记录
+- refactor(file): 集中文件路径管理到fileUtils模块
+  - 将分散在各处的文件路径计算和目录创建逻辑统一到fileUtils模块
+  - 添加ensureDirExists函数确保目录存在
+  - 重构各服务使用新的路径获取方法
+  - 在应用启动时统一创建必要目录
+
 ## 2025 年 6 月 13 日
 
 - feat(projectRoutes): 添加用户认证支持并更新.gitignore
@@ -1244,9 +1361,9 @@ ct-summary.md`，以简化日志管理。
 - 提交
 - 重构文档分类
 - 清理内容
-- 初始提交
+- 初始提交到GitHub
 
------- 旧记录 ------
+------ 旧记录，顺序时间排序，提交记录在旧分支，懒得考据时间了 ------
 
 - 创建基本结构
 - 添加 LiteGraph.js 的基本画布功能
