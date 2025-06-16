@@ -39,15 +39,15 @@ function getTabClasses(tab: Tab): string[] {
   ]
   if (tab.internalId === activeTabId.value) {
     classes.push(
-      'border-primary-500', 'text-primary-600', 'dark:text-primary-400',
-      'bg-gray-100', 'dark:bg-gray-700'
+      'border-primary', 'text-primary', // 使用语义化颜色
+      'bg-primary-softest' // 活动标签背景使用 primary-softest
     )
   } else {
     classes.push(
-      'border-transparent', 'text-gray-500', 'dark:text-gray-400',
-      'hover:text-gray-700', 'dark:hover:text-gray-200',
-      'hover:bg-gray-50', 'dark:hover:bg-gray-800',
-      'hover:border-gray-300', 'dark:hover:border-gray-600'
+      'border-transparent', 'text-text-muted', // 非活动标签文本使用 text-muted
+      'hover:text-primary', // hover 时文本变 primary
+      'hover:bg-neutral-softest', // hover 时背景变 neutral-softest
+      'hover:border-border-base' // hover 时边框变 border-base
     )
   }
   return classes
@@ -55,9 +55,9 @@ function getTabClasses(tab: Tab): string[] {
 
 function getCloseButtonClasses(tab: Tab): string[] {
   const classes = [
-    'ml-2', 'p-0.5', 'rounded', 'text-gray-400', 'dark:text-gray-500',
-    'hover:bg-gray-200', 'dark:hover:bg-gray-600',
-    'hover:text-gray-600', 'dark:hover:text-gray-300',
+    'ml-2', 'p-0.5', 'rounded', 'text-text-muted', // 关闭按钮文本使用 text-muted
+    'hover:bg-neutral-softest', // hover 时背景变 neutral-softest
+    'hover:text-primary', // hover 时文本变 primary
     'opacity-0', 'group-hover:opacity-100', // 默认隐藏，悬停时显示
     'transition-opacity', 'duration-150'
   ];
@@ -105,11 +105,11 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="tab-bar-container flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-hidden">
+    class="tab-bar-container flex border-b border-border-base bg-background-surface overflow-y-hidden">
     <OverlayScrollbarsComponent ref="scrollbarRef" :options="{
       scrollbars: {
         autoHide: 'scroll',
-        theme: isDark ? 'os-theme-light' : 'os-theme-dark'
+        theme: isDark ? 'os-theme-light' : 'os-theme-dark' // 保留 isDark 用于 OverlayScrollbars 主题
       },
       overflow: { x: 'scroll', y: 'hidden' },
     }" class="min-w-0">
@@ -117,7 +117,7 @@ onUnmounted(() => {
         <a v-for="tab in tabs" :key="tab.internalId" href="#" :class="getTabClasses(tab)"
           @click.prevent="selectTab(tab.internalId)">
           <span>{{ tab.label }}</span>
-          <span v-if="tab.isDirty" class="ml-1 text-red-500">*</span>
+          <span v-if="tab.isDirty" class="ml-1 text-error">*</span>
           <button :class="getCloseButtonClasses(tab)" @click.prevent="closeTab($event, tab.internalId)"
             aria-label="Close tab">
             <XMarkIcon class="h-4 w-4" />
@@ -126,7 +126,7 @@ onUnmounted(() => {
       </nav>
     </OverlayScrollbarsComponent>
     <button @click="addNewTab"
-      class="ml-2 px-2 py-1.5 border-b-2 border-transparent text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150 flex-shrink-0"
+      class="ml-2 px-2 py-1.5 border-b-2 border-transparent text-text-muted hover:text-primary hover:bg-neutral-softest transition-colors duration-150 flex-shrink-0"
       aria-label="New tab">
       <PlusIcon class="h-5 w-5" />
     </button>

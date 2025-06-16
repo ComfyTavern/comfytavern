@@ -1,11 +1,11 @@
 <template>
-  <div class="workflow-panel p-4 h-full flex flex-col bg-background-surface text-text-base"> {/* text-text-default -> text-text-base */}
+  <div class="workflow-panel p-4 h-full flex flex-col bg-background-surface text-text-base"> 
     <h3 class="text-lg font-semibold mb-4 border-b pb-2 border-border-base">工作流</h3>
 
     <!-- 搜索框 (可选) -->
     <div class="mb-3">
       <input type="text" v-model="searchTerm" placeholder="搜索工作流..."
-        class="w-full px-2 py-1 border rounded bg-background-base border-border-base focus:outline-none focus:ring-1 focus:ring-primary"> {/* bg-background-input -> bg-background-base, border-border-input -> border-border-base */}
+        class="w-full px-2 py-1 border rounded bg-background-base border-border-base focus:outline-none focus:ring-1 focus:ring-primary"> 
     </div>
 
     <!-- 刷新按钮 -->

@@ -23,40 +23,40 @@
           <template v-if="panelMode === 'singlePreview'">
             <template v-if="activeTarget">
               {{ nodeDisplayName }}
-              <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(ID: {{ activeTarget.nodeId }})</span>
+              <span class="text-xs text-text-muted ml-1">(ID: {{ activeTarget.nodeId }})</span>
             </template>
             <template v-else>
-              <span class="text-gray-700 dark:text-gray-300">单一预览 <span
-                  class="text-gray-400 dark:text-gray-500">（未选目标）</span></span>
+              <span class="text-text-base">单一预览 <span
+                  class="text-text-muted">（未选目标）</span></span>
             </template>
           </template>
           <template v-else-if="panelMode === 'groupOverview'">
             <template v-if="activeTabId && groupOutputs"> <span
-                class="text-lg font-semibold text-green-500 dark:text-green-300">{{
+                class="text-lg font-semibold text-success">{{
                   activeWorkflowName }}</span> 组输出总览 </template>
             <template v-else>
-              <span class="text-gray-700 dark:text-gray-300">组输出总览
-                <span class="text-gray-400 dark:text-gray-500">（无可用工作流）</span></span>
+              <span class="text-text-base">组输出总览
+                <span class="text-text-muted">（无可用工作流）</span></span>
             </template>
           </template>
         </h3>
       </div>
       <!-- 按钮组 -->
       <div v-if="panelLayout.isExpanded"
-        class="mode-switcher flex-shrink-0 flex items-center space-x-1 p-1 bg-gray-100 dark:bg-gray-700 rounded-md mx-2">
+        class="mode-switcher flex-shrink-0 flex items-center space-x-1 p-1 bg-neutral-softest rounded-md mx-2">
         <button @click="panelMode = 'singlePreview'" :class="[
           'px-2 py-0.5 text-xs rounded-md transition-colors',
           panelMode === 'singlePreview'
-            ? 'bg-blue-500 text-white shadow-sm'
-            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
+            ? 'bg-primary text-primary-content shadow-sm'
+            : 'text-text-secondary hover:bg-neutral-softest',
         ]" title="单一插槽预览模式 (含流式)">
           单一
         </button>
         <button @click="panelMode = 'groupOverview'" :class="[
           'px-2 py-0.5 text-xs rounded-md transition-colors',
           panelMode === 'groupOverview'
-            ? 'bg-green-500 text-white shadow-sm'
-            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
+            ? 'bg-success text-primary-content shadow-sm'
+            : 'text-text-secondary hover:bg-neutral-softest',
         ]" title="组输出总览模式">
           组总览
         </button>
@@ -84,21 +84,21 @@
           <div class="p-4 flex flex-col overflow-hidden h-full space-y-2">
             <!-- 插槽信息 -->
             <p class="text-sm flex-shrink-0">
-              <span class="font-semibold text-gray-500 dark:text-gray-400">插槽: </span>
-              <span class="text-gray-800 dark:text-gray-100">{{ slotDisplayName }}</span>
-              <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">(Key: {{ activeTarget.slotKey }})</span>
-              <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase ml-2">- 输出</span>
+              <span class="font-semibold text-text-muted">插槽: </span>
+              <span class="text-text-base">{{ slotDisplayName }}</span>
+              <span class="text-xs text-text-muted ml-1">(Key: {{ activeTarget.slotKey }})</span>
+              <span class="text-xs font-semibold text-text-muted uppercase ml-2">- 输出</span>
               <span v-if="isStreamSlot"
-                class="text-xs font-semibold text-purple-500 dark:text-purple-400 uppercase ml-2">[STREAM]</span>
+                class="text-xs font-semibold text-accent uppercase ml-2">[STREAM]</span>
               <span v-if="isSingleStreamProcessing"
-                class="text-blue-500 dark:text-blue-400 ml-2 font-normal text-xs">(流式传输中...)</span>
+                class="text-info ml-2 font-normal text-xs">(流式传输中...)</span>
               <span v-else-if="isStreamSlot && isSingleStreamDone"
-                class="text-green-500 dark:text-green-400 ml-2 font-normal text-xs">(流已结束)</span>
+                class="text-success ml-2 font-normal text-xs">(流已结束)</span>
             </p>
 
             <div class="flex flex-col flex-grow overflow-hidden">
               <!-- 内容框：移除 max-h, 添加 flex-grow overflow-y-auto -->
-              <div class="p-2 border rounded bg-gray-50 dark:bg-gray-700/50 flex-grow overflow-y-auto">
+              <div class="p-2 border rounded bg-neutral-softest flex-grow overflow-y-auto">
                 <!-- 使用 mergedSinglePreviewContent， 增加 !== '' 的判断 -->
                 <template v-if="
                   mergedSinglePreviewContent !== null &&
@@ -118,7 +118,7 @@
                   </p>
                 </template>
                 <!-- 无内容时的提示 -->
-                <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">
+                <p v-else class="text-xs text-text-muted italic">
                   <template v-if="isSingleStreamProcessing">等待流数据...</template>
                   <template v-else>无可用预览数据或插槽未产生输出。</template>
                 </p>
@@ -127,7 +127,7 @@
           </div>
         </template>
         <template v-else>
-          <p class="p-4 text-sm text-gray-500 dark:text-gray-400">
+          <p class="p-4 text-sm text-text-muted">
             无预览目标被选中。右键点击节点输出桩或连线以预览。
           </p>
         </template>
@@ -137,26 +137,26 @@
       <!-- 组输出总览模式 -->
       <template v-else-if="panelMode === 'groupOverview'">
         <template v-if="!activeTabId">
-          <p class="p-4 text-sm text-gray-500 dark:text-gray-400">没有活动的工作流。</p>
+          <p class="p-4 text-sm text-text-muted">没有活动的工作流。</p>
         </template>
         <template v-else-if="!groupOutputs || Object.keys(groupOutputs).length === 0">
-          <p class="p-4 text-sm text-gray-500 dark:text-gray-400">当前工作流没有定义组输出接口。</p>
+          <p class="p-4 text-sm text-text-muted">当前工作流没有定义组输出接口。</p>
         </template>
         <template v-else-if="processedGroupOutputs.length > 0">
           <!-- 添加 overflow-y-auto 以便内容过多时滚动 -->
           <div class="p-2 space-y-2 overflow-y-auto h-full">
             <template v-for="item in processedGroupOutputs" :key="item.key">
-              <div class="border border-gray-200 dark:border-gray-600 rounded-md overflow-hidden">
+              <div class="border border-border-base rounded-md overflow-hidden">
                 <!-- Header -->
                 <div @click="toggleGroupOutputCollapse(item.key)"
-                  class="flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors">
-                  <span class="font-medium text-sm text-gray-700 dark:text-gray-200">
+                  class="flex items-center justify-between p-2 bg-neutral-softest hover:bg-neutral-soft cursor-pointer transition-colors">
+                  <span class="font-medium text-sm text-text-base">
                     {{ item.outputDef.displayName || item.key }}
                     <!-- 添加 STREAM 标签 -->
                     <span v-if="item.isStream"
-                      class="text-xs font-semibold text-purple-500 dark:text-purple-400 uppercase ml-1">[STREAM]</span>
+                      class="text-xs font-semibold text-accent uppercase ml-1">[STREAM]</span>
                     <!-- 标题和状态 -->
-                    <span class="text-xs mb-1 text-gray-500 dark:text-gray-400 font-semibold">
+                    <span class="text-xs mb-1 text-text-muted font-semibold">
                       输出值:
                       <!-- 显示状态文本 -->
                       <span v-if="item.status" :class="['ml-2 font-normal text-xs', item.status.class]">
@@ -164,7 +164,7 @@
                       </span>
                     </span>
                   </span>
-                  <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform duration-200"
+                  <svg class="w-5 h-5 text-text-muted transform transition-transform duration-200"
                     :class="{ 'rotate-180': !isGroupOutputCollapsed(item.key) }" viewBox="0 0 20 20"
                     fill="currentColor">
                     <path fill-rule="evenodd"
@@ -174,9 +174,9 @@
                 </div>
                 <!-- Content: 合并后的单一内容块 -->
                 <div v-show="!isGroupOutputCollapsed(item.key)"
-                  class="p-2 border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 space-y-1">
+                  class="p-2 border-t border-border-base bg-background-base space-y-1">
                   <!-- 内容显示区域 -->
-                  <div class="p-1 border rounded bg-gray-100 dark:bg-gray-700/30 max-h-64 overflow-y-auto">
+                  <div class="p-1 border rounded bg-neutral-softest max-h-64 overflow-y-auto">
                     <!-- 有内容时 -->
                     <template v-if="!item.isEmpty">
                       <MarkdownRenderer v-if="item.isMarkdown && typeof item.content === 'string'"
@@ -186,7 +186,7 @@
                       <p v-else class="text-xs whitespace-pre-wrap break-all">{{ String(item.content) }}</p>
                     </template>
                     <!-- 无内容时的提示 -->
-                    <p v-else class="text-xs text-gray-500 dark:text-gray-400 italic">
+                    <p v-else class="text-xs text-text-muted italic">
                       {{ item.emptyText }}
                     </p>
                   </div>
@@ -196,7 +196,7 @@
           </div>
         </template>
         <template v-else>
-          <p class="p-4 text-sm text-gray-500 dark:text-gray-400">
+          <p class="p-4 text-sm text-text-muted">
             当前工作流的组输出没有可用接口。
           </p>
         </template>
@@ -548,8 +548,8 @@ const getGroupStatusText = (key: string, outputDef: OutputDefinition): { text: s
   const streamProcessing = isInterfaceStreamProcessing(key); // 已有方法
   const streamDone = isInterfaceStreamDone(key); // 已有方法
 
-  if (streamProcessing) return { text: "(流式传输中...)", class: "text-blue-500 dark:text-blue-400" };
-  if (streamDone) return { text: "(流已结束)", class: "text-green-500 dark:text-green-400" };
+  if (streamProcessing) return { text: "(流式传输中...)", class: "text-info" };
+  if (streamDone) return { text: "(流已结束)", class: "text-success" };
   return null;
 };
 
@@ -753,7 +753,7 @@ onUnmounted(() => {
 <style scoped>
 /* Style 保持不变 */
 .right-preview-panel {
-  @apply fixed right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg flex flex-col z-50 rounded-md;
+  @apply fixed right-0 bg-background-base border border-border-base shadow-lg flex flex-col z-50 rounded-md;
   transition: width 0.2s ease-in-out, height 0.2s ease-in-out;
   overflow: hidden;
 }
@@ -768,12 +768,10 @@ onUnmounted(() => {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
   /* 添加左侧边框线感 */
-  border-left: 1px solid theme('colors.gray.200');
+  border-left: 1px solid hsl(var(--ct-border-base-hsl) / 1);
 }
 
-.dark .right-preview-panel.is-expanded {
-  border-left: 1px solid theme('colors.gray.700');
-}
+/* Removed .dark .right-preview-panel.is-expanded rule */
 
 .right-preview-panel:not(.is-expanded) {
   @apply rounded-md;
@@ -801,15 +799,16 @@ onUnmounted(() => {
 }
 
 .resize-handle-top {
-  @apply absolute top-0 left-0 w-full h-3 cursor-ns-resize z-50 bg-transparent hover:bg-blue-300/30;
+  /* TODO: Review hover:bg-blue-300/30 for theme color */
+  @apply absolute top-0 left-0 w-full h-3 cursor-ns-resize z-50 bg-transparent hover:bg-primary-softest;
 }
 
 .resize-handle-corner {
-  @apply absolute bottom-0 left-0 w-4 h-4 cursor-nesw-resize z-50 bg-gray-400 dark:bg-gray-600 opacity-0 hover:opacity-100 rounded-tr-md transition-opacity duration-150;
+  @apply absolute bottom-0 left-0 w-4 h-4 cursor-nesw-resize z-50 bg-neutral opacity-0 hover:opacity-100 rounded-tr-md transition-opacity duration-150;
 }
 
 .panel-header {
-  @apply flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 select-none;
+  @apply flex items-center justify-between p-2 border-b border-border-base flex-shrink-0 select-none;
   cursor: grab;
   /* 默认抓手光标 */
 }
@@ -827,11 +826,11 @@ onUnmounted(() => {
 }
 
 .panel-title {
-  @apply text-lg font-semibold text-gray-700 dark:text-gray-200;
+  @apply text-lg font-semibold text-text-base;
 }
 
 .toggle-button {
-  @apply p-1 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md cursor-pointer;
+  @apply p-1 text-text-muted hover:bg-neutral-softest rounded-md cursor-pointer;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -100,7 +100,7 @@
         data-testid="fm-filter-btn">
         <FunnelIcon class="h-5 w-5" />
         <span v-if="activeFiltersCount > 0"
-          class="absolute -top-1 -right-1 bg-error text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+          class="absolute -top-1 -right-1 bg-error text-primary-content text-xs rounded-full h-4 w-4 flex items-center justify-center">
           {{ activeFiltersCount }}
         </span>
       </button>

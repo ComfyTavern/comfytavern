@@ -845,4 +845,60 @@ onUnmounted(() => {
 :deep(.vue-flow__nodesselection-rect) {
   pointer-events: none;
 }
+
+/* VueFlow Controls 主题化 - 强化版 */
+:deep(.vue-flow__controls) {
+  @apply shadow-md rounded-md overflow-hidden; /* 加 overflow-hidden 避免内部元素破坏圆角 */
+}
+
+:deep(.vue-flow__controls .vue-flow__controls-button) { /* 增加选择器特指度 */
+  background-color: hsl(var(--ct-background-surface-hsl)) !important;
+  color: hsl(var(--ct-text-base-hsl)) !important; /* SVG 会继承这个颜色如果 fill="currentColor" */
+  border: 1px solid hsl(var(--ct-border-base-hsl)) !important;
+  box-shadow: none !important; /* 移除库可能自带的阴影 */
+  transition: background-color 0.15s ease-in-out !important; /* 保留过渡 */
+}
+
+:deep(.vue-flow__controls .vue-flow__controls-button:hover) {
+  background-color: hsl(var(--ct-neutral-hsl) / 0.15) !important; /* 对应 hover:bg-neutral-softest (假设 softest 是 0.15 透明度) */
+}
+
+:deep(.vue-flow__controls .vue-flow__controls-button svg) {
+  fill: currentColor !important; /* 强制SVG使用父元素的 color 属性 */
+}
+
+/* 控制器按钮之间的分隔线 - VueFlow 默认是垂直排列，按钮间是上边框 */
+:deep(.vue-flow__controls .vue-flow__controls-button + .vue-flow__controls-button) {
+  border-top-width: 1px !important;
+  border-top-color: hsl(var(--ct-border-base-hsl)) !important; /* 使用主题边框色作为分隔线 */
+  margin-left: 0 !important; /* 重置可能存在的库默认 margin */
+  border-left-width: 0 !important; /* 如果意外是水平排列，则移除左边框 */
+}
+
+/* 禁用状态 */
+:deep(.vue-flow__controls .vue-flow__controls-button:disabled) {
+  background-color: hsl(var(--ct-background-surface-hsl) / var(--ct-disabled-opacity)) !important;
+  color: hsl(var(--ct-text-muted-hsl) / var(--ct-disabled-opacity)) !important;
+  border-color: hsl(var(--ct-border-base-hsl) / var(--ct-disabled-opacity)) !important;
+  cursor: not-allowed !important;
+}
+
+
+/* VueFlow MiniMap 主题化 */
+:deep(.vue-flow__minimap) {
+  @apply bg-background-surface border border-border-base rounded-md shadow-md;
+}
+:deep(.vue-flow__minimap-mask) {
+  /* 视口矩形外的遮罩 */
+  /* 使用背景遮罩颜色和透明度, theme-variables.css 中定义了 --ct-backdrop-bg-hsl 和 --ct-backdrop-opacity */
+  fill: hsl(var(--ct-backdrop-bg-hsl) / var(--ct-backdrop-opacity));
+}
+:deep(.vue-flow__minimap-node) {
+  /* 小地图中的节点表示 */
+  @apply fill-neutral stroke-border-base;
+  stroke-width: 1px; /* 确保单位 */
+}
+:deep(.vue-flow__minimap-node.selected) { /* 如果有选中态 */
+  @apply fill-primary stroke-primary;
+}
 </style>

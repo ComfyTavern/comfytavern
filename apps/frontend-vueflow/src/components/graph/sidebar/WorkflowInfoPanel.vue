@@ -245,7 +245,7 @@ const logWorkflowJson = () => {
       class="flex-1 px-4 pb-4" defer>
       <div class="space-y-4"> <!-- Inner wrapper for spacing -->
         <div>
-          <label for="workflow-name" class="block text-xs font-medium text-text-secondary mb-1">名称</label> {/* text-text-label -> text-text-secondary */}
+          <label for="workflow-name" class="block text-xs font-medium text-text-secondary mb-1">名称</label> 
           <input id="workflow-name" type="text" v-model="editingName" @blur="handleNameBlur" placeholder="工作流名称"
             class="input-sm w-full" />
 
@@ -254,7 +254,7 @@ const logWorkflowJson = () => {
 
         <div>
           <label for="workflow-description"
-            class="block text-xs font-medium text-text-secondary mb-1">描述</label> {/* text-text-label -> text-text-secondary */}
+            class="block text-xs font-medium text-text-secondary mb-1">描述</label> 
           <textarea id="workflow-description" v-model="editingDescription" @blur="handleDescriptionBlur" rows="4"
             placeholder="工作流描述信息..." class="textarea-sm w-full"></textarea>
           <p class="text-xs text-text-muted mt-1">详细描述这个工作流的功能和用途。</p>
@@ -291,14 +291,14 @@ const logWorkflowJson = () => {
             <span class="transform transition-transform duration-200 mr-2" :class="{ 'rotate-90': isNodeListExpanded }">
               ▶
             </span>
-            <h2 class="text-xs font-medium uppercase text-text-secondary"> {/* text-text-label-uppercase -> text-text-secondary (removed uppercase class as it's already in the text) */}
+            <h2 class="text-xs font-medium uppercase text-text-secondary"> 
               工作流节点列表 ({{ nodeCount }})
             </h2>
           </div>
           <OverlayScrollbarsComponent v-if="isNodeListExpanded"
             :options="{ scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' } }"
-            class="mt-2 max-h-60 border rounded border-neutral-soft bg-background-base bg-opacity-50 p-2 text-xs" defer> {/* border-border-neutral-soft -> border-neutral/30, bg-background-inset -> bg-background-base */}
-            <div v-if="workflowNodes.length === 0" class="text-text-muted italic"> {/* text-text-placeholder -> text-text-muted */}
+            class="mt-2 max-h-60 border rounded border-neutral-soft bg-background-base bg-opacity-50 p-2 text-xs" defer> 
+            <div v-if="workflowNodes.length === 0" class="text-text-muted italic"> 
               此工作流中没有节点。
             </div>
             <ul v-else class="space-y-1">
@@ -311,7 +311,7 @@ const logWorkflowJson = () => {
         </div>
       </div>
     </OverlayScrollbarsComponent>
-    <div v-else class="text-text-muted italic text-center py-6 px-4 flex-1">没有活动的工作流或数据不可用。</div> {/* text-text-placeholder -> text-text-muted */}
+    <div v-else class="text-text-muted italic text-center py-6 px-4 flex-1">没有活动的工作流或数据不可用。</div> 
     <!-- Added flex-1 here -->
   </div>
 </template>

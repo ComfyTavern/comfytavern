@@ -1,9 +1,9 @@
 <template>
   <div
-    class="status-bar bg-gray-100 dark:bg-gray-800 border-t border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm flex items-center justify-between shadow-inner">
+    class="status-bar bg-background-surface border-t border-border-base px-3 py-1.5 text-sm flex items-center justify-between shadow-inner">
     <div class="flex items-center space-x-4 flex-grow min-w-0">
       <!-- Added flex-grow -->
-      <div class="text-blue-500 dark:text-blue-400 font-semibold flex-shrink-0">{{ projectName }}</div>
+      <div class="text-primary font-semibold flex-shrink-0">{{ projectName }}</div>
       <!-- 工作流菜单触发器 -->
       <div class="relative flex-shrink-0">
         <button ref="workflowButtonRef" @click="toggleWorkflowMenu" class="status-bar-button">
@@ -17,11 +17,10 @@
     <div class="flex items-center space-x-2 flex-shrink-0">
       <!-- 可停靠编辑器切换按钮 -->
       <button @click="toggleDockedEditor" :title="isDockedEditorVisible ? '隐藏编辑器面板' : '显示编辑器面板'"
-        class="px-2 py-1 rounded border border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none transition-all duration-150"
+        class="px-2 py-1 rounded border border-transparent text-text-muted hover:bg-neutral-softest focus:outline-none transition-all duration-150"
         :class="{
-          'text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/50':
-            isDockedEditorVisible,
-          'text-gray-500 dark:text-gray-500': !isDockedEditorVisible,
+          'text-primary border-primary-soft bg-primary-softest': isDockedEditorVisible,
+          'text-text-muted': !isDockedEditorVisible, /* text-gray-500 is more like text-muted or text-secondary */
         }">
         <svg v-if="isDockedEditorVisible" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" fill="none"
           viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -36,11 +35,10 @@
       </button>
       <!-- 实时预览切换按钮 -->
       <button @click="togglePreview" :title="isPreviewEnabled ? '禁用实时预览' : '启用实时预览'"
-        class="px-2 py-1 rounded border border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none transition-all duration-150"
+        class="px-2 py-1 rounded border border-transparent text-text-muted hover:bg-neutral-softest focus:outline-none transition-all duration-150"
         :class="{
-          'text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/50':
-            isPreviewEnabled,
-          'text-gray-500 dark:text-gray-500': !isPreviewEnabled,
+          'text-primary border-primary-soft bg-primary-softest': isPreviewEnabled,
+          'text-text-muted': !isPreviewEnabled, /* text-gray-500 is more like text-muted or text-secondary */
         }">
         <svg v-if="isPreviewEnabled" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" fill="none"
           viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -58,24 +56,24 @@
       </button>
       <!-- 执行按钮 -->
       <button @click="handleExecuteWorkflow"
-        class="px-3 py-1 rounded text-white font-medium bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-500">
+        class="px-3 py-1 rounded text-primary-content font-medium bg-success/90 saturate-[.85] hover:bg-success/95 hover:saturate-[.75] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-success">
         执行
       </button>
       <!-- 显示工作流执行状态 -->
       <span v-if="workflowStatusText" class="flex items-center space-x-1.5 text-xs font-medium ml-2" :class="{
-        'text-yellow-700 dark:text-yellow-300': currentWorkflowStatus === ExecutionStatus.RUNNING,
-        'text-green-700 dark:text-green-300': currentWorkflowStatus === ExecutionStatus.COMPLETE,
-        'text-red-700 dark:text-red-300': currentWorkflowStatus === ExecutionStatus.ERROR,
-        'text-gray-600 dark:text-gray-400':
+        'text-warning': currentWorkflowStatus === ExecutionStatus.RUNNING,
+        'text-success': currentWorkflowStatus === ExecutionStatus.COMPLETE,
+        'text-error': currentWorkflowStatus === ExecutionStatus.ERROR,
+        'text-text-muted':
           currentWorkflowStatus === ExecutionStatus.IDLE ||
           currentWorkflowStatus === ExecutionStatus.QUEUED ||
           currentWorkflowStatus === ExecutionStatus.SKIPPED,
       }">
         <span class="inline-block h-2 w-2 rounded-full" :class="{
-          'bg-yellow-500 animate-pulse': currentWorkflowStatus === ExecutionStatus.RUNNING,
-          'bg-green-500': currentWorkflowStatus === ExecutionStatus.COMPLETE,
-          'bg-red-500': currentWorkflowStatus === ExecutionStatus.ERROR,
-          'bg-gray-400':
+          'bg-warning animate-pulse': currentWorkflowStatus === ExecutionStatus.RUNNING,
+          'bg-success': currentWorkflowStatus === ExecutionStatus.COMPLETE,
+          'bg-error': currentWorkflowStatus === ExecutionStatus.ERROR,
+          'bg-neutral': /* bg-gray-400 is more like neutral for an indicator */
             currentWorkflowStatus === ExecutionStatus.IDLE ||
             currentWorkflowStatus === ExecutionStatus.QUEUED ||
             currentWorkflowStatus === ExecutionStatus.SKIPPED,
@@ -240,6 +238,6 @@ const handleExecuteWorkflow = async () => {
 }
 
 .status-bar-button {
-  @apply px-2 py-0.5 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-150 focus:outline-none;
+  @apply px-2 py-0.5 rounded text-text-secondary hover:bg-neutral-softest transition-colors duration-150 focus:outline-none;
 }
 </style>

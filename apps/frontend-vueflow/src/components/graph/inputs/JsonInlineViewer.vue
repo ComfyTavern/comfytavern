@@ -193,9 +193,9 @@ const removeItem = (index: number) => {
   gap: 8px;
   width: 100%;
   padding: 8px;
-  border: 1px solid var(--ct-border-DEFAULT, #d1d5db); /* gray-300 */
+  border: 1px solid hsl(var(--ct-border-base-hsl) / 1);
   border-radius: 4px;
-  background-color: var(--ct-bg-surface, #f9fafb); /* gray-50 */
+  background-color: hsl(var(--ct-background-surface-hsl) / 1);
   font-size: 0.9em;
 }
 
@@ -210,11 +210,9 @@ const removeItem = (index: number) => {
   gap: 8px; /* 保持 kv-pair 之间的间距 */
 }
 
-/* 如果滚动容器本身没有足够的内边距，可能需要给最后一个子元素添加底部边距 */
 .kv-list-scroll-container .kv-pair:last-child {
    /* margin-bottom: 0; */ /* 如果gap已足够，则不需要 */
 }
-
 
 .kv-pair {
   display: flex;
@@ -226,15 +224,14 @@ const removeItem = (index: number) => {
 .value-input {
   flex-grow: 1;
   padding: 4px 6px;
-  border: 1px solid var(--ct-border-input, #cbd5e1); /* gray-300 / blue-gray-300 */
+  border: 1px solid hsl(var(--ct-border-base-hsl) / 1);
   border-radius: 3px;
-  background-color: var(--ct-bg-input, #ffffff);
-  color: var(--ct-text-default, #1f2937); /* gray-800 */
-  /* 移除了 font-family 以继承全局字体 */
+  background-color: hsl(var(--ct-background-base-hsl) / 1);
+  color: hsl(var(--ct-text-base-hsl) / 1);
   font-size: 0.95em;
   line-height: 1.4;
   min-width: 0;
-  height: 28px; /* 略微增加高度以匹配按钮 */
+  height: 28px;
 }
 
 .key-input {
@@ -248,12 +245,12 @@ const removeItem = (index: number) => {
 .key-input:focus,
 .value-input:focus {
   outline: none;
-  border-color: var(--ct-accent-DEFAULT, #2563eb); /* blue-600 */
-  box-shadow: 0 0 0 1px var(--ct-accent-DEFAULT, #2563eb);
+  border-color: hsl(var(--ct-accent-hsl) / 1);
+  box-shadow: 0 0 0 1px hsl(var(--ct-accent-hsl) / 1);
 }
 
 .separator {
-  color: var(--ct-text-muted, #6b7280); /* gray-500 */
+  color: hsl(var(--ct-text-muted-hsl) / 1);
   font-weight: 500;
 }
 
@@ -262,78 +259,38 @@ const removeItem = (index: number) => {
   padding: 2px 6px;
   background-color: transparent;
   border: none;
-  color: var(--ct-text-danger, #dc2626); /* red-600 */
+  color: hsl(var(--ct-error-hsl) / 1);
   cursor: pointer;
   font-size: 1.2em;
   line-height: 1;
   border-radius: 3px;
 }
 .remove-button:hover {
-  background-color: var(--ct-bg-danger-hover, #fee2e2); /* red-100 */
+  background-color: hsl(var(--ct-error-hsl) / 0.15);
 }
 
 .add-button {
-  padding: 0px 8px; /* 减小垂直内边距 */
-  width: 100%; /* 横向占满 */
-  height: 22px; /* 固定高度 */
-  background-color: var(--ct-bg-button-secondary, #e5e7eb); /* gray-200 */
-  border: 1px solid var(--ct-border-button-secondary, #d1d5db); /* gray-300 */
-  color: var(--ct-text-button-secondary, #374151); /* gray-700 */
+  padding: 0px 8px;
+  width: 100%;
+  height: 22px;
+  background-color: hsl(var(--ct-border-base-hsl) / 1); /* 使用基础边框的颜色作为浅色背景 (类似 gray-200) */
+  border: 1px solid hsl(var(--ct-border-base-hsl) / 1); /* 边框与背景一致或略深，这里用一致 */
+  color: hsl(var(--ct-text-secondary-hsl) / 1);
   border-radius: 3px;
   cursor: pointer;
   font-size: 0.9em;
-  /* align-self: flex-start;  移除此行以允许拉伸 */
   margin-top: 4px;
   flex-shrink: 0;
   text-align: center;
 }
 .add-button:hover {
-  background-color: var(--ct-bg-button-secondary-hover, #d1d5db); /* gray-300 */
+  background-color: hsl(var(--ct-secondary-hsl) / 0.3); /* 使用次要颜色配合透明度作为 hover 背景 */
 }
 
 .empty-state {
-  color: var(--ct-text-muted, #6b7280); /* gray-500 */
+  color: hsl(var(--ct-text-muted-hsl) / 1);
   font-style: italic;
   text-align: center;
   padding: 8px 0;
-  /* 确保空状态在滚动容器内，如果列表为空 */
-  /* 或者如果希望它在滚动容器外，则需要调整模板结构 */
-}
-
-/* 暗色模式适配 */
-.dark .key-value-editor-pro {
-  border-color: var(--ct-border-dark, #4b5563); /* gray-600 */
-  background-color: var(--ct-bg-surface-dark, #1f2937); /* gray-800, 更接近 BaseNode */
-}
-.dark .key-input,
-.dark .value-input {
-  border-color: var(--ct-border-input-dark, #6b7280); /* gray-500 */
-  background-color: var(--ct-bg-input-dark, #374151); /* gray-700 */
-  color: var(--ct-text-default-dark, #f3f4f6); /* gray-100 */
-}
-.dark .key-input:focus,
-.dark .value-input:focus {
-  border-color: var(--ct-accent-dark, #3b82f6); /* blue-500 */
-  box-shadow: 0 0 0 1px var(--ct-accent-dark, #3b82f6);
-}
-.dark .separator {
-  color: var(--ct-text-muted-dark, #9ca3af); /* gray-400 */
-}
-.dark .remove-button {
-  color: var(--ct-text-danger-dark, #f87171); /* red-400 */
-}
-.dark .remove-button:hover {
-  background-color: var(--ct-bg-danger-hover-dark, #450a0a); /* red-900 with opacity or darker red */
-}
-.dark .add-button {
-  background-color: var(--ct-bg-button-secondary-dark, #374151); /* gray-700 */
-  border-color: var(--ct-border-button-secondary-dark, #4b5563); /* gray-600 */
-  color: var(--ct-text-button-secondary-dark, #d1d5db); /* gray-300 */
-}
-.dark .add-button:hover {
-  background-color: var(--ct-bg-button-secondary-hover-dark, #4b5563); /* gray-600 */
-}
-.dark .empty-state {
-  color: var(--ct-text-muted-dark, #9ca3af); /* gray-400 */
 }
 </style>

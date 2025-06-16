@@ -30,11 +30,14 @@
   --ct-disabled-opacity: 0.5; /* 通用禁用透明度 */
 
   /* 边框透明度变量 */
-  --ct-border-base-opacity: 1;       /* 基础边框透明度 */
-  --ct-border-primary-opacity: 1;    /* 基于主色的边框透明度 */
-  --ct-border-secondary-opacity: 1;  /* 基于次要色的边框透明度 */
-  --ct-border-accent-opacity: 1;     /* 基于强调色的边框透明度 */
+  --ct-border-base-opacity: 1; /* 基础边框透明度 */
+  --ct-border-primary-opacity: 1; /* 基于主色的边框透明度 */
+  --ct-border-secondary-opacity: 1; /* 基于次要色的边框透明度 */
+  --ct-border-accent-opacity: 1; /* 基于强调色的边框透明度 */
   --ct-border-decorative-opacity: 0.5; /* 装饰性边框透明度 */
+
+  /* 画布背景图案 */
+  --ct-bg-pattern-color: hsl(var(--ct-text-muted-hsl) / 0.6); /* 亮色模式下的背景图案颜色 - 透明度调整为0.6，基于柔和文本色 */
 
   /* 遮罩层 */
   --ct-backdrop-bg-hsl: 0 0% 0%; /* 遮罩层背景颜色 HSL (默认黑色) */
@@ -46,7 +49,7 @@
   /* 跳过节点样式 */
   --ct-node-skipped-opacity: 0.6; /* 默认亮色模式下跳过节点的透明度 */
   --ct-node-skipped-overlay-color: rgba(180, 180, 180, 0.15); /* 默认亮色模式下跳过节点的覆盖颜色 */
- 
+
   /* --ct-primary-focus: color-mix(in srgb, hsl(var(--ct-primary-hsl)), black 20%); */
   /* ... 更多 DaisyUI 特定变量可以根据需要添加和映射 ... */
 }
@@ -86,6 +89,9 @@ html.dark {
   --ct-border-accent-opacity: 1;
   --ct-border-decorative-opacity: 0.5;
 
+  /* 画布背景图案 */
+  --ct-bg-pattern-color: hsl(var(--ct-text-muted-hsl) / 0.6); /* 暗色模式下的背景图案颜色 - 透明度调整为0.6，基于柔和文本色 */
+
   /* 遮罩层 (暗色模式下通常与亮色模式一致，或由主题JSON覆盖) */
   /* --ct-backdrop-bg-hsl: 0 0% 0%; (如果与 :root 不同则取消注释) */
   /* --ct-backdrop-opacity: 0.5; (如果与 :root 不同则取消注释) */
@@ -96,6 +102,6 @@ html.dark {
   /* 暗色模式下跳过节点样式 */
   --ct-node-skipped-opacity: 0.5; /* 默认暗色模式下跳过节点的透明度 */
   --ct-node-skipped-overlay-color: rgba(100, 100, 100, 0.25); /* 默认暗色模式下跳过节点的覆盖颜色 */
- 
+
   /* --ct-primary-focus: color-mix(in srgb, hsl(var(--ct-primary-hsl)), white 20%); */
 }

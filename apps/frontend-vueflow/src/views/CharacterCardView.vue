@@ -38,7 +38,7 @@ onMounted(async () => {
     <!-- 主要内容区域, HomeLayout 会处理 padding-left -->
     <div class="p-4 lg:p-6 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out">
       <!-- :class="themeStore.collapsed ? 'ml-16' : 'ml-64'" REMOVED -->
-      <h1 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">我的角色卡</h1>
+      <h1 class="text-2xl font-bold text-gray-800 dark:text-primary-content mb-6">我的角色卡</h1>
 
       <!-- 加载状态 -->
       <div v-if="isLoading" class="text-center text-gray-500 dark:text-gray-400 mt-10">

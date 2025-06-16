@@ -3,7 +3,7 @@
     <h3 class="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-200">节点组件统计</h3>
     <div class="flex items-center mb-4 space-x-2">
       <button @click="collectStats"
-        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex-grow">
+        class="px-4 py-2 bg-blue-500 text-primary-content rounded hover:bg-blue-600 transition-colors flex-grow">
         统计当前画布数据
       </button>
       <button @click="copyStatsToClipboard" title="复制统计数据" :disabled="!stats.length || loading"

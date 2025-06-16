@@ -393,7 +393,7 @@ watch(
 
 <style scoped>
 .btn {
-  @apply px-4 py-2 rounded-md font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-colors shadow hover:shadow-md;
+  @apply px-4 py-2 rounded-md font-medium text-primary-content focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-colors shadow hover:shadow-md;
 }
 
 .btn-blue {

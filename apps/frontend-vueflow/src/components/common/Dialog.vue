@@ -66,7 +66,7 @@
               v-model="internalInputValue"
               :placeholder="props.inputPlaceholder"
               :rows="props.inputRows"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900 placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-offset-gray-800"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900 placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-primary-content dark:placeholder-gray-400 dark:focus:ring-offset-gray-800"
               @input="emit('update:inputValue', internalInputValue)"
               @keydown.enter="handleInputEnter"
             ></textarea>
@@ -75,7 +75,7 @@
               v-model="internalInputValue"
               :type="props.inputType"
               :placeholder="props.inputPlaceholder"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900 placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-offset-gray-800"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900 placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-primary-content dark:placeholder-gray-400 dark:focus:ring-offset-gray-800"
               @input="emit('update:inputValue', internalInputValue)"
               @keydown.enter="handleInputEnter"
             />

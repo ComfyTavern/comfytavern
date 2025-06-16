@@ -84,13 +84,13 @@
               class="param-value-preview mt-1">
               <span class="text-xs text-text-muted mr-1">接受类型:</span>
               <span v-for="accType in selectedNode.configSchema[configKey]!.config!.acceptedTypes" :key="accType.value"
-                class="category-tag !bg-success/20 !text-success mr-1"> {/* !bg-success-soft !text-success-strong -> !bg-success/20 !text-success */}
+                class="category-tag !bg-success/20 !text-success mr-1"> 
                 {{ accType.label || accType.value }}
               </span>
             </div>
             <div v-else-if="selectedNode.configSchema[configKey]!.config?.placeholder" class="param-value-preview mt-1">
               <span class="text-xs text-text-muted">占位提示: </span>
-              <span class="text-xs italic p-1 text-text-muted"> {/* text-text-placeholder -> text-text-muted */}
+              <span class="text-xs italic p-1 text-text-muted"> 
                 {{ selectedNode.configSchema[configKey]!.config?.placeholder }}
               </span>
             </div>

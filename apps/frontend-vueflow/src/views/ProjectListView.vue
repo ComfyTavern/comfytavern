@@ -46,7 +46,7 @@ const promptAndCreateProject = async () => {
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-gray-800 dark:text-white">我的项目</h1>
         <button @click="promptAndCreateProject" :disabled="isLoading"
-          class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          class="px-4 py-2 bg-blue-500 text-primary-content rounded hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           {{ isLoading ? '创建中...' : '创建新项目' }}
         </button>
       </div>
@@ -70,7 +70,7 @@ const promptAndCreateProject = async () => {
         <div v-if="!isLoading || projects.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div v-for="project in projects" :key="project.id" @click="openProject(project.id)"
             class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-shadow">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">{{ project.name }}</h2>
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-primary-content mb-2">{{ project.name }}</h2>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ project.description || '暂无描述' }}</p>
             <div class="text-xs text-gray-500 dark:text-gray-500">
               最后更新: {{ new Date(project.updatedAt).toLocaleString() }}

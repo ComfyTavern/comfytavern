@@ -983,7 +983,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
 }
 
 .btn-primary {
-  @apply bg-blue-500 hover:bg-blue-600 text-white border border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+  @apply bg-blue-500 hover:bg-blue-600 text-primary-content border border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
   /* 主要按钮样式 */
 }
 
