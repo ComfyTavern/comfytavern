@@ -1,6 +1,7 @@
 // scripts/upgradeDatabase.ts
 import { spawnSync } from 'node:child_process';
 import path from 'node:path'; // 尽管当前 setupDatabase 未直接使用 path，但 projectRoot 依赖，且未来可能用到
+import fs from 'node:fs'; // 导入 fs 模块用于文件系统操作
 
 const projectRoot = process.cwd();
 
@@ -37,6 +38,20 @@ function setupDatabase(): boolean {
   } catch (err: any) {
     console.error(`[upgradeDatabase] 执行 bunx drizzle-kit generate 时发生启动错误: ${err.message}`);
     return false;
+  }
+
+  // 确保 ./data 目录存在
+  const dataDir = path.join(projectRoot, 'data');
+  if (!fs.existsSync(dataDir)) {
+    try {
+      fs.mkdirSync(dataDir, { recursive: true });
+      console.log(`[upgradeDatabase] 已成功创建目录: ${dataDir}`);
+    } catch (err: any) {
+      console.error(`[upgradeDatabase] 创建目录 ${dataDir} 失败: ${err.message}`);
+      return false;
+    }
+  } else {
+    console.log(`[upgradeDatabase] 目录 ${dataDir} 已存在。`);
   }
 
   console.log(`[upgradeDatabase] 步骤 2: 应用数据库迁移 (bun run db:migrate)`);
