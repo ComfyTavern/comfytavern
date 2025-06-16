@@ -1,6 +1,6 @@
 {
-  "id": "default-dark",
-  "name": "默认暗色",
+  "id": "default",
+  "name": "默认主题",
   "isSystemTheme": true,
   "variants": {
     "light": {
@@ -76,6 +76,6 @@
   },
   "metadata": {
     "author": "ComfyTavern Team",
-    "description": "默认的暗色基础主题，提供亮色模式兼容性。"
+    "description": "默认的基础主题。"
   }
 }

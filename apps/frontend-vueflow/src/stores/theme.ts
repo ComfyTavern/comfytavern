@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia';
 import { ref, computed, readonly, watch } from 'vue';
-import type { ThemePreset } from '@comfytavern/types'; // 导入新定义的类型
+import type { FAMItem, ThemePreset } from '@comfytavern/types'; // 导入新定义的类型
+import * as fileManagerApi from '@/api/fileManagerApi';
+import { useAuthStore } from '@/stores/authStore';
 
 // 定义显示模式的类型
 export type DisplayMode = 'light' | 'dark' | 'system';
@@ -109,30 +111,68 @@ export const useThemeStore = defineStore('theme', () => {
 
   /**
    * 从预定义位置加载可用的主题预设。
-   * 初期从 public/themes/ 加载 JSON 文件。
+   * 系统主题从 system://public/themes/ 加载。
+   * 用户主题从 user://library/themes/ 加载。
    */
   async function loadAvailableThemes() {
-    // TODO: 实现从 FAMService 加载用户自定义主题的逻辑 (user://library/themes/)
-    // userCustomThemes.value = await famService.loadUserThemes();
-
-    // 示例：加载系统预设主题 (这里需要实际的主题文件名列表)
-    const systemThemeFiles = ['default-light.json', 'default-dark.json', 'ocean-blue.json']; // 示例文件名
+    const authStore = useAuthStore();
     const loadedSystemThemes: ThemePreset[] = [];
+    userCustomThemes.value = []; // 清空之前的用户主题
 
-    for (const fileName of systemThemeFiles) {
-      try {
-        const response = await fetch(`/themes/${fileName}`); // 假设主题文件在 public/themes/ 目录下
-        if (!response.ok) {
-          console.error(`[ThemeStore] Failed to load theme file: ${fileName}, status: ${response.status}`);
-          continue;
+    // 1. 加载系统预设主题
+    try {
+      const systemThemeItems: FAMItem[] = await fileManagerApi.listDir('system://public/themes/');
+      for (const item of systemThemeItems) {
+        if (item.itemType === 'file' && item.name.endsWith('.json')) {
+          try {
+            const downloadUrl = await fileManagerApi.getDownloadFileLink(item.logicalPath);
+            const response = await fetch(downloadUrl);
+            if (!response.ok) {
+              console.error(`[ThemeStore] Failed to load system theme file: ${item.name}, status: ${response.status}`);
+              continue;
+            }
+            const themeData = await response.json();
+            // TODO: 在此可以添加 Zod 校验 themeData 是否符合 ThemePreset 结构
+            loadedSystemThemes.push(themeData as ThemePreset);
+          } catch (error) {
+            console.error(`[ThemeStore] Error loading or parsing system theme file ${item.name}:`, error);
+          }
         }
-        const themeData = await response.json();
-        // TODO: 在此可以添加 Zod 校验 themeData 是否符合 ThemePreset 结构
-        loadedSystemThemes.push(themeData as ThemePreset);
+      }
+    } catch (error) {
+      console.error('[ThemeStore] Failed to list system themes:', error);
+    }
+
+    // 2. 加载用户自定义主题
+    if (authStore.isAuthenticated && authStore.currentUser) { // 移除了 .id 检查，因为 fileManagerApi 调用不直接使用 userId
+      try {
+        const userThemeItems: FAMItem[] = await fileManagerApi.listDir('user://library/themes/');
+        for (const item of userThemeItems) {
+          if (item.itemType === 'file' && item.name.endsWith('.json')) {
+            try {
+              // 注意：如果 getDownloadFileLink 返回的链接对于用户私有文件没有正确的认证机制，
+              // fetch 可能会失败。这种情况下，后端需要提供一个专门的 readFile API 端点，
+              // 前端 fileManagerApi 也需要添加对应的方法来调用。
+              const downloadUrl = await fileManagerApi.getDownloadFileLink(item.logicalPath);
+              const response = await fetch(downloadUrl);
+              if (!response.ok) {
+                console.error(`[ThemeStore] Failed to load user theme file: ${item.name}, status: ${response.status}`);
+                continue;
+              }
+              const themeData = await response.json();
+              // TODO: 在此可以添加 Zod 校验 themeData 是否符合 ThemePreset 结构
+              userCustomThemes.value.push(themeData as ThemePreset);
+            } catch (error) {
+              console.error(`[ThemeStore] Error loading or parsing user theme file ${item.name}:`, error);
+            }
+          }
+        }
       } catch (error) {
-        console.error(`[ThemeStore] Error loading or parsing theme file ${fileName}:`, error);
+        console.error('[ThemeStore] Failed to list user themes:', error);
+        // 如果列出用户主题的目录本身失败（例如目录不存在），则 userCustomThemes 保持为空
       }
     }
+
     availableThemes.value = [...loadedSystemThemes, ...userCustomThemes.value];
 
     // 修正 selectedThemeId 的逻辑：

@@ -233,13 +233,13 @@ defineExpose({
 }
 
 .sidebar-content {
-  @apply flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out border-l border-border-base;
+  @apply flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out border-l border-r border-border-base;
   /* 添加 flex-shrink-0 和过渡 */
 }
 
 /* 当没有激活标签页时，隐藏内容区域 */
 .sidebar-content[style*="width: 0px"] {
-  @apply border-l-0;
+  @apply border-l-0 border-r-0;
   /* 折叠时移除左边框 */
 }
 </style>
