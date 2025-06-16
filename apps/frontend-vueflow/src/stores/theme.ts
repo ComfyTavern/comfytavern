@@ -167,9 +167,29 @@ export const useThemeStore = defineStore('theme', () => {
             }
           }
         }
-      } catch (error) {
-        console.error('[ThemeStore] Failed to list user themes:', error);
-        // 如果列出用户主题的目录本身失败（例如目录不存在），则 userCustomThemes 保持为空
+      } catch (error: any) { // 明确 error 类型为 any 以访问 response 属性
+        const userThemesPath = 'user://library/themes/';
+        // 检查错误是否为 404 Not Found，这通常意味着目录不存在
+        // 假设 fileManagerApi.listDir 抛出的错误对象在失败时有 response.status
+        if (error.response && error.response.status === 404) {
+          console.warn(`[ThemeStore] User themes directory ${userThemesPath} not found. Attempting to create it.`);
+          try {
+            // 从 userThemesPath 解析 parentLogicalPath 和 dirName
+            // 'user://library/themes/' -> parent: 'user://library/', name: 'themes'
+            await fileManagerApi.createDir('user://library/', 'themes');
+            console.log(`[ThemeStore] User themes directory ${userThemesPath} created successfully. No custom themes loaded as it's new.`);
+            // userCustomThemes.value 保持为空，因为目录是新创建的，里面没有文件
+          } catch (createError: any) {
+            console.error(`[ThemeStore] Failed to create user themes directory ${userThemesPath} after it was not found:`, createError);
+            // 即使创建失败，也继续执行，只是用户主题将为空。原始的 console.error 已在下面处理。
+            // 记录原始的列出目录失败的错误
+            console.error('[ThemeStore] Original error when listing user themes (before attempting create):', error);
+          }
+        } else {
+          // 对于其他类型的错误，或者如果 404 不是因为目录不存在（虽然不太可能），则正常记录
+          console.error('[ThemeStore] Failed to list user themes:', error);
+        }
+        // 无论如何，如果列出或创建失败，userCustomThemes.value 此时应为空或未被填充
       }
     }
 
