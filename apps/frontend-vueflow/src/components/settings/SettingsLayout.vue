@@ -51,10 +51,19 @@ import type { SettingsSection, SettingItemConfig } from '@/types/settings';
 import SettingsPanel from './SettingsPanel.vue';
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
-import { useThemeStore } from '@/stores/theme';
+import { useThemeStore, type DisplayMode } from '@/stores/theme'; // + type DisplayMode
 import { useAuthStore } from '@/stores/authStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { storeToRefs } from 'pinia';
+
+// --- Store 实例化 ---
+const themeStore = useThemeStore(); // 移动到顶部
+const authStore = useAuthStore();
+const settingsStore = useSettingsStore();
+const { currentUser } = storeToRefs(authStore);
+// 从 themeStore 解构需要的 refs
+const { displayMode, availableThemes, selectedThemeId } = storeToRefs(themeStore);
+
 
 // --- 占位符组件 ---
 // 后续这些将被替换为真实的自定义组件
@@ -67,9 +76,9 @@ const PlaceholderComponent = defineComponent({
 // === 定义所有设置分区 ===
 
 // 1. 数据驱动的配置示例
-const authStore = useAuthStore();
-const settingsStore = useSettingsStore();
-const { currentUser } = storeToRefs(authStore);
+// const authStore = useAuthStore(); // 已提前
+// const settingsStore = useSettingsStore(); // 已提前
+// const { currentUser } = storeToRefs(authStore); // 已提前
 
 
 const userSettingsConfig: SettingItemConfig[] = [
@@ -114,10 +123,74 @@ const userSettingsConfig: SettingItemConfig[] = [
 ];
 
 const displaySettingsConfig: SettingItemConfig[] = [
-  { key: 'display.theme', type: 'select', label: '主题', defaultValue: 'auto', options: [{label:'浅色', value:'light'}, {label:'深色', value:'dark'}, {label:'跟随系统', value:'auto'}], category: '外观' },
-  { key: 'display.fontSize', type: 'number', label: '基础字体大小 (px)', defaultValue: 14, min: 12, max: 20, category: '外观' },
-  { key: 'display.showMinimap', type: 'boolean', label: '显示编辑器小地图', defaultValue: true, category: '编辑器' },
-  { key: 'display.showConnectionStatus', type: 'boolean', label: '显示后端连接状态', defaultValue: true, category: '界面元素' },
+  {
+    key: 'theme.displayMode', // 使用更明确的key
+    type: 'button-group', // <--- 修改类型为 button-group
+    label: '显示模式',
+    category: '外观',
+    get defaultValue() {
+      return displayMode.value; // 从 storeToRefs 获取响应式值
+    },
+    options: [
+      { label: '浅色', value: 'light' as DisplayMode },
+      { label: '深色', value: 'dark' as DisplayMode },
+      { label: '系统', value: 'system' as DisplayMode }, // 与 DisplayMode 类型一致
+    ],
+    async onSave(_key, newValue) {
+      if (newValue === 'light' || newValue === 'dark' || newValue === 'system') {
+        themeStore.setDisplayMode(newValue as DisplayMode); // 调用 themeStore 的方法
+        return { success: true };
+      }
+      return { success: false, message: '无效的显示模式值' };
+    },
+    description: '选择界面的显示模式：浅色、深色或跟随操作系统设置。',
+  },
+  {
+    key: 'theme.preset',
+    type: 'select',
+    label: '主题预设',
+    category: '外观',
+    get defaultValue() {
+      return selectedThemeId.value; // 从 storeToRefs 获取响应式值
+    },
+    get options() {
+      return availableThemes.value.map(theme => ({ label: theme.name, value: theme.id })); // 从 storeToRefs 获取响应式值
+    },
+    async onSave(_key, newValue) {
+      if (typeof newValue === 'string') {
+        themeStore.selectThemePreset(newValue);
+        return { success: true };
+      }
+      return { success: false, message: '无效的主题预设值' };
+    },
+    description: '选择一个预设的主题样式。',
+  },
+  {
+    key: 'display.fontSize',
+    type: 'number',
+    label: '基础字体大小 (px)',
+    defaultValue: 14,
+    min: 12,
+    max: 20,
+    category: '外观',
+    description: '调整应用界面的基础字体大小。'
+  },
+  {
+    key: 'display.showMinimap',
+    type: 'boolean',
+    label: '显示编辑器小地图',
+    defaultValue: true,
+    category: '编辑器',
+    description: '在节点编辑器右侧显示代码小地图。'
+  },
+  {
+    key: 'display.showConnectionStatus',
+    type: 'boolean',
+    label: '显示后端连接状态',
+    defaultValue: true,
+    category: '界面元素',
+    description: '在界面底部显示与后端服务的连接状态指示。'
+  },
 ];
 
 const mcpSettingsConfig: SettingItemConfig[] = [
@@ -148,8 +221,8 @@ const activeSection = computed(() =>
   sections.value.find(s => s.id === activeSectionId.value)
 );
 
-const themeStore = useThemeStore();
-// const isDark = computed(() => themeStore.currentAppliedMode === 'dark');
+// const themeStore = useThemeStore(); // 已提前实例化
+// const isDark = computed(() => themeStore.currentAppliedMode === 'dark'); // currentAppliedMode 是 themeStore 的 getter
 
 // 新增: 监听 authStore 中用户名的变化，并同步到 settingsStore
 // 这确保了 SettingControl 能通过 settingsStore.getSetting 获取到最新的昵称

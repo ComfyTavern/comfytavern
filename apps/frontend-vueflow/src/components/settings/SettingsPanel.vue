@@ -1,15 +1,5 @@
 <template>
   <div class="settings-panel">
-    <!-- 主题设置 -->
-    <SettingGroup title="外观设置">
-      <div class="setting-item-row-like">
-        <ThemePresetSelector />
-      </div>
-      <div class="setting-item-row-like mt-4">
-        <DisplayModeSwitcher />
-      </div>
-    </SettingGroup>
-
     <!-- 按 category 分组渲染 -->
     <SettingGroup
       v-for="(items, categoryName) in groupedConfig"
@@ -30,8 +20,6 @@ import { computed } from 'vue';
 import type { SettingItemConfig } from '@/types/settings';
 import SettingGroup from './SettingGroup.vue';
 import SettingItemRow from './SettingItemRow.vue';
-import ThemePresetSelector from './ThemePresetSelector.vue'; // + 导入主题选择器
-import DisplayModeSwitcher from './DisplayModeSwitcher.vue'; // + 导入模式切换器
 
 const props = defineProps<{
   config: SettingItemConfig[];

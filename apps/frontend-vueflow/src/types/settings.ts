@@ -8,7 +8,8 @@ export type SettingControlType =
   | 'select'
   | 'textarea'
   | 'slider' // 可以根据需要扩展
-  | 'avatar'; // + 新增头像控件类型
+  | 'avatar' // + 新增头像控件类型
+  | 'button-group'; // 新增按钮组控件类型
 
 // 下拉选项
 export interface SelectOption {

@@ -39,6 +39,14 @@
       class="w-full"
       size="large"
     />
+    <ButtonGroupInput
+      v-else-if="itemConfig.type === 'button-group'"
+      v-model="currentValue"
+      :id="itemConfig.key"
+      :options="itemConfig.options || []"
+      class="w-full"
+      size="large"
+    />
     <p v-else>咕？未知的控件类型: {{ itemConfig.type }}</p>
   </div>
 </template>
@@ -54,6 +62,7 @@ import TextAreaInput from '@/components/graph/inputs/TextAreaInput.vue';
 import NumberInput from '@/components/graph/inputs/NumberInput.vue';
 import BooleanToggle from '@/components/graph/inputs/BooleanToggle.vue';
 import SelectInput from '@/components/graph/inputs/SelectInput.vue';
+import ButtonGroupInput from '@/components/graph/inputs/ButtonGroupInput.vue'; // 新增导入
 
 const props = defineProps<{
   itemConfig: SettingItemConfig;
