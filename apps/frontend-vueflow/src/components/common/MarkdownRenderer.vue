@@ -9,7 +9,7 @@ import { Marked, Renderer, type Tokens } from "marked"; // 导入 Marked 类和 
 import { markedHighlight } from "marked-highlight"; // 导入 marked-highlight
 import DOMPurify from "dompurify";
 import hljs from 'highlight.js';
-import 'highlight.js/styles/atom-one-dark.css'; // 引入 highlight.js CSS 主题
+import 'highlight.js/styles/atom-one-dark.css';
 
 interface Props {
   /** Markdown 文本内容 */
@@ -80,7 +80,8 @@ const renderedHtml = computed(() => {
   & :deep(ul),
   & :deep(ol) {
     /* 重置可能影响嵌套列表的顶层列表默认边距 */
-    /* 如果全局样式已处理，这可能不是必需的，但为了保险起见 */  /* margin-block-start: 0.5em; */
+    /* 如果全局样式已处理，这可能不是必需的，但为了保险起见 */
+    /* margin-block-start: 0.5em; */
     /* 保留一些垂直间距 */
     /* margin-block-end: 0.5em; */
     /* padding-inline-start: 1.5em; */
@@ -104,8 +105,21 @@ const renderedHtml = computed(() => {
   /* 这些样式现在由全局 base.css 处理 */
 }
 
-/* 覆盖 highlight.js 的默认内边距 */
+/* 代码块样式 */
+/* <pre> 元素负责代码块的整体框架和背景 */
+:deep(.markdown-content pre) {
+  box-shadow: 0 1px 3px hsla(var(--ct-neutral-hsl), 0.08), 0 1px 2px hsla(var(--ct-neutral-hsl), 0.04);
+  /* 更柔和的阴影, 这个可以保留或移到base.css */
+  /* 其他在 base.css 中未定义的特定样式可以保留在这里 */
+}
+
+/* 内部 <code> 元素处理高亮，背景透明 */
 :deep(pre code.hljs) {
-  padding: 0.1em;
+  display: block;
+  /* 确保 code 填满 pre */
+  background-color: transparent;
+  padding: 0;
+  /* pre 元素已处理内边距 */
+  /* 文本颜色由 highlight.js 的主题 (atom-one-dark.css) 控制 */
 }
 </style>

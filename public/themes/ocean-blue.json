@@ -6,7 +6,7 @@
     "light": {
       "variables": {
         "--ct-primary-hsl": "197 59% 50%",
-        "--ct-secondary-hsl": "209 76% 67%",
+        "--ct-secondary-hsl": "208 76% 67%",
         "--ct-accent-hsl": "188 100% 50%",
         "--ct-background-base-hsl": "195 53% 92%",
         "--ct-background-surface-hsl": "200 100% 97%",
@@ -20,8 +20,8 @@
         "--ct-error-hsl": "354 70% 54%",
         "--ct-primary-content-hsl": "0 0% 100%",
         "--ct-neutral-hsl": "210 55% 16%",
-        "--ct-background-base-opacity": "1",
- 
+
+        "--ct-background-base-opacity": "0.7",
         "--ct-menu-item-active-bg-opacity": "0.1",
         "--ct-component-hover-bg-opacity": "0.05",
         "--ct-panel-bg-opacity": "1",
@@ -41,7 +41,7 @@
     },
     "dark": {
       "variables": {
-        "--ct-primary-hsl": "213 100% 60%",
+        "--ct-primary-hsl": "204 90% 50%",
         "--ct-secondary-hsl": "210 58% 58%",
         "--ct-accent-hsl": "184 100% 66%",
         "--ct-background-base-hsl": "212 51% 10%",
@@ -56,8 +56,8 @@
         "--ct-error-hsl": "0 94% 65%",
         "--ct-primary-content-hsl": "0 0% 100%",
         "--ct-neutral-hsl": "213 60% 91%",
-        "--ct-background-base-opacity": "1",
- 
+
+        "--ct-background-base-opacity": "0.8",
         "--ct-menu-item-active-bg-opacity": "0.2",
         "--ct-component-hover-bg-opacity": "0.1",
         "--ct-panel-bg-opacity": "1",

@@ -51,6 +51,10 @@
   --ct-node-skipped-opacity: 0.6; /* 默认亮色模式下跳过节点的透明度 */
   --ct-node-skipped-overlay-color: rgba(180, 180, 180, 0.15); /* 默认亮色模式下跳过节点的覆盖颜色 */
 
+  /* 通用阴影颜色定义 */
+  --ct-shadow-opacity: 0.1; /* 亮色模式下的阴影透明度 */
+  --ct-shadow-color: hsl(var(--ct-border-base-hsl) / var(--ct-shadow-opacity));
+
   /* --ct-primary-focus: color-mix(in srgb, hsl(var(--ct-primary-hsl)), black 20%); */
   /* ... 更多 DaisyUI 特定变量可以根据需要添加和映射 ... */
 }
@@ -104,6 +108,10 @@ html.dark {
   /* 暗色模式下跳过节点样式 */
   --ct-node-skipped-opacity: 0.5; /* 默认暗色模式下跳过节点的透明度 */
   --ct-node-skipped-overlay-color: rgba(100, 100, 100, 0.25); /* 默认暗色模式下跳过节点的覆盖颜色 */
+
+  /* 通用阴影颜色定义 */
+  --ct-shadow-opacity: 0.25; /* 暗色模式下的阴影透明度 */
+  --ct-shadow-color: hsl(var(--ct-border-base-hsl) / var(--ct-shadow-opacity));
 
   /* --ct-primary-focus: color-mix(in srgb, hsl(var(--ct-primary-hsl)), white 20%); */
 }

@@ -1,5 +1,5 @@
 <template>
-  <div class="rich-code-editor-wrapper" ref="wrapperRef" :class="{ dark: themeStore.currentAppliedMode === 'dark' }">
+  <div class="rich-code-editor-wrapper" ref="wrapperRef">
     <div v-if="breadcrumbData" class="breadcrumb-bar">
       <span v-if="breadcrumbData.workflowName" class="breadcrumb-item">{{
         breadcrumbData.workflowName
@@ -60,6 +60,7 @@ import { foldGutter, foldKeymap } from "@codemirror/language"; // 导入 foldGut
 import { vscodeSearch, customSearchKeymap } from '@rigstech/codemirror-vscodesearch'; // 导入新的搜索插件
 import type { KeyBinding } from "@codemirror/view"; // 导入 KeyBinding 类型
 import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
+import { comfyTavernBaseTheme } from "@/codemirror-theme/comfyTavernEditorTheme"; // 导入自定义基础主题
 import type { BreadcrumbData, EditorInstanceConfig } from "@/types/editorTypes";
 import { useThemeStore } from "@/stores/theme";
 import EditorContextMenu from "./EditorContextMenu.vue"; // 导入右键菜单组件
@@ -108,7 +109,8 @@ onMounted(() => {
   const currentConfig = props.config || {};
 
   const extensions = [
-    themeCompartment.of(themeStore.currentAppliedMode === 'dark' ? vscodeDark : vscodeLight),
+    themeCompartment.of(themeStore.currentAppliedMode === 'dark' ? vscodeDark : vscodeLight), // 提供语法高亮和默认行为
+    comfyTavernBaseTheme, // 应用自定义基础UI颜色，覆盖 vscodeLight/Dark 的对应部分
     editableCompartment.of(EditorView.editable.of(!(currentConfig.readOnly ?? false))),
     lineNumbersCompartment.of(currentConfig.lineNumbers ?? true ? lineNumbers() : []),
     foldGutterCompartment.of(currentConfig.foldGutter ?? true ? foldGutter() : []),

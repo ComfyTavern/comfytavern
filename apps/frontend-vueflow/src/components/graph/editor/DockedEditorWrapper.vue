@@ -680,19 +680,20 @@ onMounted(() => {
 <style scoped>
 .docked-editor-wrapper-root {
   width: 100%;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 -2px 10px var(--ct-shadow-color);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   /* 保持 hidden 以便高度调整生效 */
   position: relative;
   /* 确保 resizer 相对于此元素定位 */
-  @apply bg-white border-t border-gray-200 text-gray-800;
+  @apply bg-background-base border-t border-border-base text-text-base;
 }
 
 .docked-editor-wrapper-root.dark {
-  @apply bg-gray-800 border-t border-gray-700 text-gray-200;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.25);
+  /* Theme variables will automatically apply dark mode values for bg, border, and text */
+  /* box-shadow will be applied via Tailwind classes dark:shadow-black/25 */
+  @apply bg-background-base border-t border-border-base text-text-base;
 }
 
 .editor-resizer {
@@ -743,11 +744,11 @@ onMounted(() => {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  @apply bg-gray-500;
+  @apply bg-text-muted;
 }
 
 .docked-editor-wrapper-root.dark .drag-dot {
-  @apply bg-gray-400;
+  @apply bg-text-muted; /* text-muted will use dark theme variable */
 }
 
 .editor-header {
@@ -761,12 +762,11 @@ onMounted(() => {
   /* 确保 header 内容在 resizer 之下（如果 resizer 有背景）或同级 */
   z-index: 1000;
   /* 低于 resizer */
-  @apply bg-gray-100 border-b border-gray-200;
+  @apply bg-background-surface border-b border-border-base;
 }
 
 .docked-editor-wrapper-root.dark .editor-header {
-  @apply bg-gray-700 border-gray-600;
-  /* 使用 700 替代 750 */
+  @apply bg-background-surface border-b border-border-base; /* background-surface and border-border-base will use dark theme variables */
 }
 
 .editor-title {
@@ -781,17 +781,18 @@ onMounted(() => {
   cursor: pointer;
   padding: 4px 8px;
   font-size: 1.1em;
-  @apply text-gray-600 hover:bg-gray-200;
+  @apply text-text-secondary hover:bg-border-base;
 }
 
 .docked-editor-wrapper-root.dark .editor-actions button {
-  @apply text-gray-300 hover:bg-gray-600;
+  @apply text-text-secondary hover:bg-border-base; /* text-secondary and border-base will use dark theme variables */
 }
 
 .editor-content {
   flex-grow: 1;
   overflow: hidden;
   position: relative;
+  z-index: 1000; /* 确保内容区域与头部在相似的层叠上下文，高于外部穿模组件 */
   /* 背景由内部 RichCodeEditor 主题控制 */
 }
 
@@ -808,10 +809,10 @@ onMounted(() => {
   font-style: italic;
   padding: 20px;
   text-align: center;
-  @apply text-gray-400;
+  @apply text-text-muted;
 }
 
 .docked-editor-wrapper-root.dark .editor-placeholder {
-  @apply text-gray-500;
+  @apply text-text-muted; /* text-muted will use dark theme variable */
 }
 </style>

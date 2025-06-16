@@ -12,6 +12,9 @@ export default {
       fontSize: { // 保留现有的 fontSize 扩展
         'xxs': ['0.65rem', { lineHeight: '0.85rem' }],
       },
+      boxShadow: {
+        // 'upward': '0 -2px 10px 0 hsl(var(--ct-upward-shadow-color-hsl) / var(--ct-upward-shadow-opacity))', // 已移除
+      },
       colors: { // 颜色定义使用新的 HSL 通道变量和 <alpha-value>
         'primary': 'hsl(var(--ct-primary-hsl) / <alpha-value>)',
         'secondary': 'hsl(var(--ct-secondary-hsl) / <alpha-value>)',
@@ -23,7 +26,7 @@ export default {
         'text-muted': 'hsl(var(--ct-text-muted-hsl) / <alpha-value>)',
         'border-base': 'hsl(var(--ct-border-base-hsl) / <alpha-value>)',
         'backdrop': 'hsl(var(--ct-backdrop-bg-hsl) / <alpha-value>)', // 新增 backdrop 颜色
-        
+
         // 新增的变体，使用 primary 的 HSL 值，但固定 alpha
         'primary-soft': 'hsl(var(--ct-primary-hsl) / 0.3)', // 例如 30% 透明度
         'primary-softest': 'hsl(var(--ct-primary-hsl) / 0.15)', // 例如 15% 透明度
@@ -33,7 +36,7 @@ export default {
 
         'accent-soft': 'hsl(var(--ct-accent-hsl) / 0.3)',
         'accent-softest': 'hsl(var(--ct-accent-hsl) / 0.15)',
-            
+
         // 状态颜色
         'info': 'hsl(var(--ct-info-hsl) / <alpha-value>)',
         'info-soft': 'hsl(var(--ct-info-hsl) / 0.3)',

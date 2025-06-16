@@ -848,13 +848,13 @@ onUnmounted(() => {
 
 /* VueFlow Controls 主题化 - 强化版 */
 :deep(.vue-flow__controls) {
-  @apply shadow-md rounded-md overflow-hidden; /* 加 overflow-hidden 避免内部元素破坏圆角 */
+  @apply shadow-md rounded-md overflow-hidden border border-border-base; /* 加 overflow-hidden 避免内部元素破坏圆角, 同时添加统一边框 */
 }
 
 :deep(.vue-flow__controls .vue-flow__controls-button) { /* 增加选择器特指度 */
   background-color: hsl(var(--ct-background-surface-hsl)) !important;
   color: hsl(var(--ct-text-base-hsl)) !important; /* SVG 会继承这个颜色如果 fill="currentColor" */
-  border: 1px solid hsl(var(--ct-border-base-hsl)) !important;
+  /* border: 1px solid hsl(var(--ct-border-base-hsl)) !important; */ /* 移除单个按钮的边框 */
   box-shadow: none !important; /* 移除库可能自带的阴影 */
   transition: background-color 0.15s ease-in-out !important; /* 保留过渡 */
 }
@@ -886,7 +886,7 @@ onUnmounted(() => {
 
 /* VueFlow MiniMap 主题化 */
 :deep(.vue-flow__minimap) {
-  @apply bg-background-surface border border-border-base rounded-md shadow-md;
+  @apply bg-background-surface border border-border-base rounded-md shadow-md overflow-hidden; /* 添加 overflow-hidden */
 }
 :deep(.vue-flow__minimap-mask) {
   /* 视口矩形外的遮罩 */

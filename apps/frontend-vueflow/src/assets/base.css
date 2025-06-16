@@ -182,15 +182,15 @@ body {
 /* Inline code - Light theme override */
 :root:not(.dark) .markdown-content code,
 .light .markdown-content code {
-  background-color: rgba(50, 50, 50, 0.08); /* Light gray background */
+  background-color: transparent;
   color: #2c3e50; /* Dark text (match body text) */
-  border: 1px solid rgba(60, 60, 60, 0.12); /* Darker, subtle border */
+  text-shadow: 0 0.5px 1px hsl(var(--ct-text-base-hsl) / 0.2);
 }
 
 
 /* Code block container */
 .markdown-content pre {
-  background-color: var(--color-background-mute); /* Use theme variable */
+  background-color: hsl(var(--ct-background-base-hsl));
   padding: 0.8em;
   border-radius: 6px;
   overflow-x: auto;
