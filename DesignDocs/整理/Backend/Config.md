@@ -53,11 +53,7 @@
     *   **用途**: 在单用户模式下，用于访问控制的密码哈希值。
     *   **来源**: 从 `config.json` 中的 `userManagement.accessPasswordHash` 读取。如果未配置，默认为 `null`。
     *   **影响**: 如果设置了此值，单用户模式下访问应用可能需要密码验证。
-
-*   **`SINGLE_USER_PATH: string`**
-    *   **用途**: 在单用户模式下，用于标识用户数据存储路径的名称/标识符（不是完整路径）。
-    *   **来源**: 从 `config.json` 中的 `userManagement.singleUserPath` 读取。如果未配置，默认为 `"default_user_data"`。
-    *   **影响**: 用于构建单用户模式下的数据存储目录，通常与 `USER_DATA_ROOT` 结合使用。
+    *   (注意: `singleUserPath` 配置项已移除。在单用户模式下，用户数据存储路径是基于固定的用户ID `'default_user'` 与 `USER_DATA_ROOT` 结合构建的，不再通过 `config.json` 中的特定路径标识符配置。)
 
 *   **`ENABLE_CREDENTIAL_ENCRYPTION: boolean`**
     *   **用途**: 启用或禁用敏感凭据（如 API 密钥）的加密功能。

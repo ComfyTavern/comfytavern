@@ -16,7 +16,6 @@
   ],
   "userManagement": {
     "multiUserMode": false,
-    "singleUserPath": "default_user_data",
     "accessPasswordHash": null
   },
   "security": {

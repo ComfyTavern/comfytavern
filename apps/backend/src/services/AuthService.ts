@@ -12,7 +12,7 @@ import {
   AuthenticatedMultiUserIdentity,
 } from '@comfytavern/types'; // 从 packages/types 导入
 import { DatabaseService, USERS_UID_DEFAULT, USERNAME_DEFAULT } from './DatabaseService';
-import { MULTI_USER_MODE, ACCESS_PASSWORD_HASH, SINGLE_USER_PATH } from '../config'; // 用于确定模式
+import { MULTI_USER_MODE, ACCESS_PASSWORD_HASH } from '../config'; // 用于确定模式, SINGLE_USER_PATH 已移除
 
 export class AuthService {
   private static currentMode: 'LocalNoPassword' | 'LocalWithPassword' | 'MultiUserShared';

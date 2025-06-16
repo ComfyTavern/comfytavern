@@ -70,13 +70,13 @@
   {
     "userManagement": {
       "multiUserMode": false, // true: 多用户共享模式; false: 自用模式 (纯本地或带全局密码)
-      "singleUserPath": "default_user_data", // 自用模式下，相对于 userData 的路径名。注意：v3中用户身份ID固定为'default_user'，此路径仅用于文件数据。
       "accessPasswordHash": null // 自用模式下的可选全局访问密码哈希。如果为 null 或空字符串，则自用模式无需密码。
+      // "singleUserPath" 配置已移除。单用户模式的文件数据存储路径基于固定的 'default_user' ID。
     }
     // ... 其他全局配置
   }
   ```
-  **注意**: 在 v3 方案中，虽然 `singleUserPath` 仍然用于指定单用户模式下的文件数据存储路径（如工作流文件等），但代表该单用户的身份 ID 在数据库层面将固定为 `'default_user'`。
+  **注意**: 在 v3 方案中，单用户模式下的文件数据存储路径是基于固定的用户身份 ID `'default_user'` (通常在 `userData/default_user/` 下)，不再通过 `singleUserPath` 配置。代表该单用户的身份 ID 在数据库层面固定为 `'default_user'`。
 
 ### 2.2. 用户上下文与身份 (`UserContext`)
 
@@ -262,7 +262,7 @@ CREATE TABLE external_credentials (
 - **单用户模式下的 `users` 表记录**:
   - 为了维护 `service_api_keys` 和 `external_credentials` 表中 `user_id` 字段的外键约束，即使在单用户模式下，也应在应用首次初始化时，在 `users` 表中创建一条记录，其 `uid` 为 `'default_user'`。
   - 这条记录的 `username` 可以是 "本地用户" 或从 `config.json` 中读取（例如，可以默认为 `'default_user'`），`password_hash` 可以为 `NULL` 或一个明确的不可登录标记（因为单用户模式不通过此表进行密码认证），`is_admin` 在此模式下无实际意义，可设为 `false`，`created_at` 设为当前时间。
-- **数据目录**: 原 v2 设计中 `userData/<user_uuid>/` 或 `userData/<singleUserPath>/` 的概念主要用于存储用户相关的文件型数据（如工作流定义、项目文件、用户特定设置的 JSON 文件等），这些文件数据仍然可以按此方式组织。数据库文件 (如 `app.sqlite`) 通常建议存放在 `userData` 根目录或一个专门的 `database` 子目录下。
+- **数据目录**: 用户相关的文件型数据（如工作流定义、项目文件等）在单用户模式下存储于基于固定用户ID `'default_user'` 的路径下 (例如 `userData/default_user/`)；在多用户模式下存储于 `userData/<user_uuid>/`。数据库文件 (如 `app.sqlite`) 通常建议存放在 `data/` 目录或项目根目录下的一个专门的 `database` 子目录下。
 - **事务与并发**: 使用 SQLite 和 ORM 可以有效处理事务和并发控制，确保数据操作的原子性和一致性，这是相比 JSON 文件存储的巨大优势。
 
 ### 2.4. 安全核心：密钥与凭证处理
@@ -408,7 +408,7 @@ CREATE TABLE external_credentials (
     - 应用初始化时，应确保数据库 `users` 表中存在 `uid='default_user'` 的记录。
   - **数据存储**:
     - 用户账户信息（占位记录）、服务 API 密钥、外部服务凭证均存储在 SQLite 数据库中，并关联到 `user_id='default_user'`。
-    - 用户的文件型数据（工作流、项目等）仍可根据 `config.json` 中的 `singleUserPath` 存储在文件系统中。
+    - 用户的文件型数据（工作流、项目等）存储在基于 `user_id='default_user'` 的文件系统路径下 (例如 `userData/default_user/`)。
   - **API 影响**:
     - 用户账户管理相关的 API (如用户注册 `/api/auth/register`、登录 `/api/auth/login`) 在此模式下通常被禁用或返回特定状态，因为不存在多账户概念。
     - `/api/auth/current` 将始终返回 `LocalNoPasswordUserContext`，其 `currentUser` 属性为 `DefaultUserIdentity`，并包含该默认用户的所有服务 API 密钥元数据和外部服务凭证元数据。
@@ -513,7 +513,7 @@ CREATE TABLE external_credentials (
 
 2.  **纯本地自用模式 (Mode 1)**:
     a. **数据库初始化**: 检查 SQLite 数据库。如果 `users` 表不存在或没有 `uid='default_user'` 的记录，则创建该表并插入 `default_user` 的占位记录。其 `username` 可默认为 "本地用户"，`password_hash` 为 NULL，`is_admin` 为 `false`。
-    b. **数据路径**: 根据 `config.json` 中的 `userManagement.singleUserPath` (如果配置) 确定默认用户的文件数据存储路径，并确保该路径存在。
+    b. **数据路径**: 默认用户的文件数据存储路径基于固定的用户ID `'default_user'` (例如 `userData/default_user/`)，系统应确保此路径存在。
     c. **进入应用**: 直接进入应用主界面，无需任何认证。用户上下文为 `LocalNoPasswordUserContext`。
 
 3.  **个人远程访问模式 (Mode 2 - 带全局密码)**:
@@ -948,8 +948,8 @@ classDiagram
     package "Config & Environment" {
         class ConfigJson {
             +userManagement: object
-            +singleUserPath: string
             +accessPasswordHash: string?
+            // singleUserPath removed
         }
         class EnvVariables {
             +COMFYTAVERN_MASTER_ENCRYPTION_KEY: string

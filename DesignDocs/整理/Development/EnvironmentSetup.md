@@ -68,7 +68,8 @@ bun install
     *   `execution.logDir`: 工作流执行日志的存储目录。
     *   `customNodePaths`: 自定义节点的加载路径。
     *   `userManagement.multiUserMode`: 是否启用多用户模式。
-    *   `userManagement.singleUserPath`: 单用户模式下的数据存储路径。
+    *   `userManagement.accessPasswordHash`: 单用户模式下，可选的全局访问密码哈希。
+    *   (注意: 单用户模式下的数据存储路径现在是基于固定的用户ID 'default_user'，不再通过 'singleUserPath' 配置。)
 
     请查阅 [`config.template.json`](config.template.json:1) 以了解所有可配置选项及其默认值。
 

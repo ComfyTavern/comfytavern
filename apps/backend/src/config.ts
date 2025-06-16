@@ -39,8 +39,7 @@ export const CUSTOM_NODE_PATHS: string[] = (config as any).customNodePaths || []
 const userManagementConfig = (config as any).userManagement || {};
 export const MULTI_USER_MODE: boolean = userManagementConfig.multiUserMode === true; // 明确转换为布尔值，默认为 false
 export const ACCESS_PASSWORD_HASH: string | null = userManagementConfig.accessPasswordHash || null;
-// 根据设计文档 (line 73, 79), singleUserPath 用于文件数据，用户身份ID固定为 'default_user'
-export const SINGLE_USER_PATH: string = userManagementConfig.singleUserPath || "default_user_data";
+// SINGLE_USER_PATH 已移除，单用户模式下的用户标识固定为 'default_user' (见 DatabaseService.ts)
 
 // 新增安全配置的读取
 const securityConfig = (config as any).security || {};
@@ -57,8 +56,7 @@ export const LIBRARY_BASE_DIR = getLibraryBaseDir(); // 全局库根目录
 // export const SILLYTAVERN_DIR = getGlobalSillyTavernDir(); // 全局库的 SillyTavern 目录 - 移除
 // export const PROJECTS_BASE_DIR = getProjectsBaseDir(); // 所有项目的基础目录 (内部会按用户组织) - 移除
 
-// USER_DATA_ROOT 和 SINGLE_USER_SPECIFIC_DATA_DIR 的定义保持不变，因为它们依赖 MULTI_USER_MODE
-// 并且 SINGLE_USER_PATH 是一个标识符，而不是一个完整的路径片段。
+// USER_DATA_ROOT 的定义保持不变。
 // 实际的用户数据路径构建逻辑在 DatabaseService 和 ProjectService 中处理，
-// 它们会结合 USER_DATA_ROOT 和用户标识 (如 SINGLE_USER_PATH 或 uid)。
+// 它们会结合 USER_DATA_ROOT 和用户标识 (单用户模式为 'default_user', 多用户模式为 uid)。
 // 我们会在 index.ts 中确保 USER_DATA_ROOT 本身存在。

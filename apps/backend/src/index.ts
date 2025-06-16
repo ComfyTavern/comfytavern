@@ -21,7 +21,6 @@ import {
   LOG_DIR as APP_LOG_DIR, // 从 config.ts 导入，可能已被覆盖
   MULTI_USER_MODE,
   ACCESS_PASSWORD_HASH,
-  SINGLE_USER_PATH,
   CORS_ALLOWED_ORIGINS, // + 导入 CORS 白名单
 } from './config';
 import { characterApiRoutes } from './routes/characterRoutes';
@@ -103,9 +102,7 @@ if (MULTI_USER_MODE) {
   }
 }
 console.log(`[ComfyTavern Backend] Determined user operation mode: ${currentUserMode}`);
-if (currentUserMode === 'LocalNoPassword' || currentUserMode === 'LocalWithPassword') {
-  console.log(`[ComfyTavern Backend] Single user data path: ${SINGLE_USER_PATH}`);
-}
+// SINGLE_USER_PATH 已移除，相关日志也移除
 
 // --- 初始化数据库服务 ---
 try {
