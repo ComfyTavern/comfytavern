@@ -15,8 +15,11 @@
     "build-only:frontend": "bun run --cwd apps/frontend-vueflow build-only",
     "build:frontend": "bun run type-check:frontend ; bun run build-only:frontend",
     "build": "bun run build:frontend",
+    "preview:frontend": "bun run --cwd apps/frontend-vueflow preview",
     "start": "bun run --cwd apps/backend start",
     "start:backend": "bun run --cwd apps/backend start",
+    "start:frontend:prod": "bun run --cwd apps/frontend-vueflow start:prod",
+    "manage:pm2": "bun ./scripts/pm2-manager.ts",
     "db:generate": "bun run ./node_modules/drizzle-kit/bin.cjs generate --config ./drizzle.config.ts",
     "db:migrate": "bun run ./node_modules/drizzle-kit/bin.cjs migrate --config ./drizzle.config.ts",
     "db:upgrade": "bun scripts/upgradeDatabase.ts"

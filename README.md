@@ -37,7 +37,7 @@ ComfyTavern 的设计围绕：**高性能引擎 → 专业化编排 → 多渠�
 3.  **🎯 平台定位：通用编排与应用构建**
 
     - **定位与范围**:
-      - **与 ComfyUI 的侧重点不同**: ComfyUI 精于图像生成领域的工作流。ComfyTavern 的设计目标更广泛，覆盖通用逻辑、文本处理、LLM 交互、Agent 构建及最终应用层的封装，定位于一个通用的 AI 应用构建与执行平台，可以和comfyui组合使用。
+      - **与 ComfyUI 的侧重点不同**: ComfyUI 精于图像生成领域的工作流。ComfyTavern 的设计目标更广泛，覆盖通用逻辑、文本处理、LLM 交互、Agent 构建及最终应用层的封装，定位于一个通用的 AI 应用构建与执行平台，可以和 comfyui 组合使用。
       - **与 SillyTavern 的架构不同**: SillyTavern 作为一个优秀的前端界面，其核心优势在于为聊天场景提供了成熟且高度集成的上下文构建与管理功能。 ComfyTavern 的核心优势源于其**高度灵活和可编程的节点式工作流系统**。用户可以通过可视化方式自由组合节点，构建出远比传统预设更为精细、动态和强大的上下文生成逻辑、RAG (检索增强生成) 流程、多步推理链、乃至复杂的 Agent 行为。
     - **API 驱动架构**: 核心功能均通过内部 API（HTTP/WebSocket）暴露，前端本身即是 API 的使用者。这为平台未来发展为**独立后端服务 (Engine as a Service)** 和开放平台奠定了基础。
 
@@ -136,35 +136,36 @@ cd comfytavern
 ```
 
 - **下载 ZIP:**
-  - 下载 [GitHub 仓库打包](https://github.com/ComfyTavern/comfytavern/archive/refs/heads/main.zip) 
-  - 将其解压后，进入解压好的comfytavern文件夹。
+  - 下载 [GitHub 仓库打包](https://github.com/ComfyTavern/comfytavern/archive/refs/heads/main.zip)
+  - 将其解压后，进入解压好的 comfytavern 文件夹。
 
 **安装:**
 
 ```bash
 bun install
 ```
+
 如果遇到网络问题，可以尝试使用镜像源安装：
+
 ```bash
 bun install --registry https://registry.npmmirror.com
 ```
 
-
 **启动应用:**
-| 平台 | 命令 | 描述 |
-| :---------- | :------------ | :---------- |
-| Windows | `.\start.bat` | 完整启动 (包含依赖检查和项目准备) |
-| Linux/macOS | `./start.sh` | 完整启动 (包含依赖检查和项目准备) |
-| Windows | `.\start_fast.bat` | 快速启动 (跳过依赖检查和项目准备) |
-| Linux/macOS | `./start_fast.sh` | 快速启动 (跳过依赖检查和项目准备) |
+| 平台        | 命令               | 描述                              |
+| :---------- | :----------------- | :-------------------------------- |
+| Windows     | `.\start.bat`      | 完整启动 (包含依赖检查和项目准备) |
+| Linux/macOS | `./start.sh`       | 完整启动 (包含依赖检查和项目准备) |
+| Windows     | `.\start_fast.bat` | 快速启动 (跳过依赖检查和项目准备) |
+| Linux/macOS | `./start_fast.sh`  | 快速启动 (跳过依赖检查和项目准备) |
 
 **启动开发模式:**
-| 平台 | 命令 | 描述 |
-| :---------- | :---------------- | :---------- |
-| Windows | `.\start.bat dev` | 完整启动开发模式 |
-| Linux/macOS | `./start.sh dev` | 完整启动开发模式 |
-| Windows | `.\start_fast.bat dev` | 快速启动开发模式 |
-| Linux/macOS | `./start_fast.sh dev` | 快速启动开发模式 |
+| 平台        | 命令                   | 描述             |
+| :---------- | :--------------------- | :--------------- |
+| Windows     | `.\start.bat dev`      | 完整启动开发模式 |
+| Linux/macOS | `./start.sh dev`       | 完整启动开发模式 |
+| Windows     | `.\start_fast.bat dev` | 快速启动开发模式 |
+| Linux/macOS | `./start_fast.sh dev`  | 快速启动开发模式 |
 
 **默认地址:**
 
@@ -221,7 +222,59 @@ bun install --registry https://registry.npmmirror.com
   ```bash
   bun run db:upgrade
   ```
+
   这个命令会生成新的迁移文件（如果需要）并应用所有待处理的迁移，确保您的数据库结构与最新代码保持一致。
+
+---
+
+### 🏭 使用 PM2 进行生产环境管理
+
+对于生产环境部署，项目提供了通过 PM2 管理应用进程的脚本。PM2 是一个强大的进程管理器，可以帮助您保持应用在线、管理日志、监控性能等。
+
+**基本用法:**
+
+所有 PM2 相关操作都通过 `bun run manage:pm2` 命令执行，后跟具体的操作指令。
+
+```bash
+bun run manage:pm2 <action> [arguments]
+```
+
+**可用操作 (`<action>`):**
+
+| 命令                  | 描述                                                                             |
+| :-------------------- | :------------------------------------------------------------------------------- |
+| `prepare`             | 准备生产环境，包括安装依赖、执行项目准备脚本和构建前端。                         |
+| `start`               | （先执行 `prepare`）然后通过 PM2 启动所有在 `ecosystem.config.js` 中定义的服务。 |
+| `stop`                | 通过 PM2 停止所有服务。                                                          |
+| `restart`             | 通过 PM2 重启所有服务。                                                          |
+| `delete`              | 通过 PM2 停止并删除所有服务。                                                    |
+| `logs [service_name]` | 显示 PM2 日志。如果提供了 `service_name`，则只显示该服务的日志。                 |
+| `list`                | 列出 PM2 管理的所有服务及其状态。                                                |
+| `flush`               | 清空所有 PM2 日志。                                                              |
+
+**示例:**
+
+- 启动所有服务:
+  ```bash
+  bun run manage:pm2 start
+  ```
+- 查看所有服务状态:
+  ```bash
+  bun run manage:pm2 list
+  ```
+- 查看特定服务 (例如 `comfytavern-backend`) 的日志:
+  ```bash
+  bun run manage:pm2 logs comfytavern-backend
+  ```
+- 停止所有服务:
+  ```bash
+  bun run manage:pm2 stop
+  ```
+
+**注意:**
+
+- 确保您已经在系统中全局安装了 PM2，或者通过 `bunx pm2` (脚本内部已使用 `bunx pm2`)。
+- 服务的具体配置（如名称、启动脚本等）定义在项目根目录的 `ecosystem.config.js` 文件中。
 
 ---
 
