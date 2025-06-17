@@ -13,7 +13,7 @@ const DAISYUI_DARK_THEME_NAME = 'mytheme_dark';
 
 // 默认主题 ID，如果 localStorage 中没有，则使用此值
 // 假设我们有一个名为 'default' 的系统主题，或者第一个加载的主题
-const DEFAULT_THEME_ID = 'default-light'; // TODO: 需要根据实际预设主题调整
+const DEFAULT_THEME_ID = 'default'; // 已根据 public/themes/default.json 的 id 调整
 
 export const useThemeStore = defineStore('theme', () => {
   // --- 状态 (State) ---
@@ -65,11 +65,10 @@ export const useThemeStore = defineStore('theme', () => {
 
     // 1. 获取对应变体的 CSS 变量
     const variant = presetToApply.variants[modeToApply];
-    
+
     // 确保 variant 和 variant.variables 都有效，并且 variables 对象不是空的
     if (variant && variant.variables && Object.keys(variant.variables).length > 0) {
       // 正常应用选中的变体
-      console.log(`[ThemeStore] Applying variables from ${presetToApply.id}.${modeToApply}:`, variant.variables);
       Object.entries(variant.variables).forEach(([key, value]) => {
         document.documentElement.style.setProperty(key, value);
       });
@@ -94,7 +93,7 @@ export const useThemeStore = defineStore('theme', () => {
         console.error('[ThemeStore] Error clearing cached theme variables from localStorage:', e);
       }
     }
-    
+
 
     // 2. 根据 currentAppliedMode 添加/移除 <html> 上的 'dark' 类 (用于 Tailwind CSS)
     if (modeToApply === 'dark') {
@@ -106,7 +105,6 @@ export const useThemeStore = defineStore('theme', () => {
     // 3. 设置 document.documentElement.dataset.theme 为对应的 DaisyUI 桥接主题名
     document.documentElement.dataset.theme = modeToApply === 'dark' ? DAISYUI_DARK_THEME_NAME : DAISYUI_LIGHT_THEME_NAME;
 
-    console.log(`[ThemeStore] Applied theme: ${presetToApply.id}, Mode: ${modeToApply}`);
   }
 
   /**
@@ -119,31 +117,38 @@ export const useThemeStore = defineStore('theme', () => {
     const loadedSystemThemes: ThemePreset[] = [];
     userCustomThemes.value = []; // 清空之前的用户主题
 
-    // 1. 加载系统预设主题
-    try {
-      const systemThemeItems: FAMItem[] = await fileManagerApi.listDir('system://public/themes/');
-      for (const item of systemThemeItems) {
-        if (item.itemType === 'file' && item.name.endsWith('.json')) {
-          try {
-            const downloadUrl = await fileManagerApi.getDownloadFileLink(item.logicalPath);
-            const response = await fetch(downloadUrl);
-            if (!response.ok) {
-              console.error(`[ThemeStore] Failed to load system theme file: ${item.name}, status: ${response.status}`);
-              continue;
+        // 1. 加载系统预设主题 (通过 import.meta.glob)
+        try {
+          // 使用 import.meta.glob 导入 public/themes 目录下的所有 .json 文件
+          // eager: true 会同步加载模块，返回的是模块本身而不是加载函数
+          // 对于 JSON 文件，模块的 default 导出就是解析后的对象
+          const themeModules = import.meta.glob('/public/themes/*.json', { eager: true }) as Record<string, { default: ThemePreset }>;
+    
+          for (const path in themeModules) {
+            // 确保 themeModules[path] 存在并且有 default 属性
+            if (themeModules[path] && themeModules[path].default) {
+              const themeData = themeModules[path].default;
+              // 对 themeData 进行基本验证，确保它看起来像一个有效的主题预设
+              if (themeData && typeof themeData === 'object' && themeData.id && themeData.name && themeData.variants) {
+                // 系统主题来源已明确，直接将其标记为 isSystemTheme: true
+                loadedSystemThemes.push({ ...themeData, isSystemTheme: true });
+              } else {
+                console.warn(`[ThemeStore] Theme file ${path} did not export a valid ThemePreset object or is missing required fields (id, name, variants). Data:`, themeData);
+              }
+            } else {
+              console.warn(`[ThemeStore] Module for theme file ${path} is invalid or missing default export.`);
             }
-            const themeData = await response.json();
-            // TODO: 在此可以添加 Zod 校验 themeData 是否符合 ThemePreset 结构
-            loadedSystemThemes.push(themeData as ThemePreset);
-          } catch (error) {
-            console.error(`[ThemeStore] Error loading or parsing system theme file ${item.name}:`, error);
           }
+    
+          if (loadedSystemThemes.length === 0) {
+            console.warn('[ThemeStore] No system themes were loaded via import.meta.glob. Check /public/themes/ directory for .json files and the glob pattern.');
+          }
+        } catch (error) {
+          // 这个 catch 块主要用于捕获 import.meta.glob (eager: true) 在加载或解析模块时可能发生的同步错误，
+          // 或者遍历 themeModules 过程中的其他意外错误。
+          console.error('[ThemeStore] Failed to load or parse system themes from public/themes using import.meta.glob (eager):', error);
         }
-      }
-    } catch (error) {
-      console.error('[ThemeStore] Failed to list system themes:', error);
-    }
-
-    // 2. 加载用户自定义主题
+    // 2. 加载用户自定义主题 (逻辑保持不变)
     if (authStore.isAuthenticated && authStore.currentUser) { // 移除了 .id 检查，因为 fileManagerApi 调用不直接使用 userId
       try {
         const userThemeItems: FAMItem[] = await fileManagerApi.listDir('user://library/themes/');
@@ -161,7 +166,8 @@ export const useThemeStore = defineStore('theme', () => {
               }
               const themeData = await response.json();
               // TODO: 在此可以添加 Zod 校验 themeData 是否符合 ThemePreset 结构
-              userCustomThemes.value.push(themeData as ThemePreset);
+              // 用户主题来源已明确，直接将其标记为 isSystemTheme: false
+              userCustomThemes.value.push({ ...themeData, isSystemTheme: false } as ThemePreset);
             } catch (error) {
               console.error(`[ThemeStore] Error loading or parsing user theme file ${item.name}:`, error);
             }
@@ -254,18 +260,18 @@ export const useThemeStore = defineStore('theme', () => {
   async function initTheme() {
     await loadAvailableThemes(); // 加载主题是异步的
     // applyCurrentTheme(); // loadAvailableThemes 成功后会调用
-    
+
     // 监听系统颜色方案变化
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     mediaQuery.addEventListener('change', () => {
       if (displayMode.value === 'system') {
         // currentAppliedMode 会自动更新，其 watch 会调用 applyCurrentTheme
         // 为确保万无一失，也可以直接调用
-         applyCurrentTheme();
+        applyCurrentTheme();
       }
     });
   }
-  
+
   // 监听 currentAppliedMode 的变化，确保主题正确应用
   // (displayMode 或系统主题变化时，此计算属性会变)
   watch(currentAppliedMode, () => {
@@ -283,7 +289,7 @@ export const useThemeStore = defineStore('theme', () => {
     // await famService.saveUserTheme(theme);
     // userCustomThemes.value.push(theme); // 或重新加载
     // availableThemes.value = [...systemThemes, ...userCustomThemes.value];
-    console.log('[ThemeStore] saveUserTheme (not implemented)', theme);
+    console.warn('[ThemeStore] saveUserTheme (not implemented)', theme);
   }
 
   /**
@@ -295,9 +301,9 @@ export const useThemeStore = defineStore('theme', () => {
     // await famService.deleteUserTheme(themeId);
     // userCustomThemes.value = userCustomThemes.value.filter(t => t.id !== themeId);
     // availableThemes.value = availableThemes.value.filter(t => t.id !== themeId);
-    console.log('[ThemeStore] deleteUserTheme (not implemented)', themeId);
+    console.warn('[ThemeStore] deleteUserTheme (not implemented)', themeId);
   }
-  
+
   /**
    * (阶段二) 更新用户自定义主题。
    * @param themeId 要更新的主题的 ID。
@@ -305,7 +311,7 @@ export const useThemeStore = defineStore('theme', () => {
    */
   async function updateUserTheme(themeId: string, updatedVariables: Partial<ThemePreset['variants']['light']['variables']>) {
     // TODO: 实现更新逻辑
-    console.log('[ThemeStore] updateUserTheme (not implemented)', themeId, updatedVariables);
+    console.warn('[ThemeStore] updateUserTheme (not implemented)', themeId, updatedVariables);
   }
 
 
