@@ -10,7 +10,7 @@
     "test:unit": "vitest",
     "build-only": "bunx vite build",
     "type-check": "bunx vue-tsc --build",
-    "start:prod": "bunx serve dist -l tcp://localhost:${PORT}"
+    "start:prod": "bunx serve dist"
   },
   "dependencies": {
     "@babel/runtime": "^7.27.1",

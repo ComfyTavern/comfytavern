@@ -39,19 +39,19 @@ module.exports = {
   apps: [
     {
       name: 'comfytavern-backend',
-      script: 'bun',
-      args: 'run start:backend', // Executes "start:backend" from root package.json
-      cwd: './',                 // Run from project root
-      interpreter: 'bun',
+      script: './scripts/run-backend-node.cjs', // 指向新的 Node.js 包装器脚本
+      args: [], // 参数在 Node.js 包装器脚本内部处理
+      cwd: './',                 // Node.js 包装器脚本会处理自己的路径
+      interpreter: 'node',        // 明确指定使用 node 执行 .cjs 包装器脚本
       exec_mode: 'fork',
       watch: false,
       instance_var: 'INSTANCE_ID_BACKEND',
       env_production: {
         NODE_ENV: 'production',
-        PORT: backendPortToUse, // Pass the determined port to the backend app
+        PORT: backendPortToUse, // 这个 PORT 环境变量会传递给包装器脚本，进而可以被后端应用使用
       },
-      out_file: './logs/backend-out.log',
-      error_file: './logs/backend-error.log',
+      out_file: './logs/backend-out.log', // PM2 将捕获包装器脚本的 stdout
+      error_file: './logs/backend-error.log', // PM2 将捕获包装器脚本的 stderr
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       merge_logs: true,
       autorestart: true,
@@ -60,20 +60,19 @@ module.exports = {
       restart_delay: 5000, // Delay 5s before restarting
     },
     {
-      name: 'comfytavern-frontend',
-      script: 'bun',
-      args: 'run start:frontend:prod', // MODIFIED from preview:frontend
-      cwd: './',                  // Run from project root
-      interpreter: 'bun',
+      name: 'comfytavern-frontend', // 恢复应用名称
+      script: './scripts/run-frontend-preview-node.cjs', // 指向新的 .cjs 包装器脚本
+      args: [], // 参数在 Node.js 脚本内部处理
+      cwd: './', // Node.js 脚本会处理自己的路径
+      interpreter: 'node', // 明确指定使用 node 执行 .cjs 脚本 (可选, PM2通常能自动识别)
       exec_mode: 'fork',
       watch: false,
-      instance_var: 'INSTANCE_ID_FRONTEND',
+      instance_var: 'INSTANCE_ID_FRONTEND', // 恢复 instance_var
       env_production: {
         NODE_ENV: 'production',
-        PORT: frontendPortToUse, // ADDED frontend port
       },
-      out_file: './logs/frontend-out.log',
-      error_file: './logs/frontend-error.log',
+      out_file: './logs/frontend-out.log', // 恢复日志文件名
+      error_file: './logs/frontend-error.log', // 恢复日志文件名
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       merge_logs: true,
       autorestart: true,
