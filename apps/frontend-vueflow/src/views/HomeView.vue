@@ -35,7 +35,7 @@
             </div>
             <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               <div v-for="project in recentProjects" :key="project.id"
-                class="bg-background-surface p-4 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
+                class="bg-background-surface p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
                 @click="openProject(project.id)">
                 <h3 class="font-semibold text-lg text-text-base mb-2 truncate">{{ project.name }}</h3>
                 <p class="text-sm text-text-secondary mb-1">
