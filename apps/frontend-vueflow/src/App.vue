@@ -28,9 +28,10 @@ const { activeTabId } = storeToRefs(tabStore);
 const { currentProjectId } = storeToRefs(projectStore); // 获取当前项目 ID 的响应式引用
 const { isSettingsModalVisible, settingsModalProps } = storeToRefs(uiStore); // 获取设置模态框的显示状态和属性
 const { userContext, currentUser, isLoadingContext } = storeToRefs(authStore); // + Add currentUser, isLoadingContext
-
+ 
 const showInitialUsernameModal = ref(false); // + Ref for modal visibility
-
+// const initialSetupDoneKey = 'comfytavern_initial_setup_processed'; // 将在 watchEffect 中动态生成
+ 
 onMounted(async () => {
   themeStore.initTheme();
   initializeWebSocket(); // <-- ADDED: Initialize WebSocket connection
@@ -102,34 +103,56 @@ onUnmounted(() => {
 
 // + Watch for conditions to show initial username setup modal
 watchEffect(() => {
-  if (!isLoadingContext.value && userContext.value && currentUser.value) {
-    if (
-      userContext.value.mode === 'LocalNoPassword' &&
-      currentUser.value.username === '本地用户' // USERNAME_DEFAULT from backend
-    ) {
-      showInitialUsernameModal.value = true;
-    } else {
-      // 如果条件不再满足（例如用户通过其他方式改了名，或模式改变），确保模态框关闭
-      // 但通常这个模态框只出现一次，成功后就不再满足条件
-      showInitialUsernameModal.value = false;
-    }
+  if (isLoadingContext.value || !userContext.value) {
+    // 如果还在加载或用户上下文不可用，则不执行
+    return;
+  }
+
+  // 首先处理非 LocalNoPassword 模式，这些模式下不应显示此弹窗
+  if (userContext.value.mode !== 'LocalNoPassword') {
+    showInitialUsernameModal.value = false;
+    return;
+  }
+
+  // 此处，userContext.value.mode 必定是 'LocalNoPassword'
+  // currentUser.value 的类型应为 DefaultUserIdentity
+  const currentUserVal = currentUser.value as import('@comfytavern/types').DefaultUserIdentity | null;
+
+  if (!currentUserVal) { // 理论上在 LocalNoPassword 模式下，currentUser 不应为 null
+    showInitialUsernameModal.value = false;
+    return;
+  }
+
+  // 此时 currentUserVal.id 是 'default_user'
+  const userSpecificSetupKey = `comfytavern_initial_setup_processed_${currentUserVal.id}`;
+  const setupProcessed = localStorage.getItem(userSpecificSetupKey) === 'true';
+
+  if (setupProcessed) {
+    showInitialUsernameModal.value = false;
+    return;
+  }
+
+  if (currentUserVal.username === '本地用户') {
+    showInitialUsernameModal.value = true;
+  } else {
+    // 用户名不是 "本地用户"，说明已经设置过了（即使 localStorage 没有标记）
+    // 此时应该标记 localStorage 并关闭弹窗
+    localStorage.setItem(userSpecificSetupKey, 'true');
+    showInitialUsernameModal.value = false;
   }
 });
 
-const handleModalClosed = () => {
+const handleModalInteraction = () => {
+  if (userContext.value && userContext.value.mode === 'LocalNoPassword' && currentUser.value) {
+    // 明确知道是 LocalNoPassword 模式，currentUser 类型是 DefaultUserIdentity
+    const user = currentUser.value as import('@comfytavern/types').DefaultUserIdentity;
+    const userSpecificSetupKey = `comfytavern_initial_setup_processed_${user.id}`;
+    localStorage.setItem(userSpecificSetupKey, 'true');
+  }
   showInitialUsernameModal.value = false;
-  // 如果用户只是关闭了模态框（如果允许）而没有保存，
-  // 并且条件仍然满足，它可能会再次打开。
-  // 但当前模态框设计为不可随意关闭，只能通过保存。
-};
-
-const handleModalSaved = () => {
-  showInitialUsernameModal.value = false;
-  // 保存后，authStore.currentUser.username 会更新，
-  // watchEffect 会检测到条件不再满足，不会再次打开模态框。
 };
 </script>
-
+ 
 <template>
   <div class="h-full w-full basic-flow bg-gray-100 dark:bg-gray-900">
     <RouterView />
@@ -153,8 +176,8 @@ const handleModalSaved = () => {
     <InitialUsernameSetupModal
       :visible="showInitialUsernameModal"
       :initial-username="currentUser?.username"
-      @close="handleModalClosed"
-      @saved="handleModalSaved"
+      @close="handleModalInteraction"
+      @saved="handleModalInteraction"
     />
   </div>
 </template>
