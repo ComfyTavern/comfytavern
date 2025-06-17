@@ -328,11 +328,11 @@ const onResetView = () => {
 }
 
 .context-menu-item .icon {
-  @apply mr-2 text-gray-500 dark:text-gray-400;
+  @apply mr-2 text-text-muted;
 }
 
 .submenu-arrow-static {
-  @apply ml-auto pl-2 text-xs text-gray-600 dark:text-gray-300;
+  @apply ml-auto pl-2 text-xs text-text-secondary;
 }
 
 .context-menu-separator {

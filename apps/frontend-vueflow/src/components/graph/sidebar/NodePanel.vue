@@ -71,7 +71,7 @@
             class="node-namespace-section">
             <!-- Namespace Title Bar -->
             <div
-              class="namespace-title bg-background-surface/90 px-2 py-1 rounded cursor-pointer flex items-center justify-between mb-1"
+              class="namespace-title bg-primary/20 px-2 py-1 rounded cursor-pointer flex items-center justify-between mb-1"
               @click="toggleCollapse(namespace)">
               <span>{{ namespace }}</span>
               <span class="text-lg">{{ collapsedStates[namespace] ? "▸" : "▾" }}</span>
@@ -84,7 +84,7 @@
                 class="node-category-section">
                 <!-- Category Title Bar -->
                 <div
-                  class="category-title  bg-primary/20 px-2 py-1 rounded cursor-pointer flex items-center justify-between mt-1"
+                  class="category-title  bg-primary/10 px-2 py-1 rounded cursor-pointer flex items-center justify-between mt-1"
                   @click="toggleCollapse(`${namespace}:${category}`)">
                   <span>{{ category }}</span>
                   <span class="text-lg">{{

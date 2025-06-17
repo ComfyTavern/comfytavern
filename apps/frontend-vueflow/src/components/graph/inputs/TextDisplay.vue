@@ -3,16 +3,16 @@
     <div class="w-full p-1 text-sm rounded border
               bg-background-surface
               border-gray-300 dark:border-gray-600
-              text-gray-900 dark:text-gray-100
+              text-text-base
               disabled:bg-neutral-softest
-              disabled:text-gray-500 dark:disabled:text-gray-400
+              disabled:text-text-muted
               min-h-[60px] max-h-[200px] overflow-y-auto whitespace-pre-wrap" 
          :class="{
            'border-red-500 dark:border-red-700': hasError
          }">
       {{ modelValue }}
     </div>
-    <div v-if="hasError" class="text-xs text-red-500 dark:text-red-400 mt-1">
+    <div v-if="hasError" class="text-xs text-error mt-1">
       {{ errorMessage }}
     </div>
   </div>

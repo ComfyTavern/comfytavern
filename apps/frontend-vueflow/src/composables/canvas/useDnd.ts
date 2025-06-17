@@ -83,11 +83,11 @@ export default function useDragAndDrop() {
 
           if (isDarkMode) {
             dragIcon.style.backgroundColor = `hsl(var(--ct-background-surface-hsl) / 0.9)`; // 对应语义化的 surface 背景色，稍作透明
-            dragIcon.style.color = "rgba(229, 231, 235, 1)"; // 对应 dark:text-gray-200
+            dragIcon.style.color = `hsl(var(--ct-text-base-hsl))`; // 对应主题化的 text-base
             dragIcon.style.border = "1px solid rgba(55, 65, 81, 0.9)"; // 对应 dark:border-gray-700
           } else {
             dragIcon.style.backgroundColor = "rgba(255, 255, 255, 0.9)"; // 对应 bg-white，稍作透明
-            dragIcon.style.color = "rgba(55, 65, 81, 1)"; // 对应 text-gray-700
+            dragIcon.style.color = `hsl(var(--ct-text-base-hsl))`; // 对应主题化的 text-base
             dragIcon.style.border = "1px solid rgba(229, 231, 235, 0.9)"; // 对应 border-gray-200
           }
           // 统一的阴影，参考 context-menu-base 但可以略微调整

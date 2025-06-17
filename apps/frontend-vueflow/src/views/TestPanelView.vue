@@ -5,16 +5,16 @@
       @close="isInitialUsernameSetupModalVisible = false; uiStoreResult = '初始用户名设置模态框已关闭 (事件)。'"
       @saved="isInitialUsernameSetupModalVisible = false; uiStoreResult = '初始用户名已保存 (事件)。'"
     />
-    <h1 class="text-3xl font-bold mb-8 text-gray-900 dark:text-gray-100">弹窗与UI组件测试面板</h1>
+    <h1 class="text-3xl font-bold mb-8 text-text-base">弹窗与UI组件测试面板</h1>
 
     <!-- DialogService 测试 -->
     <section class="mb-12">
-      <h2 class="text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200 border-b pb-2">DialogService (模态对话框与通知)
+      <h2 class="text-2xl font-semibold mb-6 text-text-base border-b pb-2">DialogService (模态对话框与通知)
       </h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
         <!-- 对话框部分 -->
         <div class="bg-background-surface p-6 rounded-lg shadow-md">
-          <h3 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300">模态对话框 (Dialogs)</h3>
+          <h3 class="text-xl font-semibold mb-4 text-text-secondary">模态对话框 (Dialogs)</h3>
           <div class="space-y-4">
             <button @click="showMessageDialog" class="btn btn-blue w-full">显示消息对话框</button>
             <button @click="showConfirmDialog" class="btn btn-green w-full">显示确认对话框</button>
@@ -28,7 +28,7 @@
 
         <!-- 通知部分 -->
         <div class="bg-background-surface p-6 rounded-lg shadow-md">
-          <h3 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300">通知 (Toasts)</h3>
+          <h3 class="text-xl font-semibold mb-4 text-text-secondary">通知 (Toasts)</h3>
           <div class="space-y-4">
             <button @click="showInfoToast" class="btn btn-blue w-full">显示信息通知</button>
             <button @click="showSuccessToast" class="btn btn-green w-full">显示成功通知</button>
@@ -41,19 +41,19 @@
         </div>
       </div>
       <div class="mt-8 bg-background-surface p-6 rounded-lg shadow-md">
-        <h3 class="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">DialogService 操作结果:</h3>
+        <h3 class="text-lg font-semibold mb-3 text-text-secondary">DialogService 操作结果:</h3>
         <div class="bg-background-base p-4 rounded-md min-h-[50px]">
-          <pre class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ dialogServiceResult }}</pre>
+          <pre class="text-sm text-text-base whitespace-pre-wrap">{{ dialogServiceResult }}</pre>
         </div>
       </div>
     </section>
 
     <!-- UiStore Modals 测试 -->
     <section>
-      <h2 class="text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200 border-b pb-2">UiStore (全局模态框)</h2>
+      <h2 class="text-2xl font-semibold mb-6 text-text-base border-b pb-2">UiStore (全局模态框)</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
         <div class="bg-background-surface p-6 rounded-lg shadow-md">
-          <h3 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300">特定模态框</h3>
+          <h3 class="text-xl font-semibold mb-4 text-text-secondary">特定模态框</h3>
           <div class="space-y-4">
             <button @click="openSettings" class="btn btn-indigo w-full">打开设置模态框 (App.vue 管理)</button>
             <button @click="openRegexEditor" class="btn btn-pink w-full">打开正则编辑器模态框</button>
@@ -62,26 +62,26 @@
         </div>
       </div>
       <div class="mt-8 bg-background-surface p-6 rounded-lg shadow-md">
-        <h3 class="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">UiStore 操作结果:</h3>
+        <h3 class="text-lg font-semibold mb-3 text-text-secondary">UiStore 操作结果:</h3>
         <div class="bg-background-base p-4 rounded-md min-h-[50px]">
-          <pre class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ uiStoreResult }}</pre>
+          <pre class="text-sm text-text-base whitespace-pre-wrap">{{ uiStoreResult }}</pre>
         </div>
       </div>
     </section>
 
     <!-- SettingsControl 测试 (使用 SettingsPanel) -->
     <section class="mt-12">
-      <h2 class="text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200 border-b pb-2">SettingControl (通过 SettingsPanel) 测试</h2>
+      <h2 class="text-2xl font-semibold mb-6 text-text-base border-b pb-2">SettingControl (通过 SettingsPanel) 测试</h2>
       <div class="bg-background-surface p-6 rounded-lg shadow-md">
         <SettingsPanel :config="testSettingItems" />
       </div>
       <!-- 用于验证 settingsStore 中的值是否正确更新 -->
       <div class="mt-8 bg-background-surface p-6 rounded-lg shadow-md">
-        <h3 class="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">SettingsStore 当前值 (验证用):</h3>
+        <h3 class="text-lg font-semibold mb-3 text-text-secondary">SettingsStore 当前值 (验证用):</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div v-for="config in testSettingItems" :key="`debug-${config.key}`" class="bg-background-base p-3 rounded">
-            <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ config.label }} ({{ config.key }})</p>
-            <pre class="mt-1 text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{{ settingsStore.getSetting(config.key, config.defaultValue) }}</pre>
+            <p class="text-sm font-medium text-text-base">{{ config.label }} ({{ config.key }})</p>
+            <pre class="mt-1 text-xs text-text-secondary whitespace-pre-wrap">{{ settingsStore.getSetting(config.key, config.defaultValue) }}</pre>
           </div>
         </div>
       </div>
@@ -421,7 +421,7 @@ watch(
 }
 
 .btn-yellow {
-  @apply bg-yellow-500 hover:bg-yellow-600 focus:ring-yellow-400 text-gray-800;
+  @apply bg-warning hover:opacity-90 focus:ring-warning text-text-base;
   /* 黄色按钮通常用深色文字 */
 }
 

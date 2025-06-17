@@ -276,7 +276,7 @@ const logWorkflowJson = () => {
 
           <div class="mt-3">
             <button @click="logWorkflowJson"
-              class="w-full px-3 py-1.5 text-xs font-medium text-center text-info dark:bg-transparent bg-background-surface border border-info rounded-md hover:bg-info-softest focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-info dark:focus:ring-offset-background-surface">
+              class="w-full px-3 py-1.5 text-xs font-medium text-center text-info bg-transparent border border-info/50 rounded-md hover:bg-info-softest focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-info dark:focus:ring-offset-background-surface shadow-sm">
               输出工作流 JSON 到控制台 (Debug)
             </button>
           </div>

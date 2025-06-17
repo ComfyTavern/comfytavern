@@ -57,7 +57,7 @@
             />
           </div>
         </div>
-        <div v-else class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+        <div v-else class="flex items-center justify-center h-full text-text-muted">
           正在加载节点定义...
         </div>
   

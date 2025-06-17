@@ -39,7 +39,7 @@
     </div>
 
     <!-- 侧边栏内容区域 -->
-    <div class="sidebar-content" :style="{ width: activeTab ? '300px' : '0px' }">
+    <div class="sidebar-content bg-background-surface" :style="{ width: activeTab ? '300px' : '0px' }">
       <component v-if="activeTab" :is="getTabComponent" @node-selected="nodeSelected" @add-node="addNodeToCanvas" />
     </div>
   </div>
@@ -233,8 +233,8 @@ defineExpose({
 }
 
 .sidebar-content {
-  @apply flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out border-l border-r border-border-base;
-  /* 添加 flex-shrink-0 和过渡 */
+  @apply flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out border-l border-background-base border-r border-border-base;
+  /* 添加 flex-shrink-0 和过渡, 修改右边框颜色 */
 }
 
 /* 当没有激活标签页时，隐藏内容区域 */

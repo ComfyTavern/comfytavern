@@ -261,9 +261,9 @@ const handleClearResource = () => {
         v-comfy-tooltip="{ content: `选择 ${primaryTypeLabel}`, placement: 'top' }"
         class="type-selector-button flex items-center justify-between px-1 py-1 text-xs w-[40px] border border-border-base rounded bg-background-surface hover:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed">
         <!-- Display icon for the primary accepted type -->
-        <span v-html="primaryTypeIcon" class="flex-shrink-0 w-4 h-4 text-gray-700 dark:text-gray-300"></span>
+        <span v-html="primaryTypeIcon" class="flex-shrink-0 w-4 h-4 text-text-base"></span>
         <!-- Chevron Down Icon -->
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 text-gray-500 dark:text-gray-400 flex-shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 text-text-muted flex-shrink-0">
           <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
         </svg>
       </button>
@@ -297,8 +297,8 @@ const handleClearResource = () => {
         @select="handleSuggestionSelect"
         @close="closeSuggestions"
       />
-        <p v-if="resourceError" class="absolute -bottom-4 left-0 text-xs text-red-500">{{ resourceError }}</p>
-        <p v-if="isLoadingResources" class="absolute -bottom-4 left-0 text-xs text-gray-500">加载中...</p>
+        <p v-if="resourceError" class="absolute -bottom-4 left-0 text-xs text-error">{{ resourceError }}</p>
+        <p v-if="isLoadingResources" class="absolute -bottom-4 left-0 text-xs text-text-muted">加载中...</p>
     </div>
 
     <!-- 3. 操作按钮 (文件选择 & 清除) -->

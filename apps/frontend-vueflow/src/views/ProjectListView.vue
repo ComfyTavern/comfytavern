@@ -44,7 +44,7 @@ const promptAndCreateProject = async () => {
     <div class="p-4 lg:p-6 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out">
       <!-- :class="themeStore.collapsed ? 'ml-16' : 'ml-64'" REMOVED -->
       <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">我的项目</h1>
+        <h1 class="text-2xl font-bold text-text-base">我的项目</h1>
         <button @click="promptAndCreateProject" :disabled="isLoading"
           class="px-4 py-2 bg-primary text-primary-content rounded hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           {{ isLoading ? '创建中...' : '创建新项目' }}
@@ -52,7 +52,7 @@ const promptAndCreateProject = async () => {
       </div>
 
       <!-- 加载状态 -->
-      <div v-if="isLoading && projects.length === 0" class="text-center text-gray-500 dark:text-gray-400 mt-10">
+      <div v-if="isLoading && projects.length === 0" class="text-center text-text-muted mt-10">
         正在加载项目...
       </div>
 
@@ -70,15 +70,15 @@ const promptAndCreateProject = async () => {
         <div v-if="!isLoading || projects.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div v-for="project in projects" :key="project.id" @click="openProject(project.id)"
             class="bg-background-surface rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-shadow">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-primary-content mb-2">{{ project.name }}</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ project.description || '暂无描述' }}</p>
-            <div class="text-xs text-gray-500 dark:text-gray-500">
+            <h2 class="text-lg font-semibold text-text-base mb-2">{{ project.name }}</h2>
+            <p class="text-sm text-text-secondary mb-3">{{ project.description || '暂无描述' }}</p>
+            <div class="text-xs text-text-muted">
               最后更新: {{ new Date(project.updatedAt).toLocaleString() }}
             </div>
           </div>
         </div>
         <div v-if="!isLoading && projects.length === 0 && !error"
-          class="text-center text-gray-500 dark:text-gray-400 mt-10">
+          class="text-center text-text-muted mt-10">
           还没有项目，点击右上角按钮创建一个吧！
         </div>
       </OverlayScrollbarsComponent>

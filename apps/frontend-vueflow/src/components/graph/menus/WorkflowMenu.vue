@@ -33,7 +33,7 @@
               transform="rotate(180 12 12)" />
           </svg>
           保存
-          <span class="ml-auto text-xs text-gray-400 dark:text-gray-500">Ctrl+S</span>
+          <span class="ml-auto text-xs text-text-muted">Ctrl+S</span>
         </button>
       </li>
       <li>
@@ -80,7 +80,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
           </svg>
           撤销
-          <span class="ml-auto text-xs text-gray-400 dark:text-gray-500">Ctrl+Z</span>
+          <span class="ml-auto text-xs text-text-muted">Ctrl+Z</span>
         </button>
       </li>
       <li>
@@ -90,7 +90,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
           </svg>
           重做
-          <span class="ml-auto text-xs text-gray-400 dark:text-gray-500">Ctrl+Shift+Z</span>
+          <span class="ml-auto text-xs text-text-muted">Ctrl+Shift+Z</span>
         </button>
       </li>
     </ul>

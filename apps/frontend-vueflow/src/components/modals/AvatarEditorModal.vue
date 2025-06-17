@@ -206,7 +206,7 @@ const saveAvatar = async () => {
 .input-field:focus {
   outline: none;
   border-color: var(--ct-primary); /* 使用标准主题变量 */
-  box-shadow: 0 0 0 2px var(--ct-primary-transparent-20, rgba(var(--ct-primary-rgb), 0.2)); /* 使用标准主题变量, 提供回退 */
+  box-shadow: 0 0 0 2px hsla(var(--ct-primary-hsl), 0.2); /* 使用 HSL 变量和透明度 */
 }
 
 

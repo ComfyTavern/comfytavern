@@ -17,23 +17,23 @@
       >
         <!-- 标题栏 -->
         <div v-if="props.title" class="flex justify-between items-center p-4 pr-2"> <!-- pr-2 为关闭和复制按钮留空间 -->
-          <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 flex-grow">
+          <h3 class="text-lg font-medium text-text-base flex-grow">
             {{ props.title }}
           </h3>
           <div class="flex items-center space-x-2">
             <button
               v-if="props.showCopyButton && (props.message || $slots.default)"
               @click="copyContent"
-              class="p-1 rounded text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"
+              class="p-1 rounded text-text-muted hover:text-text-base focus:outline-none"
               :title="copyButtonTitle"
             >
               <svg v-if="!copySuccess" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-              <svg v-else class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              <svg v-else class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
             </button>
             <button
               v-if="props.showCloseIcon"
               @click="handleCancel"
-              class="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none p-1"
+              class="text-text-muted hover:text-text-secondary focus:outline-none p-1"
             >
               <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -43,7 +43,7 @@
         </div>
 
         <!-- 内容区域 -->
-        <div class="p-4 text-gray-700 dark:text-gray-300">
+        <div class="p-4 text-text-base">
           <OverlayScrollbarsComponent
             :options="{
               scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
@@ -56,7 +56,7 @@
             <div ref="contentToCopyRef">
               <slot>
                 <MarkdownRenderer v-if="props.message" :markdown-content="props.message" />
-                <p v-else-if="!$slots.default && !props.message" class="text-sm text-gray-500 dark:text-gray-400">没有内容可显示。</p>
+                <p v-else-if="!$slots.default && !props.message" class="text-sm text-text-muted">没有内容可显示。</p>
               </slot>
             </div>
           </OverlayScrollbarsComponent>

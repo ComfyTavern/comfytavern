@@ -15,26 +15,26 @@
           <!-- 图标 -->
           <div class="flex-shrink-0">
             <!-- 成功图标 -->
-            <svg v-if="type === 'success'" class="h-6 w-6 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+            <svg v-if="type === 'success'" class="h-6 w-6 text-success" xmlns="http://www.w3.org/2000/svg" fill="none"
               viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
 
             <!-- 错误图标 -->
-            <svg v-else-if="type === 'error'" class="h-6 w-6 text-red-400" xmlns="http://www.w3.org/2000/svg"
+            <svg v-else-if="type === 'error'" class="h-6 w-6 text-error" xmlns="http://www.w3.org/2000/svg"
               fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
 
             <!-- 警告图标 -->
-            <svg v-else-if="type === 'warning'" class="h-6 w-6 text-yellow-400" xmlns="http://www.w3.org/2000/svg"
+            <svg v-else-if="type === 'warning'" class="h-6 w-6 text-warning" xmlns="http://www.w3.org/2000/svg"
               fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
 
             <!-- 信息图标 -->
-            <svg v-else class="h-6 w-6 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+            <svg v-else class="h-6 w-6 text-info" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
               stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -74,11 +74,11 @@
             <button
               v-if="props.showCopyButton && message"
               @click="copyContent"
-              class="p-0.5 rounded text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"
+              class="p-0.5 rounded text-text-muted hover:text-text-base focus:outline-none"
               :title="copyButtonTitle"
             >
               <svg v-if="!copySuccess" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-              <svg v-else class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              <svg v-else class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
             </button>
           </div>
         </div>
@@ -180,14 +180,13 @@ const typeClasses = computed(() => {
 
 // 计算文本颜色
 const textColorClass = computed(() => {
-  return isDark.value ? 'text-gray-100' : 'text-gray-900';
+  return 'text-text-base';
 });
 
 // 计算关闭按钮样式
 const closeButtonClass = computed(() => {
-  return isDark.value
-    ? 'text-gray-400 hover:text-gray-200 focus:ring-gray-600'
-    : 'text-gray-400 hover:text-gray-600 focus:ring-gray-400';
+  // 模板中已有 focus:ring-offset-transparent, 这里只提供颜色和 focus:ring-neutral
+  return 'text-text-muted hover:text-text-base focus:ring-neutral';
 });
 // 计算进度条样式
 const progressBarClass = computed(() => {

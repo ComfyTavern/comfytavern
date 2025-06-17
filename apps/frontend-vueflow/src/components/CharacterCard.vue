@@ -116,15 +116,15 @@ const backgroundStyle = computed(() => {
     <!-- 角色信息 - 根据 variant 显示不同内容 -->
     <div v-if="props.variant === 'full'" class="absolute bottom-0 left-0 right-0 p-4 text-white">
       <!-- 创作者评论 -->
-      <div v-if="creatorComment" class="mt-1 text-xs text-gray-300 italic line-clamp-2">
+      <div v-if="creatorComment" class="mt-1 text-xs text-text-muted italic line-clamp-2">
         "{{ creatorComment }}"
       </div>
       <!-- 创作者信息 -->
       <div class="mt-2 text-xs">
-        <span v-if="creator" class="text-gray-300">作者: {{ creator }}</span>
+        <span v-if="creator" class="text-text-muted">作者: {{ creator }}</span>
       </div>
       <!-- 版本和创建日期 -->
-      <div class="flex justify-between text-xs text-gray-300 mt-1">
+      <div class="flex justify-between text-xs text-text-muted mt-1">
         <span v-if="characterVersion">{{ characterVersion }}</span>
         <span v-if="formattedDate">{{ formattedDate }}</span>
       </div>
@@ -138,7 +138,7 @@ const backgroundStyle = computed(() => {
       <!-- 角色名称和收藏 -->
       <div class="flex justify-between items-center mt-2">
         <h3 class="text-lg font-semibold truncate">{{ name }}</h3>
-        <div v-if="favorite" class="text-yellow-400 ml-2 flex-shrink-0">
+        <div v-if="favorite" class="text-warning ml-2 flex-shrink-0">
           <span>⭐</span>
         </div>
       </div>
@@ -148,7 +148,7 @@ const backgroundStyle = computed(() => {
     <div v-else-if="props.variant === 'compact'" class="absolute bottom-0 left-0 right-0 p-2 text-white">
       <div class="flex justify-between items-center">
         <h3 class="text-sm font-medium truncate">{{ name }}</h3>
-        <div v-if="favorite" class="text-yellow-400 ml-1 flex-shrink-0 text-xs">
+        <div v-if="favorite" class="text-warning ml-1 flex-shrink-0 text-xs">
           <span>⭐</span>
         </div>
       </div>
@@ -219,7 +219,7 @@ const backgroundStyle = computed(() => {
 
 /* 在暗色模式下调整描边颜色 */
 :global(.dark) .card-container:hover .card-border {
-  border-color: rgba(var(--ct-primary-rgb), 0.4);
-  box-shadow: 0 0 15px rgba(var(--ct-primary-rgb), 0.3);
+  border-color: hsla(var(--ct-primary-hsl), 0.4);
+  box-shadow: 0 0 15px hsla(var(--ct-primary-hsl), 0.3);
 }
 </style>

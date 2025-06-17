@@ -38,10 +38,10 @@ onMounted(async () => {
     <!-- 主要内容区域, HomeLayout 会处理 padding-left -->
     <div class="p-4 lg:p-6 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out">
       <!-- :class="themeStore.collapsed ? 'ml-16' : 'ml-64'" REMOVED -->
-      <h1 class="text-2xl font-bold text-gray-800 dark:text-primary-content mb-6">我的角色卡</h1>
+      <h1 class="text-2xl font-bold text-text-base mb-6">我的角色卡</h1>
 
       <!-- 加载状态 -->
-      <div v-if="isLoading" class="text-center text-gray-500 dark:text-gray-400 mt-10">
+      <div v-if="isLoading" class="text-center text-text-muted mt-10">
         正在加载角色卡...
       </div>
 
@@ -54,7 +54,7 @@ onMounted(async () => {
 
       <OverlayScrollbarsComponent :options="{
         scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
-      }" class="h-[96vh]" defer>
+      }" class="h-[96vh] p-3" defer>
         <!-- 角色卡片网格 -->
         <div v-if="!isLoading && characters.length > 0" class="flex flex-wrap gap-6">
           <CharacterCard v-for="character in characters" :key="character.id" :name="character.name"
@@ -63,7 +63,7 @@ onMounted(async () => {
             :creator="character.creator" :talkativeness="character.talkativeness" :favorite="character.favorite" />
         </div>
         <div v-if="!isLoading && characters.length === 0 && !error"
-          class="text-center text-gray-500 dark:text-gray-400 mt-10">
+          class="text-center text-text-muted mt-10">
           没有找到角色卡。
         </div>
       </OverlayScrollbarsComponent>
