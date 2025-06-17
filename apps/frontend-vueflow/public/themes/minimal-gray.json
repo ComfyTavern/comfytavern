@@ -1,0 +1,83 @@
+{
+  "id": "minimal-gray",
+  "name": "极简灰调",
+  "isSystemTheme": true,
+  "variants": {
+    "light": {
+      "variables": {
+        "--ct-primary-hsl": "210 10% 40%",
+        "--ct-secondary-hsl": "210 8% 55%",
+        "--ct-accent-hsl": "200 10% 50%",
+        "--ct-background-base-hsl": "0 0% 97%",
+        "--ct-background-surface-hsl": "0 0% 100%",
+        "--ct-text-base-hsl": "210 15% 20%",
+        "--ct-text-secondary-hsl": "210 12% 35%",
+        "--ct-text-muted-hsl": "210 10% 50%",
+        "--ct-border-base-hsl": "210 15% 90%",
+        "--ct-info-hsl": "200 10% 50%",
+        "--ct-success-hsl": "134 61% 40%",
+        "--ct-warning-hsl": "45 100% 51%",
+        "--ct-error-hsl": "354 70% 54%",
+        "--ct-primary-content-hsl": "0 0% 100%",
+        "--ct-neutral-hsl": "210 15% 20%",
+
+        "--ct-background-base-opacity": "1",
+        "--ct-menu-item-active-bg-opacity": "0.08",
+        "--ct-component-hover-bg-opacity": "0.04",
+        "--ct-panel-bg-opacity": "1",
+        "--ct-disabled-opacity": "0.5",
+        "--ct-border-base-opacity": "1",
+        "--ct-border-primary-opacity": "1",
+        "--ct-border-secondary-opacity": "1",
+        "--ct-border-accent-opacity": "1",
+        "--ct-border-decorative-opacity": "0.5",
+
+        "--ct-backdrop-bg-hsl": "0 0% 10%",
+        "--ct-backdrop-opacity": "0.4",
+        "--ct-focus-ring-opacity": "0.4",
+        "--ct-node-skipped-opacity": "0.6",
+        "--ct-node-skipped-overlay-color": "rgba(190, 190, 190, 0.15)"
+      }
+    },
+    "dark": {
+      "variables": {
+        "--ct-primary-hsl": "210 12% 75%",
+        "--ct-secondary-hsl": "210 10% 60%",
+        "--ct-accent-hsl": "200 12% 70%",
+        "--ct-background-base-hsl": "220 10% 12%",
+        "--ct-background-surface-hsl": "220 10% 18%",
+        "--ct-text-base-hsl": "210 15% 90%",
+        "--ct-text-secondary-hsl": "210 12% 80%",
+        "--ct-text-muted-hsl": "210 10% 65%",
+        "--ct-border-base-hsl": "210 10% 30%",
+        "--ct-info-hsl": "200 12% 70%",
+        "--ct-success-hsl": "130 57% 49%",
+        "--ct-warning-hsl": "42 96% 50%",
+        "--ct-error-hsl": "0 94% 65%",
+        "--ct-primary-content-hsl": "210 15% 10%",
+        "--ct-neutral-hsl": "210 15% 90%",
+
+        "--ct-background-base-opacity": "1",
+        "--ct-menu-item-active-bg-opacity": "0.15",
+        "--ct-component-hover-bg-opacity": "0.08",
+        "--ct-panel-bg-opacity": "1",
+        "--ct-disabled-opacity": "0.5",
+        "--ct-border-base-opacity": "1",
+        "--ct-border-primary-opacity": "1",
+        "--ct-border-secondary-opacity": "1",
+        "--ct-border-accent-opacity": "1",
+        "--ct-border-decorative-opacity": "0.5",
+
+        "--ct-backdrop-bg-hsl": "0 0% 5%",
+        "--ct-backdrop-opacity": "0.6",
+        "--ct-focus-ring-opacity": "0.6",
+        "--ct-node-skipped-opacity": "0.5",
+        "--ct-node-skipped-overlay-color": "rgba(110, 110, 110, 0.25)"
+      }
+    }
+  },
+  "metadata": {
+    "author": "ComfyTavern Team",
+    "description": "现代简约的灰色主题，强调内容与功能性。"
+  }
+}

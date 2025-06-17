@@ -1,27 +1,27 @@
 {
-  "id": "ocean-blue",
-  "name": "海洋之蓝",
+  "id": "warm-sunset",
+  "name": "暖阳余晖",
   "isSystemTheme": true,
   "variants": {
     "light": {
       "variables": {
-        "--ct-primary-hsl": "197 59% 50%",
-        "--ct-secondary-hsl": "208 76% 67%",
-        "--ct-accent-hsl": "188 100% 50%",
-        "--ct-background-base-hsl": "195 53% 92%",
-        "--ct-background-surface-hsl": "200 100% 97%",
-        "--ct-text-base-hsl": "200 52% 14%",
-        "--ct-text-secondary-hsl": "200 40% 25%",
-        "--ct-text-muted-hsl": "203 29% 40%",
-        "--ct-border-base-hsl": "205 43% 85%",
-        "--ct-info-hsl": "188 100% 50%",
+        "--ct-primary-hsl": "30 95% 55%",
+        "--ct-secondary-hsl": "40 80% 65%",
+        "--ct-accent-hsl": "20 100% 60%",
+        "--ct-background-base-hsl": "35 50% 96%",
+        "--ct-background-surface-hsl": "35 60% 98%",
+        "--ct-text-base-hsl": "25 40% 20%",
+        "--ct-text-secondary-hsl": "25 30% 35%",
+        "--ct-text-muted-hsl": "25 25% 50%",
+        "--ct-border-base-hsl": "30 30% 90%",
+        "--ct-info-hsl": "195 100% 50%",
         "--ct-success-hsl": "134 61% 40%",
-        "--ct-warning-hsl": "45 100% 51%",
+        "--ct-warning-hsl": "30 95% 55%",
         "--ct-error-hsl": "354 70% 54%",
         "--ct-primary-content-hsl": "0 0% 100%",
-        "--ct-neutral-hsl": "210 55% 16%",
+        "--ct-neutral-hsl": "25 40% 20%",
 
-        "--ct-background-base-opacity": "0.7",
+        "--ct-background-base-opacity": "0.8",
         "--ct-menu-item-active-bg-opacity": "0.1",
         "--ct-component-hover-bg-opacity": "0.05",
         "--ct-panel-bg-opacity": "1",
@@ -36,28 +36,28 @@
         "--ct-backdrop-opacity": "0.5",
         "--ct-focus-ring-opacity": "0.5",
         "--ct-node-skipped-opacity": "0.6",
-        "--ct-node-skipped-overlay-color": "rgba(180, 180, 180, 0.15)"
+        "--ct-node-skipped-overlay-color": "rgba(230, 200, 170, 0.15)"
       }
     },
     "dark": {
       "variables": {
-        "--ct-primary-hsl": "204 90% 50%",
-        "--ct-secondary-hsl": "210 58% 58%",
-        "--ct-accent-hsl": "184 100% 66%",
-        "--ct-background-base-hsl": "212 51% 10%",
-        "--ct-background-surface-hsl": "213 50% 14%",
-        "--ct-text-base-hsl": "213 60% 91%",
-        "--ct-text-secondary-hsl": "213 45% 80%",
-        "--ct-text-muted-hsl": "212 33% 72%",
-        "--ct-border-base-hsl": "213 41% 29%",
-        "--ct-info-hsl": "184 100% 66%",
+        "--ct-primary-hsl": "30 90% 60%",
+        "--ct-secondary-hsl": "40 75% 68%",
+        "--ct-accent-hsl": "20 100% 65%",
+        "--ct-background-base-hsl": "25 20% 10%",
+        "--ct-background-surface-hsl": "25 15% 15%",
+        "--ct-text-base-hsl": "35 60% 93%",
+        "--ct-text-secondary-hsl": "35 50% 85%",
+        "--ct-text-muted-hsl": "35 40% 78%",
+        "--ct-border-base-hsl": "30 20% 30%",
+        "--ct-info-hsl": "195 85% 60%",
         "--ct-success-hsl": "130 57% 49%",
-        "--ct-warning-hsl": "42 96% 50%",
+        "--ct-warning-hsl": "30 90% 60%",
         "--ct-error-hsl": "0 94% 65%",
-        "--ct-primary-content-hsl": "0 0% 100%",
-        "--ct-neutral-hsl": "213 60% 91%",
+        "--ct-primary-content-hsl": "20 15% 95%",
+        "--ct-neutral-hsl": "35 60% 93%",
 
-        "--ct-background-base-opacity": "0.8",
+        "--ct-background-base-opacity": "0.9",
         "--ct-menu-item-active-bg-opacity": "0.2",
         "--ct-component-hover-bg-opacity": "0.1",
         "--ct-panel-bg-opacity": "1",
@@ -72,12 +72,12 @@
         "--ct-backdrop-opacity": "0.5",
         "--ct-focus-ring-opacity": "0.5",
         "--ct-node-skipped-opacity": "0.5",
-        "--ct-node-skipped-overlay-color": "rgba(100, 100, 100, 0.25)"
+        "--ct-node-skipped-overlay-color": "rgba(150, 120, 90, 0.25)"
       }
     }
   },
   "metadata": {
     "author": "ComfyTavern Team",
-    "description": "深邃而宁静的蓝色主题，同时支持亮色和暗色模式。"
+    "description": "温暖的橙色主题，如同夕阳余晖般舒适。"
   }
 }

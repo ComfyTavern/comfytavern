@@ -1,27 +1,27 @@
 {
-  "id": "ocean-blue",
-  "name": "海洋之蓝",
+  "id": "violet-dream",
+  "name": "紫罗兰之梦",
   "isSystemTheme": true,
   "variants": {
     "light": {
       "variables": {
-        "--ct-primary-hsl": "197 59% 50%",
-        "--ct-secondary-hsl": "208 76% 67%",
-        "--ct-accent-hsl": "188 100% 50%",
-        "--ct-background-base-hsl": "195 53% 92%",
-        "--ct-background-surface-hsl": "200 100% 97%",
-        "--ct-text-base-hsl": "200 52% 14%",
-        "--ct-text-secondary-hsl": "200 40% 25%",
-        "--ct-text-muted-hsl": "203 29% 40%",
-        "--ct-border-base-hsl": "205 43% 85%",
-        "--ct-info-hsl": "188 100% 50%",
+        "--ct-primary-hsl": "270 65% 55%",
+        "--ct-secondary-hsl": "280 50% 68%",
+        "--ct-accent-hsl": "260 80% 60%",
+        "--ct-background-base-hsl": "275 30% 94%",
+        "--ct-background-surface-hsl": "275 45% 97%",
+        "--ct-text-base-hsl": "270 40% 18%",
+        "--ct-text-secondary-hsl": "270 30% 30%",
+        "--ct-text-muted-hsl": "270 25% 45%",
+        "--ct-border-base-hsl": "270 25% 88%",
+        "--ct-info-hsl": "230 100% 60%",
         "--ct-success-hsl": "134 61% 40%",
         "--ct-warning-hsl": "45 100% 51%",
         "--ct-error-hsl": "354 70% 54%",
         "--ct-primary-content-hsl": "0 0% 100%",
-        "--ct-neutral-hsl": "210 55% 16%",
+        "--ct-neutral-hsl": "270 40% 18%",
 
-        "--ct-background-base-opacity": "0.7",
+        "--ct-background-base-opacity": "0.75",
         "--ct-menu-item-active-bg-opacity": "0.1",
         "--ct-component-hover-bg-opacity": "0.05",
         "--ct-panel-bg-opacity": "1",
@@ -36,28 +36,28 @@
         "--ct-backdrop-opacity": "0.5",
         "--ct-focus-ring-opacity": "0.5",
         "--ct-node-skipped-opacity": "0.6",
-        "--ct-node-skipped-overlay-color": "rgba(180, 180, 180, 0.15)"
+        "--ct-node-skipped-overlay-color": "rgba(200, 180, 220, 0.15)"
       }
     },
     "dark": {
       "variables": {
-        "--ct-primary-hsl": "204 90% 50%",
-        "--ct-secondary-hsl": "210 58% 58%",
-        "--ct-accent-hsl": "184 100% 66%",
-        "--ct-background-base-hsl": "212 51% 10%",
-        "--ct-background-surface-hsl": "213 50% 14%",
-        "--ct-text-base-hsl": "213 60% 91%",
-        "--ct-text-secondary-hsl": "213 45% 80%",
-        "--ct-text-muted-hsl": "212 33% 72%",
-        "--ct-border-base-hsl": "213 41% 29%",
-        "--ct-info-hsl": "184 100% 66%",
+        "--ct-primary-hsl": "270 70% 60%",
+        "--ct-secondary-hsl": "280 55% 70%",
+        "--ct-accent-hsl": "260 85% 65%",
+        "--ct-background-base-hsl": "270 30% 10%",
+        "--ct-background-surface-hsl": "270 25% 15%",
+        "--ct-text-base-hsl": "275 50% 92%",
+        "--ct-text-secondary-hsl": "275 40% 82%",
+        "--ct-text-muted-hsl": "275 30% 75%",
+        "--ct-border-base-hsl": "270 20% 30%",
+        "--ct-info-hsl": "230 90% 70%",
         "--ct-success-hsl": "130 57% 49%",
         "--ct-warning-hsl": "42 96% 50%",
         "--ct-error-hsl": "0 94% 65%",
         "--ct-primary-content-hsl": "0 0% 100%",
-        "--ct-neutral-hsl": "213 60% 91%",
+        "--ct-neutral-hsl": "275 50% 92%",
 
-        "--ct-background-base-opacity": "0.8",
+        "--ct-background-base-opacity": "0.85",
         "--ct-menu-item-active-bg-opacity": "0.2",
         "--ct-component-hover-bg-opacity": "0.1",
         "--ct-panel-bg-opacity": "1",
@@ -72,12 +72,12 @@
         "--ct-backdrop-opacity": "0.5",
         "--ct-focus-ring-opacity": "0.5",
         "--ct-node-skipped-opacity": "0.5",
-        "--ct-node-skipped-overlay-color": "rgba(100, 100, 100, 0.25)"
+        "--ct-node-skipped-overlay-color": "rgba(120, 100, 140, 0.25)"
       }
     }
   },
   "metadata": {
     "author": "ComfyTavern Team",
-    "description": "深邃而宁静的蓝色主题，同时支持亮色和暗色模式。"
+    "description": "梦幻般的紫色主题，充满神秘与浪漫气息。"
   }
 }
