@@ -36,7 +36,7 @@ const promptAndCreateProject = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
+  <div class="min-h-screen bg-background-base">
     <!-- 左侧边栏 由 HomeLayout 提供 -->
     <!-- <SideBar /> -->
 
@@ -46,7 +46,7 @@ const promptAndCreateProject = async () => {
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-gray-800 dark:text-white">我的项目</h1>
         <button @click="promptAndCreateProject" :disabled="isLoading"
-          class="px-4 py-2 bg-blue-500 text-primary-content rounded hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          class="px-4 py-2 bg-primary text-primary-content rounded hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           {{ isLoading ? '创建中...' : '创建新项目' }}
         </button>
       </div>
@@ -57,7 +57,7 @@ const promptAndCreateProject = async () => {
       </div>
 
       <!-- 错误提示 -->
-      <div v-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6"
+      <div v-if="error" class="bg-error-softest border border-error-soft text-error px-4 py-3 rounded relative mb-6"
         role="alert">
         <strong class="font-bold">加载错误:</strong>
         <span class="block sm:inline"> {{ error }}</span>
@@ -66,10 +66,10 @@ const promptAndCreateProject = async () => {
       <!-- 项目列表 -->
       <OverlayScrollbarsComponent :options="{
         scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
-      }" class="max-h-[70vh]" defer>
+      }" class="h-[90vh]" defer>
         <div v-if="!isLoading || projects.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div v-for="project in projects" :key="project.id" @click="openProject(project.id)"
-            class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-shadow">
+            class="bg-background-surface rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-shadow">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-primary-content mb-2">{{ project.name }}</h2>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ project.description || '暂无描述' }}</p>
             <div class="text-xs text-gray-500 dark:text-gray-500">

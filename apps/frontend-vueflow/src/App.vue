@@ -154,7 +154,7 @@ const handleModalInteraction = () => {
 </script>
  
 <template>
-  <div class="h-full w-full basic-flow bg-gray-100 dark:bg-gray-900">
+  <div class="h-full w-full basic-flow bg-background-base">
     <RouterView />
     <!-- 全局对话框和通知容器 -->
     <DialogContainer />

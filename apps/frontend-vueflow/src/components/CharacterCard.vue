@@ -157,7 +157,7 @@ const backgroundStyle = computed(() => {
     <!-- 三点菜单 (只在 full 模式下显示) -->
     <div v-if="props.variant === 'full'" class="absolute top-2 right-2 z-10">
       <div class="relative group">
-        <button class="p-1 rounded-full bg-gray-800 bg-opacity-50 text-primary-content hover:bg-opacity-70">
+        <button class="p-1 rounded-full bg-background-surface bg-opacity-50 text-primary-content hover:bg-opacity-70">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
           </svg>

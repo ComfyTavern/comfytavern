@@ -64,7 +64,7 @@
 
 [`App.vue`](apps/frontend-vueflow/src/App.vue:1) 的模板 ([`apps/frontend-vueflow/src/App.vue:132`](apps/frontend-vueflow/src/App.vue:132)) 主要包含以下部分：
 
--   一个顶层 `div` 容器 ([`apps/frontend-vueflow/src/App.vue:133`](apps/frontend-vueflow/src/App.vue:133))，应用了基础样式类（如 `h-full`, `w-full`, `basic-flow`）和深色/浅色主题相关的类（`bg-gray-100 dark:bg-gray-900`）。
+-   一个顶层 `div` 容器 ([`apps/frontend-vueflow/src/App.vue:133`](apps/frontend-vueflow/src/App.vue:133))，应用了基础样式类（如 `h-full`, `w-full`, `basic-flow`）和深色/浅色主题相关的类（`bg-background-base`）。
 -   **`<RouterView />`** ([`apps/frontend-vueflow/src/App.vue:134`](apps/frontend-vueflow/src/App.vue:134))：Vue Router 的核心组件，用于显示当前路由匹配到的组件。
 -   **[`<DialogContainer />`](apps/frontend-vueflow/src/App.vue:136)**：全局对话框和通知的容器组件，来源于 [`./components/common/DialogContainer.vue`](apps/frontend-vueflow/src/components/common/DialogContainer.vue:1)。
 -   **[`<TooltipRenderer />`](apps/frontend-vueflow/src/App.vue:138)**：全局 Tooltip 的渲染组件，来源于 [`./components/common/TooltipRenderer.vue`](apps/frontend-vueflow/src/components/common/TooltipRenderer.vue:1)。

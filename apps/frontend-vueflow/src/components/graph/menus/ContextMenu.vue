@@ -320,7 +320,7 @@ const onResetView = () => {
 }
 
 .context-menu-item {
-  @apply flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer;
+  @apply flex items-center px-3 py-2 hover:bg-neutral-softest cursor-pointer;
 }
 
 .context-menu-item.disabled {

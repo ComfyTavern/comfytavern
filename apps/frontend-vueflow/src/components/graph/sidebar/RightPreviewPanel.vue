@@ -799,7 +799,7 @@ onUnmounted(() => {
 }
 
 .resize-handle-top {
-  /* TODO: Review hover:bg-blue-300/30 for theme color */
+  /* hover:bg-primary-softest (was hover:bg-blue-300/30) */
   @apply absolute top-0 left-0 w-full h-3 cursor-ns-resize z-50 bg-transparent hover:bg-primary-softest;
 }
 

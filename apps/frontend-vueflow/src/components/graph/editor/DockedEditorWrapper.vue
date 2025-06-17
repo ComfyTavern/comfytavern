@@ -717,12 +717,12 @@ onMounted(() => {
 }
 
 .editor-resizer:hover {
-  @apply bg-gray-300 bg-opacity-50;
+  @apply bg-border-base bg-opacity-50;
   /* 悬停时半透明背景 */
 }
 
 .docked-editor-wrapper-root.dark .editor-resizer:hover {
-  @apply bg-gray-500 bg-opacity-50;
+  @apply bg-border-base bg-opacity-50; /* border-base adapts to light/dark */
   /* 暗色模式下悬停时半透明背景 */
 }
 

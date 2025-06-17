@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
+  <div class="min-h-screen bg-background-base">
     <!-- 主要内容区域 -->
     <OverlayScrollbarsComponent
       :options="{
@@ -20,7 +20,7 @@
 
       <div class="grid grid-cols-1 gap-8">
         <!-- 项目预览区 -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div class="bg-background-surface rounded-lg shadow p-6">
           <h2 class="text-xl font-semibold text-gray-900 dark:text-primary-content mb-4">最近项目</h2>
           <div>
             <div v-if="isLoading" class="text-center text-gray-500 dark:text-gray-400">
@@ -35,7 +35,7 @@
             </div>
             <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               <div v-for="project in recentProjects" :key="project.id"
-                class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
+                class="bg-background-surface p-4 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
                 @click="openProject(project.id)">
                 <h3 class="font-semibold text-lg text-gray-900 dark:text-primary-content mb-2 truncate">{{ project.name }}</h3>
                 <p class="text-sm text-gray-600 dark:text-gray-300 mb-1">
@@ -52,7 +52,7 @@
         </div>
 
         <!-- 角色卡预览区 -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div class="bg-background-surface rounded-lg shadow p-6">
           <h2 class="text-xl font-semibold text-gray-900 dark:text-primary-content mb-4">角色卡概览</h2>
           <div>
             <CharacterCardPreview />

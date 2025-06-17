@@ -62,14 +62,14 @@ const previewCharacters = computed(() => {
       </div>
       <!-- 右侧渐变遮罩 -->
       <div
-        class="absolute top-0 right-0 bottom-0 w-16 bg-gradient-to-l from-background-base to-transparent pointer-events-none">
+        class="absolute top-0 right-0 bottom-0 w-16 bg-gradient-to-l from-background-surface to-transparent pointer-events-none">
       </div>
     </div>
     <div v-if="!isLoading && characters.length === 0 && !error" class="text-center text-text-muted">
       没有找到角色卡。
     </div>
     <div v-if="!isLoading && characters.length > 0 && !error" class="mt-4 text-right">
-      <router-link :to="{ name: 'characters' }" class="text-blue-500 hover:underline">查看全部角色卡 &rarr;</router-link>
+      <router-link :to="{ name: 'characters' }" class="text-primary hover:underline">查看全部角色卡 &rarr;</router-link>
     </div>
   </div>
 </template>

@@ -3,7 +3,7 @@
 /* --- Context Menu Base --- */
 /* Defined directly, without @layer */
 .context-menu-base {
-  @apply absolute bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50;
+  @apply absolute bg-background-surface rounded-lg shadow-lg border border-border-base overflow-hidden z-50;
 }
 
 /* --- Context Menu Items (can be used directly or applied) --- */
@@ -12,20 +12,20 @@
 }
 
 .context-menu-item {
-  @apply px-4 py-2 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer text-gray-700 dark:text-gray-300;
+  @apply px-4 py-2 flex items-center gap-2 hover:bg-neutral-softest cursor-pointer text-text-secondary;
 }
 
 .context-menu-item.disabled {
-  @apply opacity-50 cursor-not-allowed hover:bg-white dark:hover:bg-gray-800;
+  @apply opacity-50 cursor-not-allowed;
 }
 
 .context-menu-separator {
-  @apply my-1 border-t border-gray-200 dark:border-gray-700;
+  @apply my-1 border-t border-border-base;
 }
 
 .icon {
   /* Note: This is a general icon class used in context menus, might need adjustments if used elsewhere */
-  @apply inline-flex items-center justify-center w-5 h-5 text-gray-500 dark:text-gray-400;
+  @apply inline-flex items-center justify-center w-5 h-5 text-text-muted;
 }
 
 
@@ -35,18 +35,18 @@
 }
 
 .dark .vue-flow__controls button {
-  @apply bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600;
+  @apply bg-background-surface border-border-base text-text-base hover:bg-neutral-softest;
 }
 
 .dark .vue-flow__minimap {
-  @apply bg-gray-800 border-gray-700;
+  @apply bg-background-base border-border-base;
 }
 
 .dark .vue-flow__minimap-mask {
-  @apply bg-gray-600 opacity-40;
+  @apply bg-neutral bg-opacity-40;
 }
 
 /* Ensure node colors in minimap also adapt */
 .dark .vue-flow__minimap-node {
-  @apply bg-gray-700 border-gray-600;
+  @apply bg-background-surface border-border-base;
 }

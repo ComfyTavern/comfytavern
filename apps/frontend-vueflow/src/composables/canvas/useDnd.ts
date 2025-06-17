@@ -82,7 +82,7 @@ export default function useDragAndDrop() {
           const isDarkMode = document.documentElement.classList.contains('dark');
 
           if (isDarkMode) {
-            dragIcon.style.backgroundColor = "rgba(31, 41, 55, 0.9)"; // 对应 dark:bg-gray-800，稍作透明
+            dragIcon.style.backgroundColor = `hsl(var(--ct-background-surface-hsl) / 0.9)`; // 对应语义化的 surface 背景色，稍作透明
             dragIcon.style.color = "rgba(229, 231, 235, 1)"; // 对应 dark:text-gray-200
             dragIcon.style.border = "1px solid rgba(55, 65, 81, 0.9)"; // 对应 dark:border-gray-700
           } else {

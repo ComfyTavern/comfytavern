@@ -1,5 +1,5 @@
 <template>
-  <div class="editor-container flex flex-col bg-gray-100 dark:bg-gray-900">
+  <div class="editor-container flex flex-col bg-background-base">
     <!-- 主要内容区域 -->
     <div class="editor-main flex-1 relative overflow-hidden">
       <div v-if="loading" class="loading-overlay">

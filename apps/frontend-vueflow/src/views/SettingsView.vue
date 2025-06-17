@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-screen bg-gray-100 dark:bg-gray-900">
+  <div class="flex h-screen bg-background-base">
     <!-- 左侧边栏 由 HomeLayout 提供 -->
     <!-- <SideBar /> -->
 

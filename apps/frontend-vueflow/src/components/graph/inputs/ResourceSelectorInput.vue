@@ -259,7 +259,7 @@ const handleClearResource = () => {
       <!-- Click triggers openSuggestions for the primary type -->
       <button :disabled="isEffectivelyDisabled" @click="handlePrimaryTypeSelect"
         v-comfy-tooltip="{ content: `选择 ${primaryTypeLabel}`, placement: 'top' }"
-        class="type-selector-button flex items-center justify-between px-1 py-1 text-xs w-[40px] border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+        class="type-selector-button flex items-center justify-between px-1 py-1 text-xs w-[40px] border border-border-base rounded bg-background-surface hover:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed">
         <!-- Display icon for the primary accepted type -->
         <span v-html="primaryTypeIcon" class="flex-shrink-0 w-4 h-4 text-gray-700 dark:text-gray-300"></span>
         <!-- Chevron Down Icon -->
@@ -276,13 +276,13 @@ const handleClearResource = () => {
       <input v-if="isEditableInput" type="text" :value="internalValue"
         @input="internalValue = ($event.target as HTMLInputElement).value"
         :placeholder="placeholder || '输入资源名称或选择'"
-        class="value-input-editable w-full px-2 py-1 text-xs border bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+        class="value-input-editable w-full px-2 py-1 text-xs border border-border-base bg-background-surface focus:outline-none focus:ring-1 focus:ring-primary" />
       <!-- Removed duplicate input block -->
       <template v-else>
         <!-- Span for displaying value when not editable, no longer triggers suggestions -->
         <span
-          class="value-display block w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 truncate"
-          :class="{ 'cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700': !isEffectivelyDisabled, 'cursor-not-allowed': isEffectivelyDisabled }">
+          class="value-display block w-full px-2 py-1 text-xs border border-border-base bg-background-base text-text-muted truncate"
+          :class="{ 'cursor-pointer hover:bg-neutral-softest': !isEffectivelyDisabled, 'cursor-not-allowed': isEffectivelyDisabled }">
           {{ internalValue || placeholder || '选择资源' }}
         </span>
       </template>
@@ -306,7 +306,7 @@ const handleClearResource = () => {
       <!-- 文件系统选择按钮 -->
       <button @click="handleSystemFileSelect" :disabled="isEffectivelyDisabled"
         v-comfy-tooltip="{ content: '从文件系统选择', placement: 'top' }"
-        class="action-button p-1 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+        class="action-button p-1 rounded text-text-muted hover:bg-neutral-softest focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed">
         <!-- Heroicon: document-add -->
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -316,7 +316,7 @@ const handleClearResource = () => {
       <!-- 清除按钮 (仅在有值且未禁用时显示) -->
        <button v-if="internalValue && !isEffectivelyDisabled" @click="handleClearResource"
          v-comfy-tooltip="{ content: '清除选择', placement: 'top' }"
-         class="action-button p-1 rounded text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
+         class="action-button p-1 rounded text-error hover:bg-error-softest focus:outline-none focus:ring-1 focus:ring-error disabled:opacity-50 disabled:cursor-not-allowed">
          <!-- Heroicon: x -->
          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

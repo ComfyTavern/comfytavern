@@ -31,7 +31,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
+  <div class="min-h-screen bg-background-base">
     <!-- 左侧边栏 由 HomeLayout 提供 -->
     <!-- <SideBar /> -->
 
@@ -46,7 +46,7 @@ onMounted(async () => {
       </div>
 
       <!-- 错误提示 -->
-      <div v-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6"
+      <div v-if="error" class="bg-error-softest border border-error-soft text-error px-4 py-3 rounded relative mb-6"
         role="alert">
         <strong class="font-bold">加载错误:</strong>
         <span class="block sm:inline"> {{ error }}</span>
@@ -54,7 +54,7 @@ onMounted(async () => {
 
       <OverlayScrollbarsComponent :options="{
         scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
-      }" class="h-screen" defer>
+      }" class="h-[96vh]" defer>
         <!-- 角色卡片网格 -->
         <div v-if="!isLoading && characters.length > 0" class="flex flex-wrap gap-6">
           <CharacterCard v-for="character in characters" :key="character.id" :name="character.name"

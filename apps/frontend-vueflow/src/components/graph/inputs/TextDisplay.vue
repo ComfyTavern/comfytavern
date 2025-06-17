@@ -1,10 +1,10 @@
 <template>
   <div class="text-display">
     <div class="w-full p-1 text-sm rounded border
-              bg-white dark:bg-gray-700
+              bg-background-surface
               border-gray-300 dark:border-gray-600
               text-gray-900 dark:text-gray-100
-              disabled:bg-gray-100 dark:disabled:bg-gray-800
+              disabled:bg-neutral-softest
               disabled:text-gray-500 dark:disabled:text-gray-400
               min-h-[60px] max-h-[200px] overflow-y-auto whitespace-pre-wrap" 
          :class="{

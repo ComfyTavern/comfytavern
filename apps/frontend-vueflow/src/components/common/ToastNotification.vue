@@ -153,14 +153,14 @@ const typeClasses = computed(() => {
     // 暗色模式下的样式
     switch (currentType) {
       case 'success':
-        return 'bg-gray-800 border-l-4 border-green-500';
+        return 'bg-background-surface border-l-4 border-success';
       case 'error':
-        return 'bg-gray-800 border-l-4 border-red-500';
+        return 'bg-background-surface border-l-4 border-error';
       case 'warning':
-        return 'bg-gray-800 border-l-4 border-yellow-500';
+        return 'bg-background-surface border-l-4 border-warning';
       case 'info':
       default:
-        return 'bg-gray-800 border-l-4 border-blue-500';
+        return 'bg-background-surface border-l-4 border-info';
     }
   } else {
     // 亮色模式下的样式
@@ -195,14 +195,14 @@ const progressBarClass = computed(() => {
   const currentType = props?.type || 'info';
   switch (currentType) {
     case 'success':
-      return 'bg-green-500';
+      return 'bg-success';
     case 'error':
-      return 'bg-red-500';
+      return 'bg-error';
     case 'warning':
-      return 'bg-yellow-500';
+      return 'bg-warning';
     case 'info':
     default:
-      return 'bg-blue-500';
+      return 'bg-info';
   }
 });
 

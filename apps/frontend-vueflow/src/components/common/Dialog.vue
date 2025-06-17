@@ -3,14 +3,14 @@
     <!-- 遮罩层 -->
     <div
       v-if="props.visible"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center transition-opacity duration-300"
+      class="fixed inset-0 bg-backdrop flex items-center justify-center transition-opacity duration-300"
       :style="{ zIndex: dynamicZIndex }"
       :class="{ 'opacity-0': !showContent, 'opacity-100': showContent }"
       @click="props.closeOnBackdrop && handleCancel()"
     >
       <!-- 对话框 -->
       <div
-        class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 max-w-md w-full mx-4 transition-all duration-300"
+        class="relative bg-background-surface rounded-lg shadow-xl border border-border-base max-w-md w-full mx-4 transition-all duration-300"
         :class="{ 'opacity-0 scale-95': !showContent, 'opacity-100 scale-100': showContent }"
         :style="{ width: props.width }"
         @click.stop
@@ -66,7 +66,7 @@
               v-model="internalInputValue"
               :placeholder="props.inputPlaceholder"
               :rows="props.inputRows"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900 placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-primary-content dark:placeholder-gray-400 dark:focus:ring-offset-gray-800"
+              class="w-full px-3 py-2 border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background-surface text-text-base placeholder:text-text-muted dark:focus:ring-offset-background-surface"
               @input="emit('update:inputValue', internalInputValue)"
               @keydown.enter="handleInputEnter"
             ></textarea>
@@ -75,7 +75,7 @@
               v-model="internalInputValue"
               :type="props.inputType"
               :placeholder="props.inputPlaceholder"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900 placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-primary-content dark:placeholder-gray-400 dark:focus:ring-offset-gray-800"
+              class="w-full px-3 py-2 border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background-surface text-text-base placeholder:text-text-muted dark:focus:ring-offset-background-surface"
               @input="emit('update:inputValue', internalInputValue)"
               @keydown.enter="handleInputEnter"
             />
@@ -89,7 +89,7 @@
             <button
               v-if="shouldShowCancelButton"
               @click="handleCancel"
-              class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors"
+              class="px-4 py-2 bg-neutral-soft hover:bg-neutral text-text-base rounded-md focus:outline-none focus:ring-2 focus:ring-neutral focus:ring-offset-2 dark:focus:ring-offset-background-surface transition-colors"
             >
               {{ props.cancelText }}
             </button>
@@ -98,8 +98,8 @@
               :class="[
                 'px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors',
                 props.dangerConfirm
-                  ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white'
-                  : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 text-white'
+                  ? 'bg-error hover:opacity-90 focus:ring-error text-primary-content'
+                  : 'bg-primary hover:opacity-90 focus:ring-primary text-primary-content'
               ]"
             >
               {{ props.confirmText }}

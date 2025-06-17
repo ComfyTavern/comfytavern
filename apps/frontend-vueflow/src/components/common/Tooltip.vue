@@ -13,7 +13,7 @@
         <!-- 复制按钮 -->
         <div class="relative">
           <button v-if="props.showCopyButton && (content || $slots.content)"
-            class="copy-button absolute right-1 top-1 p-1 rounded-md hover:bg-opacity-10 hover:bg-gray-500 transition-colors group"
+            class="copy-button absolute right-1 top-1 p-1 rounded-md hover:bg-neutral-softest transition-colors group"
             @click="copyContent" style="z-index: 101; pointer-events: auto">
             <svg class="w-4 h-4 text-[hsl(var(--ct-text-muted-hsl))]" xmlns="http://www.w3.org/2000/svg"
               fill="none" viewBox="0 0 24 24" stroke="currentColor">

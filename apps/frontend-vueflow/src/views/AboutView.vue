@@ -375,7 +375,7 @@ const appScenes = [
   { name: '创意辅助工具', icon: '🎨', colorClass: 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' },
   { name: '轻量级游戏', icon: '🎮', colorClass: 'bg-cyan-50 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300' },
   { name: '自动化任务助手', icon: '🤖', colorClass: 'bg-teal-50 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 col-span-2 md:col-span-1' },
-  { name: '以及更多...', icon: '🤗', colorClass: 'bg-gray-50 dark:bg-gray-700/40 text-gray-700 dark:text-gray-300' },
+  { name: '以及更多...', icon: '🤗', colorClass: 'bg-background-base dark:bg-background-surface/40 text-text-secondary' },
 ];
 
 const devFeatures = [

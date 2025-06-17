@@ -1,5 +1,5 @@
 <template>
-  <div class="file-manager-page h-full w-full flex flex-col bg-gray-100 dark:bg-gray-800">
+  <div class="file-manager-page h-full w-full flex flex-col bg-background-base">
     <FileManagerViewLayout v-if="storeInitialized" />
     <div v-else class="flex items-center justify-center h-full">
       <!-- 可以放置一个加载指示器 -->

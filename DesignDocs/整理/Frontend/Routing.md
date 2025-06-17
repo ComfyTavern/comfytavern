@@ -276,7 +276,7 @@ function goBack() {
 ```html
 <!-- apps/frontend-vueflow/src/App.vue -->
 <template>
-  <div class="h-full w-full basic-flow bg-gray-100 dark:bg-gray-900">
+  <div class="h-full w-full basic-flow bg-background-base">
     <RouterView />
     <!-- ... 其他全局组件 ... -->
   </div>

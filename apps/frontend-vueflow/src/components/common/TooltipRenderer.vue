@@ -25,7 +25,7 @@
         <!-- 复制按钮 -->
         <div v-if="tooltipStore.options.showCopyButton && tooltipStore.content" class="relative">
           <button
-            class="copy-button absolute right-1 top-1 p-1 rounded-md hover:bg-opacity-10 hover:bg-gray-500 transition-colors group"
+            class="copy-button absolute right-1 top-1 p-1 rounded-md hover:bg-neutral-softest transition-colors group"
             style="z-index: 101; pointer-events: auto"
             @click="copyContentToClipboard"
             type="button"

@@ -13,7 +13,7 @@
       </h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
         <!-- 对话框部分 -->
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+        <div class="bg-background-surface p-6 rounded-lg shadow-md">
           <h3 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300">模态对话框 (Dialogs)</h3>
           <div class="space-y-4">
             <button @click="showMessageDialog" class="btn btn-blue w-full">显示消息对话框</button>
@@ -27,7 +27,7 @@
         </div>
 
         <!-- 通知部分 -->
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+        <div class="bg-background-surface p-6 rounded-lg shadow-md">
           <h3 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300">通知 (Toasts)</h3>
           <div class="space-y-4">
             <button @click="showInfoToast" class="btn btn-blue w-full">显示信息通知</button>
@@ -40,9 +40,9 @@
           </div>
         </div>
       </div>
-      <div class="mt-8 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+      <div class="mt-8 bg-background-surface p-6 rounded-lg shadow-md">
         <h3 class="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">DialogService 操作结果:</h3>
-        <div class="bg-gray-100 dark:bg-gray-700 p-4 rounded-md min-h-[50px]">
+        <div class="bg-background-base p-4 rounded-md min-h-[50px]">
           <pre class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ dialogServiceResult }}</pre>
         </div>
       </div>
@@ -52,7 +52,7 @@
     <section>
       <h2 class="text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200 border-b pb-2">UiStore (全局模态框)</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+        <div class="bg-background-surface p-6 rounded-lg shadow-md">
           <h3 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300">特定模态框</h3>
           <div class="space-y-4">
             <button @click="openSettings" class="btn btn-indigo w-full">打开设置模态框 (App.vue 管理)</button>
@@ -61,9 +61,9 @@
           </div>
         </div>
       </div>
-      <div class="mt-8 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+      <div class="mt-8 bg-background-surface p-6 rounded-lg shadow-md">
         <h3 class="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">UiStore 操作结果:</h3>
-        <div class="bg-gray-100 dark:bg-gray-700 p-4 rounded-md min-h-[50px]">
+        <div class="bg-background-base p-4 rounded-md min-h-[50px]">
           <pre class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ uiStoreResult }}</pre>
         </div>
       </div>
@@ -72,14 +72,14 @@
     <!-- SettingsControl 测试 (使用 SettingsPanel) -->
     <section class="mt-12">
       <h2 class="text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200 border-b pb-2">SettingControl (通过 SettingsPanel) 测试</h2>
-      <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+      <div class="bg-background-surface p-6 rounded-lg shadow-md">
         <SettingsPanel :config="testSettingItems" />
       </div>
       <!-- 用于验证 settingsStore 中的值是否正确更新 -->
-      <div class="mt-8 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+      <div class="mt-8 bg-background-surface p-6 rounded-lg shadow-md">
         <h3 class="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">SettingsStore 当前值 (验证用):</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div v-for="config in testSettingItems" :key="`debug-${config.key}`" class="bg-gray-100 dark:bg-gray-700 p-3 rounded">
+          <div v-for="config in testSettingItems" :key="`debug-${config.key}`" class="bg-background-base p-3 rounded">
             <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ config.label }} ({{ config.key }})</p>
             <pre class="mt-1 text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{{ settingsStore.getSetting(config.key, config.defaultValue) }}</pre>
           </div>

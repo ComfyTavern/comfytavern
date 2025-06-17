@@ -1,6 +1,6 @@
 <template>
   <div
-    class="workflow-menu absolute bottom-full left-0 mb-1 w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-50 py-1">
+    class="workflow-menu absolute bottom-full left-0 mb-1 w-48 bg-background-surface border border-border-base rounded-md shadow-lg z-50 py-1">
     <ul>
       <li>
         <button @click="handleNew" class="menu-item">
@@ -519,7 +519,7 @@ const handleRedoClick = () => {
 }
 
 .menu-item {
-  @apply flex items-center w-full px-3 py-1.5 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply flex items-center w-full px-3 py-1.5 text-left text-sm text-text-secondary hover:bg-neutral-softest disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
 .menu-separator {
