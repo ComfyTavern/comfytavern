@@ -133,7 +133,7 @@ export interface BypassBehavior {
 // 节点定义
 export interface NodeDefinition {
   type: string;
-  namespace?: string;
+  namespace?: string; // 节点的顶层命名空间，用于区别归属于哪个插件或是内部节点库，类似于 minecraft:air 的 minecraft 部分
   category: string;
   displayName: string;
   description: string;
