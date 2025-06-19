@@ -48,6 +48,14 @@
       class="w-full"
       size="large"
     />
+    <!-- 咕咕：添加 action-button 类型处理 -->
+    <ButtonInput
+      v-else-if="itemConfig.type === 'action-button'"
+      :label="itemConfig.buttonText || t('settings.actions.default_action_button_text')"
+      :disabled="itemConfig.disabled"
+      @click="itemConfig.onClick ? itemConfig.onClick() : () => {}"
+      class="w-full"
+    />
     <p v-else>咕？未知的控件类型: {{ itemConfig.type }}</p>
   </div>
 </template>
@@ -56,6 +64,7 @@
 import { computed } from 'vue';
 import type { SettingItemConfig } from '@/types/settings';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useI18n } from 'vue-i18n'; // + 咕咕：添加 useI18n 导入
 
 // 导入 graph/inputs 下的真实组件
 import StringInput from '@/components/graph/inputs/StringInput.vue';
@@ -64,11 +73,13 @@ import NumberInput from '@/components/graph/inputs/NumberInput.vue';
 import BooleanToggle from '@/components/graph/inputs/BooleanToggle.vue';
 import SelectInput from '@/components/graph/inputs/SelectInput.vue';
 import ButtonGroupInput from '@/components/graph/inputs/ButtonGroupInput.vue'; // 新增导入
+import ButtonInput from '@/components/graph/inputs/ButtonInput.vue'; // + 咕咕：添加 ButtonInput 导入
 
 const props = defineProps<{
   itemConfig: SettingItemConfig;
 }>();
 
+const { t } = useI18n(); // + 咕咕：添加 i18n
 const settingsStore = useSettingsStore();
 // TODO: 处理 itemConfig.storeName，支持绑定到不同的 store
 
@@ -83,14 +94,6 @@ const currentValue = computed({
     if (props.itemConfig.onSave) {
       try {
         const saveResult = await props.itemConfig.onSave(props.itemConfig.key, newValue, oldValue);
-        // 根据 saveResult 的约定处理
-        // 如果 onSave 返回 { success: false } 或直接的 false，则认为外部保存失败，可能不继续更新 settingsStore
-        // 如果 onSave 成功处理了持久化，并且不需要 settingsStore 再存一份，它可以返回 false 来阻止 settingsStore 更新
-        // 这里我们假设：如果 onSave 存在，它全权负责保存。如果它没抛异常且没返回明确的 false 或 {success: false}，
-        // 我们仍然更新 settingsStore 作为一种UI状态的同步（除非 onSave 的契约另有规定）。
-        // 对于 user.nickname，onSave 会更新 authStore，settingsStore 的更新将通过 watch authStore.currentUser.username 来完成。
-        // 因此，如果 onSave 成功，我们可能不希望在这里直接更新 settingsStore，以避免冲突或重复。
-        // 让我们约定：如果 onSave 存在并成功执行（未抛错，未返回 false 或 {success: false}），则它已处理保存。
         if (typeof saveResult === 'boolean' && !saveResult) {
           console.debug(`[SettingControl] onSave for ${props.itemConfig.key} returned false, skipping settingsStore update.`);
           return; // 外部保存逻辑指示不要更新 settingsStore

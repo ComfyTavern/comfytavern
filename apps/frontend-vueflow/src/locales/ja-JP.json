@@ -118,7 +118,21 @@
       "fontSize_small": "小",
       "fontSize_medium": "中",
       "fontSize_large": "大",
-      "fontSize_x_large": "極大"
+      "fontSize_x_large": "極大",
+      "i18n_addCustomLanguagePack_label": "カスタム言語パックを追加",
+      "i18n_addCustomLanguagePack_desc": "アップロードする .json 形式の言語パックファイルを選択してください。"
+    },
+    "actions": {
+      "default_action_button_text": "アクションを実行",
+      "add_language_pack_button": "言語パックを追加"
+    },
+    "notifications": {
+      "invalid_file_type_json": "無効なファイルタイプです。.json ファイルを選択してください。",
+      "invalid_lang_file_meta": "言語パックのファイル形式が無効です。必要なメタデータ (_meta.name, _meta.nativeName) がありません。",
+      "uploading_lang_file": "言語パックをアップロード中...",
+      "lang_file_upload_success": "言語パックのアップロードに成功しました！",
+      "lang_file_upload_error": "言語パックのアップロードに失敗しました：{error}",
+      "no_file_selected_error": "ファイルが選択されていないか、読み取れません。"
     },
     "advanced": {
       "title": "詳細設定"

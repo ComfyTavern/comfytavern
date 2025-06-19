@@ -118,7 +118,21 @@
       "fontSize_small": "小",
       "fontSize_medium": "中",
       "fontSize_large": "大",
-      "fontSize_x_large": "更大"
+      "fontSize_x_large": "更大",
+      "i18n_addCustomLanguagePack_label": "添加自定义语言包",
+      "i18n_addCustomLanguagePack_desc": "选择一个 .json 格式的语言包文件进行上传。"
+    },
+    "actions": {
+      "default_action_button_text": "执行操作",
+      "add_language_pack_button": "添加语言包"
+    },
+    "notifications": {
+      "invalid_file_type_json": "文件类型无效，请选择 .json 文件。",
+      "invalid_lang_file_meta": "语言包文件格式无效，缺少必要的元数据 (_meta.name, _meta.nativeName)。",
+      "uploading_lang_file": "正在上传语言包...",
+      "lang_file_upload_success": "语言包上传成功！",
+      "lang_file_upload_error": "语言包上传失败：{error}",
+      "no_file_selected_error": "未选择文件或文件无法读取。"
     },
     "advanced": {
       "title": "高级设置"

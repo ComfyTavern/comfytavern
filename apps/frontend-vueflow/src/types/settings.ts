@@ -9,7 +9,8 @@ export type SettingControlType =
   | 'textarea'
   | 'slider' // 可以根据需要扩展
   | 'avatar' // + 新增头像控件类型
-  | 'button-group'; // 新增按钮组控件类型
+  | 'button-group' // 新增按钮组控件类型
+  | 'action-button'; // + 咕咕：添加 action-button 类型
 
 // 下拉选项
 export interface SelectOption {
@@ -34,6 +35,11 @@ export interface SettingItemConfig {
   // validationRules?: any; // 校验规则 (可选)
   // componentProps?: Record<string, any>; // 传递给自定义渲染组件的 props (如果 type 是某种 custom-component)
   onSave?: (key: string, newValue: any, oldValue?: any) => Promise<void | boolean | { success: boolean; message?: string }>; // 自定义保存逻辑
+
+  // + 咕咕：为 action-button 类型添加的属性
+  buttonText?: string; // 按钮上显示的文本
+  onClick?: () => void; // 按钮点击事件处理函数
+  disabled?: boolean; // 按钮是否禁用 (主要由 itemConfig.disabled 控制)
 }
 
 // 设置页面的导航分区定义

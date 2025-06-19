@@ -1,5 +1,7 @@
 <template>
   <div class="settings-layout">
+    <!-- 咕咕：添加隐藏的文件输入框 -->
+    <input type="file" ref="languageFileInput" @change="onFileSelected" accept=".json" style="display: none;" />
     <!-- 顶部标签页导航 -->
     <nav class="settings-nav">
       <ul>
@@ -40,6 +42,8 @@
 import { ref, computed, defineComponent, defineAsyncComponent, markRaw, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import type { SettingsSection, SettingItemConfig } from "@/types/settings";
+import { fileManagerApiClient } from "@/api/fileManagerApi"; // + 咕咕：导入 fileManagerApiClient
+import { useDialogService } from "@/services/DialogService"; // + 咕咕：导入 DialogService
 import SettingsPanel from "./SettingsPanel.vue";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
@@ -55,11 +59,77 @@ const themeStore = useThemeStore(); // 移动到顶部
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
 const languageManager = useLanguagePackManager(); // + i18n
+const dialogService = useDialogService(); // + 咕咕：实例化 DialogService
 const { currentUser } = storeToRefs(authStore);
 // 从 themeStore 解构需要的 refs
 const { displayMode, availableThemes, selectedThemeId } = storeToRefs(themeStore);
 const { i18nSettings } = storeToRefs(settingsStore); // + i18n
 const { availableLanguages } = languageManager; // + i18n (直接从 composable 获取 ref)
+
+const languageFileInput = ref<HTMLInputElement | null>(null); // + 咕咕：为文件输入添加 ref
+
+// + 咕咕：添加处理语言包上传的函数
+function handleAddLanguagePack() {
+  languageFileInput.value?.click();
+}
+
+async function onFileSelected(event: Event) {
+  const target = event.target as HTMLInputElement;
+  if (target.files && target.files.length > 0) {
+    const file = target.files[0];
+    
+    // + 咕咕：添加对 file 存在的显式检查
+    if (!file) {
+      dialogService.showToast({ type: 'error', message: t('settings.notifications.no_file_selected_error') });
+      target.value = '';
+      return;
+    }
+
+    const fileName = file.name;
+
+    if (!fileName.endsWith('.json')) {
+      dialogService.showToast({ type: 'error', message: t('settings.notifications.invalid_file_type_json') });
+      target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const fileContent = e.target?.result as string;
+        const parsedContent = JSON.parse(fileContent);
+
+        if (!parsedContent._meta || !parsedContent._meta.name || !parsedContent._meta.nativeName) {
+          dialogService.showToast({ type: 'error', message: t('settings.notifications.invalid_lang_file_meta') });
+          target.value = '';
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('files', file, fileName);
+
+        const targetDir = 'user://library/locales/ui/@ComfyTavern-ui/';
+        
+        // dialogService.showLoading(t('settings.notifications.uploading_lang_file')); // DialogService 可能没有 showLoading
+        dialogService.showToast({ type: 'info', message: t('settings.notifications.uploading_lang_file'), duration: 1500 });
+
+
+        await fileManagerApiClient.writeFile(targetDir, formData);
+        
+        dialogService.showToast({ type: 'success', message: t('settings.notifications.lang_file_upload_success') });
+        
+        await languageManager.discoverLanguagePacks();
+        
+      } catch (error) {
+        console.error("咕: 处理语言文件失败:", error);
+        dialogService.showError(t('settings.notifications.lang_file_upload_error', { error: (error as Error).message }));
+      } finally {
+        target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  }
+}
 
 // --- 占位符组件 ---
 // 后续这些将被替换为真实的自定义组件
@@ -146,6 +216,17 @@ const displaySettingsConfig = computed<SettingItemConfig[]>(() => [
       return { success: false, message: "无效的语言代码" };
     },
     description: t("settings.items.i18n_currentLanguage_desc"),
+  },
+  // + 咕咕：添加 "添加自定义语言包" 按钮的配置
+  {
+    key: "i18n.addCustomLanguagePack",
+    type: "action-button",
+    label: t("settings.items.i18n_addCustomLanguagePack_label"),
+    categoryKey: "appearance",
+    category: t("settings.categories.appearance"),
+    buttonText: t("settings.actions.add_language_pack_button"),
+    onClick: handleAddLanguagePack,
+    description: t("settings.items.i18n_addCustomLanguagePack_desc"),
   },
   {
     key: "theme.displayMode", // 使用更明确的key

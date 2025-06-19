@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "name": "English (US)",
+    "name": "英语 (US)",
     "nativeName": "English (US)"
   },
   "common": {
@@ -118,7 +118,21 @@
       "fontSize_small": "Small",
       "fontSize_medium": "Medium",
       "fontSize_large": "Large",
-      "fontSize_x_large": "X-Large"
+      "fontSize_x_large": "X-Large",
+      "i18n_addCustomLanguagePack_label": "Add Custom Language Pack",
+      "i18n_addCustomLanguagePack_desc": "Select a .json language pack file to upload."
+    },
+    "actions": {
+      "default_action_button_text": "Perform Action",
+      "add_language_pack_button": "Add Language Pack"
+    },
+    "notifications": {
+      "invalid_file_type_json": "Invalid file type. Please select a .json file.",
+      "invalid_lang_file_meta": "Invalid language pack file format. Missing required metadata (_meta.name, _meta.nativeName).",
+      "uploading_lang_file": "Uploading language pack...",
+      "lang_file_upload_success": "Language pack uploaded successfully!",
+      "lang_file_upload_error": "Language pack upload failed: {error}",
+      "no_file_selected_error": "No file selected or file is unreadable."
     },
     "advanced": {
       "title": "Advanced Settings"

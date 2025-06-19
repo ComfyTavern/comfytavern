@@ -1,4 +1,6 @@
 // apps/frontend-vueflow/src/locales/index.ts
+
+// i18n内容以中文为准，以中文为主，以中文为尊！
 import { createI18n } from 'vue-i18n';
 import zhCN from './zh-CN.json';
 import zhWYW from './zh-WYW.json';

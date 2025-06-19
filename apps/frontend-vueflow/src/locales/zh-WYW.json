@@ -118,7 +118,21 @@
       "fontSize_small": "小",
       "fontSize_medium": "中",
       "fontSize_large": "大",
-      "fontSize_x_large": "愈大"
+      "fontSize_x_large": "愈大",
+      "i18n_addCustomLanguagePack_label": "增雅言之卷",
+      "i18n_addCustomLanguagePack_desc": "择一 JSON 格之雅言卷以上呈。"
+    },
+    "actions": {
+      "default_action_button_text": "行法",
+      "add_language_pack_button": "增雅言卷"
+    },
+    "notifications": {
+      "invalid_file_type_json": "卷式非也，请择 JSON 格之卷。",
+      "invalid_lang_file_meta": "雅言卷式谬矣，阙元信息 (_meta.name, _meta.nativeName)。",
+      "uploading_lang_file": "雅言卷上呈中...",
+      "lang_file_upload_success": "雅言卷上呈功成！",
+      "lang_file_upload_error": "雅言卷上呈败北：{error}",
+      "no_file_selected_error": "未择卷宗或卷不可读。"
     },
     "advanced": {
       "title": "玄奥枢机"
