@@ -350,8 +350,10 @@ watch(
   /* 内边距，让li元素和ul边框之间有空隙 */
   margin: 0 42px;
   /* 左右外边距调整为32px */
-  display: inline-flex;
-  /* 让ul根据内容自适应宽度，并可以应用padding和圆角 */
+  display: flex;
+  /* 改为 flex 以支持换行 */
+  flex-wrap: wrap;
+  /* 允许标签换行 */
   background-color: transparent;
   /* 胶囊组的背景色 */
   border-radius: 8px;
@@ -366,6 +368,8 @@ watch(
   cursor: pointer;
   font-size: 0.9rem;
   /* 可以适当减小字体 */
+  white-space: nowrap;
+  /* 防止标签内文字换行 */
   display: flex;
   align-items: center;
   gap: 6px;
