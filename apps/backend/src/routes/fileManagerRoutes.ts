@@ -81,8 +81,11 @@ export const fileManagerRoutes = new Elysia({
           error.message,
           error.stack
         );
+        // 咕: 对于 listDir，如果目录不存在，前端期望得到一个空数组而不是 404 错误。
+        // 这样可以避免在控制台产生不必要的错误日志，因为检查一个可选的目录是否存在是正常操作。
         if (error.message.includes("not found") || error.message.includes("Not a directory")) {
-          set.status = 404;
+          // set.status = 404; // 旧行为
+          return []; // 新行为：返回空数组，状态码默认为 200
         } else if (
           error.message.includes("Invalid logical path") ||
           error.message.includes("Unknown scheme") ||
@@ -725,9 +728,79 @@ export const fileManagerRoutes = new Elysia({
         tags: ["File Manager"],
       },
     }
-  );
+  )
+  // GET /api/fam/read/* - 读取文件内容 (用于预览，非下载)
+  .get(
+    "/read/*",
+    async (ctx) => {
+      const { params, set, userContext } = ctx as FamRequestContext & { params: { "*": string } };
+      let rawLogicalPath = params["*"];
+      let logicalPath: string;
 
-// TODO: 添加其他 FAM 路由 (exists, readFile for content viewing)
-// 例如:
-// .get('/exists/*', async (ctx) => { /* ... */ })
-// .get('/read/*', async (ctx) => { /* ... */ }) // For getting file content as text/json, not download
+      if (typeof rawLogicalPath === "string") {
+        try {
+          logicalPath = decodeURIComponent(rawLogicalPath).trim();
+          if (!logicalPath) throw new Error("File path is empty after decode/trim.");
+        } catch (e) {
+          set.status = 400;
+          return { error: "Invalid file path encoding." };
+        }
+      } else {
+        set.status = 400;
+        return { error: "File path parameter is missing or not a string." };
+      }
+
+      const userId = getUserIdFromContext(userContext);
+      console.log(
+        `[FileManagerRoutes] Attempting to read file content: '${logicalPath}' for userId: ${userId}`
+      );
+
+      try {
+        // 默认以 utf-8 读取，因为这通常用于 JSON 或文本预览
+        const content = await famService.readFile(userId, logicalPath, "utf-8");
+        
+        // 如果是 Buffer，尝试转为 string (虽然我们请求了 utf-8)
+        // 如果是 JSON 字符串，直接返回。Elysia 会自动设置 Content-Type: application/json
+        // 如果是普通文本，也直接返回。
+        if (Buffer.isBuffer(content)) {
+            return content.toString('utf-8');
+        }
+        // 尝试解析JSON，如果失败则作为纯文本返回
+        try {
+          return JSON.parse(content as string);
+        } catch (e) {
+          return content;
+        }
+
+      } catch (error: any) {
+        // 咕: 对于 readFile，如果文件不存在，前端期望得到 null 而不是 404 错误。
+        // 这同样是为了避免在加载可选配置文件（如语言包）时产生控制台错误。
+        if (error.message.includes("not found")) {
+          // set.status = 404; // 旧行为
+          return null; // 新行为：返回 null，状态码默认为 200
+        }
+        
+        console.error(
+          `[FileManagerRoutes] Error reading file content '${logicalPath}' (userId: ${userId}):`,
+          error.message
+        );
+
+        if (
+          error.message.includes("Invalid logical path") ||
+          error.message.includes("UserId is required")
+        ) {
+          set.status = 400;
+        } else {
+          set.status = 500;
+        }
+        return { error: error.message };
+      }
+    },
+    {
+      detail: {
+        summary: "Read file content for preview.",
+        description: "Returns the content of a file, typically as JSON or text. Returns null if not found.",
+        tags: ["File Manager"],
+      },
+    }
+  );

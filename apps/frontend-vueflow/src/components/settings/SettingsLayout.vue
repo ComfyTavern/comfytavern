@@ -10,7 +10,7 @@
           @click="activeSectionId = section.id"
         >
           <!-- <Icon :name="section.icon" />  图标暂时占位 -->
-          <span>{{ section.label }}</span>
+          <span>{{ t(`settings.sections.${section.id.replace('-', '_')}`) }}</span>
         </li>
       </ul>
     </nav>
@@ -47,6 +47,7 @@
 
 <script setup lang="ts">
 import { ref, computed, defineComponent, defineAsyncComponent, markRaw, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { SettingsSection, SettingItemConfig } from '@/types/settings';
 import SettingsPanel from './SettingsPanel.vue';
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
@@ -54,15 +55,20 @@ import "overlayscrollbars/overlayscrollbars.css";
 import { useThemeStore, type DisplayMode } from '@/stores/theme'; // + type DisplayMode
 import { useAuthStore } from '@/stores/authStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useLanguagePackManager } from '@/composables/useLanguagePackManager'; // + i18n
 import { storeToRefs } from 'pinia';
 
 // --- Store 实例化 ---
+const { t } = useI18n();
 const themeStore = useThemeStore(); // 移动到顶部
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
+const languageManager = useLanguagePackManager(); // + i18n
 const { currentUser } = storeToRefs(authStore);
 // 从 themeStore 解构需要的 refs
 const { displayMode, availableThemes, selectedThemeId } = storeToRefs(themeStore);
+const { i18nSettings } = storeToRefs(settingsStore); // + i18n
+const { availableLanguages } = languageManager; // + i18n (直接从 composable 获取 ref)
 
 
 // --- 占位符组件 ---
@@ -123,6 +129,29 @@ const userSettingsConfig: SettingItemConfig[] = [
 ];
 
 const displaySettingsConfig: SettingItemConfig[] = [
+  {
+    key: 'i18n.currentLanguage',
+    type: 'select',
+    label: t('settings.general.language'),
+    category: '外观',
+    get defaultValue() {
+      return i18nSettings.value.currentLanguage;
+    },
+    get options() {
+      return availableLanguages.value.map(lang => ({
+        label: `${lang.nativeName} (${lang.name})`,
+        value: lang.code,
+      }));
+    },
+    async onSave(_key, newValue) {
+      if (typeof newValue === 'string') {
+        settingsStore.setLanguage(newValue);
+        return { success: true };
+      }
+      return { success: false, message: '无效的语言代码' };
+    },
+    description: '选择 ComfyTavern 的界面显示语言。',
+  },
   {
     key: 'theme.displayMode', // 使用更明确的key
     type: 'button-group', // <--- 修改类型为 button-group
@@ -200,19 +229,19 @@ const mcpSettingsConfig: SettingItemConfig[] = [
 
 // 2. 组装所有 Section
 const sections = ref<SettingsSection[]>([
-  { id: 'display', label: '显示设置', icon: 'screen', type: 'data-driven', dataConfig: displaySettingsConfig },
-  { id: 'user', label: '用户设置', icon: 'user', type: 'data-driven', dataConfig: userSettingsConfig },
-  { id: 'keybindings', label: '快捷键', icon: 'keyboard', type: 'component', component: { ...PlaceholderComponent, props: { title: '快捷键编辑器' } } },
-  { id: 'llm', label: '模型配置', icon: 'brain', type: 'component', component: { ...PlaceholderComponent, props: { title: 'LLM API 管理器' } } },
-  { id: 'mcp', label: 'MCP', icon: 'protocol', type: 'data-driven', dataConfig: mcpSettingsConfig },
+  { id: 'display', label: t('settings.sections.display'), icon: 'screen', type: 'data-driven', dataConfig: displaySettingsConfig },
+  { id: 'user', label: t('settings.sections.user'), icon: 'user', type: 'data-driven', dataConfig: userSettingsConfig },
+  { id: 'keybindings', label: t('settings.sections.keybindings'), icon: 'keyboard', type: 'component', component: { ...PlaceholderComponent, props: { title: '快捷键编辑器' } } },
+  { id: 'llm', label: t('settings.sections.llm'), icon: 'brain', type: 'component', component: { ...PlaceholderComponent, props: { title: 'LLM API 管理器' } } },
+  { id: 'mcp', label: t('settings.sections.mcp'), icon: 'protocol', type: 'data-driven', dataConfig: mcpSettingsConfig },
   {
     id: 'test-panel',
-    label: '测试面板',
+    label: t('settings.sections.test_panel'),
     icon: 'bug_report', // Material Icon name for a bug or test
     type: 'component',
     component: markRaw(defineAsyncComponent(() => import('@/views/TestPanelView.vue')))
   },
-  { id: 'about', label: '关于', icon: 'info', type: 'component', component: { ...PlaceholderComponent, props: { title: '关于 ComfyTavern' } } },
+  { id: 'about', label: t('settings.sections.about'), icon: 'info', type: 'component', component: { ...PlaceholderComponent, props: { title: '关于 ComfyTavern' } } },
 ]);
 
 const activeSectionId = ref(sections.value[0]?.id ?? ''); // 默认选中第一个, 如果数组为空则默认为空字符串

@@ -1,0 +1,61 @@
+{
+  "_meta": {
+    "name": "Chinese (Simplified)",
+    "nativeName": "简体中文"
+  },
+  "common": {
+    "confirm": "确认",
+    "cancel": "取消",
+    "save": "保存",
+    "delete": "删除",
+    "edit": "编辑",
+    "add": "添加",
+    "loading": "加载中...",
+    "error": "错误",
+    "success": "成功",
+    "warning": "警告"
+  },
+  "nav": {
+    "home": "首页",
+    "editor": "编辑器",
+    "settings": "设置",
+    "about": "关于"
+  },
+  "editor": {
+    "toolbar": {
+      "save": "保存工作流",
+      "execute": "执行工作流",
+      "clear": "清空画布"
+    },
+    "contextMenu": {
+      "addNode": "添加节点",
+      "deleteNode": "删除节点",
+      "copyNode": "复制节点"
+    }
+  },
+  "settings": {
+    "general": {
+      "title": "通用设置",
+      "language": "界面语言",
+      "theme": "主题"
+    },
+    "sections": {
+      "display": "显示设置",
+      "user": "用户设置",
+      "keybindings": "快捷键",
+      "llm": "模型配置",
+      "mcp": "MCP",
+      "test_panel": "测试面板",
+      "about": "关于"
+    },
+    "advanced": {
+      "title": "高级设置"
+    }
+  },
+  "dialogs": {
+    "confirmDelete": {
+      "title": "确认删除",
+      "message": "此操作不可撤销，确定要删除吗？"
+    }
+  }
+}

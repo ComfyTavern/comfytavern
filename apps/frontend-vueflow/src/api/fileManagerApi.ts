@@ -21,7 +21,11 @@ export async function listDir(logicalPath: string): Promise<FAMItem[]> {
     // 后端现在直接返回 FAMItem[] 结构
     const items = await useApi().get<FAMItem[]>(`${API_PREFIX}/list/${encodeURIComponent(normalizedPath)}`);
     return items || []; // 如果 API 返回 null/undefined (虽然不应该)，则返回空数组
-  } catch (err) {
+  } catch (err: any) {
+    // 如果是 404 错误，则静默处理并返回空数组，因为目录不存在是正常情况
+    if (err.isAxiosError && err.response?.status === 404) {
+      return [];
+    }
     console.error(`[fileManagerApi] Failed to list directory "${normalizedPath}":`, err);
     throw err; // 由调用方处理用户反馈
   }
@@ -147,6 +151,26 @@ export async function getDownloadFileLink(logicalPath: string): Promise<string> 
 // - searchFiles(logicalPath: string, query: string, options?: any): Promise<FAMListItem[]>
 // - getFilePreview(logicalPath: string, fileType: string): Promise<any> // 获取预览数据，如文本内容、图片 base64 等
 
+/**
+ * 读取指定逻辑路径的文件内容。
+ * @param logicalPath 要读取的文件的逻辑路径 (例如 "user://library/locales/ui/@ComfyTavern-ui/en-US.json")
+ * @returns Promise<any> 文件内容 (如果是 JSON，可能会被自动解析)
+ */
+export async function readFile(logicalPath: string): Promise<any> {
+  try {
+    // 假设后端 /read/:logicalPath 返回文件原始内容
+    const content = await useApi().get<any>(`${API_PREFIX}/read/${encodeURIComponent(logicalPath)}`);
+    return content;
+  } catch (err: any) {
+    // 如果是 404 错误，则静默处理并返回 null，因为文件不存在是正常情况
+    if (err.isAxiosError && err.response?.status === 404) {
+      return null;
+    }
+    console.error(`[fileManagerApi] Failed to read file "${logicalPath}":`, err);
+    throw err;
+  }
+}
+
 // 占位导出，确保文件在没有其他具体导出时仍被视为模块
 export const fileManagerApiClient = {
   listDir,
@@ -156,4 +180,5 @@ export const fileManagerApiClient = {
   moveFilesOrDirs,
   deleteFilesOrDirs,
   getDownloadFileLink,
+  readFile,
 };

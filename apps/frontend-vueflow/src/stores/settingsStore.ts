@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, reactive } from 'vue';
 import type { SettingItemConfig } from '@/types/settings'; // 确保路径正确
+import { defaultLocale } from '@/locales';
 
 // 简易防抖函数
 // eslint-disable-next-line @typescript-eslint/ban-types
@@ -18,9 +19,21 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
   return debounced as (...args: Parameters<F>) => ReturnType<F>;
 }
 
+export interface I18nSettings {
+  currentLanguage: string;
+  fallbackLanguage: string;
+  autoDetect: boolean;
+}
+
 export const useSettingsStore = defineStore('settings', () => {
   // 存储所有设置项的值, key 就是 SettingItemConfig.key
   const settings = ref<Record<string, any>>({});
+
+  const i18nSettings = reactive<I18nSettings>({
+    currentLanguage: defaultLocale,
+    fallbackLanguage: defaultLocale,
+    autoDetect: true,
+  });
 
   // 加载持久化数据 (e.g., from localStorage)
   function loadSettings() {
@@ -31,6 +44,11 @@ export const useSettingsStore = defineStore('settings', () => {
         const parsedSettings = JSON.parse(saved);
         // 可以在这里进行一些数据校验或迁移逻辑
         settings.value = parsedSettings;
+
+        // 加载 i18n 设置
+        if (parsedSettings.i18n) {
+          Object.assign(i18nSettings, parsedSettings.i18n);
+        }
       } else {
         // 如果没有保存的设置，可以考虑初始化一些默认值
         // (或者让 SettingControl 在 getSetting 时处理默认值)
@@ -47,7 +65,11 @@ export const useSettingsStore = defineStore('settings', () => {
   const saveSettings = debounce(() => {
     console.log("咕: 保存设置到存储...");
     try {
-      localStorage.setItem('app_settings', JSON.stringify(settings.value));
+      const allSettings = {
+        ...settings.value,
+        i18n: i18nSettings,
+      };
+      localStorage.setItem('app_settings', JSON.stringify(allSettings));
     } catch (error) {
       console.error("咕: 保存设置失败!", error);
     }
@@ -70,6 +92,10 @@ export const useSettingsStore = defineStore('settings', () => {
     return defaultValueFromConfig;
   }
 
+  function setLanguage(langCode: string) {
+    i18nSettings.currentLanguage = langCode;
+  }
+
   // 初始化时加载设置
   onMounted(() => {
     loadSettings();
@@ -77,7 +103,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // 监听 settings 对象的深度变化以自动保存
   watch(
-    settings,
+    [settings, i18nSettings],
     () => {
       saveSettings();
     },
@@ -107,6 +133,8 @@ export const useSettingsStore = defineStore('settings', () => {
     updateSetting,
     loadSettings, // 暴露以便手动重新加载（如果需要）
     initializeDefaultSettings,
+    i18nSettings,
+    setLanguage,
   };
 });
 

@@ -7,6 +7,9 @@ import { useTabStore } from './stores/tabStore' // 导入标签页状态管理
 import { useProjectStore } from './stores/projectStore'; // 导入项目状态管理
 import { useUiStore } from './stores/uiStore'; // 导入 UI Store
 import { useAuthStore } from './stores/authStore'; // + 导入 authStore
+import { useSettingsStore } from './stores/settingsStore'; // + 导入 settingsStore
+import { useLanguagePackManager } from './composables/useLanguagePackManager'; // + 导入 i18n manager
+import { useI18n } from 'vue-i18n'; // + 导入 vue-i18n
 import InitialUsernameSetupModal from './components/auth/InitialUsernameSetupModal.vue'; // + Import modal
 import { storeToRefs } from 'pinia'
 import { initializeWebSocket, closeWebSocket } from './composables/useWebSocket'; // <-- ADDED: Import WebSocket functions
@@ -22,21 +25,35 @@ const tabStore = useTabStore()
 const uiStore = useUiStore(); // 初始化 UI Store
 const projectStore = useProjectStore();
 const authStore = useAuthStore(); // + 初始化 authStore
+const settingsStore = useSettingsStore(); // + 初始化 settingsStore
+const languageManager = useLanguagePackManager(); // + 初始化 i18n manager
+const { locale, setLocaleMessage } = useI18n({ useScope: 'global' }); // + 获取全局 i18n 实例的方法
 
 const { currentAppliedMode } = storeToRefs(themeStore); // 从 isDark 更改为 currentAppliedMode
 const { activeTabId } = storeToRefs(tabStore);
 const { currentProjectId } = storeToRefs(projectStore); // 获取当前项目 ID 的响应式引用
 const { isSettingsModalVisible, settingsModalProps } = storeToRefs(uiStore); // 获取设置模态框的显示状态和属性
 const { userContext, currentUser, isLoadingContext } = storeToRefs(authStore); // + Add currentUser, isLoadingContext
- 
+const { i18nSettings } = storeToRefs(settingsStore); // + 获取 i18n 设置
+
 const showInitialUsernameModal = ref(false); // + Ref for modal visibility
 // const initialSetupDoneKey = 'comfytavern_initial_setup_processed'; // 将在 watchEffect 中动态生成
- 
+
 onMounted(async () => {
   themeStore.initTheme();
   initializeWebSocket(); // <-- ADDED: Initialize WebSocket connection
   await authStore.fetchUserContext(); // + 获取用户上下文
   uiStore.setupMobileViewListener(); // + 设置移动端视图监听器
+
+  // + i18n 初始化
+  const availableLangs = await languageManager.discoverLanguagePacks();
+  if (i18nSettings.value.autoDetect) {
+    const browserLang = navigator.language;
+    const matchedLang = availableLangs.find(l => l.code === browserLang);
+    if (matchedLang) {
+      settingsStore.setLanguage(matchedLang.code);
+    }
+  }
 
   // 应用主题类名到 body 的逻辑已由 themeStore.applyCurrentTheme() 在 <html> 上处理
   // document.body.classList.toggle('light-theme', themeStore.currentAppliedMode === 'light');
@@ -74,6 +91,20 @@ watch(currentAppliedMode, (newModeValue) => {
     console.debug('App.vue: 未找到活动标签页，跳过边样式更新。');
   }
 });
+
+// + 监听语言变化
+watch(() => i18nSettings.value.currentLanguage, async (newLang) => {
+  if (newLang) {
+    try {
+      const messages = await languageManager.loadLanguage(newLang);
+      setLocaleMessage(newLang, messages);
+      locale.value = newLang;
+      console.log(`咕: 语言已切换到 ${newLang}`);
+    } catch (error) {
+      console.error(`咕: 加载语言包 ${newLang} 失败:`, error);
+    }
+  }
+}, { immediate: true });
 
 // 监听当前项目 ID 的变化
 watch(currentProjectId, async (newProjectId, oldProjectId) => {
@@ -152,7 +183,7 @@ const handleModalInteraction = () => {
   showInitialUsernameModal.value = false;
 };
 </script>
- 
+
 <template>
   <div class="h-full w-full basic-flow bg-background-base">
     <RouterView />
@@ -162,23 +193,14 @@ const handleModalInteraction = () => {
     <TooltipRenderer />
 
     <!-- 全局设置模态框 -->
-    <BaseModal
-      :visible="isSettingsModalVisible"
-      title="设置"
-      :width="settingsModalProps.width"
-      :height="settingsModalProps.height"
-      @update:visible="!$event && uiStore.closeSettingsModal()"
-    >
+    <BaseModal :visible="isSettingsModalVisible" title="设置" :width="settingsModalProps.width"
+      :height="settingsModalProps.height" @update:visible="!$event && uiStore.closeSettingsModal()">
       <SettingsLayout />
     </BaseModal>
 
     <!-- + Initial Username Setup Modal -->
-    <InitialUsernameSetupModal
-      :visible="showInitialUsernameModal"
-      :initial-username="currentUser?.username"
-      @close="handleModalInteraction"
-      @saved="handleModalInteraction"
-    />
+    <InitialUsernameSetupModal :visible="showInitialUsernameModal" :initial-username="currentUser?.username"
+      @close="handleModalInteraction" @saved="handleModalInteraction" />
   </div>
 </template>
 
@@ -190,8 +212,10 @@ body {
   padding: 0;
   height: 100%;
   overflow: hidden;
-  /* background-color: aquamarine; */ /* 由 CSS 变量控制 */
-  background-color: var(--ct-background-base); /* 使用主题变量 */
+  /* background-color: aquamarine; */
+  /* 由 CSS 变量控制 */
+  background-color: var(--ct-background-base);
+  /* 使用主题变量 */
 }
 
 #app {
@@ -200,7 +224,7 @@ body {
 }
 
 /* @media (prefers-color-scheme: dark) { */
-  /* 暗色模式的 body 背景也由 html.dark 和 --ct-background-base 控制 */
+/* 暗色模式的 body 背景也由 html.dark 和 --ct-background-base 控制 */
 /*
   html,
   body {

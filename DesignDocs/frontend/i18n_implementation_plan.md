@@ -61,15 +61,17 @@
     *   创建 `apps/frontend-vueflow/src/composables/useLanguagePackManager.ts` (或 `apps/frontend-vueflow/src/services/i18nService.ts`)。
     *   **定义接口**: 参考文档中的 `LanguagePackManager` 和 `AvailableLanguage` 接口 (`DesignDocs/architecture/i18n.md:312`)。
     *   **`discoverLanguagePacks()`**:
-        *   **内置语言**: 直接从 `src/locales` 读取。
+        *   **内置语言**: 直接从 `src/locales` 导入的 JSON 对象中读取元数据。每个内置语言文件（如 `zh-CN.json`）都包含一个 `_meta` 字段，用于自我注册。
         *   **外部语言包 (全局和用户级)**:
-            *   **关键问题**: 前端无法直接访问文件系统路径如 `ComfyTavern/userData/...`。
-            *   **解决方案**: 需要后端提供 API 接口 (例如 `/api/language-packs`) 来列出可用的外部语言包及其 `manifest.json` 内容和翻译文件。前端通过此 API 获取信息。
-            *   此方法应调用该 API，并结合内置语言信息，构建 `AvailableLanguage[]` 列表。
+            *   **解决方案**: 使用现有的文件管理 API (通过 `fileManagerApi.ts` 调用) 来发现和加载自包含的外部语言包。
+            *   首先，调用 `fileManagerApi.listDir()` 遍历 `user://library/locales/ui/@ComfyTavern-ui/` 和 `shared://library/locales/ui/@ComfyTavern-ui/` 目录。
+            *   然后，对发现的每个 `.json` 文件，调用 `fileManagerApi.readFile()` 读取其内容。
+            *   从文件内容中解析 `_meta` 字段（包含 `name` 和 `nativeName`），以获取语言包的元信息。
+            *   此方法将结合内置语言和动态发现的外部语言信息，构建 `AvailableLanguage[]` 列表。
     *   **`loadLanguage(languageCode: string)`**:
-        *   根据 `languageCode` 加载翻译消息。
-        *   **内置**: 直接从 `src/locales` 获取。
-        *   **外部**: 通过后端 API (例如 `/api/language-packs/{pack_identifier}/{lang_code}.json`) 获取指定语言的 JSON 内容。
+        *   根据 `languageCode` 加载并合并翻译消息。
+        *   **内置**: 直接从 `src/locales` 导入的 JSON 对象中获取，加载时会移除 `_meta` 字段。
+        *   **外部**: 使用 `fileManagerApi.readFile()` 并传入逻辑路径 (例如 `user://library/locales/ui/@ComfyTavern-ui/en-US.json`) 来获取指定语言的 JSON 内容，加载时同样会移除 `_meta` 字段。
         *   **合并逻辑**: 实现用户级 > 全局级 > 内置的翻译消息深合并。
     *   **`getSupportedLanguages()`**: 返回 `discoverLanguagePacks()` 的结果或其缓存。
     *   **缓存**: 对发现的语言包信息和加载的语言文件内容进行缓存。
@@ -202,7 +204,7 @@ graph TD
         TargetLang --> LPM_Discover[LanguagePackManager: discoverLanguagePacks()];
         LPM_Discover -- 可用语言列表 --> SettingsUI_Populate[填充设置界面语言选项];
         TargetLang --> LPM_Load[LanguagePackManager: loadLanguage(targetLang)];
-        LPM_Load -- API: /api/language-packs --> Backend_LangPacks[后端: 提供外部语言包];
+        LPM_Load -- fileManagerApi --> Backend_FAM[后端: 文件资产管理服务];
         LPM_Load -- 合并翻译 (用户>全局>内置) --> MergedMessages;
         MergedMessages --> VueI18n_Init[初始化/更新 vue-i18n 实例];
         VueI18n_Init --> RenderUI[渲染UI (使用翻译)];
