@@ -119,10 +119,10 @@ export const useThemeStore = defineStore('theme', () => {
 
         // 1. 加载系统预设主题 (通过 import.meta.glob)
         try {
-          // 使用 import.meta.glob 导入 public/themes 目录下的所有 .json 文件
+          // 使用 import.meta.glob 导入 src/assets/themes 目录下的所有 .json 文件
           // eager: true 会同步加载模块，返回的是模块本身而不是加载函数
           // 对于 JSON 文件，模块的 default 导出就是解析后的对象
-          const themeModules = import.meta.glob('/public/themes/*.json', { eager: true }) as Record<string, { default: ThemePreset }>;
+          const themeModules = import.meta.glob('@/assets/themes/*.json', { eager: true }) as Record<string, { default: ThemePreset }>;
     
           for (const path in themeModules) {
             // 确保 themeModules[path] 存在并且有 default 属性
@@ -141,12 +141,12 @@ export const useThemeStore = defineStore('theme', () => {
           }
     
           if (loadedSystemThemes.length === 0) {
-            console.warn('[ThemeStore] No system themes were loaded via import.meta.glob. Check /public/themes/ directory for .json files and the glob pattern.');
+            console.warn('[ThemeStore] No system themes were loaded via import.meta.glob. Check src/assets/themes/ directory for .json files and the glob pattern.');
           }
         } catch (error) {
           // 这个 catch 块主要用于捕获 import.meta.glob (eager: true) 在加载或解析模块时可能发生的同步错误，
           // 或者遍历 themeModules 过程中的其他意外错误。
-          console.error('[ThemeStore] Failed to load or parse system themes from public/themes using import.meta.glob (eager):', error);
+          console.error('[ThemeStore] Failed to load or parse system themes from src/assets/themes using import.meta.glob (eager):', error);
         }
     // 2. 加载用户自定义主题 (逻辑保持不变)
     if (authStore.isAuthenticated && authStore.currentUser) { // 移除了 .id 检查，因为 fileManagerApi 调用不直接使用 userId
