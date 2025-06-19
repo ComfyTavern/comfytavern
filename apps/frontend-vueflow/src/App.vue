@@ -34,7 +34,7 @@ const { activeTabId } = storeToRefs(tabStore);
 const { currentProjectId } = storeToRefs(projectStore); // 获取当前项目 ID 的响应式引用
 const { isSettingsModalVisible, settingsModalProps } = storeToRefs(uiStore); // 获取设置模态框的显示状态和属性
 const { userContext, currentUser, isLoadingContext } = storeToRefs(authStore); // + Add currentUser, isLoadingContext
-const { i18nSettings } = storeToRefs(settingsStore); // + 获取 i18n 设置
+const { i18nSettings, settings } = storeToRefs(settingsStore); // + 获取 i18n 设置
 
 const showInitialUsernameModal = ref(false); // + Ref for modal visibility
 // const initialSetupDoneKey = 'comfytavern_initial_setup_processed'; // 将在 watchEffect 中动态生成
@@ -105,6 +105,19 @@ watch(() => i18nSettings.value.currentLanguage, async (newLang) => {
     }
   }
 }, { immediate: true });
+
+// 监听字体大小设置
+watch(
+  () => settings.value['display.fontSize'],
+  (newSize) => {
+    const size = newSize || 'medium'; // 如果未定义，则默认为 'medium'
+    const root = document.documentElement;
+    root.classList.remove('font-size-x-small', 'font-size-small', 'font-size-medium', 'font-size-large', 'font-size-x-large');
+    root.classList.add(`font-size-${size}`);
+    console.log(`咕: 字体大小已设置为 ${size}`);
+  },
+  { immediate: true }
+);
 
 // 监听当前项目 ID 的变化
 watch(currentProjectId, async (newProjectId, oldProjectId) => {

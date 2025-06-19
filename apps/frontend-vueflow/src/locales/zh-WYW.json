@@ -101,8 +101,8 @@
       "theme_displayMode_desc": "择此境之形貌：昭昭、昏昏，或随天时。",
       "theme_preset_label": "仪轨预置",
       "theme_preset_desc": "择一预设之仪轨样式。",
-      "display_fontSize_label": "根基墨迹大小 (px)",
-      "display_fontSize_desc": "调此境根基墨迹之大小。",
+      "display_fontSize_label": "界面墨迹大小",
+      "display_fontSize_desc": "调整个应用界面相对墨迹之大小。",
       "display_showMinimap_label": "显天工坊缩略图",
       "display_showMinimap_desc": "于机括坊右侧显缩略舆图。",
       "display_showConnectionStatus_label": "显通幽之径",
@@ -113,7 +113,12 @@
       "mcp_defaultTimeout_desc": "与通灵玉符交通之默认守候期。",
       "light_mode": "昭昭",
       "dark_mode": "昏昏",
-      "system_mode": "随天时"
+      "system_mode": "随天时",
+      "fontSize_x_small": "愈小",
+      "fontSize_small": "小",
+      "fontSize_medium": "中",
+      "fontSize_large": "大",
+      "fontSize_x_large": "愈大"
     },
     "advanced": {
       "title": "玄奥枢机"

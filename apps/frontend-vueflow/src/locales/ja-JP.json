@@ -101,8 +101,8 @@
       "theme_displayMode_desc": "インターフェースの表示モードを選択します：ライト、ダーク、またはOS設定に従う。",
       "theme_preset_label": "テーマプリセット",
       "theme_preset_desc": "プリセットのテーマスタイルを選択します。",
-      "display_fontSize_label": "基本フォントサイズ (px)",
-      "display_fontSize_desc": "アプリケーションインターフェースの基本フォントサイズを調整します。",
+      "display_fontSize_label": "インターフェースフォントサイズ",
+      "display_fontSize_desc": "アプリケーション全体の相対的なフォントサイズを調整します。",
       "display_showMinimap_label": "エディターミニマップを表示",
       "display_showMinimap_desc": "ノードエディターの右側にコードミニマップを表示します。",
       "display_showConnectionStatus_label": "バックエンド接続ステータスを表示",
@@ -113,7 +113,12 @@
       "mcp_defaultTimeout_desc": "MCPサーバーとの通信のデフォルトタイムアウト。",
       "light_mode": "ライト",
       "dark_mode": "ダーク",
-      "system_mode": "システム"
+      "system_mode": "システム",
+      "fontSize_x_small": "極小",
+      "fontSize_small": "小",
+      "fontSize_medium": "中",
+      "fontSize_large": "大",
+      "fontSize_x_large": "極大"
     },
     "advanced": {
       "title": "詳細設定"

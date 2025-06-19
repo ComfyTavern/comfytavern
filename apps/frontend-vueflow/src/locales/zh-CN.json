@@ -101,8 +101,8 @@
       "theme_displayMode_desc": "选择界面的显示模式：浅色、深色或跟随操作系统设置。",
       "theme_preset_label": "主题预设",
       "theme_preset_desc": "选择一个预设的主题样式。",
-      "display_fontSize_label": "基础字体大小 (px)",
-      "display_fontSize_desc": "调整应用界面的基础字体大小。",
+      "display_fontSize_label": "界面字体大小",
+      "display_fontSize_desc": "调整整个应用界面的相对字体大小。",
       "display_showMinimap_label": "显示编辑器小地图",
       "display_showMinimap_desc": "在节点编辑器右侧显示代码小地图。",
       "display_showConnectionStatus_label": "显示后端连接状态",
@@ -113,7 +113,12 @@
       "mcp_defaultTimeout_desc": "与MCP服务器通信的默认超时时间。",
       "light_mode": "浅色",
       "dark_mode": "深色",
-      "system_mode": "系统"
+      "system_mode": "系统",
+      "fontSize_x_small": "更小",
+      "fontSize_small": "小",
+      "fontSize_medium": "中",
+      "fontSize_large": "大",
+      "fontSize_x_large": "更大"
     },
     "advanced": {
       "title": "高级设置"

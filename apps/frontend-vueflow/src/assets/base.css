@@ -3,6 +3,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Font size settings */
+html {
+  /* Default font size, corresponds to 'medium' */
+  font-size: 15px;
+}
+
+html.font-size-x-small {
+  font-size: 13px;
+}
+
+html.font-size-small {
+  font-size: 14px;
+}
+
+html.font-size-medium {
+  font-size: 15px;
+}
+
+html.font-size-large {
+  font-size: 16px;
+}
+
+html.font-size-x-large {
+  font-size: 17px;
+}
+
 /* color palette from <https://github.com/vuejs/theme> */
 :root {
   --vt-c-white: #ffffff;
@@ -142,7 +168,7 @@ body {
     'Droid Sans',
     'Helvetica Neue',
     sans-serif;
-  font-size: 15px;
+  font-size: 1rem;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

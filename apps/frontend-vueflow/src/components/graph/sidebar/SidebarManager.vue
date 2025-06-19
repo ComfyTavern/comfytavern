@@ -191,7 +191,7 @@ defineExpose({
 }
 
 .sidebar-icon-bar {
-  @apply flex flex-col w-14 border-r border-border-base bg-background-surface items-center py-1 transition-all duration-300 ease-in-out;
+  @apply flex flex-col w-16 border-r border-border-base bg-background-surface items-center py-1 transition-all duration-300 ease-in-out;
   /* py-2 -> py-1 */
   /* 添加过渡 */
 }

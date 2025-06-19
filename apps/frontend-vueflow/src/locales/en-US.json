@@ -101,8 +101,8 @@
       "theme_displayMode_desc": "Select the interface display mode: Light, Dark, or follow OS setting.",
       "theme_preset_label": "Theme Preset",
       "theme_preset_desc": "Choose a preset theme style.",
-      "display_fontSize_label": "Base Font Size (px)",
-      "display_fontSize_desc": "Adjust the base font size for the application interface.",
+      "display_fontSize_label": "Interface Font Size",
+      "display_fontSize_desc": "Adjust the relative font size for the entire application.",
       "display_showMinimap_label": "Show Editor Minimap",
       "display_showMinimap_desc": "Display the code minimap on the right side of the node editor.",
       "display_showConnectionStatus_label": "Show Backend Connection Status",
@@ -113,7 +113,12 @@
       "mcp_defaultTimeout_desc": "Default timeout for communication with MCP servers.",
       "light_mode": "Light",
       "dark_mode": "Dark",
-      "system_mode": "System"
+      "system_mode": "System",
+      "fontSize_x_small": "X-Small",
+      "fontSize_small": "Small",
+      "fontSize_medium": "Medium",
+      "fontSize_large": "Large",
+      "fontSize_x_large": "X-Large"
     },
     "advanced": {
       "title": "Advanced Settings"

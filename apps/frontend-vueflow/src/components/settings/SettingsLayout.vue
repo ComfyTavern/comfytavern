@@ -193,13 +193,27 @@ const displaySettingsConfig = computed<SettingItemConfig[]>(() => [
   },
   {
     key: "display.fontSize",
-    type: "number",
+    type: "button-group",
     label: t("settings.items.display_fontSize_label"),
-    defaultValue: 14,
-    min: 12,
-    max: 20,
     categoryKey: "appearance",
     category: t("settings.categories.appearance"),
+    get defaultValue() {
+      return settingsStore.getSetting("display.fontSize", "medium");
+    },
+    options: [
+      { label: t("settings.items.fontSize_x_small"), value: "x-small" },
+      { label: t("settings.items.fontSize_small"), value: "small" },
+      { label: t("settings.items.fontSize_medium"), value: "medium" },
+      { label: t("settings.items.fontSize_large"), value: "large" },
+      { label: t("settings.items.fontSize_x_large"), value: "x-large" },
+    ],
+    async onSave(_key, newValue) {
+      if (["x-small", "small", "medium", "large", "x-large"].includes(newValue as string)) {
+        settingsStore.updateSetting("display.fontSize", newValue);
+        return { success: true };
+      }
+      return { success: false, message: "无效的字体大小" };
+    },
     description: t("settings.items.display_fontSize_desc"),
   },
   {
@@ -363,7 +377,7 @@ watch(
 }
 
 .settings-nav li {
-  padding: 10px 20px;
+  padding: 6px 12px;
   /* 调整内边距以适应胶囊形状 */
   cursor: pointer;
   font-size: 0.9rem;
@@ -379,7 +393,12 @@ watch(
   transition: all 0.2s ease;
   border: 1px solid transparent;
   /* 添加一个透明边框，防止激活时跳动 */
-  /* 移除 border-bottom 和 margin-bottom */
+}
+
+.settings-nav li span {
+  font-size: 1.2rem;
+  font-weight: 600;
+  /* 标签文本加粗 */
 }
 
 .settings-nav li:hover {
