@@ -280,7 +280,7 @@ export const useFileManagerStore = defineStore('fileManager', {
 
     async renameItem(itemToRename: FAMItem, newName?: string) {
       const dialogService = useDialogService();
-      const itemTypeLabel = i18n.global.t(itemToRename.itemType === 'directory' ? 'fileManager.store.itemTypes.directory' : 'fileManager.store.itemTypes.file');
+      const itemTypeLabel = i18n.global.t(itemToRename.itemType === 'directory' ? 'common.folder' : 'common.file');
       const finalNewName = newName || await dialogService.showInput({
         title: i18n.global.t('fileManager.store.rename.title', { itemType: itemTypeLabel }),
         initialValue: itemToRename.name,

@@ -43,7 +43,7 @@
               </div>
             </th>
             <th scope="col" class="relative px-3 py-2.5 w-12">
-                          <span class="sr-only">{{ t('fileManager.browser.actions') }}</span>
+                          <span class="sr-only">{{ t('common.actions') }}</span>
                         </th>
           </tr>
         </thead>
@@ -131,10 +131,10 @@ const contextMenuRef = ref<HTMLElement | null>(null); // Typed for FileContextMe
 const visibleColumnsList = computed(() => {
   // 基于 viewSettings.visibleColumns 和预定义列信息生成
   const allCols: Record<string, { label: string, widthClass?: string }> = {
-    name: { label: t('fileManager.browser.colName'), widthClass: 'w-2/5' },
+    name: { label: t('common.name'), widthClass: 'w-2/5' },
     size: { label: t('fileManager.browser.colSize'), widthClass: 'w-1/5' },
     lastModified: { label: t('fileManager.browser.colDate'), widthClass: 'w-1/5' },
-    itemType: { label: t('fileManager.browser.colType'), widthClass: 'w-1/5' },
+    itemType: { label: t('common.type'), widthClass: 'w-1/5' },
     // 可以添加更多列定义
   };
   return (viewSettings.value.visibleColumns || ['name', 'size', 'lastModified', 'itemType']).map(key => ({

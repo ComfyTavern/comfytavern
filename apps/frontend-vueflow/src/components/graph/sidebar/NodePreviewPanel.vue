@@ -22,7 +22,7 @@
       </div>
 
       <div v-if="selectedNode.inputs && Object.keys(selectedNode.inputs).length > 0" class="details-section">
-        <div class="details-section-title">输入参数</div>
+        <div class="details-section-title">{{ t('nodePreviewPanel.inputsTitle') }}</div>
         <div v-for="(input, key) in selectedNode.inputs" :key="`input-${key}`" class="details-param">
           <div class="param-header">
             <div class="param-name">{{ input.displayName || key }}</div>
@@ -40,7 +40,7 @@
       </div>
 
       <div v-if="selectedNode.outputs && Object.keys(selectedNode.outputs).length > 0" class="details-section">
-        <div class="details-section-title">输出参数</div>
+        <div class="details-section-title">{{ t('nodePreviewPanel.outputsTitle') }}</div>
         <div v-for="(output, key) in selectedNode.outputs" :key="`output-${key}`" class="details-param">
           <div class="param-header">
             <div class="param-name">{{ output.displayName || key }}</div>
@@ -60,7 +60,7 @@
       <!-- 节点配置项预览区域 -->
       <div v-if="selectedNode.configSchema && Object.keys(selectedNode.configSchema).length > 0"
         class="details-section">
-        <div class="details-section-title">配置项</div>
+        <div class="details-section-title">{{ t('nodePreviewPanel.configTitle') }}</div>
         <div v-for="configKey in Object.keys(selectedNode.configSchema)" :key="`config-${configKey}`">
           <div v-if="selectedNode.configSchema && selectedNode.configSchema[configKey]" class="details-param">
             <div class="param-header">
@@ -82,15 +82,15 @@
             <div
               v-if="selectedNode.configSchema[configKey]!.config?.acceptedTypes && selectedNode.configSchema[configKey]!.config!.acceptedTypes!.length > 0"
               class="param-value-preview mt-1">
-              <span class="text-xs text-text-muted mr-1">接受类型:</span>
+              <span class="text-xs text-text-muted mr-1">{{ t('nodePreviewPanel.acceptedTypesLabel') }}</span>
               <span v-for="accType in selectedNode.configSchema[configKey]!.config!.acceptedTypes" :key="accType.value"
-                class="category-tag !bg-success/20 !text-success mr-1"> 
+                class="category-tag !bg-success/20 !text-success mr-1">
                 {{ accType.label || accType.value }}
               </span>
             </div>
             <div v-else-if="selectedNode.configSchema[configKey]!.config?.placeholder" class="param-value-preview mt-1">
-              <span class="text-xs text-text-muted">占位提示: </span>
-              <span class="text-xs italic p-1 text-text-muted"> 
+              <span class="text-xs text-text-muted">{{ t('nodePreviewPanel.placeholderLabel') }}</span>
+              <span class="text-xs italic p-1 text-text-muted">
                 {{ selectedNode.configSchema[configKey]!.config?.placeholder }}
               </span>
             </div>
@@ -99,14 +99,14 @@
       </div>
 
       <div v-if="selectedNode.type === 'core:NodeGroup'" class="details-section">
-        <div class="details-section-title">内部组件</div>
+        <div class="details-section-title">{{ t('nodePreviewPanel.internalComponentsTitle') }}</div>
         <div class="details-param">
           <div class="param-header">
-            <div class="param-name">工作流选择器</div>
+            <div class="param-name">{{ t('nodePreviewPanel.workflowSelectorLabel') }}</div>
             <!-- 可以添加一个虚拟类型 -->
             <!-- <div class="param-type">Component</div> -->
           </div>
-          <div class="param-description">选择要在此节点组中实例化的工作流。</div>
+          <div class="param-description">{{ t('nodePreviewPanel.workflowSelectorDescription') }}</div>
         </div>
       </div>
     </OverlayScrollbarsComponent>
@@ -115,6 +115,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useI18n } from "vue-i18n";
 import type { FrontendNodeDefinition } from "../../../stores/nodeStore"; // 确保路径正确
 // import type { InputDefinition } from "@comfytavern/types"; // InputDefinition 未在此处直接使用，移除以避免警告
 import { useThemeStore } from "../../../stores/theme"; // 确保路径正确
@@ -132,6 +133,7 @@ const emit = defineEmits<{
   (e: "close"): void;
 }>();
 
+const { t } = useI18n();
 const themeStore = useThemeStore();
 const isDark = computed(() => themeStore.currentAppliedMode === 'dark');
 

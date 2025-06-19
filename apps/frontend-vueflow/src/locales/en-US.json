@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "name": "英语 (US)",
+    "name": "English (US)",
     "nativeName": "English (US)"
   },
   "common": {
@@ -13,7 +13,18 @@
     "loading": "Loading...",
     "error": "Error",
     "success": "Success",
-    "warning": "Warning"
+    "warning": "Warning",
+    "refresh": "Refresh",
+    "searchEllipsis": "Search...",
+    "name": "Name",
+    "type": "Type",
+    "yes": "Yes",
+    "no": "No",
+    "retry": "Retry",
+    "file": "File",
+    "folder": "Folder",
+    "actions": "Actions",
+    "description": "Description"
   },
   "nav": {
     "home": "Home",
@@ -21,7 +32,7 @@
     "settings": "Settings",
     "about": "About",
     "projects": "Projects",
-    "characters": "Characters",
+    "characters": "Character Cards",
     "files": "File Manager"
   },
   "editor": {
@@ -35,6 +46,28 @@
       "deleteNode": "Delete Node",
       "copyNode": "Copy Node"
     }
+  },
+  "home": {
+    "welcome": "Welcome to ComfyTavern",
+    "subtitle": "Manage your workflow projects and character cards, unleash your creativity.",
+    "recentProjects": "Recent Projects",
+    "loadingProjects": "Loading projects...",
+    "loadProjectsFailed": "Failed to load projects: {error}",
+    "noProjects": "No projects yet.",
+    "createNewProject": "Create a new project",
+    "lastModified": "Last modified",
+    "noDescription": "No description available",
+    "viewAllProjects": "View all projects",
+    "characterCardOverview": "Character Card Overview",
+    "exploreSidebar": "Explore the sidebar to start your creative journey.",
+    "invalidDate": "Invalid Date"
+  },
+  "editorView": {
+    "loadingNodes": "Loading node data...",
+    "loadingDefinitions": "Loading node definitions...",
+    "searchNodes": "Search nodes...",
+    "noNodesFound": "No nodes found",
+    "unclassified": "Unclassified"
   },
   "settings": {
     "general": {
@@ -109,7 +142,39 @@
     "themeLight": "Light Mode",
     "toggleSidebar": "Collapse/Expand Sidebar",
     "expand": "Expand",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "groupIOEdit": {
+      "title": "Workflow Interface",
+      "inputsTitle": "Inputs",
+      "sortInputsTooltip": "Sort inputs by name",
+      "noInputs": "No input interfaces",
+      "addInput": "Add Input",
+      "outputsTitle": "Outputs",
+      "sortOutputsTooltip": "Sort outputs by name",
+      "noOutputs": "No output interfaces",
+      "addOutput": "Add Output",
+      "editPropertiesTitle": "Edit Interface Properties",
+      "selectInterfaceToEdit": "Please select an interface from the list above to edit.",
+      "interfaceKeyTooltip": "Interface Key (Unique Identifier)",
+      "moveUpTooltip": "Move Up",
+      "moveDownTooltip": "Move Down",
+      "deleteThisInput": "Delete this input",
+      "nameLabel": "Name:",
+      "displayNamePlaceholder": "Display Name",
+      "typeLabel": "Type:",
+      "descriptionLabel": "Description:",
+      "descriptionPlaceholder": "Interface description information",
+      "defaultValueLabel": "Default Value:",
+      "defaultValueNumberPlaceholder": "Default number value",
+      "defaultValueStringPlaceholder": "Default string value (supports multiple lines)",
+      "defaultValueNotSupported": "Default value not supported for this type",
+      "minValueLabel": "Min Value:",
+      "minValuePlaceholder": "Min value (optional)",
+      "maxValueLabel": "Max Value:",
+      "maxValuePlaceholder": "Max value (optional)",
+      "deleteThisOutput": "Delete this output",
+      "noActiveWorkflow": "No active workflow or workflow data is unavailable."
+    }
   },
   "projects": {
     "title": "My Projects",
@@ -149,9 +214,7 @@
       "upload": "Upload",
       "uploadFile": "Upload File",
       "newFolder": "New Folder",
-      "refresh": "Refresh",
       "paste": "Paste",
-      "searchPlaceholder": "Search...",
       "switchToGridView": "Switch to Grid View",
       "switchToListView": "Switch to List View",
       "sortBy": "Sort by",
@@ -185,11 +248,8 @@
     "browser": {
       "emptyFolder": "This folder is empty, or no items match the filter criteria.",
       "clearFilters": "Clear Filters",
-      "colName": "Name",
       "colSize": "Size",
       "colDate": "Date Modified",
-      "colType": "Type",
-      "actions": "Actions",
       "contextMenu": {
         "open": "Open",
         "download": "Download",
@@ -199,7 +259,6 @@
         "addToFavorites": "Add to Favorites",
         "removeFromFavorites": "Remove from Favorites",
         "delete": "Delete",
-        "refresh": "Refresh",
         "newFolder": "New Folder",
         "paste": "Paste",
         "noActions": "No actions available"
@@ -227,8 +286,6 @@
       "typeArchive": "Archive File",
       "typeFile": "{ext} File",
       "typeGenericFile": "File",
-      "yes": "Yes",
-      "no": "No",
       "favorited": "Favorited",
       "notFavorited": "Not Favorited",
       "previewFailed": "Preview Failed:",
@@ -236,226 +293,453 @@
       "previewUnsupported": "Preview is not supported for this file type, or content is empty.",
       "previewTooLarge": "... (File is too large, showing partial content)",
       "serverError": "Server error: {error}"
-          },
-          "sidebarNav": {
-            "title": "Navigation",
-            "expand": "Expand Navigation",
-            "collapse": "Collapse Navigation",
-            "locations": "Locations",
-            "recentAccess": "Recent Access",
-            "clearRecent": "Clear Recent Access",
-            "favorites": "Favorites",
-            "noFavorites": "No favorites yet",
-            "unfavorite": "Remove from favorites"
-                },
-                "store": {
-                  "myFiles": "My Files",
-                  "sharedSpace": "Shared Space",
-                  "itemTypes": {
-                    "file": "File",
-                    "directory": "Folder"
-                  },
-                  "errors": {
-                    "loadFailed": "Failed to load file list: {error}",
-                    "unknown": "Unknown error"
-                  },
-                  "createDirectory": {
-                    "title": "New Folder",
-                    "placeholder": "Enter folder name",
-                    "success": "Folder \"{dirName}\" created successfully",
-                    "error": "Failed to create folder: {error}"
-                  },
-                  "rename": {
-                    "title": "Rename {itemType}",
-                    "placeholder": "Enter new name",
-                    "success": "Renamed to \"{newName}\"",
-                    "error": "Rename failed: {error}"
-                  },
-                  "delete": {
-                    "title": "Confirm Deletion",
-                    "message": "Are you sure you want to delete the {count} selected item(s)? This action may not be reversible.",
-                    "confirmText": "Delete",
-                    "success": "{count} item(s) deleted",
-                    "error": "Delete failed: {error}"
-                  },
-                  "move": {
-                    "success": "{count} item(s) moved",
-                    "error": "Move failed: {error}"
-                  },
-                  "download": {
-                    "noFolderSupport": "Downloading folders is not supported yet.",
-                    "error": "Failed to get download link: {error}"
-                  },
-                  "clipboard": {
-                    "copied": "{count} item(s) copied to clipboard",
-                    "cut": "{count} item(s) cut to clipboard"
-                  },
-                  "paste": {
-                    "errorMoveIntoSelf": "Cannot move a folder into itself or one of its subfolders.",
-                    "alreadyAtTarget": "The item is already at the target location.",
-                    "copyNotImplemented": "Copy functionality is not yet implemented.",
-                    "moveSuccess": "{count} item(s) moved",
-                    "error": "Paste failed: {error}"
-                  },
-                  "favorites": {
-                    "added": "Added to favorites",
-                    "removed": "Removed from favorites"
-                  },
-                  "upload": {
-                    "noValidFiles": "No valid files were selected for upload.",
-                    "success": "{count} file(s) uploaded successfully",
-                    "error": "Upload failed: {error}"
-                  }
-                },
-                "home": {
-                  "welcome": "Welcome to ComfyTavern",
-      "subtitle": "Manage your workflow projects and character cards, unleash your creativity.",
-      "recentProjects": "Recent Projects",
-      "loadingProjects": "Loading projects...",
-      "loadProjectsFailed": "Failed to load projects: {error}",
-      "noProjects": "No projects yet.",
-      "createNewProject": "Create a new project",
-      "lastModified": "Last modified",
-      "noDescription": "No description",
-      "viewAllProjects": "View all projects",
-      "characterCardOverview": "Character Card Overview",
-      "exploreSidebar": "Explore the sidebar to start your creative journey.",
-      "invalidDate": "Invalid Date"
     },
-    "editorView": {
-      "loadingNodes": "Loading node data...",
-      "loadingDefinitions": "Loading node definitions...",
-      "searchNodes": "Search nodes...",
-      "noNodesFound": "No nodes found",
-      "unclassified": "Unclassified"
+    "sidebarNav": {
+      "title": "Navigation",
+      "expand": "Expand Navigation",
+      "collapse": "Collapse Navigation",
+      "locations": "Locations",
+      "recentAccess": "Recent Access",
+      "clearRecent": "Clear Recent Access",
+      "favorites": "Favorites",
+      "noFavorites": "No favorites yet",
+      "unfavorite": "Remove from favorites"
     },
-    "testPanel": {
-      "title": "Popup and UI Component Test Panel",
-      "dialogService": {
-        "title": "DialogService (Modal Dialogs & Toasts)",
-        "dialogs": "Modal Dialogs",
-        "toasts": "Toasts",
-        "results": "DialogService Operation Result:",
-        "buttons": {
-          "showMessage": "Show Message Dialog",
-          "showConfirm": "Show Confirm Dialog",
-          "showDangerConfirm": "Show Danger Confirm Dialog",
-          "showAutoClose": "Show Auto-close Dialog",
-          "showInput": "Show Input Dialog",
-          "showTextarea": "Show Textarea Dialog",
-          "showLargeMessage": "Show Large Text Message Dialog",
-          "showInfoToast": "Show Info Toast",
-          "showSuccessToast": "Show Success Toast",
-          "showWarningToast": "Show Warning Toast",
-          "showErrorToast": "Show Error Toast",
-          "showCustomToast": "Show Custom Toast",
-          "showMultipleToasts": "Show Multiple Toasts",
-          "showLargeToast": "Show Large Text Toast"
-        },
-        "resultsContent": {
-          "waiting": "Waiting for action...",
-          "waitingFor": "Waiting for {actionName} response...",
-          "cancelled": "{actionName}: User cancelled or closed the dialog.",
-          "exception": "{actionName}: An exception occurred: {error}",
-          "messageSuccess": "Message Dialog: User clicked OK.",
-          "messageCancelled": "Message Dialog: User closed the dialog or an exception occurred.",
-          "confirmSuccess": "Confirm Dialog: User chose -> {choice}",
-          "confirmCancelled": "Confirm Dialog: User cancelled the operation.",
-          "dangerConfirmSuccess": "Danger Confirm: User chose -> {choice}",
-          "dangerConfirmCancelled": "Danger Confirm: User cancelled the operation.",
-          "autoCloseSuccess": "Auto-close Dialog: Closed automatically or user clicked OK.",
-          "autoCloseCancelled": "Auto-close Dialog: User closed it before auto-close or an exception occurred.",
-          "inputSuccess": "Input Dialog: User entered \"{input}\"",
-          "inputCancelled": "Input Dialog: User cancelled the input.",
-          "textareaSuccess": "Textarea Dialog: User entered \"{input}\"",
-          "textareaCancelled": "Textarea Dialog: User cancelled the input.",
-          "largeMessageSuccess": "Large Text Message Dialog: User clicked OK.",
-          "largeMessageCancelled": "Large Text Message Dialog: User closed the dialog or an exception occurred.",
-          "infoToastTriggered": "Info toast triggered.",
-          "successToastTriggered": "Success toast triggered.",
-          "warningToastTriggered": "Warning toast triggered.",
-          "errorToastTriggered": "Error toast triggered.",
-          "customToastTriggered": "Custom toast triggered.",
-          "multipleToastsTriggered": "Multiple toasts triggered.",
-          "largeToastTriggered": "Large text toast triggered."
-        },
-        "dialogContent": {
-          "messageTitle": "Message",
-          "messageText": "This is a simple message dialog with only an OK button.",
-          "confirmTitle": "Confirm Action",
-          "confirmText": "Are you sure you want to perform this action?",
-          "dangerConfirmTitle": "Confirm Dangerous Action",
-          "dangerConfirmText": "This action cannot be undone. Are you sure you want to continue?",
-          "dangerConfirmYes": "Yes, delete it",
-          "dangerConfirmNo": "No, keep it",
-          "autoCloseTitle": "Auto-close Example",
-          "autoCloseText": "This dialog will close automatically in 3 seconds.",
-          "inputTitle": "Please Enter Information",
-          "inputText": "Please enter your nickname:",
-          "inputPlaceholder": "e.g., Gugu",
-          "textareaTitle": "Please Enter Feedback",
-          "textareaText": "Please describe the issue or suggestion in detail:",
-          "textareaPlaceholder": "Enter your feedback here...",
-          "largeMessageTitle": "Large Text Message",
-          "largeMessageConfirm": "Acknowledged",
-          "customToastTitle": "Custom Style Toast",
-          "customToastText": "This toast is at the bottom-center and lasts for 5 seconds.",
-          "infoToastTitle": "Info",
-          "infoToastText": "This is an informational toast!",
-          "successToastTitle": "Success",
-          "successToastText": "The operation was completed successfully!",
-          "warningToastTitle": "Warning",
-          "warningToastText": "Please be aware, this is a warning.",
-          "errorToastTitle": "Error",
-          "errorToastText": "Oops, an error occurred!",
-          "multiToast1": "Toast 1",
-          "multiToast2": "Toast 2 (delayed)",
-          "multiToast3": "Toast 3 (delayed)",
-          "largeToastTitle": "Large Text Toast"
-        }
+    "store": {
+      "myFiles": "My Files",
+      "sharedSpace": "Shared Space",
+      "itemTypes": {},
+      "errors": {
+        "loadFailed": "Failed to load file list: {error}",
+        "unknown": "Unknown error"
       },
-      "uiStore": {
-        "title": "UiStore (Global Modals)",
-        "specificModals": "Specific Modals",
-        "results": "UiStore Operation Result:",
-        "buttons": {
-          "openSettings": "Open Settings Modal (Managed by App.vue)",
-          "openRegexEditor": "Open Regex Editor Modal",
-          "openInitialUsernameSetup": "Open Initial Username Setup"
-        },
-        "resultsContent": {
-          "initialUsernameClosed": "Initial username setup modal closed (event).",
-          "initialUsernameSaved": "Initial username saved (event).",
-          "openingSettings": "Attempting to open settings modal...",
-          "openingRegexEditor": "Attempting to open regex editor modal...",
-          "regexEditorSaved": "Regex editor saved, rule count: {count}. Check console for details.",
-          "openingInitialUsernameSetup": "Attempting to open initial username setup modal...",
-          "settingsClosed": "Settings modal has been closed."
-        }
+      "createDirectory": {
+        "title": "New Folder",
+        "placeholder": "Enter folder name",
+        "success": "Folder \"{dirName}\" created successfully",
+        "error": "Failed to create folder: {error}"
       },
-      "settingsControl": {
-        "title": "SettingControl (via SettingsPanel) Test",
-        "results": "Current SettingsStore Values (for validation):",
-        "labels": {
-          "string": "String Input",
-          "textarea": "Textarea Input",
-          "number": "Number Input",
-          "boolean": "Boolean Toggle",
-          "select": "Select Input"
-        },
-        "descriptions": {
-          "string": "For testing single-line text input.",
-          "textarea": "For testing multi-line text input.",
-          "number": "For testing number input with range and step.",
-          "boolean": "For testing toggle switch state.",
-          "select": "For testing dropdown selection."
-        },
-        "selectOptions": {
-          "a": "Option A",
-          "b": "Option B",
-          "c": "Option C",
-          "d": "Option D (intended to be disabled)"
-        }
+      "rename": {
+        "title": "Rename {itemType}",
+        "placeholder": "Enter new name",
+        "success": "Renamed to \"{newName}\"",
+        "error": "Rename failed: {error}"
+      },
+      "delete": {
+        "title": "Confirm Deletion",
+        "message": "Are you sure you want to delete the {count} selected item(s)? This action may not be reversible.",
+        "confirmText": "Delete",
+        "success": "{count} item(s) deleted",
+        "error": "Delete failed: {error}"
+      },
+      "move": {
+        "success": "{count} item(s) moved",
+        "error": "Move failed: {error}"
+      },
+      "download": {
+        "noFolderSupport": "Downloading folders is not supported yet.",
+        "error": "Failed to get download link: {error}"
+      },
+      "clipboard": {
+        "copied": "{count} item(s) copied to clipboard",
+        "cut": "{count} item(s) cut to clipboard"
+      },
+      "paste": {
+        "errorMoveIntoSelf": "Cannot move a folder into itself or one of its subfolders.",
+        "alreadyAtTarget": "The item is already at the target location.",
+        "copyNotImplemented": "Copy functionality is not yet implemented.",
+        "moveSuccess": "{count} item(s) moved",
+        "error": "Paste failed: {error}"
+      },
+      "favorites": {
+        "added": "Added to favorites",
+        "removed": "Removed from favorites"
+      },
+      "upload": {
+        "noValidFiles": "No valid files were selected for upload.",
+        "success": "{count} file(s) uploaded successfully",
+        "error": "Upload failed: {error}"
+      }
+    }
+  },
+  "statusBar": {
+    "workflow": "Workflow",
+    "execute": "Execute",
+    "defaultProjectName": "ComfyTavern",
+    "tooltip": {
+      "hideEditorPanel": "Hide editor panel",
+      "showEditorPanel": "Show editor panel",
+      "disableLivePreview": "Disable live preview",
+      "enableLivePreview": "Enable live preview"
+    },
+    "status": {
+      "idle": "Idle",
+      "queued": "Queued",
+      "running": "Running...",
+      "complete": "Complete",
+      "error": "Error",
+      "skipped": "Skipped"
+    }
+  },
+  "history": {
+    "groupIO": {
+      "inputNameChanged": "Changed input {inputName} name: '{oldName}' -> '{newName}'",
+      "inputTypeChanged": "Changed input {inputName} type: '{oldType}' -> '{newType}'",
+      "inputDescriptionChanged": "Changed input {inputName} description",
+      "inputDefaultValueChanged": "Changed input {inputName} default value",
+      "inputMinValueChanged": "Changed input {inputName} min value",
+      "inputMaxValueChanged": "Changed input {inputName} max value",
+      "outputNameChanged": "Changed output {outputName} name: '{oldName}' -> '{newName}'",
+      "outputTypeChanged": "Changed output {outputName} type: '{oldType}' -> '{newType}'",
+      "outputDescriptionChanged": "Changed output {outputName} description"
+    }
+  },
+  "historyPanel": {
+    "title": "Operation History",
+    "noActiveTab": "No active tab.",
+    "noHistoryForTab": "No history for current tab.",
+    "unnamedOperation": "Unnamed operation",
+    "invalidHistoryItem": "Invalid history item",
+    "tooltip": {
+      "detailsTitle": "Details:",
+      "noDetails": "None",
+      "operationTitle": "Operation:",
+      "indexTitle": "Index:",
+      "statusTitle": "Status:",
+      "statusCurrent": "Current",
+      "statusPast": "Past",
+      "statusFuture": "Future",
+      "statusSaved": "(Saved)"
+    },
+    "formatDetail": {
+      "depthLimitExceeded": "[Depth limit exceeded]",
+      "nodeInfo": "Node: {nodeName} (Type: {nodeType}, ID: {displayNodeId})",
+      "edgeInfo": "Edge: {displayEdgeId} (Source: {displaySourceNodeId}({sourceHandle}) -> Target: {displayTargetNodeId}({targetHandle}))",
+      "emptyArray": "[] (0)",
+      "arrayLength": "( {length} )",
+      "arrayMoreItems": "- ... ({count} more)",
+      "emptyObject": "{}",
+      "objectMoreProperties": "... ({count} more properties)",
+      "serializationFailed": "[Serialization failed]"
+    }
+  },
+  "nodePanel": {
+    "title": "Node Library",
+    "reloadNodesTooltip": "Reload node definitions",
+    "searchPlaceholder": "Search nodes...",
+    "reloadedRefreshing": "Nodes reloaded, refreshing list...",
+    "loadingNodes": "Loading nodes...",
+    "reloadFailed": "Reload failed: {error}",
+    "addOrDragToCanvasTooltip": "Click or drag to add to canvas",
+    "noMatchingNodes": "No matching nodes found",
+    "unclassifiedCategory": "Unclassified",
+    "noNodesAvailable": "No node definitions available",
+    "errorSavingCollapseState": "Unable to save node panel collapse state to localStorage:",
+    "errorFetchingNodes": "Failed to fetch nodes (NodePanel):",
+    "errorInvalidCollapseStateFormat": "Node panel collapse state in localStorage is in an incorrect format, ignored.",
+    "errorLoadingCollapseState": "Unable to load or parse node panel collapse state from localStorage:",
+    "errorProactiveFetchFailed": "Proactive fetch of node list failed.",
+    "errorRequestReloadFailedAPI": "Request node reload failed (API)",
+    "errorRequestReloadErrorAPI": "Error requesting node reload (API): {errorMessage}"
+  },
+  "nodePreviewPanel": {
+    "inputsTitle": "Input Parameters",
+    "outputsTitle": "Output Parameters",
+    "configTitle": "Configuration Items",
+    "acceptedTypesLabel": "Accepted Types:",
+    "placeholderLabel": "Placeholder Hint:",
+    "internalComponentsTitle": "Internal Components",
+    "workflowSelectorLabel": "Workflow Selector",
+    "workflowSelectorDescription": "Select the workflow to instantiate in this node group."
+  },
+  "performancePanel": {
+    "title": "Node Component Stats",
+    "collectButton": "Collect current canvas data",
+    "copyTooltip": "Copy stats data",
+    "loadingMessage": "Collecting stats...",
+    "noDataOrEmptyCanvas": "No data collected, or canvas is empty.",
+    "componentInstancesLabel": "Number of component instances used in various node types",
+    "warnNoTabId": "PerformancePanel: Unable to collect stats, current tab ID is invalid.",
+    "nodeCountLabel": "Total node types",
+    "unknownType": "Unknown type",
+    "edgeCountLabel": "Total connections",
+    "unknownConfigItem": "Unknown config item",
+    "slotCountLabel": "Total slots",
+    "inputSlotsLabel": "Input slots",
+    "outputSlotsLabel": "Output slots",
+    "configSlotsLabel": "Config slots",
+    "warnNoStatsToCopy": "No stats data available to copy.",
+    "errorClipboardNotSupported": "Your browser does not support or is not authorized for clipboard write operations.",
+    "errorCopyFailed": "Copy failed: {message}",
+    "logErrorCopyFailed": "Failed to copy stats data:",
+    "successCopied": "Stats data copied to clipboard!"
+  },
+  "rightPreviewPanel": {
+    "titleSinglePreviewActive": "Single Preview: {nodeName} (ID: {nodeId})",
+    "titleGroupOverviewActive": "Group Output Overview: {workflowName}",
+    "titleDefault": "Preview",
+    "singlePreview": "Single Preview",
+    "noTargetSelected": "(No target selected)",
+    "groupOverview": "Group Output Overview",
+    "noWorkflowAvailable": "(No workflow available)",
+    "singleModeTooltip": "Single slot preview mode (including streaming)",
+    "singleModeButton": "Single",
+    "groupModeTooltip": "Group output overview mode",
+    "groupModeButton": "Group Overview",
+    "slotLabel": "Slot:",
+    "keyLabel": "Key:",
+    "outputSuffix": "Output",
+    "streamTag": "Stream",
+    "streamingStatus": "Streaming...",
+    "streamEndedStatus": "Stream ended",
+    "waitingForStreamData": "Waiting for stream data...",
+    "noPreviewData": "No preview data available or slot did not produce output.",
+    "noTargetSelectedHint": "No preview target selected. Right-click on a node output handle or connection to preview.",
+    "noActiveWorkflow": "No active workflow.",
+    "noGroupOutputsDefined": "The current workflow has no group output interfaces defined.",
+    "outputValueLabel": "Output Value:",
+    "noGroupOutputsAvailable": "The current workflow's group outputs have no available interfaces.",
+    "noGroupPreviewData": "No preview data available or interface did not produce output."
+  },
+  "sidebarManager": {
+    "tooltips": {
+      "goHome": "Go to Home",
+      "toggleTheme": "Toggle Display Mode",
+      "settings": "Settings"
+    },
+    "buttons": {
+      "goHome": "Back",
+      "settings": "Settings"
+    },
+    "theme": {
+      "system": "System",
+      "dark": "Dark",
+      "light": "Light"
+    },
+    "tabs": {
+      "nodes": {
+        "label": "Nodes",
+        "title": "Node Library"
+      },
+      "workflows": {
+        "label": "Workflows",
+        "title": "Workflow Management"
+      },
+      "interface": {
+        "label": "Interface",
+        "title": "Workflow Interface"
+      },
+      "history": {
+        "label": "History",
+        "title": "Operation History"
+      },
+      "performance": {
+        "label": "Stats",
+        "title": "Node Stats"
+      },
+      "info": {
+        "label": "Info",
+        "title": "Workflow Info"
+      }
+    }
+  },
+  "workflowInfoPanel": {
+    "title": "Workflow Info",
+    "labels": {
+      "id": "ID:",
+      "createdAt": "Created At:",
+      "updatedAt": "Updated At:",
+      "version": "Version:",
+      "nodeCount": "Node Count:"
+    },
+    "placeholders": {
+      "name": "Workflow Name",
+      "description": "Workflow description information..."
+    },
+    "hints": {
+      "name": "The display name for the workflow. If names conflict, a suffix will be added automatically.",
+      "description": "Detailed description of the workflow's function and purpose.",
+      "markdownSupport": "Markdown syntax is supported."
+    },
+    "buttons": {
+      "logJson": "Output Workflow JSON to Console (Debug)"
+    },
+    "nodeList": {
+      "title": "Workflow Node List ({count})",
+      "noNodes": "There are no nodes in this workflow."
+    },
+    "noActiveWorkflow": "No active workflow or data is unavailable.",
+    "logs": {
+      "nameConflictAdjusted": "Name adjusted to avoid conflict: from \"{oldName}\" to \"{newName}\"",
+      "coordinatingNameUpdate": "Coordinating workflow name update (tab {tabId}) to: {newName}",
+      "nameUpdateSuccess": "Workflow name update successfully coordinated (tab {tabId}).",
+      "nameUpdateError": "Error coordinating workflow name update (tab {tabId}):",
+      "coordinatingDescriptionUpdate": "Coordinating workflow description update (tab {tabId})",
+      "descriptionUpdateSuccess": "Workflow description update successfully coordinated (tab {tabId}).",
+      "descriptionUpdateError": "Error coordinating workflow description update (tab {tabId}):",
+      "currentWorkflowJson": "Current workflow JSON (built from elements):",
+      "noActiveStateForLog": "No activeState, elements, or workflowData available for output."
+    },
+    "history": {
+      "nameChanged": "Changed workflow name to \"{newName}\"",
+      "descriptionChanged": "Changed workflow description"
+    }
+  },
+  "workflowPanel": {
+    "title": "Workflows",
+    "searchPlaceholder": "Search workflows...",
+    "refreshButton": "Refresh List",
+    "loading": "Loading...",
+    "noWorkflowsToLoad": "No workflows to load.",
+    "noMatchingWorkflows": "No matching workflows.",
+    "noDescription": "No description",
+    "status": {
+      "unused": "Unused"
+    },
+    "tooltips": {
+      "loadWorkflow": "Click to load **{name}**\n\n---\n{description}",
+      "orphanGroup": "This is a workflow generated by 'Create Group' and is currently not referenced",
+      "referencedBy": "Referenced by {count} workflows",
+      "delete": "Delete"
+    },
+    "errors": {
+      "loadNotFound": "Unable to load workflow: Not found in list.",
+      "loadNoProject": "Unable to load workflow: Missing project information."
+    },
+    "defaultTabName": "Workflow {idSuffix}",
+    "logs": {
+      "loadErrorNotFound": "WorkflowPanel: Workflow with ID {workflowId} not found in available list.",
+      "loadErrorNoProject": "WorkflowPanel: Unable to load workflow, current project ID is missing.",
+      "activatedExistingTab": "WorkflowPanel: Activated existing tab {tabId} for workflow {workflowId}",
+      "openedNewTab": "WorkflowPanel: Opened new tab {tabId} for workflow {workflowId}"
+    }
+  },
+  "testPanel": {
+    "title": "Popup and UI Component Test Panel",
+    "dialogService": {
+      "title": "DialogService (Modal Dialogs & Toasts)",
+      "dialogs": "Modal Dialogs",
+      "toasts": "Toasts",
+      "results": "DialogService Operation Result:",
+      "buttons": {
+        "showMessage": "Show Message Dialog",
+        "showConfirm": "Show Confirm Dialog",
+        "showDangerConfirm": "Show Danger Confirm Dialog",
+        "showAutoClose": "Show Auto-close Dialog",
+        "showInput": "Show Input Dialog",
+        "showTextarea": "Show Textarea Dialog",
+        "showLargeMessage": "Show Large Text Message Dialog",
+        "showInfoToast": "Show Info Toast",
+        "showSuccessToast": "Show Success Toast",
+        "showWarningToast": "Show Warning Toast",
+        "showErrorToast": "Show Error Toast",
+        "showCustomToast": "Show Custom Toast",
+        "showMultipleToasts": "Show Multiple Toasts",
+        "showLargeToast": "Show Large Text Toast"
+      },
+      "resultsContent": {
+        "waiting": "Waiting for action...",
+        "waitingFor": "Waiting for {actionName} response...",
+        "cancelled": "{actionName}: User cancelled or closed the dialog.",
+        "exception": "{actionName}: An exception occurred: {error}",
+        "messageSuccess": "Message Dialog: User clicked OK.",
+        "messageCancelled": "Message Dialog: User closed the dialog or an exception occurred.",
+        "confirmSuccess": "Confirm Dialog: User chose -> {choice}",
+        "confirmCancelled": "Confirm Dialog: User cancelled the operation.",
+        "dangerConfirmSuccess": "Danger Confirm: User chose -> {choice}",
+        "dangerConfirmCancelled": "Danger Confirm: User cancelled the operation.",
+        "autoCloseSuccess": "Auto-close Dialog: Closed automatically or user clicked OK.",
+        "autoCloseCancelled": "Auto-close Dialog: User closed it before auto-close or an exception occurred.",
+        "inputSuccess": "Input Dialog: User entered \"{input}\"",
+        "inputCancelled": "Input Dialog: User cancelled the input.",
+        "textareaSuccess": "Textarea Dialog: User entered \"{input}\"",
+        "textareaCancelled": "Textarea Dialog: User cancelled the input.",
+        "largeMessageSuccess": "Large Text Message Dialog: User clicked OK.",
+        "largeMessageCancelled": "Large Text Message Dialog: User closed the dialog or an exception occurred.",
+        "infoToastTriggered": "Info toast triggered.",
+        "successToastTriggered": "Success toast triggered.",
+        "warningToastTriggered": "Warning toast triggered.",
+        "errorToastTriggered": "Error toast triggered.",
+        "customToastTriggered": "Custom toast triggered.",
+        "multipleToastsTriggered": "Multiple toasts triggered.",
+        "largeToastTriggered": "Large text toast triggered."
+      },
+      "dialogContent": {
+        "messageTitle": "Message",
+        "messageText": "This is a simple message dialog with only an OK button.",
+        "confirmTitle": "Confirm Action",
+        "confirmText": "Are you sure you want to perform this action?",
+        "dangerConfirmTitle": "Confirm Dangerous Action",
+        "dangerConfirmText": "This action cannot be undone. Are you sure you want to continue?",
+        "dangerConfirmYes": "Yes, delete it",
+        "dangerConfirmNo": "No, keep it",
+        "autoCloseTitle": "Auto-close Example",
+        "autoCloseText": "This dialog will close automatically in 3 seconds.",
+        "inputTitle": "Please Enter Information",
+        "inputText": "Please enter your nickname:",
+        "inputPlaceholder": "e.g., Gugu",
+        "textareaTitle": "Please Enter Feedback",
+        "textareaText": "Please describe the issue or suggestion in detail:",
+        "textareaPlaceholder": "Enter your feedback here...",
+        "largeMessageTitle": "Large Text Message",
+        "largeMessageConfirm": "Acknowledged",
+        "customToastTitle": "Custom Style Toast",
+        "customToastText": "This toast is at the bottom-center and lasts for 5 seconds.",
+        "infoToastTitle": "Info",
+        "infoToastText": "This is an informational toast!",
+        "successToastTitle": "Success",
+        "successToastText": "The operation was completed successfully!",
+        "warningToastTitle": "Warning",
+        "warningToastText": "Please be aware, this is a warning.",
+        "errorToastTitle": "Error",
+        "errorToastText": "Oops, an error occurred!",
+        "multiToast1": "Toast 1",
+        "multiToast2": "Toast 2 (delayed)",
+        "multiToast3": "Toast 3 (delayed)",
+        "largeToastTitle": "Large Text Toast"
+      }
+    },
+    "uiStore": {
+      "title": "UiStore (Global Modals)",
+      "specificModals": "Specific Modals",
+      "results": "UiStore Operation Result:",
+      "buttons": {
+        "openSettings": "Open Settings Modal (Managed by App.vue)",
+        "openRegexEditor": "Open Regex Editor Modal",
+        "openInitialUsernameSetup": "Open Initial Username Setup"
+      },
+      "resultsContent": {
+        "initialUsernameClosed": "Initial username setup modal closed (event).",
+        "initialUsernameSaved": "Initial username saved (event).",
+        "openingSettings": "Attempting to open settings modal...",
+        "openingRegexEditor": "Attempting to open regex editor modal...",
+        "regexEditorSaved": "Regex editor saved, rule count: {count}. Check console for details.",
+        "openingInitialUsernameSetup": "Attempting to open initial username setup modal...",
+        "settingsClosed": "Settings modal has been closed."
+      }
+    },
+    "settingsControl": {
+      "title": "SettingControl (via SettingsPanel) Test",
+      "results": "Current SettingsStore Values (for validation):",
+      "labels": {
+        "string": "String Input",
+        "textarea": "Textarea Input",
+        "number": "Number Input",
+        "boolean": "Boolean Toggle",
+        "select": "Select Input"
+      },
+      "descriptions": {
+        "string": "For testing single-line text input.",
+        "textarea": "For testing multi-line text input.",
+        "number": "For testing number input with range and step.",
+        "boolean": "For testing toggle switch state.",
+        "select": "For testing dropdown selection."
+      },
+      "selectOptions": {
+        "a": "Option A",
+        "b": "Option B",
+        "c": "Option C",
+        "d": "Option D (intended to be disabled)"
       }
     }
   }

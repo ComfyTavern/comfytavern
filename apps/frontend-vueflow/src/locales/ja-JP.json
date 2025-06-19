@@ -13,7 +13,18 @@
     "loading": "読み込み中...",
     "error": "エラー",
     "success": "成功",
-    "warning": "警告"
+    "warning": "警告",
+    "refresh": "更新",
+    "searchEllipsis": "検索...",
+    "name": "名前",
+    "type": "タイプ",
+    "yes": "はい",
+    "no": "いいえ",
+    "retry": "リトライ",
+    "file": "ファイル",
+    "folder": "フォルダー",
+    "actions": "操作",
+    "description": "説明"
   },
   "nav": {
     "home": "ホーム",
@@ -21,7 +32,7 @@
     "settings": "設定",
     "about": "概要",
     "projects": "プロジェクト",
-    "characters": "キャラクター",
+    "characters": "キャラクターカード",
     "files": "ファイル管理"
   },
   "editor": {
@@ -35,6 +46,28 @@
       "deleteNode": "ノードを削除",
       "copyNode": "ノードをコピー"
     }
+  },
+  "home": {
+    "welcome": "ComfyTavernへようこそ",
+    "subtitle": "ワークフロープロジェクトとキャラクターカードを管理し、創造性を解き放ちましょう。",
+    "recentProjects": "最近のプロジェクト",
+    "loadingProjects": "プロジェクトを読み込み中...",
+    "loadProjectsFailed": "プロジェクトの読み込みに失敗しました: {error}",
+    "noProjects": "まだプロジェクトがありません。",
+    "createNewProject": "新しいプロジェクトを作成",
+    "lastModified": "最終更新",
+    "noDescription": "説明がありません",
+    "viewAllProjects": "すべてのプロジェクトを表示",
+    "characterCardOverview": "キャラクターカード概要",
+    "exploreSidebar": "サイドバーを探索して、創造の旅を始めましょう。",
+    "invalidDate": "無効な日付"
+  },
+  "editorView": {
+    "loadingNodes": "ノードデータを読み込み中...",
+    "loadingDefinitions": "ノード定義を読み込み中...",
+    "searchNodes": "ノードを検索...",
+    "noNodesFound": "ノードが見つかりません",
+    "unclassified": "未分類"
   },
   "settings": {
     "general": {
@@ -109,7 +142,39 @@
     "themeLight": "ライトモード",
     "toggleSidebar": "サイドバーを折りたたむ/展開する",
     "expand": "展開",
-    "collapse": "折りたたむ"
+    "collapse": "折りたたむ",
+    "groupIOEdit": {
+      "title": "ワークフローインターフェース",
+      "inputsTitle": "入力 (Inputs)",
+      "sortInputsTooltip": "名前で入力をソート",
+      "noInputs": "入力インターフェースなし",
+      "addInput": "入力を追加",
+      "outputsTitle": "出力 (Outputs)",
+      "sortOutputsTooltip": "名前で出力をソート",
+      "noOutputs": "出力インターフェースなし",
+      "addOutput": "出力を追加",
+      "editPropertiesTitle": "インターフェースプロパティを編集",
+      "selectInterfaceToEdit": "編集するインターフェースを上のリストから選択してください。",
+      "interfaceKeyTooltip": "インターフェースキー (一意の識別子)",
+      "moveUpTooltip": "上に移動",
+      "moveDownTooltip": "下に移動",
+      "deleteThisInput": "この入力を削除",
+      "nameLabel": "名前:",
+      "displayNamePlaceholder": "表示名",
+      "typeLabel": "タイプ:",
+      "descriptionLabel": "説明:",
+      "descriptionPlaceholder": "インターフェースの説明情報",
+      "defaultValueLabel": "デフォルト値:",
+      "defaultValueNumberPlaceholder": "デフォルト数値",
+      "defaultValueStringPlaceholder": "デフォルト文字列 (複数行対応)",
+      "defaultValueNotSupported": "このタイプのデフォルト値はサポートされていません",
+      "minValueLabel": "最小値:",
+      "minValuePlaceholder": "最小値 (オプション)",
+      "maxValueLabel": "最大値:",
+      "maxValuePlaceholder": "最大値 (オプション)",
+      "deleteThisOutput": "この出力を削除",
+      "noActiveWorkflow": "アクティブなワークフローがないか、ワークフローデータが利用できません。"
+    }
   },
   "projects": {
     "title": "マイプロジェクト",
@@ -149,9 +214,7 @@
       "upload": "アップロード",
       "uploadFile": "ファイルをアップロード",
       "newFolder": "新しいフォルダー",
-      "refresh": "更新",
       "paste": "貼り付け",
-      "searchPlaceholder": "検索...",
       "switchToGridView": "グリッドビューに切り替え",
       "switchToListView": "リストビューに切り替え",
       "sortBy": "並べ替え",
@@ -185,11 +248,8 @@
     "browser": {
       "emptyFolder": "このフォルダーは空か、フィルター条件に一致する項目がありません。",
       "clearFilters": "フィルターをクリア",
-      "colName": "名前",
       "colSize": "サイズ",
       "colDate": "更新日時",
-      "colType": "種類",
-      "actions": "操作",
       "contextMenu": {
         "open": "開く",
         "download": "ダウンロード",
@@ -199,7 +259,6 @@
         "addToFavorites": "お気に入りに追加",
         "removeFromFavorites": "お気に入りから削除",
         "delete": "削除",
-        "refresh": "更新",
         "newFolder": "新しいフォルダー",
         "paste": "貼り付け",
         "noActions": "利用可能な操作はありません"
@@ -227,8 +286,6 @@
       "typeArchive": "アーカイブファイル",
       "typeFile": "{ext} ファイル",
       "typeGenericFile": "ファイル",
-      "yes": "はい",
-      "no": "いいえ",
       "favorited": "お気に入り登録済み",
       "notFavorited": "お気に入り未登録",
       "previewFailed": "プレビュー失敗:",
@@ -251,10 +308,7 @@
     "store": {
       "myFiles": "マイファイル",
       "sharedSpace": "共有スペース",
-      "itemTypes": {
-        "file": "ファイル",
-        "directory": "フォルダー"
-      },
+      "itemTypes": {},
       "errors": {
         "loadFailed": "ファイルリストの読み込みに失敗しました: {error}",
         "unknown": "不明なエラー"
@@ -308,27 +362,257 @@
       }
     }
   },
-  "home": {
-    "welcome": "ComfyTavernへようこそ",
-    "subtitle": "ワークフロープロジェクトやキャラクターカードを管理し、創造性を解き放ちましょう。",
-    "recentProjects": "最近のプロジェクト",
-    "loadingProjects": "プロジェクトを読み込み中...",
-    "loadProjectsFailed": "プロジェクトの読み込みに失敗しました: {error}",
-    "noProjects": "まだプロジェクトがありません。",
-    "createNewProject": "新しいプロジェクトを作成",
-    "lastModified": "最終更新",
-    "noDescription": "説明なし",
-    "viewAllProjects": "すべてのプロジェクトを表示",
-    "characterCardOverview": "キャラクターカード概要",
-    "exploreSidebar": "サイドバーを探索して、創造の旅を始めましょう。",
-    "invalidDate": "無効な日付"
+  "statusBar": {
+    "workflow": "ワークフロー",
+    "execute": "実行",
+    "defaultProjectName": "ComfyTavern",
+    "tooltip": {
+      "hideEditorPanel": "エディターパネルを非表示",
+      "showEditorPanel": "エディターパネルを表示",
+      "disableLivePreview": "ライブプレビューを無効化",
+      "enableLivePreview": "ライブプレビューを有効化"
+    },
+    "status": {
+      "idle": "アイドル",
+      "queued": "キュー中",
+      "running": "実行中...",
+      "complete": "完了",
+      "error": "エラー",
+      "skipped": "スキップ済み"
+    }
   },
-  "editorView": {
-    "loadingNodes": "ノードデータを読み込み中...",
-    "loadingDefinitions": "ノード定義を読み込み中...",
-    "searchNodes": "ノードを検索...",
-    "noNodesFound": "ノードが見つかりません",
-    "unclassified": "未分類"
+  "history": {
+    "groupIO": {
+      "inputNameChanged": "入力 {inputName} 名を変更: '{oldName}' -> '{newName}'",
+      "inputTypeChanged": "入力 {inputName} タイプを変更: '{oldType}' -> '{newType}'",
+      "inputDescriptionChanged": "入力 {inputName} 説明を変更",
+      "inputDefaultValueChanged": "入力 {inputName} デフォルト値を変更",
+      "inputMinValueChanged": "入力 {inputName} 最小値を変更",
+      "inputMaxValueChanged": "入力 {inputName} 最大値を変更",
+      "outputNameChanged": "出力 {outputName} 名を変更: '{oldName}' -> '{newName}'",
+      "outputTypeChanged": "出力 {outputName} タイプを変更: '{oldType}' -> '{newType}'",
+      "outputDescriptionChanged": "出力 {outputName} 説明を変更"
+    }
+  },
+  "historyPanel": {
+    "title": "操作履歴",
+    "noActiveTab": "アクティブなタブがありません。",
+    "noHistoryForTab": "現在のタブには履歴がありません。",
+    "unnamedOperation": "名前のない操作",
+    "invalidHistoryItem": "無効な履歴アイテム",
+    "tooltip": {
+      "detailsTitle": "詳細:",
+      "noDetails": "なし",
+      "operationTitle": "操作:",
+      "indexTitle": "インデックス:",
+      "statusTitle": "ステータス:",
+      "statusCurrent": "現在",
+      "statusPast": "過去",
+      "statusFuture": "未来",
+      "statusSaved": "(保存済み)"
+    },
+    "formatDetail": {
+      "depthLimitExceeded": "[深度制限超過]",
+      "nodeInfo": "ノード: {nodeName} (タイプ: {nodeType}, ID: {displayNodeId})",
+      "edgeInfo": "エッジ: {displayEdgeId} (ソース: {displaySourceNodeId}({sourceHandle}) -> ターゲット: {displayTargetNodeId}({targetHandle}))",
+      "emptyArray": "[] (0)",
+      "arrayLength": "( {length} )",
+      "arrayMoreItems": "- ... ({count} more)",
+      "emptyObject": "{}",
+      "objectMoreProperties": "... ({count} more properties)",
+      "serializationFailed": "[シリアライズ失敗]"
+    }
+  },
+  "nodePanel": {
+    "title": "ノードライブラリ",
+    "reloadNodesTooltip": "ノード定義を再読み込み",
+    "searchPlaceholder": "ノードを検索...",
+    "reloadedRefreshing": "ノードが再読み込みされました、リストを更新中...",
+    "loadingNodes": "ノードを読み込み中...",
+    "reloadFailed": "再読み込み失敗: {error}",
+    "addOrDragToCanvasTooltip": "クリックまたはドラッグしてキャンバスに追加",
+    "noMatchingNodes": "一致するノードが見つかりません",
+    "unclassifiedCategory": "未分類",
+    "noNodesAvailable": "利用可能なノード定義がありません",
+    "errorSavingCollapseState": "ノードパネルの折りたたみ状態をlocalStorageに保存できません:",
+    "errorFetchingNodes": "ノードの取得に失敗しました (NodePanel):",
+    "errorInvalidCollapseStateFormat": "localStorageのノードパネル折りたたみ状態の形式が正しくありません、無視されました。",
+    "errorLoadingCollapseState": "localStorageからノードパネル折りたたみ状態を読み込みまたは解析できません:",
+    "errorProactiveFetchFailed": "ノードリストの事前取得に失敗しました。",
+    "errorRequestReloadFailedAPI": "ノード再読み込みリクエスト失敗 (API)",
+    "errorRequestReloadErrorAPI": "ノード再読み込みリクエスト中にエラーが発生しました (API): {errorMessage}"
+  },
+  "nodePreviewPanel": {
+    "inputsTitle": "入力パラメータ",
+    "outputsTitle": "出力パラメータ",
+    "configTitle": "設定項目",
+    "acceptedTypesLabel": "受け入れタイプ:",
+    "placeholderLabel": "プレースホルダー:",
+    "internalComponentsTitle": "内部コンポーネント",
+    "workflowSelectorLabel": "ワークフローセレクター",
+    "workflowSelectorDescription": "このノードグループでインスタンス化するワークフローを選択します。"
+  },
+  "performancePanel": {
+    "title": "ノードコンポーネント統計",
+    "collectButton": "現在のキャンバスデータを統計",
+    "copyTooltip": "統計データをコピー",
+    "loadingMessage": "統計中...",
+    "noDataOrEmptyCanvas": "データが収集されていないか、キャンバスが空です。",
+    "componentInstancesLabel": "各ノードで使用されているコンポーネントインスタンス数",
+    "warnNoTabId": "PerformancePanel: 統計情報を収集できません、現在のタブIDが無効です。",
+    "nodeCountLabel": "ノードタイプ総数",
+    "unknownType": "未知のタイプ",
+    "edgeCountLabel": "接続総数",
+    "unknownConfigItem": "未知の設定項目",
+    "slotCountLabel": "スロット総数",
+    "inputSlotsLabel": "入力スロット",
+    "outputSlotsLabel": "出力スロット",
+    "configSlotsLabel": "設定スロット",
+    "warnNoStatsToCopy": "コピー可能な統計データがありません。",
+    "errorClipboardNotSupported": "お使いのブラウザはクリップボードへの書き込みをサポートしていないか、許可されていません。",
+    "errorCopyFailed": "コピー失敗: {message}",
+    "logErrorCopyFailed": "統計データのコピーに失敗しました:",
+    "successCopied": "統計データがクリップボードにコピーされました！"
+  },
+  "rightPreviewPanel": {
+    "titleSinglePreviewActive": "単一プレビュー: {nodeName} (ID: {nodeId})",
+    "titleGroupOverviewActive": "グループ出力概要: {workflowName}",
+    "titleDefault": "プレビュー",
+    "singlePreview": "単一プレビュー",
+    "noTargetSelected": "（ターゲット未選択）",
+    "groupOverview": "グループ出力概要",
+    "noWorkflowAvailable": "（利用可能なワークフローなし）",
+    "singleModeTooltip": "単一スロットプレビューモード (ストリーミング含む)",
+    "singleModeButton": "単一",
+    "groupModeTooltip": "グループ出力概要モード",
+    "groupModeButton": "グループ概要",
+    "slotLabel": "スロット:",
+    "keyLabel": "キー:",
+    "outputSuffix": "出力",
+    "streamTag": "ストリーム",
+    "streamingStatus": "ストリーミング中...",
+    "streamEndedStatus": "ストリーム終了",
+    "waitingForStreamData": "ストリームデータを待機中...",
+    "noPreviewData": "利用可能なプレビューデータがないか、スロットが出力を生成していません。",
+    "noTargetSelectedHint": "プレビューターゲットが選択されていません。ノード出力スタブまたは接続を右クリックしてプレビューします。",
+    "noActiveWorkflow": "アクティブなワークフローがありません。",
+    "noGroupOutputsDefined": "現在のワークフローにはグループ出力インターフェースが定義されていません。",
+    "outputValueLabel": "出力値:",
+    "noGroupOutputsAvailable": "現在のワークフローのグループ出力に利用可能なインターフェースがありません。",
+    "noGroupPreviewData": "利用可能なプレビューデータがないか、インターフェースが出力を生成していません。"
+  },
+  "sidebarManager": {
+    "tooltips": {
+      "goHome": "ホームに戻る",
+      "toggleTheme": "表示モードを切り替え",
+      "settings": "設定"
+    },
+    "buttons": {
+      "goHome": "戻る",
+      "settings": "設定"
+    },
+    "theme": {
+      "system": "システム",
+      "dark": "暗色",
+      "light": "亮色"
+    },
+    "tabs": {
+      "nodes": {
+        "label": "ノード",
+        "title": "ノードライブラリ"
+      },
+      "workflows": {
+        "label": "ワークフロー",
+        "title": "ワークフロー管理"
+      },
+      "interface": {
+        "label": "インターフェース",
+        "title": "ワークフローインターフェース"
+      },
+      "history": {
+        "label": "履歴",
+        "title": "操作履歴"
+      },
+      "performance": {
+        "label": "統計",
+        "title": "ノード統計"
+      },
+      "info": {
+        "label": "情報",
+        "title": "ワークフロー情報"
+      }
+    }
+  },
+  "workflowInfoPanel": {
+    "title": "ワークフロー情報",
+    "labels": {
+      "id": "ID:",
+      "createdAt": "作成日時:",
+      "updatedAt": "更新日時:",
+      "version": "バージョン:",
+      "nodeCount": "ノード数:"
+    },
+    "placeholders": {
+      "name": "ワークフロー名",
+      "description": "ワークフローの説明情報..."
+    },
+    "hints": {
+      "name": "ワークフローの表示名。名前が衝突する場合は、自動的にサフィックスが追加されます。",
+      "description": "このワークフローの機能と用途を詳細に説明します。",
+      "markdownSupport": "Markdown構文をサポートしています。"
+    },
+    "buttons": {
+      "logJson": "ワークフローJSONをコンソールに出力 (デバッグ)"
+    },
+    "nodeList": {
+      "title": "ワークフローノードリスト ({count})",
+      "noNodes": "このワークフローにはノードがありません。"
+    },
+    "noActiveWorkflow": "アクティブなワークフローがないか、データが利用できません。",
+    "logs": {
+      "nameConflictAdjusted": "名前の衝突を避けるために調整されました: 「{oldName}」から「{newName}」へ",
+      "coordinatingNameUpdate": "ワークフロー名の更新を調整中 (タブ {tabId}): {newName}",
+      "nameUpdateSuccess": "ワークフロー名の更新が正常に調整されました (タブ {tabId})。",
+      "nameUpdateError": "ワークフロー名の更新を調整中にエラーが発生しました (タブ {tabId}):",
+      "coordinatingDescriptionUpdate": "ワークフローの説明更新を調整中 (タブ {tabId})",
+      "descriptionUpdateSuccess": "ワークフローの説明更新が正常に調整されました (タブ {tabId})。",
+      "descriptionUpdateError": "ワークフローの説明更新を調整中にエラーが発生しました (タブ {tabId}):",
+      "currentWorkflowJson": "現在のワークフローJSON (要素から構築):",
+      "noActiveStateForLog": "出力可能なアクティブなactiveState、elements、またはworkflowDataがありません。"
+    },
+    "history": {
+      "nameChanged": "ワークフロー名を「{newName}」に変更",
+      "descriptionChanged": "ワークフローの説明を変更"
+    }
+  },
+  "workflowPanel": {
+    "title": "ワークフロー",
+    "searchPlaceholder": "ワークフローを検索...",
+    "refreshButton": "リストを更新",
+    "loading": "読み込み中...",
+    "noWorkflowsToLoad": "読み込み可能なワークフローがありません。",
+    "noMatchingWorkflows": "一致するワークフローがありません。",
+    "noDescription": "説明がありません",
+    "status": {
+      "unused": "未使用"
+    },
+    "tooltips": {
+      "loadWorkflow": "クリックして **{name}** を読み込み\n\n---\n{description}",
+      "orphanGroup": "これは「グループを作成」によって生成され、現在参照されていないワークフローです",
+      "referencedBy": "{count}個のワークフローによって参照されています",
+      "delete": "削除"
+    },
+    "errors": {
+      "loadNotFound": "ワークフローを読み込めません: リストに見つかりませんでした。",
+      "loadNoProject": "ワークフローを読み込めません: プロジェクト情報がありません。"
+    },
+    "defaultTabName": "ワークフロー {idSuffix}",
+    "logs": {
+      "loadErrorNotFound": "WorkflowPanel: 利用可能なリストにID {workflowId} のワークフローが見つかりませんでした。",
+      "loadErrorNoProject": "WorkflowPanel: ワークフローを読み込めません、現在のプロジェクトIDが欠落しています。",
+      "activatedExistingTab": "WorkflowPanel: ワークフロー {workflowId} の既存のタブ {tabId} をアクティブ化しました",
+      "openedNewTab": "WorkflowPanel: ワークフロー {workflowId} の新しいタブ {tabId} を開きました"
+    }
   },
   "testPanel": {
     "title": "ポップアップとUIコンポーネントのテストパネル",

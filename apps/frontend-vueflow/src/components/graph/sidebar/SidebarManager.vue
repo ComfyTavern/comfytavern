@@ -3,37 +3,37 @@
     <!-- 左侧图标栏 -->
     <div class="sidebar-icon-bar">
       <!-- 返回主页按钮 -->
-      <RouterLink to="/" class="icon-button w-full" v-comfy-tooltip="'返回主页'">
+      <RouterLink to="/" class="icon-button w-full" v-comfy-tooltip="t('sidebarManager.tooltips.goHome')">
         <span class="text-xl">🏠</span>
-        <span class="tab-label">返回</span>
+        <span class="tab-label">{{ t('sidebarManager.buttons.goHome') }}</span>
       </RouterLink>
 
       <!-- 中间标签按钮 -->
       <div class="tab-buttons-container">
-        <button v-for="tab in tabs" :key="tab.id" class="icon-button w-full" :class="{ 'active': activeTab === tab.id }" @click="setActiveTab(tab.id)" v-comfy-tooltip="tab.title">
+        <button v-for="tab in tabs" :key="tab.id" class="icon-button w-full" :class="{ 'active': activeTab === tab.id }" @click="setActiveTab(tab.id)" v-comfy-tooltip="t(tab.titleKey)">
           <span class="tab-icon">{{ tab.icon }}</span>
-          <span class="tab-label">{{ tab.label }}</span>
+          <span class="tab-label">{{ t(tab.labelKey) }}</span>
         </button>
       </div>
 
       <!-- 底部控制按钮 -->
       <div class="bottom-buttons-container">
         <!-- 主题切换按钮 -->
-        <button class="icon-button w-full" @click="cycleDisplayMode" v-comfy-tooltip="'切换显示模式'">
+        <button class="icon-button w-full" @click="cycleDisplayMode" v-comfy-tooltip="t('sidebarManager.tooltips.toggleTheme')">
           <span class="tab-icon">
             <span v-if="displayMode === 'system'">💻</span>
             <span v-else-if="displayMode === 'light'">☀️</span>
             <span v-else>🌙</span> <!-- displayMode === 'dark' -->
           </span>
           <span class="tab-label">
-            {{ displayMode === 'system' ? '系统' : displayMode === 'dark' ? '暗色' : '亮色' }}
+            {{ displayMode === 'system' ? t('sidebarManager.theme.system') : displayMode === 'dark' ? t('sidebarManager.theme.dark') : t('sidebarManager.theme.light') }}
           </span>
         </button>
 
         <!-- 设置按钮 -->
-        <button class="icon-button w-full" @click="uiStore.openSettingsModal({ width: '800px', height: '75vh' })" v-comfy-tooltip="'设置'">
+        <button class="icon-button w-full" @click="uiStore.openSettingsModal({ width: '800px', height: '75vh' })" v-comfy-tooltip="t('sidebarManager.tooltips.settings')">
           <span class="tab-icon">⚙️</span>
-          <span class="tab-label">设置</span>
+          <span class="tab-label">{{ t('sidebarManager.buttons.settings') }}</span>
         </button>
       </div>
     </div>
@@ -47,6 +47,7 @@
 
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { RouterLink } from 'vue-router'; // 确保导入
 import { useThemeStore, type DisplayMode } from '../../../stores/theme'; // 导入 DisplayMode
@@ -65,11 +66,13 @@ import type { FrontendNodeDefinition } from '../../../stores/nodeStore';
 // 定义标签页接口
 interface SidebarTab {
   id: string;
-  label: string;
-  title: string;
+  labelKey: string; // 改为翻译键
+  titleKey: string; // 改为翻译键
   icon: string;
   component: any;
 }
+
+const { t } = useI18n();
 
 const emit = defineEmits<{
   (e: 'add-node', nodeType: string, position?: { x: number, y: number }): void;
@@ -98,43 +101,43 @@ function cycleDisplayMode() {
 const tabs = ref<SidebarTab[]>([
   {
     id: 'nodes',
-    label: '节点',
-    title: '节点库',
+    labelKey: 'sidebarManager.tabs.nodes.label',
+    titleKey: 'sidebarManager.tabs.nodes.title',
     icon: '📦',
     component: markRaw(NodePanel)
   },
   {
     id: 'workflows',
-    label: '工作流',
-    title: '工作流管理',
+    labelKey: 'sidebarManager.tabs.workflows.label',
+    titleKey: 'sidebarManager.tabs.workflows.title',
     icon: '📁', // 使用文件夹图标
     component: markRaw(WorkflowPanel)
   },
   { // <-- 添加接口编辑器标签页
     id: 'interface',
-    label: '接口',
-    title: '工作流接口',
+    labelKey: 'sidebarManager.tabs.interface.label',
+    titleKey: 'sidebarManager.tabs.interface.title',
     icon: '↔️', // 使用双向箭头图标
     component: markRaw(GroupIOEdit)
   },
   { // <-- 添加历史记录标签页
     id: 'history',
-    label: '历史',
-    title: '操作历史',
+    labelKey: 'sidebarManager.tabs.history.label',
+    titleKey: 'sidebarManager.tabs.history.title',
     icon: '📜', // 使用卷轴图标
     component: markRaw(HistoryPanel)
   },
   {
     id: 'performance',
-    label: '统计',
-    title: '节点统计',
+    labelKey: 'sidebarManager.tabs.performance.label',
+    titleKey: 'sidebarManager.tabs.performance.title',
     icon: '📊', // 使用条形图图标
     component: markRaw(PerformancePanel)
   },
   { // <-- 添加工作流信息标签页
     id: 'info',
-    label: '信息',
-    title: '工作流信息',
+    labelKey: 'sidebarManager.tabs.info.label',
+    titleKey: 'sidebarManager.tabs.info.title',
     icon: 'ℹ️', // 使用信息图标
     component: markRaw(WorkflowInfoPanel)
   },
@@ -188,7 +191,7 @@ defineExpose({
 }
 
 .sidebar-icon-bar {
-  @apply flex flex-col w-12 border-r border-border-base bg-background-surface items-center py-1 transition-all duration-300 ease-in-out;
+  @apply flex flex-col w-14 border-r border-border-base bg-background-surface items-center py-1 transition-all duration-300 ease-in-out;
   /* py-2 -> py-1 */
   /* 添加过渡 */
 }

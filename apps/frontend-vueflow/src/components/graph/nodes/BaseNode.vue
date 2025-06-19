@@ -2,6 +2,7 @@
 // 第 1 部分：导入
 // Vue 和 VueFlow 核心
 import { computed, ref, watch, nextTick, onMounted, onUnmounted } from "vue"; // 添加 onMounted, onUnmounted
+import { useI18n } from "vue-i18n";
 import { useVueFlow, Handle, Position, type NodeProps } from "@vue-flow/core";
 
 // Pinia 和状态存储
@@ -59,6 +60,7 @@ const props = defineProps<NodeProps>();
 const nodeRootRef = ref<HTMLDivElement | null>(null); // 节点根元素引用
 
 // 第 4 部分：Composables、Store 实例和 Store Refs
+const { t } = useI18n();
 // Store
 // const themeStore = useThemeStore(); // 不再需要，因为 isDark 已移除
 // const isDark = computed(() => themeStore.currentAppliedMode === 'dark'); // 不再需要，由 Tailwind dark: 前缀自动处理
@@ -193,7 +195,7 @@ const tooltipContentForNodeTitle = computed(() => {
       // 添加 Markdown 分隔符
       content += "\n\n---\n\n";
     }
-    content += `默认名称: ${props.data.defaultLabel}`;
+    content += t('graph.nodes.baseNode.tooltipDefaultName', { name: props.data.defaultLabel });
   }
   // 如果没有内容，确保返回 undefined 或空字符串，以便 Tooltip 正确处理
   return content || undefined;
@@ -300,7 +302,7 @@ const formatDescription = (desc: string | undefined): string | undefined => {
 
 const formatOutputValueForTooltip = (value: any): string => {
   if (value === undefined || value === null) {
-    return "无";
+    return t('graph.nodes.baseNode.tooltipNoValue');
   }
   if (typeof value === "string") {
     return value.length > 100 ? value.substring(0, 97) + "..." : value;
@@ -310,7 +312,7 @@ const formatOutputValueForTooltip = (value: any): string => {
       const jsonString = JSON.stringify(value);
       return jsonString.length > 100 ? jsonString.substring(0, 97) + "..." : jsonString;
     } catch (e) {
-      return "[无法序列化的对象]";
+      return t('graph.nodes.baseNode.tooltipUnserializableObject');
     }
   }
   return String(value);
@@ -380,15 +382,15 @@ const getDynamicParamHeaderStyle = (inputDef: (typeof finalInputs.value)[number]
 // 事件处理器和交互协调器
 const handleComponentBlur = (inputKey: string, currentValue: string) => {
   if (!activeTabId.value) {
-    console.warn(`[BaseNode ${props.id}] 无法记录组件失焦：无活动标签页 ID。`);
+    console.warn(t('graph.nodes.baseNode.consoleWarnCannotRecordBlurNoActiveTab', { nodeId: props.id }));
     return;
   }
   const inputDefinition = finalInputs.value.find((i) => String(i.key) === inputKey);
   const inputDisplayName = inputDefinition?.displayName || inputKey;
   const truncatedValue =
     currentValue.length > 30 ? currentValue.substring(0, 27) + "..." : currentValue;
-  const nodeName = props.data.displayName || props.data.label || "未命名节点";
-  const summary = `编辑 ${nodeName} - ${inputDisplayName}: "${truncatedValue}"`;
+  const nodeName = props.data.displayName || props.data.label || t('graph.nodes.baseNode.unnamedNode');
+  const summary = t('graph.nodes.baseNode.historyEditSummary', { nodeName, inputDisplayName, value: truncatedValue });
   const entry: HistoryEntry = createHistoryEntry(
     "update",
     "nodeInputValue",
@@ -406,14 +408,14 @@ const handleComponentBlur = (inputKey: string, currentValue: string) => {
 
 const handleComponentResizeEnd = (inputKey: string, payload: { newHeight: number }) => {
   if (!activeTabId.value) {
-    console.warn(`[BaseNode ${props.id}] 无法记录组件调整大小：无活动标签页 ID。`);
+    console.warn(t('graph.nodes.baseNode.consoleWarnCannotRecordResizeNoActiveTab', { nodeId: props.id }));
     return;
   }
   const { newHeight } = payload;
   const inputDefinition = finalInputs.value.find((i) => String(i.key) === inputKey);
   const inputDisplayName = inputDefinition?.displayName || inputKey;
-  const nodeName = props.data.displayName || props.data.label || "未命名节点";
-  const summary = `调整 ${nodeName} - ${inputDisplayName} 高度: ${newHeight}px`;
+  const nodeName = props.data.displayName || props.data.label || t('graph.nodes.baseNode.unnamedNode');
+  const summary = t('graph.nodes.baseNode.historyResizeSummary', { nodeName, inputDisplayName, height: newHeight });
   const stateUpdate = { height: newHeight };
   const entry: HistoryEntry = createHistoryEntry(
     "update",
@@ -437,12 +439,12 @@ const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // output
 
   const internalId = activeTabId.value;
   if (!internalId) {
-    console.warn("[BaseNode] 无法处理输出 Alt+Click：没有活动的标签页。");
+    console.warn(t('graph.nodes.baseNode.consoleWarnCannotHandleAltClickNoActiveTab'));
     return;
   }
 
   if (outputSlot.dataFlowType === DataFlowType.WILDCARD || outputSlot.dataFlowType === DataFlowType.CONVERTIBLE_ANY) {
-    console.warn(`[BaseNode] Alt+Click: 类型为 ${outputSlot.dataFlowType} 的插槽 ${props.id}::${outputSlot.key} 不可被设置为预览目标。`);
+    console.warn(t('graph.nodes.baseNode.consoleWarnCannotSetPreviewForType', { type: outputSlot.dataFlowType, nodeId: props.id, slotKey: outputSlot.key }));
     return;
   }
 
@@ -450,6 +452,8 @@ const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // output
   let newTarget: { nodeId: string; slotKey: string } | null = null;
   let historySummary = "";
   const slotKeyStr = String(outputSlot.key);
+  const nodeIdentifier = props.label || props.id;
+  const slotIdentifier = outputSlot.displayName || slotKeyStr;
 
   if (
     currentPreviewTarget &&
@@ -457,10 +461,10 @@ const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // output
     currentPreviewTarget.slotKey === slotKeyStr
   ) {
     newTarget = null; // 清除预览
-    historySummary = `清除了节点 ${props.label || props.id} 插槽 ${outputSlot.displayName || slotKeyStr} 的预览`;
+    historySummary = t('graph.nodes.baseNode.historyClearPreviewSummary', { nodeIdentifier, slotIdentifier });
   } else {
     newTarget = { nodeId: props.id, slotKey: slotKeyStr }; // 设置新预览
-    historySummary = `设置节点 ${props.label || props.id} 插槽 ${outputSlot.displayName || slotKeyStr} 为预览目标`;
+    historySummary = t('graph.nodes.baseNode.historySetPreviewSummary', { nodeIdentifier, slotIdentifier });
   }
 
   const entry: HistoryEntry = createHistoryEntry(
@@ -479,11 +483,11 @@ const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // output
 
 const openEditorForInput = (input: InputDefinition) => {
   if (!activeTabId.value) {
-    console.warn(`[BaseNode ${props.id}] 无法打开编辑器：无活动标签页 ID。`);
+    console.warn(t('graph.nodes.baseNode.consoleWarnCannotOpenEditorNoActiveTab', { nodeId: props.id }));
     return;
   }
   if (!interactionCoordinator.openDockedEditorForNodeInput) {
-    console.warn(`[BaseNode ${props.id}] openDockedEditorForNodeInput 方法未找到。`);
+    console.warn(t('graph.nodes.baseNode.consoleWarnOpenDockedEditorNotFound', { nodeId: props.id }));
     return;
   }
 
@@ -523,7 +527,7 @@ const openReferencedWorkflow = () => {
   if (id) {
     const projId = currentProjectId.value;
     if (!projId) {
-      console.error('无法打开引用的工作流：当前项目 ID 未找到。');
+      console.error(t('graph.nodes.baseNode.consoleErrorCannotOpenReferencedWorkflowNoProjectId'));
       return;
     }
     // 调用 tabStore 的 action 来打开或激活对应的 groupEditor 标签页
@@ -580,7 +584,7 @@ const handleActionTriggered = (payload: {
 }) => {
   const inputDefinition = finalInputs.value.find(i => String(i.key) === payload.inputKey);
   if (!inputDefinition) {
-    console.warn(`[BaseNode ${props.id}] Action triggered for unknown inputKey: ${payload.inputKey}`);
+    console.warn(t('graph.nodes.baseNode.consoleWarnActionTriggeredUnknownInput', { nodeId: props.id, inputKey: payload.inputKey }));
     return;
   }
 
@@ -592,7 +596,7 @@ const handleActionTriggered = (payload: {
       break;
     case 'builtin_preview':
       // TODO: 实现 BaseNode 级别的预览逻辑，可能涉及动态 Tooltip 或面板
-      console.log(`[BaseNode ${props.id}] Preview action triggered for input:`, payload.inputKey, "Value:", getInputValue(payload.inputKey));
+      console.log(t('graph.nodes.baseNode.consoleLogPreviewActionTriggered', { nodeId: props.id, inputKey: payload.inputKey, value: getInputValue(payload.inputKey) }));
       // 暂时让 NodeInputActionsBar 内部的 Tooltip (如果有) 处理简单预览
       break;
     case 'emit_event':
@@ -611,7 +615,7 @@ const handleActionTriggered = (payload: {
         nodeRootRef.value.dispatchEvent(customEvent);
         // console.log(`[BaseNode ${props.id}] Emitted event '${payload.handlerArgs.eventName}'`, eventDetail);
       } else {
-        console.warn(`[BaseNode ${props.id}] 'emit_event' action missing eventName or nodeRootRef.`, payload.handlerArgs);
+        console.warn(t('graph.nodes.baseNode.consoleWarnEmitEventMissingArgs', { nodeId: props.id }), payload.handlerArgs);
       }
       break;
     case 'client_script_hook':
@@ -620,22 +624,22 @@ const handleActionTriggered = (payload: {
         // 确保 executeClientHook 存在 (已在 setup 中解构)
         executeClientHook(payload.handlerArgs.hookName, inputDefinition, inputValue, payload.handlerArgs.hookPayload);
       } else {
-        console.warn(`[BaseNode ${props.id}] 'client_script_hook' action missing hookName.`, payload.handlerArgs);
+        console.warn(t('graph.nodes.baseNode.consoleWarnClientScriptHookMissingHookName', { nodeId: props.id }), payload.handlerArgs);
       }
       break;
     case 'open_panel':
       if (payload.handlerArgs?.panelId === 'RegexEditorModal') {
         if (!activeTabId.value) {
-          console.warn(`[BaseNode ${props.id}] 无法打开 Regex 编辑器：无活动标签页 ID。`);
+          console.warn(t('graph.nodes.baseNode.consoleWarnCannotOpenRegexEditorNoActiveTab', { nodeId: props.id }));
           return;
         }
         const currentRules = (getInputValue(payload.inputKey) as RegexRule[] | undefined) || [];
-        const nodeDisplayName = props.data.displayName || props.label || "未命名节点";
+        const nodeDisplayName = props.data.displayName || props.label || t('graph.nodes.baseNode.unnamedNode');
         const inputDisplayName = inputDefinition.displayName || payload.inputKey;
 
         const onSaveCallback = (updatedRules: RegexRule[]) => {
           if (!activeTabId.value) {
-            console.warn(`[BaseNode ${props.id}] 无法保存 Regex 规则：无活动标签页 ID。`);
+            console.warn(t('graph.nodes.baseNode.consoleWarnCannotSaveRegexRulesNoActiveTab', { nodeId: props.id }));
             return;
           }
           // 1. 更新节点内部值
@@ -644,14 +648,17 @@ const handleActionTriggered = (payload: {
 
           // 2. 记录历史
           // 创建一个更简洁的摘要，例如规则数量的变化
-          let rulesSummary = `更新了 ${updatedRules.length} 条规则。`;
+          let rulesSummary = t('graph.nodes.baseNode.historyRegexUpdatedRulesCount', { count: updatedRules.length });
           if (updatedRules.length > 0 && updatedRules.length <= 3) {
-            rulesSummary = `规则: ${updatedRules.map(r => `"${r.name}"`).join(', ')}`;
+            rulesSummary = t('graph.nodes.baseNode.historyRegexUpdatedSpecificRules', { rules: updatedRules.map(r => `"${r.name}"`).join(', ') });
           } else if (updatedRules.length > 3) {
-            rulesSummary = `规则: ${updatedRules.slice(0, 2).map(r => `"${r.name}"`).join(', ')} 等 (${updatedRules.length}条)`;
+            rulesSummary = t('graph.nodes.baseNode.historyRegexUpdatedMultipleRules', {
+              rules: updatedRules.slice(0, 2).map(r => `"${r.name}"`).join(', '),
+              count: updatedRules.length
+            });
           }
 
-          const summary = `编辑 ${nodeDisplayName} - ${inputDisplayName}: ${rulesSummary}`;
+          const summary = t('graph.nodes.baseNode.historyEditSummary', { nodeName: nodeDisplayName, inputDisplayName, value: rulesSummary });
           const entry: HistoryEntry = createHistoryEntry(
             "update",
             "nodeInputValue", // 或者一个更特定的 "nodeRegexRules"
@@ -676,11 +683,11 @@ const handleActionTriggered = (payload: {
         });
 
       } else {
-        console.warn(`[BaseNode ${props.id}] 'open_panel' action received for unhandled panelId '${payload.handlerArgs?.panelId}'. Payload:`, payload);
+        console.warn(t('graph.nodes.baseNode.consoleWarnOpenPanelUnhandledPanelId', { nodeId: props.id, panelId: payload.handlerArgs?.panelId }), payload);
       }
       break;
     default:
-      console.warn(`[BaseNode ${props.id}] Unknown action handlerType: ${payload.handlerType}`);
+      console.warn(t('graph.nodes.baseNode.consoleWarnUnknownActionHandlerType', { nodeId: props.id, handlerType: payload.handlerType }));
   }
 };
 </script>
@@ -719,7 +726,7 @@ const handleActionTriggered = (payload: {
         <!-- 客户端脚本错误图标 -->
         <svg v-if="clientScriptError" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
           stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-error mr-1 flex-shrink-0"
-          :title="`客户端脚本错误: ${clientScriptError}`">
+          :title="t('graph.nodes.baseNode.clientScriptErrorTitle', { error: clientScriptError })">
           <path stroke-linecap="round" stroke-linejoin="round"
             d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
         </svg>
@@ -727,13 +734,13 @@ const handleActionTriggered = (payload: {
         <span v-if="nodeExecutionStatus === ExecutionStatus.ERROR && nodeExecutionError"
           class="node-title truncate text-error"
           v-comfy-tooltip="{
-            content: `执行错误: ${nodeExecutionError}`,
+            content: t('graph.nodes.baseNode.executionErrorTooltip', { error: nodeExecutionError }),
             placement: 'top',
             maxWidth: 400,
             copyButton: true,
             interactive: true
           }">
-          {{ label || "未命名节点" }}
+          {{ label || t('graph.nodes.baseNode.unnamedNode') }}
         </span>
         <!-- 其次，如果需要显示 Tooltip (有描述 或 自定义标签与默认不同)，使用 v-comfy-tooltip -->
         <span v-else-if="tooltipContentForNodeTitle" class="node-title truncate" v-comfy-tooltip="{
@@ -744,15 +751,15 @@ const handleActionTriggered = (payload: {
           showCopyButton: true,
           interactive: true
         }">
-          {{ label || "未命名节点" }}
+          {{ label || t('graph.nodes.baseNode.unnamedNode') }}
         </span>
         <!-- 最后，如果不需要 Tooltip，直接显示普通标题 -->
-        <span v-else class="node-title truncate">{{ label || "未命名节点" }}</span>
+        <span v-else class="node-title truncate">{{ label || t('graph.nodes.baseNode.unnamedNode') }}</span>
       </div>
       <!-- 头部右侧：跳转按钮和分类 -->
       <div class="flex items-center gap-1 flex-shrink-0">
         <!-- 跳转到引用的工作流按钮 -->
-        <button v-if="referencedWorkflowId" v-comfy-tooltip="{ content: '跳转到引用的工作流', placement: 'top', maxWidth: 400 }"
+        <button v-if="referencedWorkflowId" v-comfy-tooltip="{ content: t('graph.nodes.baseNode.jumpToReferencedWorkflowTooltip'), placement: 'top', maxWidth: 400 }"
           @click.stop="openReferencedWorkflow"
           class="p-0.5 rounded text-text-muted hover:bg-neutral-softest focus:outline-none focus:ring-1 focus:ring-primary">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -810,11 +817,11 @@ const handleActionTriggered = (payload: {
               <!-- Handle 的容器 -->
               <Tooltip placement="right" :maxWidth="400" :showDelay="300">
                 <template #content>
-                  <div>类型: {{ output.dataFlowType || "未知" }}</div>
+                  <div>{{ t('graph.nodes.baseNode.tooltipType', { type: output.dataFlowType || t('graph.nodes.baseNode.unknownType') }) }}</div>
                   <!-- 直接调用 store getter 获取当前缓存的输出 -->
                   <div v-if="executionStore.getNodeOutput(activeTabId!, props.id, String(output.key)) !== undefined"
                     class="mt-1">
-                    当前缓存结果:
+                    {{ t('graph.nodes.baseNode.tooltipCurrentCachedResult') }}
                     {{
                       formatOutputValueForTooltip(
                         executionStore.getNodeOutput(activeTabId!, props.id, String(output.key))
@@ -825,7 +832,7 @@ const handleActionTriggered = (payload: {
                   <div
                     v-else-if="executionStore.getNodePreviewOutput(activeTabId!, props.id, String(output.key)) !== undefined"
                     class="mt-1 text-warning">
-                    预览:
+                    {{ t('graph.nodes.baseNode.tooltipPreview') }}
                     {{
                       formatOutputValueForTooltip(
                         executionStore.getNodePreviewOutput(
@@ -870,27 +877,27 @@ const handleActionTriggered = (payload: {
             stroke="currentColor" class="w-3 h-3 inline-block mr-0.5">
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125Z" />
-          </svg>
-          {{ nodeGroupInfo.nodeCount }} 节点
-        </span>
-        <span class="info-item">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-            stroke="currentColor" class="w-3 h-3 inline-block mr-0.5 transform rotate-180">
-            <path stroke-linecap="round" stroke-linejoin="round"
-              d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5" />
-          </svg>
-          {{ nodeGroupInfo.inputCount }} 输入
-        </span>
-        <span class="info-item">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-            stroke="currentColor" class="w-3 h-3 inline-block mr-0.5">
-            <path stroke-linecap="round" stroke-linejoin="round"
-              d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5" />
-          </svg>
-          {{ nodeGroupInfo.outputCount }} 输出
-        </span>
-      </template>
-    </div>
+            </svg>
+            {{ t('graph.nodes.baseNode.nodeGroupInfoNodes', { count: nodeGroupInfo.nodeCount }) }}
+          </span>
+          <span class="info-item">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+              stroke="currentColor" class="w-3 h-3 inline-block mr-0.5 transform rotate-180">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5" />
+            </svg>
+            {{ t('graph.nodes.baseNode.nodeGroupInfoInputs', { count: nodeGroupInfo.inputCount }) }}
+          </span>
+          <span class="info-item">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+              stroke="currentColor" class="w-3 h-3 inline-block mr-0.5">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5" />
+            </svg>
+            {{ t('graph.nodes.baseNode.nodeGroupInfoOutputs', { count: nodeGroupInfo.outputCount }) }}
+          </span>
+        </template>
+      </div>
 
     <!-- 节点输入区域 -->
     <div class="node-inputs" :key="`inputs-${finalInputs.map((i) => i.key).join(',')}`">
@@ -940,7 +947,7 @@ const handleActionTriggered = (payload: {
                   getHandleTypeClass(input.dataFlowType),
                   isAnyType(input.dataFlowType) && styles.handleAny,
                 ]" :style="getStandardHandleStyles(true)"
-                  v-comfy-tooltip="{ content: `${input.dataFlowType} (插槽 ${index})`, placement: 'left', maxWidth: 400 }" />
+                  v-comfy-tooltip="{ content: t('graph.nodes.baseNode.multiInputChildHandleTooltip', { type: input.dataFlowType, index }), placement: 'left', maxWidth: 400 }" />
               </div>
             </template>
           </div>

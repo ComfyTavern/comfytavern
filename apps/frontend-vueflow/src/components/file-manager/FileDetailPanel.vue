@@ -53,7 +53,7 @@
             <!-- 属性视图 -->
             <div v-if="activeTab === 'properties'" class="space-y-3">
               <div class="property-row">
-                <label class="property-label">{{ t('fileManager.detailPanel.propName') }}</label>
+                <label class="property-label">{{ t('common.name') }}</label>
                 <div class="property-value flex items-center">
                   <component :is="selectedItem.itemType === 'directory' ? FolderIcon : getDocumentIcon(selectedItem.name)"
                     class="h-5 w-5 mr-2 text-text-muted flex-shrink-0" />
@@ -62,7 +62,7 @@
                 </div>
               </div>
               <div class="property-row">
-                <label class="property-label">{{ t('fileManager.detailPanel.propType') }}</label>
+                <label class="property-label">{{ t('common.type') }}</label>
                 <span class="property-value">{{ getItemMimeTypeDisplay(selectedItem) }}</span>
               </div>
               <div v-if="selectedItem.itemType === 'file'" class="property-row">
@@ -85,7 +85,7 @@
               </div>
               <div class="property-row">
                 <label class="property-label">{{ t('fileManager.detailPanel.propWritable') }}</label>
-                <span class="property-value">{{ t(selectedItem.isWritable ? 'fileManager.detailPanel.yes' : 'fileManager.detailPanel.no') }}</span>
+                <span class="property-value">{{ t(selectedItem.isWritable ? 'common.yes' : 'common.no') }}</span>
               </div>
               <div class="property-row">
                 <label class="property-label">{{ t('fileManager.detailPanel.propFavorite') }}</label>

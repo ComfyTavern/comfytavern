@@ -1,11 +1,11 @@
 <template>
   <div class="workflow-panel p-4 h-full flex flex-col text-text-base">
-    <h3 class="text-lg font-semibold mb-4 border-b pb-2 border-border-base">工作流</h3>
+    <h3 class="text-lg font-semibold mb-4 border-b pb-2 border-border-base">{{ t('workflowPanel.title') }}</h3>
 
     <!-- 搜索框 (可选) -->
     <div class="mb-3">
-      <input type="text" v-model="searchTerm" placeholder="搜索工作流..."
-        class="w-full px-2 py-1 border rounded bg-background-base border-border-base focus:outline-none focus:ring-1 focus:ring-primary"> 
+      <input type="text" v-model="searchTerm" :placeholder="t('workflowPanel.searchPlaceholder')"
+        class="w-full px-2 py-1 border rounded bg-background-base border-border-base focus:outline-none focus:ring-1 focus:ring-primary">
     </div>
 
     <!-- 刷新按钮 -->
@@ -17,7 +17,7 @@
             d="M4.5 12a7.5 7.5 0 0 1 13.8-4.07l-2-.4a1.5 1.5 0 0 0-.6 2.94l5 1c.76.15 1.51-.3 1.74-1.04l1.5-5a1.5 1.5 0 1 0-2.88-.86l-.43 1.45A10.49 10.49 0 0 0 1.5 12a10.5 10.5 0 0 0 20.4 3.5 1.5 1.5 0 1 0-2.83-1A7.5 7.5 0 0 1 4.5 12Z"
             fill="currentColor"></path>
         </svg>
-        刷新列表
+        {{ t('workflowPanel.refreshButton') }}
       </button>
     </div>
 
@@ -26,9 +26,9 @@
     <OverlayScrollbarsComponent
       :options="{ scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' } }"
       class="flex-1 border rounded border-border-base" defer>
-      <div v-if="loadingWorkflows" class="p-4 text-center text-text-muted">加载中...</div>
+      <div v-if="loadingWorkflows" class="p-4 text-center text-text-muted">{{ t('workflowPanel.loading') }}</div>
       <div v-else-if="filteredWorkflows.length === 0" class="p-4 text-center text-text-muted">
-        {{ availableWorkflows.length === 0 ? '没有可加载的工作流。' : '没有匹配的工作流。' }}
+        {{ availableWorkflows.length === 0 ? t('workflowPanel.noWorkflowsToLoad') : t('workflowPanel.noMatchingWorkflows') }}
       </div>
       <ul v-else>
         <li v-for="wf in filteredWorkflows" :key="wf.id"
@@ -36,23 +36,23 @@
           @click="handleLoad(wf.id)">
           <!-- 分开名称 Tooltip 和 状态 Tooltip -->
           <div class="flex items-center flex-grow min-w-0 mr-2"> <!-- 包裹名称和图标 -->
-            <Tooltip :content="`点击加载 **${wf.name}**\n\n---\n${wf.description || '没有描述'}`" placement="top-start"
+            <Tooltip :content="t('workflowPanel.tooltips.loadWorkflow', { name: wf.name, description: wf.description || t('workflowPanel.noDescription') })" placement="top-start"
               :offsetValue="8" :showDelay="500" triggerClass="truncate flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                 stroke="currentColor" class="w-4 h-4 mr-2 text-text-muted flex-shrink-0">
                 <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75c0-.231-.035-.454-.1-.664M6.75 7.5H18a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25H6.75a2.25 2.25 0 0 1-2.25-2.25v-9a2.25 2.25 0 0 1 2.25-2.25Z" />
+                  d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75c0-.231-.035-.454-.1-.664M6.75 7.5H18a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25-2.25H6.75a2.25 2.25 0 0 1-2.25-2.25v-9a2.25 2.25 0 0 1 2.25-2.25Z" />
               </svg>
               <span class="truncate">{{ wf.name }}</span>
             </Tooltip>
             <!-- 状态徽章 Tooltip 移到外面 -->
-            <Tooltip v-if="wf.isOrphanGroup" content="这是一个由“创建组”产生且当前未被引用的工作流" placement="top">
+            <Tooltip v-if="wf.isOrphanGroup" :content="t('workflowPanel.tooltips.orphanGroup')" placement="top">
               <span
                 class="ml-2 text-xs px-1.5 py-0.5 rounded bg-warning/20 text-warning flex-shrink-0">
-                未使用
+                {{ t('workflowPanel.status.unused') }}
               </span>
             </Tooltip>
-            <Tooltip v-else-if="wf.referenceCount > 0" :content="`被 ${wf.referenceCount} 个工作流引用`" placement="top">
+            <Tooltip v-else-if="wf.referenceCount > 0" :content="t('workflowPanel.tooltips.referencedBy', { count: wf.referenceCount })" placement="top">
               <span
                 class="ml-2 text-xs px-1.5 py-0.5 rounded bg-primary/20 text-primary flex-shrink-0">
                 {{ wf.referenceCount }}
@@ -60,7 +60,7 @@
             </Tooltip>
           </div>
           <div class="flex items-center flex-shrink-0"> <!-- 包裹按钮 -->
-            <Tooltip content="删除">
+            <Tooltip :content="t('workflowPanel.tooltips.delete')">
               <button @click.stop="handleDelete(wf.id)"
                 class="text-error hover:text-error ml-2 p-1 rounded hover:bg-error-softest opacity-70 hover:opacity-100">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
@@ -80,6 +80,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import { storeToRefs } from 'pinia';
 import { useTabStore } from '@/stores/tabStore'; // Import tabStore
@@ -95,6 +96,7 @@ import { useDialogService } from '@/services/DialogService'; // 导入 DialogSer
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore(); // Get tabStore instance
 const projectStore = useProjectStore(); // Get projectStore instance
+const { t } = useI18n();
 const { availableWorkflows } = storeToRefs(workflowStore);
 const themeStore = useThemeStore(); // Get theme store instance
 const isDark = computed(() => themeStore.currentAppliedMode === 'dark'); // Get isDark state
@@ -163,15 +165,15 @@ const handleRefresh = async () => {
 const handleLoad = async (workflowId: string) => {
   const workflowToLoad = availableWorkflows.value.find(wf => wf.id === workflowId);
   if (!workflowToLoad) {
-    console.error(`WorkflowPanel: Workflow with ID ${workflowId} not found in available list.`);
-    dialogService.showError("无法加载工作流：未在列表中找到。");
+    console.error(t('workflowPanel.logs.loadErrorNotFound', { workflowId }));
+    dialogService.showError(t('workflowPanel.errors.loadNotFound'));
     return;
   }
 
   const currentProjectId = projectStore.currentProjectId;
   if (!currentProjectId) {
-    console.error("WorkflowPanel: Cannot load workflow, current project ID is missing.");
-    dialogService.showError("无法加载工作流：缺少项目信息。");
+    console.error(t('workflowPanel.logs.loadErrorNoProject'));
+    dialogService.showError(t('workflowPanel.errors.loadNoProject'));
     return;
   }
 
@@ -185,11 +187,11 @@ const handleLoad = async (workflowId: string) => {
   if (existingTab) {
     // 激活已存在的标签页
     tabStore.setActiveTab(existingTab.internalId);
-    console.log(`WorkflowPanel: Activated existing workflow tab ${existingTab.internalId} for workflow ${workflowId}`);
+    console.log(t('workflowPanel.logs.activatedExistingTab', { tabId: existingTab.internalId, workflowId }));
   } else {
     // 添加新标签页
-    const newTab = tabStore.addTab('workflow', workflowToLoad.name || `工作流 ${workflowId.substring(0, 6)}`, workflowId, true, currentProjectId);
-    console.log(`WorkflowPanel: Opened new workflow tab ${newTab?.internalId} for workflow ${workflowId}`);
+    const newTab = tabStore.addTab('workflow', workflowToLoad.name || t('workflowPanel.defaultTabName', { idSuffix: workflowId.substring(0, 6) }), workflowId, true, currentProjectId);
+    console.log(t('workflowPanel.logs.openedNewTab', { tabId: newTab?.internalId, workflowId }));
   }
 };
 

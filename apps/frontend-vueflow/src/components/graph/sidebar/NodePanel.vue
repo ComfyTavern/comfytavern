@@ -2,14 +2,14 @@
   <div class="node-panel">
     <div class="panel-header">
       <div class="header-top">
-        <div class="panel-title">节点库</div>
+        <div class="panel-title">{{ t('nodePanel.title') }}</div>
         <button @click="reloadNodes" :disabled="nodeLoading || localLoading" class="reload-button"
-          v-comfy-tooltip="'重新加载节点定义'">
+          v-comfy-tooltip="t('nodePanel.reloadNodesTooltip')">
           🔄
         </button>
       </div>
       <div class="panel-search">
-        <input type="text" v-model="searchQuery" placeholder="搜索节点..." class="search-input" />
+        <input type="text" v-model="searchQuery" :placeholder="t('nodePanel.searchPlaceholder')" class="search-input" />
       </div>
     </div>
 
@@ -24,14 +24,14 @@
       <svg class="svg-spinner" viewBox="0 0 50 50">
         <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
       </svg>
-      <span v-if="notifiedNodesReloaded">节点已重载，正在刷新列表...</span>
-      <span v-else-if="nodeLoading || localLoading">加载节点中...</span>
+      <span v-if="notifiedNodesReloaded">{{ t('nodePanel.reloadedRefreshing') }}</span>
+      <span v-else-if="nodeLoading || localLoading">{{ t('nodePanel.loadingNodes') }}</span>
       <span v-if="reloadError" class="text-danger mt-2">
-        重载失败: {{ reloadError }}
+        {{ t('nodePanel.reloadFailed', { error: reloadError }) }}
         <button @click="reloadNodes"
           class="ml-2 px-2 py-1 bg-primary hover:bg-primary-hover text-text-on-primary rounded-md text-xs"
           :disabled="localLoading">
-          重试
+          {{ t('common.retry') }}
         </button>
       </span>
     </div>
@@ -51,7 +51,8 @@
               <div v-if="node.description" class="node-description">{{ node.description }}</div>
             </div>
             <div class="node-actions">
-              <div class="node-drag-handle" @click.stop="addNodeToCanvas(node.type)" v-comfy-tooltip="'点击或拖拽添加到画布'">
+              <div class="node-drag-handle" @click.stop="addNodeToCanvas(node.type)"
+                v-comfy-tooltip="t('nodePanel.addOrDragToCanvasTooltip')">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                   class="lucide lucide-plus">
@@ -62,7 +63,7 @@
             </div>
           </div>
 
-          <div v-if="filteredNodes.length === 0" class="no-results">没有找到匹配的节点</div>
+          <div v-if="filteredNodes.length === 0" class="no-results">{{ t('nodePanel.noMatchingNodes') }}</div>
         </div>
 
         <template v-else>
@@ -107,7 +108,7 @@
                     </div>
                     <div class="node-actions">
                       <div class="node-drag-handle" @click.stop="addNodeToCanvas(`${namespace}:${node.type}`)"
-                        v-comfy-tooltip="'点击或拖拽添加到画布'">
+                        v-comfy-tooltip="t('nodePanel.addOrDragToCanvasTooltip')">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                           class="lucide lucide-plus">
@@ -124,7 +125,7 @@
         </template>
       </template>
 
-      <div v-else class="no-nodes">没有可用的节点定义</div>
+      <div v-else class="no-nodes">{{ t('nodePanel.noNodesAvailable') }}</div>
       <!-- End of content that needs scrolling -->
     </OverlayScrollbarsComponent>
 
@@ -134,6 +135,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue"; // 移除了 nextTick
+import { useI18n } from "vue-i18n";
 import { useNodeStore, type FrontendNodeDefinition } from "../../../stores/nodeStore";
 import { useApi } from "../../../utils/api";
 import useDragAndDrop from "../../../composables/canvas/useDnd";
@@ -142,11 +144,10 @@ import { storeToRefs } from "pinia";
 // import Tooltip from "@/components/common/Tooltip.vue"; // Tooltip 组件不再直接使用
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
-
 // State for collapsed sections
 const LOCAL_STORAGE_KEY = "nodePanelCollapsedStates";
 const collapsedStates = ref<Record<string, boolean>>({});
-
+const { t } = useI18n();
 // Function to toggle collapse state
 const toggleCollapse = (key: string) => {
   // Initialize if key doesn't exist (default to expanded)
@@ -159,7 +160,7 @@ const toggleCollapse = (key: string) => {
   try {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(collapsedStates.value));
   } catch (error) {
-    console.error("无法保存节点面板折叠状态到 localStorage:", error);
+    console.error(t('nodePanel.errorSavingCollapseState'), error);
   }
 };
 
@@ -197,7 +198,7 @@ const fetchNodes = async () => {
     await nodeStore.fetchAllNodeDefinitions();
   } catch (error) {
     // 错误处理可以依赖 store 的 error 状态 (nodeError)
-    console.error("获取节点失败 (NodePanel):", error);
+    console.error(t('nodePanel.errorFetchingNodes'), error);
   } finally {
     localLoading.value = false;
   }
@@ -217,7 +218,7 @@ const nodesByNamespaceAndCategory = computed(() => {
 
   nodeDefinitions.value.forEach((node: FrontendNodeDefinition) => {
     const namespace = node.namespace || "core"; // Default to 'core' if namespace is missing
-    const category = node.category || "未分类";
+    const category = node.category || t('nodePanel.unclassifiedCategory');
 
     if (!result[namespace]) {
       result[namespace] = {};
@@ -317,17 +318,17 @@ const reloadNodes = async () => {
         console.error('[NodePanel] Error during proactive fetch after reload API call:', err);
         // 如果 nodeStore.reloadError 尚未被设置（例如，API 调用成功但后续的 WS->fetch 失败），则可以在此设置
         if (!nodeStore.reloadError) {
-          nodeStore.reloadError = '主动获取节点列表失败。';
+          nodeStore.reloadError = t('nodePanel.errorProactiveFetchFailed');
         }
       });
     } else {
       console.error("API call to /api/nodes/reload failed:", response.message);
-      nodeStore.reloadError = response.message || "请求节点重载失败 (API)";
+      nodeStore.reloadError = response.message || t('nodePanel.errorRequestReloadFailedAPI');
     }
   } catch (err: any) {
     console.error("Error during /api/nodes/reload API call:", err);
     const errorMessage = err instanceof Error ? err.message : String(err);
-    nodeStore.reloadError = `请求节点重载时出错 (API): ${errorMessage}`;
+    nodeStore.reloadError = t('nodePanel.errorRequestReloadErrorAPI', { errorMessage });
   } finally {
     localLoading.value = false; // 确保在 API 请求完成后（无论成功、失败或异常）都重置 localLoading
   }
@@ -365,12 +366,12 @@ onMounted(() => {
         collapsedStates.value = parsedStates;
       } else {
         // 如果解析出来不是对象，或者为 null，则不使用，并可以考虑清除
-        console.warn("localStorage 中的节点面板折叠状态格式不正确，已忽略。");
+        console.warn(t('nodePanel.errorInvalidCollapseStateFormat'));
         // localStorage.removeItem(LOCAL_STORAGE_KEY); // 可选：清除无效数据
       }
     }
   } catch (error) {
-    console.error("无法从 localStorage 加载或解析节点面板折叠状态:", error);
+    console.error(t('nodePanel.errorLoadingCollapseState'), error);
     // localStorage.removeItem(LOCAL_STORAGE_KEY); // 可选：清除无效数据
   }
 

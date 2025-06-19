@@ -1,16 +1,16 @@
 <template>
   <div class="history-panel p-4 h-full flex flex-col">
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-semibold text-text-base">操作历史</h3>
+      <h3 class="text-lg font-semibold text-text-base">{{ t('historyPanel.title') }}</h3>
       <span v-if="currentHistory" class="text-sm text-text-muted">
         {{ currentHistory.items.length }} / {{ MAX_HISTORY_LENGTH }}
       </span>
     </div>
     <div v-if="!activeTabId" class="text-text-muted text-center mt-4">
-      没有活动的标签页。
+      {{ t('historyPanel.noActiveTab') }}
     </div>
     <div v-else-if="!currentHistory || currentHistory.items.length === 0" class="text-text-muted">
-      当前标签页没有历史记录。
+      {{ t('historyPanel.noHistoryForTab') }}
     </div>
     <OverlayScrollbarsComponent v-else :options="{
       scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
@@ -39,7 +39,7 @@
           <span class="mr-2">{{
             item.originalIndex === currentHistory.savedIndex ? "💾" : "•"
           }}</span>
-          <span class="flex-1 truncate">{{ item.entry?.summary || "未命名操作" }}</span>
+          <span class="flex-1 truncate">{{ item.entry?.summary || t('historyPanel.unnamedOperation') }}</span>
         </li>
       </ul>
     </OverlayScrollbarsComponent>
@@ -48,6 +48,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { storeToRefs } from "pinia";
 // import Tooltip from "../../common/Tooltip.vue"; // Tooltip 组件不再直接使用
 // Import OverlayScrollbars and theme
@@ -65,6 +66,7 @@ import { useWorkflowStore } from "../../../stores/workflowStore";
 const tabStore = useTabStore();
 const workflowHistory = useWorkflowHistory();
 const workflowStore = useWorkflowStore(); // 获取 workflowStore 实例
+const { t } = useI18n();
 
 const { activeTabId } = storeToRefs(tabStore);
 const themeStore = useThemeStore(); // Get theme store instance
@@ -107,7 +109,7 @@ const formatDetailValue = (
   const nestedIndent = "  ".repeat(currentDepth + 1 + (isInsideArray ? 1 : 0));
 
   if (currentDepth > MAX_RECURSION_DEPTH) {
-    return `${indent}[深度超限]`;
+    return `${indent}${t('historyPanel.formatDetail.depthLimitExceeded')}`;
   }
 
   if (value === null) return `${indent}null`;
@@ -131,7 +133,7 @@ const formatDetailValue = (
     ) {
       const nodeIdStr = String(value.nodeId);
       const displayNodeId = nodeIdStr.length > ID_MAX_LEN ? nodeIdStr.substring(0, ID_MAX_LEN) + "..." : nodeIdStr;
-      let nodeStr = `${indent}节点: ${value.nodeName} (类型: ${value.nodeType}, ID: ${displayNodeId})`;
+      let nodeStr = `${indent}${t('historyPanel.formatDetail.nodeInfo', { nodeName: value.nodeName, nodeType: value.nodeType, displayNodeId })}`;
       return nodeStr;
     }
     // 边对象
@@ -148,19 +150,19 @@ const formatDetailValue = (
       const targetNodeIdStr = String(value.targetNodeId);
       const displayTargetNodeId = targetNodeIdStr.length > ID_MAX_LEN ? targetNodeIdStr.substring(0, ID_MAX_LEN) + "..." : targetNodeIdStr;
 
-      return `${indent}边: ${displayEdgeId} (源: ${displaySourceNodeId}(${value.sourceHandle || ""}) -> 目标: ${displayTargetNodeId}(${value.targetHandle || ""}))`;
+      return `${indent}${t('historyPanel.formatDetail.edgeInfo', { displayEdgeId, displaySourceNodeId, sourceHandle: value.sourceHandle || "", displayTargetNodeId, targetHandle: value.targetHandle || "" })}`;
     }
   }
 
   if (Array.isArray(value)) {
-    if (value.length === 0) return `${indent}[] (0)`;
-    let arrStr = `${indent}( ${value.length} )`;
+    if (value.length === 0) return `${indent}${t('historyPanel.formatDetail.emptyArray')}`;
+    let arrStr = `${indent}${t('historyPanel.formatDetail.arrayLength', { length: value.length })}`;
     const itemsToShow = currentDepth === 0 ? value : value.slice(0, ARRAY_MAX_ITEMS_SHALLOW); // 顶层数组完整显示，嵌套数组部分显示
     for (let i = 0; i < itemsToShow.length; i++) {
       arrStr += `\n${nestedIndent}- ${formatDetailValue(itemsToShow[i], currentDepth + 1, true).trimStart()}`;
     }
     if (currentDepth > 0 && value.length > ARRAY_MAX_ITEMS_SHALLOW) {
-      arrStr += `\n${nestedIndent}- ... (${value.length - ARRAY_MAX_ITEMS_SHALLOW} more)`;
+      arrStr += `\n${nestedIndent}- ${t('historyPanel.formatDetail.arrayMoreItems', { count: value.length - ARRAY_MAX_ITEMS_SHALLOW })}`;
     }
     return arrStr;
   }
@@ -168,7 +170,7 @@ const formatDetailValue = (
   if (typeof value === "object" && value !== null) {
     const objValue = value as Record<string, any>;
     const keys = Object.keys(objValue);
-    if (keys.length === 0) return `${indent}{}`;
+    if (keys.length === 0) return `${indent}${t('historyPanel.formatDetail.emptyObject')}`;
     let objStr = `${indent}{`;
     const propsToShow = currentDepth === 0 ? keys : keys.slice(0, OBJECT_MAX_PROPS_SHALLOW);
     for (let i = 0; i < propsToShow.length; i++) {
@@ -181,7 +183,7 @@ const formatDetailValue = (
       ).trimStart()}`;
     }
     if (currentDepth > 0 && keys.length > OBJECT_MAX_PROPS_SHALLOW) {
-      objStr += `\n${nestedIndent}... (${keys.length - OBJECT_MAX_PROPS_SHALLOW} more properties)`;
+      objStr += `\n${nestedIndent}${t('historyPanel.formatDetail.objectMoreProperties', { count: keys.length - OBJECT_MAX_PROPS_SHALLOW })}`;
     }
     objStr += `\n${indent}}`;
     return objStr;
@@ -193,24 +195,29 @@ const formatDetailValue = (
       ? `${indent}${str.substring(0, STRING_MAX_LEN)}...`
       : `${indent}${str}`;
   } catch (e) {
-    return `${indent}[序列化失败]`;
+    return `${indent}${t('historyPanel.formatDetail.serializationFailed')}`;
   }
 };
 
 // Function to generate tooltip content dynamically
 const generateTooltipContent = (item: HistoryItem & { originalIndex: number }): string => {
   if (!item || !item.entry || !currentHistory.value) {
-    return "无效的历史记录项";
+    return t('historyPanel.invalidHistoryItem');
   }
 
   const { entry, originalIndex } = item;
   const { currentIndex, savedIndex } = currentHistory.value;
 
-  const status =
-    originalIndex === currentIndex ? "当前" : originalIndex < currentIndex ? "过去" : "未来";
-  const savedStatus = originalIndex === savedIndex ? " (已保存)" : "";
+  const statusKey =
+    originalIndex === currentIndex
+      ? "historyPanel.tooltip.statusCurrent"
+      : originalIndex < currentIndex
+        ? "historyPanel.tooltip.statusPast"
+        : "historyPanel.tooltip.statusFuture";
+  const status = t(statusKey);
+  const savedStatus = originalIndex === savedIndex ? ` ${t('historyPanel.tooltip.statusSaved')}` : "";
 
-  let detailsString = "\n\n**详情:**";
+  let detailsString = `\n\n**${t('historyPanel.tooltip.detailsTitle')}**`;
   if (entry.details && Object.keys(entry.details).length > 0) {
     detailsString += Object.entries(entry.details)
       .map(([key, value]) => {
@@ -232,12 +239,12 @@ const generateTooltipContent = (item: HistoryItem & { originalIndex: number }): 
       })
       .join("");
   } else {
-    detailsString += "\n  无";
+    detailsString += `\n  ${t('historyPanel.tooltip.noDetails')}`;
   }
 
-  return `**操作:** ${entry.summary || "未命名操作"}
-**索引:** ${originalIndex}
-**状态:** ${status}${savedStatus}${detailsString}
+  return `**${t('historyPanel.tooltip.operationTitle')}** ${entry.summary || t('historyPanel.unnamedOperation')}
+**${t('historyPanel.tooltip.indexTitle')}** ${originalIndex}
+**${t('historyPanel.tooltip.statusTitle')}** ${status}${savedStatus}${detailsString}
 `;
 };
 

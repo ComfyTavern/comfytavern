@@ -15,10 +15,10 @@
             <span class="ml-1 hidden sm:inline">{{ t('fileManager.toolbar.newFolder') }}</span>
           </button>
     
-          <button @click="refreshList" class="toolbar-action-btn" :disabled="isLoading" :title="t('fileManager.toolbar.refresh')"
+          <button @click="refreshList" class="toolbar-action-btn" :disabled="isLoading" :title="t('common.refresh')"
             data-testid="fm-refresh-btn">
             <ArrowPathIcon class="h-5 w-5" :class="{ 'animate-spin': isLoading }" />
-            <span class="ml-1 hidden sm:inline">{{ t('fileManager.toolbar.refresh') }}</span>
+            <span class="ml-1 hidden sm:inline">{{ t('common.refresh') }}</span>
           </button>
     
           <button v-if="canPaste" @click="pasteItems" class="toolbar-action-btn" :title="t('fileManager.toolbar.paste')"
@@ -39,7 +39,7 @@
             input-class="input-sm"
           /> -->
           <div class="relative">
-            <input type="text" v-model="searchQuery" :placeholder="t('fileManager.toolbar.searchPlaceholder')" @input="onSearchInputDebounced"
+            <input type="text" v-model="searchQuery" :placeholder="t('common.searchEllipsis')" @input="onSearchInputDebounced"
               @keydown.enter="triggerSearch"
               class="input input-sm input-bordered w-full pr-10 bg-background-base text-text-base border-border-base placeholder-text-muted" />
             <MagnifyingGlassIcon

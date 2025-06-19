@@ -13,7 +13,18 @@
     "loading": "载入中... 咕？",
     "error": "谬矣",
     "success": "功成",
-    "warning": "噫！慎之"
+    "warning": "噫！慎之",
+    "refresh": "拂尘",
+    "searchEllipsis": "寻觅...",
+    "name": "名讳",
+    "type": "类属",
+    "yes": "然",
+    "no": "否",
+    "retry": "再试",
+    "file": "文书",
+    "folder": "秘阁",
+    "actions": "法诀",
+    "description": "注疏"
   },
   "nav": {
     "home": "归庭",
@@ -35,6 +46,28 @@
       "deleteNode": "毁此机括",
       "copyNode": "拓印机括"
     }
+  },
+  "home": {
+    "welcome": "玄思妙境，恭迎大驾",
+    "subtitle": "掌尔锦囊妙计与百工图鉴，纵情挥洒。",
+    "recentProjects": "近履锦囊",
+    "loadingProjects": "锦囊载入中...",
+    "loadProjectsFailed": "锦囊载入倾覆: {error}",
+    "noProjects": "尚无锦囊。",
+    "createNewProject": "新辟锦囊",
+    "lastModified": "末次修缮",
+    "noDescription": "暂无批注",
+    "viewAllProjects": "遍览诸锦囊",
+    "characterCardOverview": "百工图鉴一瞥",
+    "exploreSidebar": "探侧厢，启尔造化之途。",
+    "invalidDate": "谬期"
+  },
+  "editorView": {
+    "loadingNodes": "机括载入中...",
+    "loadingDefinitions": "机括玄义载入中...",
+    "searchNodes": "寻机括...",
+    "noNodesFound": "未得机括",
+    "unclassified": "未归籍"
   },
   "settings": {
     "general": {
@@ -109,7 +142,39 @@
     "themeLight": "昭昭仪轨",
     "toggleSidebar": "展/敛侧厢",
     "expand": "展之",
-    "collapse": "敛之"
+    "collapse": "敛之",
+    "groupIOEdit": {
+      "title": "机巧流之枢纽",
+      "inputsTitle": "纳 (Inputs)",
+      "sortInputsTooltip": "以名序纳",
+      "noInputs": "无纳之枢",
+      "addInput": "增纳",
+      "outputsTitle": "吐 (Outputs)",
+      "sortOutputsTooltip": "以名序吐",
+      "noOutputs": "无吐之枢",
+      "addOutput": "增吐",
+      "editPropertiesTitle": "修枢纽之性",
+      "selectInterfaceToEdit": "请于上列择一枢纽以修之。",
+      "interfaceKeyTooltip": "枢纽之钥 (识之唯一)",
+      "moveUpTooltip": "上移",
+      "moveDownTooltip": "下移",
+      "deleteThisInput": "删此纳",
+      "nameLabel": "名讳:",
+      "displayNamePlaceholder": "示名",
+      "typeLabel": "类属:",
+      "descriptionLabel": "注疏:",
+      "descriptionPlaceholder": "枢纽之注疏",
+      "defaultValueLabel": "默认值:",
+      "defaultValueNumberPlaceholder": "默认之数",
+      "defaultValueStringPlaceholder": "默认之文 (可多行)",
+      "defaultValueNotSupported": "此类不支持默认值",
+      "minValueLabel": "最小值:",
+      "minValuePlaceholder": "最小值 (可选)",
+      "maxValueLabel": "最大值:",
+      "maxValuePlaceholder": "最大值 (可选)",
+      "deleteThisOutput": "删此吐",
+      "noActiveWorkflow": "无机巧流在运，或其数不可得。"
+    }
   },
   "projects": {
     "title": "吾之锦囊",
@@ -149,9 +214,7 @@
       "upload": "献宝",
       "uploadFile": "献文书",
       "newFolder": "辟新阁",
-      "refresh": "拂尘",
       "paste": "拓印",
-      "searchPlaceholder": "寻宝...",
       "switchToGridView": "罗列如棋局",
       "switchToListView": "罗列如书简",
       "sortBy": "序列之法",
@@ -185,11 +248,8 @@
     "browser": {
       "emptyFolder": "此阁空空，或未合筛法之宝。",
       "clearFilters": "净筛法",
-      "colName": "名讳",
       "colSize": "大小",
       "colDate": "修缮之期",
-      "colType": "类属",
-      "actions": "法诀",
       "contextMenu": {
         "open": "启之",
         "download": "取之",
@@ -199,7 +259,6 @@
         "addToFavorites": "纳为私藏",
         "removeFromFavorites": "除于私藏",
         "delete": "毁之",
-        "refresh": "拂尘",
         "newFolder": "辟新阁",
         "paste": "拓印",
         "noActions": "无法可施"
@@ -227,8 +286,6 @@
       "typeArchive": "封装箱箧",
       "typeFile": "{ext} 文书",
       "typeGenericFile": "文书",
-      "yes": "然",
-      "no": "否",
       "favorited": "私藏",
       "notFavorited": "非私藏",
       "previewFailed": "窥斑败北:",
@@ -306,156 +363,386 @@
         "success": "{count} 文书献功成",
         "error": "献宝败北: {error}"
       }
+    }
+  },
+  "statusBar": {
+    "workflow": "机巧流",
+    "execute": "敕令",
+    "defaultProjectName": "玄思妙境",
+    "tooltip": {
+      "hideEditorPanel": "隐天工坊",
+      "showEditorPanel": "显天工坊",
+      "disableLivePreview": "止即时窥豹",
+      "enableLivePreview": "启即时窥豹"
     },
-    "home": {
-      "welcome": "玄思妙境，恭迎大驾",
-      "subtitle": "掌尔锦囊妙计与百工图鉴，纵情挥洒。",
-      "recentProjects": "近履锦囊",
-      "loadingProjects": "锦囊载入中...",
-      "loadProjectsFailed": "锦囊载入倾覆: {error}",
-      "noProjects": "尚无锦囊。",
-      "createNewProject": "新辟锦囊",
-      "lastModified": "末次修缮",
-      "noDescription": "暂无批注",
-      "viewAllProjects": "遍览诸锦囊",
-      "characterCardOverview": "百工图鉴一瞥",
-      "exploreSidebar": "探侧厢，启尔造化之途。",
-      "invalidDate": "谬期"
+    "status": {
+      "idle": "安闲",
+      "queued": "候旨",
+      "running": "运转中...",
+      "complete": "功成",
+      "error": "谬矣",
+      "skipped": "越之"
+    }
+  },
+  "history": {
+    "groupIO": {
+      "inputNameChanged": "易纳 {inputName} 之名为 '{oldName}' -> '{newName}'",
+      "inputTypeChanged": "易纳 {inputName} 之类为 '{oldType}' -> '{newType}'",
+      "inputDescriptionChanged": "易纳 {inputName} 之注疏",
+      "inputDefaultValueChanged": "易纳 {inputName} 之默认值",
+      "inputMinValueChanged": "易纳 {inputName} 之最小值",
+      "inputMaxValueChanged": "易纳 {inputName} 之最大值",
+      "outputNameChanged": "易吐 {outputName} 之名为 '{oldName}' -> '{newName}'",
+      "outputTypeChanged": "易吐 {outputName} 之类为 '{oldType}' -> '{newType}'",
+      "outputDescriptionChanged": "易吐 {outputName} 之注疏"
+    }
+  },
+  "historyPanel": {
+    "title": "往事之鉴",
+    "noActiveTab": "无在运之签。",
+    "noHistoryForTab": "此签无往事可鉴。",
+    "unnamedOperation": "无名之举",
+    "invalidHistoryItem": "无效之往事",
+    "tooltip": {
+      "detailsTitle": "细目:",
+      "noDetails": "无",
+      "operationTitle": "行止:",
+      "indexTitle": "索引:",
+      "statusTitle": "情状:",
+      "statusCurrent": "当世",
+      "statusPast": "过往",
+      "statusFuture": "来日",
+      "statusSaved": "(已存)"
     },
-    "editorView": {
-      "loadingNodes": "机括载入中...",
-      "loadingDefinitions": "机括玄义载入中...",
-      "searchNodes": "寻机括...",
-      "noNodesFound": "未得机括",
-      "unclassified": "未归籍"
+    "formatDetail": {
+      "depthLimitExceeded": "[纵深越限]",
+      "nodeInfo": "机括: {nodeName} (类: {nodeType}, 识: {displayNodeId})",
+      "edgeInfo": "缘: {displayEdgeId} (源: {displaySourceNodeId}({sourceHandle}) -> 终: {displayTargetNodeId}({targetHandle}))",
+      "emptyArray": "[] (0)",
+      "arrayLength": "( {length} )",
+      "arrayMoreItems": "- ... (尚有 {count} 项)",
+      "emptyObject": "{}",
+      "objectMoreProperties": "... (尚有 {count} 秉性)",
+      "serializationFailed": "[序列化败北]"
+    }
+  },
+  "nodePanel": {
+    "title": "机括宝库",
+    "reloadNodesTooltip": "重载机括玄义",
+    "searchPlaceholder": "寻机括...",
+    "reloadedRefreshing": "机括已重载，刷新中...",
+    "loadingNodes": "机括载入中...",
+    "reloadFailed": "重载败北: {error}",
+    "addOrDragToCanvasTooltip": "点击或拖拽以添至画布",
+    "noMatchingNodes": "未寻得匹配之机括",
+    "unclassifiedCategory": "未归籍",
+    "noNodesAvailable": "无可用之机括玄义",
+    "errorSavingCollapseState": "存机括宝库折叠之态于本地败北:",
+    "errorFetchingNodes": "取机括败北 (NodePanel):",
+    "errorInvalidCollapseStateFormat": "本地所存机括宝库折叠之态格式谬误，已忽略。",
+    "errorLoadingCollapseState": "从本地加载或解析机括宝库折叠之态败北:",
+    "errorProactiveFetchFailed": "主动获取机括列表败北。",
+    "errorRequestReloadFailedAPI": "请求机括重载败北 (API)",
+    "errorRequestReloadErrorAPI": "请求机括重载时出错 (API): {errorMessage}"
+  },
+  "nodePreviewPanel": {
+    "inputsTitle": "纳之要目",
+    "outputsTitle": "吐之要目",
+    "configTitle": "营造之法",
+    "acceptedTypesLabel": "所纳之类:",
+    "placeholderLabel": "虚位之示:",
+    "internalComponentsTitle": "内蕴之件",
+    "workflowSelectorLabel": "择机巧流",
+    "workflowSelectorDescription": "择一机巧流于此机括组中实例化。"
+  },
+  "performancePanel": {
+    "title": "机括营造之计",
+    "collectButton": "计当前画布之数",
+    "copyTooltip": "拓印计数",
+    "loadingMessage": "计数中...",
+    "noDataOrEmptyCanvas": "未得其数，或画布空空如也。",
+    "componentInstancesLabel": "各类机括所用组件实例之数",
+    "warnNoTabId": "PerformancePanel:无法计数，当前标签页ID无效。",
+    "nodeCountLabel": "机括类属总数",
+    "unknownType": "未知类属",
+    "edgeCountLabel": "连线总数",
+    "unknownConfigItem": "未知营造之项",
+    "slotCountLabel": "接口总数",
+    "inputSlotsLabel": "纳之接口",
+    "outputSlotsLabel": "吐之接口",
+    "configSlotsLabel": "营造接口",
+    "warnNoStatsToCopy": "无计数可拓。",
+    "errorClipboardNotSupported": "汝之浏览器不支持或未允拓印。",
+    "errorCopyFailed": "拓印败北: {message}",
+    "logErrorCopyFailed": "拓印计数败北:",
+    "successCopied": "计数已拓入剪牍！"
+  },
+  "rightPreviewPanel": {
+    "titleSinglePreviewActive": "独窥: {nodeName} (识: {nodeId})",
+    "titleGroupOverviewActive": "组览: {workflowName}",
+    "titleDefault": "窥豹",
+    "singlePreview": "独窥",
+    "noTargetSelected": "（未择）",
+    "groupOverview": "组览",
+    "noWorkflowAvailable": "（无可用之机巧流）",
+    "singleModeTooltip": "独口窥豹之法 (含流式)",
+    "singleModeButton": "独",
+    "groupModeTooltip": "组吐总览之法",
+    "groupModeButton": "组",
+    "slotLabel": "接口:",
+    "keyLabel": "钥:",
+    "outputSuffix": "吐",
+    "streamTag": "流",
+    "streamingStatus": "流式传输中...",
+    "streamEndedStatus": "流已尽",
+    "waitingForStreamData": "待流之数据...",
+    "noPreviewData": "无可用之预览，或接口未有产出。",
+    "noTargetSelectedHint": "未择预览之标的。右击机括之吐或连线以窥。",
+    "noActiveWorkflow": "无在运之机巧流。",
+    "noGroupOutputsDefined": "当前机巧流未定义组吐之接口。",
+    "outputValueLabel": "吐之值:",
+    "noGroupOutputsAvailable": "当前机巧流之组吐无可用接口。",
+    "noGroupPreviewData": "无可用之预览，或接口未有产出。"
+  },
+  "sidebarManager": {
+    "tooltips": {
+      "goHome": "归庭",
+      "toggleTheme": "更迭仪轨",
+      "settings": "机巧枢要"
     },
-    "testPanel": {
-      "title": "玄机试炼场 (示匣与奇物)",
-      "dialogService": {
-        "title": "DialogService (玄机示匣与飞符)",
-        "dialogs": "玄机示匣 (Dialogs)",
-        "toasts": "飞符传讯 (Toasts)",
-        "results": "DialogService 果报:",
-        "buttons": {
-          "showMessage": "启消息示匣",
-          "showConfirm": "启确认示匣",
-          "showDangerConfirm": "启险途示匣",
-          "showAutoClose": "启自阖示匣",
-          "showInput": "启问策匣",
-          "showTextarea": "启长策匣",
-          "showLargeMessage": "启鸿篇示匣",
-          "showInfoToast": "发通识飞符",
-          "showSuccessToast": "发功成飞符",
-          "showWarningToast": "发警世飞符",
-          "showErrorToast": "发谬误飞符",
-          "showCustomToast": "发定制飞符",
-          "showMultipleToasts": "发连珠飞符",
-          "showLargeToast": "发鸿篇飞符"
-        },
-        "resultsContent": {
-          "waiting": "待君决...",
-          "waitingFor": "待 {actionName} 回响...",
-          "cancelled": "{actionName}：君罢手或阖匣。",
-          "exception": "{actionName}：玄妙之谬: {error}",
-          "messageSuccess": "消息示匣：君点可也。",
-          "messageCancelled": "消息示匣：君阖匣或遇谬。",
-          "confirmSuccess": "确认示匣：君择 -> {choice}",
-          "confirmCancelled": "确认示匣：君罢手。",
-          "dangerConfirmSuccess": "险途示匣：君择 -> {choice}",
-          "dangerConfirmCancelled": "险途示匣：君罢手。",
-          "autoCloseSuccess": "自阖示匣：匣自阖或君点可也。",
-          "autoCloseCancelled": "自阖示匣：君先阖或遇谬。",
-          "inputSuccess": "问策匣：君书 \"{input}\"",
-          "inputCancelled": "问策匣：君罢书。",
-          "textareaSuccess": "长策匣：君书 \"{input}\"",
-          "textareaCancelled": "长策匣：君罢书。",
-          "largeMessageSuccess": "鸿篇示匣：君点可也。",
-          "largeMessageCancelled": "鸿篇示匣：君阖匣或遇谬。",
-          "infoToastTriggered": "通识飞符已发。",
-          "successToastTriggered": "功成飞符已发。",
-          "warningToastTriggered": "警世飞符已发。",
-          "errorToastTriggered": "谬误飞符已发。",
-          "customToastTriggered": "定制飞符已发。",
-          "multipleToastsTriggered": "连珠飞符已发。",
-          "largeToastTriggered": "鸿篇飞符已发。"
-        },
-        "dialogContent": {
-          "messageTitle": "通识示匣",
-          "messageText": "此乃简易通识示匣，唯一可也钮。",
-          "confirmTitle": "确乎行此？",
-          "confirmText": "卿果决行此法乎？",
-          "dangerConfirmTitle": "险途示匣",
-          "dangerConfirmText": "此途不可逆，卿确欲前行乎？",
-          "dangerConfirmYes": "然，毁之",
-          "dangerConfirmNo": "罢也",
-          "autoCloseTitle": "自阖示匣例",
-          "autoCloseText": "此匣三息自阖。",
-          "inputTitle": "请赐策",
-          "inputText": "请书雅号：",
-          "inputPlaceholder": "例：咕咕",
-          "textareaTitle": "请赐长策",
-          "textareaText": "请详述所遇之碍或良策：",
-          "textareaPlaceholder": "请书长策于此...",
-          "largeMessageTitle": "鸿篇巨示",
-          "largeMessageConfirm": "朕已御览",
-          "customToastTitle": "定制飞符",
-          "customToastText": "此符悬于底央，驻五息。",
-          "infoToastTitle": "通识",
-          "infoToastText": "此乃通识飞符！",
-          "successToastTitle": "功成",
-          "successToastText": "法成矣！",
-          "warningToastTitle": "警世",
-          "warningToastText": "噫！此乃警世之言。",
-          "errorToastTitle": "谬矣",
-          "errorToastText": "呜呼！谬误现矣！",
-          "multiToast1": "飞符一",
-          "multiToast2": "飞符二 (迟)",
-          "multiToast3": "飞符三 (迟)",
-          "largeToastTitle": "鸿篇飞符"
-        }
+    "buttons": {
+      "goHome": "归",
+      "settings": "设"
+    },
+    "theme": {
+      "system": "随天时",
+      "dark": "昏昏",
+      "light": "昭昭"
+    },
+    "tabs": {
+      "nodes": {
+        "label": "机括",
+        "title": "机括宝库"
       },
-      "uiStore": {
-        "title": "UiStore (寰宇示匣)",
-        "specificModals": "特定玄匣",
-        "results": "UiStore 果报:",
-        "buttons": {
-          "openSettings": "启机巧枢要玄匣 (App.vue 掌之)",
-          "openRegexEditor": "启天符纂修玄匣",
-          "openInitialUsernameSetup": "启初名玄匣"
-        },
-        "resultsContent": {
-          "initialUsernameClosed": "初名玄匣已阖 (事象)。",
-          "initialUsernameSaved": "初名已存 (事象)。",
-          "openingSettings": "试启机巧枢要玄匣...",
-          "openingRegexEditor": "试启天符纂修玄匣...",
-          "regexEditorSaved": "天符已纂，规数: {count}。观幽府录以悉。",
-          "openingInitialUsernameSetup": "试启初名玄匣...",
-          "settingsClosed": "机巧枢要玄匣已阖。"
-        }
+      "workflows": {
+        "label": "机巧流",
+        "title": "机巧流总管"
       },
-      "settingsControl": {
-        "title": "SettingControl (假道枢要玄鉴) 试炼",
-        "results": "SettingsStore 现值 (验真用):",
-        "labels": {
-          "string": "单行书 (String)",
-          "textarea": "长策书 (Textarea)",
-          "number": "数策书 (Number)",
-          "boolean": "阴阳爻 (Boolean)",
-          "select": "择物匣 (Select)"
-        },
-        "descriptions": {
-          "string": "验单行书入。",
-          "textarea": "验长策书入。",
-          "number": "验数策入，兼度与阶。",
-          "boolean": "验阴阳爻变。",
-          "select": "验择物之法。"
-        },
-        "selectOptions": {
-          "a": "甲策 (option1)",
-          "b": "乙策 (option2)",
-          "c": "丙策 (option3)",
-          "d": "丁策 (原欲封禁)"
-        }
+      "interface": {
+        "label": "接口",
+        "title": "机巧流之枢纽"
+      },
+      "history": {
+        "label": "往事",
+        "title": "往事之鉴"
+      },
+      "performance": {
+        "label": "计数",
+        "title": "机括之计"
+      },
+      "info": {
+        "label": "注疏",
+        "title": "机巧流注疏"
+      }
+    }
+  },
+  "workflowInfoPanel": {
+    "title": "机巧流注疏",
+    "labels": {
+      "id": "识:",
+      "createdAt": "营造之时:",
+      "updatedAt": "修缮之时:",
+      "version": "版:",
+      "nodeCount": "机括之数:"
+    },
+    "placeholders": {
+      "name": "机巧流之名",
+      "description": "机巧流之注疏..."
+    },
+    "hints": {
+      "name": "机巧流之示名。若名讳冲突，将自动添后缀。",
+      "description": "详述此机巧流之功用。",
+      "markdownSupport": "支持Markdown语法。"
+    },
+    "buttons": {
+      "logJson": "于控制台输出机巧流JSON (Debug)"
+    },
+    "nodeList": {
+      "title": "机巧流之机括列表 ({count})",
+      "noNodes": "此机巧流中无机括。"
+    },
+    "noActiveWorkflow": "无在运之机巧流或数据不可用。",
+    "logs": {
+      "nameConflictAdjusted": "为免冲突，易名：由 \"{oldName}\" 至 \"{newName}\"",
+      "coordinatingNameUpdate": "协调机巧流易名 (签 {tabId}) 为: {newName}",
+      "nameUpdateSuccess": "机巧流易名已协调功成 (签 {tabId})。",
+      "nameUpdateError": "协调机巧流易名时出错 (签 {tabId}):",
+      "coordinatingDescriptionUpdate": "协调机巧流注疏更新 (签 {tabId})",
+      "descriptionUpdateSuccess": "机巧流注疏更新已协调功成 (签 {tabId})。",
+      "descriptionUpdateError": "协调机巧流注疏更新时出错 (签 {tabId}):",
+      "currentWorkflowJson": "当前机巧流 JSON (由 elements 构建):",
+      "noActiveStateForLog": "无 activeState、elements 或 workflowData 可供输出。"
+    },
+    "history": {
+      "nameChanged": "易机巧流之名为 \"{newName}\"",
+      "descriptionChanged": "修改机巧流之注疏"
+    }
+  },
+  "workflowPanel": {
+    "title": "机巧流",
+    "searchPlaceholder": "寻机巧流...",
+    "refreshButton": "刷新列表",
+    "loading": "载入中...",
+    "noWorkflowsToLoad": "无可载之机巧流。",
+    "noMatchingWorkflows": "无匹配之机巧流。",
+    "noDescription": "无注疏",
+    "status": {
+      "unused": "未用"
+    },
+    "tooltips": {
+      "loadWorkflow": "点击加载 **{name}**\n\n---\n{description}",
+      "orphanGroup": "此乃“创建组”所生且当前未被引用之机巧流",
+      "referencedBy": "被 {count} 个机巧流引用",
+      "delete": "删除"
+    },
+    "errors": {
+      "loadNotFound": "无法加载机巧流：未在列表中找到。",
+      "loadNoProject": "无法加载机巧流：缺少项目信息。"
+    },
+    "defaultTabName": "机巧流 {idSuffix}",
+    "logs": {
+      "loadErrorNotFound": "WorkflowPanel: 未在可用列表中找到ID为 {workflowId} 的机巧流。",
+      "loadErrorNoProject": "WorkflowPanel: 无法加载机巧流，当前项目ID缺失。",
+      "activatedExistingTab": "WorkflowPanel: 已激活机巧流 {workflowId} 的现有标签页 {tabId}",
+      "openedNewTab": "WorkflowPanel: 已为机巧流 {workflowId} 打开新标签页 {tabId}"
+    }
+  },
+  "testPanel": {
+    "title": "玄机试炼场 (示匣与奇物)",
+    "dialogService": {
+      "title": "DialogService (玄机示匣与飞符)",
+      "dialogs": "玄机示匣 (Dialogs)",
+      "toasts": "飞符传讯 (Toasts)",
+      "results": "DialogService 果报:",
+      "buttons": {
+        "showMessage": "启消息示匣",
+        "showConfirm": "启确认示匣",
+        "showDangerConfirm": "启险途示匣",
+        "showAutoClose": "启自阖示匣",
+        "showInput": "启问策匣",
+        "showTextarea": "启长策匣",
+        "showLargeMessage": "启鸿篇示匣",
+        "showInfoToast": "发通识飞符",
+        "showSuccessToast": "发功成飞符",
+        "showWarningToast": "发警世飞符",
+        "showErrorToast": "发谬误飞符",
+        "showCustomToast": "发定制飞符",
+        "showMultipleToasts": "发连珠飞符",
+        "showLargeToast": "发鸿篇飞符"
+      },
+      "resultsContent": {
+        "waiting": "待君决...",
+        "waitingFor": "待 {actionName} 回响...",
+        "cancelled": "{actionName}：君罢手或阖匣。",
+        "exception": "{actionName}：玄妙之谬: {error}",
+        "messageSuccess": "消息示匣：君点可也。",
+        "messageCancelled": "消息示匣：君阖匣或遇谬。",
+        "confirmSuccess": "确认示匣：君择 -> {choice}",
+        "confirmCancelled": "确认示匣：君罢手。",
+        "dangerConfirmSuccess": "险途示匣：君择 -> {choice}",
+        "dangerConfirmCancelled": "险途示匣：君罢手。",
+        "autoCloseSuccess": "自阖示匣：匣自阖或君点可也。",
+        "autoCloseCancelled": "自阖示匣：君先阖或遇谬。",
+        "inputSuccess": "问策匣：君书 \"{input}\"",
+        "inputCancelled": "问策匣：君罢书。",
+        "textareaSuccess": "长策匣：君书 \"{input}\"",
+        "textareaCancelled": "长策匣：君罢书。",
+        "largeMessageSuccess": "鸿篇示匣：君点可也。",
+        "largeMessageCancelled": "鸿篇示匣：君阖匣或遇谬。",
+        "infoToastTriggered": "通识飞符已发。",
+        "successToastTriggered": "功成飞符已发。",
+        "warningToastTriggered": "警世飞符已发。",
+        "errorToastTriggered": "谬误飞符已发。",
+        "customToastTriggered": "定制飞符已发。",
+        "multipleToastsTriggered": "连珠飞符已发。",
+        "largeToastTriggered": "鸿篇飞符已发。"
+      },
+      "dialogContent": {
+        "messageTitle": "通识示匣",
+        "messageText": "此乃简易通识示匣，唯一可也钮。",
+        "confirmTitle": "确乎行此？",
+        "confirmText": "卿果决行此法乎？",
+        "dangerConfirmTitle": "险途示匣",
+        "dangerConfirmText": "此途不可逆，卿确欲前行乎？",
+        "dangerConfirmYes": "然，毁之",
+        "dangerConfirmNo": "罢也",
+        "autoCloseTitle": "自阖示匣例",
+        "autoCloseText": "此匣三息自阖。",
+        "inputTitle": "请赐策",
+        "inputText": "请书雅号：",
+        "inputPlaceholder": "例：咕咕",
+        "textareaTitle": "请赐长策",
+        "textareaText": "请详述所遇之碍或良策：",
+        "textareaPlaceholder": "请书长策于此...",
+        "largeMessageTitle": "鸿篇巨示",
+        "largeMessageConfirm": "朕已御览",
+        "customToastTitle": "定制飞符",
+        "customToastText": "此符悬于底央，驻五息。",
+        "infoToastTitle": "通识",
+        "infoToastText": "此乃通识飞符！",
+        "successToastTitle": "功成",
+        "successToastText": "法成矣！",
+        "warningToastTitle": "警世",
+        "warningToastText": "噫！此乃警世之言。",
+        "errorToastTitle": "谬矣",
+        "errorToastText": "呜呼！谬误现矣！",
+        "multiToast1": "飞符一",
+        "multiToast2": "飞符二 (迟)",
+        "multiToast3": "飞符三 (迟)",
+        "largeToastTitle": "鸿篇飞符"
+      }
+    },
+    "uiStore": {
+      "title": "UiStore (寰宇示匣)",
+      "specificModals": "特定玄匣",
+      "results": "UiStore 果报:",
+      "buttons": {
+        "openSettings": "启机巧枢要玄匣 (App.vue 掌之)",
+        "openRegexEditor": "启天符纂修玄匣",
+        "openInitialUsernameSetup": "启初名玄匣"
+      },
+      "resultsContent": {
+        "initialUsernameClosed": "初名玄匣已阖 (事象)。",
+        "initialUsernameSaved": "初名已存 (事象)。",
+        "openingSettings": "试启机巧枢要玄匣...",
+        "openingRegexEditor": "试启天符纂修玄匣...",
+        "regexEditorSaved": "天符已纂，规数: {count}。观幽府录以悉。",
+        "openingInitialUsernameSetup": "试启初名玄匣...",
+        "settingsClosed": "机巧枢要玄匣已阖。"
+      }
+    },
+    "settingsControl": {
+      "title": "SettingControl (假道枢要玄鉴) 试炼",
+      "results": "SettingsStore 现值 (验真用):",
+      "labels": {
+        "string": "单行书 (String)",
+        "textarea": "长策书 (Textarea)",
+        "number": "数策书 (Number)",
+        "boolean": "阴阳爻 (Boolean)",
+        "select": "择物匣 (Select)"
+      },
+      "descriptions": {
+        "string": "验单行书入。",
+        "textarea": "验长策书入。",
+        "number": "验数策入，兼度与阶。",
+        "boolean": "验阴阳爻变。",
+        "select": "验择物之法。"
+      },
+      "selectOptions": {
+        "a": "甲策 (option1)",
+        "b": "乙策 (option2)",
+        "c": "丙策 (option3)",
+        "d": "丁策 (原欲封禁)"
       }
     }
   }

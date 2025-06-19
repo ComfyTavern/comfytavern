@@ -15,10 +15,10 @@
     <div class="panel-header" :class="{ collapsed: !panelLayout.isExpanded }" @mousedown.stop.prevent="startDragTop">
       <div v-if="panelLayout.isExpanded" class="flex items-center space-x-2 flex-grow min-w-0">
         <h3 class="panel-title truncate flex-shrink" :title="panelMode === 'singlePreview' && activeTarget
-          ? `单一预览: ${nodeDisplayName} (ID: ${activeTarget.nodeId})`
+          ? t('rightPreviewPanel.titleSinglePreviewActive', { nodeName: nodeDisplayName, nodeId: activeTarget.nodeId })
           : panelMode === 'groupOverview' && activeTabId && groupOutputs
-            ? `组输出总览: ${activeWorkflowName}`
-            : '预览'
+            ? t('rightPreviewPanel.titleGroupOverviewActive', { workflowName: activeWorkflowName })
+            : t('rightPreviewPanel.titleDefault')
           ">
           <template v-if="panelMode === 'singlePreview'">
             <template v-if="activeTarget">
@@ -26,17 +26,17 @@
               <span class="text-xs text-text-muted ml-1">(ID: {{ activeTarget.nodeId }})</span>
             </template>
             <template v-else>
-              <span class="text-text-base">单一预览 <span
-                  class="text-text-muted">（未选目标）</span></span>
+              <span class="text-text-base">{{ t('rightPreviewPanel.singlePreview') }} <span
+                  class="text-text-muted">{{ t('rightPreviewPanel.noTargetSelected') }}</span></span>
             </template>
           </template>
           <template v-else-if="panelMode === 'groupOverview'">
             <template v-if="activeTabId && groupOutputs"> <span
                 class="text-lg font-semibold text-success">{{
-                  activeWorkflowName }}</span> 组输出总览 </template>
+                  activeWorkflowName }}</span> {{ t('rightPreviewPanel.groupOverview') }} </template>
             <template v-else>
-              <span class="text-text-base">组输出总览
-                <span class="text-text-muted">（无可用工作流）</span></span>
+              <span class="text-text-base">{{ t('rightPreviewPanel.groupOverview') }}
+                <span class="text-text-muted">{{ t('rightPreviewPanel.noWorkflowAvailable') }}</span></span>
             </template>
           </template>
         </h3>
@@ -49,16 +49,16 @@
           panelMode === 'singlePreview'
             ? 'bg-primary text-primary-content shadow-sm'
             : 'text-text-secondary hover:bg-neutral-softest',
-        ]" title="单一插槽预览模式 (含流式)">
-          单一
+        ]" :title="t('rightPreviewPanel.singleModeTooltip')">
+          {{ t('rightPreviewPanel.singleModeButton') }}
         </button>
         <button @click="panelMode = 'groupOverview'" :class="[
           'px-2 py-0.5 text-xs rounded-md transition-colors',
           panelMode === 'groupOverview'
             ? 'bg-success text-primary-content shadow-sm'
             : 'text-text-secondary hover:bg-neutral-softest',
-        ]" title="组输出总览模式">
-          组总览
+        ]" :title="t('rightPreviewPanel.groupModeTooltip')">
+          {{ t('rightPreviewPanel.groupModeButton') }}
         </button>
       </div>
       <button class="toggle-button" @click="togglePanelExpansion">
@@ -84,16 +84,16 @@
           <div class="p-4 flex flex-col overflow-hidden h-full space-y-2">
             <!-- 插槽信息 -->
             <p class="text-sm flex-shrink-0">
-              <span class="font-semibold text-text-muted">插槽: </span>
+              <span class="font-semibold text-text-muted">{{ t('rightPreviewPanel.slotLabel') }}</span>
               <span class="text-text-base">{{ slotDisplayName }}</span>
-              <span class="text-xs text-text-muted ml-1">(Key: {{ activeTarget.slotKey }})</span>
-              <span class="text-xs font-semibold text-text-muted uppercase ml-2">- 输出</span>
+              <span class="text-xs text-text-muted ml-1">({{ t('rightPreviewPanel.keyLabel') }} {{ activeTarget.slotKey }})</span>
+              <span class="text-xs font-semibold text-text-muted uppercase ml-2">- {{ t('rightPreviewPanel.outputSuffix') }}</span>
               <span v-if="isStreamSlot"
-                class="text-xs font-semibold text-accent uppercase ml-2">[STREAM]</span>
+                class="text-xs font-semibold text-accent uppercase ml-2">[{{ t('rightPreviewPanel.streamTag') }}]</span>
               <span v-if="isSingleStreamProcessing"
-                class="text-info ml-2 font-normal text-xs">(流式传输中...)</span>
+                class="text-info ml-2 font-normal text-xs">({{ t('rightPreviewPanel.streamingStatus') }})</span>
               <span v-else-if="isStreamSlot && isSingleStreamDone"
-                class="text-success ml-2 font-normal text-xs">(流已结束)</span>
+                class="text-success ml-2 font-normal text-xs">({{ t('rightPreviewPanel.streamEndedStatus') }})</span>
             </p>
 
             <div class="flex flex-col flex-grow overflow-hidden">
@@ -119,8 +119,8 @@
                 </template>
                 <!-- 无内容时的提示 -->
                 <p v-else class="text-xs text-text-muted italic">
-                  <template v-if="isSingleStreamProcessing">等待流数据...</template>
-                  <template v-else>无可用预览数据或插槽未产生输出。</template>
+                  <template v-if="isSingleStreamProcessing">{{ t('rightPreviewPanel.waitingForStreamData') }}</template>
+                  <template v-else>{{ t('rightPreviewPanel.noPreviewData') }}</template>
                 </p>
               </div>
             </div>
@@ -128,7 +128,7 @@
         </template>
         <template v-else>
           <p class="p-4 text-sm text-text-muted">
-            无预览目标被选中。右键点击节点输出桩或连线以预览。
+            {{ t('rightPreviewPanel.noTargetSelectedHint') }}
           </p>
         </template>
       </template>
@@ -137,10 +137,10 @@
       <!-- 组输出总览模式 -->
       <template v-else-if="panelMode === 'groupOverview'">
         <template v-if="!activeTabId">
-          <p class="p-4 text-sm text-text-muted">没有活动的工作流。</p>
+          <p class="p-4 text-sm text-text-muted">{{ t('rightPreviewPanel.noActiveWorkflow') }}</p>
         </template>
         <template v-else-if="!groupOutputs || Object.keys(groupOutputs).length === 0">
-          <p class="p-4 text-sm text-text-muted">当前工作流没有定义组输出接口。</p>
+          <p class="p-4 text-sm text-text-muted">{{ t('rightPreviewPanel.noGroupOutputsDefined') }}</p>
         </template>
         <template v-else-if="processedGroupOutputs.length > 0">
           <!-- 添加 overflow-y-auto 以便内容过多时滚动 -->
@@ -154,10 +154,10 @@
                     {{ item.outputDef.displayName || item.key }}
                     <!-- 添加 STREAM 标签 -->
                     <span v-if="item.isStream"
-                      class="text-xs font-semibold text-accent uppercase ml-1">[STREAM]</span>
+                      class="text-xs font-semibold text-accent uppercase ml-1">[{{ t('rightPreviewPanel.streamTag') }}]</span>
                     <!-- 标题和状态 -->
                     <span class="text-xs mb-1 text-text-muted font-semibold">
-                      输出值:
+                      {{ t('rightPreviewPanel.outputValueLabel') }}
                       <!-- 显示状态文本 -->
                       <span v-if="item.status" :class="['ml-2 font-normal text-xs', item.status.class]">
                         {{ item.status.text }}
@@ -197,7 +197,7 @@
         </template>
         <template v-else>
           <p class="p-4 text-sm text-text-muted">
-            当前工作流的组输出没有可用接口。
+            {{ t('rightPreviewPanel.noGroupOutputsAvailable') }}
           </p>
         </template>
       </template>
@@ -207,6 +207,7 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted, type Ref, computed, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useLocalStorage } from "@vueuse/core";
 import { DataFlowType, type OutputDefinition, ExecutionStatus } from "@comfytavern/types";
 import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager";
@@ -216,6 +217,8 @@ import { useNodeStore } from "@/stores/nodeStore";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer.vue";
 import type { Node as VueFlowNode } from "@vue-flow/core";
 
+
+const { t } = useI18n();
 const panelMode = useLocalStorage<"singlePreview" | "groupOverview">(
   "rightPreviewPanelMode", // 用于 localStorage 的键名
   "singlePreview" // 默认值
@@ -231,7 +234,6 @@ const workflowStore = useWorkflowStore();
 const nodeStore = useNodeStore();
 
 const panelElementRef: Ref<HTMLElement | null> = ref(null);
-
 const activeTarget = computed(() => workflowManager.activePreviewTarget.value);
 const activeTabId = computed(() => workflowManager.activeTabId.value);
 
@@ -548,8 +550,8 @@ const getGroupStatusText = (key: string, outputDef: OutputDefinition): { text: s
   const streamProcessing = isInterfaceStreamProcessing(key); // 已有方法
   const streamDone = isInterfaceStreamDone(key); // 已有方法
 
-  if (streamProcessing) return { text: "(流式传输中...)", class: "text-info" };
-  if (streamDone) return { text: "(流已结束)", class: "text-success" };
+  if (streamProcessing) return { text: `(${t('rightPreviewPanel.streamingStatus')})`, class: "text-info" };
+  if (streamDone) return { text: `(${t('rightPreviewPanel.streamEndedStatus')})`, class: "text-success" };
   return null;
 };
 
@@ -575,8 +577,8 @@ const getGroupEmptyText = (key: string, outputDef: OutputDefinition, content: an
   const isStream = outputDef.dataFlowType === DataFlowType.STREAM;
   const streamProcessing = isInterfaceStreamProcessing(key); // 已有方法
 
-  if (isStream && streamProcessing) return "等待流数据...";
-  return "无可用预览数据或接口未产生输出。";
+  if (isStream && streamProcessing) return t('rightPreviewPanel.waitingForStreamData');
+  return t('rightPreviewPanel.noGroupPreviewData');
 };
 
 const processedGroupOutputs = computed(() => {

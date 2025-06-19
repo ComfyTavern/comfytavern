@@ -1,12 +1,12 @@
 <template>
   <div class="performance-panel p-4 h-full flex flex-col text-sm">
-    <h3 class="text-lg font-semibold mb-4 text-text-base">节点组件统计</h3>
+    <h3 class="text-lg font-semibold mb-4 text-text-base">{{ t('performancePanel.title') }}</h3>
     <div class="flex items-center mb-4 space-x-2">
       <button @click="collectStats"
         class="px-4 py-2 bg-primary text-primary-content rounded hover:bg-primary hover:brightness-95 transition-colors flex-grow">
-        统计当前画布数据
+        {{ t('performancePanel.collectButton') }}
       </button>
-      <button @click="copyStatsToClipboard" title="复制统计数据" :disabled="!stats.length || loading"
+      <button @click="copyStatsToClipboard" :title="t('performancePanel.copyTooltip')" :disabled="!stats.length || loading"
         class="p-2 bg-background-surface text-text-base rounded hover:bg-background-surface hover:brightness-95 dark:hover:brightness-105 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
           stroke-width="2">
@@ -16,7 +16,7 @@
       </button>
     </div>
 
-    <div v-if="loading" class="text-text-secondary">正在统计...</div>
+    <div v-if="loading" class="text-text-secondary">{{ t('performancePanel.loadingMessage') }}</div>
 
     <div v-if="!loading && stats.length > 0" class="flex-1 overflow-y-auto">
       <ul class="space-y-1">
@@ -99,13 +99,14 @@
       </ul>
     </div>
     <div v-if="!loading && stats.length === 0 && collected" class="text-text-secondary">
-      没有收集到数据，或者画布为空。
+      {{ t('performancePanel.noDataOrEmptyCanvas') }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from "vue-i18n";
 import { useVueFlow } from '@vue-flow/core';
 import { useClipboard } from '@/composables/useClipboard';
 import { useDialogService } from '@/services/DialogService';
@@ -128,6 +129,7 @@ export interface StatItem {
 // !!! 修改结束 !!!
 
 
+const { t } = useI18n();
 const { getNodes, getEdges } = useVueFlow();
 const nodeStore = useNodeStore();
 const tabStore = useTabStore();
@@ -152,7 +154,7 @@ const stats = computed((): StatItem[] => {
 
     if (children.length > 0) {
       componentStatItems.push({
-        label: '各类节点中所用组件实例数量',
+        label: t('performancePanel.componentInstancesLabel'),
         count: children.reduce((sum, item) => sum + item.count, 0),
         children: children,
         expanded: true,
@@ -180,13 +182,13 @@ const toggleItem = (item: StatItem) => {
   // 对于没有子项的条目，点击无效果，避免不必要的响应式更新
 };
 
+
 const collectStats = async () => {
   if (!currentTabId.value) {
-    console.warn('PerformancePanel:无法收集统计信息，当前标签页 ID 无效。');
+    console.warn(t('performancePanel.warnNoTabId'));
     return;
   }
   const tabId = currentTabId.value;
-
   performanceStatsStore.setLoading(tabId, true);
 
   const nodes: Node[] = getNodes.value;
@@ -205,12 +207,12 @@ const collectStats = async () => {
 
   // 1. 节点总数
   const nodeCount = nodes.length;
-  const nodeStatsItem: StatItem = { label: '节点类型总数', count: nodeCount, children: [], expanded: true };
+  const nodeStatsItem: StatItem = { label: t('performancePanel.nodeCountLabel'), count: nodeCount, children: [], expanded: true };
 
   // 2. 各类型节点数量
   const nodeTypes: Record<string, { count: number, definition: any | null }> = {}; // 存储计数和定义
   nodes.forEach(node => {
-    const type = node.type || '未知类型';
+    const type = node.type || t('performancePanel.unknownType');
     if (!nodeTypes[type]) {
       nodeTypes[type] = { count: 0, definition: nodeStore.getNodeDefinitionByFullType(type) };
     }
@@ -241,7 +243,7 @@ const collectStats = async () => {
   calculatedStats.push(nodeStatsItem);
 
   // 3. 连线总数
-  calculatedStats.push({ label: '连线总数', count: edges.length, expanded: true });
+  calculatedStats.push({ label: t('performancePanel.edgeCountLabel'), count: edges.length, expanded: true });
 
 
   // 4. 槽位统计 (包括输入、输出、配置)
@@ -281,10 +283,10 @@ const collectStats = async () => {
         Object.values(nodeDefinition.configSchema).forEach((configDef: InputDefinition) => {
           totalConfigSlotInstances++;
 
-          const configKeyForDisplay = configDef.displayName || (Object.keys(nodeDefinition.configSchema!).find(key => nodeDefinition.configSchema![key] === configDef)) || '未知配置项';
-          configSlotKeyCounts[configKeyForDisplay] = (configSlotKeyCounts[configKeyForDisplay] || 0) + 1;
+        const configKeyForDisplay = configDef.displayName || (Object.keys(nodeDefinition.configSchema!).find(key => nodeDefinition.configSchema![key] === configDef)) || t('performancePanel.unknownConfigItem');
+        configSlotKeyCounts[configKeyForDisplay] = (configSlotKeyCounts[configKeyForDisplay] || 0) + 1;
 
-          const componentObject = getInputComponent(configDef.dataFlowType, configDef.config, configDef.matchCategories);
+        const componentObject = getInputComponent(configDef.dataFlowType, configDef.config, configDef.matchCategories);
           if (componentObject) {
             const componentName = componentObject.name || (componentObject as any).__name || 'UnknownComponent';
             if (componentName !== 'InlineConnectionSorter' && componentName !== 'NodeInputActionsBar' && componentName !== 'UnknownComponent') {
@@ -318,7 +320,7 @@ const collectStats = async () => {
       if (inputsFromData) {
         Object.values(inputsFromData).forEach((slotDefValue: unknown) => {
           totalInputSlots++;
-          let typeKey = '未知';
+          let typeKey = t('performancePanel.unknownType');
           if (slotDefValue && typeof slotDefValue === 'object' && 'dataFlowType' in slotDefValue && typeof (slotDefValue as any).dataFlowType === 'string') {
             typeKey = (slotDefValue as any).dataFlowType;
           }
@@ -328,7 +330,7 @@ const collectStats = async () => {
       if (outputsFromData) {
         Object.values(outputsFromData).forEach((slotDefValue: unknown) => {
           totalOutputSlots++;
-          let typeKey = '未知';
+          let typeKey = t('performancePanel.unknownType');
           if (slotDefValue && typeof slotDefValue === 'object' && 'dataFlowType' in slotDefValue && typeof (slotDefValue as any).dataFlowType === 'string') {
             typeKey = (slotDefValue as any).dataFlowType;
           }
@@ -339,14 +341,14 @@ const collectStats = async () => {
   });
 
   const overallTotalSlots = totalInputSlots + totalOutputSlots + totalConfigSlotInstances;
-  const slotStatsItem: StatItem = { label: '槽位总数', count: overallTotalSlots, children: [], expanded: true };
+  const slotStatsItem: StatItem = { label: t('performancePanel.slotCountLabel'), count: overallTotalSlots, children: [], expanded: true };
 
   const inputSlotChildren: StatItem[] = [];
   Object.entries(inputSlotTypes).sort(([a], [b]) => a.localeCompare(b)).forEach(([type, count]) => {
     inputSlotChildren.push({ label: type, count });
   });
   slotStatsItem.children?.push({
-    label: '输入槽位',
+    label: t('performancePanel.inputSlotsLabel'),
     count: totalInputSlots,
     children: inputSlotChildren.length > 0 ? inputSlotChildren : undefined,
     expanded: false
@@ -357,7 +359,7 @@ const collectStats = async () => {
     outputSlotChildren.push({ label: type, count });
   });
   slotStatsItem.children?.push({
-    label: '输出槽位',
+    label: t('performancePanel.outputSlotsLabel'),
     count: totalOutputSlots,
     children: outputSlotChildren.length > 0 ? outputSlotChildren : undefined,
     expanded: false
@@ -368,7 +370,7 @@ const collectStats = async () => {
     configSlotChildren.push({ label: key, count });
   });
   slotStatsItem.children?.push({
-    label: '配置槽位',
+    label: t('performancePanel.configSlotsLabel'),
     count: totalConfigSlotInstances,
     children: configSlotChildren.length > 0 ? configSlotChildren : undefined,
     expanded: false
@@ -391,11 +393,11 @@ const collectStats = async () => {
 // !!! 修改点: 清理复制的 JSON !!!
 const copyStatsToClipboard = async () => {
   if (!stats.value || stats.value.length === 0) {
-    dialogService.showWarning('没有可复制的统计数据。', '提示');
+    dialogService.showWarning(t('performancePanel.warnNoStatsToCopy'), t('common.warning'));
     return;
   }
   if (!clipboardIsSupported) {
-    dialogService.showError('您的浏览器不支持或未授权剪贴板写入操作。', '错误');
+    dialogService.showError(t('performancePanel.errorClipboardNotSupported'), t('common.error'));
     return;
   }
 
@@ -420,10 +422,10 @@ const copyStatsToClipboard = async () => {
   await writeText(statsJson);
 
   if (clipboardError.value) {
-    dialogService.showError(`复制失败: ${clipboardError.value.message}`, '错误');
-    console.error('复制统计数据失败:', clipboardError.value);
+    dialogService.showError(t('performancePanel.errorCopyFailed', { message: clipboardError.value.message }), t('common.error'));
+    console.error(t('performancePanel.logErrorCopyFailed'), clipboardError.value);
   } else {
-    dialogService.showSuccess('统计数据已复制到剪贴板！', '成功');
+    dialogService.showSuccess(t('performancePanel.successCopied'), t('common.success'));
   }
 };
 // !!! 修改结束 !!!

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { storeToRefs } from "pinia";
 import { useTabStore } from "@/stores/tabStore";
 // 移除旧的 workflowManager 导入
@@ -20,6 +21,7 @@ const tabStore = useTabStore();
 const workflowStore = useWorkflowStore(); // 获取 workflowStore 实例
 const themeStore = useThemeStore(); // 获取 themeStore 实例
 
+const { t } = useI18n();
 const { activeTabId } = storeToRefs(tabStore);
 const isDark = computed(() => themeStore.currentAppliedMode === 'dark'); // 获取 isDark 状态
 
@@ -89,20 +91,19 @@ const handleNameBlur = async () => {
       finalSafeFilename = generateSafeWorkflowFilename(finalName);
     }
   } while (conflict);
-
   // 使用最终确定的名称更新状态
   if (finalName !== editingName.value) {
-    console.log(`名称调整以避免冲突：从 "${editingName.value}" 调整为 "${finalName}"`);
+    console.log(t('workflowInfoPanel.logs.nameConflictAdjusted', { oldName: editingName.value, newName: finalName }));
     editingName.value = finalName; // 更新输入框显示的值
   }
 
-  console.log(`Coordinating workflow name update for tab ${currentTabId} to: ${finalName}`);
+  console.log(t('workflowInfoPanel.logs.coordinatingNameUpdate', { tabId: currentTabId, newName: finalName }));
 
   // 创建历史记录条目
   const historyEntry = createHistoryEntry(
     "modify",
     "workflowMetadata",
-    `修改工作流名称为 "${finalName}"`,
+    t('workflowInfoPanel.history.nameChanged', { newName: finalName }),
     {
       property: "name",
       oldValue: originalName,
@@ -114,15 +115,15 @@ const handleNameBlur = async () => {
   // 调用协调器函数
   try {
     await workflowStore.updateWorkflowNameAndRecord(currentTabId, finalName, historyEntry);
-    console.log(`Workflow name update coordinated successfully for tab ${currentTabId}.`);
+    console.log(t('workflowInfoPanel.logs.nameUpdateSuccess', { tabId: currentTabId }));
   } catch (error) {
-    console.error(`Error coordinating workflow name update for tab ${currentTabId}:`, error);
+    console.error(t('workflowInfoPanel.logs.nameUpdateError', { tabId: currentTabId }), error);
     // 考虑错误处理，例如恢复原始名称或显示错误消息
     editingName.value = originalName; // 发生错误时恢复原始名称
   }
-  // 移除旧的直接调用
-  // workflowManager.updateWorkflowName(activeTabId.value, finalName);
 };
+// 移除旧的直接调用
+// workflowManager.updateWorkflowName(activeTabId.value, finalName);
 
 // 处理描述文本域失焦事件
 const handleDescriptionBlur = async () => {
@@ -134,13 +135,13 @@ const handleDescriptionBlur = async () => {
   const newDescription = editingDescription.value; // 通常 textarea 不需要 trim，除非有特定需求
 
   if (newDescription !== originalDescription) {
-    console.log(`Coordinating workflow description update for tab ${currentTabId}`);
+    console.log(t('workflowInfoPanel.logs.coordinatingDescriptionUpdate', { tabId: currentTabId }));
 
     // 创建历史记录条目
     const historyEntry = createHistoryEntry(
       "modify",
       "workflowMetadata",
-      `修改工作流描述`, // 简短摘要
+      t('workflowInfoPanel.history.descriptionChanged'), // 简短摘要
       {
         property: "description",
         oldValue: originalDescription,
@@ -159,10 +160,10 @@ const handleDescriptionBlur = async () => {
         newDescription,
         historyEntry
       );
-      console.log(`Workflow description update coordinated successfully for tab ${currentTabId}.`);
+      console.log(t('workflowInfoPanel.logs.descriptionUpdateSuccess', { tabId: currentTabId }));
     } catch (error) {
       console.error(
-        `Error coordinating workflow description update for tab ${currentTabId}:`,
+        t('workflowInfoPanel.logs.descriptionUpdateError', { tabId: currentTabId }),
         error
       );
       // 考虑错误处理
@@ -226,19 +227,20 @@ const logWorkflowJson = () => {
       ...workflowMeta, // 复制所有元数据
       nodes: currentNodes, // 使用最新的节点
       edges: currentEdges, // 使用最新的边
-      viewport: currentViewport, // 使用最新的视口
+      viewport: currentViewport // 使用最新的视口
     };
 
-    console.debug("当前工作流 JSON (从 elements 构建):", JSON.stringify(currentWorkflowForLog, null, 2));
+    console.debug(t('workflowInfoPanel.logs.currentWorkflowJson'), JSON.stringify(currentWorkflowForLog, null, 2));
   } else {
-    console.warn("没有活动的 activeState、elements 或 workflowData 可供输出。");
+    console.warn(t('workflowInfoPanel.logs.noActiveStateForLog'));
   }
 };
 </script>
 
 <template>
   <div class="workflow-info-panel h-full flex flex-col text-sm">
-    <h3 class="text-lg text-text-base font-semibold mb-4 border-b pb-2 border-border-base px-4 pt-4 flex-shrink-0">工作流信息
+    <h3 class="text-lg text-text-base font-semibold mb-4 border-b pb-2 border-border-base px-4 pt-4 flex-shrink-0">{{
+      t('workflowInfoPanel.title') }}
     </h3>
 
     <OverlayScrollbarsComponent v-if="workflowData"
@@ -246,38 +248,43 @@ const logWorkflowJson = () => {
       class="flex-1 px-4 pb-4" defer>
       <div class="space-y-4"> <!-- Inner wrapper for spacing -->
         <div>
-          <label for="workflow-name" class="block text-xs font-medium text-text-secondary mb-1">名称</label>
-          <input id="workflow-name" type="text" v-model="editingName" @blur="handleNameBlur" placeholder="工作流名称"
-            class="input-sm w-full" />
+          <label for="workflow-name" class="block text-xs font-medium text-text-secondary mb-1">{{
+            t('common.name') }}</label>
+          <input id="workflow-name" type="text" v-model="editingName" @blur="handleNameBlur"
+            :placeholder="t('workflowInfoPanel.placeholders.name')" class="input-sm w-full" />
 
-          <p class="text-xs text-text-muted mt-1">工作流的显示名称。如果名称冲突，会自动添加后缀。</p>
+          <p class="text-xs text-text-muted mt-1">{{ t('workflowInfoPanel.hints.name') }}</p>
         </div>
 
         <div>
-          <label for="workflow-description" class="block text-xs font-medium text-text-secondary mb-1">描述</label>
+          <label for="workflow-description" class="block text-xs font-medium text-text-secondary mb-1">{{
+            t('common.description') }}</label>
           <textarea id="workflow-description" v-model="editingDescription" @blur="handleDescriptionBlur" rows="4"
-            placeholder="工作流描述信息..." class="textarea-sm w-full"></textarea>
-          <p class="text-xs text-text-muted mt-1">详细描述这个工作流的功能和用途。</p>
-          <p class="text-xs text-text-muted mt-1">支持markdown语法。</p>
+            :placeholder="t('workflowInfoPanel.placeholders.description')" class="textarea-sm w-full"></textarea>
+          <p class="text-xs text-text-muted mt-1">{{ t('workflowInfoPanel.hints.description') }}</p>
+          <p class="text-xs text-text-muted mt-1">{{ t('workflowInfoPanel.hints.markdownSupport') }}</p>
         </div>
 
         <!-- 可以添加其他信息显示，如 ID, 创建/更新时间等 -->
         <div class="text-xs text-text-muted space-y-1 border-t pt-3 mt-4 border-border-base">
-          <p><strong>ID:</strong> {{ workflowData.id }}</p>
+          <p><strong>{{ t('workflowInfoPanel.labels.id') }}</strong> {{ workflowData.id }}</p>
           <p v-if="workflowData.createdAt">
-            <strong>创建时间:</strong> {{ new Date(workflowData.createdAt).toLocaleString() }}
+            <strong>{{ t('workflowInfoPanel.labels.createdAt') }}</strong> {{ new
+              Date(workflowData.createdAt).toLocaleString() }}
           </p>
           <p v-if="workflowData.updatedAt">
-            <strong>更新时间:</strong> {{ new Date(workflowData.updatedAt).toLocaleString() }}
+            <strong>{{ t('workflowInfoPanel.labels.updatedAt') }}</strong> {{ new
+              Date(workflowData.updatedAt).toLocaleString() }}
           </p>
-          <p v-if="workflowData.version"><strong>版本:</strong> {{ workflowData.version }}</p>
-          <p><strong>节点数量:</strong> {{ nodeCount }}</p>
+          <p v-if="workflowData.version"><strong>{{ t('workflowInfoPanel.labels.version') }}</strong> {{
+            workflowData.version }}</p>
+          <p><strong>{{ t('workflowInfoPanel.labels.nodeCount') }}</strong> {{ nodeCount }}</p>
           <!-- 添加节点数量显示 -->
 
           <div class="mt-3">
             <button @click="logWorkflowJson"
               class="w-full px-3 py-1.5 text-xs font-medium text-center text-info bg-transparent border border-info/50 rounded-md hover:bg-info-softest focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-info dark:focus:ring-offset-background-surface shadow-sm">
-              输出工作流 JSON 到控制台 (Debug)
+              {{ t('workflowInfoPanel.buttons.logJson') }}
             </button>
           </div>
         </div>
@@ -291,14 +298,14 @@ const logWorkflowJson = () => {
               ▶
             </span>
             <h2 class="text-xs font-medium uppercase text-text-secondary">
-              工作流节点列表 ({{ nodeCount }})
+              {{ t('workflowInfoPanel.nodeList.title', { count: nodeCount }) }}
             </h2>
           </div>
           <OverlayScrollbarsComponent v-if="isNodeListExpanded"
             :options="{ scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' } }"
             class="mt-2 max-h-60 border rounded border-neutral-soft bg-background-base bg-opacity-50 p-2 text-xs" defer>
             <div v-if="workflowNodes.length === 0" class="text-text-muted italic">
-              此工作流中没有节点。
+              {{ t('workflowInfoPanel.nodeList.noNodes') }}
             </div>
             <ul v-else class="space-y-1">
               <li v-for="node in workflowNodes" :key="node.id" class="truncate py-0.5 text-text-muted">
@@ -310,7 +317,8 @@ const logWorkflowJson = () => {
         </div>
       </div>
     </OverlayScrollbarsComponent>
-    <div v-else class="text-text-muted italic text-center py-6 px-4 flex-1">没有活动的工作流或数据不可用。</div>
+    <div v-else class="text-text-muted italic text-center py-6 px-4 flex-1">{{
+      t('workflowInfoPanel.noActiveWorkflow') }}</div>
     <!-- Added flex-1 here -->
   </div>
 </template>

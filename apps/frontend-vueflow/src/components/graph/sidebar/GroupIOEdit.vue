@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted, nextTick } from "vue";
+import { useI18n } from "vue-i18n";
 import { storeToRefs } from "pinia";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useTabStore } from "@/stores/tabStore";
@@ -14,6 +15,7 @@ import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
 import { useThemeStore } from "@/stores/theme";
 
+const { t } = useI18n();
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore();
 
@@ -232,8 +234,11 @@ function handleInputNameBlur() {
     };
 
     // Create History Entry
-    const summary = `修改输入 ${oldDisplayNameValue || keyToUpdate
-      } 名称: '${oldDisplayNameValue}' -> '${newDisplayName}'`;
+    const summary = t("history.groupIO.inputNameChanged", {
+      inputName: oldDisplayNameValue || keyToUpdate,
+      oldName: oldDisplayNameValue,
+      newName: newDisplayName,
+    });
     const entry: HistoryEntry = createHistoryEntry("modify", "interfaceInput", summary, {
       key: keyToUpdate,
       propertyName: "displayName",
@@ -269,7 +274,12 @@ function handleInputTypeChange(event: Event) {
 
     // Create History Entry
     const inputName = selectedInputData.value?.displayName || keyToUpdate;
-    const summary = `修改输入 ${inputName} 类型: '${oldType}' -> '${newType}'`;
+    const summary = t("history.groupIO.inputTypeChanged", {
+      inputName,
+      oldType,
+      newType,
+    });
+    // const summary = `修改输入 ${inputName} 类型: '${oldType}' -> '${newType}'`;
     const entry: HistoryEntry = createHistoryEntry("modify", "interfaceInput", summary, {
       key: keyToUpdate,
       propertyName: "dataFlowType",
@@ -313,7 +323,8 @@ function handleInputDescriptionBlur() {
 
     // Create History Entry
     const inputName = selectedInputData.value?.displayName || keyToUpdate;
-    const summary = `修改输入 ${inputName} 描述`; // Simplified summary for potentially long text
+    const summary = t("history.groupIO.inputDescriptionChanged", { inputName });
+    // const summary = `修改输入 ${inputName} 描述`; // Simplified summary for potentially long text
     const entry: HistoryEntry = createHistoryEntry("modify", "interfaceInput", summary, {
       key: keyToUpdate,
       propertyName: "customDescription", // 历史记录属性名改为 customDescription
@@ -360,7 +371,7 @@ function handleInputDefaultValueChange() {
 
     // Create History Entry
     const inputName = selectedInputData.value?.displayName || keyToUpdate;
-    const summary = `修改输入 ${inputName} 默认值`;
+    const summary = t("history.groupIO.inputDefaultValueChanged", { inputName });
     const entry: HistoryEntry = createHistoryEntry("modify", "interfaceInput", summary, {
       key: keyToUpdate,
       propertyName: "config.default",
@@ -405,7 +416,7 @@ function handleInputMinBlur() {
 
     // Create History Entry
     const inputName = selectedInputData.value?.displayName || keyToUpdate;
-    const summary = `修改输入 ${inputName} 最小值`;
+    const summary = t("history.groupIO.inputMinValueChanged", { inputName });
     const entry: HistoryEntry = createHistoryEntry("modify", "interfaceInput", summary, {
       key: keyToUpdate,
       propertyName: "min",
@@ -450,7 +461,7 @@ function handleInputMaxBlur() {
 
     // Create History Entry
     const inputName = selectedInputData.value?.displayName || keyToUpdate;
-    const summary = `修改输入 ${inputName} 最大值`;
+    const summary = t("history.groupIO.inputMaxValueChanged", { inputName });
     const entry: HistoryEntry = createHistoryEntry("modify", "interfaceInput", summary, {
       key: keyToUpdate,
       propertyName: "max",
@@ -493,8 +504,11 @@ function handleOutputNameBlur() {
     };
 
     // Create History Entry
-    const summary = `修改输出 ${oldDisplayNameValue || keyToUpdate
-      } 名称: '${oldDisplayNameValue}' -> '${newDisplayName}'`;
+    const summary = t("history.groupIO.outputNameChanged", {
+      outputName: oldDisplayNameValue || keyToUpdate,
+      oldName: oldDisplayNameValue,
+      newName: newDisplayName,
+    });
     const entry: HistoryEntry = createHistoryEntry("modify", "interfaceOutput", summary, {
       key: keyToUpdate,
       propertyName: "displayName",
@@ -530,7 +544,12 @@ function handleOutputTypeChange(event: Event) {
 
     // Create History Entry
     const outputName = selectedOutputData.value?.displayName || keyToUpdate;
-    const summary = `修改输出 ${outputName} 类型: '${oldType}' -> '${newType}'`;
+    const summary = t("history.groupIO.outputTypeChanged", {
+      outputName,
+      oldType,
+      newType,
+    });
+    // const summary = `修改输出 ${outputName} 类型: '${oldType}' -> '${newType}'`;
     const entry: HistoryEntry = createHistoryEntry("modify", "interfaceOutput", summary, {
       key: keyToUpdate,
       propertyName: "dataFlowType",
@@ -573,7 +592,8 @@ function handleOutputDescriptionBlur() {
 
     // Create History Entry
     const outputName = selectedOutputData.value?.displayName || keyToUpdate;
-    const summary = `修改输出 ${outputName} 描述`; // Simplified summary
+    const summary = t("history.groupIO.outputDescriptionChanged", { outputName });
+    // const summary = `修改输出 ${outputName} 描述`; // Simplified summary
     const entry: HistoryEntry = createHistoryEntry("modify", "interfaceOutput", summary, {
       key: keyToUpdate,
       propertyName: "customDescription", // 历史记录属性名改为 customDescription
@@ -631,7 +651,8 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
 
 <template>
   <div class="flex flex-col h-full text-sm">
-    <h3 class="text-lg font-semibold mb-2 border-b border-border-base text-text-base pb-1 px-4 pt-4">工作流接口</h3>
+    <h3 class="text-lg font-semibold mb-2 border-b border-border-base text-text-base pb-1 px-4 pt-4">{{
+      t('sidebar.groupIOEdit.title') }}</h3>
 
     <div v-if="activeState?.workflowData" class="flex-grow flex flex-col overflow-y-auto">
       <!-- 接口列表 (顶部区域) -->
@@ -640,8 +661,9 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
         <!-- 输入列表 -->
         <div>
           <div class="flex justify-between items-center">
-            <h4 class="font-medium mb-1 text-xs uppercase text-text-muted">输入 (Inputs)</h4>
-            <button @click="sortInputs" v-comfy-tooltip="'按名称排序输入'"
+            <h4 class="font-medium mb-1 text-xs uppercase text-text-muted">{{ t('sidebar.groupIOEdit.inputsTitle') }}
+            </h4>
+            <button @click="sortInputs" v-comfy-tooltip="t('sidebar.groupIOEdit.sortInputsTooltip')"
               class="btn btn-xs btn-ghost p-0 text-text-secondary hover:text-text-base">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 themed-icon-stroke" fill="none"
                 viewBox="0 0 24 24" stroke-width="2">
@@ -650,7 +672,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
             </button>
           </div>
           <div v-if="Object.keys(filteredInputs).length === 0" class="text-text-muted italic text-xs px-1">
-            无输入接口
+            {{ t('sidebar.groupIOEdit.noInputs') }}
           </div>
           <OverlayScrollbarsComponent v-else :options="{
             scrollbars: {
@@ -687,7 +709,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
             <!-- 输入下拉菜单容器 -->
             <button ref="inputDropdownButtonRef" @click="showInputDropdown = !showInputDropdown"
               class="btn btn-xs btn-outline w-full">
-              + 添加输入
+              + {{ t('sidebar.groupIOEdit.addInput') }}
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -708,8 +730,9 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
         <!-- 输出列表 -->
         <div>
           <div class="flex justify-between items-center">
-            <h4 class="font-medium mb-1 text-xs uppercase text-text-muted">输出 (Outputs)</h4>
-            <button @click="sortOutputs" v-comfy-tooltip="'按名称排序输出'"
+            <h4 class="font-medium mb-1 text-xs uppercase text-text-muted">{{ t('sidebar.groupIOEdit.outputsTitle') }}
+            </h4>
+            <button @click="sortOutputs" v-comfy-tooltip="t('sidebar.groupIOEdit.sortOutputsTooltip')"
               class="btn btn-xs btn-ghost p-0 text-text-secondary hover:text-text-base">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 themed-icon-stroke" fill="none"
                 viewBox="0 0 24 24" stroke-width="2">
@@ -718,7 +741,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
             </button>
           </div>
           <div v-if="Object.keys(filteredOutputs).length === 0" class="text-text-muted italic text-xs px-1">
-            无输出接口
+            {{ t('sidebar.groupIOEdit.noOutputs') }}
           </div>
           <OverlayScrollbarsComponent v-else :options="{
             scrollbars: {
@@ -738,13 +761,13 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
                   <div class="flex items-center space-x-1.5 flex-shrink-0">
                     <span class="text-xs text-text-secondary">{{ output.dataFlowType }}</span>
                     <span :class="getHandleClasses(output, false)" style="
-                        width: 8px !important;
-                        height: 8px !important;
-                        position: static !important;
-                        transform: none !important;
-                        border-width: 1px !important;
-                        display: inline-block;
-                      "></span>
+                          width: 8px !important;
+                          height: 8px !important;
+                          position: static !important;
+                          transform: none !important;
+                          border-width: 1px !important;
+                          display: inline-block;
+                        "></span>
                   </div>
                 </li>
               </template>
@@ -755,7 +778,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
             <!-- 输出下拉菜单容器 -->
             <button ref="outputDropdownButtonRef" @click="showOutputDropdown = !showOutputDropdown"
               class="btn btn-xs btn-outline w-full">
-              + 添加输出
+              + {{ t('sidebar.groupIOEdit.addOutput') }}
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -781,22 +804,24 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
       <OverlayScrollbarsComponent :options="{
         scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
       }" class="flex-grow flex-shrink-0 px-4 pb-4" defer>
-        <h4 class="font-medium mb-2 text-xs uppercase text-text-secondary">编辑接口属性</h4>
+        <h4 class="font-medium mb-2 text-xs uppercase text-text-secondary">{{
+          t('sidebar.groupIOEdit.editPropertiesTitle') }}
+        </h4>
 
         <div v-if="!selectedInputKey && !selectedOutputKey" class="text-text-secondary italic text-xs">
-          请在上方列表中选择一个接口进行编辑。
+          {{ t('sidebar.groupIOEdit.selectInterfaceToEdit') }}
         </div>
 
         <!-- 输入编辑表单 -->
         <div v-if="selectedInputKey && selectedInputData" class="space-y-2">
           <div class="flex justify-between items-center mb-1">
             <span class="font-mono text-xs text-text-secondary bg-neutral/10 dark:bg-neutral/10 p-1 px-2 rounded"
-              v-comfy-tooltip="'接口 Key (唯一标识符)'">{{
+              v-comfy-tooltip="t('sidebar.groupIOEdit.interfaceKeyTooltip')">{{
                 selectedInputKey
               }}</span>
             <div class="flex items-center space-x-2">
               <button @click="moveSlot(selectedInputKey, 'up', 'input')" :disabled="!canMoveInputUp"
-                v-comfy-tooltip="'上移'"
+                v-comfy-tooltip="t('sidebar.groupIOEdit.moveUpTooltip')"
                 class="btn btn-xs btn-ghost p-0 text-text-secondary hover:text-text-base disabled:text-text-muted">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 themed-icon-stroke" fill="none"
                   viewBox="0 0 24 24" stroke-width="2">
@@ -804,7 +829,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
                 </svg>
               </button>
               <button @click="moveSlot(selectedInputKey, 'down', 'input')" :disabled="!canMoveInputDown"
-                v-comfy-tooltip="'下移'"
+                v-comfy-tooltip="t('sidebar.groupIOEdit.moveDownTooltip')"
                 class="btn btn-xs btn-ghost p-0 text-text-secondary hover:text-text-base disabled:text-text-muted">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 themed-icon-stroke" fill="none"
                   viewBox="0 0 24 24" stroke-width="2">
@@ -813,27 +838,28 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
               </button>
               <button @click="removeInput(selectedInputKey)"
                 class="text-error hover:text-error hover:brightness-75 text-xs">
-                删除此输入
+                {{ t('sidebar.groupIOEdit.deleteThisInput') }}
               </button>
             </div>
           </div>
           <div class="grid grid-cols-3 gap-x-2 gap-y-1 items-center text-xs">
-            <label class="col-span-1 text-right text-text-base">名称:</label>
+            <label class="col-span-1 text-right text-text-base">{{ t('sidebar.groupIOEdit.nameLabel') }}</label>
             <input v-model="editingDisplayName" type="text" class="col-span-2 input-xs text-text-muted"
-              placeholder="显示名称" @focus="oldInputDisplayName = editingDisplayName" @blur="handleInputNameBlur" />
+              :placeholder="t('sidebar.groupIOEdit.displayNamePlaceholder')"
+              @focus="oldInputDisplayName = editingDisplayName" @blur="handleInputNameBlur" />
 
-            <label class="col-span-1 text-right text-text-base">类型:</label>
+            <label class="col-span-1 text-right text-text-base">{{ t('sidebar.groupIOEdit.typeLabel') }}</label>
             <select :value="selectedInputData?.dataFlowType" class="col-span-2 input-xs text-text-muted"
               @change="handleInputTypeChange">
-              <option v-for="t in availableTypes" :key="t" :value="t">{{ t }}</option>
+              <option v-for="t_val in availableTypes" :key="t_val" :value="t_val">{{ t_val }}</option>
             </select>
 
-            <label class="col-span-1 text-right text-text-base">描述:</label>
+            <label class="col-span-1 text-right text-text-base">{{ t('sidebar.groupIOEdit.descriptionLabel') }}</label>
             <input v-model="editingDescription" type="text" class="col-span-2 input-xs text-text-muted"
-              placeholder="接口描述信息" @blur="handleInputDescriptionBlur" />
+              :placeholder="t('sidebar.groupIOEdit.descriptionPlaceholder')" @blur="handleInputDescriptionBlur" />
 
             <!-- 默认值输入 -->
-            <label class="col-span-1 text-right text-text-base">默认值:</label>
+            <label class="col-span-1 text-right text-text-base">{{ t('sidebar.groupIOEdit.defaultValueLabel') }}</label>
             <div class="col-span-2">
               <!-- 优先检查 suggestions -->
               <select
@@ -849,17 +875,21 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
               <input v-else-if="
                 selectedInputData.dataFlowType === DataFlowType.INTEGER ||
                 selectedInputData.dataFlowType === DataFlowType.FLOAT
-              " v-model.number="editingDefaultValue" type="number" class="input-xs text-text-muted" placeholder="默认数值"
+              " v-model.number="editingDefaultValue" type="number" class="input-xs text-text-muted"
+                :placeholder="t('sidebar.groupIOEdit.defaultValueNumberPlaceholder')"
                 @change="handleInputDefaultValueChange" />
               <textarea v-else-if="selectedInputData.dataFlowType === DataFlowType.STRING" v-model="editingDefaultValue"
-                class="input-xs textarea-xs text-text-muted" placeholder="默认字符串 (支持多行)" rows="3"
+                class="input-xs textarea-xs text-text-muted"
+                :placeholder="t('sidebar.groupIOEdit.defaultValueStringPlaceholder')" rows="3"
                 @change="handleInputDefaultValueChange"></textarea>
               <input v-else-if="selectedInputData.dataFlowType === DataFlowType.BOOLEAN" v-model="editingDefaultValue"
                 type="checkbox"
                 class="h-4 w-4 rounded border-border-base text-primary focus:ring-primary bg-background-base"
                 @change="handleInputDefaultValueChange" />
               <!-- TODO: 添加对 CODE 等类型的默认值支持 (COMBO 已通过 suggestions 处理) -->
-              <span v-else class="text-text-secondary italic text-xs">不支持此类型的默认值</span>
+              <span v-else class="text-text-secondary italic text-xs">{{
+                t('sidebar.groupIOEdit.defaultValueNotSupported')
+                }}</span>
             </div>
 
             <!-- 最小值输入 (仅数值类型) -->
@@ -867,9 +897,9 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
               selectedInputData.dataFlowType === DataFlowType.INTEGER ||
               selectedInputData.dataFlowType === DataFlowType.FLOAT
             ">
-              <label class="col-span-1 text-right text-text-base">最小值:</label>
+              <label class="col-span-1 text-right text-text-base">{{ t('sidebar.groupIOEdit.minValueLabel') }}</label>
               <input v-model.number="editingMin" type="number" class="col-span-2 input-xs text-text-muted"
-                placeholder="最小值 (可选)" @blur="handleInputMinBlur" />
+                :placeholder="t('sidebar.groupIOEdit.minValuePlaceholder')" @blur="handleInputMinBlur" />
             </template>
 
             <!-- 最大值输入 (仅数值类型) -->
@@ -877,9 +907,9 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
               selectedInputData.dataFlowType === DataFlowType.INTEGER ||
               selectedInputData.dataFlowType === DataFlowType.FLOAT
             ">
-              <label class="col-span-1 text-right text-text-base">最大值:</label>
+              <label class="col-span-1 text-right text-text-base">{{ t('sidebar.groupIOEdit.maxValueLabel') }}</label>
               <input v-model.number="editingMax" type="number" class="col-span-2 input-xs text-text-muted"
-                placeholder="最大值 (可选)" @blur="handleInputMaxBlur" />
+                :placeholder="t('sidebar.groupIOEdit.maxValuePlaceholder')" @blur="handleInputMaxBlur" />
             </template>
 
             <!-- TODO: 添加 required, config 字段 -->
@@ -895,12 +925,12 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
         <div v-if="selectedOutputKey && selectedOutputData" class="space-y-2">
           <div class="flex justify-between items-center mb-1">
             <span class="font-mono text-xs bg-neutral/10 dark:bg-neutral/20 px-1 rounded"
-              v-comfy-tooltip="'接口 Key (唯一标识符)'">{{
+              v-comfy-tooltip="t('sidebar.groupIOEdit.interfaceKeyTooltip')">{{
                 selectedOutputKey
               }}</span>
             <div class="flex items-center space-x-2">
               <button @click="moveSlot(selectedOutputKey, 'up', 'output')" :disabled="!canMoveOutputUp"
-                v-comfy-tooltip="'上移'"
+                v-comfy-tooltip="t('sidebar.groupIOEdit.moveUpTooltip')"
                 class="btn btn-xs btn-ghost p-0 text-text-secondary hover:text-text-base disabled:text-text-muted">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
                   stroke="currentColor" stroke-width="2">
@@ -908,7 +938,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
                 </svg>
               </button>
               <button @click="moveSlot(selectedOutputKey, 'down', 'output')" :disabled="!canMoveOutputDown"
-                v-comfy-tooltip="'下移'"
+                v-comfy-tooltip="t('sidebar.groupIOEdit.moveDownTooltip')"
                 class="btn btn-xs btn-ghost p-0 text-text-secondary hover:text-text-base disabled:text-text-muted">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
                   stroke="currentColor" stroke-width="2">
@@ -917,24 +947,25 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
               </button>
               <button @click="removeOutput(selectedOutputKey)"
                 class="text-error hover:text-error hover:brightness-75 text-xs">
-                删除此输出
+                {{ t('sidebar.groupIOEdit.deleteThisOutput') }}
               </button>
             </div>
           </div>
           <div class="grid grid-cols-3 gap-x-2 gap-y-1 items-center text-xs">
-            <label class="col-span-1 text-right text-text-base">名称:</label>
+            <label class="col-span-1 text-right text-text-base">{{ t('sidebar.groupIOEdit.nameLabel') }}</label>
             <input v-model="editingDisplayName" type="text" class="col-span-2 input-xs text-text-muted"
-              placeholder="显示名称" @focus="oldOutputDisplayName = editingDisplayName" @blur="handleOutputNameBlur" />
+              :placeholder="t('sidebar.groupIOEdit.displayNamePlaceholder')"
+              @focus="oldOutputDisplayName = editingDisplayName" @blur="handleOutputNameBlur" />
 
-            <label class="col-span-1 text-right text-text-base">类型:</label>
+            <label class="col-span-1 text-right text-text-base">{{ t('sidebar.groupIOEdit.typeLabel') }}</label>
             <select :value="selectedOutputData?.dataFlowType" class="col-span-2 input-xs"
               @change="handleOutputTypeChange">
-              <option v-for="t in availableTypes" :key="t" :value="t">{{ t }}</option>
+              <option v-for="t_val in availableTypes" :key="t_val" :value="t_val">{{ t_val }}</option>
             </select>
 
-            <label class="col-span-1 text-right text-text-base">描述:</label>
+            <label class="col-span-1 text-right text-text-base">{{ t('sidebar.groupIOEdit.descriptionLabel') }}</label>
             <input v-model="editingDescription" type="text" class="col-span-2 input-xs text-text-muted"
-              placeholder="接口描述信息" @blur="handleOutputDescriptionBlur" />
+              :placeholder="t('sidebar.groupIOEdit.descriptionPlaceholder')" @blur="handleOutputDescriptionBlur" />
 
             <!-- TODO: 添加 config 字段 -->
           </div>
@@ -942,7 +973,7 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
       </OverlayScrollbarsComponent>
     </div>
     <div v-else class="px-4 py-4 text-text-muted italic text-xs">
-      没有活动的工作流或工作流数据不可用。
+      {{ t('sidebar.groupIOEdit.noActiveWorkflow') }}
     </div>
   </div>
 </template>
