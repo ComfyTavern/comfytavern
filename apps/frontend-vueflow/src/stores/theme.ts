@@ -68,6 +68,7 @@ export const useThemeStore = defineStore('theme', () => {
 
     // 确保 variant 和 variant.variables 都有效，并且 variables 对象不是空的
     if (variant && variant.variables && Object.keys(variant.variables).length > 0) {
+      // console.log(`[ThemeStore] Applying theme "${presetToApply.id}", mode "${modeToApply}". Variables:`, JSON.parse(JSON.stringify(variant.variables)));
       // 正常应用选中的变体
       Object.entries(variant.variables).forEach(([key, value]) => {
         document.documentElement.style.setProperty(key, value);
@@ -76,6 +77,7 @@ export const useThemeStore = defineStore('theme', () => {
       try {
         localStorage.setItem('comfyTavern_cachedThemeVariables', JSON.stringify(variant.variables));
         localStorage.setItem('comfyTavern_cachedThemeMode', modeToApply);
+        // console.log('[ThemeStore] Saved theme variables and mode to localStorage. Mode:', modeToApply, 'Variables:', JSON.parse(JSON.stringify(variant.variables)));
       } catch (e) {
         console.error('[ThemeStore] Error saving theme variables to localStorage:', e);
       }
@@ -89,8 +91,9 @@ export const useThemeStore = defineStore('theme', () => {
       try {
         localStorage.removeItem('comfyTavern_cachedThemeVariables');
         localStorage.setItem('comfyTavern_cachedThemeMode', modeToApply); // 仍然记录当前尝试应用的模式
+        // console.log('[ThemeStore] Cleared cached theme variables from localStorage, saved mode:', modeToApply);
       } catch (e) {
-        console.error('[ThemeStore] Error clearing cached theme variables from localStorage:', e);
+        console.error('[ThemeStore] Error clearing/saving theme variables/mode from localStorage:', e);
       }
     }
 

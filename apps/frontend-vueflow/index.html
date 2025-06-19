@@ -6,6 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ComfyTavern Flow</title> <!-- 更新标题 -->
     <style>
+      /* Default HSL values for fallback (if JS fails or no cache) */
+      :root {
+        --ct-background-base-hsl: 0 0% 100%; /* Light mode default HSL for body bg */
+      }
+      html.dark {
+        --ct-background-base-hsl: 0 0% 7%;   /* Dark mode default HSL for body bg */
+      }
+
+      /* Define the final color variable based on the HSL variable */
+      /* This rule needs to be available for the body styles below */
+      :root, html.dark { /* Apply to both to ensure it's always defined */
+        --ct-background-base: hsl(var(--ct-background-base-hsl));
+      }
+
       /* Basic body reset, actual background will be set by active mode class or CSS vars later */
       body {
         margin: 0;
@@ -16,10 +30,10 @@
       }
 
       body.dark-mode-active {
-        background-color: #111827; /* Hardcoded dark body background for initial paint */
+        background-color: var(--ct-background-base, #111827); /* Use var, fallback to hardcoded dark */
       }
       body.light-mode-active {
-        background-color: #f9fafb; /* Hardcoded light body background for initial paint */
+        background-color: var(--ct-background-base, #f9fafb); /* Use var, fallback to hardcoded light */
       }
 
       #splash {
@@ -38,7 +52,7 @@
 
       /* Splash screen styles based on active mode */
       body.dark-mode-active #splash {
-        background-color: #111827; /* Dark theme splash background */
+        background-color: var(--ct-background-base, #111827); /* Use var, fallback to dark splash */
       }
       body.dark-mode-active #splash::after { /* Spinner for dark mode */
         content: '';
@@ -52,7 +66,7 @@
       }
 
       body.light-mode-active #splash {
-        background-color: #f9fafb; /* Light theme splash background */
+        background-color: var(--ct-background-base, #f9fafb); /* Use var, fallback to light splash */
       }
       body.light-mode-active #splash::after { /* Spinner for light mode */
         content: '';
@@ -80,8 +94,12 @@
   <body>
     <script>
       (function() {
+        // console.log('[InlineScript] Initializing theme application...');
         try {
-          const displayMode = localStorage.getItem('displayMode') || 'system';
+          const storedDisplayMode = localStorage.getItem('displayMode');
+          // console.log('[InlineScript] localStorage displayMode:', storedDisplayMode);
+          const displayMode = storedDisplayMode || 'system';
+          
           const DAISYUI_LIGHT_THEME_NAME = 'mytheme_light';
           const DAISYUI_DARK_THEME_NAME = 'mytheme_dark';
           const CACHED_THEME_VARS_KEY = 'comfyTavern_cachedThemeVariables';
@@ -90,33 +108,47 @@
 
           if (displayMode === 'system') {
             modeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            // console.log('[InlineScript] System preference detected. Mode to apply:', modeToApply);
           } else {
             modeToApply = displayMode;
+            // console.log('[InlineScript] User preference detected. Mode to apply:', modeToApply);
           }
 
           let specificThemeApplied = false;
           try {
             const cachedMode = localStorage.getItem(CACHED_THEME_MODE_KEY);
             const cachedVarsString = localStorage.getItem(CACHED_THEME_VARS_KEY);
+            // console.log('[InlineScript] Cached theme mode from localStorage:', cachedMode);
+            // console.log('[InlineScript] Cached theme variables string from localStorage (first 100 chars):', cachedVarsString ? cachedVarsString.substring(0, 100) + '...' : null);
+
 
             if (cachedMode === modeToApply && cachedVarsString) {
+              // console.log('[InlineScript] Cached mode matches current mode. Attempting to apply cached variables.');
               const variables = JSON.parse(cachedVarsString);
               if (typeof variables === 'object' && variables !== null) {
+                // console.log('[InlineScript] Parsed cached variables:', variables);
                 for (const key in variables) {
                   if (Object.prototype.hasOwnProperty.call(variables, key)) {
                     document.documentElement.style.setProperty(key, variables[key]);
+                    // console.log(`[InlineScript] Applied variable: ${key} = ${variables[key]}`);
                   }
                 }
                 specificThemeApplied = true;
-                // console.log('[InlineScript] Applied cached theme variables for mode:', modeToApply);
+                // console.log('[InlineScript] Successfully applied cached theme variables for mode:', modeToApply);
+              } else {
+                // console.warn('[InlineScript] Parsed cached variables are not a valid object:', variables);
               }
+            } else {
+              // console.log('[InlineScript] Cached theme not applied. Reason:',
+                  // cachedMode !== modeToApply ? `Mode mismatch (cached: ${cachedMode}, current: ${modeToApply})` : 'No cached variables string or mode mismatch.');
             }
           } catch (err) {
-            // console.error('[InlineScript] Error applying cached theme variables:', err);
+            console.error('[InlineScript] Error applying cached theme variables:', err); // Keep this error log
             // specificThemeApplied remains false, will fall back to basic mode setting below
           }
 
           // Always apply basic mode classes and data-theme attribute
+          // console.log('[InlineScript] Applying basic mode classes. Mode to apply:', modeToApply);
           if (modeToApply === 'dark') {
             document.documentElement.classList.add('dark');
             document.documentElement.dataset.theme = DAISYUI_DARK_THEME_NAME;
@@ -132,14 +164,25 @@
               document.body.classList.remove('dark-mode-active');
             }
           }
+          // console.log(`[InlineScript] Final modeToApply: ${modeToApply}`);
+          // console.log(`[InlineScript] document.documentElement.className: ${document.documentElement.className}`);
+          // console.log(`[InlineScript] document.documentElement.dataset.theme: ${document.documentElement.dataset.theme}`);
+          // if (document.body) {
+          //     console.log(`[InlineScript] document.body.className: ${document.body.className}`);
+          // }
         } catch (e) {
-          console.error('Error applying initial theme script:', e);
+          console.error('[InlineScript] Error in initial theme script:', e); // Keep this error log
           // Fallback to a default or do nothing, allowing CSS defaults to take over
-          document.documentElement.classList.remove('dark'); // Default to light on error
-          document.documentElement.dataset.theme = 'mytheme_light';
-          if (document.body) {
-            document.body.classList.add('light-mode-active');
-            document.body.classList.remove('dark-mode-active');
+          try {
+            document.documentElement.classList.remove('dark'); // Default to light on error
+            document.documentElement.dataset.theme = 'mytheme_light'; // DAISYUI_LIGHT_THEME_NAME
+            if (document.body) {
+              document.body.classList.add('light-mode-active');
+              document.body.classList.remove('dark-mode-active');
+            }
+            // console.log('[InlineScript] Fallback to light theme due to error.');
+          } catch (fallbackError) {
+            console.error('[InlineScript] Error applying fallback theme:', fallbackError); // Keep this error log
           }
         }
       })();
