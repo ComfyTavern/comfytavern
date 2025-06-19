@@ -2,10 +2,10 @@
   <div class="sidebar-nav h-full flex flex-col text-sm" :class="{ 'items-center': collapsed }">
     <!-- 折叠/展开控制按钮 (可选，也可以由父组件控制) -->
     <div class="p-2 flex items-center" :class="collapsed ? 'justify-center' : 'justify-between'">
-      <span v-if="!collapsed" class="font-semibold text-lg text-text-base">导航</span>
+      <span v-if="!collapsed" class="font-semibold text-lg text-text-base">{{ t('fileManager.sidebarNav.title') }}</span>
       <button @click="toggleCollapse"
         class="p-2 rounded-md hover:bg-background-base text-text-muted"
-        :title="collapsed ? '展开导航' : '折叠导航'" data-testid="fm-sidebar-toggle">
+        :title="t(collapsed ? 'fileManager.sidebarNav.expand' : 'fileManager.sidebarNav.collapse')" data-testid="fm-sidebar-toggle">
         <svg v-if="collapsed" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
           fill="currentColor">
           <path fill-rule="evenodd"
@@ -25,7 +25,7 @@
       <section>
         <h3 v-if="!collapsed"
           class="px-2 py-1 text-xs font-semibold text-text-muted uppercase tracking-wider">
-          位置
+          {{ t('fileManager.sidebarNav.locations') }}
         </h3>
         <ul>
           <li v-for="item in rootNavigationItems" :key="item.logicalPath">
@@ -46,9 +46,9 @@
       <section v-if="recentAccessItemsSorted.length > 0">
         <h3 v-if="!collapsed"
           class="px-2 py-1 mt-4 text-xs font-semibold text-text-muted uppercase tracking-wider flex justify-between items-center">
-          <span>最近访问</span>
-          <button @click="clearRecentAccess" title="清空最近访问" class="text-xs hover:text-error"
-            v-comfy-tooltip="'清空最近访问'">
+          <span>{{ t('fileManager.sidebarNav.recentAccess') }}</span>
+          <button @click="clearRecentAccess" :title="t('fileManager.sidebarNav.clearRecent')" class="text-xs hover:text-error"
+            :v-comfy-tooltip="t('fileManager.sidebarNav.clearRecent')">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
               stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -74,12 +74,12 @@
       <section>
         <h3 v-if="!collapsed"
           class="px-2 py-1 mt-4 text-xs font-semibold text-text-muted uppercase tracking-wider">
-          收藏夹
+          {{ t('fileManager.sidebarNav.favorites') }}
         </h3>
         <ul v-if="!collapsed">
           <li v-if="favoritesPaths.length === 0 && !collapsed"
             class="px-2 py-1 text-xs text-text-muted">
-            暂无收藏
+            {{ t('fileManager.sidebarNav.noFavorites') }}
           </li>
           <li v-for="favPath in favoritesPaths" :key="favPath">
             <a href="#" @click.prevent="navigateTo(favPath)"
@@ -90,7 +90,7 @@
                 <span class="truncate">{{ getPathDisplayName(favPath) }}</span>
               </div>
               <button @click.stop.prevent="removeFromFavorites(favPath)"
-                class="ml-2 p-0.5 rounded hover:bg-error/10" title="取消收藏">
+                class="ml-2 p-0.5 rounded hover:bg-error/10" :title="t('fileManager.sidebarNav.unfavorite')">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-error" viewBox="0 0 20 20"
                   fill="currentColor">
                   <path fill-rule="evenodd"
@@ -118,6 +118,7 @@
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
 import { FolderIcon, DocumentIcon, StarIcon } from '@heroicons/vue/24/outline'; // 使用 heroicons 作为示例
 
@@ -132,6 +133,7 @@ const getIconComponent = (iconName: string) => {
   return iconComponents[iconName] || FolderIcon; // 默认图标
 };
 
+const { t } = useI18n();
 
 const props = defineProps<{
   collapsed: boolean;

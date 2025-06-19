@@ -1,48 +1,48 @@
 <template>
   <nav aria-label="Breadcrumb" class="breadcrumbs-nav flex items-center text-sm" data-testid="fm-breadcrumbs">
-    <div v-if="!isEditingPath" class="flex items-center space-x-1 flex-wrap">
-      <button v-if="canGoUp" @click="goUpDirectory"
-        class="p-1 rounded hover:bg-background-surface flex-shrink-0" v-comfy-tooltip="'返回上一级'"
-        aria-label="返回上一级">
-        <ArrowUpIcon class="h-4 w-4 text-text-muted" />
-      </button>
-      <button v-else class="p-1 rounded flex-shrink-0 opacity-50 cursor-not-allowed" aria-label="已在根目录" disabled>
-        <HomeIcon class="h-4 w-4 text-text-muted" />
-      </button>
-
-      <ol role="list" class="flex items-center space-x-1 flex-wrap">
-        <li v-for="(segment, index) in breadcrumbs" :key="segment.path + '-' + index">
-          <div class="flex items-center">
-            <ChevronRightIcon v-if="index > 0 || (index === 0 && canGoUp)"
-              class="h-4 w-4 text-text-muted flex-shrink-0 mx-0.5" />
-            <a href="#" @click.prevent="navigateToSegment(segment.path)" @dblclick.prevent="startPathEdit"
-              class="px-1.5 py-0.5 rounded text-text-base hover:bg-background-surface hover:text-text-base truncate max-w-[150px] sm:max-w-[200px]"
-              :class="{ 'font-semibold text-text-base': index === breadcrumbs.length - 1 }"
-              :title="segment.label">
-              {{ segment.label }}
-            </a>
-          </div>
-        </li>
-      </ol>
-      <button @click="startPathEdit" class="p-1 rounded hover:bg-background-surface ml-1 flex-shrink-0"
-        v-comfy-tooltip="'编辑路径'" aria-label="编辑路径">
-        <PencilIcon class="h-3.5 w-3.5 text-text-muted" />
-      </button>
-    </div>
-
-    <div v-else class="flex items-center w-full">
-      <input ref="pathInputRef" type="text" v-model="editablePath" @blur="finishPathEdit(false)"
-        @keydown.enter="finishPathEdit(true)" @keydown.esc="cancelPathEdit"
-        class="input input-sm input-bordered w-full bg-background-surface text-text-base border-border-base"
-        placeholder="输入路径..." />
-      <button @click="finishPathEdit(true)" class="btn btn-xs btn-ghost ml-1 text-success" v-comfy-tooltip="'确认'">
-        <CheckIcon class="h-4 w-4" />
-      </button>
-      <button @click="cancelPathEdit" class="btn btn-xs btn-ghost ml-1 text-error" v-comfy-tooltip="'取消'">
-        <XMarkIcon class="h-4 w-4" />
-      </button>
-    </div>
-  </nav>
+      <div v-if="!isEditingPath" class="flex items-center space-x-1 flex-wrap">
+        <button v-if="canGoUp" @click="goUpDirectory"
+          class="p-1 rounded hover:bg-background-surface flex-shrink-0" :title="t('fileManager.breadcrumbs.goUp')"
+          :aria-label="t('fileManager.breadcrumbs.goUp')">
+          <ArrowUpIcon class="h-4 w-4 text-text-muted" />
+        </button>
+        <button v-else class="p-1 rounded flex-shrink-0 opacity-50 cursor-not-allowed" :aria-label="t('fileManager.breadcrumbs.root')" disabled>
+          <HomeIcon class="h-4 w-4 text-text-muted" />
+        </button>
+  
+        <ol role="list" class="flex items-center space-x-1 flex-wrap">
+          <li v-for="(segment, index) in breadcrumbs" :key="segment.path + '-' + index">
+            <div class="flex items-center">
+              <ChevronRightIcon v-if="index > 0 || (index === 0 && canGoUp)"
+                class="h-4 w-4 text-text-muted flex-shrink-0 mx-0.5" />
+              <a href="#" @click.prevent="navigateToSegment(segment.path)" @dblclick.prevent="startPathEdit"
+                class="px-1.5 py-0.5 rounded text-text-base hover:bg-background-surface hover:text-text-base truncate max-w-[150px] sm:max-w-[200px]"
+                :class="{ 'font-semibold text-text-base': index === breadcrumbs.length - 1 }"
+                :title="segment.label">
+                {{ segment.label }}
+              </a>
+            </div>
+          </li>
+        </ol>
+        <button @click="startPathEdit" class="p-1 rounded hover:bg-background-surface ml-1 flex-shrink-0"
+          :title="t('fileManager.breadcrumbs.editPath')" :aria-label="t('fileManager.breadcrumbs.editPath')">
+          <PencilIcon class="h-3.5 w-3.5 text-text-muted" />
+        </button>
+      </div>
+  
+      <div v-else class="flex items-center w-full">
+        <input ref="pathInputRef" type="text" v-model="editablePath" @blur="finishPathEdit(false)"
+          @keydown.enter="finishPathEdit(true)" @keydown.esc="cancelPathEdit"
+          class="input input-sm input-bordered w-full bg-background-surface text-text-base border-border-base"
+          :placeholder="t('fileManager.breadcrumbs.pathPlaceholder')" />
+        <button @click="finishPathEdit(true)" class="btn btn-xs btn-ghost ml-1 text-success" :title="t('fileManager.breadcrumbs.confirm')">
+          <CheckIcon class="h-4 w-4" />
+        </button>
+        <button @click="cancelPathEdit" class="btn btn-xs btn-ghost ml-1 text-error" :title="t('fileManager.breadcrumbs.cancel')">
+          <XMarkIcon class="h-4 w-4" />
+        </button>
+      </div>
+    </nav>
 </template>
 
 <script setup lang="ts">
@@ -50,9 +50,11 @@ import { ref, computed, nextTick, watch } from 'vue';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
 import { ArrowUpIcon, ChevronRightIcon, PencilIcon, CheckIcon, XMarkIcon, HomeIcon } from '@heroicons/vue/24/outline';
 import { useDialogService } from '@/services/DialogService';
+import { useI18n } from 'vue-i18n';
 
 const fileManagerStore = useFileManagerStore();
 const dialogService = useDialogService();
+const { t } = useI18n();
 
 const breadcrumbs = computed(() => fileManagerStore.breadcrumbsSegments);
 const currentPath = computed(() => fileManagerStore.currentLogicalPath);
@@ -108,21 +110,21 @@ const finishPathEdit = async (navigate: boolean) => {
         // 尝试从当前路径获取协议头
         const currentProto = currentPath.value.split('://')[0];
         if (currentProto && (currentProto === 'user' || currentProto === 'shared' || currentProto === 'system')) {
-          correctedPath = `${currentProto}://${newPath.replace(/^\/+/, '')}`;
-        } else {
-          dialogService.showError('路径格式无效，必须包含协议头 (如 user://)。');
-          return;
-        }
-      }
-      if (!correctedPath.endsWith('/')) {
-        correctedPath += '/';
-      }
-      // 再次检查修正后的路径
-      if (!correctedPath.includes('://') || !correctedPath.endsWith('/')) {
-        dialogService.showError('路径格式无效。示例: user://my/folder/');
-        return;
-      }
-      editablePath.value = correctedPath; // 更新输入框中的值
+                  correctedPath = `${currentProto}://${newPath.replace(/^\/+/, '')}`;
+                } else {
+                  dialogService.showError(t('fileManager.breadcrumbs.invalidPathError'));
+                  return;
+                }
+              }
+              if (!correctedPath.endsWith('/')) {
+                correctedPath += '/';
+              }
+              // 再次检查修正后的路径
+              if (!correctedPath.includes('://') || !correctedPath.endsWith('/')) {
+                dialogService.showError(t('fileManager.breadcrumbs.invalidPathExampleError'));
+                return;
+              }
+              editablePath.value = correctedPath; // 更新输入框中的值
       // console.log(`Path corrected from "${newPath}" to "${correctedPath}"`);
       if (correctedPath === currentPath.value) return; // 如果修正后与当前路径相同，则不导航
       fileManagerStore.navigateTo(correctedPath);

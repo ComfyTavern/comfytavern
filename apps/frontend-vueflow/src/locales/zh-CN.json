@@ -19,7 +19,10 @@
     "home": "首页",
     "editor": "编辑器",
     "settings": "设置",
-    "about": "关于"
+    "about": "关于",
+    "projects": "项目",
+    "characters": "角色卡",
+    "files": "文件管理"
   },
   "editor": {
     "toolbar": {
@@ -40,22 +43,420 @@
       "theme": "主题"
     },
     "sections": {
-      "display": "显示设置",
-      "user": "用户设置",
+      "display": "显示",
+      "user": "用户",
       "keybindings": "快捷键",
       "llm": "模型配置",
       "mcp": "MCP",
       "test_panel": "测试面板",
       "about": "关于"
     },
+    "categories": {
+      "appearance": "外观",
+      "basic_info": "基础信息",
+      "editor": "编辑器",
+      "interface_elements": "界面元素"
+    },
+    "items": {
+      "user_nickname_label": "昵称",
+      "user_nickname_desc": "您在平台中显示的名称。",
+      "user_avatar_label": "头像",
+      "user_avatar_desc": "设置您的个人头像。",
+      "i18n_currentLanguage_label": "界面语言",
+      "i18n_currentLanguage_desc": "选择 ComfyTavern 的界面显示语言。",
+      "theme_displayMode_label": "显示模式",
+      "theme_displayMode_desc": "选择界面的显示模式：浅色、深色或跟随操作系统设置。",
+      "theme_preset_label": "主题预设",
+      "theme_preset_desc": "选择一个预设的主题样式。",
+      "display_fontSize_label": "基础字体大小 (px)",
+      "display_fontSize_desc": "调整应用界面的基础字体大小。",
+      "display_showMinimap_label": "显示编辑器小地图",
+      "display_showMinimap_desc": "在节点编辑器右侧显示代码小地图。",
+      "display_showConnectionStatus_label": "显示后端连接状态",
+      "display_showConnectionStatus_desc": "在界面底部显示与后端服务的连接状态指示。",
+      "mcp_autoConnect_label": "自动连接MCP服务器",
+      "mcp_autoConnect_desc": "启动时自动连接已配置的MCP服务器。",
+      "mcp_defaultTimeout_label": "默认超时 (ms)",
+      "mcp_defaultTimeout_desc": "与MCP服务器通信的默认超时时间。",
+      "light_mode": "浅色",
+      "dark_mode": "深色",
+      "system_mode": "系统"
+    },
     "advanced": {
       "title": "高级设置"
+    },
+    "placeholders": {
+      "no_content": "咕？这里似乎没有内容... 可能是正在施工中。",
+      "custom_module_wip": "这里将来是一个自定义的复杂配置模块，目前正在施工中... 咕~"
+    },
+    "avatar": {
+      "edit": "编辑头像",
+      "preview_alt": "用户头像"
     }
   },
   "dialogs": {
     "confirmDelete": {
       "title": "确认删除",
       "message": "此操作不可撤销，确定要删除吗？"
+    }
+  },
+  "sidebar": {
+    "userAvatar": "用户头像",
+    "guest": "游客",
+    "toggleTheme": "切换主题",
+    "themeSystem": "跟随系统",
+    "themeDark": "暗色模式",
+    "themeLight": "亮色模式",
+    "toggleSidebar": "折叠/展开侧边栏",
+    "expand": "展开",
+    "collapse": "折叠"
+  },
+  "projects": {
+    "title": "我的项目",
+    "createNew": "创建新项目",
+    "creating": "创建中...",
+    "loading": "正在加载项目...",
+    "loadError": "加载错误:",
+    "noProjects": "还没有项目，点击右上角按钮创建一个吧！",
+    "noDescription": "暂无描述",
+    "lastUpdated": "最后更新",
+    "createDialog": {
+      "title": "创建新项目",
+      "message": "请输入新项目的名称：",
+      "placeholder": "项目名称"
+    },
+    "errors": {
+      "nameRequired": "项目名称不能为空！"
+    }
+  },
+  "characters": {
+    "title": "我的角色卡",
+    "loading": "正在加载角色卡...",
+    "loadError": "加载错误:",
+    "loadErrorDetail": "加载角色卡失败: {error}",
+    "noCharacters": "没有找到角色卡。"
+  },
+  "characterPreview": {
+    "loading": "正在加载角色卡...",
+    "loadError": "加载错误:",
+    "loadErrorDetail": "加载角色卡预览失败: {error}",
+    "noCards": "没有找到角色卡。",
+    "viewAll": "查看全部角色卡"
+  },
+  "fileManager": {
+    "initializing": "正在初始化文件管理器...",
+    "toolbar": {
+      "upload": "上传",
+      "uploadFile": "上传文件",
+      "newFolder": "新建文件夹",
+      "refresh": "刷新",
+      "paste": "粘贴",
+      "searchPlaceholder": "搜索...",
+      "switchToGridView": "切换到网格视图",
+      "switchToListView": "切换到列表视图",
+      "sortBy": "排序方式",
+      "gridSize": "网格视图尺寸",
+      "sortDirection": "反向排序",
+      "sortAsc": "升序",
+      "sortDesc": "降序",
+      "sortByLabel": "排序依据",
+      "sortByName": "名称",
+      "sortByExtension": "扩展名",
+      "sortByDate": "修改日期",
+      "sortBySize": "大小",
+      "advancedFilter": "高级筛选",
+      "hideDetailPanel": "隐藏详情面板",
+      "showDetailPanel": "显示详情面板",
+      "viewSettings": "显示设置",
+      "filtersCleared": "筛选已清除",
+      "openAdvancedFilterPlaceholder": "打开高级筛选（占位）",
+      "openViewSettingsPlaceholder": "打开显示设置（占位）"
+    },
+    "breadcrumbs": {
+      "goUp": "返回上一级",
+      "root": "已在根目录",
+      "editPath": "编辑路径",
+      "pathPlaceholder": "输入路径...",
+      "confirm": "确认",
+      "cancel": "取消",
+      "invalidPathError": "路径格式无效，必须包含协议头 (如 user://)。",
+      "invalidPathExampleError": "路径格式无效。示例: user://my/folder/"
+    },
+    "browser": {
+      "emptyFolder": "此文件夹为空，或没有匹配筛选条件的项目。",
+      "clearFilters": "清除筛选",
+      "colName": "名称",
+      "colSize": "大小",
+      "colDate": "修改日期",
+      "colType": "类型",
+      "actions": "操作",
+      "contextMenu": {
+        "open": "打开",
+        "download": "下载",
+        "rename": "重命名",
+        "moveTo": "移动到...",
+        "copyPath": "复制路径",
+        "addToFavorites": "添加到收藏夹",
+        "removeFromFavorites": "从收藏夹移除",
+        "delete": "删除",
+        "refresh": "刷新",
+        "newFolder": "新建文件夹",
+        "paste": "粘贴",
+        "noActions": "无可用操作"
+      }
+    },
+    "detailPanel": {
+      "title": "详情",
+      "titleForItem": "项目详情",
+      "properties": "属性",
+      "preview": "预览",
+      "close": "关闭面板",
+      "noItemSelected": "未选择任何项目",
+      "propName": "名称:",
+      "propType": "类型:",
+      "propSize": "大小:",
+      "propPath": "路径:",
+      "propLastModified": "最后修改:",
+      "propSymlinkTarget": "符号链接目标:",
+      "propWritable": "可写:",
+      "propFavorite": "收藏:",
+      "typeFolder": "文件夹",
+      "typeImage": "图片",
+      "typeText": "文本文档",
+      "typePdf": "PDF 文档",
+      "typeArchive": "压缩文件",
+      "typeFile": "{ext} 文件",
+      "typeGenericFile": "文件",
+      "yes": "是",
+      "no": "否",
+      "favorited": "已收藏",
+      "notFavorited": "未收藏",
+      "previewFailed": "预览失败:",
+      "loadingPreview": "正在加载预览...",
+      "previewUnsupported": "此文件类型不支持预览，或预览内容为空。",
+      "previewTooLarge": "... (文件过大，仅显示部分内容)",
+      "serverError": "服务器错误: {error}"
+          },
+          "sidebarNav": {
+            "title": "导航",
+            "expand": "展开导航",
+            "collapse": "折叠导航",
+            "locations": "位置",
+            "recentAccess": "最近访问",
+            "clearRecent": "清空最近访问",
+            "favorites": "收藏夹",
+            "noFavorites": "暂无收藏",
+            "unfavorite": "取消收藏"
+                },
+                "store": {
+                  "myFiles": "我的文件",
+                  "sharedSpace": "共享空间",
+                  "itemTypes": {
+                    "file": "文件",
+                    "directory": "文件夹"
+                  },
+                  "errors": {
+                    "loadFailed": "加载文件列表失败: {error}",
+                    "unknown": "未知错误"
+                  },
+                  "createDirectory": {
+                    "title": "新建文件夹",
+                    "placeholder": "请输入文件夹名称",
+                    "success": "文件夹 \"{dirName}\" 创建成功",
+                    "error": "创建文件夹失败: {error}"
+                  },
+                  "rename": {
+                    "title": "重命名 {itemType}",
+                    "placeholder": "请输入新名称",
+                    "success": "已重命名为 \"{newName}\"",
+                    "error": "重命名失败: {error}"
+                  },
+                  "delete": {
+                    "title": "确认删除",
+                    "message": "您确定要删除选中的 {count} 个项目吗？此操作可能无法撤销。",
+                    "confirmText": "删除",
+                    "success": "{count} 个项目已删除",
+                    "error": "删除失败: {error}"
+                  },
+                  "move": {
+                    "success": "{count} 个项目已移动",
+                    "error": "移动失败: {error}"
+                  },
+                  "download": {
+                    "noFolderSupport": "暂不支持下载文件夹。",
+                    "error": "获取下载链接失败: {error}"
+                  },
+                  "clipboard": {
+                    "copied": "{count} 个项目已复制到剪贴板",
+                    "cut": "{count} 个项目已剪切到剪贴板"
+                  },
+                  "paste": {
+                    "errorMoveIntoSelf": "不能将文件夹移动到其自身或其子文件夹中。",
+                    "alreadyAtTarget": "项目已在目标位置。",
+                    "copyNotImplemented": "复制功能暂未实现。",
+                    "moveSuccess": "{count} 个项目已移动",
+                    "error": "粘贴失败: {error}"
+                  },
+                  "favorites": {
+                    "added": "已添加到收藏夹",
+                    "removed": "已从收藏夹移除"
+                  },
+                  "upload": {
+                    "noValidFiles": "没有有效的文件被选中上传。",
+                    "success": "{count} 个文件上传成功",
+                    "error": "上传失败: {error}"
+                  }
+                },
+                "home": {
+                  "welcome": "欢迎使用 ComfyTavern",
+      "subtitle": "管理您的工作流项目和角色卡，释放创造力。",
+      "recentProjects": "最近项目",
+      "loadingProjects": "正在加载项目...",
+      "loadProjectsFailed": "加载项目失败: {error}",
+      "noProjects": "还没有项目。",
+      "createNewProject": "创建新项目",
+      "lastModified": "最后修改",
+      "noDescription": "暂无描述",
+      "viewAllProjects": "查看所有项目",
+      "characterCardOverview": "角色卡概览",
+      "exploreSidebar": "探索侧边栏以开始您的创作之旅。",
+      "invalidDate": "无效日期"
+    },
+    "editorView": {
+      "loadingNodes": "正在加载节点数据...",
+      "loadingDefinitions": "正在加载节点定义...",
+      "searchNodes": "搜索节点...",
+      "noNodesFound": "未找到节点",
+      "unclassified": "未分类"
+    },
+    "testPanel": {
+      "title": "弹窗与UI组件测试面板",
+      "dialogService": {
+        "title": "DialogService (模态对话框与通知)",
+        "dialogs": "模态对话框 (Dialogs)",
+        "toasts": "通知 (Toasts)",
+        "results": "DialogService 操作结果:",
+        "buttons": {
+          "showMessage": "显示消息对话框",
+          "showConfirm": "显示确认对话框",
+          "showDangerConfirm": "显示危险操作确认",
+          "showAutoClose": "显示自动关闭对话框",
+          "showInput": "显示输入对话框",
+          "showTextarea": "显示多行输入对话框",
+          "showLargeMessage": "显示超大文本消息对话框",
+          "showInfoToast": "显示信息通知",
+          "showSuccessToast": "显示成功通知",
+          "showWarningToast": "显示警告通知",
+          "showErrorToast": "显示错误通知",
+          "showCustomToast": "显示自定义通知",
+          "showMultipleToasts": "显示多个通知",
+          "showLargeToast": "显示超大文本通知"
+        },
+        "resultsContent": {
+          "waiting": "等待操作...",
+          "waitingFor": "等待 {actionName} 响应...",
+          "cancelled": "{actionName}：用户取消了操作或关闭了对话框。",
+          "exception": "{actionName}：发生异常: {error}",
+          "messageSuccess": "消息对话框：用户点击了确定。",
+          "messageCancelled": "消息对话框：用户关闭了对话框或发生异常。",
+          "confirmSuccess": "确认对话框：用户选择 -> {choice}",
+          "confirmCancelled": "确认对话框：用户取消了操作。",
+          "dangerConfirmSuccess": "危险操作确认：用户选择 -> {choice}",
+          "dangerConfirmCancelled": "危险操作确认：用户取消了操作。",
+          "autoCloseSuccess": "自动关闭对话框：已自动关闭或用户点击了确定。",
+          "autoCloseCancelled": "自动关闭对话框：用户在自动关闭前关闭了对话框或发生异常。",
+          "inputSuccess": "输入对话框：用户输入了 \"{input}\"",
+          "inputCancelled": "输入对话框：用户取消了输入。",
+          "textareaSuccess": "多行输入对话框：用户输入了 \"{input}\"",
+          "textareaCancelled": "多行输入对话框：用户取消了输入。",
+          "largeMessageSuccess": "超大文本消息对话框：用户点击了确定。",
+          "largeMessageCancelled": "超大文本消息对话框：用户关闭了对话框或发生异常。",
+          "infoToastTriggered": "触发了信息通知。",
+          "successToastTriggered": "触发了成功通知。",
+          "warningToastTriggered": "触发了警告通知。",
+          "errorToastTriggered": "触发了错误通知。",
+          "customToastTriggered": "触发了自定义通知。",
+          "multipleToastsTriggered": "触发了多个通知。",
+          "largeToastTriggered": "触发了超大文本通知。"
+        },
+        "dialogContent": {
+          "messageTitle": "消息提示",
+          "messageText": "这是一个简单的消息对话框，只有一个确定按钮。",
+          "confirmTitle": "确认操作",
+          "confirmText": "您确定要执行此操作吗？",
+          "dangerConfirmTitle": "危险操作确认",
+          "dangerConfirmText": "此操作不可逆转，您确定要继续吗？",
+          "dangerConfirmYes": "是的，删除它",
+          "dangerConfirmNo": "不了",
+          "autoCloseTitle": "自动关闭示例",
+          "autoCloseText": "此对话框将在3秒后自动关闭。",
+          "inputTitle": "请输入信息",
+          "inputText": "请输入您的昵称：",
+          "inputPlaceholder": "例如：咕咕",
+          "textareaTitle": "请输入反馈",
+          "textareaText": "请详细描述您遇到的问题或建议：",
+          "textareaPlaceholder": "请在此处输入您的反馈内容...",
+          "largeMessageTitle": "超大文本消息",
+          "largeMessageConfirm": "朕已阅",
+          "customToastTitle": "自定义样式通知",
+          "customToastText": "这个通知在底部中间，持续5秒。",
+          "infoToastTitle": "提示",
+          "infoToastText": "这是一条信息通知！",
+          "successToastTitle": "成功",
+          "successToastText": "操作已成功完成！",
+          "warningToastTitle": "警告",
+          "warningToastText": "请注意，这是一个警告。",
+          "errorToastTitle": "错误",
+          "errorToastText": "糟糕，发生了一个错误！",
+          "multiToast1": "通知 1",
+          "multiToast2": "通知 2 (延迟)",
+          "multiToast3": "通知 3 (延迟)",
+          "largeToastTitle": "超大文本通知"
+        }
+      },
+      "uiStore": {
+        "title": "UiStore (全局模态框)",
+        "specificModals": "特定模态框",
+        "results": "UiStore 操作结果:",
+        "buttons": {
+          "openSettings": "打开设置模态框 (App.vue 管理)",
+          "openRegexEditor": "打开正则编辑器模态框",
+          "openInitialUsernameSetup": "打开初始用户名设置"
+        },
+        "resultsContent": {
+          "initialUsernameClosed": "初始用户名设置模态框已关闭 (事件)。",
+          "initialUsernameSaved": "初始用户名已保存 (事件)。",
+          "openingSettings": "尝试打开设置模态框...",
+          "openingRegexEditor": "尝试打开正则编辑器模态框...",
+          "regexEditorSaved": "正则编辑器已保存，规则数: {count}。查看控制台获取详情。",
+          "openingInitialUsernameSetup": "尝试打开初始用户名设置模态框...",
+          "settingsClosed": "设置模态框已关闭。"
+        }
+      },
+      "settingsControl": {
+        "title": "SettingControl (通过 SettingsPanel) 测试",
+        "results": "SettingsStore 当前值 (验证用):",
+        "labels": {
+          "string": "字符串输入 (String)",
+          "textarea": "文本域输入 (Textarea)",
+          "number": "数字输入 (Number)",
+          "boolean": "布尔切换 (Boolean)",
+          "select": "选择框 (Select)"
+        },
+        "descriptions": {
+          "string": "用于测试单行文本输入。",
+          "textarea": "用于测试多行文本输入。",
+          "number": "用于测试数字输入，带范围和步长。",
+          "boolean": "用于测试开关状态。",
+          "select": "用于测试下拉选择。"
+        },
+        "selectOptions": {
+          "a": "选项 A (option1)",
+          "b": "选项 B (option2)",
+          "c": "选项 C (option3)",
+          "d": "选项 D (原计划禁用)"
+        }
+      }
     }
   }
 }

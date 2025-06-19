@@ -4,125 +4,124 @@
     data-testid="fm-detail-panel-component">
     <!-- Resizer Handle -->
     <div
-      class="panel-resizer absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary-soft transition-colors duration-150 z-10"
-      @mousedown.prevent="startResize" v-comfy-tooltip="'拖动调整宽度'"></div>
-
-    <header class="pl-3 pr-3 py-3 border-b border-border-base flex items-center justify-between flex-shrink-0">
-      <h3 class="text-base font-semibold text-text-base truncate ml-1.5" :title="panelTitle">
-        <!-- Added ml-1.5 for spacing from resizer -->
-        {{ panelTitle }}
-      </h3>
-      <div class="flex items-center">
-        <!-- Tab切换按钮 -->
-        <div class="tabs tabs-xs sm:tabs-sm mr-2" v-if="selectedItem">
-          <button class="tab tab-lifted tab-xs sm:tab-sm" :class="{ 'tab-active': activeTab === 'properties' }"
-            @click="setActiveTab('properties')" v-comfy-tooltip="'属性'">
-            <InformationCircleIcon class="h-4 w-4 sm:h-5 sm:w-5" />
-            <span class="hidden sm:inline ml-1">属性</span>
-          </button>
-          <button v-if="canPreview" class="tab tab-lifted tab-xs sm:tab-sm"
-            :class="{ 'tab-active': activeTab === 'preview' }" @click="setActiveTab('preview')" v-comfy-tooltip="'预览'">
-            <EyeIcon class="h-4 w-4 sm:h-5 sm:w-5" />
-            <span class="hidden sm:inline ml-1">预览</span>
-          </button>
-          <!-- <button
-            class="tab tab-lifted tab-xs sm:tab-sm"
-            :class="{ 'tab-active': activeTab === 'actions' }"
-            @click="setActiveTab('actions')"
-            v-comfy-tooltip="'操作'"
-          >
-            <BoltIcon class="h-4 w-4 sm:h-5 sm:w-5" />
-            <span class="hidden sm:inline ml-1">操作</span>
-          </button> -->
-        </div>
-        <button @click="closePanel"
-          class="p-1.5 rounded-md hover:bg-background-base text-text-muted"
-          v-comfy-tooltip="'关闭面板'" aria-label="关闭面板">
-          <XMarkIcon class="h-5 w-5" />
-        </button>
-      </div>
-    </header>
-
-    <div class="panel-content flex-1 overflow-y-auto p-4 space-y-4 text-sm">
-      <div v-if="!selectedItem" class="text-center text-text-muted py-10">
-        <InformationCircleIcon class="h-10 w-10 mx-auto mb-2 opacity-50" />
-        <p>未选择任何项目</p>
-      </div>
-
-      <template v-if="selectedItem">
-        <!-- 属性视图 -->
-        <div v-if="activeTab === 'properties'" class="space-y-3">
-          <div class="property-row">
-            <label class="property-label">名称:</label>
-            <div class="property-value flex items-center">
-              <component :is="selectedItem.itemType === 'directory' ? FolderIcon : getDocumentIcon(selectedItem.name)"
-                class="h-5 w-5 mr-2 text-text-muted flex-shrink-0" />
-              <span class="truncate" :title="selectedItem.name">{{ selectedItem.name }}</span>
-              <!-- TODO: 内联编辑名称 -->
+          class="panel-resizer absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary-soft transition-colors duration-150 z-10"
+          @mousedown.prevent="startResize" :title="t('fileManager.detailPanel.resize')"></div>
+    
+        <header class="pl-3 pr-3 py-3 border-b border-border-base flex items-center justify-between flex-shrink-0">
+          <h3 class="text-base font-semibold text-text-base truncate ml-1.5" :title="panelTitle">
+            <!-- Added ml-1.5 for spacing from resizer -->
+            {{ panelTitle }}
+          </h3>
+          <div class="flex items-center">
+            <!-- Tab切换按钮 -->
+            <div class="tabs tabs-xs sm:tabs-sm mr-2" v-if="selectedItem">
+              <button class="tab tab-lifted tab-xs sm:tab-sm" :class="{ 'tab-active': activeTab === 'properties' }"
+                @click="setActiveTab('properties')" :title="t('fileManager.detailPanel.properties')">
+                <InformationCircleIcon class="h-4 w-4 sm:h-5 sm:w-5" />
+                <span class="hidden sm:inline ml-1">{{ t('fileManager.detailPanel.properties') }}</span>
+              </button>
+              <button v-if="canPreview" class="tab tab-lifted tab-xs sm:tab-sm"
+                :class="{ 'tab-active': activeTab === 'preview' }" @click="setActiveTab('preview')" :title="t('fileManager.detailPanel.preview')">
+                <EyeIcon class="h-4 w-4 sm:h-5 sm:w-5" />
+                <span class="hidden sm:inline ml-1">{{ t('fileManager.detailPanel.preview') }}</span>
+              </button>
+              <!-- <button
+                class="tab tab-lifted tab-xs sm:tab-sm"
+                :class="{ 'tab-active': activeTab === 'actions' }"
+                @click="setActiveTab('actions')"
+                v-comfy-tooltip="'操作'"
+              >
+                <BoltIcon class="h-4 w-4 sm:h-5 sm:w-5" />
+                <span class="hidden sm:inline ml-1">操作</span>
+              </button> -->
             </div>
-          </div>
-          <div class="property-row">
-            <label class="property-label">类型:</label>
-            <span class="property-value">{{ selectedItem.itemType === 'directory' ? '文件夹' :
-              getItemMimeTypeDisplay(selectedItem) }}</span>
-          </div>
-          <div v-if="selectedItem.itemType === 'file'" class="property-row">
-            <label class="property-label">大小:</label>
-            <span class="property-value">{{ formatSize(selectedItem.size) }}</span>
-          </div>
-          <div class="property-row">
-            <label class="property-label">路径:</label>
-            <span class="property-value break-all" :title="selectedItem.logicalPath">{{ selectedItem.logicalPath
-            }}</span>
-          </div>
-          <div class="property-row">
-            <label class="property-label">最后修改:</label>
-            <span class="property-value">{{ formatDate(selectedItem.lastModified) }}</span>
-          </div>
-          <div v-if="selectedItem.isSymlink && selectedItem.targetLogicalPath" class="property-row">
-            <label class="property-label">符号链接目标:</label>
-            <span class="property-value break-all" :title="selectedItem.targetLogicalPath">{{
-              selectedItem.targetLogicalPath }}</span>
-          </div>
-          <div class="property-row">
-            <label class="property-label">可写:</label>
-            <span class="property-value">{{ selectedItem.isWritable ? '是' : '否' }}</span>
-          </div>
-          <div class="property-row">
-            <label class="property-label">收藏:</label>
-            <button @click="toggleFavorite" class="btn btn-xs btn-ghost">
-              <StarIcon class="h-4 w-4 mr-1" :class="isFavorite ? 'text-warning fill-current' : 'text-text-muted'" />
-              {{ isFavorite ? '已收藏' : '未收藏' }}
+            <button @click="closePanel"
+              class="p-1.5 rounded-md hover:bg-background-base text-text-muted"
+              :title="t('fileManager.detailPanel.close')" :aria-label="t('fileManager.detailPanel.close')">
+              <XMarkIcon class="h-5 w-5" />
             </button>
           </div>
-          <!-- 更多属性... -->
-        </div>
-
-        <!-- 预览视图 -->
-        <div v-if="activeTab === 'preview' && canPreview">
-          <div v-if="previewError" class="text-error bg-error-softest p-4 rounded-md">
-            <p><strong>预览失败:</strong></p>
-            <p>{{ previewError }}</p>
+        </header>
+    
+        <div class="panel-content flex-1 overflow-y-auto p-4 space-y-4 text-sm">
+          <div v-if="!selectedItem" class="text-center text-text-muted py-10">
+            <InformationCircleIcon class="h-10 w-10 mx-auto mb-2 opacity-50" />
+            <p>{{ t('fileManager.detailPanel.noItemSelected') }}</p>
           </div>
-          <div v-else-if="isLoadingPreview" class="text-center py-8">
-            <ArrowPathIcon class="h-8 w-8 animate-spin text-primary mx-auto" />
-            <p class="mt-2 text-text-muted">正在加载预览...</p>
-          </div>
-          <template v-else>
-            <!-- 图片预览 -->
-            <img v-if="previewType === 'image' && previewContent" :src="previewContent" alt="文件预览"
-              class="max-w-full h-auto rounded-md shadow" />
-            <!-- 文本预览 -->
-            <pre v-else-if="previewType === 'text' && typeof previewContent === 'string'"
-              class="text-xs bg-background-base p-3 rounded-md overflow-auto max-h-[60vh] whitespace-pre-wrap break-all">{{ previewContent }}</pre>
-            <!-- PDF 预览 (可能需要 iframe 或特定库) -->
-            <iframe v-else-if="previewType === 'pdf' && previewContent" :src="previewContent"
-              class="w-full h-[70vh] border rounded-md" title="PDF预览"></iframe>
-            <div v-else class="text-text-muted">
-              此文件类型不支持预览，或预览内容为空。
+    
+          <template v-if="selectedItem">
+            <!-- 属性视图 -->
+            <div v-if="activeTab === 'properties'" class="space-y-3">
+              <div class="property-row">
+                <label class="property-label">{{ t('fileManager.detailPanel.propName') }}</label>
+                <div class="property-value flex items-center">
+                  <component :is="selectedItem.itemType === 'directory' ? FolderIcon : getDocumentIcon(selectedItem.name)"
+                    class="h-5 w-5 mr-2 text-text-muted flex-shrink-0" />
+                  <span class="truncate" :title="selectedItem.name">{{ selectedItem.name }}</span>
+                  <!-- TODO: 内联编辑名称 -->
+                </div>
+              </div>
+              <div class="property-row">
+                <label class="property-label">{{ t('fileManager.detailPanel.propType') }}</label>
+                <span class="property-value">{{ getItemMimeTypeDisplay(selectedItem) }}</span>
+              </div>
+              <div v-if="selectedItem.itemType === 'file'" class="property-row">
+                <label class="property-label">{{ t('fileManager.detailPanel.propSize') }}</label>
+                <span class="property-value">{{ formatSize(selectedItem.size) }}</span>
+              </div>
+              <div class="property-row">
+                <label class="property-label">{{ t('fileManager.detailPanel.propPath') }}</label>
+                <span class="property-value break-all" :title="selectedItem.logicalPath">{{ selectedItem.logicalPath
+                }}</span>
+              </div>
+              <div class="property-row">
+                <label class="property-label">{{ t('fileManager.detailPanel.propLastModified') }}</label>
+                <span class="property-value">{{ formatDate(selectedItem.lastModified) }}</span>
+              </div>
+              <div v-if="selectedItem.isSymlink && selectedItem.targetLogicalPath" class="property-row">
+                <label class="property-label">{{ t('fileManager.detailPanel.propSymlinkTarget') }}</label>
+                <span class="property-value break-all" :title="selectedItem.targetLogicalPath">{{
+                  selectedItem.targetLogicalPath }}</span>
+              </div>
+              <div class="property-row">
+                <label class="property-label">{{ t('fileManager.detailPanel.propWritable') }}</label>
+                <span class="property-value">{{ t(selectedItem.isWritable ? 'fileManager.detailPanel.yes' : 'fileManager.detailPanel.no') }}</span>
+              </div>
+              <div class="property-row">
+                <label class="property-label">{{ t('fileManager.detailPanel.propFavorite') }}</label>
+                <button @click="toggleFavorite" class="btn btn-xs btn-ghost">
+                  <StarIcon class="h-4 w-4 mr-1" :class="isFavorite ? 'text-warning fill-current' : 'text-text-muted'" />
+                  {{ t(isFavorite ? 'fileManager.detailPanel.favorited' : 'fileManager.detailPanel.notFavorited') }}
+                </button>
+              </div>
+              <!-- 更多属性... -->
             </div>
-          </template>
-        </div>
+    
+            <!-- 预览视图 -->
+            <div v-if="activeTab === 'preview' && canPreview">
+              <div v-if="previewError" class="text-error bg-error-softest p-4 rounded-md">
+                <p><strong>{{ t('fileManager.detailPanel.previewFailed') }}</strong></p>
+                <p>{{ previewError }}</p>
+              </div>
+              <div v-else-if="isLoadingPreview" class="text-center py-8">
+                <ArrowPathIcon class="h-8 w-8 animate-spin text-primary mx-auto" />
+                <p class="mt-2 text-text-muted">{{ t('fileManager.detailPanel.loadingPreview') }}</p>
+              </div>
+              <template v-else>
+                <!-- 图片预览 -->
+                <img v-if="previewType === 'image' && previewContent" :src="previewContent" :alt="t('fileManager.detailPanel.preview')"
+                  class="max-w-full h-auto rounded-md shadow" />
+                <!-- 文本预览 -->
+                <pre v-else-if="previewType === 'text' && typeof previewContent === 'string'"
+                  class="text-xs bg-background-base p-3 rounded-md overflow-auto max-h-[60vh] whitespace-pre-wrap break-all">{{ previewContent }}</pre>
+                <!-- PDF 预览 (可能需要 iframe 或特定库) -->
+                <iframe v-else-if="previewType === 'pdf' && previewContent" :src="previewContent"
+                  class="w-full h-[70vh] border rounded-md" :title="t('fileManager.detailPanel.preview')"></iframe>
+                <div v-else class="text-text-muted">
+                  {{ t('fileManager.detailPanel.previewUnsupported') }}
+                </div>
+              </template>
+            </div>
 
         <!-- 操作视图 (未来扩展) -->
         <!-- <div v-if="activeTab === 'actions'">
@@ -135,6 +134,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'; // + onUnmounted
+import { useI18n } from 'vue-i18n';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
 import { useUiStore } from '@/stores/uiStore'; // + 导入 uiStore
 import type { FAMItem } from '@comfytavern/types';
@@ -146,6 +146,7 @@ import {
 
 const fileManagerStore = useFileManagerStore();
 const uiStore = useUiStore(); // + 初始化 uiStore
+const { t } = useI18n();
 
 const selectedItem = computed(() => fileManagerStore.selectedItemForDetail);
 const activeTab = computed(() => fileManagerStore.detailPanelActiveTab);
@@ -156,8 +157,8 @@ const isLoadingPreview = ref(false);
 const previewError = ref<string | null>(null);
 
 const panelTitle = computed(() => {
-  if (!selectedItem.value) return '详情';
-  return selectedItem.value.name || '项目详情';
+  if (!selectedItem.value) return t('fileManager.detailPanel.title');
+  return selectedItem.value.name || t('fileManager.detailPanel.titleForItem');
 });
 
 const isFavorite = computed(() => selectedItem.value && fileManagerStore.isFavorite(selectedItem.value.logicalPath));
@@ -213,17 +214,17 @@ const formatDate = (timestamp?: number | null): string => {
 };
 
 const getItemMimeTypeDisplay = (item: FAMItem): string => {
-  if (item.itemType === 'directory') return '文件夹';
+  if (item.itemType === 'directory') return t('fileManager.detailPanel.typeFolder');
   if (item.mimeType) {
-    if (item.mimeType.startsWith('image/')) return '图片';
-    if (item.mimeType.startsWith('text/')) return '文本文档';
-    if (item.mimeType === 'application/pdf') return 'PDF 文档';
-    if (item.mimeType === 'application/zip' || item.mimeType === 'application/x-rar-compressed') return '压缩文件';
+    if (item.mimeType.startsWith('image/')) return t('fileManager.detailPanel.typeImage');
+    if (item.mimeType.startsWith('text/')) return t('fileManager.detailPanel.typeText');
+    if (item.mimeType === 'application/pdf') return t('fileManager.detailPanel.typePdf');
+    if (item.mimeType === 'application/zip' || item.mimeType === 'application/x-rar-compressed') return t('fileManager.detailPanel.typeArchive');
     return item.mimeType;
   }
   const ext = item.name.split('.').pop()?.toLowerCase();
-  if (ext) return `${ext.toUpperCase()} 文件`;
-  return '文件';
+  if (ext) return t('fileManager.detailPanel.typeFile', { ext: ext.toUpperCase() });
+  return t('fileManager.detailPanel.typeGenericFile');
 };
 
 const getDocumentIcon = (filename: string) => {
@@ -274,18 +275,18 @@ const fetchPreview = async (item: FAMItem) => {
       // For now, let's assume getDownloadFileLink can be fetched and read as text.
       // This is a simplified example; direct blob fetching and reading is more robust.
       const response = await fetch(await fileManagerApi.getDownloadFileLink(item.logicalPath));
-      if (!response.ok) throw new Error(`服务器错误: ${response.statusText}`);
-      const text = await response.text();
-      // Limit preview size for very large text files
-      previewContent.value = text.length > 50000 ? text.substring(0, 50000) + "\n... (文件过大，仅显示部分内容)" : text;
-    } else {
-      previewType.value = 'unsupported';
-    }
-  } catch (err) {
-    console.error('Error fetching preview:', err);
-    previewError.value = (err as Error).message || '加载预览失败。';
-    previewType.value = 'unsupported';
-  } finally {
+            if (!response.ok) throw new Error(t('fileManager.detailPanel.serverError', { error: response.statusText }));
+            const text = await response.text();
+            // Limit preview size for very large text files
+            previewContent.value = text.length > 50000 ? text.substring(0, 50000) + `\n... (${t('fileManager.detailPanel.previewTooLarge')})` : text;
+          } else {
+            previewType.value = 'unsupported';
+          }
+        } catch (err) {
+          console.error('Error fetching preview:', err);
+          previewError.value = (err as Error).message || t('fileManager.detailPanel.previewFailed');
+          previewType.value = 'unsupported';
+        } finally {
     isLoadingPreview.value = false;
   }
 };

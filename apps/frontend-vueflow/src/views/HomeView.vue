@@ -12,26 +12,26 @@
         <!-- :class="themeStore.collapsed ? 'ml-16' : 'ml-64'" REMOVED -->
       <h1
         class="text-5xl font-bold text-center mb-8 pb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-500">
-        欢迎使用 ComfyTavern
+        {{ t('home.welcome') }}
       </h1>
       <p class="text-xl text-center text-text-secondary mb-10">
-        管理您的工作流项目和角色卡，释放创造力。
+        {{ t('home.subtitle') }}
       </p>
 
       <div class="grid grid-cols-1 gap-8">
         <!-- 项目预览区 -->
         <div class="bg-background-surface rounded-lg shadow p-6">
-          <h2 class="text-xl font-semibold text-text-base mb-4">最近项目</h2>
+          <h2 class="text-xl font-semibold text-text-base mb-4">{{ t('home.recentProjects') }}</h2>
           <div>
             <div v-if="isLoading" class="text-center text-text-muted">
-              正在加载项目...
+              {{ t('home.loadingProjects') }}
             </div>
             <div v-else-if="error" class="text-center text-error">
-              加载项目失败: {{ error }}
+              {{ t('home.loadProjectsFailed', { error }) }}
             </div>
             <div v-else-if="recentProjects.length === 0" class="text-center text-text-muted">
-              还没有项目。
-              <router-link to="/home/projects" class="text-primary hover:underline ml-2">创建新项目</router-link>
+              {{ t('home.noProjects') }}
+              <router-link to="/home/projects" class="text-primary hover:underline ml-2">{{ t('home.createNewProject') }}</router-link>
             </div>
             <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               <div v-for="project in recentProjects" :key="project.id"
@@ -39,21 +39,21 @@
                 @click="openProject(project.id)">
                 <h3 class="font-semibold text-lg text-text-base mb-2 truncate">{{ project.name }}</h3>
                 <p class="text-sm text-text-secondary mb-1">
-                  最后修改: {{ formatDate(project.updatedAt) }}
+                  {{ t('home.lastModified') }}: {{ formatDate(project.updatedAt) }}
                 </p>
                 <p class="text-sm text-text-muted truncate">
-                  {{ project.description || '暂无描述' }}
+                  {{ project.description || t('home.noDescription') }}
                 </p>
               </div>
             </div>
             <router-link to="/home/projects"
-              class="text-primary hover:underline mt-4 inline-block float-right">查看所有项目</router-link>
+              class="text-primary hover:underline mt-4 inline-block float-right">{{ t('home.viewAllProjects') }}</router-link>
           </div>
         </div>
 
         <!-- 角色卡预览区 -->
         <div class="bg-background-surface rounded-lg shadow p-6">
-          <h2 class="text-xl font-semibold text-text-base mb-4">角色卡概览</h2>
+          <h2 class="text-xl font-semibold text-text-base mb-4">{{ t('home.characterCardOverview') }}</h2>
           <div>
             <CharacterCardPreview />
           </div>
@@ -62,7 +62,7 @@
 
       <!-- 其他可能的欢迎信息或快速入口 -->
       <div class="mt-10 text-center text-text-muted">
-        <p>探索侧边栏以开始您的创作之旅。</p>
+        <p>{{ t('home.exploreSidebar') }}</p>
       </div>
 
       </div>
@@ -77,7 +77,9 @@ import { useProjectManagement } from '../composables/editor/useProjectManagement
 import { computed } from 'vue';
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
+import { useI18n } from 'vue-i18n';
 
+const { t, locale } = useI18n();
 const themeStore = useThemeStore(); // 获取 theme store 实例
 const isDark = computed(() => themeStore.currentAppliedMode === 'dark');
 const { projects, isLoading, error, openProject } = useProjectManagement();
@@ -96,9 +98,9 @@ const formatDate = (dateString: string | Date) => {
   const date = new Date(dateString);
   // 检查日期是否有效
   if (isNaN(date.getTime())) {
-    return '无效日期';
+    return t('home.invalidDate');
   }
-  return date.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleString(locale.value, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 };
 </script>
 

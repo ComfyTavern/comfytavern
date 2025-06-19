@@ -14,11 +14,11 @@
       </div>
 
       <div v-if="!isLoading && filteredItems.length === 0"
-        class="empty-folder-placeholder p-8 text-center text-text-muted">
-        <InformationCircleIcon class="h-12 w-12 mx-auto mb-2" />
-        <p>此文件夹为空，或没有匹配筛选条件的项目。</p>
-        <button v-if="isFilterActive" @click="clearFilters" class="btn btn-sm btn-outline mt-4">清除筛选</button>
-      </div>
+              class="empty-folder-placeholder p-8 text-center text-text-muted">
+              <InformationCircleIcon class="h-12 w-12 mx-auto mb-2" />
+              <p>{{ t('fileManager.browser.emptyFolder') }}</p>
+              <button v-if="isFilterActive" @click="clearFilters" class="btn btn-sm btn-outline mt-4">{{ t('fileManager.browser.clearFilters') }}</button>
+            </div>
 
       <!-- 列表视图 -->
       <table v-if="!isLoading && viewSettings.mode === 'list' && filteredItems.length > 0"
@@ -43,8 +43,8 @@
               </div>
             </th>
             <th scope="col" class="relative px-3 py-2.5 w-12">
-              <span class="sr-only">操作</span>
-            </th>
+                          <span class="sr-only">{{ t('fileManager.browser.actions') }}</span>
+                        </th>
           </tr>
         </thead>
         <tbody class="divide-y divide-border-base bg-background-base">
@@ -79,6 +79,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useFileManagerStore, type ViewSettings } from '@/stores/fileManagerStore';
 import type { FAMItem } from '@comfytavern/types'; // 统一类型 FAMItem 从 @comfytavern/types 导入
 // import { onClickOutside } from '@vueuse/core'; // onClickOutside is handled by FileContextMenu itself
@@ -93,6 +94,7 @@ import FileGridItem from './FileGridItem.vue';
 import FileContextMenu from './FileContextMenu.vue';
 
 const fileManagerStore = useFileManagerStore();
+const { t } = useI18n();
 
 const isLoading = computed(() => fileManagerStore.isLoading);
 const filteredItems = computed(() => fileManagerStore.filteredItems);
@@ -129,10 +131,10 @@ const contextMenuRef = ref<HTMLElement | null>(null); // Typed for FileContextMe
 const visibleColumnsList = computed(() => {
   // 基于 viewSettings.visibleColumns 和预定义列信息生成
   const allCols: Record<string, { label: string, widthClass?: string }> = {
-    name: { label: '名称', widthClass: 'w-2/5' },
-    size: { label: '大小', widthClass: 'w-1/5' },
-    lastModified: { label: '修改日期', widthClass: 'w-1/5' },
-    itemType: { label: '类型', widthClass: 'w-1/5' },
+    name: { label: t('fileManager.browser.colName'), widthClass: 'w-2/5' },
+    size: { label: t('fileManager.browser.colSize'), widthClass: 'w-1/5' },
+    lastModified: { label: t('fileManager.browser.colDate'), widthClass: 'w-1/5' },
+    itemType: { label: t('fileManager.browser.colType'), widthClass: 'w-1/5' },
     // 可以添加更多列定义
   };
   return (viewSettings.value.visibleColumns || ['name', 'size', 'lastModified', 'itemType']).map(key => ({
@@ -260,29 +262,29 @@ const hideContextMenu = () => {
 
 const generateItemContextActions = (item: FAMItem): any[] => {
   const actions = [];
-  actions.push({ label: '打开', action: 'open', icon: 'FolderOpenIcon' }); // 示例图标
+  actions.push({ label: t('fileManager.browser.contextMenu.open'), action: 'open', icon: 'FolderOpenIcon' });
   if (item.itemType === 'file') {
-    actions.push({ label: '下载', action: 'download', icon: 'ArrowDownTrayIcon' });
+    actions.push({ label: t('fileManager.browser.contextMenu.download'), action: 'download', icon: 'ArrowDownTrayIcon' });
   }
-  actions.push({ label: '重命名', action: 'rename', icon: 'PencilIcon' });
-  actions.push({ label: '移动到...', action: 'move', icon: 'ArrowsRightLeftIcon' }); // 示例
-  actions.push({ label: '复制路径', action: 'copyPath', icon: 'ClipboardDocumentIcon' });
+  actions.push({ label: t('fileManager.browser.contextMenu.rename'), action: 'rename', icon: 'PencilIcon' });
+  actions.push({ label: t('fileManager.browser.contextMenu.moveTo'), action: 'move', icon: 'ArrowsRightLeftIcon' });
+  actions.push({ label: t('fileManager.browser.contextMenu.copyPath'), action: 'copyPath', icon: 'ClipboardDocumentIcon' });
   if (fileManagerStore.isFavorite(item.logicalPath)) {
-    actions.push({ label: '从收藏夹移除', action: 'unfavorite', icon: 'StarSlashIcon' });
+    actions.push({ label: t('fileManager.browser.contextMenu.removeFromFavorites'), action: 'unfavorite', icon: 'StarSlashIcon' });
   } else {
-    actions.push({ label: '添加到收藏夹', action: 'favorite', icon: 'StarIcon' });
+    actions.push({ label: t('fileManager.browser.contextMenu.addToFavorites'), action: 'favorite', icon: 'StarIcon' });
   }
   actions.push({ type: 'divider' });
-  actions.push({ label: '删除', action: 'delete', icon: 'TrashIcon', danger: true });
+  actions.push({ label: t('fileManager.browser.contextMenu.delete'), action: 'delete', icon: 'TrashIcon', danger: true });
   return actions;
 };
 
 const generateBlankContextActions = (): any[] => {
   const actions = [];
-  actions.push({ label: '刷新', action: 'refresh', icon: 'ArrowPathIcon' });
-  actions.push({ label: '新建文件夹', action: 'createDirectory', icon: 'FolderPlusIcon' });
+  actions.push({ label: t('fileManager.browser.contextMenu.refresh'), action: 'refresh', icon: 'ArrowPathIcon' });
+  actions.push({ label: t('fileManager.browser.contextMenu.newFolder'), action: 'createDirectory', icon: 'FolderPlusIcon' });
   if (fileManagerStore.clipboard && fileManagerStore.clipboard.sourcePaths.length > 0) {
-    actions.push({ label: '粘贴', action: 'paste', icon: 'ClipboardDocumentIcon' });
+    actions.push({ label: t('fileManager.browser.contextMenu.paste'), action: 'paste', icon: 'ClipboardDocumentIcon' });
   }
   // actions.push({ label: '显示设置', action: 'viewSettings', icon: 'CogIcon' });
   return actions;

@@ -4,7 +4,7 @@
     <div class="editor-main flex-1 relative overflow-hidden">
       <div v-if="loading" class="loading-overlay">
         <div class="loading-spinner"></div>
-        <div class="loading-text">正在加载节点数据...</div>
+        <div class="loading-text">{{ t('editorView.loadingNodes') }}</div>
       </div>
 
       <!-- 主要内容布局 - 仅在节点定义加载后渲染 -->
@@ -45,8 +45,8 @@
                 :loading="loading"
                 @select="handleHierarchicalNodeSelect"
                 class="node-search-panel-canvas"
-                :search-placeholder="'搜索节点...'"
-                :no-results-text="'未找到节点'"
+                :search-placeholder="t('editorView.searchNodes')"
+                :no-results-text="t('editorView.noNodesFound')"
               />
             </div>
             <!-- 可停靠编辑器 -->
@@ -58,7 +58,7 @@
           </div>
         </div>
         <div v-else class="flex items-center justify-center h-full text-text-muted">
-          正在加载节点定义...
+          {{ t('editorView.loadingDefinitions') }}
         </div>
   
         <!-- 节点预览面板 - 仅在侧边栏准备好后渲染 -->
@@ -95,6 +95,7 @@
   </template>
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, markRaw, watch, nextTick, provide } from "vue"; // watch 已经存在，无需重复导入, 移除 ComputedRef
+import { useI18n } from "vue-i18n";
 import Canvas from "../components/graph/Canvas.vue";
 import HierarchicalMenu from '../components/common/HierarchicalMenu.vue';
 import type { MenuItem as HierarchicalMenuItem } from '../components/common/HierarchicalMenu.vue';
@@ -127,6 +128,7 @@ type SidebarManagerInstance = InstanceType<typeof SidebarManager> & {
   activeTab: string | null;
 };
 
+const { t } = useI18n();
 const canvasRef = ref<InstanceType<typeof Canvas> | null>(null);
 const dockedEditorWrapperRef = ref<InstanceType<typeof DockedEditorWrapper> | null>(null);
 const sidebarManagerRef = ref<SidebarManagerInstance | null>(null);
@@ -167,7 +169,7 @@ const hierarchicalNodeMenuSections = computed(() => {
     })
     .forEach((node: FrontendNodeDefinition) => {
       const namespace = node.namespace || 'core';
-      const category = node.category || '未分类';
+      const category = node.category || t('editorView.unclassified');
 
       if (!sections[namespace]) {
         sections[namespace] = {

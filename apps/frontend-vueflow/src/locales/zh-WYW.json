@@ -1,0 +1,462 @@
+{
+  "_meta": {
+    "name": "Classical Chinese",
+    "nativeName": "文言"
+  },
+  "common": {
+    "confirm": "可也",
+    "cancel": "罢之",
+    "save": "存之",
+    "delete": "删之",
+    "edit": "修之",
+    "add": "增之",
+    "loading": "载入中... 咕？",
+    "error": "谬矣",
+    "success": "功成",
+    "warning": "噫！慎之"
+  },
+  "nav": {
+    "home": "归庭",
+    "editor": "天工开物坊",
+    "settings": "机巧枢要",
+    "about": "此为何物",
+    "projects": "锦囊妙计",
+    "characters": "百工图鉴",
+    "files": "琅嬛秘府"
+  },
+  "editor": {
+    "toolbar": {
+      "save": "封存机巧",
+      "execute": "敕令运转",
+      "clear": "拭净素帛"
+    },
+    "contextMenu": {
+      "addNode": "添一机括",
+      "deleteNode": "毁此机括",
+      "copyNode": "拓印机括"
+    }
+  },
+  "settings": {
+    "general": {
+      "title": "常法枢机",
+      "language": "雅言",
+      "theme": "仪轨"
+    },
+    "sections": {
+      "display": "显形之法",
+      "user": "卿家",
+      "keybindings": "急键",
+      "llm": "玄思妙算",
+      "mcp": "通灵玉符 (MCP)",
+      "test_panel": "玄机试炼场",
+      "about": "此为何物"
+    },
+    "categories": {
+      "appearance": "皮相",
+      "basic_info": "根基",
+      "editor": "天工坊",
+      "interface_elements": "机巧陈设"
+    },
+    "items": {
+      "user_nickname_label": "雅号",
+      "user_nickname_desc": "君于此境所显之名讳。",
+      "user_avatar_label": "真容",
+      "user_avatar_desc": "设卿家之真容绘影。",
+      "i18n_currentLanguage_label": "雅言",
+      "i18n_currentLanguage_desc": "择此「玄思妙境」所显之言辞。",
+      "theme_displayMode_label": "显形之法",
+      "theme_displayMode_desc": "择此境之形貌：昭昭、昏昏，或随天时。",
+      "theme_preset_label": "仪轨预置",
+      "theme_preset_desc": "择一预设之仪轨样式。",
+      "display_fontSize_label": "根基墨迹大小 (px)",
+      "display_fontSize_desc": "调此境根基墨迹之大小。",
+      "display_showMinimap_label": "显天工坊缩略图",
+      "display_showMinimap_desc": "于机括坊右侧显缩略舆图。",
+      "display_showConnectionStatus_label": "显通幽之径",
+      "display_showConnectionStatus_desc": "于境底显与幽府通联之状。",
+      "mcp_autoConnect_label": "自启通灵玉符",
+      "mcp_autoConnect_desc": "启境时自联已设之通灵玉符。",
+      "mcp_defaultTimeout_label": "默认守候之期 (ms)",
+      "mcp_defaultTimeout_desc": "与通灵玉符交通之默认守候期。",
+      "light_mode": "昭昭",
+      "dark_mode": "昏昏",
+      "system_mode": "随天时"
+    },
+    "advanced": {
+      "title": "玄奥枢机"
+    },
+    "placeholders": {
+      "no_content": "咕？此间空空如也... 或尚在营造。",
+      "custom_module_wip": "此乃未来玄奥枢机之处，营造未竟... 咕~"
+    },
+    "avatar": {
+      "edit": "修吾真容",
+      "preview_alt": "卿家真容"
+    }
+  },
+  "dialogs": {
+    "confirmDelete": {
+      "title": "确乎删之？",
+      "message": "此乃覆水难收之举，卿果决乎？"
+    }
+  },
+  "sidebar": {
+    "userAvatar": "卿家真容",
+    "guest": "过客",
+    "toggleTheme": "更迭仪轨",
+    "themeSystem": "随天时",
+    "themeDark": "昏昏仪轨",
+    "themeLight": "昭昭仪轨",
+    "toggleSidebar": "展/敛侧厢",
+    "expand": "展之",
+    "collapse": "敛之"
+  },
+  "projects": {
+    "title": "吾之锦囊",
+    "createNew": "新辟锦囊",
+    "creating": "营造中...",
+    "loading": "锦囊载入中...",
+    "loadError": "载物倾覆:",
+    "noProjects": "尚无锦囊，点右上之钮新辟一囊乎！",
+    "noDescription": "暂无批注",
+    "lastUpdated": "末次修缮",
+    "createDialog": {
+      "title": "新辟锦囊",
+      "message": "请赐锦囊之名：",
+      "placeholder": "锦囊妙计之名"
+    },
+    "errors": {
+      "nameRequired": "锦囊之名岂可空乎！"
+    }
+  },
+  "characters": {
+    "title": "吾之百工图鉴",
+    "loading": "图鉴载入中...",
+    "loadError": "载物倾覆:",
+    "loadErrorDetail": "图鉴载入倾覆: {error}",
+    "noCharacters": "未得图鉴。"
+  },
+  "characterPreview": {
+    "loading": "图鉴载入中...",
+    "loadError": "载物倾覆:",
+    "loadErrorDetail": "图鉴预览倾覆: {error}",
+    "noCards": "未得图鉴。",
+    "viewAll": "遍览诸图鉴"
+  },
+  "fileManager": {
+    "initializing": "秘府初开中...",
+    "toolbar": {
+      "upload": "献宝",
+      "uploadFile": "献文书",
+      "newFolder": "辟新阁",
+      "refresh": "拂尘",
+      "paste": "拓印",
+      "searchPlaceholder": "寻宝...",
+      "switchToGridView": "罗列如棋局",
+      "switchToListView": "罗列如书简",
+      "sortBy": "序列之法",
+      "gridSize": "棋局大小",
+      "sortDirection": "逆序",
+      "sortAsc": "顺",
+      "sortDesc": "逆",
+      "sortByLabel": "序列之据",
+      "sortByName": "名讳",
+      "sortByExtension": "后缀",
+      "sortByDate": "修缮之期",
+      "sortBySize": "大小",
+      "advancedFilter": "玄奥筛法",
+      "hideDetailPanel": "藏宝鉴",
+      "showDetailPanel": "显宝鉴",
+      "viewSettings": "显形枢机",
+      "filtersCleared": "筛法已清",
+      "openAdvancedFilterPlaceholder": "启玄奥筛法（虚位）",
+      "openViewSettingsPlaceholder": "启显形枢机（虚位）"
+    },
+    "breadcrumbs": {
+      "goUp": "返上阁",
+      "root": "已至秘府根",
+      "editPath": "修秘径",
+      "pathPlaceholder": "书秘径...",
+      "confirm": "可也",
+      "cancel": "罢之",
+      "invalidPathError": "秘径谬矣，须含符首 (如 user://)。",
+      "invalidPathExampleError": "秘径谬矣。示例: user://吾之/秘阁/"
+    },
+    "browser": {
+      "emptyFolder": "此阁空空，或未合筛法之宝。",
+      "clearFilters": "净筛法",
+      "colName": "名讳",
+      "colSize": "大小",
+      "colDate": "修缮之期",
+      "colType": "类属",
+      "actions": "法诀",
+      "contextMenu": {
+        "open": "启之",
+        "download": "取之",
+        "rename": "易名",
+        "moveTo": "移之...",
+        "copyPath": "拓秘径",
+        "addToFavorites": "纳为私藏",
+        "removeFromFavorites": "除于私藏",
+        "delete": "毁之",
+        "refresh": "拂尘",
+        "newFolder": "辟新阁",
+        "paste": "拓印",
+        "noActions": "无法可施"
+      }
+    },
+    "detailPanel": {
+      "title": "宝鉴",
+      "titleForItem": "宝物鉴",
+      "properties": "禀性",
+      "preview": "窥斑",
+      "close": "阖鉴",
+      "noItemSelected": "未择宝物",
+      "propName": "名讳:",
+      "propType": "类属:",
+      "propSize": "大小:",
+      "propPath": "秘径:",
+      "propLastModified": "末次修缮:",
+      "propSymlinkTarget": "幻影所指:",
+      "propWritable": "可书:",
+      "propFavorite": "私藏:",
+      "typeFolder": "秘阁",
+      "typeImage": "丹青",
+      "typeText": "文牍",
+      "typePdf": "PDF 文牍",
+      "typeArchive": "封装箱箧",
+      "typeFile": "{ext} 文书",
+      "typeGenericFile": "文书",
+      "yes": "然",
+      "no": "否",
+      "favorited": "私藏",
+      "notFavorited": "非私藏",
+      "previewFailed": "窥斑败北:",
+      "loadingPreview": "窥斑中...",
+      "previewUnsupported": "此宝类属不可窥，或内中空空。",
+      "previewTooLarge": "... (宝巨，仅示片羽)",
+      "serverError": "幽府谬矣: {error}"
+    },
+    "sidebarNav": {
+      "title": "导引",
+      "expand": "展导引",
+      "collapse": "敛导引",
+      "locations": "方位",
+      "recentAccess": "近履",
+      "clearRecent": "拂近履",
+      "favorites": "私藏阁",
+      "noFavorites": "私藏空空",
+      "unfavorite": "出私藏"
+    },
+    "store": {
+      "myFiles": "吾之秘府",
+      "sharedSpace": "众乐之庭",
+      "itemTypes": {
+        "file": "文书",
+        "directory": "秘阁"
+      },
+      "errors": {
+        "loadFailed": "载宝录倾覆: {error}",
+        "unknown": "玄妙之谬"
+      },
+      "createDirectory": {
+        "title": "新辟秘阁",
+        "placeholder": "赐秘阁之名",
+        "success": "秘阁 \"{dirName}\" 功成",
+        "error": "辟阁败北: {error}"
+      },
+      "rename": {
+        "title": "易 {itemType} 之名",
+        "placeholder": "赐新名",
+        "success": "已易名 \"{newName}\"",
+        "error": "易名败北: {error}"
+      },
+      "delete": {
+        "title": "确乎毁之？",
+        "message": "卿确欲毁此 {count} 宝乎？覆水难收矣。",
+        "confirmText": "毁之",
+        "success": "{count} 宝已湮灭",
+        "error": "毁宝败北: {error}"
+      },
+      "move": {
+        "success": "{count} 宝已移形",
+        "error": "移形败北: {error}"
+      },
+      "download": {
+        "noFolderSupport": "暂不可取秘阁。",
+        "error": "取宝符败北: {error}"
+      },
+      "clipboard": {
+        "copied": "{count} 宝已拓入剪牍",
+        "cut": "{count} 宝已裁入剪牍"
+      },
+      "paste": {
+        "errorMoveIntoSelf": "不可移秘阁入己身或子阁。",
+        "alreadyAtTarget": "宝已在彼处。",
+        "copyNotImplemented": "拓印之法未竟。",
+        "moveSuccess": "{count} 宝已移形",
+        "error": "拓印败北: {error}"
+      },
+      "favorites": {
+        "added": "已纳私藏",
+        "removed": "已出私藏"
+      },
+      "upload": {
+        "noValidFiles": "无合宜之宝献上。",
+        "success": "{count} 文书献功成",
+        "error": "献宝败北: {error}"
+      }
+    },
+    "home": {
+      "welcome": "玄思妙境，恭迎大驾",
+      "subtitle": "掌尔锦囊妙计与百工图鉴，纵情挥洒。",
+      "recentProjects": "近履锦囊",
+      "loadingProjects": "锦囊载入中...",
+      "loadProjectsFailed": "锦囊载入倾覆: {error}",
+      "noProjects": "尚无锦囊。",
+      "createNewProject": "新辟锦囊",
+      "lastModified": "末次修缮",
+      "noDescription": "暂无批注",
+      "viewAllProjects": "遍览诸锦囊",
+      "characterCardOverview": "百工图鉴一瞥",
+      "exploreSidebar": "探侧厢，启尔造化之途。",
+      "invalidDate": "谬期"
+    },
+    "editorView": {
+      "loadingNodes": "机括载入中...",
+      "loadingDefinitions": "机括玄义载入中...",
+      "searchNodes": "寻机括...",
+      "noNodesFound": "未得机括",
+      "unclassified": "未归籍"
+    },
+    "testPanel": {
+      "title": "玄机试炼场 (示匣与奇物)",
+      "dialogService": {
+        "title": "DialogService (玄机示匣与飞符)",
+        "dialogs": "玄机示匣 (Dialogs)",
+        "toasts": "飞符传讯 (Toasts)",
+        "results": "DialogService 果报:",
+        "buttons": {
+          "showMessage": "启消息示匣",
+          "showConfirm": "启确认示匣",
+          "showDangerConfirm": "启险途示匣",
+          "showAutoClose": "启自阖示匣",
+          "showInput": "启问策匣",
+          "showTextarea": "启长策匣",
+          "showLargeMessage": "启鸿篇示匣",
+          "showInfoToast": "发通识飞符",
+          "showSuccessToast": "发功成飞符",
+          "showWarningToast": "发警世飞符",
+          "showErrorToast": "发谬误飞符",
+          "showCustomToast": "发定制飞符",
+          "showMultipleToasts": "发连珠飞符",
+          "showLargeToast": "发鸿篇飞符"
+        },
+        "resultsContent": {
+          "waiting": "待君决...",
+          "waitingFor": "待 {actionName} 回响...",
+          "cancelled": "{actionName}：君罢手或阖匣。",
+          "exception": "{actionName}：玄妙之谬: {error}",
+          "messageSuccess": "消息示匣：君点可也。",
+          "messageCancelled": "消息示匣：君阖匣或遇谬。",
+          "confirmSuccess": "确认示匣：君择 -> {choice}",
+          "confirmCancelled": "确认示匣：君罢手。",
+          "dangerConfirmSuccess": "险途示匣：君择 -> {choice}",
+          "dangerConfirmCancelled": "险途示匣：君罢手。",
+          "autoCloseSuccess": "自阖示匣：匣自阖或君点可也。",
+          "autoCloseCancelled": "自阖示匣：君先阖或遇谬。",
+          "inputSuccess": "问策匣：君书 \"{input}\"",
+          "inputCancelled": "问策匣：君罢书。",
+          "textareaSuccess": "长策匣：君书 \"{input}\"",
+          "textareaCancelled": "长策匣：君罢书。",
+          "largeMessageSuccess": "鸿篇示匣：君点可也。",
+          "largeMessageCancelled": "鸿篇示匣：君阖匣或遇谬。",
+          "infoToastTriggered": "通识飞符已发。",
+          "successToastTriggered": "功成飞符已发。",
+          "warningToastTriggered": "警世飞符已发。",
+          "errorToastTriggered": "谬误飞符已发。",
+          "customToastTriggered": "定制飞符已发。",
+          "multipleToastsTriggered": "连珠飞符已发。",
+          "largeToastTriggered": "鸿篇飞符已发。"
+        },
+        "dialogContent": {
+          "messageTitle": "通识示匣",
+          "messageText": "此乃简易通识示匣，唯一可也钮。",
+          "confirmTitle": "确乎行此？",
+          "confirmText": "卿果决行此法乎？",
+          "dangerConfirmTitle": "险途示匣",
+          "dangerConfirmText": "此途不可逆，卿确欲前行乎？",
+          "dangerConfirmYes": "然，毁之",
+          "dangerConfirmNo": "罢也",
+          "autoCloseTitle": "自阖示匣例",
+          "autoCloseText": "此匣三息自阖。",
+          "inputTitle": "请赐策",
+          "inputText": "请书雅号：",
+          "inputPlaceholder": "例：咕咕",
+          "textareaTitle": "请赐长策",
+          "textareaText": "请详述所遇之碍或良策：",
+          "textareaPlaceholder": "请书长策于此...",
+          "largeMessageTitle": "鸿篇巨示",
+          "largeMessageConfirm": "朕已御览",
+          "customToastTitle": "定制飞符",
+          "customToastText": "此符悬于底央，驻五息。",
+          "infoToastTitle": "通识",
+          "infoToastText": "此乃通识飞符！",
+          "successToastTitle": "功成",
+          "successToastText": "法成矣！",
+          "warningToastTitle": "警世",
+          "warningToastText": "噫！此乃警世之言。",
+          "errorToastTitle": "谬矣",
+          "errorToastText": "呜呼！谬误现矣！",
+          "multiToast1": "飞符一",
+          "multiToast2": "飞符二 (迟)",
+          "multiToast3": "飞符三 (迟)",
+          "largeToastTitle": "鸿篇飞符"
+        }
+      },
+      "uiStore": {
+        "title": "UiStore (寰宇示匣)",
+        "specificModals": "特定玄匣",
+        "results": "UiStore 果报:",
+        "buttons": {
+          "openSettings": "启机巧枢要玄匣 (App.vue 掌之)",
+          "openRegexEditor": "启天符纂修玄匣",
+          "openInitialUsernameSetup": "启初名玄匣"
+        },
+        "resultsContent": {
+          "initialUsernameClosed": "初名玄匣已阖 (事象)。",
+          "initialUsernameSaved": "初名已存 (事象)。",
+          "openingSettings": "试启机巧枢要玄匣...",
+          "openingRegexEditor": "试启天符纂修玄匣...",
+          "regexEditorSaved": "天符已纂，规数: {count}。观幽府录以悉。",
+          "openingInitialUsernameSetup": "试启初名玄匣...",
+          "settingsClosed": "机巧枢要玄匣已阖。"
+        }
+      },
+      "settingsControl": {
+        "title": "SettingControl (假道枢要玄鉴) 试炼",
+        "results": "SettingsStore 现值 (验真用):",
+        "labels": {
+          "string": "单行书 (String)",
+          "textarea": "长策书 (Textarea)",
+          "number": "数策书 (Number)",
+          "boolean": "阴阳爻 (Boolean)",
+          "select": "择物匣 (Select)"
+        },
+        "descriptions": {
+          "string": "验单行书入。",
+          "textarea": "验长策书入。",
+          "number": "验数策入，兼度与阶。",
+          "boolean": "验阴阳爻变。",
+          "select": "验择物之法。"
+        },
+        "selectOptions": {
+          "a": "甲策 (option1)",
+          "b": "乙策 (option2)",
+          "c": "丙策 (option3)",
+          "d": "丁策 (原欲封禁)"
+        }
+      }
+    }
+  }
+}

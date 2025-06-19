@@ -6,6 +6,7 @@ import { computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
 import { storeToRefs } from 'pinia'
 import { getBackendBaseUrl } from '@/utils/urlUtils'
+import { useI18n } from 'vue-i18n';
 // import Tooltip from '@/components/common/Tooltip.vue'; // 移除 Tooltip 组件导入
 
 const themeStore = useThemeStore();
@@ -13,6 +14,7 @@ const { displayMode } = storeToRefs(themeStore); // currentAppliedMode 在此组
 const uiStore = useUiStore(); // + 实例化 uiStore
 const authStore = useAuthStore()
 const { currentUser } = storeToRefs(authStore)
+const { t } = useI18n();
 
 const defaultAvatarPath = '/img/default-avatar.png'; // 确保这个文件在 public/img 目录下
 
@@ -82,7 +84,7 @@ const displayedUsername = computed(() => {
   if (uiStore.isMainSidebarCollapsed) {
     return '';
   }
-  return currentUser.value?.username || '游客';
+  return currentUser.value?.username || t('sidebar.guest');
 });
 
 // 循环切换显示模式
@@ -103,7 +105,7 @@ function cycleDisplayMode() {
     <div class="p-2 flex flex-col items-center mt-2 mb-2">
       <img
         :src="displayedAvatarUrl"
-        alt="用户头像"
+        :alt="t('sidebar.userAvatar')"
         @error="onAvatarError"
         class="w-12 h-12 rounded-full object-cover border-2 border-border-base"
       />
@@ -129,7 +131,7 @@ function cycleDisplayMode() {
         ]">
           <span class="inline text-lg">🏠</span>
           <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
-            :class="textClasses">主页</span>
+            :class="textClasses">{{ t('nav.home') }}</span>
         </div>
       </RouterLink>
 
@@ -139,7 +141,7 @@ function cycleDisplayMode() {
       ]" active-class="bg-primary-soft">
         <span class="inline text-lg">📁</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
-          :class="textClasses">项目</span>
+          :class="textClasses">{{ t('nav.projects') }}</span>
       </RouterLink>
       <RouterLink to="/home/characters" class="w-full p-2 rounded flex items-center" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
@@ -147,7 +149,7 @@ function cycleDisplayMode() {
       ]" active-class="bg-primary-soft">
         <span class="inline text-lg">🎭</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
-          :class="textClasses">角色卡</span>
+          :class="textClasses">{{ t('nav.characters') }}</span>
       </RouterLink>
 
       <RouterLink to="/home/files" class="w-full p-2 rounded flex items-center" :class="[
@@ -156,7 +158,7 @@ function cycleDisplayMode() {
       ]" active-class="bg-primary-soft">
         <span class="inline text-lg">🗂️</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
-          :class="textClasses">文件管理</span>
+          :class="textClasses">{{ t('nav.files') }}</span>
       </RouterLink>
 
       <RouterLink to="/home/about" class="w-full p-2 rounded flex items-center" :class="[
@@ -165,14 +167,14 @@ function cycleDisplayMode() {
       ]" active-class="bg-primary-soft">
         <span class="inline text-lg">ℹ️</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
-          :class="textClasses">关于</span>
+          :class="textClasses">{{ t('nav.about') }}</span>
       </RouterLink>
     </nav>
 
     <!-- 底部按钮区域 -->
     <div class="p-2 space-y-2">
       <!-- 主题切换按钮 -->
-      <div v-comfy-tooltip="'切换主题'" class="w-full p-2 rounded flex items-center cursor-pointer" :class="[
+      <div v-comfy-tooltip="t('sidebar.toggleTheme')" class="w-full p-2 rounded flex items-center cursor-pointer" :class="[
           uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
           'hover:bg-primary-softest'
         ]" @click="cycleDisplayMode()">
@@ -183,7 +185,7 @@ function cycleDisplayMode() {
         </span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">
-          {{ displayMode === 'system' ? '跟随系统' : displayMode === 'dark' ? '暗色模式' : '亮色模式' }}
+          {{ t(displayMode === 'system' ? 'sidebar.themeSystem' : displayMode === 'dark' ? 'sidebar.themeDark' : 'sidebar.themeLight') }}
         </span>
       </div>
 
@@ -194,11 +196,11 @@ function cycleDisplayMode() {
       ]" active-class="bg-primary-soft">
         <span class="inline text-lg">⚙️</span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
-          :class="textClasses">设置</span>
+          :class="textClasses">{{ t('nav.settings') }}</span>
       </RouterLink>
 
       <!-- 折叠按钮 -->
-      <button v-comfy-tooltip="'折叠/展开侧边栏'" @click="uiStore.toggleMainSidebar()" class="w-full p-2 rounded flex items-center mt-2" :class="[ // + 使用 uiStore action
+      <button v-comfy-tooltip="t('sidebar.toggleSidebar')" @click="uiStore.toggleMainSidebar()" class="w-full p-2 rounded flex items-center mt-2" :class="[ // + 使用 uiStore action
           uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
           'hover:bg-primary-softest'
         ]">
@@ -220,7 +222,7 @@ function cycleDisplayMode() {
         </span>
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">
-          {{ uiStore.isMainSidebarCollapsed ? '展开' : '折叠' }}
+          {{ t(uiStore.isMainSidebarCollapsed ? 'sidebar.expand' : 'sidebar.collapse') }}
         </span>
       </button>
     </div>

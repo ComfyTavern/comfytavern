@@ -3,18 +3,20 @@
     <FileManagerViewLayout v-if="storeInitialized" />
     <div v-else class="flex items-center justify-center h-full">
       <!-- 可以放置一个加载指示器 -->
-      <p>正在初始化文件管理器...</p>
+      <p>{{ t('fileManager.initializing') }}</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import FileManagerViewLayout from '@/components/file-manager/FileManagerViewLayout.vue';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
 import { useAuthStore } from '@/stores/authStore'; // 假设 authStore 用于获取 userId
 
+const { t } = useI18n();
 const route = useRoute();
 const fileManagerStore = useFileManagerStore();
 const authStore = useAuthStore(); // 假设 authStore 已初始化并包含 currentUser

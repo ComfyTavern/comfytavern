@@ -24,7 +24,8 @@ export interface SettingItemConfig {
   label: string; // 显示名称
   description?: string; // 描述或提示
   defaultValue?: any; // 默认值 (设为可选)
-  category?: string; // 分组名称 (e.g., "界面", "行为")
+  category?: string; // 分组名称 (e.g., "界面", "行为") - 用于显示
+  categoryKey?: string; // 分组键 (e.g., "appearance") - 用于逻辑
   options?: SelectOption[]; // 仅 type='select' 时需要
   min?: number;         // 仅 type='number'|'slider' 时
   max?: number;         // 仅 type='number'|'slider' 时

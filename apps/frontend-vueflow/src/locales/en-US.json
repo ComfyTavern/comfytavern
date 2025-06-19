@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "name": "English (US)",
+    "name": "英语 (US)",
     "nativeName": "English (US)"
   },
   "common": {
@@ -19,7 +19,10 @@
     "home": "Home",
     "editor": "Editor",
     "settings": "Settings",
-    "about": "About"
+    "about": "About",
+    "projects": "Projects",
+    "characters": "Characters",
+    "files": "File Manager"
   },
   "editor": {
     "toolbar": {
@@ -48,14 +51,412 @@
       "test_panel": "Test Panel",
       "about": "About"
     },
+    "categories": {
+      "appearance": "Appearance",
+      "basic_info": "Basic Info",
+      "editor": "Editor",
+      "interface_elements": "Interface Elements"
+    },
+    "items": {
+      "user_nickname_label": "Nickname",
+      "user_nickname_desc": "Your display name in the platform.",
+      "user_avatar_label": "Avatar",
+      "user_avatar_desc": "Set your personal avatar.",
+      "i18n_currentLanguage_label": "Interface Language",
+      "i18n_currentLanguage_desc": "Choose the display language for ComfyTavern.",
+      "theme_displayMode_label": "Display Mode",
+      "theme_displayMode_desc": "Select the interface display mode: Light, Dark, or follow OS setting.",
+      "theme_preset_label": "Theme Preset",
+      "theme_preset_desc": "Choose a preset theme style.",
+      "display_fontSize_label": "Base Font Size (px)",
+      "display_fontSize_desc": "Adjust the base font size for the application interface.",
+      "display_showMinimap_label": "Show Editor Minimap",
+      "display_showMinimap_desc": "Display the code minimap on the right side of the node editor.",
+      "display_showConnectionStatus_label": "Show Backend Connection Status",
+      "display_showConnectionStatus_desc": "Show the connection status indicator to the backend service at the bottom of the interface.",
+      "mcp_autoConnect_label": "Auto-connect MCP Servers",
+      "mcp_autoConnect_desc": "Automatically connect to configured MCP servers on startup.",
+      "mcp_defaultTimeout_label": "Default Timeout (ms)",
+      "mcp_defaultTimeout_desc": "Default timeout for communication with MCP servers.",
+      "light_mode": "Light",
+      "dark_mode": "Dark",
+      "system_mode": "System"
+    },
     "advanced": {
       "title": "Advanced Settings"
+    },
+    "placeholders": {
+      "no_content": "Goo? There seems to be no content here... Maybe it's under construction.",
+      "custom_module_wip": "A custom complex configuration module will be here in the future, currently under construction... Goo~"
+    },
+    "avatar": {
+      "edit": "Edit Avatar",
+      "preview_alt": "User Avatar"
     }
   },
   "dialogs": {
     "confirmDelete": {
       "title": "Confirm Deletion",
       "message": "This action cannot be undone. Are you sure you want to delete this?"
+    }
+  },
+  "sidebar": {
+    "userAvatar": "User Avatar",
+    "guest": "Guest",
+    "toggleTheme": "Toggle Theme",
+    "themeSystem": "System",
+    "themeDark": "Dark Mode",
+    "themeLight": "Light Mode",
+    "toggleSidebar": "Collapse/Expand Sidebar",
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "projects": {
+    "title": "My Projects",
+    "createNew": "Create New Project",
+    "creating": "Creating...",
+    "loading": "Loading projects...",
+    "loadError": "Load Error:",
+    "noProjects": "No projects yet. Click the button in the top right to create one!",
+    "noDescription": "No description available",
+    "lastUpdated": "Last Updated",
+    "createDialog": {
+      "title": "Create New Project",
+      "message": "Please enter the name for the new project:",
+      "placeholder": "Project Name"
+    },
+    "errors": {
+      "nameRequired": "Project name cannot be empty!"
+    }
+  },
+  "characters": {
+    "title": "My Character Cards",
+    "loading": "Loading character cards...",
+    "loadError": "Load Error:",
+    "loadErrorDetail": "Failed to load character cards: {error}",
+    "noCharacters": "No character cards found."
+  },
+  "characterPreview": {
+    "loading": "Loading character cards...",
+    "loadError": "Load Error:",
+    "loadErrorDetail": "Failed to load character card preview: {error}",
+    "noCards": "No character cards found.",
+    "viewAll": "View all character cards"
+  },
+  "fileManager": {
+    "initializing": "Initializing File Manager...",
+    "toolbar": {
+      "upload": "Upload",
+      "uploadFile": "Upload File",
+      "newFolder": "New Folder",
+      "refresh": "Refresh",
+      "paste": "Paste",
+      "searchPlaceholder": "Search...",
+      "switchToGridView": "Switch to Grid View",
+      "switchToListView": "Switch to List View",
+      "sortBy": "Sort by",
+      "gridSize": "Grid View Size",
+      "sortDirection": "Reverse Sort",
+      "sortAsc": "Ascending",
+      "sortDesc": "Descending",
+      "sortByLabel": "Sort By",
+      "sortByName": "Name",
+      "sortByExtension": "Extension",
+      "sortByDate": "Date Modified",
+      "sortBySize": "Size",
+      "advancedFilter": "Advanced Filter",
+      "hideDetailPanel": "Hide Detail Panel",
+      "showDetailPanel": "Show Detail Panel",
+      "viewSettings": "View Settings",
+      "filtersCleared": "Filters cleared",
+      "openAdvancedFilterPlaceholder": "Open Advanced Filter (Placeholder)",
+      "openViewSettingsPlaceholder": "Open View Settings (Placeholder)"
+    },
+    "breadcrumbs": {
+      "goUp": "Go up one level",
+      "root": "Already at root",
+      "editPath": "Edit path",
+      "pathPlaceholder": "Enter path...",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "invalidPathError": "Invalid path format. Must include a protocol (e.g., user://).",
+      "invalidPathExampleError": "Invalid path format. Example: user://my/folder/"
+    },
+    "browser": {
+      "emptyFolder": "This folder is empty, or no items match the filter criteria.",
+      "clearFilters": "Clear Filters",
+      "colName": "Name",
+      "colSize": "Size",
+      "colDate": "Date Modified",
+      "colType": "Type",
+      "actions": "Actions",
+      "contextMenu": {
+        "open": "Open",
+        "download": "Download",
+        "rename": "Rename",
+        "moveTo": "Move to...",
+        "copyPath": "Copy Path",
+        "addToFavorites": "Add to Favorites",
+        "removeFromFavorites": "Remove from Favorites",
+        "delete": "Delete",
+        "refresh": "Refresh",
+        "newFolder": "New Folder",
+        "paste": "Paste",
+        "noActions": "No actions available"
+      }
+    },
+    "detailPanel": {
+      "title": "Details",
+      "titleForItem": "Item Details",
+      "properties": "Properties",
+      "preview": "Preview",
+      "close": "Close Panel",
+      "noItemSelected": "No item selected",
+      "propName": "Name:",
+      "propType": "Type:",
+      "propSize": "Size:",
+      "propPath": "Path:",
+      "propLastModified": "Last Modified:",
+      "propSymlinkTarget": "Symlink Target:",
+      "propWritable": "Writable:",
+      "propFavorite": "Favorite:",
+      "typeFolder": "Folder",
+      "typeImage": "Image",
+      "typeText": "Text Document",
+      "typePdf": "PDF Document",
+      "typeArchive": "Archive File",
+      "typeFile": "{ext} File",
+      "typeGenericFile": "File",
+      "yes": "Yes",
+      "no": "No",
+      "favorited": "Favorited",
+      "notFavorited": "Not Favorited",
+      "previewFailed": "Preview Failed:",
+      "loadingPreview": "Loading preview...",
+      "previewUnsupported": "Preview is not supported for this file type, or content is empty.",
+      "previewTooLarge": "... (File is too large, showing partial content)",
+      "serverError": "Server error: {error}"
+          },
+          "sidebarNav": {
+            "title": "Navigation",
+            "expand": "Expand Navigation",
+            "collapse": "Collapse Navigation",
+            "locations": "Locations",
+            "recentAccess": "Recent Access",
+            "clearRecent": "Clear Recent Access",
+            "favorites": "Favorites",
+            "noFavorites": "No favorites yet",
+            "unfavorite": "Remove from favorites"
+                },
+                "store": {
+                  "myFiles": "My Files",
+                  "sharedSpace": "Shared Space",
+                  "itemTypes": {
+                    "file": "File",
+                    "directory": "Folder"
+                  },
+                  "errors": {
+                    "loadFailed": "Failed to load file list: {error}",
+                    "unknown": "Unknown error"
+                  },
+                  "createDirectory": {
+                    "title": "New Folder",
+                    "placeholder": "Enter folder name",
+                    "success": "Folder \"{dirName}\" created successfully",
+                    "error": "Failed to create folder: {error}"
+                  },
+                  "rename": {
+                    "title": "Rename {itemType}",
+                    "placeholder": "Enter new name",
+                    "success": "Renamed to \"{newName}\"",
+                    "error": "Rename failed: {error}"
+                  },
+                  "delete": {
+                    "title": "Confirm Deletion",
+                    "message": "Are you sure you want to delete the {count} selected item(s)? This action may not be reversible.",
+                    "confirmText": "Delete",
+                    "success": "{count} item(s) deleted",
+                    "error": "Delete failed: {error}"
+                  },
+                  "move": {
+                    "success": "{count} item(s) moved",
+                    "error": "Move failed: {error}"
+                  },
+                  "download": {
+                    "noFolderSupport": "Downloading folders is not supported yet.",
+                    "error": "Failed to get download link: {error}"
+                  },
+                  "clipboard": {
+                    "copied": "{count} item(s) copied to clipboard",
+                    "cut": "{count} item(s) cut to clipboard"
+                  },
+                  "paste": {
+                    "errorMoveIntoSelf": "Cannot move a folder into itself or one of its subfolders.",
+                    "alreadyAtTarget": "The item is already at the target location.",
+                    "copyNotImplemented": "Copy functionality is not yet implemented.",
+                    "moveSuccess": "{count} item(s) moved",
+                    "error": "Paste failed: {error}"
+                  },
+                  "favorites": {
+                    "added": "Added to favorites",
+                    "removed": "Removed from favorites"
+                  },
+                  "upload": {
+                    "noValidFiles": "No valid files were selected for upload.",
+                    "success": "{count} file(s) uploaded successfully",
+                    "error": "Upload failed: {error}"
+                  }
+                },
+                "home": {
+                  "welcome": "Welcome to ComfyTavern",
+      "subtitle": "Manage your workflow projects and character cards, unleash your creativity.",
+      "recentProjects": "Recent Projects",
+      "loadingProjects": "Loading projects...",
+      "loadProjectsFailed": "Failed to load projects: {error}",
+      "noProjects": "No projects yet.",
+      "createNewProject": "Create a new project",
+      "lastModified": "Last modified",
+      "noDescription": "No description",
+      "viewAllProjects": "View all projects",
+      "characterCardOverview": "Character Card Overview",
+      "exploreSidebar": "Explore the sidebar to start your creative journey.",
+      "invalidDate": "Invalid Date"
+    },
+    "editorView": {
+      "loadingNodes": "Loading node data...",
+      "loadingDefinitions": "Loading node definitions...",
+      "searchNodes": "Search nodes...",
+      "noNodesFound": "No nodes found",
+      "unclassified": "Unclassified"
+    },
+    "testPanel": {
+      "title": "Popup and UI Component Test Panel",
+      "dialogService": {
+        "title": "DialogService (Modal Dialogs & Toasts)",
+        "dialogs": "Modal Dialogs",
+        "toasts": "Toasts",
+        "results": "DialogService Operation Result:",
+        "buttons": {
+          "showMessage": "Show Message Dialog",
+          "showConfirm": "Show Confirm Dialog",
+          "showDangerConfirm": "Show Danger Confirm Dialog",
+          "showAutoClose": "Show Auto-close Dialog",
+          "showInput": "Show Input Dialog",
+          "showTextarea": "Show Textarea Dialog",
+          "showLargeMessage": "Show Large Text Message Dialog",
+          "showInfoToast": "Show Info Toast",
+          "showSuccessToast": "Show Success Toast",
+          "showWarningToast": "Show Warning Toast",
+          "showErrorToast": "Show Error Toast",
+          "showCustomToast": "Show Custom Toast",
+          "showMultipleToasts": "Show Multiple Toasts",
+          "showLargeToast": "Show Large Text Toast"
+        },
+        "resultsContent": {
+          "waiting": "Waiting for action...",
+          "waitingFor": "Waiting for {actionName} response...",
+          "cancelled": "{actionName}: User cancelled or closed the dialog.",
+          "exception": "{actionName}: An exception occurred: {error}",
+          "messageSuccess": "Message Dialog: User clicked OK.",
+          "messageCancelled": "Message Dialog: User closed the dialog or an exception occurred.",
+          "confirmSuccess": "Confirm Dialog: User chose -> {choice}",
+          "confirmCancelled": "Confirm Dialog: User cancelled the operation.",
+          "dangerConfirmSuccess": "Danger Confirm: User chose -> {choice}",
+          "dangerConfirmCancelled": "Danger Confirm: User cancelled the operation.",
+          "autoCloseSuccess": "Auto-close Dialog: Closed automatically or user clicked OK.",
+          "autoCloseCancelled": "Auto-close Dialog: User closed it before auto-close or an exception occurred.",
+          "inputSuccess": "Input Dialog: User entered \"{input}\"",
+          "inputCancelled": "Input Dialog: User cancelled the input.",
+          "textareaSuccess": "Textarea Dialog: User entered \"{input}\"",
+          "textareaCancelled": "Textarea Dialog: User cancelled the input.",
+          "largeMessageSuccess": "Large Text Message Dialog: User clicked OK.",
+          "largeMessageCancelled": "Large Text Message Dialog: User closed the dialog or an exception occurred.",
+          "infoToastTriggered": "Info toast triggered.",
+          "successToastTriggered": "Success toast triggered.",
+          "warningToastTriggered": "Warning toast triggered.",
+          "errorToastTriggered": "Error toast triggered.",
+          "customToastTriggered": "Custom toast triggered.",
+          "multipleToastsTriggered": "Multiple toasts triggered.",
+          "largeToastTriggered": "Large text toast triggered."
+        },
+        "dialogContent": {
+          "messageTitle": "Message",
+          "messageText": "This is a simple message dialog with only an OK button.",
+          "confirmTitle": "Confirm Action",
+          "confirmText": "Are you sure you want to perform this action?",
+          "dangerConfirmTitle": "Confirm Dangerous Action",
+          "dangerConfirmText": "This action cannot be undone. Are you sure you want to continue?",
+          "dangerConfirmYes": "Yes, delete it",
+          "dangerConfirmNo": "No, keep it",
+          "autoCloseTitle": "Auto-close Example",
+          "autoCloseText": "This dialog will close automatically in 3 seconds.",
+          "inputTitle": "Please Enter Information",
+          "inputText": "Please enter your nickname:",
+          "inputPlaceholder": "e.g., Gugu",
+          "textareaTitle": "Please Enter Feedback",
+          "textareaText": "Please describe the issue or suggestion in detail:",
+          "textareaPlaceholder": "Enter your feedback here...",
+          "largeMessageTitle": "Large Text Message",
+          "largeMessageConfirm": "Acknowledged",
+          "customToastTitle": "Custom Style Toast",
+          "customToastText": "This toast is at the bottom-center and lasts for 5 seconds.",
+          "infoToastTitle": "Info",
+          "infoToastText": "This is an informational toast!",
+          "successToastTitle": "Success",
+          "successToastText": "The operation was completed successfully!",
+          "warningToastTitle": "Warning",
+          "warningToastText": "Please be aware, this is a warning.",
+          "errorToastTitle": "Error",
+          "errorToastText": "Oops, an error occurred!",
+          "multiToast1": "Toast 1",
+          "multiToast2": "Toast 2 (delayed)",
+          "multiToast3": "Toast 3 (delayed)",
+          "largeToastTitle": "Large Text Toast"
+        }
+      },
+      "uiStore": {
+        "title": "UiStore (Global Modals)",
+        "specificModals": "Specific Modals",
+        "results": "UiStore Operation Result:",
+        "buttons": {
+          "openSettings": "Open Settings Modal (Managed by App.vue)",
+          "openRegexEditor": "Open Regex Editor Modal",
+          "openInitialUsernameSetup": "Open Initial Username Setup"
+        },
+        "resultsContent": {
+          "initialUsernameClosed": "Initial username setup modal closed (event).",
+          "initialUsernameSaved": "Initial username saved (event).",
+          "openingSettings": "Attempting to open settings modal...",
+          "openingRegexEditor": "Attempting to open regex editor modal...",
+          "regexEditorSaved": "Regex editor saved, rule count: {count}. Check console for details.",
+          "openingInitialUsernameSetup": "Attempting to open initial username setup modal...",
+          "settingsClosed": "Settings modal has been closed."
+        }
+      },
+      "settingsControl": {
+        "title": "SettingControl (via SettingsPanel) Test",
+        "results": "Current SettingsStore Values (for validation):",
+        "labels": {
+          "string": "String Input",
+          "textarea": "Textarea Input",
+          "number": "Number Input",
+          "boolean": "Boolean Toggle",
+          "select": "Select Input"
+        },
+        "descriptions": {
+          "string": "For testing single-line text input.",
+          "textarea": "For testing multi-line text input.",
+          "number": "For testing number input with range and step.",
+          "boolean": "For testing toggle switch state.",
+          "select": "For testing dropdown selection."
+        },
+        "selectOptions": {
+          "a": "Option A",
+          "b": "Option B",
+          "c": "Option C",
+          "d": "Option D (intended to be disabled)"
+        }
+      }
     }
   }
 }

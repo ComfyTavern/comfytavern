@@ -1,0 +1,462 @@
+{
+  "_meta": {
+    "name": "Japanese",
+    "nativeName": "日本語"
+  },
+  "common": {
+    "confirm": "確認",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "delete": "削除",
+    "edit": "編集",
+    "add": "追加",
+    "loading": "読み込み中...",
+    "error": "エラー",
+    "success": "成功",
+    "warning": "警告"
+  },
+  "nav": {
+    "home": "ホーム",
+    "editor": "エディター",
+    "settings": "設定",
+    "about": "概要",
+    "projects": "プロジェクト",
+    "characters": "キャラクター",
+    "files": "ファイル管理"
+  },
+  "editor": {
+    "toolbar": {
+      "save": "ワークフローを保存",
+      "execute": "ワークフローを実行",
+      "clear": "キャンバスをクリア"
+    },
+    "contextMenu": {
+      "addNode": "ノードを追加",
+      "deleteNode": "ノードを削除",
+      "copyNode": "ノードをコピー"
+    }
+  },
+  "settings": {
+    "general": {
+      "title": "一般設定",
+      "language": "インターフェース言語",
+      "theme": "テーマ"
+    },
+    "sections": {
+      "display": "表示",
+      "user": "ユーザー",
+      "keybindings": "キーボードショートカット",
+      "llm": "モデル構成",
+      "mcp": "MCP",
+      "test_panel": "テストパネル",
+      "about": "概要"
+    },
+    "categories": {
+      "appearance": "外観",
+      "basic_info": "基本情報",
+      "editor": "エディター",
+      "interface_elements": "インターフェース要素"
+    },
+    "items": {
+      "user_nickname_label": "ニックネーム",
+      "user_nickname_desc": "プラットフォームでの表示名。",
+      "user_avatar_label": "アバター",
+      "user_avatar_desc": "個人用アバターを設定します。",
+      "i18n_currentLanguage_label": "インターフェース言語",
+      "i18n_currentLanguage_desc": "ComfyTavernの表示言語を選択します。",
+      "theme_displayMode_label": "表示モード",
+      "theme_displayMode_desc": "インターフェースの表示モードを選択します：ライト、ダーク、またはOS設定に従う。",
+      "theme_preset_label": "テーマプリセット",
+      "theme_preset_desc": "プリセットのテーマスタイルを選択します。",
+      "display_fontSize_label": "基本フォントサイズ (px)",
+      "display_fontSize_desc": "アプリケーションインターフェースの基本フォントサイズを調整します。",
+      "display_showMinimap_label": "エディターミニマップを表示",
+      "display_showMinimap_desc": "ノードエディターの右側にコードミニマップを表示します。",
+      "display_showConnectionStatus_label": "バックエンド接続ステータスを表示",
+      "display_showConnectionStatus_desc": "インターフェース下部にバックエンドサービスへの接続ステータスインジケーターを表示します。",
+      "mcp_autoConnect_label": "MCPサーバーに自動接続",
+      "mcp_autoConnect_desc": "起動時に設定済みのMCPサーバーに自動的に接続します。",
+      "mcp_defaultTimeout_label": "デフォルトタイムアウト (ms)",
+      "mcp_defaultTimeout_desc": "MCPサーバーとの通信のデフォルトタイムアウト。",
+      "light_mode": "ライト",
+      "dark_mode": "ダーク",
+      "system_mode": "システム"
+    },
+    "advanced": {
+      "title": "詳細設定"
+    },
+    "placeholders": {
+      "no_content": "ぐぅ？ここには何もないようです... 工事中かもしれません。",
+      "custom_module_wip": "将来的にはカスタムの複雑な設定モジュールがここに配置される予定です、現在工事中... ぐぅ〜"
+    },
+    "avatar": {
+      "edit": "アバターを編集",
+      "preview_alt": "ユーザーアバター"
+    }
+  },
+  "dialogs": {
+    "confirmDelete": {
+      "title": "削除の確認",
+      "message": "この操作は元に戻せません。本当に削除しますか？"
+    }
+  },
+  "sidebar": {
+    "userAvatar": "ユーザーアバター",
+    "guest": "ゲスト",
+    "toggleTheme": "テーマを切り替え",
+    "themeSystem": "システム",
+    "themeDark": "ダークモード",
+    "themeLight": "ライトモード",
+    "toggleSidebar": "サイドバーを折りたたむ/展開する",
+    "expand": "展開",
+    "collapse": "折りたたむ"
+  },
+  "projects": {
+    "title": "マイプロジェクト",
+    "createNew": "新規プロジェクトを作成",
+    "creating": "作成中...",
+    "loading": "プロジェクトを読み込み中...",
+    "loadError": "読み込みエラー:",
+    "noProjects": "まだプロジェクトがありません。右上のボタンをクリックして作成してください！",
+    "noDescription": "説明がありません",
+    "lastUpdated": "最終更新",
+    "createDialog": {
+      "title": "新規プロジェクトを作成",
+      "message": "新しいプロジェクトの名前を入力してください：",
+      "placeholder": "プロジェクト名"
+    },
+    "errors": {
+      "nameRequired": "プロジェクト名は空にできません！"
+    }
+  },
+  "characters": {
+    "title": "私のキャラクターカード",
+    "loading": "キャラクターカードを読み込み中...",
+    "loadError": "読み込みエラー:",
+    "loadErrorDetail": "キャラクターカードの読み込みに失敗しました: {error}",
+    "noCharacters": "キャラクターカードが見つかりません。"
+  },
+  "characterPreview": {
+    "loading": "キャラクターカードを読み込み中...",
+    "loadError": "読み込みエラー:",
+    "loadErrorDetail": "キャラクターカードプレビューの読み込みに失敗しました: {error}",
+    "noCards": "キャラクターカードが見つかりません。",
+    "viewAll": "すべてのキャラクターカードを表示"
+  },
+  "fileManager": {
+    "initializing": "ファイルマネージャーを初期化中...",
+    "toolbar": {
+      "upload": "アップロード",
+      "uploadFile": "ファイルをアップロード",
+      "newFolder": "新しいフォルダー",
+      "refresh": "更新",
+      "paste": "貼り付け",
+      "searchPlaceholder": "検索...",
+      "switchToGridView": "グリッドビューに切り替え",
+      "switchToListView": "リストビューに切り替え",
+      "sortBy": "並べ替え",
+      "gridSize": "グリッドビューのサイズ",
+      "sortDirection": "逆順ソート",
+      "sortAsc": "昇順",
+      "sortDesc": "降順",
+      "sortByLabel": "並べ替え基準",
+      "sortByName": "名前",
+      "sortByExtension": "拡張子",
+      "sortByDate": "更新日時",
+      "sortBySize": "サイズ",
+      "advancedFilter": "高度なフィルター",
+      "hideDetailPanel": "詳細パネルを非表示",
+      "showDetailPanel": "詳細パネルを表示",
+      "viewSettings": "表示設定",
+      "filtersCleared": "フィルターをクリアしました",
+      "openAdvancedFilterPlaceholder": "高度なフィルターを開く（プレースホルダー）",
+      "openViewSettingsPlaceholder": "表示設定を開く（プレースホルダー）"
+    },
+    "breadcrumbs": {
+      "goUp": "一つ上の階層へ",
+      "root": "すでにルートです",
+      "editPath": "パスを編集",
+      "pathPlaceholder": "パスを入力...",
+      "confirm": "確認",
+      "cancel": "キャンセル",
+      "invalidPathError": "無効なパス形式です。プロトコル（例：user://）を含める必要があります。",
+      "invalidPathExampleError": "無効なパス形式です。例：user://my/folder/"
+    },
+    "browser": {
+      "emptyFolder": "このフォルダーは空か、フィルター条件に一致する項目がありません。",
+      "clearFilters": "フィルターをクリア",
+      "colName": "名前",
+      "colSize": "サイズ",
+      "colDate": "更新日時",
+      "colType": "種類",
+      "actions": "操作",
+      "contextMenu": {
+        "open": "開く",
+        "download": "ダウンロード",
+        "rename": "名前の変更",
+        "moveTo": "移動...",
+        "copyPath": "パスをコピー",
+        "addToFavorites": "お気に入りに追加",
+        "removeFromFavorites": "お気に入りから削除",
+        "delete": "削除",
+        "refresh": "更新",
+        "newFolder": "新しいフォルダー",
+        "paste": "貼り付け",
+        "noActions": "利用可能な操作はありません"
+      }
+    },
+    "detailPanel": {
+      "title": "詳細",
+      "titleForItem": "アイテム詳細",
+      "properties": "プロパティ",
+      "preview": "プレビュー",
+      "close": "パネルを閉じる",
+      "noItemSelected": "アイテムが選択されていません",
+      "propName": "名前:",
+      "propType": "種類:",
+      "propSize": "サイズ:",
+      "propPath": "パス:",
+      "propLastModified": "最終更新日時:",
+      "propSymlinkTarget": "シンボリックリンクのターゲット:",
+      "propWritable": "書き込み可能:",
+      "propFavorite": "お気に入り:",
+      "typeFolder": "フォルダー",
+      "typeImage": "画像",
+      "typeText": "テキストドキュメント",
+      "typePdf": "PDFドキュメント",
+      "typeArchive": "アーカイブファイル",
+      "typeFile": "{ext} ファイル",
+      "typeGenericFile": "ファイル",
+      "yes": "はい",
+      "no": "いいえ",
+      "favorited": "お気に入り登録済み",
+      "notFavorited": "お気に入り未登録",
+      "previewFailed": "プレビュー失敗:",
+      "loadingPreview": "プレビューを読み込み中...",
+      "previewUnsupported": "このファイルタイプはプレビュー非対応か、内容が空です。",
+      "previewTooLarge": "... (ファイルが大きすぎるため、一部のみ表示しています)",
+      "serverError": "サーバーエラー: {error}"
+    },
+    "sidebarNav": {
+      "title": "ナビゲーション",
+      "expand": "ナビゲーションを展開",
+      "collapse": "ナビゲーションを折りたたむ",
+      "locations": "場所",
+      "recentAccess": "最近のアクセス",
+      "clearRecent": "最近のアクセスをクリア",
+      "favorites": "お気に入り",
+      "noFavorites": "まだお気に入りがありません",
+      "unfavorite": "お気に入りから削除"
+    },
+    "store": {
+      "myFiles": "マイファイル",
+      "sharedSpace": "共有スペース",
+      "itemTypes": {
+        "file": "ファイル",
+        "directory": "フォルダー"
+      },
+      "errors": {
+        "loadFailed": "ファイルリストの読み込みに失敗しました: {error}",
+        "unknown": "不明なエラー"
+      },
+      "createDirectory": {
+        "title": "新しいフォルダー",
+        "placeholder": "フォルダー名を入力",
+        "success": "フォルダー「{dirName}」が正常に作成されました",
+        "error": "フォルダーの作成に失敗しました: {error}"
+      },
+      "rename": {
+        "title": "{itemType}の名前を変更",
+        "placeholder": "新しい名前を入力",
+        "success": "「{newName}」に名前を変更しました",
+        "error": "名前の変更に失敗しました: {error}"
+      },
+      "delete": {
+        "title": "削除の確認",
+        "message": "選択した{count}個のアイテムを本当に削除しますか？この操作は元に戻せない場合があります。",
+        "confirmText": "削除",
+        "success": "{count}個のアイテムを削除しました",
+        "error": "削除に失敗しました: {error}"
+      },
+      "move": {
+        "success": "{count}個のアイテムを移動しました",
+        "error": "移動に失敗しました: {error}"
+      },
+      "download": {
+        "noFolderSupport": "フォルダーのダウンロードはまだサポートされていません。",
+        "error": "ダウンロードリンクの取得に失敗しました: {error}"
+      },
+      "clipboard": {
+        "copied": "{count}個のアイテムをクリップボードにコピーしました",
+        "cut": "{count}個のアイテムをクリップボードにカットしました"
+      },
+      "paste": {
+        "errorMoveIntoSelf": "フォルダーを自身またはそのサブフォルダーに移動することはできません。",
+        "alreadyAtTarget": "アイテムはすでにターゲットの場所にあります。",
+        "copyNotImplemented": "コピー機能はまだ実装されていません。",
+        "moveSuccess": "{count}個のアイテムを移動しました",
+        "error": "貼り付けに失敗しました: {error}"
+      },
+      "favorites": {
+        "added": "お気に入りに追加しました",
+        "removed": "お気に入りから削除しました"
+      },
+      "upload": {
+        "noValidFiles": "アップロード対象の有効なファイルが選択されていません。",
+        "success": "{count}個のファイルが正常にアップロードされました",
+        "error": "アップロードに失敗しました: {error}"
+      }
+    }
+  },
+  "home": {
+    "welcome": "ComfyTavernへようこそ",
+    "subtitle": "ワークフロープロジェクトやキャラクターカードを管理し、創造性を解き放ちましょう。",
+    "recentProjects": "最近のプロジェクト",
+    "loadingProjects": "プロジェクトを読み込み中...",
+    "loadProjectsFailed": "プロジェクトの読み込みに失敗しました: {error}",
+    "noProjects": "まだプロジェクトがありません。",
+    "createNewProject": "新しいプロジェクトを作成",
+    "lastModified": "最終更新",
+    "noDescription": "説明なし",
+    "viewAllProjects": "すべてのプロジェクトを表示",
+    "characterCardOverview": "キャラクターカード概要",
+    "exploreSidebar": "サイドバーを探索して、創造の旅を始めましょう。",
+    "invalidDate": "無効な日付"
+  },
+  "editorView": {
+    "loadingNodes": "ノードデータを読み込み中...",
+    "loadingDefinitions": "ノード定義を読み込み中...",
+    "searchNodes": "ノードを検索...",
+    "noNodesFound": "ノードが見つかりません",
+    "unclassified": "未分類"
+  },
+  "testPanel": {
+    "title": "ポップアップとUIコンポーネントのテストパネル",
+    "dialogService": {
+      "title": "DialogService (モーダルダイアログとトースト)",
+      "dialogs": "モーダルダイアログ",
+      "toasts": "トースト",
+      "results": "DialogService 操作結果:",
+      "buttons": {
+        "showMessage": "メッセージダイアログを表示",
+        "showConfirm": "確認ダイアログを表示",
+        "showDangerConfirm": "危険な確認ダイアログを表示",
+        "showAutoClose": "自動クローズダイアログを表示",
+        "showInput": "入力ダイアログを表示",
+        "showTextarea": "テキストエリアダイアログを表示",
+        "showLargeMessage": "長文メッセージダイアログを表示",
+        "showInfoToast": "情報トーストを表示",
+        "showSuccessToast": "成功トーストを表示",
+        "showWarningToast": "警告トーストを表示",
+        "showErrorToast": "エラートーストを表示",
+        "showCustomToast": "カスタムトーストを表示",
+        "showMultipleToasts": "複数トーストを表示",
+        "showLargeToast": "長文トーストを表示"
+      },
+      "resultsContent": {
+        "waiting": "操作を待っています...",
+        "waitingFor": "{actionName} の応答を待っています...",
+        "cancelled": "{actionName}: ユーザーが操作をキャンセルまたはダイアログを閉じました。",
+        "exception": "{actionName}: 例外が発生しました: {error}",
+        "messageSuccess": "メッセージダイアログ: ユーザーがOKをクリックしました。",
+        "messageCancelled": "メッセージダイアログ: ユーザーがダイアログを閉じたか、例外が発生しました。",
+        "confirmSuccess": "確認ダイアログ: ユーザーが選択 -> {choice}",
+        "confirmCancelled": "確認ダイアログ: ユーザーが操作をキャンセルしました。",
+        "dangerConfirmSuccess": "危険な確認: ユーザーが選択 -> {choice}",
+        "dangerConfirmCancelled": "危険な確認: ユーザーが操作をキャンセルしました。",
+        "autoCloseSuccess": "自動クローズダイアログ: 自動的に閉じたか、ユーザーがOKをクリックしました。",
+        "autoCloseCancelled": "自動クローズダイアログ: 自動クローズ前にユーザーが閉じたか、例外が発生しました。",
+        "inputSuccess": "入力ダイアログ: ユーザーが「{input}」と入力しました",
+        "inputCancelled": "入力ダイアログ: ユーザーが入力をキャンセルしました。",
+        "textareaSuccess": "テキストエリアダイアログ: ユーザーが「{input}」と入力しました",
+        "textareaCancelled": "テキストエリアダイアログ: ユーザーが入力をキャンセルしました。",
+        "largeMessageSuccess": "長文メッセージダイアログ: ユーザーがOKをクリックしました。",
+        "largeMessageCancelled": "長文メッセージダイアログ: ユーザーがダイアログを閉じたか、例外が発生しました。",
+        "infoToastTriggered": "情報トーストがトリガーされました。",
+        "successToastTriggered": "成功トーストがトリガーされました。",
+        "warningToastTriggered": "警告トーストがトリガーされました。",
+        "errorToastTriggered": "エラートーストがトリガーされました。",
+        "customToastTriggered": "カスタムトーストがトリガーされました。",
+        "multipleToastsTriggered": "複数トーストがトリガーされました。",
+        "largeToastTriggered": "長文トーストがトリガーされました。"
+      },
+      "dialogContent": {
+        "messageTitle": "メッセージ",
+        "messageText": "これはOKボタンのみのシンプルなメッセージダイアログです。",
+        "confirmTitle": "操作の確認",
+        "confirmText": "この操作を実行してもよろしいですか？",
+        "dangerConfirmTitle": "危険な操作の確認",
+        "dangerConfirmText": "この操作は元に戻せません。続行してもよろしいですか？",
+        "dangerConfirmYes": "はい、削除します",
+        "dangerConfirmNo": "いいえ、やめます",
+        "autoCloseTitle": "自動クローズの例",
+        "autoCloseText": "このダイアログは3秒後に自動的に閉じます。",
+        "inputTitle": "情報を入力してください",
+        "inputText": "ニックネームを入力してください：",
+        "inputPlaceholder": "例：ぐぐ",
+        "textareaTitle": "フィードバックを入力してください",
+        "textareaText": "問題や提案を詳しく説明してください：",
+        "textareaPlaceholder": "ここにフィードバックを入力してください...",
+        "largeMessageTitle": "長文メッセージ",
+        "largeMessageConfirm": "承知しました",
+        "customToastTitle": "カスタムスタイルのトースト",
+        "customToastText": "このトーストは画面下中央に表示され、5秒間続きます。",
+        "infoToastTitle": "情報",
+        "infoToastText": "これは情報トーストです！",
+        "successToastTitle": "成功",
+        "successToastText": "操作は正常に完了しました！",
+        "warningToastTitle": "警告",
+        "warningToastText": "ご注意ください、これは警告です。",
+        "errorToastTitle": "エラー",
+        "errorToastText": "おっと、エラーが発生しました！",
+        "multiToast1": "トースト 1",
+        "multiToast2": "トースト 2 (遅延)",
+        "multiToast3": "トースト 3 (遅延)",
+        "largeToastTitle": "長文トースト"
+      }
+    },
+    "uiStore": {
+      "title": "UiStore (グローバルモーダル)",
+      "specificModals": "特定モーダル",
+      "results": "UiStore 操作結果:",
+      "buttons": {
+        "openSettings": "設定モーダルを開く (App.vue管理)",
+        "openRegexEditor": "正規表現エディタモーダルを開く",
+        "openInitialUsernameSetup": "初期ユーザー名設定を開く"
+      },
+      "resultsContent": {
+        "initialUsernameClosed": "初期ユーザー名設定モーダルが閉じられました（イベント）。",
+        "initialUsernameSaved": "初期ユーザー名が保存されました（イベント）。",
+        "openingSettings": "設定モーダルを開こうとしています...",
+        "openingRegexEditor": "正規表現エディタモーダルを開こうとしています...",
+        "regexEditorSaved": "正規表現エディタが保存されました、ルール数: {count}。詳細はコンソールを確認してください。",
+        "openingInitialUsernameSetup": "初期ユーザー名設定モーダルを開こうとしています...",
+        "settingsClosed": "設定モーダルが閉じられました。"
+      }
+    },
+    "settingsControl": {
+      "title": "SettingControl (SettingsPanel経由) テスト",
+      "results": "現在のSettingsStoreの値 (検証用):",
+      "labels": {
+        "string": "文字列入力",
+        "textarea": "テキストエリア入力",
+        "number": "数値入力",
+        "boolean": "ブール値トグル",
+        "select": "セレクト入力"
+      },
+      "descriptions": {
+        "string": "単一行テキスト入力のテスト用。",
+        "textarea": "複数行テキスト入力のテスト用。",
+        "number": "範囲とステップ付きの数値入力のテスト用。",
+        "boolean": "トグルスイッチの状態のテスト用。",
+        "select": "ドロップダウン選択のテスト用。"
+      },
+      "selectOptions": {
+        "a": "オプション A",
+        "b": "オプション B",
+        "c": "オプション C",
+        "d": "オプション D (無効化予定)"
+      }
+    }
+  }
+}

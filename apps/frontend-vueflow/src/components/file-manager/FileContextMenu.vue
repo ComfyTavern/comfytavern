@@ -19,14 +19,15 @@
         </li>
       </template>
       <li v-if="items.length === 0" class="px-3 py-1.5 text-text-muted italic">
-        无可用操作
-      </li>
+              {{ t('fileManager.browser.contextMenu.noActions') }}
+            </li>
     </ul>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, defineAsyncComponent } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { onClickOutside } from '@vueuse/core';
 
 // 定义菜单项的类型
@@ -62,6 +63,7 @@ const emit = defineEmits<{
   (e: 'action', action: string, item?: ContextMenuItemAction): void; // item 是触发操作的菜单项本身
 }>();
 
+const { t } = useI18n();
 const contextMenuRef = ref<HTMLElement | null>(null);
 
 onClickOutside(contextMenuRef, () => {

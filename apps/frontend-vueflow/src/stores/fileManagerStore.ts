@@ -3,6 +3,7 @@ import { defineStore } from 'pinia';
 import * as fileManagerApi from '@/api/fileManagerApi';
 import { FAMItemsSchema, type FAMItem } from '@comfytavern/types'; // 导入统一类型和 Schema
 import { useDialogService } from '@/services/DialogService'; // 导入对话框服务
+import i18n from '@/locales';
 
 
 export interface RecentAccessItem {
@@ -74,8 +75,8 @@ export const useFileManagerStore = defineStore('fileManager', {
     isLoading: false,
     error: null,
     rootNavigationItems: [ // 初始可以为空，由 initialize 或配置加载
-      { label: '我的文件', logicalPath: 'user://', icon: 'UserIcon' }, // icon 是示例
-      { label: '共享空间', logicalPath: 'shared://', icon: 'UsersIcon' },
+      { label: 'My Files', logicalPath: 'user://', icon: 'UserIcon' }, // icon 是示例, label 会在 initialize 中被覆盖
+      { label: 'Shared Space', logicalPath: 'shared://', icon: 'UsersIcon' },
       // system:// 通常不直接暴露给普通用户浏览，除非特定场景
     ],
     clipboard: null,
@@ -177,12 +178,12 @@ export const useFileManagerStore = defineStore('fileManager', {
       // 示例：如果 currentUserId 存在，可以动态设置 rootNavigationItems
       if (userId) {
         this.rootNavigationItems = [
-          { label: '我的文件', logicalPath: `user://`, icon: 'UserIcon' },
-          { label: '共享空间', logicalPath: 'shared://', icon: 'UsersIcon' },
+          { label: i18n.global.t('fileManager.store.myFiles'), logicalPath: `user://`, icon: 'UserIcon' },
+          { label: i18n.global.t('fileManager.store.sharedSpace'), logicalPath: 'shared://', icon: 'UsersIcon' },
         ];
       } else {
         this.rootNavigationItems = [
-          { label: '共享空间', logicalPath: 'shared://', icon: 'UsersIcon' },
+          { label: i18n.global.t('fileManager.store.sharedSpace'), logicalPath: 'shared://', icon: 'UsersIcon' },
         ];
       }
     },
@@ -246,7 +247,7 @@ export const useFileManagerStore = defineStore('fileManager', {
         this.filteredItems = [];
         // 使用 DialogService 显示错误
         const dialogService = useDialogService();
-        dialogService.showError(`加载文件列表失败: ${(err as Error).message || '未知错误'}`);
+        dialogService.showError(i18n.global.t('fileManager.store.errors.loadFailed', { error: (err as Error).message || i18n.global.t('fileManager.store.errors.unknown') }));
       } finally {
         this.isLoading = false;
       }
@@ -256,8 +257,8 @@ export const useFileManagerStore = defineStore('fileManager', {
     async createDirectory(name?: string) {
       const dialogService = useDialogService();
       const dirName = name || await dialogService.showInput({
-        title: '新建文件夹',
-        inputPlaceholder: '请输入文件夹名称',
+        title: i18n.global.t('fileManager.store.createDirectory.title'),
+        inputPlaceholder: i18n.global.t('fileManager.store.createDirectory.placeholder'),
         // TODO: 添加验证规则，例如不允许特殊字符
       });
 
@@ -265,11 +266,11 @@ export const useFileManagerStore = defineStore('fileManager', {
         this.isLoading = true;
         try {
           await fileManagerApi.createDir(this.currentLogicalPath, dirName);
-          dialogService.showSuccess(`文件夹 "${dirName}" 创建成功`);
+          dialogService.showSuccess(i18n.global.t('fileManager.store.createDirectory.success', { dirName }));
           await this.fetchItems(); // 刷新列表
         } catch (err) {
           this.error = err;
-          dialogService.showError(`创建文件夹失败: ${(err as Error).message}`);
+          dialogService.showError(i18n.global.t('fileManager.store.createDirectory.error', { error: (err as Error).message }));
         } finally {
           this.isLoading = false;
         }
@@ -279,17 +280,18 @@ export const useFileManagerStore = defineStore('fileManager', {
 
     async renameItem(itemToRename: FAMItem, newName?: string) {
       const dialogService = useDialogService();
+      const itemTypeLabel = i18n.global.t(itemToRename.itemType === 'directory' ? 'fileManager.store.itemTypes.directory' : 'fileManager.store.itemTypes.file');
       const finalNewName = newName || await dialogService.showInput({
-        title: `重命名 ${itemToRename.itemType === 'directory' ? '文件夹' : '文件'}`,
+        title: i18n.global.t('fileManager.store.rename.title', { itemType: itemTypeLabel }),
         initialValue: itemToRename.name,
-        inputPlaceholder: '请输入新名称',
+        inputPlaceholder: i18n.global.t('fileManager.store.rename.placeholder'),
       });
 
       if (finalNewName && finalNewName !== itemToRename.name) {
         this.isLoading = true;
         try {
           await fileManagerApi.renameFileOrDir(itemToRename.logicalPath, finalNewName);
-          dialogService.showSuccess(`已重命名为 "${finalNewName}"`);
+          dialogService.showSuccess(i18n.global.t('fileManager.store.rename.success', { newName: finalNewName }));
           // 更新选中项和详情（如果被重命名的项是当前选中的）
           if (this.selectedItemForDetail?.logicalPath === itemToRename.logicalPath) {
             const updatedItem = { ...this.selectedItemForDetail, name: finalNewName, logicalPath: itemToRename.logicalPath.substring(0, itemToRename.logicalPath.lastIndexOf('/') + 1) + finalNewName };
@@ -300,7 +302,7 @@ export const useFileManagerStore = defineStore('fileManager', {
           await this.fetchItems(); // 刷新列表
         } catch (err: any) { // Restored catch block
           this.error = err;
-          dialogService.showError(`重命名失败: ${(err as Error).message}`);
+          dialogService.showError(i18n.global.t('fileManager.store.rename.error', { error: (err as Error).message }));
         } finally {
           this.isLoading = false;
         }
@@ -313,10 +315,10 @@ export const useFileManagerStore = defineStore('fileManager', {
 
       const dialogService = useDialogService();
       const confirmed = await dialogService.showConfirm({
-        title: '确认删除',
-        message: `您确定要删除选中的 ${items.length} 个项目吗？此操作可能无法撤销。`,
+        title: i18n.global.t('fileManager.store.delete.title'),
+        message: i18n.global.t('fileManager.store.delete.message', { count: items.length }),
         dangerConfirm: true,
-        confirmText: '删除',
+        confirmText: i18n.global.t('fileManager.store.delete.confirmText'),
       });
 
       if (confirmed) {
@@ -324,12 +326,12 @@ export const useFileManagerStore = defineStore('fileManager', {
         try {
           const pathsToDelete = items.map(item => item.logicalPath);
           await fileManagerApi.deleteFilesOrDirs(pathsToDelete);
-          dialogService.showSuccess(`${items.length} 个项目已删除`);
+          dialogService.showSuccess(i18n.global.t('fileManager.store.delete.success', { count: items.length }));
           this.clearSelection(); // 删除后清除选择
           await this.fetchItems(); // 刷新列表
         } catch (err) {
           this.error = err;
-          dialogService.showError(`删除失败: ${(err as Error).message}`);
+          dialogService.showError(i18n.global.t('fileManager.store.delete.error', { error: (err as Error).message }));
         } finally {
           this.isLoading = false;
         }
@@ -343,13 +345,13 @@ export const useFileManagerStore = defineStore('fileManager', {
       try {
         const sourcePaths = itemsToMove.map(item => item.logicalPath);
         await fileManagerApi.moveFilesOrDirs(sourcePaths, targetParentPath);
-        dialogService.showSuccess(`${itemsToMove.length} 个项目已移动`);
+        dialogService.showSuccess(i18n.global.t('fileManager.store.move.success', { count: itemsToMove.length }));
         this.clearSelection();
         await this.fetchItems(); // 刷新当前目录
         // TODO: 可能需要导航到 targetParentPath 或刷新来源目录（如果不同）
       } catch (err) {
         this.error = err;
-        dialogService.showError(`移动失败: ${(err as Error).message}`);
+        dialogService.showError(i18n.global.t('fileManager.store.move.error', { error: (err as Error).message }));
       } finally {
         this.isLoading = false;
       }
@@ -358,7 +360,7 @@ export const useFileManagerStore = defineStore('fileManager', {
     async downloadFile(item: FAMItem) {
       if (item.itemType === 'directory') {
         // TODO: 支持下载文件夹 (可能需要后端压缩)
-        useDialogService().showInfo('暂不支持下载文件夹。');
+        useDialogService().showInfo(i18n.global.t('fileManager.store.download.noFolderSupport'));
         return;
       }
       try {
@@ -371,7 +373,7 @@ export const useFileManagerStore = defineStore('fileManager', {
         anchor.click();
         document.body.removeChild(anchor);
       } catch (err) {
-        useDialogService().showError(`获取下载链接失败: ${(err as Error).message}`);
+        useDialogService().showError(i18n.global.t('fileManager.store.download.error', { error: (err as Error).message }));
       }
     },
 
@@ -415,14 +417,14 @@ export const useFileManagerStore = defineStore('fileManager', {
       const itemsToCopy = items || this.selectedItems;
       if (itemsToCopy.length > 0) {
         this.clipboard = { action: 'copy', sourcePaths: itemsToCopy.map(item => item.logicalPath) };
-        useDialogService().showToast({ message: `${itemsToCopy.length} 个项目已复制到剪贴板`, type: 'info' });
+        useDialogService().showToast({ message: i18n.global.t('fileManager.store.clipboard.copied', { count: itemsToCopy.length }), type: 'info' });
       }
     },
     cutToClipboard(items?: FAMItem[]) {
       const itemsToCut = items || this.selectedItems;
       if (itemsToCut.length > 0) {
         this.clipboard = { action: 'cut', sourcePaths: itemsToCut.map(item => item.logicalPath) };
-        useDialogService().showToast({ message: `${itemsToCut.length} 个项目已剪切到剪贴板`, type: 'info' });
+        useDialogService().showToast({ message: i18n.global.t('fileManager.store.clipboard.cut', { count: itemsToCut.length }), type: 'info' });
       }
     },
     async pasteFromClipboard() {
@@ -436,11 +438,11 @@ export const useFileManagerStore = defineStore('fileManager', {
       if (action === 'cut') {
         for (const sourcePath of sourcePaths) {
           if (targetParentPath.startsWith(sourcePath) && sourcePath !== targetParentPath) {
-            dialogService.showError('不能将文件夹移动到其自身或其子文件夹中。');
+            dialogService.showError(i18n.global.t('fileManager.store.paste.errorMoveIntoSelf'));
             return;
           }
           if (sourcePath.substring(0, sourcePath.lastIndexOf('/') + 1) === targetParentPath) {
-            dialogService.showInfo('项目已在目标位置。');
+            dialogService.showInfo(i18n.global.t('fileManager.store.paste.alreadyAtTarget'));
             this.clipboard = null; // 清空剪贴板
             return;
           }
@@ -453,16 +455,16 @@ export const useFileManagerStore = defineStore('fileManager', {
           // TODO: 实现 fileManagerApi.copyFilesOrDirs(sourcePaths, targetParentPath)
           // 假设 API 存在
           // await fileManagerApi.copyFilesOrDirs(sourcePaths, targetParentPath);
-          dialogService.showInfo('复制功能暂未实现。'); // 临时
+          dialogService.showInfo(i18n.global.t('fileManager.store.paste.copyNotImplemented')); // 临时
         } else if (action === 'cut') {
           await fileManagerApi.moveFilesOrDirs(sourcePaths, targetParentPath);
-          dialogService.showSuccess(`${sourcePaths.length} 个项目已移动`);
+          dialogService.showSuccess(i18n.global.t('fileManager.store.paste.moveSuccess', { count: sourcePaths.length }));
         }
         this.clipboard = null; // 操作后清空剪贴板
         await this.fetchItems();
       } catch (err) {
         this.error = err;
-        dialogService.showError(`粘贴失败: ${(err as Error).message}`);
+        dialogService.showError(i18n.global.t('fileManager.store.paste.error', { error: (err as Error).message }));
       } finally {
         this.isLoading = false;
       }
@@ -499,13 +501,13 @@ export const useFileManagerStore = defineStore('fileManager', {
       if (!this.favoritesPaths.includes(logicalPath)) {
         this.favoritesPaths.push(logicalPath);
         // TODO: 持久化
-        useDialogService().showSuccess('已添加到收藏夹');
+        useDialogService().showSuccess(i18n.global.t('fileManager.store.favorites.added'));
       }
     },
     removeFromFavorites(logicalPath: string) {
       this.favoritesPaths = this.favoritesPaths.filter(p => p !== logicalPath);
       // TODO: 持久化
-      useDialogService().showSuccess('已从收藏夹移除');
+      useDialogService().showSuccess(i18n.global.t('fileManager.store.favorites.removed'));
     },
     isFavorite(logicalPath: string): boolean {
       return this.favoritesPaths.includes(logicalPath);
@@ -651,7 +653,7 @@ export const useFileManagerStore = defineStore('fileManager', {
       }
 
       if (formData.getAll('files').length === 0 && files.length > 0) {
-        dialogService.showWarning('没有有效的文件被选中上传。');
+        dialogService.showWarning(i18n.global.t('fileManager.store.upload.noValidFiles'));
         return;
       }
       if (formData.getAll('files').length === 0) return; // 没有文件就不用继续了
@@ -660,11 +662,11 @@ export const useFileManagerStore = defineStore('fileManager', {
       this.isLoading = true; // 表示文件列表正在因上传而可能发生变化
       try {
         await fileManagerApi.writeFile(this.currentLogicalPath, formData);
-        dialogService.showSuccess(`${files.length} 个文件上传成功`);
+        dialogService.showSuccess(i18n.global.t('fileManager.store.upload.success', { count: files.length }));
         await this.fetchItems(); // 上传成功后刷新列表
       } catch (err) {
         this.error = err;
-        dialogService.showError(`上传失败: ${(err as Error).message}`);
+        dialogService.showError(i18n.global.t('fileManager.store.upload.error', { error: (err as Error).message }));
       } finally {
         this.isLoading = false;
       }

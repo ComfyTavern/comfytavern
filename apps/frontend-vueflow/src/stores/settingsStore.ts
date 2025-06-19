@@ -94,6 +94,8 @@ export const useSettingsStore = defineStore('settings', () => {
 
   function setLanguage(langCode: string) {
     i18nSettings.currentLanguage = langCode;
+    i18nSettings.autoDetect = false; // 当用户手动设置语言时，关闭自动检测
+    // vue-i18n 实例的 locale 将由 App.vue 中的 watch(i18nSettings.currentLanguage) 来更新
   }
 
   // 初始化时加载设置

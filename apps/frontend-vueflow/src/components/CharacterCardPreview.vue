@@ -3,6 +3,9 @@ import { ref, onMounted, computed } from 'vue';
 import CharacterCard from './CharacterCard.vue'; // 复用现有的卡片组件
 import { sillyTavernService } from '../services/SillyTavernService';
 import type { CharacterCardUI } from '@comfytavern/types';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 // 角色列表
 const characters = ref<CharacterCardUI[]>([]);
@@ -21,7 +24,8 @@ onMounted(async () => {
     characters.value = allCharacters;
   } catch (err) {
     console.error('加载角色卡预览失败:', err);
-    error.value = `加载角色卡预览失败: ${err instanceof Error ? err.message : String(err)}`;
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    error.value = t('characterPreview.loadErrorDetail', { error: errorMessage });
   } finally {
     isLoading.value = false;
   }
@@ -41,13 +45,13 @@ const previewCharacters = computed(() => {
   <div>
     <!-- 加载状态 -->
     <div v-if="isLoading" class="text-center text-text-muted">
-      正在加载角色卡...
+      {{ t('characterPreview.loading') }}
     </div>
 
     <!-- 错误提示 -->
     <div v-if="error" class="bg-error/10 border border-error text-error px-4 py-3 rounded relative mb-4"
       role="alert">
-      <strong class="font-bold">加载错误:</strong>
+      <strong class="font-bold">{{ t('characterPreview.loadError') }}</strong>
       <span class="block sm:inline"> {{ error }}</span>
     </div>
 
@@ -66,10 +70,10 @@ const previewCharacters = computed(() => {
       </div>
     </div>
     <div v-if="!isLoading && characters.length === 0 && !error" class="text-center text-text-muted">
-      没有找到角色卡。
+      {{ t('characterPreview.noCards') }}
     </div>
     <div v-if="!isLoading && characters.length > 0 && !error" class="mt-4 text-right">
-      <router-link :to="{ name: 'characters' }" class="text-primary hover:underline">查看全部角色卡 &rarr;</router-link>
+      <router-link :to="{ name: 'characters' }" class="text-primary hover:underline">{{ t('characterPreview.viewAll') }} &rarr;</router-link>
     </div>
   </div>
 </template>

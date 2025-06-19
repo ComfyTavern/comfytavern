@@ -8,11 +8,11 @@
     <!-- Avatar Control -->
     <div v-if="itemConfig.type === 'avatar'" class="control-area avatar-control-area">
       <button class="btn btn-secondary btn-sm" @click="handleUploadAvatar">
-        编辑头像
+        {{ t('settings.avatar.edit') }}
       </button>
       <img
         :src="displayedAvatarUrl"
-        alt="用户头像"
+        :alt="t('settings.avatar.preview_alt')"
         class="avatar-preview"
         @error="onAvatarError"
       />
@@ -50,6 +50,7 @@ import { computed, ref, onMounted } from 'vue'; // + 导入 onMounted
 import AvatarEditorModal from '@/components/modals/AvatarEditorModal.vue';
 import { uploadAvatar as apiUploadAvatar } from '@/api/userProfileApi';
 import { getBackendBaseUrl } from '@/utils/urlUtils';
+import { useI18n } from 'vue-i18n';
 // import { useUiStore } from '@/stores/uiStore';
 
 // eslint-disable-next-line no-unused-vars
@@ -60,6 +61,7 @@ const props = defineProps<{
 // eslint-disable-next-line @typescript-eslint/no-unused-expressions, no-unused-expressions
 props.itemConfig; // 确保 props 被 TypeScript 插件认为是读取过的
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const { currentUser } = storeToRefs(authStore);
 // console.log('[SettingItemRow] Initial currentUser from store (at setup):', JSON.parse(JSON.stringify(currentUser.value)));
