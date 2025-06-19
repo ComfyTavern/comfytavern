@@ -73,7 +73,7 @@ html.dark {
 
   /* 暗色模式下的状态颜色 - HSL 通道 */
   --ct-info-hsl: 187 68% 54%;
-  --ct-success-hsl: 130 57% 49%;
+  --ct-success-hsl: 130 50% 42%; /* 咕咕调整：降低饱和度和亮度 */
   --ct-warning-hsl: 42 96% 50%;
   --ct-error-hsl: 0 94% 65%;
 

@@ -51,7 +51,7 @@
         "--ct-text-muted-hsl": "0 0% 63%",
         "--ct-border-base-hsl": "0 0% 26%",
         "--ct-info-hsl": "187 68% 54%",
-        "--ct-success-hsl": "130 57% 49%",
+        "--ct-success-hsl": "130 50% 42%",
         "--ct-warning-hsl": "42 96% 50%",
         "--ct-error-hsl": "0 94% 65%",
         "--ct-primary-content-hsl": "0 0% 100%",
