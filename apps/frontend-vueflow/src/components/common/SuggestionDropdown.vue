@@ -23,7 +23,7 @@
               ref="searchInputRef"
               type="text"
               v-model="searchQuery"
-              placeholder="搜索..."
+              :placeholder="t('common.searchEllipsis')"
               @keydown.stop
               @mousedown.stop
               :class="dropdownSizeClasses.searchInput"
@@ -45,7 +45,7 @@
             v-if="!filteredSuggestions || filteredSuggestions.length === 0"
             class="px-3 py-1 text-text-muted italic"
           >
-            {{ searchQuery ? "无匹配结果" : "无建议" }}
+            {{ searchQuery ? t('common.noMatchingResults') : t('common.noSuggestions') }}
           </li>
       </ul>
     </Transition>
@@ -70,6 +70,7 @@
  * @emits close - 当下拉菜单需要关闭时触发（例如，点击外部、选择建议、按下 Esc）。
  */
 import { ref, watch, onBeforeUnmount, nextTick, computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { useVueFlow } from "@vue-flow/core";
 // Removed OverlayScrollbars imports
 
@@ -100,6 +101,7 @@ const emit = defineEmits<{
   close: []; // 触发 close 事件
 }>();
 
+const { t } = useI18n();
 const dropdownRef = ref<HTMLUListElement | null>(null); // 根元素 ul 的引用
 // Removed scrollbarRef
 const searchInputRef = ref<HTMLInputElement | null>(null); // 搜索输入框的引用

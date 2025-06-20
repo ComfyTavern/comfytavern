@@ -28,7 +28,7 @@
         </div>
       </template>
       <div v-if="openTabs.length === 0" class="ct-no-tabs-placeholder">
-        没有活动的编辑标签页。请从节点输入处打开编辑器。
+        {{ t('editorHost.noActiveTabs') }}
       </div>
     </div>
   </div>
@@ -36,6 +36,7 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted, reactive } from 'vue'; // computed removed as isDark is no longer used directly in template
+import { useI18n } from 'vue-i18n';
 import RichCodeEditor from './RichCodeEditor.vue';
 import type { TabData } from '@/types/editorTypes';
 // import { useThemeStore } from '@/stores/theme'; // Not directly needed if not using isDark in script
@@ -56,6 +57,7 @@ const emit = defineEmits<{
   (e: 'allTabsClosed'): void;
 }>();
 
+const { t } = useI18n();
 const openTabs = ref<TabData[]>([]);
 const activeTabIdInternal = ref<string | undefined>(undefined);
 const editorRefs = reactive<Record<string, InstanceType<typeof RichCodeEditor> | null>>({});

@@ -68,6 +68,7 @@ export default {
  * @param {boolean} [interactive=true] - Tooltip 是否可交互 (允许鼠标悬停在 Tooltip 内容上)。
  */
 import { ref, computed, watch, onMounted, onUnmounted, shallowRef } from "vue";
+import { useI18n } from "vue-i18n";
 import { useWindowSize, useEventListener, isClient } from "@vueuse/core"; // 导入 useWindowSize, useEventListener 和 isClient
 import {
   useFloating,
@@ -204,8 +205,9 @@ const computedMaxWidth = computed(() => {
   return typeof props.maxWidth === "number" ? `${props.maxWidth}px` : props.maxWidth;
 });
 // 复制功能相关的状态
+const { t } = useI18n();
 const copySuccess = ref(false);
-const copyButtonTitle = computed(() => (copySuccess.value ? "复制成功" : "复制内容"));
+const copyButtonTitle = computed(() => (copySuccess.value ? t('tooltip.copySuccess') : t('tooltip.copyContent')));
 
 // 复制内容到剪贴板
 const copyContent = async () => {
@@ -232,7 +234,7 @@ const copyContent = async () => {
       copySuccess.value = false;
     }, 2500);
   } catch (err) {
-    console.error("复制失败:", err);
+    console.error(t('tooltip.copyFailed', { error: err }));
   }
 };
 

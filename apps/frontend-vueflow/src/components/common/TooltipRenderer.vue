@@ -66,6 +66,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, getCurrentInstance } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useTooltipStore } from '@/stores/tooltipStore';
 import { useThemeStore } from '@/stores/theme';
 import { storeToRefs } from 'pinia';
@@ -80,8 +81,9 @@ const { currentAppliedMode } = storeToRefs(themeStore);
 const isDark = computed(() => currentAppliedMode.value === 'dark');
 
 const floatingRendererRef = ref<HTMLElement | null>(null);
+const { t } = useI18n();
 const copySuccess = ref(false);
-const copyButtonTitle = computed(() => (copySuccess.value ? '复制成功' : '复制内容'));
+const copyButtonTitle = computed(() => (copySuccess.value ? t('tooltip.copySuccess') : t('tooltip.copyContent')));
 
 // 生成一个唯一的 ID，用于 ARIA
 const instance = getCurrentInstance();
@@ -135,7 +137,7 @@ const copyContentToClipboard = async () => {
       copySuccess.value = false;
     }, 2500);
   } catch (err) {
-    console.error('复制 Tooltip 内容失败:', err);
+    console.error(t('tooltip.copyFailed', { error: err }));
   }
 };
 

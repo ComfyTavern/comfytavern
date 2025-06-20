@@ -87,6 +87,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 export interface MenuItem {
   id: string;
@@ -119,9 +122,9 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
   showSearch: true,
-  searchPlaceholder: '搜索...',
-  loadingText: '加载中...',
-  noResultsText: '没有找到匹配项'
+  searchPlaceholder: t('common.searchEllipsis'),
+  loadingText: t('common.loading'),
+  noResultsText: t('common.noResults')
 });
 
 const emit = defineEmits<{
