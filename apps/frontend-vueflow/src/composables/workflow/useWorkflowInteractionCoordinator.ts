@@ -588,31 +588,50 @@ export function useWorkflowInteractionCoordinator() {
    * @param entry - 描述此操作的历史记录条目。
    */
   async function addNodeAndRecord(internalId: string, nodeToAdd: VueFlowNode, entry: HistoryEntry) {
-    if (!nodeToAdd) {
-      console.warn("[InteractionCoordinator:addNodeAndRecord] 提供了无效参数。");
+    await addElementsAndRecord(internalId, [nodeToAdd], [], entry);
+  }
+
+  /**
+   * 批量添加节点和边，并原子性地记录历史。
+   * @param internalId - 目标标签页的内部 ID。
+   * @param nodesToAdd - 要添加的 VueFlowNode 对象数组。
+   * @param edgesToAdd - 要添加的 Edge 对象数组。
+   * @param entry - 描述此操作的历史记录条目。
+   */
+  async function addElementsAndRecord(
+    internalId: string,
+    nodesToAdd: VueFlowNode[],
+    edgesToAdd: Edge[],
+    entry: HistoryEntry
+  ) {
+    if ((!nodesToAdd || nodesToAdd.length === 0) && (!edgesToAdd || edgesToAdd.length === 0)) {
+      console.warn("[InteractionCoordinator:addElementsAndRecord] 提供了无效参数。");
       return;
     }
     const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(
       internalId,
-      "addNodeAndRecord"
+      "addElementsAndRecord"
     );
     if (snapshotError || !currentSnapshot) {
       console.error(
         snapshotError ||
-          `[InteractionCoordinator:addNodeAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
+          `[InteractionCoordinator:addElementsAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
       );
       return;
     }
 
-    // 准备下一个状态快照 (深拷贝并添加节点)
+    // 准备下一个状态快照 (深拷贝并添加所有新元素)
     const nextSnapshot = klona(currentSnapshot);
-    nextSnapshot.elements.push(nodeToAdd);
+    const newElements = [...nodesToAdd, ...edgesToAdd];
+    nextSnapshot.elements.push(...newElements);
 
     // 应用状态更新
-    await workflowManager.addNode(internalId, nodeToAdd);
+    // 注意：这里我们直接设置完整的元素数组，而不是逐个添加
+    // 这对于 workflowManager 来说更高效，也确保了原子性
+    await workflowManager.setElements(internalId, nextSnapshot.elements);
 
     // 记录历史
-    recordHistory(internalId, entry, nextSnapshot); // 传递准备好的 nextSnapshot
+    recordHistory(internalId, entry, nextSnapshot);
   }
 
   /**
@@ -1927,6 +1946,7 @@ export function useWorkflowInteractionCoordinator() {
     disconnectEdgeFromInputAndRecord,
     connectEdgeToInputAndRecord,
     moveAndReconnectEdgeAndRecord,
+    addElementsAndRecord, // <-- 导出新函数
 
     // --- 预览相关 (来自 useWorkflowPreview) ---
     isPreviewEnabled, // 导出从 useWorkflowPreview 获取的预览状态

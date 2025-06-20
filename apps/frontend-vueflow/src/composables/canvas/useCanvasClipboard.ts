@@ -1,16 +1,14 @@
 import { type Node, type Edge, useVueFlow } from "@vue-flow/core";
 import { useTabStore } from "@/stores/tabStore";
-import { useWorkflowStore } from "@/stores/workflowStore";
 import { v4 as uuidv4 } from "uuid";
 import { deepClone } from "@/utils/deepClone";
 import { useClipboard } from '../useClipboard';
 import { serializeWorkflowFragment, deserializeWorkflowFragment } from '@/utils/workflowTransformer';
 import { useDialogService } from '@/services/DialogService';
+import type { HistoryEntry } from "@comfytavern/types";
+import { nextTick } from "vue";
+import { useWorkflowInteractionCoordinator } from "../workflow/useWorkflowInteractionCoordinator";
 
-// 从 @comfytavern/types 导入 HistoryEntry, OutputDefinition, DataFlowType 和 GroupSlotInfo
-// 这些类型主要由 pasteElementsToCanvas 内部的 recordHistorySnapshot 使用，而 recordHistorySnapshot 是 workflowStore 的一部分
-// 因此，这里不需要直接导入 HistoryEntry 等，除非我们在这里构建 HistoryEntry 对象。
-// pasteElementsToCanvas 直接传递参数给 workflowStore.recordHistorySnapshot
 
 /**
  * 用于处理画布元素复制和粘贴逻辑的 Composable。
@@ -19,15 +17,13 @@ export function useCanvasClipboard() {
   const {
     getNodes,
     getEdges,
-    addNodes: vueFlowAddNodes,
-    addEdges: vueFlowAddEdges,
     project,
     addSelectedNodes,
     addSelectedEdges,
   } = useVueFlow();
 
   const tabStore = useTabStore();
-  const workflowStore = useWorkflowStore();
+  const coordinator = useWorkflowInteractionCoordinator(); // 获取协调器实例
   const { writeText, readText, error: clipboardError, isSupported: clipboardIsSupported } = useClipboard();
   const dialogService = useDialogService();
 
@@ -61,7 +57,7 @@ export function useCanvasClipboard() {
   };
 
   // --- 辅助函数：将节点和边粘贴到画布上 ---
-  const pasteElementsToCanvas = (nodesToPaste: Node[], edgesToPaste: Edge[], pasteType: 'local' | 'system' = 'local') => {
+  const pasteElementsToCanvas = async (nodesToPaste: Node[], edgesToPaste: Edge[], pasteType: 'local' | 'system' = 'local') => {
     const activeTabId = tabStore.activeTabId;
     if (!activeTabId) {
       console.warn("Cannot paste: No active tab ID found.");
@@ -100,6 +96,7 @@ export function useCanvasClipboard() {
         ...deepClone(node),
         id: newId,
         position: { x: node.position.x + offsetX, y: node.position.y + offsetY },
+        // selected 属性不在这里设置
       });
     });
 
@@ -112,15 +109,29 @@ export function useCanvasClipboard() {
           id: uuidv4(),
           source: sourceId,
           target: targetId,
+          // selected 属性不在这里设置
         });
       }
     });
 
-    // 4. 添加到画布
-    if (newNodes.length > 0) vueFlowAddNodes(newNodes);
-    if (newEdges.length > 0) vueFlowAddEdges(newEdges);
+    // 4. 创建历史记录条目
+    const historyEntry: HistoryEntry = {
+      actionType: pasteType === 'system' ? 'systemPaste' : 'paste',
+      objectType: 'elements',
+      summary: `通过${pasteType === 'system' ? '系统' : '本地'}剪贴板粘贴了 ${newNodes.length} 个节点和 ${newEdges.length} 条边`,
+      details: {
+        pasteSource: pasteType,
+        addedNodes: newNodes.map(n => deepClone(n)), // 存储完整节点信息以供撤销
+        addedEdges: newEdges.map(e => deepClone(e)),
+      },
+      timestamp: Date.now()
+    };
 
-    // 5. 选中新添加的元素
+    // 5. 使用协调器添加元素并记录历史
+    await coordinator.addElementsAndRecord(activeTabId, newNodes, newEdges, historyEntry);
+
+    // 6. 选中新添加的元素
+    await nextTick();
     const newNodeIds = new Set(newNodes.map((n) => n.id));
     const newEdgeIds = new Set(newEdges.map((e) => e.id));
     const nodesToSelect = getNodes.value.filter((n) => newNodeIds.has(n.id));
@@ -128,36 +139,19 @@ export function useCanvasClipboard() {
     if (nodesToSelect.length > 0) addSelectedNodes(nodesToSelect);
     if (edgesToSelect.length > 0) addSelectedEdges(edgesToSelect);
 
-    // 6. 标记为已修改
-    workflowStore.markAsDirty(activeTabId);
-
-    // 7. 记录历史
-    workflowStore.recordHistorySnapshot({
-      actionType: pasteType === 'system' ? 'systemPaste' : 'paste',
-      objectType: 'elements',
-      summary: `通过${pasteType === 'system' ? '系统' : '本地'}剪贴板粘贴了 ${newNodes.length} 个节点和 ${newEdges.length} 条边`,
-      details: {
-        pasteSource: pasteType,
-        nodeCount: newNodes.length,
-        edgeCount: newEdges.length,
-        newNodeIds: newNodes.map(n => n.id),
-        newEdgeIds: newEdges.map(e => e.id)
-      },
-      timestamp: Date.now()
-    });
 
     return { pastedNodesCount: newNodes.length, pastedEdgesCount: newEdges.length };
   };
 
   // --- 本地粘贴处理函数 ---
-  const handleLocalPaste = () => {
+  const handleLocalPaste = async () => {
     if (!clipboardData || clipboardData.nodes.length === 0) {
       console.log("Local clipboard is empty.");
       dialogService.showInfo("本地剪贴板为空");
       return;
     }
 
-    const { pastedNodesCount, pastedEdgesCount } = pasteElementsToCanvas(
+    const { pastedNodesCount, pastedEdgesCount } = await pasteElementsToCanvas(
       clipboardData.nodes,
       clipboardData.edges,
       'local'
@@ -238,7 +232,7 @@ export function useCanvasClipboard() {
       return;
     }
 
-    const { pastedNodesCount, pastedEdgesCount } = pasteElementsToCanvas(
+    const { pastedNodesCount, pastedEdgesCount } = await pasteElementsToCanvas(
       deserializedData.nodes,
       deserializedData.edges,
       'system'
