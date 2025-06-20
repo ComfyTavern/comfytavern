@@ -5,7 +5,7 @@
     :data-path="item.logicalPath" data-testid="fm-list-item">
     <td class="px-3 py-2 whitespace-nowrap w-10">
       <input type="checkbox" :checked="isSelected" @change.stop="emit('toggleSelect', item)" @click.stop
-        class="checkbox checkbox-xs sm:checkbox-sm rounded border-border-base text-primary focus:ring-primary ring-offset-background-base bg-background-surface" />
+        class="checkbox checkbox-xs sm:checkbox-sm rounded border-2 border-border-base text-primary focus:ring-primary ring-offset-background-base bg-background-surface" />
     </td>
 
     <!-- Dynamically rendered columns based on viewSettings.visibleColumns -->

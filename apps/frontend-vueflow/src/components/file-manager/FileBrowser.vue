@@ -27,7 +27,7 @@
           <tr>
             <th scope="col" class="px-3 py-2.5 text-left font-semibold text-text-base w-10">
               <input type="checkbox" @change="toggleSelectAll" :checked="allSelected"
-                :indeterminate="someSelected && !allSelected" class="checkbox checkbox-xs sm:checkbox-sm" />
+                :indeterminate="someSelected && !allSelected" class="checkbox checkbox-xs sm:checkbox-sm rounded border-2 border-border-base text-primary focus:ring-primary ring-offset-background-base bg-background-surface" />
             </th>
             <!-- 根据 viewSettings.visibleColumns 动态生成表头 -->
             <th v-for="column in visibleColumnsList" :key="column.key" scope="col"

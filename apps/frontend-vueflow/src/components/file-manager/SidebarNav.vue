@@ -1,22 +1,13 @@
 <template>
-  <div class="sidebar-nav h-full flex flex-col text-sm" :class="{ 'items-center': collapsed }">
+  <div class="sidebar-nav h-full flex flex-col text-sm border-r border-border-base" :class="{ 'items-center': collapsed }">
     <!-- 折叠/展开控制按钮 (可选，也可以由父组件控制) -->
     <div class="p-2 flex items-center" :class="collapsed ? 'justify-center' : 'justify-between'">
       <span v-if="!collapsed" class="font-semibold text-lg text-text-base">{{ t('fileManager.sidebarNav.title') }}</span>
       <button @click="toggleCollapse"
         class="p-2 rounded-md hover:bg-background-base text-text-muted"
         :title="t(collapsed ? 'fileManager.sidebarNav.expand' : 'fileManager.sidebarNav.collapse')" data-testid="fm-sidebar-toggle">
-        <svg v-if="collapsed" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
-          fill="currentColor">
-          <path fill-rule="evenodd"
-            d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1z"
-            clip-rule="evenodd" />
-        </svg>
-        <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd"
-            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-            clip-rule="evenodd" />
-        </svg>
+        <ChevronRightIcon v-if="collapsed" class="h-5 w-5" />
+        <ChevronLeftIcon v-else class="h-5 w-5" />
       </button>
     </div>
 
@@ -120,7 +111,7 @@
 import { computed, defineAsyncComponent } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
-import { FolderIcon, DocumentIcon, StarIcon } from '@heroicons/vue/24/outline'; // 使用 heroicons 作为示例
+import { FolderIcon, DocumentIcon, StarIcon, ChevronRightIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline'; // 使用 heroicons 作为示例
 
 // 假设的图标组件映射，实际项目中可能需要更完善的图标系统
 const iconComponents: Record<string, any> = {

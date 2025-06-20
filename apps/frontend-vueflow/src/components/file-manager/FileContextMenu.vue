@@ -1,7 +1,7 @@
 <template>
   <div v-if="visible" ref="contextMenuRef"
     class="file-context-menu fixed z-[100] bg-background-surface shadow-xl rounded-md py-1 border border-border-base text-sm min-w-[180px]"
-    :style="{ top: y + 'px', left: x + 'px' }" data-testid="fm-context-menu-component">
+    :style="{ top: adjustedY + 'px', left: adjustedX + 'px' }" data-testid="fm-context-menu-component">
     <ul class="max-h-[70vh] overflow-y-auto">
       <template v-for="(menuItem, index) in items" :key="index">
         <li v-if="menuItem.type === 'divider'" class="my-1 h-px bg-border-base"></li>
@@ -26,9 +26,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineAsyncComponent } from 'vue';
+import { ref, defineAsyncComponent, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { onClickOutside } from '@vueuse/core';
+import { onClickOutside, useElementBounding, useWindowSize } from '@vueuse/core';
 
 // 定义菜单项的类型
 export interface ContextMenuItemAction {
@@ -65,6 +65,49 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const contextMenuRef = ref<HTMLElement | null>(null);
+
+const { width: windowWidth, height: windowHeight } = useWindowSize();
+const { width: menuWidth, height: menuHeight, update: updateMenuBounding } = useElementBounding(contextMenuRef);
+
+const adjustedX = ref(props.x);
+const adjustedY = ref(props.y);
+const PADDING = 8; // 边缘的最小间距
+
+watch(
+  [() => props.visible, () => props.x, () => props.y],
+  async ([isVisible, currentX, currentY]) => {
+    if (isVisible) {
+      // 首先将菜单定位到初始位置，以便正确计算其尺寸
+      adjustedX.value = currentX;
+      adjustedY.value = currentY;
+
+      await nextTick(); // 等待DOM更新，菜单已渲染
+      updateMenuBounding(); // 手动更新边界信息
+      await nextTick(); // 确保边界信息已更新
+
+      let finalX = currentX;
+      let finalY = currentY;
+
+      const currentMenuWidth = menuWidth.value;
+      const currentMenuHeight = menuHeight.value;
+
+      // 检查右侧溢出
+      if (currentX + currentMenuWidth + PADDING > windowWidth.value) {
+        finalX = windowWidth.value - currentMenuWidth - PADDING;
+      }
+      // 检查底部溢出
+      if (currentY + currentMenuHeight + PADDING > windowHeight.value) {
+        finalY = windowHeight.value - currentMenuHeight - PADDING;
+      }
+
+      // 确保调整后不会向左或向上溢出（或初始时就溢出）
+      adjustedX.value = Math.max(PADDING, finalX);
+      adjustedY.value = Math.max(PADDING, finalY);
+    }
+  },
+  { flush: 'post' } // 在DOM更新后执行watch回调
+);
+
 
 onClickOutside(contextMenuRef, () => {
   if (props.visible) {

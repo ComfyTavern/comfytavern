@@ -289,6 +289,7 @@
       "properties": "属性",
       "preview": "预览",
       "close": "关闭面板",
+      "resize": "调整大小",
       "noItemSelected": "未选择任何项目",
       "propName": "名称:",
       "propType": "类型:",

@@ -29,6 +29,7 @@ interface UiStoreState {
 
   // 文件管理器左侧导航栏折叠状态
   isFileManagerSidebarCollapsed: boolean;
+  fileManagerSidebarWidth: number; // 新增：文件管理器左侧导航栏宽度
 
   // 新增：主侧边栏折叠状态
   isMainSidebarCollapsed: boolean;
@@ -46,8 +47,13 @@ const DEFAULT_FM_DETAIL_PANEL_WIDTH = 320; // 默认详情面板宽度
 const MIN_FM_DETAIL_PANEL_WIDTH = 200; // 最小详情面板宽度
 const MAX_FM_DETAIL_PANEL_WIDTH = 1200; // 最大详情面板宽度 (可根据需要调整)
 
+const DEFAULT_FM_SIDEBAR_WIDTH = 256; // 默认文件管理器侧边栏宽度 (w-64)
+const MIN_FM_SIDEBAR_WIDTH = 160;    // 最小文件管理器侧边栏宽度 (w-40)
+const MAX_FM_SIDEBAR_WIDTH = 512;    // 最大文件管理器侧边栏宽度 (w-128)
+
 const FM_SIDEBAR_COLLAPSED = 'fm_sidebar_collapsed'; // 已存在的 key
 const FM_DETAIL_PANEL_OPEN = 'fm_detail_panel_open'; // 新增 key
+const FM_SIDEBAR_WIDTH_KEY = 'fm_sidebar_width'; // 新增：localStorage key for sidebar width
 const MAIN_SIDEBAR_COLLAPSED = 'main_sidebar_collapsed'; // 新增：主侧边栏 localStorage key
 
 export const useUiStore = defineStore('ui', {
@@ -128,6 +134,37 @@ export const useUiStore = defineStore('ui', {
     const initialIsMobileView = mediaQueryMobile ? mediaQueryMobile.matches : false;
     console.log('[uiStore] Initial isMobileView state being set:', initialIsMobileView);
 
+    // 初始化文件管理器侧边栏宽度
+    let initialFileManagerSidebarWidth = DEFAULT_FM_SIDEBAR_WIDTH;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const storedSidebarWidth = localStorage.getItem(FM_SIDEBAR_WIDTH_KEY);
+      console.log(`[uiStore] Raw value from localStorage for ${FM_SIDEBAR_WIDTH_KEY}:`, storedSidebarWidth);
+      if (storedSidebarWidth !== null) {
+        try {
+          const parsedWidth = parseInt(storedSidebarWidth, 10);
+          if (!isNaN(parsedWidth) && parsedWidth >= MIN_FM_SIDEBAR_WIDTH && parsedWidth <= MAX_FM_SIDEBAR_WIDTH) {
+            initialFileManagerSidebarWidth = parsedWidth;
+            console.log('[uiStore] Parsed initialFileManagerSidebarWidth from localStorage:', initialFileManagerSidebarWidth);
+          } else {
+            console.warn(`[uiStore] Invalid stored sidebar width (${parsedWidth}), removing from localStorage. Defaulting to ${DEFAULT_FM_SIDEBAR_WIDTH}.`);
+            localStorage.removeItem(FM_SIDEBAR_WIDTH_KEY); // 移除无效值
+            initialFileManagerSidebarWidth = DEFAULT_FM_SIDEBAR_WIDTH;
+          }
+        } catch (error) {
+          console.error('[uiStore] Error parsing stored sidebar width:', error, `Defaulting to ${DEFAULT_FM_SIDEBAR_WIDTH}.`);
+          localStorage.removeItem(FM_SIDEBAR_WIDTH_KEY);
+          initialFileManagerSidebarWidth = DEFAULT_FM_SIDEBAR_WIDTH;
+        }
+      } else {
+        console.log(`[uiStore] No ${FM_SIDEBAR_WIDTH_KEY} found in localStorage, defaulting to ${DEFAULT_FM_SIDEBAR_WIDTH}.`);
+        initialFileManagerSidebarWidth = DEFAULT_FM_SIDEBAR_WIDTH;
+      }
+    } else {
+      console.log(`[uiStore] localStorage not available, defaulting sidebar width to ${DEFAULT_FM_SIDEBAR_WIDTH}.`);
+      initialFileManagerSidebarWidth = DEFAULT_FM_SIDEBAR_WIDTH;
+    }
+    console.log('[uiStore] Final initialFileManagerSidebarWidth state being set:', initialFileManagerSidebarWidth);
+
 
     return {
       isRegexEditorModalVisible: false,
@@ -141,6 +178,7 @@ export const useUiStore = defineStore('ui', {
       isFileManagerDetailPanelOpen: initialDetailPanelOpen, // 使用从 localStorage 读取的值
       fileManagerDetailPanelWidth: DEFAULT_FM_DETAIL_PANEL_WIDTH,
       isFileManagerSidebarCollapsed: initialSidebarCollapsed, // 使用从 localStorage 读取的值
+      fileManagerSidebarWidth: initialFileManagerSidebarWidth, // 新增
       isMainSidebarCollapsed: initialMainSidebarCollapsed, // 使用从 localStorage 读取的值
       isMobileView: initialIsMobileView, // 使用初始化的值
     };
@@ -154,7 +192,7 @@ export const useUiStore = defineStore('ui', {
         // 添加监听器
         mediaQueryMobile.addEventListener('change', (e) => {
           this.isMobileView = e.matches;
-          console.log('[uiStore] isMobileView changed by listener:', this.isMobileView);
+          // console.log('[uiStore] isMobileView changed by listener:', this.isMobileView); // 移除频繁触发的日志
         });
       }
     },
@@ -205,7 +243,7 @@ export const useUiStore = defineStore('ui', {
       if (typeof window !== 'undefined' && window.localStorage) {
         try {
           localStorage.setItem(FM_DETAIL_PANEL_OPEN, JSON.stringify(isOpen));
-          console.log(`[uiStore] Saved to localStorage (${FM_DETAIL_PANEL_OPEN}):`, isOpen);
+          // console.log(`[uiStore] Saved to localStorage (${FM_DETAIL_PANEL_OPEN}):`, isOpen); // 移除常规保存日志
         } catch (error) {
           console.error('[uiStore] Error saving detail panel state to localStorage:', error);
         }
@@ -214,35 +252,35 @@ export const useUiStore = defineStore('ui', {
       }
     },
     openFileManagerDetailPanel() {
-      console.log('[uiStore] openFileManagerDetailPanel called. Current state:', this.isFileManagerDetailPanelOpen);
+      // console.log('[uiStore] openFileManagerDetailPanel called. Current state:', this.isFileManagerDetailPanelOpen); // 移除
       if (!this.isFileManagerDetailPanelOpen) {
         this.isFileManagerDetailPanelOpen = true;
         this._saveDetailPanelState(true);
-        console.log('[uiStore] Detail panel opened. New state:', this.isFileManagerDetailPanelOpen);
+        // console.log('[uiStore] Detail panel opened. New state:', this.isFileManagerDetailPanelOpen); // 移除
       } else {
-        console.log('[uiStore] Detail panel already open.');
+        // console.log('[uiStore] Detail panel already open.'); // 移除
       }
       // TODO: 可以考虑在这里检查是否有选中项，并通知 fileManagerStore 更新 selectedItemForDetail
     },
     closeFileManagerDetailPanel() {
-      console.log('[uiStore] closeFileManagerDetailPanel called. Current state:', this.isFileManagerDetailPanelOpen);
+      // console.log('[uiStore] closeFileManagerDetailPanel called. Current state:', this.isFileManagerDetailPanelOpen); // 移除
       if (this.isFileManagerDetailPanelOpen) {
         this.isFileManagerDetailPanelOpen = false;
         this._saveDetailPanelState(false);
-        console.log('[uiStore] Detail panel closed. New state:', this.isFileManagerDetailPanelOpen);
+        // console.log('[uiStore] Detail panel closed. New state:', this.isFileManagerDetailPanelOpen); // 移除
       } else {
-        console.log('[uiStore] Detail panel already closed.');
+        // console.log('[uiStore] Detail panel already closed.'); // 移除
       }
     },
     toggleFileManagerDetailPanel(isOpen?: boolean) {
       const newState = typeof isOpen === 'boolean' ? isOpen : !this.isFileManagerDetailPanelOpen;
-      console.log(`[uiStore] toggleFileManagerDetailPanel called with isOpen: ${isOpen}. Current state: ${this.isFileManagerDetailPanelOpen}. New target state: ${newState}`);
+      // console.log(`[uiStore] toggleFileManagerDetailPanel called with isOpen: ${isOpen}. Current state: ${this.isFileManagerDetailPanelOpen}. New target state: ${newState}`); // 移除
       if (this.isFileManagerDetailPanelOpen !== newState) {
         this.isFileManagerDetailPanelOpen = newState;
         this._saveDetailPanelState(newState);
-        console.log('[uiStore] Detail panel toggled. New state:', this.isFileManagerDetailPanelOpen);
+        // console.log('[uiStore] Detail panel toggled. New state:', this.isFileManagerDetailPanelOpen); // 移除
       } else {
-        console.log('[uiStore] Detail panel state unchanged by toggle.');
+        // console.log('[uiStore] Detail panel state unchanged by toggle.'); // 移除
       }
     },
     setFileManagerDetailPanelWidth(width: number) {
@@ -254,19 +292,65 @@ export const useUiStore = defineStore('ui', {
     },
 
     // 文件管理器侧边栏 Actions
+    _saveFileManagerSidebarState(collapsed: boolean) { // 重命名以区分宽度保存
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          localStorage.setItem(FM_SIDEBAR_COLLAPSED, JSON.stringify(collapsed));
+          // console.log(`[uiStore] Saved to localStorage (${FM_SIDEBAR_COLLAPSED}):`, collapsed); // 移除常规保存日志
+        } catch (error) {
+          console.error('[uiStore] Error saving sidebar collapsed state to localStorage:', error);
+        }
+      } else {
+        console.warn('[uiStore] localStorage not available, cannot save sidebar collapsed state.');
+      }
+    },
     toggleFileManagerSidebar() {
-      // 正确的侧边栏持久化应该在 theme.ts 中，这里只是 uiStore 中的一个状态，如果 theme.ts 也改用这个，则需要加 localStorage
-      console.log(`[uiStore] toggleFileManagerSidebar called. Current state: ${this.isFileManagerSidebarCollapsed}`);
+      // console.log(`[uiStore] toggleFileManagerSidebar called. Current state: ${this.isFileManagerSidebarCollapsed}`); // 移除
       this.isFileManagerSidebarCollapsed = !this.isFileManagerSidebarCollapsed;
-      // 如果决定在这里持久化（而不是 theme.ts），则需要添加 localStorage.setItem(...)
-      console.log(`[uiStore] Sidebar collapsed toggled. New state: ${this.isFileManagerSidebarCollapsed}`);
+      this._saveFileManagerSidebarState(this.isFileManagerSidebarCollapsed);
+      // console.log(`[uiStore] Sidebar collapsed toggled. New state: ${this.isFileManagerSidebarCollapsed}`); // 移除
     },
     setFileManagerSidebarCollapsed(collapsed: boolean) {
-      // 正确的侧边栏持久化应该在 theme.ts 中
-      console.log(`[uiStore] setFileManagerSidebarCollapsed called with: ${collapsed}. Current state: ${this.isFileManagerSidebarCollapsed}`);
-      this.isFileManagerSidebarCollapsed = collapsed;
-      // 如果决定在这里持久化（而不是 theme.ts），则需要添加 localStorage.setItem(...)
-      console.log(`[uiStore] Sidebar collapsed set. New state: ${this.isFileManagerSidebarCollapsed}`);
+      // console.log(`[uiStore] setFileManagerSidebarCollapsed called with: ${collapsed}. Current state: ${this.isFileManagerSidebarCollapsed}`); // 移除
+      if (this.isFileManagerSidebarCollapsed !== collapsed) {
+        this.isFileManagerSidebarCollapsed = collapsed;
+        this._saveFileManagerSidebarState(this.isFileManagerSidebarCollapsed);
+        // console.log(`[uiStore] Sidebar collapsed set. New state: ${this.isFileManagerSidebarCollapsed}`); // 移除
+      }
+    },
+
+    // 新增：文件管理器侧边栏宽度 Actions
+    _saveFileManagerSidebarWidth(width: number) {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          localStorage.setItem(FM_SIDEBAR_WIDTH_KEY, width.toString());
+          console.log(`[uiStore] Saved sidebar width to localStorage (${FM_SIDEBAR_WIDTH_KEY}):`, width);
+        } catch (error) {
+          console.error('[uiStore] Error saving sidebar width to localStorage:', error);
+        }
+      } else {
+        console.warn('[uiStore] localStorage not available, cannot save sidebar width.');
+      }
+    },
+    setFileManagerSidebarWidth(width: number) {
+      const newWidth = Math.max(MIN_FM_SIDEBAR_WIDTH, Math.min(width, MAX_FM_SIDEBAR_WIDTH));
+      if (this.fileManagerSidebarWidth !== newWidth) {
+        this.fileManagerSidebarWidth = newWidth;
+        // 不再直接保存到 localStorage，仅更新状态
+        // console.log('[uiStore] Sidebar width updated in store. New width:', this.fileManagerSidebarWidth); // 移除这条过于频繁的日志
+      }
+    },
+    persistFileManagerSidebarWidth() {
+      this._saveFileManagerSidebarWidth(this.fileManagerSidebarWidth);
+      // 这条日志在操作结束时打印，是合理的
+      console.log('[uiStore] Sidebar width persisted to localStorage.');
+    },
+    resetFileManagerSidebarWidth() {
+      if (this.fileManagerSidebarWidth !== DEFAULT_FM_SIDEBAR_WIDTH) {
+        this.fileManagerSidebarWidth = DEFAULT_FM_SIDEBAR_WIDTH;
+        this._saveFileManagerSidebarWidth(DEFAULT_FM_SIDEBAR_WIDTH); // 重置操作通常希望立即持久化
+        console.log('[uiStore] Sidebar width reset to default and persisted.');
+      }
     },
 
     // 主侧边栏 Actions
@@ -274,7 +358,7 @@ export const useUiStore = defineStore('ui', {
       if (typeof window !== 'undefined' && window.localStorage) {
         try {
           localStorage.setItem(MAIN_SIDEBAR_COLLAPSED, JSON.stringify(collapsed));
-          console.log(`[uiStore] Saved to localStorage (${MAIN_SIDEBAR_COLLAPSED}):`, collapsed);
+          // console.log(`[uiStore] Saved to localStorage (${MAIN_SIDEBAR_COLLAPSED}):`, collapsed); // 移除常规保存日志
         } catch (error) {
           console.error('[uiStore] Error saving main sidebar state to localStorage:', error);
         }
@@ -283,17 +367,17 @@ export const useUiStore = defineStore('ui', {
       }
     },
     toggleMainSidebar() {
-      console.log(`[uiStore] toggleMainSidebar called. Current state: ${this.isMainSidebarCollapsed}`);
+      // console.log(`[uiStore] toggleMainSidebar called. Current state: ${this.isMainSidebarCollapsed}`); // 移除
       this.isMainSidebarCollapsed = !this.isMainSidebarCollapsed;
       this._saveMainSidebarState(this.isMainSidebarCollapsed);
-      console.log(`[uiStore] Main sidebar collapsed toggled. New state: ${this.isMainSidebarCollapsed}`);
+      // console.log(`[uiStore] Main sidebar collapsed toggled. New state: ${this.isMainSidebarCollapsed}`); // 移除
     },
     setMainSidebarCollapsed(collapsed: boolean) {
-      console.log(`[uiStore] setMainSidebarCollapsed called with: ${collapsed}. Current state: ${this.isMainSidebarCollapsed}`);
+      // console.log(`[uiStore] setMainSidebarCollapsed called with: ${collapsed}. Current state: ${this.isMainSidebarCollapsed}`); // 移除
       if (this.isMainSidebarCollapsed !== collapsed) {
         this.isMainSidebarCollapsed = collapsed;
         this._saveMainSidebarState(this.isMainSidebarCollapsed);
-        console.log(`[uiStore] Main sidebar collapsed set. New state: ${this.isMainSidebarCollapsed}`);
+        // console.log(`[uiStore] Main sidebar collapsed set. New state: ${this.isMainSidebarCollapsed}`); // 移除
       }
     },
   },
