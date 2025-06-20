@@ -2,7 +2,6 @@
 <template>
   <BaseModal
     :visible="visible"
-    v-comfy-tooltip="''"
     width="max-w-md"
     @update:visible="!$event && handleSkip()"
     :showCloseButton="true"

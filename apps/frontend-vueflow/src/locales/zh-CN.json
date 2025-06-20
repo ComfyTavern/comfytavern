@@ -6,11 +6,7 @@
   "common": {
     "confirm": "确认",
     "cancel": "取消",
-    "save": "保存",
     "delete": "删除",
-    "edit": "编辑",
-    "add": "添加",
-    "loading": "加载中...",
     "error": "错误",
     "success": "成功",
     "warning": "警告",
@@ -28,25 +24,13 @@
   },
   "nav": {
     "home": "首页",
-    "editor": "编辑器",
     "settings": "设置",
     "about": "关于",
     "projects": "项目",
     "characters": "角色卡",
     "files": "文件管理"
   },
-  "editor": {
-    "toolbar": {
-      "save": "保存工作流",
-      "execute": "执行工作流",
-      "clear": "清空画布"
-    },
-    "contextMenu": {
-      "addNode": "添加节点",
-      "deleteNode": "删除节点",
-      "copyNode": "复制节点"
-    }
-  },
+  "editor": {},
   "home": {
     "welcome": "欢迎使用 ComfyTavern",
     "subtitle": "管理您的工作流项目和角色卡，释放创造力。",
@@ -71,11 +55,7 @@
   },
   "settings": {
     "title": "设置",
-    "general": {
-      "title": "通用设置",
-      "language": "界面语言",
-      "theme": "主题"
-    },
+    "general": {},
     "sections": {
       "display": "显示",
       "user": "用户",
@@ -135,9 +115,7 @@
       "lang_file_upload_error": "语言包上传失败：{error}",
       "no_file_selected_error": "未选择文件或文件无法读取。"
     },
-    "advanced": {
-      "title": "高级设置"
-    },
+    "advanced": {},
     "placeholders": {
       "no_content": "咕？这里似乎没有内容... 可能是正在施工中。",
       "custom_module_wip": "这里将来是一个自定义的复杂配置模块，目前正在施工中... 咕~"
@@ -148,10 +126,7 @@
     }
   },
   "dialogs": {
-    "confirmDelete": {
-      "title": "确认删除",
-      "message": "此操作不可撤销，确定要删除吗？"
-    }
+    "confirmDelete": {}
   },
   "sidebar": {
     "userAvatar": "用户头像",
@@ -240,8 +215,6 @@
       "sortBy": "排序方式",
       "gridSize": "网格视图尺寸",
       "sortDirection": "反向排序",
-      "sortAsc": "升序",
-      "sortDesc": "降序",
       "sortByLabel": "排序依据",
       "sortByName": "名称",
       "sortByExtension": "扩展名",
@@ -293,8 +266,6 @@
       "close": "关闭面板",
       "resize": "调整大小",
       "noItemSelected": "未选择任何项目",
-      "propName": "名称:",
-      "propType": "类型:",
       "propSize": "大小:",
       "propPath": "路径:",
       "propLastModified": "最后修改:",
@@ -384,25 +355,7 @@
       }
     }
   },
-  "statusBar": {
-    "workflow": "工作流",
-    "execute": "执行",
-    "defaultProjectName": "ComfyTavern",
-    "tooltip": {
-      "hideEditorPanel": "隐藏编辑器面板",
-      "showEditorPanel": "显示编辑器面板",
-      "disableLivePreview": "禁用实时预览",
-      "enableLivePreview": "启用实时预览"
-    },
-    "status": {
-      "idle": "空闲",
-      "queued": "排队中",
-      "running": "运行中...",
-      "complete": "已完成",
-      "error": "错误",
-      "skipped": "已跳过"
-    }
-  },
+  "statusBar": {},
   "history": {
     "groupIO": {
       "inputNameChanged": "修改输入 {inputName} 名称: '{oldName}' -> '{newName}'",
@@ -428,9 +381,6 @@
       "operationTitle": "操作:",
       "indexTitle": "索引:",
       "statusTitle": "状态:",
-      "statusCurrent": "当前",
-      "statusPast": "过去",
-      "statusFuture": "未来",
       "statusSaved": "(已保存)"
     },
     "formatDetail": {
@@ -537,32 +487,6 @@
       "system": "系统",
       "dark": "暗色",
       "light": "亮色"
-    },
-    "tabs": {
-      "nodes": {
-        "label": "节点",
-        "title": "节点库"
-      },
-      "workflows": {
-        "label": "工作流",
-        "title": "工作流管理"
-      },
-      "interface": {
-        "label": "接口",
-        "title": "工作流接口"
-      },
-      "history": {
-        "label": "历史",
-        "title": "操作历史"
-      },
-      "performance": {
-        "label": "统计",
-        "title": "节点统计"
-      },
-      "info": {
-        "label": "信息",
-        "title": "工作流信息"
-      }
     }
   },
   "workflowInfoPanel": {
@@ -763,6 +687,10 @@
         "c": "选项 C (option3)",
         "d": "选项 D (原计划禁用)"
       }
+    },
+    "dialogContent": {
+      "inputTitle": "[TODO]",
+      "messageTitle": "[TODO]"
     }
   },
   "graph": {
