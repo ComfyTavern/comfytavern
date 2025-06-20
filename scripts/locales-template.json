@@ -1,0 +1,702 @@
+{
+  "characterPreview": {
+    "loadError": "[TODO]",
+    "loadErrorDetail": "[TODO]",
+    "loading": "[TODO]",
+    "noCards": "[TODO]",
+    "viewAll": "[TODO]"
+  },
+  "characters": {
+    "loadError": "[TODO]",
+    "loadErrorDetail": "[TODO]",
+    "loading": "[TODO]",
+    "noCharacters": "[TODO]",
+    "title": "[TODO]"
+  },
+  "common": {
+    "actions": "[TODO]",
+    "cancel": "[TODO]",
+    "description": "[TODO]",
+    "error": "[TODO]",
+    "name": "[TODO]",
+    "refresh": "[TODO]",
+    "retry": "[TODO]",
+    "searchEllipsis": "[TODO]",
+    "success": "[TODO]",
+    "type": "[TODO]",
+    "warning": "[TODO]"
+  },
+  "editorView": {
+    "loadingDefinitions": "[TODO]",
+    "loadingNodes": "[TODO]",
+    "noNodesFound": "[TODO]",
+    "searchNodes": "[TODO]",
+    "unclassified": "[TODO]"
+  },
+  "fileManager": {
+    "breadcrumbs": {
+      "cancel": "[TODO]",
+      "confirm": "[TODO]",
+      "editPath": "[TODO]",
+      "goUp": "[TODO]",
+      "invalidPathError": "[TODO]",
+      "invalidPathExampleError": "[TODO]",
+      "pathPlaceholder": "[TODO]",
+      "root": "[TODO]"
+    },
+    "browser": {
+      "clearFilters": "[TODO]",
+      "colDate": "[TODO]",
+      "colSize": "[TODO]",
+      "contextMenu": {
+        "addToFavorites": "[TODO]",
+        "copyPath": "[TODO]",
+        "delete": "[TODO]",
+        "download": "[TODO]",
+        "moveTo": "[TODO]",
+        "newFolder": "[TODO]",
+        "noActions": "[TODO]",
+        "open": "[TODO]",
+        "paste": "[TODO]",
+        "refresh": "[TODO]",
+        "removeFromFavorites": "[TODO]",
+        "rename": "[TODO]"
+      },
+      "emptyFolder": "[TODO]"
+    },
+    "detailPanel": {
+      "close": "[TODO]",
+      "loadingPreview": "[TODO]",
+      "noItemSelected": "[TODO]",
+      "preview": "[TODO]",
+      "previewFailed": "[TODO]",
+      "previewTooLarge": "[TODO]",
+      "previewUnsupported": "[TODO]",
+      "propFavorite": "[TODO]",
+      "propLastModified": "[TODO]",
+      "propPath": "[TODO]",
+      "propSize": "[TODO]",
+      "propSymlinkTarget": "[TODO]",
+      "propWritable": "[TODO]",
+      "properties": "[TODO]",
+      "resize": "[TODO]",
+      "serverError": "[TODO]",
+      "title": "[TODO]",
+      "titleForItem": "[TODO]",
+      "typeArchive": "[TODO]",
+      "typeFile": "[TODO]",
+      "typeFolder": "[TODO]",
+      "typeGenericFile": "[TODO]",
+      "typeImage": "[TODO]",
+      "typePdf": "[TODO]",
+      "typeText": "[TODO]"
+    },
+    "initializing": "[TODO]",
+    "sidebarNav": {
+      "clearRecent": "[TODO]",
+      "favorites": "[TODO]",
+      "locations": "[TODO]",
+      "noFavorites": "[TODO]",
+      "recentAccess": "[TODO]",
+      "title": "[TODO]",
+      "unfavorite": "[TODO]"
+    },
+    "store": {
+      "clipboard": {
+        "copied": "[TODO]",
+        "cut": "[TODO]"
+      },
+      "createDirectory": {
+        "error": "[TODO]",
+        "placeholder": "[TODO]",
+        "success": "[TODO]",
+        "title": "[TODO]"
+      },
+      "delete": {
+        "confirmText": "[TODO]",
+        "error": "[TODO]",
+        "message": "[TODO]",
+        "success": "[TODO]",
+        "title": "[TODO]"
+      },
+      "download": {
+        "error": "[TODO]",
+        "noFolderSupport": "[TODO]"
+      },
+      "errors": {
+        "loadFailed": "[TODO]",
+        "unknown": "[TODO]"
+      },
+      "favorites": {
+        "added": "[TODO]",
+        "removed": "[TODO]"
+      },
+      "move": {
+        "error": "[TODO]",
+        "success": "[TODO]"
+      },
+      "myFiles": "[TODO]",
+      "paste": {
+        "alreadyAtTarget": "[TODO]",
+        "copyNotImplemented": "[TODO]",
+        "error": "[TODO]",
+        "errorMoveIntoSelf": "[TODO]",
+        "moveSuccess": "[TODO]"
+      },
+      "rename": {
+        "error": "[TODO]",
+        "placeholder": "[TODO]",
+        "success": "[TODO]",
+        "title": "[TODO]"
+      },
+      "sharedSpace": "[TODO]",
+      "upload": {
+        "error": "[TODO]",
+        "noValidFiles": "[TODO]",
+        "success": "[TODO]"
+      }
+    },
+    "toolbar": {
+      "advancedFilter": "[TODO]",
+      "filtersCleared": "[TODO]",
+      "gridSize": "[TODO]",
+      "newFolder": "[TODO]",
+      "openAdvancedFilterPlaceholder": "[TODO]",
+      "openViewSettingsPlaceholder": "[TODO]",
+      "paste": "[TODO]",
+      "sortBy": "[TODO]",
+      "sortByDate": "[TODO]",
+      "sortByExtension": "[TODO]",
+      "sortByLabel": "[TODO]",
+      "sortByName": "[TODO]",
+      "sortBySize": "[TODO]",
+      "sortDirection": "[TODO]",
+      "upload": "[TODO]",
+      "uploadFile": "[TODO]",
+      "viewSettings": "[TODO]"
+    }
+  },
+  "graph": {
+    "nodes": {
+      "baseNode": {
+        "clientScriptErrorTitle": "[TODO]",
+        "consoleErrorCannotOpenReferencedWorkflowNoProjectId": "[TODO]",
+        "consoleLogPreviewActionTriggered": "[TODO]",
+        "consoleWarnActionTriggeredUnknownInput": "[TODO]",
+        "consoleWarnCannotHandleAltClickNoActiveTab": "[TODO]",
+        "consoleWarnCannotOpenEditorNoActiveTab": "[TODO]",
+        "consoleWarnCannotOpenRegexEditorNoActiveTab": "[TODO]",
+        "consoleWarnCannotRecordBlurNoActiveTab": "[TODO]",
+        "consoleWarnCannotRecordResizeNoActiveTab": "[TODO]",
+        "consoleWarnCannotSaveRegexRulesNoActiveTab": "[TODO]",
+        "consoleWarnCannotSetPreviewForType": "[TODO]",
+        "consoleWarnClientScriptHookMissingHookName": "[TODO]",
+        "consoleWarnEmitEventMissingArgs": "[TODO]",
+        "consoleWarnOpenDockedEditorNotFound": "[TODO]",
+        "consoleWarnOpenPanelUnhandledPanelId": "[TODO]",
+        "consoleWarnUnknownActionHandlerType": "[TODO]",
+        "executionErrorTooltip": "[TODO]",
+        "historyClearPreviewSummary": "[TODO]",
+        "historyEditSummary": "[TODO]",
+        "historyRegexUpdatedMultipleRules": "[TODO]",
+        "historyRegexUpdatedRulesCount": "[TODO]",
+        "historyRegexUpdatedSpecificRules": "[TODO]",
+        "historyResizeSummary": "[TODO]",
+        "historySetPreviewSummary": "[TODO]",
+        "jumpToReferencedWorkflowTooltip": "[TODO]",
+        "multiInputChildHandleTooltip": "[TODO]",
+        "nodeGroupInfoInputs": "[TODO]",
+        "nodeGroupInfoNodes": "[TODO]",
+        "nodeGroupInfoOutputs": "[TODO]",
+        "tooltipCurrentCachedResult": "[TODO]",
+        "tooltipDefaultName": "[TODO]",
+        "tooltipNoValue": "[TODO]",
+        "tooltipPreview": "[TODO]",
+        "tooltipType": "[TODO]",
+        "tooltipUnserializableObject": "[TODO]",
+        "unnamedNode": "[TODO]"
+      }
+    }
+  },
+  "history": {
+    "groupIO": {
+      "inputDefaultValueChanged": "[TODO]",
+      "inputDescriptionChanged": "[TODO]",
+      "inputMaxValueChanged": "[TODO]",
+      "inputMinValueChanged": "[TODO]",
+      "inputNameChanged": "[TODO]",
+      "inputTypeChanged": "[TODO]",
+      "outputDescriptionChanged": "[TODO]",
+      "outputNameChanged": "[TODO]",
+      "outputTypeChanged": "[TODO]"
+    }
+  },
+  "historyPanel": {
+    "formatDetail": {
+      "arrayLength": "[TODO]",
+      "arrayMoreItems": "[TODO]",
+      "depthLimitExceeded": "[TODO]",
+      "edgeInfo": "[TODO]",
+      "emptyArray": "[TODO]",
+      "emptyObject": "[TODO]",
+      "nodeInfo": "[TODO]",
+      "objectMoreProperties": "[TODO]",
+      "serializationFailed": "[TODO]"
+    },
+    "invalidHistoryItem": "[TODO]",
+    "noActiveTab": "[TODO]",
+    "noHistoryForTab": "[TODO]",
+    "title": "[TODO]",
+    "tooltip": {
+      "detailsTitle": "[TODO]",
+      "indexTitle": "[TODO]",
+      "noDetails": "[TODO]",
+      "operationTitle": "[TODO]",
+      "statusSaved": "[TODO]",
+      "statusTitle": "[TODO]"
+    },
+    "unnamedOperation": "[TODO]"
+  },
+  "home": {
+    "characterCardOverview": "[TODO]",
+    "createNewProject": "[TODO]",
+    "exploreSidebar": "[TODO]",
+    "invalidDate": "[TODO]",
+    "lastModified": "[TODO]",
+    "loadProjectsFailed": "[TODO]",
+    "loadingProjects": "[TODO]",
+    "noDescription": "[TODO]",
+    "noProjects": "[TODO]",
+    "recentProjects": "[TODO]",
+    "subtitle": "[TODO]",
+    "viewAllProjects": "[TODO]",
+    "welcome": "[TODO]"
+  },
+  "nav": {
+    "about": "[TODO]",
+    "characters": "[TODO]",
+    "files": "[TODO]",
+    "home": "[TODO]",
+    "projects": "[TODO]",
+    "settings": "[TODO]"
+  },
+  "nodePanel": {
+    "addOrDragToCanvasTooltip": "[TODO]",
+    "errorFetchingNodes": "[TODO]",
+    "errorInvalidCollapseStateFormat": "[TODO]",
+    "errorLoadingCollapseState": "[TODO]",
+    "errorProactiveFetchFailed": "[TODO]",
+    "errorRequestReloadErrorAPI": "[TODO]",
+    "errorRequestReloadFailedAPI": "[TODO]",
+    "errorSavingCollapseState": "[TODO]",
+    "loadingNodes": "[TODO]",
+    "noMatchingNodes": "[TODO]",
+    "noNodesAvailable": "[TODO]",
+    "reloadFailed": "[TODO]",
+    "reloadNodesTooltip": "[TODO]",
+    "reloadedRefreshing": "[TODO]",
+    "searchPlaceholder": "[TODO]",
+    "title": "[TODO]",
+    "unclassifiedCategory": "[TODO]"
+  },
+  "nodePreviewPanel": {
+    "acceptedTypesLabel": "[TODO]",
+    "configTitle": "[TODO]",
+    "inputsTitle": "[TODO]",
+    "internalComponentsTitle": "[TODO]",
+    "outputsTitle": "[TODO]",
+    "placeholderLabel": "[TODO]",
+    "workflowSelectorDescription": "[TODO]",
+    "workflowSelectorLabel": "[TODO]"
+  },
+  "performancePanel": {
+    "collectButton": "[TODO]",
+    "componentInstancesLabel": "[TODO]",
+    "configSlotsLabel": "[TODO]",
+    "copyTooltip": "[TODO]",
+    "edgeCountLabel": "[TODO]",
+    "errorClipboardNotSupported": "[TODO]",
+    "errorCopyFailed": "[TODO]",
+    "inputSlotsLabel": "[TODO]",
+    "loadingMessage": "[TODO]",
+    "logErrorCopyFailed": "[TODO]",
+    "noDataOrEmptyCanvas": "[TODO]",
+    "nodeCountLabel": "[TODO]",
+    "outputSlotsLabel": "[TODO]",
+    "slotCountLabel": "[TODO]",
+    "successCopied": "[TODO]",
+    "title": "[TODO]",
+    "unknownConfigItem": "[TODO]",
+    "unknownType": "[TODO]",
+    "warnNoStatsToCopy": "[TODO]",
+    "warnNoTabId": "[TODO]"
+  },
+  "projects": {
+    "createDialog": {
+      "message": "[TODO]",
+      "placeholder": "[TODO]",
+      "title": "[TODO]"
+    },
+    "createNew": "[TODO]",
+    "creating": "[TODO]",
+    "errors": {
+      "nameRequired": "[TODO]"
+    },
+    "lastUpdated": "[TODO]",
+    "loadError": "[TODO]",
+    "loading": "[TODO]",
+    "noDescription": "[TODO]",
+    "noProjects": "[TODO]",
+    "title": "[TODO]"
+  },
+  "rightPreviewPanel": {
+    "groupModeButton": "[TODO]",
+    "groupModeTooltip": "[TODO]",
+    "groupOverview": "[TODO]",
+    "keyLabel": "[TODO]",
+    "noActiveWorkflow": "[TODO]",
+    "noGroupOutputsAvailable": "[TODO]",
+    "noGroupOutputsDefined": "[TODO]",
+    "noGroupPreviewData": "[TODO]",
+    "noPreviewData": "[TODO]",
+    "noTargetSelected": "[TODO]",
+    "noTargetSelectedHint": "[TODO]",
+    "noWorkflowAvailable": "[TODO]",
+    "outputSuffix": "[TODO]",
+    "outputValueLabel": "[TODO]",
+    "singleModeButton": "[TODO]",
+    "singleModeTooltip": "[TODO]",
+    "singlePreview": "[TODO]",
+    "slotLabel": "[TODO]",
+    "streamEndedStatus": "[TODO]",
+    "streamTag": "[TODO]",
+    "streamingStatus": "[TODO]",
+    "titleDefault": "[TODO]",
+    "titleGroupOverviewActive": "[TODO]",
+    "titleSinglePreviewActive": "[TODO]",
+    "waitingForStreamData": "[TODO]"
+  },
+  "settings": {
+    "actions": {
+      "add_language_pack_button": "[TODO]",
+      "default_action_button_text": "[TODO]"
+    },
+    "avatar": {
+      "edit": "[TODO]",
+      "preview_alt": "[TODO]"
+    },
+    "categories": {
+      "appearance": "[TODO]",
+      "basic_info": "[TODO]",
+      "editor": "[TODO]",
+      "interface_elements": "[TODO]"
+    },
+    "items": {
+      "dark_mode": "[TODO]",
+      "display_fontSize_desc": "[TODO]",
+      "display_fontSize_label": "[TODO]",
+      "display_showConnectionStatus_desc": "[TODO]",
+      "display_showConnectionStatus_label": "[TODO]",
+      "display_showMinimap_desc": "[TODO]",
+      "display_showMinimap_label": "[TODO]",
+      "fontSize_large": "[TODO]",
+      "fontSize_medium": "[TODO]",
+      "fontSize_small": "[TODO]",
+      "fontSize_x_large": "[TODO]",
+      "fontSize_x_small": "[TODO]",
+      "i18n_addCustomLanguagePack_desc": "[TODO]",
+      "i18n_addCustomLanguagePack_label": "[TODO]",
+      "i18n_currentLanguage_desc": "[TODO]",
+      "i18n_currentLanguage_label": "[TODO]",
+      "light_mode": "[TODO]",
+      "mcp_autoConnect_desc": "[TODO]",
+      "mcp_autoConnect_label": "[TODO]",
+      "mcp_defaultTimeout_desc": "[TODO]",
+      "mcp_defaultTimeout_label": "[TODO]",
+      "system_mode": "[TODO]",
+      "theme_displayMode_desc": "[TODO]",
+      "theme_displayMode_label": "[TODO]",
+      "theme_preset_desc": "[TODO]",
+      "theme_preset_label": "[TODO]",
+      "user_avatar_desc": "[TODO]",
+      "user_avatar_label": "[TODO]",
+      "user_nickname_desc": "[TODO]",
+      "user_nickname_label": "[TODO]"
+    },
+    "notifications": {
+      "invalid_file_type_json": "[TODO]",
+      "invalid_lang_file_meta": "[TODO]",
+      "lang_file_upload_error": "[TODO]",
+      "lang_file_upload_success": "[TODO]",
+      "no_file_selected_error": "[TODO]",
+      "uploading_lang_file": "[TODO]"
+    },
+    "placeholders": {
+      "custom_module_wip": "[TODO]",
+      "no_content": "[TODO]"
+    },
+    "sections": {
+      "about": "[TODO]",
+      "display": "[TODO]",
+      "keybindings": "[TODO]",
+      "llm": "[TODO]",
+      "mcp": "[TODO]",
+      "test_panel": "[TODO]",
+      "user": "[TODO]"
+    },
+    "title": "[TODO]"
+  },
+  "sidebar": {
+    "groupIOEdit": {
+      "addInput": "[TODO]",
+      "addOutput": "[TODO]",
+      "defaultValueLabel": "[TODO]",
+      "defaultValueNotSupported": "[TODO]",
+      "defaultValueNumberPlaceholder": "[TODO]",
+      "defaultValueStringPlaceholder": "[TODO]",
+      "deleteThisInput": "[TODO]",
+      "deleteThisOutput": "[TODO]",
+      "descriptionLabel": "[TODO]",
+      "descriptionPlaceholder": "[TODO]",
+      "displayNamePlaceholder": "[TODO]",
+      "editPropertiesTitle": "[TODO]",
+      "inputsTitle": "[TODO]",
+      "interfaceKeyTooltip": "[TODO]",
+      "maxValueLabel": "[TODO]",
+      "maxValuePlaceholder": "[TODO]",
+      "minValueLabel": "[TODO]",
+      "minValuePlaceholder": "[TODO]",
+      "moveDownTooltip": "[TODO]",
+      "moveUpTooltip": "[TODO]",
+      "nameLabel": "[TODO]",
+      "noActiveWorkflow": "[TODO]",
+      "noInputs": "[TODO]",
+      "noOutputs": "[TODO]",
+      "outputsTitle": "[TODO]",
+      "selectInterfaceToEdit": "[TODO]",
+      "sortInputsTooltip": "[TODO]",
+      "sortOutputsTooltip": "[TODO]",
+      "title": "[TODO]",
+      "typeLabel": "[TODO]"
+    },
+    "guest": "[TODO]",
+    "toggleSidebar": "[TODO]",
+    "toggleTheme": "[TODO]",
+    "userAvatar": "[TODO]"
+  },
+  "sidebarManager": {
+    "buttons": {
+      "goHome": "[TODO]",
+      "settings": "[TODO]"
+    },
+    "theme": {
+      "dark": "[TODO]",
+      "light": "[TODO]",
+      "system": "[TODO]"
+    },
+    "tooltips": {
+      "goHome": "[TODO]",
+      "settings": "[TODO]",
+      "toggleTheme": "[TODO]"
+    }
+  },
+  "testPanel": {
+    "dialogService": {
+      "buttons": {
+        "showAutoClose": "[TODO]",
+        "showConfirm": "[TODO]",
+        "showCustomToast": "[TODO]",
+        "showDangerConfirm": "[TODO]",
+        "showErrorToast": "[TODO]",
+        "showInfoToast": "[TODO]",
+        "showInput": "[TODO]",
+        "showLargeMessage": "[TODO]",
+        "showLargeToast": "[TODO]",
+        "showMessage": "[TODO]",
+        "showMultipleToasts": "[TODO]",
+        "showSuccessToast": "[TODO]",
+        "showTextarea": "[TODO]",
+        "showWarningToast": "[TODO]"
+      },
+      "dialogContent": {
+        "autoCloseText": "[TODO]",
+        "autoCloseTitle": "[TODO]",
+        "confirmText": "[TODO]",
+        "confirmTitle": "[TODO]",
+        "customToastText": "[TODO]",
+        "customToastTitle": "[TODO]",
+        "dangerConfirmNo": "[TODO]",
+        "dangerConfirmText": "[TODO]",
+        "dangerConfirmTitle": "[TODO]",
+        "dangerConfirmYes": "[TODO]",
+        "errorToastText": "[TODO]",
+        "errorToastTitle": "[TODO]",
+        "infoToastText": "[TODO]",
+        "infoToastTitle": "[TODO]",
+        "inputPlaceholder": "[TODO]",
+        "inputText": "[TODO]",
+        "inputTitle": "[TODO]",
+        "largeMessageConfirm": "[TODO]",
+        "largeMessageTitle": "[TODO]",
+        "largeToastTitle": "[TODO]",
+        "messageText": "[TODO]",
+        "messageTitle": "[TODO]",
+        "multiToast1": "[TODO]",
+        "multiToast2": "[TODO]",
+        "multiToast3": "[TODO]",
+        "successToastText": "[TODO]",
+        "successToastTitle": "[TODO]",
+        "textareaPlaceholder": "[TODO]",
+        "textareaText": "[TODO]",
+        "textareaTitle": "[TODO]",
+        "warningToastText": "[TODO]",
+        "warningToastTitle": "[TODO]"
+      },
+      "dialogs": "[TODO]",
+      "results": "[TODO]",
+      "resultsContent": {
+        "autoCloseCancelled": "[TODO]",
+        "autoCloseSuccess": "[TODO]",
+        "cancelled": "[TODO]",
+        "confirmCancelled": "[TODO]",
+        "confirmSuccess": "[TODO]",
+        "customToastTriggered": "[TODO]",
+        "dangerConfirmCancelled": "[TODO]",
+        "dangerConfirmSuccess": "[TODO]",
+        "errorToastTriggered": "[TODO]",
+        "exception": "[TODO]",
+        "infoToastTriggered": "[TODO]",
+        "inputCancelled": "[TODO]",
+        "inputSuccess": "[TODO]",
+        "largeMessageCancelled": "[TODO]",
+        "largeMessageSuccess": "[TODO]",
+        "largeToastTriggered": "[TODO]",
+        "messageCancelled": "[TODO]",
+        "messageSuccess": "[TODO]",
+        "multipleToastsTriggered": "[TODO]",
+        "successToastTriggered": "[TODO]",
+        "textareaCancelled": "[TODO]",
+        "textareaSuccess": "[TODO]",
+        "waiting": "[TODO]",
+        "waitingFor": "[TODO]",
+        "warningToastTriggered": "[TODO]"
+      },
+      "title": "[TODO]",
+      "toasts": "[TODO]"
+    },
+    "settingsControl": {
+      "descriptions": {
+        "boolean": "[TODO]",
+        "number": "[TODO]",
+        "select": "[TODO]",
+        "string": "[TODO]",
+        "textarea": "[TODO]"
+      },
+      "labels": {
+        "boolean": "[TODO]",
+        "number": "[TODO]",
+        "select": "[TODO]",
+        "string": "[TODO]",
+        "textarea": "[TODO]"
+      },
+      "results": "[TODO]",
+      "selectOptions": {
+        "a": "[TODO]",
+        "b": "[TODO]",
+        "c": "[TODO]",
+        "d": "[TODO]"
+      },
+      "title": "[TODO]"
+    },
+    "title": "[TODO]",
+    "uiStore": {
+      "buttons": {
+        "openInitialUsernameSetup": "[TODO]",
+        "openRegexEditor": "[TODO]",
+        "openSettings": "[TODO]"
+      },
+      "results": "[TODO]",
+      "resultsContent": {
+        "initialUsernameClosed": "[TODO]",
+        "initialUsernameSaved": "[TODO]",
+        "openingInitialUsernameSetup": "[TODO]",
+        "openingRegexEditor": "[TODO]",
+        "openingSettings": "[TODO]",
+        "regexEditorSaved": "[TODO]",
+        "settingsClosed": "[TODO]"
+      },
+      "specificModals": "[TODO]",
+      "title": "[TODO]"
+    }
+  },
+  "workflowInfoPanel": {
+    "buttons": {
+      "logJson": "[TODO]"
+    },
+    "hints": {
+      "description": "[TODO]",
+      "markdownSupport": "[TODO]",
+      "name": "[TODO]"
+    },
+    "history": {
+      "descriptionChanged": "[TODO]",
+      "nameChanged": "[TODO]"
+    },
+    "labels": {
+      "createdAt": "[TODO]",
+      "id": "[TODO]",
+      "nodeCount": "[TODO]",
+      "updatedAt": "[TODO]",
+      "version": "[TODO]"
+    },
+    "logs": {
+      "coordinatingDescriptionUpdate": "[TODO]",
+      "coordinatingNameUpdate": "[TODO]",
+      "currentWorkflowJson": "[TODO]",
+      "descriptionUpdateError": "[TODO]",
+      "descriptionUpdateSuccess": "[TODO]",
+      "nameConflictAdjusted": "[TODO]",
+      "nameUpdateError": "[TODO]",
+      "nameUpdateSuccess": "[TODO]",
+      "noActiveStateForLog": "[TODO]"
+    },
+    "noActiveWorkflow": "[TODO]",
+    "nodeList": {
+      "noNodes": "[TODO]",
+      "title": "[TODO]"
+    },
+    "placeholders": {
+      "description": "[TODO]",
+      "name": "[TODO]"
+    },
+    "title": "[TODO]"
+  },
+  "workflowPanel": {
+    "defaultTabName": "[TODO]",
+    "errors": {
+      "loadNoProject": "[TODO]",
+      "loadNotFound": "[TODO]"
+    },
+    "loading": "[TODO]",
+    "logs": {
+      "activatedExistingTab": "[TODO]",
+      "loadErrorNoProject": "[TODO]",
+      "loadErrorNotFound": "[TODO]",
+      "openedNewTab": "[TODO]"
+    },
+    "noMatchingWorkflows": "[TODO]",
+    "noWorkflowsToLoad": "[TODO]",
+    "refreshButton": "[TODO]",
+    "searchPlaceholder": "[TODO]",
+    "status": {
+      "unused": "[TODO]"
+    },
+    "title": "[TODO]",
+    "tooltips": {
+      "delete": "[TODO]",
+      "loadWorkflow": "[TODO]",
+      "orphanGroup": "[TODO]",
+      "referencedBy": "[TODO]"
+    }
+  }
+}

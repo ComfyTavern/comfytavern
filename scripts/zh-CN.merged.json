@@ -1,0 +1,729 @@
+{
+  "_meta": {
+    "name": "Chinese (Simplified)",
+    "nativeName": "简体中文"
+  },
+  "common": {
+    "cancel": "取消",
+    "error": "错误",
+    "success": "成功",
+    "warning": "警告",
+    "refresh": "刷新",
+    "searchEllipsis": "搜索...",
+    "name": "名称",
+    "type": "类型",
+    "retry": "重试",
+    "actions": "操作",
+    "description": "描述"
+  },
+  "nav": {
+    "home": "首页",
+    "settings": "设置",
+    "about": "关于",
+    "projects": "项目",
+    "characters": "角色卡",
+    "files": "文件管理"
+  },
+  "editor": {
+    "toolbar": {},
+    "contextMenu": {}
+  },
+  "home": {
+    "welcome": "欢迎使用 ComfyTavern",
+    "subtitle": "管理您的工作流项目和角色卡，释放创造力。",
+    "recentProjects": "最近项目",
+    "loadingProjects": "正在加载项目...",
+    "loadProjectsFailed": "加载项目失败: {error}",
+    "noProjects": "还没有项目。",
+    "createNewProject": "创建新项目",
+    "lastModified": "最后修改",
+    "noDescription": "暂无描述",
+    "viewAllProjects": "查看所有项目",
+    "characterCardOverview": "角色卡概览",
+    "exploreSidebar": "探索侧边栏以开始您的创作之旅。",
+    "invalidDate": "无效日期"
+  },
+  "editorView": {
+    "loadingNodes": "正在加载节点数据...",
+    "loadingDefinitions": "正在加载节点定义...",
+    "searchNodes": "搜索节点...",
+    "noNodesFound": "未找到节点",
+    "unclassified": "未分类"
+  },
+  "settings": {
+    "title": "设置",
+    "general": {},
+    "sections": {
+      "display": "显示",
+      "user": "用户",
+      "keybindings": "快捷键",
+      "llm": "模型配置",
+      "mcp": "MCP",
+      "test_panel": "测试面板",
+      "about": "关于"
+    },
+    "categories": {
+      "appearance": "外观",
+      "basic_info": "基础信息",
+      "editor": "编辑器",
+      "interface_elements": "界面元素"
+    },
+    "items": {
+      "user_nickname_label": "昵称",
+      "user_nickname_desc": "您在平台中显示的名称。",
+      "user_avatar_label": "头像",
+      "user_avatar_desc": "设置您的个人头像。",
+      "i18n_currentLanguage_label": "界面语言",
+      "i18n_currentLanguage_desc": "选择 ComfyTavern 的界面显示语言。",
+      "theme_displayMode_label": "显示模式",
+      "theme_displayMode_desc": "选择界面的显示模式：浅色、深色或跟随操作系统设置。",
+      "theme_preset_label": "主题预设",
+      "theme_preset_desc": "选择一个预设的主题样式。",
+      "display_fontSize_label": "界面字体大小",
+      "display_fontSize_desc": "调整整个应用界面的相对字体大小。",
+      "display_showMinimap_label": "显示编辑器小地图",
+      "display_showMinimap_desc": "在节点编辑器右侧显示代码小地图。",
+      "display_showConnectionStatus_label": "显示后端连接状态",
+      "display_showConnectionStatus_desc": "在界面底部显示与后端服务的连接状态指示。",
+      "mcp_autoConnect_label": "自动连接MCP服务器",
+      "mcp_autoConnect_desc": "启动时自动连接已配置的MCP服务器。",
+      "mcp_defaultTimeout_label": "默认超时 (ms)",
+      "mcp_defaultTimeout_desc": "与MCP服务器通信的默认超时时间。",
+      "light_mode": "浅色",
+      "dark_mode": "深色",
+      "system_mode": "系统",
+      "fontSize_x_small": "更小",
+      "fontSize_small": "小",
+      "fontSize_medium": "中",
+      "fontSize_large": "大",
+      "fontSize_x_large": "更大",
+      "i18n_addCustomLanguagePack_label": "添加自定义语言包",
+      "i18n_addCustomLanguagePack_desc": "选择一个 .json 格式的语言包文件进行上传。"
+    },
+    "actions": {
+      "default_action_button_text": "执行操作",
+      "add_language_pack_button": "添加语言包"
+    },
+    "notifications": {
+      "invalid_file_type_json": "文件类型无效，请选择 .json 文件。",
+      "invalid_lang_file_meta": "语言包文件格式无效，缺少必要的元数据 (_meta.name, _meta.nativeName)。",
+      "uploading_lang_file": "正在上传语言包...",
+      "lang_file_upload_success": "语言包上传成功！",
+      "lang_file_upload_error": "语言包上传失败：{error}",
+      "no_file_selected_error": "未选择文件或文件无法读取。"
+    },
+    "advanced": {},
+    "placeholders": {
+      "no_content": "咕？这里似乎没有内容... 可能是正在施工中。",
+      "custom_module_wip": "这里将来是一个自定义的复杂配置模块，目前正在施工中... 咕~"
+    },
+    "avatar": {
+      "edit": "编辑头像",
+      "preview_alt": "用户头像"
+    }
+  },
+  "dialogs": {
+    "confirmDelete": {}
+  },
+  "sidebar": {
+    "userAvatar": "用户头像",
+    "guest": "游客",
+    "toggleTheme": "切换主题",
+    "toggleSidebar": "折叠/展开侧边栏",
+    "groupIOEdit": {
+      "title": "工作流接口",
+      "inputsTitle": "输入 (Inputs)",
+      "sortInputsTooltip": "按名称排序输入",
+      "noInputs": "无输入接口",
+      "addInput": "添加输入",
+      "outputsTitle": "输出 (Outputs)",
+      "sortOutputsTooltip": "按名称排序输出",
+      "noOutputs": "无输出接口",
+      "addOutput": "添加输出",
+      "editPropertiesTitle": "编辑接口属性",
+      "selectInterfaceToEdit": "请在上方列表中选择一个接口进行编辑。",
+      "interfaceKeyTooltip": "接口 Key (唯一标识符)",
+      "moveUpTooltip": "上移",
+      "moveDownTooltip": "下移",
+      "deleteThisInput": "删除此输入",
+      "nameLabel": "名称:",
+      "displayNamePlaceholder": "显示名称",
+      "typeLabel": "类型:",
+      "descriptionLabel": "描述:",
+      "descriptionPlaceholder": "接口描述信息",
+      "defaultValueLabel": "默认值:",
+      "defaultValueNumberPlaceholder": "默认数值",
+      "defaultValueStringPlaceholder": "默认字符串 (支持多行)",
+      "defaultValueNotSupported": "不支持此类型的默认值",
+      "minValueLabel": "最小值:",
+      "minValuePlaceholder": "最小值 (可选)",
+      "maxValueLabel": "最大值:",
+      "maxValuePlaceholder": "最大值 (可选)",
+      "deleteThisOutput": "删除此输出",
+      "noActiveWorkflow": "没有活动的工作流或工作流数据不可用。"
+    }
+  },
+  "projects": {
+    "title": "我的项目",
+    "createNew": "创建新项目",
+    "creating": "创建中...",
+    "loading": "正在加载项目...",
+    "loadError": "加载错误:",
+    "noProjects": "还没有项目，点击右上角按钮创建一个吧！",
+    "noDescription": "暂无描述",
+    "lastUpdated": "最后更新",
+    "createDialog": {
+      "title": "创建新项目",
+      "message": "请输入新项目的名称：",
+      "placeholder": "项目名称"
+    },
+    "errors": {
+      "nameRequired": "项目名称不能为空！"
+    }
+  },
+  "characters": {
+    "title": "我的角色卡",
+    "loading": "正在加载角色卡...",
+    "loadError": "加载错误:",
+    "loadErrorDetail": "加载角色卡失败: {error}",
+    "noCharacters": "没有找到角色卡。"
+  },
+  "characterPreview": {
+    "loading": "正在加载角色卡...",
+    "loadError": "加载错误:",
+    "loadErrorDetail": "加载角色卡预览失败: {error}",
+    "noCards": "没有找到角色卡。",
+    "viewAll": "查看全部角色卡"
+  },
+  "fileManager": {
+    "initializing": "正在初始化文件管理器...",
+    "toolbar": {
+      "upload": "上传",
+      "uploadFile": "上传文件",
+      "newFolder": "新建文件夹",
+      "paste": "粘贴",
+      "sortBy": "排序方式",
+      "gridSize": "网格视图尺寸",
+      "sortDirection": "反向排序",
+      "sortByLabel": "排序依据",
+      "sortByName": "名称",
+      "sortByExtension": "扩展名",
+      "sortByDate": "修改日期",
+      "sortBySize": "大小",
+      "advancedFilter": "高级筛选",
+      "viewSettings": "显示设置",
+      "filtersCleared": "筛选已清除",
+      "openAdvancedFilterPlaceholder": "打开高级筛选（占位）",
+      "openViewSettingsPlaceholder": "打开显示设置（占位）"
+    },
+    "breadcrumbs": {
+      "goUp": "返回上一级",
+      "root": "已在根目录",
+      "editPath": "编辑路径",
+      "pathPlaceholder": "输入路径...",
+      "confirm": "确认",
+      "cancel": "取消",
+      "invalidPathError": "路径格式无效，必须包含协议头 (如 user://)。",
+      "invalidPathExampleError": "路径格式无效。示例: user://my/folder/"
+    },
+    "browser": {
+      "emptyFolder": "此文件夹为空，或没有匹配筛选条件的项目。",
+      "clearFilters": "清除筛选",
+      "colSize": "大小",
+      "colDate": "修改日期",
+      "contextMenu": {
+        "open": "打开",
+        "download": "下载",
+        "rename": "重命名",
+        "moveTo": "移动到...",
+        "copyPath": "复制路径",
+        "addToFavorites": "添加到收藏夹",
+        "removeFromFavorites": "从收藏夹移除",
+        "delete": "删除",
+        "newFolder": "新建文件夹",
+        "paste": "粘贴",
+        "noActions": "无可用操作",
+        "refresh": "刷新"
+      }
+    },
+    "detailPanel": {
+      "title": "详情",
+      "titleForItem": "项目详情",
+      "properties": "属性",
+      "preview": "预览",
+      "close": "关闭面板",
+      "resize": "调整大小",
+      "noItemSelected": "未选择任何项目",
+      "propSize": "大小:",
+      "propPath": "路径:",
+      "propLastModified": "最后修改:",
+      "propSymlinkTarget": "符号链接目标:",
+      "propWritable": "可写:",
+      "propFavorite": "收藏:",
+      "typeFolder": "文件夹",
+      "typeImage": "图片",
+      "typeText": "文本文档",
+      "typePdf": "PDF 文档",
+      "typeArchive": "压缩文件",
+      "typeFile": "{ext} 文件",
+      "typeGenericFile": "文件",
+      "previewFailed": "预览失败:",
+      "loadingPreview": "正在加载预览...",
+      "previewUnsupported": "此文件类型不支持预览，或预览内容为空。",
+      "previewTooLarge": "... (文件过大，仅显示部分内容)",
+      "serverError": "服务器错误: {error}"
+    },
+    "sidebarNav": {
+      "title": "导航",
+      "locations": "位置",
+      "recentAccess": "最近访问",
+      "clearRecent": "清空最近访问",
+      "favorites": "收藏夹",
+      "noFavorites": "暂无收藏",
+      "unfavorite": "取消收藏"
+    },
+    "store": {
+      "myFiles": "我的文件",
+      "sharedSpace": "共享空间",
+      "itemTypes": {},
+      "errors": {
+        "loadFailed": "加载文件列表失败: {error}",
+        "unknown": "未知错误"
+      },
+      "createDirectory": {
+        "title": "新建文件夹",
+        "placeholder": "请输入文件夹名称",
+        "success": "文件夹 \"{dirName}\" 创建成功",
+        "error": "创建文件夹失败: {error}"
+      },
+      "rename": {
+        "title": "重命名 {itemType}",
+        "placeholder": "请输入新名称",
+        "success": "已重命名为 \"{newName}\"",
+        "error": "重命名失败: {error}"
+      },
+      "delete": {
+        "title": "确认删除",
+        "message": "您确定要删除选中的 {count} 个项目吗？此操作可能无法撤销。",
+        "confirmText": "删除",
+        "success": "{count} 个项目已删除",
+        "error": "删除失败: {error}"
+      },
+      "move": {
+        "success": "{count} 个项目已移动",
+        "error": "移动失败: {error}"
+      },
+      "download": {
+        "noFolderSupport": "暂不支持下载文件夹。",
+        "error": "获取下载链接失败: {error}"
+      },
+      "clipboard": {
+        "copied": "{count} 个项目已复制到剪贴板",
+        "cut": "{count} 个项目已剪切到剪贴板"
+      },
+      "paste": {
+        "errorMoveIntoSelf": "不能将文件夹移动到其自身或其子文件夹中。",
+        "alreadyAtTarget": "项目已在目标位置。",
+        "copyNotImplemented": "复制功能暂未实现。",
+        "moveSuccess": "{count} 个项目已移动",
+        "error": "粘贴失败: {error}"
+      },
+      "favorites": {
+        "added": "已添加到收藏夹",
+        "removed": "已从收藏夹移除"
+      },
+      "upload": {
+        "noValidFiles": "没有有效的文件被选中上传。",
+        "success": "{count} 个文件上传成功",
+        "error": "上传失败: {error}"
+      }
+    }
+  },
+  "statusBar": {
+    "tooltip": {},
+    "status": {}
+  },
+  "history": {
+    "groupIO": {
+      "inputNameChanged": "修改输入 {inputName} 名称: '{oldName}' -> '{newName}'",
+      "inputTypeChanged": "修改输入 {inputName} 类型: '{oldType}' -> '{newType}'",
+      "inputDescriptionChanged": "修改输入 {inputName} 描述",
+      "inputDefaultValueChanged": "修改输入 {inputName} 默认值",
+      "inputMinValueChanged": "修改输入 {inputName} 最小值",
+      "inputMaxValueChanged": "修改输入 {inputName} 最大值",
+      "outputNameChanged": "修改输出 {outputName} 名称: '{oldName}' -> '{newName}'",
+      "outputTypeChanged": "修改输出 {outputName} 类型: '{oldType}' -> '{newType}'",
+      "outputDescriptionChanged": "修改输出 {outputName} 描述"
+    }
+  },
+  "historyPanel": {
+    "title": "操作历史",
+    "noActiveTab": "没有活动的标签页。",
+    "noHistoryForTab": "当前标签页没有历史记录。",
+    "unnamedOperation": "未命名操作",
+    "invalidHistoryItem": "无效的历史记录项",
+    "tooltip": {
+      "detailsTitle": "详情:",
+      "noDetails": "无",
+      "operationTitle": "操作:",
+      "indexTitle": "索引:",
+      "statusTitle": "状态:",
+      "statusSaved": "(已保存)"
+    },
+    "formatDetail": {
+      "depthLimitExceeded": "[深度超限]",
+      "nodeInfo": "节点: {nodeName} (类型: {nodeType}, ID: {displayNodeId})",
+      "edgeInfo": "边: {displayEdgeId} (源: {displaySourceNodeId}({sourceHandle}) -> 目标: {displayTargetNodeId}({targetHandle}))",
+      "emptyArray": "[] (0)",
+      "arrayLength": "( {length} )",
+      "arrayMoreItems": "- ... ({count} more)",
+      "emptyObject": "{}",
+      "objectMoreProperties": "... ({count} more properties)",
+      "serializationFailed": "[序列化失败]"
+    }
+  },
+  "nodePanel": {
+    "title": "节点库",
+    "reloadNodesTooltip": "重新加载节点定义",
+    "searchPlaceholder": "搜索节点...",
+    "reloadedRefreshing": "节点已重载，正在刷新列表...",
+    "loadingNodes": "加载节点中...",
+    "reloadFailed": "重载失败: {error}",
+    "addOrDragToCanvasTooltip": "点击或拖拽添加到画布",
+    "noMatchingNodes": "没有找到匹配的节点",
+    "unclassifiedCategory": "未分类",
+    "noNodesAvailable": "没有可用的节点定义",
+    "errorSavingCollapseState": "无法保存节点面板折叠状态到 localStorage:",
+    "errorFetchingNodes": "获取节点失败 (NodePanel):",
+    "errorInvalidCollapseStateFormat": "localStorage 中的节点面板折叠状态格式不正确，已忽略。",
+    "errorLoadingCollapseState": "无法从 localStorage 加载或解析节点面板折叠状态:",
+    "errorProactiveFetchFailed": "主动获取节点列表失败。",
+    "errorRequestReloadFailedAPI": "请求节点重载失败 (API)",
+    "errorRequestReloadErrorAPI": "请求节点重载时出错 (API): {errorMessage}"
+  },
+  "nodePreviewPanel": {
+    "inputsTitle": "输入参数",
+    "outputsTitle": "输出参数",
+    "configTitle": "配置项",
+    "acceptedTypesLabel": "接受类型:",
+    "placeholderLabel": "占位提示:",
+    "internalComponentsTitle": "内部组件",
+    "workflowSelectorLabel": "工作流选择器",
+    "workflowSelectorDescription": "选择要在此节点组中实例化的工作流。"
+  },
+  "performancePanel": {
+    "title": "节点组件统计",
+    "collectButton": "统计当前画布数据",
+    "copyTooltip": "复制统计数据",
+    "loadingMessage": "正在统计...",
+    "noDataOrEmptyCanvas": "没有收集到数据，或者画布为空。",
+    "componentInstancesLabel": "各类节点中所用组件实例数量",
+    "warnNoTabId": "PerformancePanel:无法收集统计信息，当前标签页 ID 无效。",
+    "nodeCountLabel": "节点类型总数",
+    "unknownType": "未知类型",
+    "edgeCountLabel": "连线总数",
+    "unknownConfigItem": "未知配置项",
+    "slotCountLabel": "槽位总数",
+    "inputSlotsLabel": "输入槽位",
+    "outputSlotsLabel": "输出槽位",
+    "configSlotsLabel": "配置槽位",
+    "warnNoStatsToCopy": "没有可复制的统计数据。",
+    "errorClipboardNotSupported": "您的浏览器不支持或未授权剪贴板写入操作。",
+    "errorCopyFailed": "复制失败: {message}",
+    "logErrorCopyFailed": "复制统计数据失败:",
+    "successCopied": "统计数据已复制到剪贴板！"
+  },
+  "rightPreviewPanel": {
+    "titleSinglePreviewActive": "单一预览: {nodeName} (ID: {nodeId})",
+    "titleGroupOverviewActive": "组输出总览: {workflowName}",
+    "titleDefault": "预览",
+    "singlePreview": "单一预览",
+    "noTargetSelected": "（未选目标）",
+    "groupOverview": "组输出总览",
+    "noWorkflowAvailable": "（无可用工作流）",
+    "singleModeTooltip": "单一插槽预览模式 (含流式)",
+    "singleModeButton": "单一",
+    "groupModeTooltip": "组输出总览模式",
+    "groupModeButton": "组总览",
+    "slotLabel": "插槽:",
+    "keyLabel": "Key:",
+    "outputSuffix": "输出",
+    "streamTag": "流",
+    "streamingStatus": "流式传输中...",
+    "streamEndedStatus": "流已结束",
+    "waitingForStreamData": "等待流数据...",
+    "noPreviewData": "无可用预览数据或插槽未产生输出。",
+    "noTargetSelectedHint": "无预览目标被选中。右键点击节点输出桩或连线以预览。",
+    "noActiveWorkflow": "没有活动的工作流。",
+    "noGroupOutputsDefined": "当前工作流没有定义组输出接口。",
+    "outputValueLabel": "输出值:",
+    "noGroupOutputsAvailable": "当前工作流的组输出没有可用接口。",
+    "noGroupPreviewData": "无可用预览数据或接口未产生输出。"
+  },
+  "sidebarManager": {
+    "tooltips": {
+      "goHome": "返回主页",
+      "toggleTheme": "切换显示模式",
+      "settings": "设置"
+    },
+    "buttons": {
+      "goHome": "返回",
+      "settings": "设置"
+    },
+    "theme": {
+      "system": "系统",
+      "dark": "暗色",
+      "light": "亮色"
+    },
+    "tabs": {
+      "nodes": {},
+      "workflows": {},
+      "interface": {},
+      "history": {},
+      "performance": {},
+      "info": {}
+    }
+  },
+  "workflowInfoPanel": {
+    "title": "工作流信息",
+    "labels": {
+      "id": "ID:",
+      "createdAt": "创建时间:",
+      "updatedAt": "更新时间:",
+      "version": "版本:",
+      "nodeCount": "节点数量:"
+    },
+    "placeholders": {
+      "name": "工作流名称",
+      "description": "工作流描述信息..."
+    },
+    "hints": {
+      "name": "工作流的显示名称。如果名称冲突，会自动添加后缀。",
+      "description": "详细描述这个工作流的功能和用途。",
+      "markdownSupport": "支持markdown语法。"
+    },
+    "buttons": {
+      "logJson": "输出工作流 JSON 到控制台 (Debug)"
+    },
+    "nodeList": {
+      "title": "工作流节点列表 ({count})",
+      "noNodes": "此工作流中没有节点。"
+    },
+    "noActiveWorkflow": "没有活动的工作流或数据不可用。",
+    "logs": {
+      "nameConflictAdjusted": "名称调整以避免冲突：从 \"{oldName}\" 调整为 \"{newName}\"",
+      "coordinatingNameUpdate": "协调工作流名称更新 (标签页 {tabId}) 为: {newName}",
+      "nameUpdateSuccess": "工作流名称更新已成功协调 (标签页 {tabId})。",
+      "nameUpdateError": "协调工作流名称更新时出错 (标签页 {tabId}):",
+      "coordinatingDescriptionUpdate": "协调工作流描述更新 (标签页 {tabId})",
+      "descriptionUpdateSuccess": "工作流描述更新已成功协调 (标签页 {tabId})。",
+      "descriptionUpdateError": "协调工作流描述更新时出错 (标签页 {tabId}):",
+      "currentWorkflowJson": "当前工作流 JSON (从 elements 构建):",
+      "noActiveStateForLog": "没有活动的 activeState、elements 或 workflowData 可供输出。"
+    },
+    "history": {
+      "nameChanged": "修改工作流名称为 \"{newName}\"",
+      "descriptionChanged": "修改工作流描述"
+    }
+  },
+  "workflowPanel": {
+    "title": "工作流",
+    "searchPlaceholder": "搜索工作流...",
+    "refreshButton": "刷新列表",
+    "loading": "加载中...",
+    "noWorkflowsToLoad": "没有可加载的工作流。",
+    "noMatchingWorkflows": "没有匹配的工作流。",
+    "status": {
+      "unused": "未使用"
+    },
+    "tooltips": {
+      "loadWorkflow": "点击加载 **{name}**\n\n---\n{description}",
+      "orphanGroup": "这是一个由“创建组”产生且当前未被引用的工作流",
+      "referencedBy": "被 {count} 个工作流引用",
+      "delete": "删除"
+    },
+    "errors": {
+      "loadNotFound": "无法加载工作流：未在列表中找到。",
+      "loadNoProject": "无法加载工作流：缺少项目信息。"
+    },
+    "defaultTabName": "工作流 {idSuffix}",
+    "logs": {
+      "loadErrorNotFound": "WorkflowPanel: 未在可用列表中找到 ID 为 {workflowId} 的工作流。",
+      "loadErrorNoProject": "WorkflowPanel: 无法加载工作流，当前项目 ID 缺失。",
+      "activatedExistingTab": "WorkflowPanel: 已激活工作流 {workflowId} 的现有标签页 {tabId}",
+      "openedNewTab": "WorkflowPanel: 已为工作流 {workflowId} 打开新标签页 {tabId}"
+    }
+  },
+  "testPanel": {
+    "title": "弹窗与UI组件测试面板",
+    "dialogService": {
+      "title": "DialogService (模态对话框与通知)",
+      "dialogs": "模态对话框 (Dialogs)",
+      "toasts": "通知 (Toasts)",
+      "results": "DialogService 操作结果:",
+      "buttons": {
+        "showMessage": "显示消息对话框",
+        "showConfirm": "显示确认对话框",
+        "showDangerConfirm": "显示危险操作确认",
+        "showAutoClose": "显示自动关闭对话框",
+        "showInput": "显示输入对话框",
+        "showTextarea": "显示多行输入对话框",
+        "showLargeMessage": "显示超大文本消息对话框",
+        "showInfoToast": "显示信息通知",
+        "showSuccessToast": "显示成功通知",
+        "showWarningToast": "显示警告通知",
+        "showErrorToast": "显示错误通知",
+        "showCustomToast": "显示自定义通知",
+        "showMultipleToasts": "显示多个通知",
+        "showLargeToast": "显示超大文本通知"
+      },
+      "resultsContent": {
+        "waiting": "等待操作...",
+        "waitingFor": "等待 {actionName} 响应...",
+        "cancelled": "{actionName}：用户取消了操作或关闭了对话框。",
+        "exception": "{actionName}：发生异常: {error}",
+        "messageSuccess": "消息对话框：用户点击了确定。",
+        "messageCancelled": "消息对话框：用户关闭了对话框或发生异常。",
+        "confirmSuccess": "确认对话框：用户选择 -> {choice}",
+        "confirmCancelled": "确认对话框：用户取消了操作。",
+        "dangerConfirmSuccess": "危险操作确认：用户选择 -> {choice}",
+        "dangerConfirmCancelled": "危险操作确认：用户取消了操作。",
+        "autoCloseSuccess": "自动关闭对话框：已自动关闭或用户点击了确定。",
+        "autoCloseCancelled": "自动关闭对话框：用户在自动关闭前关闭了对话框或发生异常。",
+        "inputSuccess": "输入对话框：用户输入了 \"{input}\"",
+        "inputCancelled": "输入对话框：用户取消了输入。",
+        "textareaSuccess": "多行输入对话框：用户输入了 \"{input}\"",
+        "textareaCancelled": "多行输入对话框：用户取消了输入。",
+        "largeMessageSuccess": "超大文本消息对话框：用户点击了确定。",
+        "largeMessageCancelled": "超大文本消息对话框：用户关闭了对话框或发生异常。",
+        "infoToastTriggered": "触发了信息通知。",
+        "successToastTriggered": "触发了成功通知。",
+        "warningToastTriggered": "触发了警告通知。",
+        "errorToastTriggered": "触发了错误通知。",
+        "customToastTriggered": "触发了自定义通知。",
+        "multipleToastsTriggered": "触发了多个通知。",
+        "largeToastTriggered": "触发了超大文本通知。"
+      },
+      "dialogContent": {
+        "messageTitle": "消息提示",
+        "messageText": "这是一个简单的消息对话框，只有一个确定按钮。",
+        "confirmTitle": "确认操作",
+        "confirmText": "您确定要执行此操作吗？",
+        "dangerConfirmTitle": "危险操作确认",
+        "dangerConfirmText": "此操作不可逆转，您确定要继续吗？",
+        "dangerConfirmYes": "是的，删除它",
+        "dangerConfirmNo": "不了",
+        "autoCloseTitle": "自动关闭示例",
+        "autoCloseText": "此对话框将在3秒后自动关闭。",
+        "inputTitle": "请输入信息",
+        "inputText": "请输入您的昵称：",
+        "inputPlaceholder": "例如：咕咕",
+        "textareaTitle": "请输入反馈",
+        "textareaText": "请详细描述您遇到的问题或建议：",
+        "textareaPlaceholder": "请在此处输入您的反馈内容...",
+        "largeMessageTitle": "超大文本消息",
+        "largeMessageConfirm": "朕已阅",
+        "customToastTitle": "自定义样式通知",
+        "customToastText": "这个通知在底部中间，持续5秒。",
+        "infoToastTitle": "提示",
+        "infoToastText": "这是一条信息通知！",
+        "successToastTitle": "成功",
+        "successToastText": "操作已成功完成！",
+        "warningToastTitle": "警告",
+        "warningToastText": "请注意，这是一个警告。",
+        "errorToastTitle": "错误",
+        "errorToastText": "糟糕，发生了一个错误！",
+        "multiToast1": "通知 1",
+        "multiToast2": "通知 2 (延迟)",
+        "multiToast3": "通知 3 (延迟)",
+        "largeToastTitle": "超大文本通知"
+      }
+    },
+    "uiStore": {
+      "title": "UiStore (全局模态框)",
+      "specificModals": "特定模态框",
+      "results": "UiStore 操作结果:",
+      "buttons": {
+        "openSettings": "打开设置模态框 (App.vue 管理)",
+        "openRegexEditor": "打开正则编辑器模态框",
+        "openInitialUsernameSetup": "打开初始用户名设置"
+      },
+      "resultsContent": {
+        "initialUsernameClosed": "初始用户名设置模态框已关闭 (事件)。",
+        "initialUsernameSaved": "初始用户名已保存 (事件)。",
+        "openingSettings": "尝试打开设置模态框...",
+        "openingRegexEditor": "尝试打开正则编辑器模态框...",
+        "regexEditorSaved": "正则编辑器已保存，规则数: {count}。查看控制台获取详情。",
+        "openingInitialUsernameSetup": "尝试打开初始用户名设置模态框...",
+        "settingsClosed": "设置模态框已关闭。"
+      }
+    },
+    "settingsControl": {
+      "title": "SettingControl (通过 SettingsPanel) 测试",
+      "results": "SettingsStore 当前值 (验证用):",
+      "labels": {
+        "string": "字符串输入 (String)",
+        "textarea": "文本域输入 (Textarea)",
+        "number": "数字输入 (Number)",
+        "boolean": "布尔切换 (Boolean)",
+        "select": "选择框 (Select)"
+      },
+      "descriptions": {
+        "string": "用于测试单行文本输入。",
+        "textarea": "用于测试多行文本输入。",
+        "number": "用于测试数字输入，带范围和步长。",
+        "boolean": "用于测试开关状态。",
+        "select": "用于测试下拉选择。"
+      },
+      "selectOptions": {
+        "a": "选项 A (option1)",
+        "b": "选项 B (option2)",
+        "c": "选项 C (option3)",
+        "d": "选项 D (原计划禁用)"
+      }
+    }
+  },
+  "graph": {
+    "nodes": {
+      "baseNode": {
+        "clientScriptErrorTitle": "客户端脚本错误: {error}",
+        "consoleErrorCannotOpenReferencedWorkflowNoProjectId": "无法打开引用的工作流：当前项目 ID 未找到。",
+        "consoleLogPreviewActionTriggered": "[BaseNode {nodeId}] 预览操作已在输入项 '{inputKey}' 上触发，值为: {value}",
+        "consoleWarnActionTriggeredUnknownInput": "[BaseNode {nodeId}] 操作由未知的输入项触发: {inputKey}",
+        "consoleWarnCannotHandleAltClickNoActiveTab": "[BaseNode] 无法处理输出项的 Alt+Click 事件：没有活动的标签页。",
+        "consoleWarnCannotOpenEditorNoActiveTab": "[BaseNode {nodeId}] 无法打开编辑器：没有活动的标签页。",
+        "consoleWarnCannotOpenRegexEditorNoActiveTab": "[BaseNode {nodeId}] 无法打开正则表达式编辑器：没有活动的标签页。",
+        "consoleWarnCannotRecordBlurNoActiveTab": "[BaseNode {nodeId}] 无法记录组件失焦：没有活动的标签页。",
+        "consoleWarnCannotRecordResizeNoActiveTab": "[BaseNode {nodeId}] 无法记录组件调整大小：没有活动的标签页。",
+        "consoleWarnCannotSaveRegexRulesNoActiveTab": "[BaseNode {nodeId}] 无法保存正则表达式规则：没有活动的标签页。",
+        "consoleWarnCannotSetPreviewForType": "[BaseNode] Alt+Click: 无法将类型为 {type} 的接口 ({nodeId}::{slotKey}) 设为预览目标。",
+        "consoleWarnClientScriptHookMissingHookName": "[BaseNode {nodeId}] 'client_script_hook' 操作缺少 hookName。",
+        "consoleWarnEmitEventMissingArgs": "[BaseNode {nodeId}] 'emit_event' 操作缺少 eventName 或 nodeRootRef。",
+        "consoleWarnOpenDockedEditorNotFound": "[BaseNode {nodeId}] `openDockedEditorForNodeInput` 方法未找到。",
+        "consoleWarnOpenPanelUnhandledPanelId": "[BaseNode {nodeId}] 'open_panel' 操作接收到未处理的 panelId '{panelId}'。",
+        "consoleWarnUnknownActionHandlerType": "[BaseNode {nodeId}] 未知的操作处理器类型: {handlerType}",
+        "executionErrorTooltip": "执行错误: {error}",
+        "historyClearPreviewSummary": "清除了节点「{nodeIdentifier}」接口「{slotIdentifier}」的预览",
+        "historyEditSummary": "编辑 {nodeName} - {inputDisplayName}: \"{value}\"",
+        "historyRegexUpdatedMultipleRules": "规则: {rules} 等 ({count} 条)",
+        "historyRegexUpdatedRulesCount": "更新了 {count} 条规则。",
+        "historyRegexUpdatedSpecificRules": "规则: {rules}",
+        "historyResizeSummary": "调整 {nodeName} - {inputDisplayName} 高度: {height}px",
+        "historySetPreviewSummary": "将节点「{nodeIdentifier}」的接口「{slotIdentifier}」设为预览目标",
+        "jumpToReferencedWorkflowTooltip": "跳转到引用的工作流",
+        "multiInputChildHandleTooltip": "{type} (接口 {index})",
+        "nodeGroupInfoInputs": "{count} 个输入",
+        "nodeGroupInfoNodes": "{count} 个节点",
+        "nodeGroupInfoOutputs": "{count} 个输出",
+        "tooltipCurrentCachedResult": "当前缓存结果:",
+        "tooltipDefaultName": "默认名称: {name}",
+        "tooltipNoValue": "无",
+        "tooltipPreview": "预览:",
+        "tooltipType": "类型: {type}",
+        "tooltipUnserializableObject": "[无法序列化的对象]",
+        "unnamedNode": "未命名节点",
+        "unknownType": "未知"
+      }
+    }
+  }
+}
