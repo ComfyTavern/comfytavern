@@ -1,4 +1,8 @@
 {
+  "_meta": {
+    "name": "[TODO: English name for the language, e.g., French (France)]",
+    "nativeName": "[TODO: Native name for the language, e.g., Français (France)]"
+  },
   "auth": {
     "initialUsernameSetup": {
       "changeLaterHint": "[TODO]",
@@ -969,9 +973,5 @@
       "orphanGroup": "[TODO]",
       "referencedBy": "[TODO]"
     }
-  },
-  "_meta": {
-    "name": "[TODO: English name for the language, e.g., French (France)]",
-    "nativeName": "[TODO: Native name for the language, e.g., Français (France)]"
   }
 }
