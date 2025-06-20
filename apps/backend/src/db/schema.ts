@@ -113,6 +113,7 @@ export const activatedModels = sqliteTable('activated_models', {
   defaultChannelRef: text('default_channel_ref'), // 关联到 apiChannels.refName
   tags: text('tags', { mode: 'json' }), // string[]
   tokenizerId: text('tokenizer_id'),
+  createdAt: text('created_at').notNull().default(new Date().toISOString()),
 });
 
 export const activatedModelsRelations = relations(activatedModels, ({ one }) => ({

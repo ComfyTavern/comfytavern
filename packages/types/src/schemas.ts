@@ -302,6 +302,17 @@ export interface ILlmApiAdapter {
    * @returns 一个解析为标准化响应的 Promise。
    */
   execute(payload: LlmAdapterRequestPayload): Promise<StandardResponse>;
+
+  /**
+   * 从该适配器对应的外部服务发现可用的模型列表。
+   * @param credentials 包含 base_url, api_key 等认证信息。
+   * @returns 返回一个只包含模型基础信息的列表。
+   */
+  listModels(credentials: {
+    base_url: string;
+    api_key?: string;
+    custom_headers?: Record<string, string>;
+  }): Promise<Array<{ id: string; [key: string]: any }>>;
 }
 
 

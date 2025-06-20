@@ -13,6 +13,28 @@ import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
  * 用于将标准化的 LLM 请求转换为 OpenAI API 格式，并处理其响应。
  */
 export class OpenAIAdapter implements ILlmApiAdapter {
+
+  public async listModels(credentials: {
+    base_url: string;
+    api_key?: string;
+  }): Promise<Array<{ id: string;[key: string]: any; }>> {
+    const { base_url, api_key } = credentials;
+    const client = new OpenAI({
+      baseURL: base_url,
+      apiKey: api_key,
+    });
+
+    try {
+      const models = await client.models.list();
+      return models.data;
+    } catch (error: any) {
+      console.error(`[OpenAIAdapter] Failed to list models from ${base_url}:`, error.message);
+      // 返回空数组或抛出自定义错误，让调用方处理
+      // 返回空数组对前端更友好
+      return [];
+    }
+  }
+
   /**
    * 执行对 OpenAI API 的聊天补全请求。
    * @param payload - 包含消息、模型配置和渠道配置的标准化负载。
