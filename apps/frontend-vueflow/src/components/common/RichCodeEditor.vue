@@ -63,7 +63,7 @@ import { vscodeDark, vscodeLight } from "@uiw/codemirror-theme-vscode";
 import { comfyTavernBaseTheme } from "@/codemirror-theme/comfyTavernEditorTheme"; // 导入自定义基础主题
 import type { BreadcrumbData, EditorInstanceConfig } from "@/types/editorTypes";
 import { useThemeStore } from "@/stores/theme";
-import EditorContextMenu from "./EditorContextMenu.vue"; // 导入右键菜单组件
+import EditorContextMenu from "../graph/editor/EditorContextMenu.vue"; // 导入右键菜单组件
 
 const props = defineProps<{
   editorId: string;
