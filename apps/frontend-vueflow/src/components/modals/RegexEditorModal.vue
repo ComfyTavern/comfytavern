@@ -213,7 +213,7 @@ watch(
           <div class="p-2 border-b border-border-base flex justify-between items-center">
             <span class="text-sm font-medium text-text-base">规则列表</span>
             <button @click="addNewRule"
-              class="p-1 text-primary hover:text-primary-focus" title="添加新规则">
+              class="p-1 text-primary hover:text-primary-focus" v-comfy-tooltip="'添加新规则'">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                 stroke="currentColor" class="w-5 h-5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -237,11 +237,11 @@ watch(
                   </span>
                   <input type="checkbox" v-model="rule.enabled" @click.stop
                     class="h-4 w-4 rounded border-border-base text-primary focus:ring-primary bg-background-base dark:bg-background-surface mr-2 flex-shrink-0"
-                    :title="rule.enabled ? '禁用此规则' : '启用此规则'" />
-                  <span class="truncate flex-grow" :title="rule.name">{{ rule.name }}</span>
+                    v-comfy-tooltip="rule.enabled ? '禁用此规则' : '启用此规则'" />
+                  <span class="truncate flex-grow" v-comfy-tooltip="rule.name">{{ rule.name }}</span>
                   <button @click.stop="deleteRule(index)"
                     class="p-0.5 text-error hover:text-error-focus opacity-0 group-hover:opacity-100 ml-2 flex-shrink-0"
-                    title="删除规则">
+                    v-comfy-tooltip="'删除规则'">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
                       stroke="currentColor" class="w-4 h-4">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />

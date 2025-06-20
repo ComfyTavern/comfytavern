@@ -5,7 +5,7 @@
       <span v-if="!collapsed" class="font-semibold text-lg text-text-base">{{ t('fileManager.sidebarNav.title') }}</span>
       <button @click="toggleCollapse"
         class="p-2 rounded-md hover:bg-background-base text-text-muted"
-        :title="t(collapsed ? 'fileManager.sidebarNav.expand' : 'fileManager.sidebarNav.collapse')" data-testid="fm-sidebar-toggle">
+        v-comfy-tooltip="t(collapsed ? 'fileManager.sidebarNav.expand' : 'fileManager.sidebarNav.collapse')" data-testid="fm-sidebar-toggle">
         <ChevronRightIcon v-if="collapsed" class="h-5 w-5" />
         <ChevronLeftIcon v-else class="h-5 w-5" />
       </button>
@@ -38,8 +38,7 @@
         <h3 v-if="!collapsed"
           class="px-2 py-1 mt-4 text-xs font-semibold text-text-muted uppercase tracking-wider flex justify-between items-center">
           <span>{{ t('fileManager.sidebarNav.recentAccess') }}</span>
-          <button @click="clearRecentAccess" :title="t('fileManager.sidebarNav.clearRecent')" class="text-xs hover:text-error"
-            :v-comfy-tooltip="t('fileManager.sidebarNav.clearRecent')">
+          <button @click="clearRecentAccess" v-comfy-tooltip="t('fileManager.sidebarNav.clearRecent')" class="text-xs hover:text-error">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
               stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -75,13 +74,13 @@
           <li v-for="favPath in favoritesPaths" :key="favPath">
             <a href="#" @click.prevent="navigateTo(favPath)"
               class="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-background-base text-text-muted text-xs"
-              :title="favPath">
+              v-comfy-tooltip="favPath">
               <div class="flex items-center truncate">
                 <StarIcon class="h-4 w-4 mr-2 flex-shrink-0 text-accent" />
                 <span class="truncate">{{ getPathDisplayName(favPath) }}</span>
               </div>
               <button @click.stop.prevent="removeFromFavorites(favPath)"
-                class="ml-2 p-0.5 rounded hover:bg-error/10" :title="t('fileManager.sidebarNav.unfavorite')">
+                class="ml-2 p-0.5 rounded hover:bg-error/10" v-comfy-tooltip="t('fileManager.sidebarNav.unfavorite')">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-error" viewBox="0 0 20 20"
                   fill="currentColor">
                   <path fill-rule="evenodd"

@@ -23,10 +23,10 @@
           placeholder="值"
           :aria-label="`Value for item ${index + 1}`"
         />
-        <button @click="removeItem(index)" class="remove-button" title="移除此项">&times;</button>
-      </div>
-    </div>
-    <button @click="addItem" class="add-button">+ 添加键值对</button>
+       <button @click="removeItem(index)" class="remove-button" v-comfy-tooltip="'移除此项'">&times;</button>
+     </div>
+   </div>
+   <button @click="addItem" class="add-button" v-comfy-tooltip="'添加新的键值对'">+ 添加键值对</button>
   </div>
 </template>
 

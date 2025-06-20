@@ -15,7 +15,7 @@
           <component :is="item.itemType === 'directory' ? FolderIcon : getDocumentIcon(item.name)"
             class="h-5 w-5 mr-2 text-text-muted flex-shrink-0"
             :class="{ 'text-primary': item.itemType === 'directory' }" />
-          <span class="font-medium text-text-base truncate" :title="item.name">
+          <span class="font-medium text-text-base truncate" v-comfy-tooltip="item.name">
             {{ item.name }}
           </span>
           <StarIcon v-if="isFavorite" class="h-3.5 w-3.5 ml-1.5 text-accent flex-shrink-0"

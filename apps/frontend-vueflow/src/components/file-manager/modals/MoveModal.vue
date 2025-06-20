@@ -1,11 +1,11 @@
 <template>
-  <BaseModal :visible="visible" title="移动项目" @close="handleClose" modal-class="w-full max-w-lg"
+  <BaseModal :visible="visible" v-comfy-tooltip="'移动项目'" @close="handleClose" modal-class="w-full max-w-lg"
     data-testid="fm-move-modal">
     <div class="p-4 sm:p-6 space-y-4 text-sm">
       <p v-if="itemsToMove.length > 0">
         将 {{ itemsToMove.length }} 个项目:
       <ul class="list-disc list-inside max-h-32 overflow-y-auto bg-background-base p-2 rounded-md mt-1">
-        <li v-for="item in itemsToMove" :key="item.logicalPath" class="truncate" :title="item.name">
+        <li v-for="item in itemsToMove" :key="item.logicalPath" class="truncate" v-comfy-tooltip="item.name">
           <component :is="item.itemType === 'directory' ? FolderIcon : DocumentIcon"
             class="h-4 w-4 inline-block mr-1.5 align-text-bottom text-text-muted" />
           {{ item.name }}

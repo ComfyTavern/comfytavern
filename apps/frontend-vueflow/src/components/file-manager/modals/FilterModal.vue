@@ -1,5 +1,5 @@
 <template>
-  <BaseModal :visible="visible" title="筛选文件与文件夹" @close="handleClose" modal-class="w-full max-w-lg"
+  <BaseModal :visible="visible" v-comfy-tooltip="'筛选文件与文件夹'" @close="handleClose" modal-class="w-full max-w-lg"
     data-testid="fm-filter-modal">
     <form @submit.prevent="applyFilters" class="p-4 sm:p-6 space-y-4">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

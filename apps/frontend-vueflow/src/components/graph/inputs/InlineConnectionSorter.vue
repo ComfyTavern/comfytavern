@@ -2,7 +2,7 @@
   <div class="inline-connection-sorter" v-if="draggableConnections.length > 1" @mousedown.stop>
     <draggable v-model="draggableConnections" item-key="id" @end="onSortEnd" class="connection-list" :animation="200">
       <template #item="{ element, index }">
-        <div class="sortable-connection-item" :title="getSourceTooltip(element)">
+        <div class="sortable-connection-item" v-comfy-tooltip="getSourceTooltip(element)">
           <span class="connection-index">{{ index + 1 }}.</span>
           <div class="tooltip-flex-wrapper">
             <span class="connection-label-container" v-comfy-tooltip="{
@@ -10,15 +10,15 @@
               placement: 'top',
               delayShow: 300,
             }">
-              <span class="source-handle-label-part" v-if="element.sourceHandleId" :title="element.sourceHandleLabel">
+              <span class="source-handle-label-part" v-if="element.sourceHandleId" v-comfy-tooltip="element.sourceHandleLabel">
                 ({{ element.sourceHandleLabel }})
               </span>
-              <span class="source-node-label-part" :title="element.sourceNodeLabel">
+              <span class="source-node-label-part" v-comfy-tooltip="element.sourceNodeLabel">
                 {{ element.sourceNodeLabel }}
               </span>
             </span>
           </div>
-          <button @click.stop="handleDisconnectEdge(element)" class="disconnect-button" title="断开此连接">
+          <button @click.stop="handleDisconnectEdge(element)" class="disconnect-button" v-comfy-tooltip="'断开此连接'">
             &times;
           </button>
         </div>

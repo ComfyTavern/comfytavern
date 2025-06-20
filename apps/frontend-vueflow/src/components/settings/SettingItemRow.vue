@@ -24,7 +24,7 @@
     </div>
     <!--
     <div class="action-area">
-      <button @click="resetToDefault" title="恢复默认值">
+      <button @click="resetToDefault" v-comfy-tooltip="'恢复默认值'">
         <Icon name="rotate-2" />
       </button>
     </div>

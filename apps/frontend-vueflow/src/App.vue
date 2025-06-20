@@ -27,7 +27,7 @@ const projectStore = useProjectStore();
 const authStore = useAuthStore(); // + 初始化 authStore
 const settingsStore = useSettingsStore(); // + 初始化 settingsStore
 const languageManager = useLanguagePackManager(); // + 初始化 i18n manager
-const { locale, setLocaleMessage } = useI18n({ useScope: 'global' }); // + 获取全局 i18n 实例的方法
+const { t, locale, setLocaleMessage } = useI18n({ useScope: 'global' }); // + 获取全局 i18n 实例的方法
 
 const { currentAppliedMode } = storeToRefs(themeStore); // 从 isDark 更改为 currentAppliedMode
 const { activeTabId } = storeToRefs(tabStore);
@@ -206,7 +206,7 @@ const handleModalInteraction = () => {
     <TooltipRenderer />
 
     <!-- 全局设置模态框 -->
-    <BaseModal :visible="isSettingsModalVisible" title="设置" :width="settingsModalProps.width"
+    <BaseModal :visible="isSettingsModalVisible" :title="t('settings.title')" :width="settingsModalProps.width"
       :height="settingsModalProps.height" @update:visible="!$event && uiStore.closeSettingsModal()">
       <SettingsLayout />
     </BaseModal>

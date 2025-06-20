@@ -8,7 +8,7 @@
       <div v-if="!isSidebarCollapsed"
         class="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary-soft transition-colors duration-150 z-10"
         @mousedown.prevent="startResizeSidebar"
-        title="Resize sidebar"
+        v-comfy-tooltip="{ content: 'Resize sidebar', placement: 'right' }"
         data-testid="fm-sidebar-resizer">
         <!-- 样式已统一，内部线条移除 -->
       </div>

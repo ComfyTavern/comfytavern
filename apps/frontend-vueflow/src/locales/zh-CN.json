@@ -70,6 +70,7 @@
     "unclassified": "未分类"
   },
   "settings": {
+    "title": "设置",
     "general": {
       "title": "通用设置",
       "language": "界面语言",

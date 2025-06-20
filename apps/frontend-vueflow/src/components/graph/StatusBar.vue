@@ -16,7 +16,7 @@
 
     <div class="flex items-center space-x-2 flex-shrink-0">
       <!-- 可停靠编辑器切换按钮 -->
-      <button @click="toggleDockedEditor" :title="isDockedEditorVisible ? '隐藏编辑器面板' : '显示编辑器面板'"
+      <button @click="toggleDockedEditor" v-comfy-tooltip="isDockedEditorVisible ? '隐藏编辑器面板' : '显示编辑器面板'"
         class="px-2 py-1 rounded border border-transparent text-text-muted hover:bg-neutral-softest focus:outline-none transition-all duration-150"
         :class="{
           'text-primary border-primary-soft bg-primary-softest': isDockedEditorVisible,
@@ -34,7 +34,7 @@
         </svg>
       </button>
       <!-- 实时预览切换按钮 -->
-      <button @click="togglePreview" :title="isPreviewEnabled ? '禁用实时预览' : '启用实时预览'"
+      <button @click="togglePreview" v-comfy-tooltip="isPreviewEnabled ? '禁用实时预览' : '启用实时预览'"
         class="px-2 py-1 rounded border border-transparent text-text-muted hover:bg-neutral-softest focus:outline-none transition-all duration-150"
         :class="{
           'text-primary border-primary-soft bg-primary-softest': isPreviewEnabled,

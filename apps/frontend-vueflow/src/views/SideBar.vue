@@ -124,7 +124,7 @@ function cycleDisplayMode() {
     <!-- 导航链接 -->
     <nav class="flex-1 flex flex-col px-2 py-2 space-y-2">
       <RouterLink to="/home" custom v-slot="{ navigate, isExactActive }">
-        <div @click="navigate" class="w-full p-2 rounded flex items-center cursor-pointer" :class="[
+        <div v-comfy-tooltip="{ content: t('nav.home'), placement: 'right' }" @click="navigate" class="w-full p-2 rounded flex items-center cursor-pointer" :class="[
           uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
           'hover:bg-primary-softest', // 使用 primary 色的半透明背景作为 hover
           isExactActive ? 'bg-primary-soft' : '' // 激活状态使用更深一点的 primary 半透明背景
@@ -135,7 +135,7 @@ function cycleDisplayMode() {
         </div>
       </RouterLink>
 
-      <RouterLink to="/home/projects" class="w-full p-2 rounded flex items-center" :class="[
+      <RouterLink v-comfy-tooltip="{ content: t('nav.projects'), placement: 'right' }" to="/home/projects" class="w-full p-2 rounded flex items-center" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
         'hover:bg-primary-softest active:bg-primary-soft'
       ]" active-class="bg-primary-soft">
@@ -143,7 +143,7 @@ function cycleDisplayMode() {
         <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">{{ t('nav.projects') }}</span>
       </RouterLink>
-      <RouterLink to="/home/characters" class="w-full p-2 rounded flex items-center" :class="[
+      <RouterLink v-comfy-tooltip="{ content: t('nav.characters'), placement: 'right' }" to="/home/characters" class="w-full p-2 rounded flex items-center" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
         'hover:bg-primary-softest active:bg-primary-soft'
       ]" active-class="bg-primary-soft">
@@ -152,7 +152,7 @@ function cycleDisplayMode() {
           :class="textClasses">{{ t('nav.characters') }}</span>
       </RouterLink>
 
-      <RouterLink to="/home/files" class="w-full p-2 rounded flex items-center" :class="[
+      <RouterLink v-comfy-tooltip="{ content: t('nav.files'), placement: 'right' }" to="/home/files" class="w-full p-2 rounded flex items-center" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
         'hover:bg-primary-softest active:bg-primary-soft'
       ]" active-class="bg-primary-soft">
@@ -161,7 +161,7 @@ function cycleDisplayMode() {
           :class="textClasses">{{ t('nav.files') }}</span>
       </RouterLink>
 
-      <RouterLink to="/home/about" class="w-full p-2 rounded flex items-center" :class="[
+      <RouterLink v-comfy-tooltip="{ content: t('nav.about'), placement: 'right' }" to="/home/about" class="w-full p-2 rounded flex items-center" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
         'hover:bg-primary-softest active:bg-primary-soft'
       ]" active-class="bg-primary-soft">
@@ -174,7 +174,7 @@ function cycleDisplayMode() {
     <!-- 底部按钮区域 -->
     <div class="p-2 space-y-2">
       <!-- 主题切换按钮 -->
-      <div v-comfy-tooltip="t('sidebar.toggleTheme')" class="w-full p-2 rounded flex items-center cursor-pointer" :class="[
+      <div v-comfy-tooltip="{ content: t('sidebar.toggleTheme'), placement: 'right' }" class="w-full p-2 rounded flex items-center cursor-pointer" :class="[
           uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
           'hover:bg-primary-softest'
         ]" @click="cycleDisplayMode()">
@@ -190,7 +190,7 @@ function cycleDisplayMode() {
       </div>
 
       <!-- 设置按钮 -->
-      <RouterLink to="/home/settings" class="w-full p-2 rounded flex items-center mt-2" :class="[
+      <RouterLink v-comfy-tooltip="{ content: t('nav.settings'), placement: 'right' }" to="/home/settings" class="w-full p-2 rounded flex items-center mt-2" :class="[
         uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
         'hover:bg-primary-softest active:bg-primary-soft'
       ]" active-class="bg-primary-soft">
@@ -200,7 +200,7 @@ function cycleDisplayMode() {
       </RouterLink>
 
       <!-- 折叠按钮 -->
-      <button v-comfy-tooltip="t('sidebar.toggleSidebar')" @click="uiStore.toggleMainSidebar()" class="w-full p-2 rounded flex items-center mt-2" :class="[ // + 使用 uiStore action
+      <button v-comfy-tooltip="{ content: t('sidebar.toggleSidebar'), placement: 'right' }" @click="uiStore.toggleMainSidebar()" class="w-full p-2 rounded flex items-center mt-2" :class="[ // + 使用 uiStore action
           uiStore.isMainSidebarCollapsed ? 'justify-center' : 'justify-start',
           'hover:bg-primary-softest'
         ]">

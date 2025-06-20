@@ -1,5 +1,5 @@
 <template>
-  <BaseModal :visible="visible" title="文件上传管理器" @close="handleClose" modal-class="w-full max-w-2xl"
+  <BaseModal :visible="visible" v-comfy-tooltip="'文件上传管理器'" @close="handleClose" modal-class="w-full max-w-2xl"
     :close-on-backdrop="!isUploading" data-testid="fm-upload-manager-modal">
     <div class="p-4 sm:p-6 space-y-4 text-sm">
       <div v-if="!filesToUpload || filesToUpload.length === 0"
@@ -38,7 +38,7 @@
                 <component :is="getFileIcon(fileEntry.file.name)"
                   class="h-6 w-6 mr-2 text-text-muted flex-shrink-0" />
                 <div class="truncate">
-                  <p class="font-medium text-text-base truncate" :title="fileEntry.file.name">
+                  <p class="font-medium text-text-base truncate" v-comfy-tooltip="fileEntry.file.name">
                     {{ fileEntry.file.name }}
                   </p>
                   <p class="text-xs text-text-muted">
@@ -73,7 +73,7 @@
             <progress v-if="fileEntry.status === 'uploading'" class="progress progress-info w-full h-1 mt-1"
               :value="fileEntry.progress" max="100"></progress>
             <p v-if="fileEntry.status === 'error'" class="text-xs text-error mt-1 truncate"
-              :title="fileEntry.error || undefined">
+              v-comfy-tooltip="fileEntry.error || undefined">
               错误: {{ fileEntry.error }}
             </p>
           </div>

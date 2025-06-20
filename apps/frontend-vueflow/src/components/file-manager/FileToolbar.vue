@@ -2,26 +2,26 @@
   <div class="file-toolbar flex flex-wrap items-center justify-between gap-2 p-2 bg-background-surface border-b border-border-base shadow-sm">
         <!-- 左侧操作按钮 -->
         <div class="flex items-center gap-1 flex-wrap">
-          <button @click="handleUploadClick" class="toolbar-action-btn" :title="t('fileManager.toolbar.uploadFile')"
+          <button @click="handleUploadClick" class="toolbar-action-btn" v-comfy-tooltip="t('fileManager.toolbar.uploadFile')"
             data-testid="fm-upload-btn">
             <ArrowUpTrayIcon class="h-5 w-5" />
             <span class="ml-1 hidden sm:inline">{{ t('fileManager.toolbar.upload') }}</span>
           </button>
           <input type="file" ref="fileInputRef" @change="handleFileSelected" multiple class="hidden" />
     
-          <button @click="createNewFolder" class="toolbar-action-btn" :title="t('fileManager.toolbar.newFolder')"
+          <button @click="createNewFolder" class="toolbar-action-btn" v-comfy-tooltip="t('fileManager.toolbar.newFolder')"
             data-testid="fm-create-folder-btn">
             <FolderPlusIcon class="h-5 w-5" />
             <span class="ml-1 hidden sm:inline">{{ t('fileManager.toolbar.newFolder') }}</span>
           </button>
     
-          <button @click="refreshList" class="toolbar-action-btn" :disabled="isLoading" :title="t('common.refresh')"
+          <button @click="refreshList" class="toolbar-action-btn" :disabled="isLoading" v-comfy-tooltip="t('common.refresh')"
             data-testid="fm-refresh-btn">
             <ArrowPathIcon class="h-5 w-5" :class="{ 'animate-spin': isLoading }" />
             <span class="ml-1 hidden sm:inline">{{ t('common.refresh') }}</span>
           </button>
     
-          <button v-if="canPaste" @click="pasteItems" class="toolbar-action-btn" :title="t('fileManager.toolbar.paste')"
+          <button v-if="canPaste" @click="pasteItems" class="toolbar-action-btn" v-comfy-tooltip="t('fileManager.toolbar.paste')"
             data-testid="fm-paste-btn">
             <ClipboardDocumentIcon class="h-5 w-5" />
             <span class="ml-1 hidden sm:inline">{{ t('fileManager.toolbar.paste') }}</span>
@@ -50,14 +50,14 @@
         <!-- 右侧视图控制和筛选 -->
         <div class="flex items-center gap-1 flex-wrap">
           <button @click="toggleViewMode" class="toolbar-action-btn"
-            :title="t(viewSettings.mode === 'list' ? 'fileManager.toolbar.switchToGridView' : 'fileManager.toolbar.switchToListView')" data-testid="fm-toggle-view-btn">
+            v-comfy-tooltip="t(viewSettings.mode === 'list' ? 'fileManager.toolbar.switchToGridView' : 'fileManager.toolbar.switchToListView')" data-testid="fm-toggle-view-btn">
             <Squares2X2Icon v-if="viewSettings.mode === 'list'" class="h-5 w-5" />
             <QueueListIcon v-else class="h-5 w-5" />
           </button>
     
           <!-- 排序方式选择 -->
           <div class="dropdown dropdown-end">
-            <label tabindex="0" class="toolbar-action-btn" :title="t('fileManager.toolbar.sortBy')">
+            <label tabindex="0" class="toolbar-action-btn" v-comfy-tooltip="t('fileManager.toolbar.sortBy')">
               <AdjustmentsHorizontalIcon class="h-5 w-5" />
               <!-- <span class="ml-1 hidden md:inline">{{ currentSortLabel }}</span> -->
               <ChevronDownIcon class="h-4 w-4 ml-1 hidden md:inline" />
@@ -95,7 +95,7 @@
             </ul>
           </div>
     
-          <button @click="openFilterModal" class="toolbar-action-btn relative" :title="t('fileManager.toolbar.advancedFilter')"
+          <button @click="openFilterModal" class="toolbar-action-btn relative" v-comfy-tooltip="t('fileManager.toolbar.advancedFilter')"
             data-testid="fm-filter-btn">
             <FunnelIcon class="h-5 w-5" />
             <span v-if="activeFiltersCount > 0"
@@ -107,14 +107,14 @@
           <!-- 切换详情面板按钮 -->
           <button @click="uiStore.toggleFileManagerDetailPanel()" class="toolbar-action-btn"
             :class="{ 'btn-active bg-background-base': isDetailPanelOpen }"
-            :title="t(isDetailPanelOpen ? 'fileManager.toolbar.hideDetailPanel' : 'fileManager.toolbar.showDetailPanel')" data-testid="fm-toggle-detail-panel-btn">
+            v-comfy-tooltip="t(isDetailPanelOpen ? 'fileManager.toolbar.hideDetailPanel' : 'fileManager.toolbar.showDetailPanel')" data-testid="fm-toggle-detail-panel-btn">
             <ChevronDoubleRightIcon v-if="isDetailPanelOpen" class="h-5 w-5" />
             <!-- Icon to "push panel away" / collapse -->
             <ChevronDoubleLeftIcon v-else class="h-5 w-5" />
             <!-- Icon to "pull panel in" / expand -->
           </button>
     
-          <button @click="openViewSettingsModal" class="toolbar-action-btn" :title="t('fileManager.toolbar.viewSettings')"
+          <button @click="openViewSettingsModal" class="toolbar-action-btn" v-comfy-tooltip="t('fileManager.toolbar.viewSettings')"
             data-testid="fm-view-settings-btn">
             <Cog6ToothIcon class="h-5 w-5" />
           </button>

@@ -2,13 +2,13 @@
   <div
     class="file-detail-panel h-full flex flex-col bg-background-surface border-l border-border-base shadow-lg relative"
     data-testid="fm-detail-panel-component">
-    <!-- Resizer Handle -->
-    <div
-          class="panel-resizer absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary-soft transition-colors duration-150 z-10"
-          @mousedown.prevent="startResize" :title="t('fileManager.detailPanel.resize')"></div>
-    
-        <header class="pl-3 pr-3 py-3 border-b border-border-base flex items-center justify-between flex-shrink-0">
-          <h3 class="text-base font-semibold text-text-base truncate ml-1.5" :title="panelTitle">
+  <!-- Resizer Handle -->
+  <div
+        class="panel-resizer absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary-soft transition-colors duration-150 z-10"
+        @mousedown.prevent="startResize" v-comfy-tooltip="{ content: t('fileManager.detailPanel.resize'), placement: 'left' }"></div>
+  
+      <header class="pl-3 pr-3 py-3 border-b border-border-base flex items-center justify-between flex-shrink-0">
+          <h3 class="text-base font-semibold text-text-base truncate ml-1.5" v-comfy-tooltip="panelTitle">
             <!-- Added ml-1.5 for spacing from resizer -->
             {{ panelTitle }}
           </h3>
@@ -16,12 +16,12 @@
             <!-- Tab切换按钮 -->
             <div class="tabs tabs-xs sm:tabs-sm mr-2" v-if="selectedItem">
               <button class="tab tab-lifted tab-xs sm:tab-sm" :class="{ 'tab-active': activeTab === 'properties' }"
-                @click="setActiveTab('properties')" :title="t('fileManager.detailPanel.properties')">
+                @click="setActiveTab('properties')" v-comfy-tooltip="t('fileManager.detailPanel.properties')">
                 <InformationCircleIcon class="h-4 w-4 sm:h-5 sm:w-5" />
                 <span class="hidden sm:inline ml-1">{{ t('fileManager.detailPanel.properties') }}</span>
               </button>
               <button v-if="canPreview" class="tab tab-lifted tab-xs sm:tab-sm"
-                :class="{ 'tab-active': activeTab === 'preview' }" @click="setActiveTab('preview')" :title="t('fileManager.detailPanel.preview')">
+                :class="{ 'tab-active': activeTab === 'preview' }" @click="setActiveTab('preview')" v-comfy-tooltip="t('fileManager.detailPanel.preview')">
                 <EyeIcon class="h-4 w-4 sm:h-5 sm:w-5" />
                 <span class="hidden sm:inline ml-1">{{ t('fileManager.detailPanel.preview') }}</span>
               </button>
@@ -37,7 +37,7 @@
             </div>
             <button @click="closePanel"
               class="p-1.5 rounded-md hover:bg-background-base text-text-muted"
-              :title="t('fileManager.detailPanel.close')" :aria-label="t('fileManager.detailPanel.close')">
+              v-comfy-tooltip="t('fileManager.detailPanel.close')" :aria-label="t('fileManager.detailPanel.close')">
               <XMarkIcon class="h-5 w-5" />
             </button>
           </div>
@@ -57,7 +57,7 @@
                 <div class="property-value flex items-center">
                   <component :is="selectedItem.itemType === 'directory' ? FolderIcon : getDocumentIcon(selectedItem.name)"
                     class="h-5 w-5 mr-2 text-text-muted flex-shrink-0" />
-                  <span class="truncate" :title="selectedItem.name">{{ selectedItem.name }}</span>
+                  <span class="truncate" v-comfy-tooltip="selectedItem.name">{{ selectedItem.name }}</span>
                   <!-- TODO: 内联编辑名称 -->
                 </div>
               </div>
@@ -71,7 +71,7 @@
               </div>
               <div class="property-row">
                 <label class="property-label">{{ t('fileManager.detailPanel.propPath') }}</label>
-                <span class="property-value break-all" :title="selectedItem.logicalPath">{{ selectedItem.logicalPath
+                <span class="property-value break-all" v-comfy-tooltip="selectedItem.logicalPath">{{ selectedItem.logicalPath
                 }}</span>
               </div>
               <div class="property-row">
@@ -80,7 +80,7 @@
               </div>
               <div v-if="selectedItem.isSymlink && selectedItem.targetLogicalPath" class="property-row">
                 <label class="property-label">{{ t('fileManager.detailPanel.propSymlinkTarget') }}</label>
-                <span class="property-value break-all" :title="selectedItem.targetLogicalPath">{{
+                <span class="property-value break-all" v-comfy-tooltip="selectedItem.targetLogicalPath">{{
                   selectedItem.targetLogicalPath }}</span>
               </div>
               <div class="property-row">
@@ -116,7 +116,7 @@
                   class="text-xs bg-background-base p-3 rounded-md overflow-auto max-h-[60vh] whitespace-pre-wrap break-all">{{ previewContent }}</pre>
                 <!-- PDF 预览 (可能需要 iframe 或特定库) -->
                 <iframe v-else-if="previewType === 'pdf' && previewContent" :src="previewContent"
-                  class="w-full h-[70vh] border rounded-md" :title="t('fileManager.detailPanel.preview')"></iframe>
+                  class="w-full h-[70vh] border rounded-md" v-comfy-tooltip="t('fileManager.detailPanel.preview')"></iframe>
                 <div v-else class="text-text-muted">
                   {{ t('fileManager.detailPanel.previewUnsupported') }}
                 </div>

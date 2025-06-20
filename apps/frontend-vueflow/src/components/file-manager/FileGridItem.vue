@@ -28,7 +28,7 @@
           iconSizeClass,
           item.itemType === 'directory' ? 'text-primary' : 'text-text-muted'
         ]" aria-hidden="true" />
-      <p class="text-xs font-medium text-text-base truncate w-full px-1" :title="item.name">
+      <p class="text-xs font-medium text-text-base truncate w-full px-1" v-comfy-tooltip="item.name">
         {{ item.name }}
       </p>
       <p v-if="thumbnailSizeClass !== 'small' && item.itemType === 'file'"

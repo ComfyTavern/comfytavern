@@ -49,7 +49,7 @@
           panelMode === 'singlePreview'
             ? 'bg-primary text-primary-content shadow-sm'
             : 'text-text-secondary hover:bg-neutral-softest',
-        ]" :title="t('rightPreviewPanel.singleModeTooltip')">
+        ]" v-comfy-tooltip="t('rightPreviewPanel.singleModeTooltip')">
           {{ t('rightPreviewPanel.singleModeButton') }}
         </button>
         <button @click="panelMode = 'groupOverview'" :class="[
@@ -57,7 +57,7 @@
           panelMode === 'groupOverview'
             ? 'bg-success text-primary-content shadow-sm'
             : 'text-text-secondary hover:bg-neutral-softest',
-        ]" :title="t('rightPreviewPanel.groupModeTooltip')">
+        ]" v-comfy-tooltip="t('rightPreviewPanel.groupModeTooltip')">
           {{ t('rightPreviewPanel.groupModeButton') }}
         </button>
       </div>

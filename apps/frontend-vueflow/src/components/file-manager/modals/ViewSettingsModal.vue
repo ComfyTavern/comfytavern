@@ -1,5 +1,5 @@
 <template>
-  <BaseModal :visible="visible" title="视图设置" @close="handleClose" modal-class="w-full max-w-md"
+  <BaseModal :visible="visible" v-comfy-tooltip="'视图设置'" @close="handleClose" modal-class="w-full max-w-md"
     data-testid="fm-view-settings-modal">
     <div class="p-4 sm:p-6 space-y-5">
       <div>

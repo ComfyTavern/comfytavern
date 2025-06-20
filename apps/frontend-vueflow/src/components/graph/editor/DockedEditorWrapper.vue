@@ -649,10 +649,10 @@ onMounted(() => {
         </template>
       </span>
       <div class="editor-actions">
-        <button @click="toggleMaximizeEditor" :title="isMaximized ? '恢复大小' : '最大化面板'">
+        <button @click="toggleMaximizeEditor" v-comfy-tooltip="isMaximized ? '恢复大小' : '最大化面板'">
           {{ isMaximized ? "▼" : "▲" }}
         </button>
-        <button @click="closeEditorPanel" title="关闭面板">✕</button>
+        <button @click="closeEditorPanel" v-comfy-tooltip="'关闭面板'">✕</button>
       </div>
     </div>
     <div class="editor-content">

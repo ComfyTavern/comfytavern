@@ -2,7 +2,7 @@
   <div class="code-input-trigger flex items-center space-x-1">
     <button
       type="button"
-      title="预览代码"
+      v-comfy-tooltip="'预览代码'"
       class="p-1 rounded hover:bg-background-hover focus:outline-none focus:ring-1 focus:ring-primary/50"
       @click="handlePreview"
     >
@@ -11,7 +11,7 @@
     </button>
     <button
       type="button"
-      title="编辑代码"
+      v-comfy-tooltip="'编辑代码'"
       class="p-1 rounded hover:bg-background-hover focus:outline-none focus:ring-1 focus:ring-primary/50"
       @click="handleEdit"
     >

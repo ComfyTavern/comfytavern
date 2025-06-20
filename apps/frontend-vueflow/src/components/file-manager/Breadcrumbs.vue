@@ -2,7 +2,7 @@
   <nav aria-label="Breadcrumb" class="breadcrumbs-nav flex items-center text-sm" data-testid="fm-breadcrumbs">
       <div v-if="!isEditingPath" class="flex items-center space-x-1 flex-wrap">
         <button v-if="canGoUp" @click="goUpDirectory"
-          class="p-1 rounded hover:bg-background-surface flex-shrink-0" :title="t('fileManager.breadcrumbs.goUp')"
+          class="p-1 rounded hover:bg-background-surface flex-shrink-0" v-comfy-tooltip="t('fileManager.breadcrumbs.goUp')"
           :aria-label="t('fileManager.breadcrumbs.goUp')">
           <ArrowUpIcon class="h-4 w-4 text-text-muted" />
         </button>
@@ -18,14 +18,14 @@
               <a href="#" @click.prevent="navigateToSegment(segment.path)" @dblclick.prevent="startPathEdit"
                 class="px-1.5 py-0.5 rounded text-text-base hover:bg-background-surface hover:text-text-base truncate max-w-[150px] sm:max-w-[200px]"
                 :class="{ 'font-semibold text-text-base': index === breadcrumbs.length - 1 }"
-                :title="segment.label">
+                v-comfy-tooltip="segment.label">
                 {{ segment.label }}
               </a>
             </div>
           </li>
         </ol>
         <button @click="startPathEdit" class="p-1 rounded hover:bg-background-surface ml-1 flex-shrink-0"
-          :title="t('fileManager.breadcrumbs.editPath')" :aria-label="t('fileManager.breadcrumbs.editPath')">
+          v-comfy-tooltip="t('fileManager.breadcrumbs.editPath')" :aria-label="t('fileManager.breadcrumbs.editPath')">
           <PencilIcon class="h-3.5 w-3.5 text-text-muted" />
         </button>
       </div>
@@ -35,10 +35,10 @@
           @keydown.enter="finishPathEdit(true)" @keydown.esc="cancelPathEdit"
           class="input input-sm input-bordered w-full bg-background-surface text-text-base border-border-base"
           :placeholder="t('fileManager.breadcrumbs.pathPlaceholder')" />
-        <button @click="finishPathEdit(true)" class="btn btn-xs btn-ghost ml-1 text-success" :title="t('fileManager.breadcrumbs.confirm')">
+        <button @click="finishPathEdit(true)" class="btn btn-xs btn-ghost ml-1 text-success" v-comfy-tooltip="t('fileManager.breadcrumbs.confirm')">
           <CheckIcon class="h-4 w-4" />
         </button>
-        <button @click="cancelPathEdit" class="btn btn-xs btn-ghost ml-1 text-error" :title="t('fileManager.breadcrumbs.cancel')">
+        <button @click="cancelPathEdit" class="btn btn-xs btn-ghost ml-1 text-error" v-comfy-tooltip="t('fileManager.breadcrumbs.cancel')">
           <XMarkIcon class="h-4 w-4" />
         </button>
       </div>
