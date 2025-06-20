@@ -231,6 +231,20 @@ function compareLangObjects(templateObj: NestedObject, existingLangObj: NestedOb
   });
   return { added: added.sort(), obsolete: obsolete.sort() };
 }
+function getValueByPath(obj: NestedObject, pathValue: string): string | NestedObject | undefined {
+  const parts = pathValue.split('.').filter(part => part.length > 0);
+  if (parts.length === 0) return undefined;
+
+  let current: string | NestedObject | undefined = obj;
+  for (const part of parts) {
+    if (typeof current !== 'object' || current === null) {
+      return undefined;
+    }
+    current = (current as NestedObject)[part];
+  }
+  return current;
+}
+
 function setValueByPath(obj: NestedObject, pathValue: string, value: string): void {
   const parts = pathValue.split('.').filter(part => part.length > 0);
   if (parts.length === 0) {
@@ -282,19 +296,28 @@ function deleteValueByPath(obj: NestedObject, pathValue: string): boolean {
 }
 function mergeTranslations(
   existingLangObj: NestedObject,
-  scannedTemplateObj: NestedObject,
-  diff: DiffResult,
-  removeObsolete: boolean = true
+  finalTemplateObj: NestedObject
 ): NestedObject {
-  const merged: NestedObject = JSON.parse(JSON.stringify(existingLangObj));
-  for (const keyPath of diff.added) {
-    setValueByPath(merged, keyPath, "[TODO]");
-  }
-  if (removeObsolete) {
-    for (const keyPath of diff.obsolete) {
-      deleteValueByPath(merged, keyPath);
+  // Start with a deep copy of the final template, which has the correct structure.
+  const merged: NestedObject = JSON.parse(JSON.stringify(finalTemplateObj));
+
+  // Get all the keys that should exist in the final file (this helper already skips _meta).
+  const allKeys = getAllLeafPaths(finalTemplateObj);
+
+  for (const keyPath of allKeys) {
+    const existingValue = getValueByPath(existingLangObj, keyPath);
+    // If an old value exists and it's a string, use it.
+    // Otherwise, the [TODO] from the template remains.
+    if (typeof existingValue === 'string') {
+      setValueByPath(merged, keyPath, existingValue);
     }
   }
+
+  // Ensure the _meta block from the original file is preserved if it exists.
+  if (existingLangObj._meta) {
+    merged._meta = JSON.parse(JSON.stringify(existingLangObj._meta));
+  }
+
   return merged;
 }
 
@@ -376,7 +399,7 @@ async function main() {
   diffResult.obsolete.forEach(key => console.log(`  - ${key}`));
   console.log("-------------------------\n");
 
-  const mergedTranslations = mergeTranslations(existingLangObject, scannedTemplateObject, diffResult, true);
+  const mergedTranslations = mergeTranslations(existingLangObject, finalTemplateObject);
 
   try {
     await fs.writeFile(OUTPUT_MERGED_FILE, JSON.stringify(mergedTranslations, null, 2), 'utf-8');
