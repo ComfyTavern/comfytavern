@@ -338,6 +338,12 @@ async function main() {
   console.log(`\nFound ${allKeys.size} unique i18n keys from scan, ${filteredKeys.size} after filtering.`);
   const scannedTemplateObject = keysToNestedObject(filteredKeys);
 
+  // Add a placeholder _meta object to the template for user convenience
+  (scannedTemplateObject as any)._meta = {
+    name: "[TODO: English name for the language, e.g., French (France)]",
+    nativeName: "[TODO: Native name for the language, e.g., Français (France)]"
+  };
+
   try {
     await fs.mkdir(path.dirname(OUTPUT_TEMPLATE_FILE), { recursive: true });
     await fs.writeFile(OUTPUT_TEMPLATE_FILE, JSON.stringify(scannedTemplateObject, null, 2), 'utf-8');

@@ -1,4 +1,8 @@
 {
+  "_meta": {
+    "name": "[TODO: English name for the language, e.g., French (France)]",
+    "nativeName": "[TODO: Native name for the language, e.g., Français (France)]"
+  },
   "characterPreview": {
     "loadError": "[TODO]",
     "loadErrorDetail": "[TODO]",
