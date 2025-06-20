@@ -1,28 +1,27 @@
 <template>
-  <BaseModal :visible="visible" v-comfy-tooltip="'文件上传管理器'" @close="handleClose" modal-class="w-full max-w-2xl"
+  <BaseModal :visible="visible" v-comfy-tooltip="t('fileManager.uploadManager.title')" @close="handleClose" modal-class="w-full max-w-2xl"
     :close-on-backdrop="!isUploading" data-testid="fm-upload-manager-modal">
     <div class="p-4 sm:p-6 space-y-4 text-sm">
       <div v-if="!filesToUpload || filesToUpload.length === 0"
         class="text-center py-8 text-text-muted">
         <CloudArrowUpIcon class="h-16 w-16 mx-auto mb-3 opacity-50 text-text-muted" />
-        <p>没有待上传的文件。</p>
-        <p class="text-xs mt-1">您可以通过文件管理器的“上传”按钮选择文件。</p>
+        <p>{{ t('fileManager.uploadManager.noFilesToUpload') }}</p>
+        <p class="text-xs mt-1">{{ t('fileManager.uploadManager.noFilesHint') }}</p>
       </div>
 
       <div v-else class="space-y-3">
         <div class="flex justify-between items-center mb-3">
           <p class="text-text-base">
-            目标路径: <strong class="font-mono">{{ targetPathDisplay }}</strong>
+            {{ t('fileManager.uploadManager.targetPathLabel') }} <strong class="font-mono">{{ targetPathDisplay }}</strong>
           </p>
           <div v-if="overallProgress > 0 && overallProgress < 100 && !allUploadsCompletedOrFailed"
             class="text-xs text-info">
-            总体进度: {{ overallProgress.toFixed(0) }}%
+            {{ t('fileManager.uploadManager.overallProgress', { progress: overallProgress.toFixed(0) }) }}
           </div>
           <div v-if="allUploadsCompletedOrFailed && !isUploading" class="text-xs">
             <span v-if="successfulUploadsCount === filesToUpload.length"
-              class="text-success">全部上传成功!</span>
-            <span v-else class="text-warning">{{ successfulUploadsCount }} / {{
-              filesToUpload.length }} 个成功</span>
+              class="text-success">{{ t('fileManager.uploadManager.allSuccess') }}</span>
+            <span v-else class="text-warning">{{ t('fileManager.uploadManager.someSuccess', { successCount: successfulUploadsCount, totalCount: filesToUpload.length }) }}</span>
           </div>
         </div>
 
@@ -53,11 +52,11 @@
                 <CheckCircleIcon v-if="fileEntry.status === 'success'"
                   class="h-5 w-5 text-success" />
                 <XCircleIcon v-if="fileEntry.status === 'error'" class="h-5 w-5 text-error"
-                  v-comfy-tooltip="fileEntry.error || '上传失败'" />
+                  v-comfy-tooltip="fileEntry.error || t('fileManager.uploadManager.uploadFailed')" />
                 <ClockIcon v-if="fileEntry.status === 'pending'" class="h-5 w-5 text-text-muted"
-                  v-comfy-tooltip="'等待上传'" />
+                  v-comfy-tooltip="t('fileManager.uploadManager.statusWaiting')" />
                 <PauseCircleIcon v-if="fileEntry.status === 'paused'"
-                  class="h-5 w-5 text-warning" v-comfy-tooltip="'已暂停'" />
+                  class="h-5 w-5 text-warning" v-comfy-tooltip="t('fileManager.uploadManager.statusPaused')" />
 
                 <!-- 单个文件操作按钮 (未来扩展) -->
                 <!-- <button v-if="fileEntry.status === 'pending' || fileEntry.status === 'error'" @click="retryUpload(fileEntry.id)" class="btn btn-xs btn-ghost">重试</button> -->
@@ -65,7 +64,7 @@
                 <!-- <button v-if="fileEntry.status === 'paused'" @click="resumeUpload(fileEntry.id)" class="btn btn-xs btn-ghost">继续</button> -->
                 <button v-if="canCancel(fileEntry)" @click="cancelUpload(fileEntry.id)"
                   class="btn btn-xs btn-ghost text-error hover:bg-error/10"
-                  v-comfy-tooltip="'取消上传'">
+                  v-comfy-tooltip="t('fileManager.uploadManager.cancelUpload')">
                   <XMarkIcon class="h-4 w-4" />
                 </button>
               </div>
@@ -74,7 +73,7 @@
               :value="fileEntry.progress" max="100"></progress>
             <p v-if="fileEntry.status === 'error'" class="text-xs text-error mt-1 truncate"
               v-comfy-tooltip="fileEntry.error || undefined">
-              错误: {{ fileEntry.error }}
+              {{ t('fileManager.uploadManager.errorPrefix') }} {{ fileEntry.error }}
             </p>
           </div>
         </div>
@@ -87,7 +86,7 @@
           <button v-if="hasPendingOrPaused" @click="startAllUploads" class="btn btn-sm btn-success mr-2"
             :disabled="isUploading">
             <PlayIcon class="h-5 w-5 mr-1.5" />
-            全部开始
+            {{ t('fileManager.uploadManager.startAll') }}
           </button>
           <!-- <button
             v-if="isUploading && !allPaused"
@@ -108,6 +107,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'; // nextTick was removed, PauseIcon was removed
+import { useI18n } from 'vue-i18n';
 import BaseModal from '@/components/common/BaseModal.vue';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
 import * as fileManagerApi from '@/api/fileManagerApi';
@@ -116,6 +116,8 @@ import {
   DocumentIcon, PhotoIcon, DocumentTextIcon, CodeBracketIcon, ArchiveBoxIcon, TableCellsIcon, FilmIcon, MusicalNoteIcon
 } from '@heroicons/vue/24/outline';
 import { nanoid } from "nanoid";
+
+const { t } = useI18n();
 
 interface UploadFileEntry {
   id: string; // Unique ID for this entry
@@ -142,7 +144,7 @@ const uploadQueue = ref<UploadFileEntry[]>([]);
 const isUploading = ref(false); // True if any file is actively being uploaded or in queue to be auto-started
 const allowCloseWhenUploading = ref(false); // Or make it a prop
 
-const targetPathDisplay = computed(() => props.targetPath || fileManagerStore.currentLogicalPath || '未知路径');
+const targetPathDisplay = computed(() => props.targetPath || fileManagerStore.currentLogicalPath || t('fileManager.uploadManager.unknownPath'));
 
 const overallProgress = computed(() => {
   if (uploadQueue.value.length === 0) return 0;
@@ -167,9 +169,9 @@ const hasPendingOrPaused = computed(() => {
 });
 
 const closeButtonText = computed(() => {
-  if (isUploading.value && !allowCloseWhenUploading.value) return "上传中...";
-  if (allUploadsCompletedOrFailed.value) return "完成";
-  return "关闭";
+  if (isUploading.value && !allowCloseWhenUploading.value) return t('fileManager.uploadManager.uploading');
+  if (allUploadsCompletedOrFailed.value) return t('fileManager.uploadManager.done');
+  return t('fileManager.uploadManager.close');
 });
 
 
@@ -240,7 +242,7 @@ const processFileUpload = async (entry: UploadFileEntry) => {
   } catch (err) {
     if (progressIntervalId) clearInterval(progressIntervalId); // Stop simulation
     entry.status = 'error';
-    entry.error = (err as Error).message || '未知上传错误';
+    entry.error = (err as Error).message || t('fileManager.uploadManager.unknownUploadError');
     console.error(`Failed to upload ${entry.file.name}:`, err);
   } finally {
     // Check if all uploads are done

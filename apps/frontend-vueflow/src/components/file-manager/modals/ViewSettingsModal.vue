@@ -1,41 +1,41 @@
 <template>
-  <BaseModal :visible="visible" v-comfy-tooltip="'视图设置'" @close="handleClose" modal-class="w-full max-w-md"
+  <BaseModal :visible="visible" v-comfy-tooltip="t('fileManager.viewSettings.title')" @close="handleClose" modal-class="w-full max-w-md"
     data-testid="fm-view-settings-modal">
     <div class="p-4 sm:p-6 space-y-5">
       <div>
-        <label for="view-mode" class="block text-sm font-medium text-text-base mb-1">视图模式</label>
+        <label for="view-mode" class="block text-sm font-medium text-text-base mb-1">{{ t('fileManager.viewSettings.viewMode') }}</label>
         <select id="view-mode" v-model="localSettings.mode"
           class="select select-bordered select-sm w-full bg-background-base border-border-base">
-          <option value="list">列表视图</option>
-          <option value="grid">网格视图</option>
+          <option value="list">{{ t('fileManager.viewSettings.listView') }}</option>
+          <option value="grid">{{ t('fileManager.viewSettings.gridView') }}</option>
         </select>
       </div>
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label for="sort-field" class="block text-sm font-medium text-text-base mb-1">排序字段</label>
+          <label for="sort-field" class="block text-sm font-medium text-text-base mb-1">{{ t('fileManager.viewSettings.sortField') }}</label>
           <select id="sort-field" v-model="localSettings.sortField"
             class="select select-bordered select-sm w-full bg-background-base border-border-base">
-            <option value="name">名称</option>
-            <option value="size">大小</option>
-            <option value="lastModified">修改日期</option>
-            <option value="itemType">类型</option>
+            <option value="name">{{ t('fileManager.toolbar.sortByName') }}</option>
+            <option value="size">{{ t('fileManager.toolbar.sortBySize') }}</option>
+            <option value="lastModified">{{ t('fileManager.toolbar.sortByDate') }}</option>
+            <option value="itemType">{{ t('common.type') }}</option>
             <!-- 可根据 FAMListItem 扩展更多字段 -->
           </select>
         </div>
         <div>
           <label for="sort-direction"
-            class="block text-sm font-medium text-text-base mb-1">排序方向</label>
+            class="block text-sm font-medium text-text-base mb-1">{{ t('fileManager.viewSettings.sortDirection') }}</label>
           <select id="sort-direction" v-model="localSettings.sortDirection"
             class="select select-bordered select-sm w-full bg-background-base border-border-base">
-            <option value="asc">升序</option>
-            <option value="desc">降序</option>
+            <option value="asc">{{ t('fileManager.viewSettings.ascending') }}</option>
+            <option value="desc">{{ t('fileManager.viewSettings.descending') }}</option>
           </select>
         </div>
       </div>
 
       <div v-if="localSettings.mode === 'list'">
-        <label class="block text-sm font-medium text-text-base mb-1">列表视图显示列</label>
+        <label class="block text-sm font-medium text-text-base mb-1">{{ t('fileManager.viewSettings.visibleColumns') }}</label>
         <div class="space-y-1 max-h-40 overflow-y-auto p-1 rounded-md border border-border-base">
           <label v-for="column in availableColumns" :key="column.value"
             class="flex items-center space-x-2 p-1.5 hover:bg-background-base rounded text-xs">
@@ -47,24 +47,23 @@
       </div>
 
       <div v-if="localSettings.mode === 'grid'">
-        <label for="thumbnail-size" class="block text-sm font-medium text-text-base mb-1">缩略图大小
-          (网格视图)</label>
+        <label for="thumbnail-size" class="block text-sm font-medium text-text-base mb-1">{{ t('fileManager.viewSettings.thumbnailSize') }}</label>
         <select id="thumbnail-size" v-model="localSettings.thumbnailSize"
           class="select select-bordered select-sm w-full bg-background-base border-border-base">
-          <option value="small">小</option>
-          <option value="medium">中</option>
-          <option value="large">大</option>
+          <option value="small">{{ t('fileManager.viewSettings.sizeSmall') }}</option>
+          <option value="medium">{{ t('fileManager.viewSettings.sizeMedium') }}</option>
+          <option value="large">{{ t('fileManager.viewSettings.sizeLarge') }}</option>
         </select>
       </div>
 
       <div>
         <label for="information-density"
-          class="block text-sm font-medium text-text-base mb-1">信息密度</label>
+          class="block text-sm font-medium text-text-base mb-1">{{ t('fileManager.viewSettings.informationDensity') }}</label>
         <select id="information-density" v-model="localSettings.informationDensity"
           class="select select-bordered select-sm w-full bg-background-base border-border-base">
-          <option value="compact">紧凑</option>
-          <option value="comfortable">舒适</option>
-          <option value="spacious">宽松</option>
+          <option value="compact">{{ t('fileManager.viewSettings.densityCompact') }}</option>
+          <option value="comfortable">{{ t('fileManager.viewSettings.densityComfortable') }}</option>
+          <option value="spacious">{{ t('fileManager.viewSettings.densitySpacious') }}</option>
         </select>
       </div>
 
@@ -73,10 +72,10 @@
     <template #footer>
       <div class="flex justify-end items-center p-3 bg-background-surface rounded-b-md">
         <button @click="handleClose" type="button" class="btn btn-sm btn-ghost mr-2">
-          取消
+          {{ t('common.cancel') }}
         </button>
         <button @click="applySettings" type="button" class="btn btn-sm btn-primary">
-          应用设置
+          {{ t('fileManager.viewSettings.applySettings') }}
         </button>
       </div>
     </template>
@@ -84,11 +83,18 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, watch } from 'vue';
+import { reactive, watch, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import BaseModal from '@/components/common/BaseModal.vue';
 import { useFileManagerStore, type ViewSettings } from '@/stores/fileManagerStore';
 import type { FAMItem } from '@comfytavern/types';
 
+const { t } = useI18n();
+
+type AvailableColumn = {
+  label: string;
+  value: keyof FAMItem | string;
+};
 
 const props = defineProps<{
   visible: boolean;
@@ -103,14 +109,14 @@ const fileManagerStore = useFileManagerStore();
 // Local state for form inputs
 const localSettings = reactive<ViewSettings>({ ...fileManagerStore.viewSettings });
 
-const availableColumns: { label: string; value: keyof FAMItem | string }[] = [
-  { label: '名称', value: 'name' },
-  { label: '大小', value: 'size' },
-  { label: '修改日期', value: 'lastModified' },
-  { label: '类型', value: 'itemType' },
+const availableColumns = computed<AvailableColumn[]>(() => [
+  { label: t('fileManager.viewSettings.columnLabels.name'), value: 'name' },
+  { label: t('fileManager.viewSettings.columnLabels.size'), value: 'size' },
+  { label: t('fileManager.viewSettings.columnLabels.lastModified'), value: 'lastModified' },
+  { label: t('fileManager.viewSettings.columnLabels.itemType'), value: 'itemType' },
   // 可以根据 FAMListItem 的实际字段添加更多，例如 'owner', 'permissions' 等
   // { label: '创建日期', value: 'createdAt' },
-];
+]);
 
 // Sync localSettings with store when modal becomes visible or store settings change
 watch(() => props.visible, (newVal) => {

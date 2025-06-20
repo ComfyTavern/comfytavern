@@ -19,7 +19,7 @@
             {{ item.name }}
           </span>
           <StarIcon v-if="isFavorite" class="h-3.5 w-3.5 ml-1.5 text-accent flex-shrink-0"
-            v-comfy-tooltip="'已收藏'" />
+            v-comfy-tooltip="t('fileManager.detailPanel.favorited')" />
         </div>
       </td>
 
@@ -37,7 +37,7 @@
       <td v-else-if="columnKey === 'itemType'"
         class="px-3 py-2 whitespace-nowrap text-sm text-text-muted"
         :class="getColumnWidthClass('itemType')">
-        {{ item.itemType === 'directory' ? '文件夹' : getItemMimeTypeDisplay(item) }}
+        {{ getItemMimeTypeDisplay(item) }}
       </td>
 
       <!-- Placeholder for other custom columns -->
@@ -50,7 +50,7 @@
     <td class="px-3 py-2 whitespace-nowrap text-right text-sm font-medium w-12">
       <button @click.stop="emit('itemContextMenu', $event, item, true)"
         class="p-1 rounded-full text-text-muted hover:bg-background-surface hover:text-text-base"
-        v-comfy-tooltip="'更多操作'">
+        v-comfy-tooltip="t('fileManager.gridItem.moreActions')">
         <EllipsisVerticalIcon class="h-5 w-5" />
       </button>
     </td>
@@ -59,12 +59,15 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { FAMItem } from '@comfytavern/types';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
 import {
   FolderIcon, DocumentIcon, StarIcon, EllipsisVerticalIcon,
   PhotoIcon, DocumentTextIcon, CodeBracketIcon, ArchiveBoxIcon, TableCellsIcon, FilmIcon, MusicalNoteIcon // Example icons
 } from '@heroicons/vue/24/outline';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   item: FAMItem;
@@ -105,18 +108,18 @@ const formatDate = (timestamp?: number | null): string => {
 };
 
 const getItemMimeTypeDisplay = (item: FAMItem): string => {
-  if (item.itemType === 'directory') return '文件夹';
+  if (item.itemType === 'directory') return t('fileManager.store.itemTypes.folder');
   if (item.mimeType) {
-    if (item.mimeType.startsWith('image/')) return '图片';
-    if (item.mimeType.startsWith('text/')) return '文本文档';
-    if (item.mimeType === 'application/pdf') return 'PDF 文档';
-    if (item.mimeType === 'application/zip' || item.mimeType === 'application/x-rar-compressed') return '压缩文件';
+    if (item.mimeType.startsWith('image/')) return t('fileManager.store.itemTypes.image');
+    if (item.mimeType.startsWith('text/')) return t('fileManager.store.itemTypes.text');
+    if (item.mimeType === 'application/pdf') return t('fileManager.store.itemTypes.pdf');
+    if (item.mimeType === 'application/zip' || item.mimeType === 'application/x-rar-compressed') return t('fileManager.store.itemTypes.archive');
     // Add more specific types
-    return item.mimeType.split('/')[1] || item.mimeType.split('/')[0] || '文件';
+    return item.mimeType.split('/')[1] || item.mimeType.split('/')[0] || t('fileManager.store.itemTypes.file');
   }
   const ext = item.name.split('.').pop()?.toLowerCase();
-  if (ext) return `${ext.toUpperCase()} 文件`;
-  return '文件';
+  if (ext) return t('fileManager.store.itemTypes.fileWithType', { ext: ext.toUpperCase() });
+  return t('fileManager.store.itemTypes.file');
 };
 
 const getDocumentIcon = (filename: string) => {

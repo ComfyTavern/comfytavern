@@ -3,6 +3,25 @@
     "name": "Chinese (Simplified)",
     "nativeName": "简体中文"
   },
+  "auth": {
+    "initialUsernameSetup": {
+      "title": "欢迎使用 ComfyTavern",
+      "subtitle": "请设置您的初始信息",
+      "nicknameLabel": "昵称",
+      "nicknamePlaceholder": "例如：星尘探险家",
+      "processing": "处理中...",
+      "confirmAndEmbark": "确认并启程",
+      "decideLater": "稍后决定",
+      "changeLaterHint": "您可以稍后在设置中更改昵称。",
+      "errors": {
+        "nicknameRequired": "昵称不能为空，请输入一个独特的代号。",
+        "nicknameTooShort": "昵称至少需要 {count} 个字符。",
+        "nicknameTooLong": "昵称太长啦，最多 {count} 个字符就够了。",
+        "saveFailed": "哎呀，保存昵称时遇到点小麻烦，请重试。",
+        "networkError": "网络似乎开小差了，请稍后再试。"
+      }
+    }
+  },
   "common": {
     "confirm": "确认",
     "cancel": "取消",
@@ -20,7 +39,19 @@
     "file": "文件",
     "folder": "文件夹",
     "actions": "操作",
-    "description": "描述"
+    "description": "描述",
+    "loading": "加载中...",
+    "noResults": "没有找到匹配项",
+    "noSuggestions": "无建议",
+    "noMatchingResults": "无匹配结果"
+  },
+  "editorHost": {
+    "noActiveTabs": "没有活动的编辑标签页。请从节点输入处打开编辑器。"
+  },
+  "tooltip": {
+    "copySuccess": "复制成功",
+    "copyContent": "复制内容",
+    "copyFailed": "复制失败: {error}"
   },
   "nav": {
     "home": "首页",
@@ -204,6 +235,41 @@
     "viewAll": "查看全部角色卡"
   },
   "fileManager": {
+    "filterModal": {
+      "title": "筛选文件与文件夹",
+      "filenameLabel": "文件名包含",
+      "filenamePlaceholder": "例如: report, image, .txt",
+      "typeLabel": "类型",
+      "anyType": "任何类型",
+      "fileType": "文件",
+      "folderType": "文件夹",
+      "sizeRangeLabel": "大小范围",
+      "minSizeLabel": "最小大小",
+      "minSizePlaceholder": "最小",
+      "maxSizeLabel": "最大大小",
+      "maxSizePlaceholder": "最大",
+      "dateRangeLabel": "修改日期范围",
+      "dateAfterLabel": "在此日期之后",
+      "dateBeforeLabel": "在此日期之前",
+      "showHiddenLabel": "显示隐藏文件",
+      "resetButton": "重置筛选",
+      "applyButton": "应用筛选"
+    },
+    "moveModal": {
+      "title": "移动项目",
+      "itemsToMove": "将 {count} 个项目:",
+      "noItemsToMove": "没有选中的项目可移动。",
+      "targetFolderLabel": "移动到目标文件夹:",
+      "targetPathPlaceholder": "例如: user://documents/new_folder/",
+      "pathHint": "请输入完整的目标文件夹逻辑路径，并以 / 结尾。",
+      "errors": {
+        "protocolRequired": "路径必须包含协议头 (如 user://, shared://)。",
+        "folderPathMustEndWithSlash": "文件夹路径必须以 / 结尾。",
+        "cannotMoveIntoSelfOrChild": "不能将文件夹 \"{itemName}\" 移动到其自身或其子文件夹中。",
+        "alreadyAtTarget": "项目 \"{itemName}\" 已在目标位置。"
+      },
+      "moveButton": "移动"
+    },
     "initializing": "正在初始化文件管理器...",
     "toolbar": {
       "upload": "上传",
@@ -301,7 +367,15 @@
     "store": {
       "myFiles": "我的文件",
       "sharedSpace": "共享空间",
-      "itemTypes": {},
+      "itemTypes": {
+        "folder": "文件夹",
+        "image": "图片",
+        "text": "文本文档",
+        "pdf": "PDF 文档",
+        "archive": "压缩文件",
+        "file": "文件",
+        "fileWithType": "{ext} 文件"
+      },
       "errors": {
         "loadFailed": "加载文件列表失败: {error}",
         "unknown": "未知错误"
@@ -352,6 +426,56 @@
         "noValidFiles": "没有有效的文件被选中上传。",
         "success": "{count} 个文件上传成功",
         "error": "上传失败: {error}"
+      }
+    },
+    "uploadManager": {
+      "title": "文件上传管理器",
+      "noFilesToUpload": "没有待上传的文件。",
+      "noFilesHint": "您可以通过文件管理器的“上传”按钮选择文件。",
+      "targetPathLabel": "目标路径:",
+      "overallProgress": "总体进度: {progress}%",
+      "allSuccess": "全部上传成功!",
+      "someSuccess": "{successCount} / {totalCount} 个成功",
+      "uploadFailed": "上传失败",
+      "statusWaiting": "等待上传",
+      "statusPaused": "已暂停",
+      "cancelUpload": "取消上传",
+      "errorPrefix": "错误:",
+      "startAll": "全部开始",
+      "uploading": "上传中...",
+      "done": "完成",
+      "close": "关闭",
+      "unknownPath": "未知路径",
+      "unknownUploadError": "未知上传错误"
+    },
+    "gridItem": {
+      "selectItem": "选择此项目",
+      "moreActions": "更多操作"
+    },
+    "viewSettings": {
+      "title": "视图设置",
+      "viewMode": "视图模式",
+      "listView": "列表视图",
+      "gridView": "网格视图",
+      "sortField": "排序字段",
+      "sortDirection": "排序方向",
+      "ascending": "升序",
+      "descending": "降序",
+      "visibleColumns": "列表视图显示列",
+      "thumbnailSize": "缩略图大小 (网格视图)",
+      "sizeSmall": "小",
+      "sizeMedium": "中",
+      "sizeLarge": "大",
+      "informationDensity": "信息密度",
+      "densityCompact": "紧凑",
+      "densityComfortable": "舒适",
+      "densitySpacious": "宽松",
+      "applySettings": "应用设置",
+      "columnLabels": {
+        "name": "名称",
+        "size": "大小",
+        "lastModified": "修改日期",
+        "itemType": "类型"
       }
     }
   },

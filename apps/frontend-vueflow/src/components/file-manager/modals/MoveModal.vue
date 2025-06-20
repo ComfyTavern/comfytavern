@@ -1,9 +1,9 @@
 <template>
-  <BaseModal :visible="visible" v-comfy-tooltip="'移动项目'" @close="handleClose" modal-class="w-full max-w-lg"
+  <BaseModal :visible="visible" v-comfy-tooltip="t('fileManager.moveModal.title')" @close="handleClose" modal-class="w-full max-w-lg"
     data-testid="fm-move-modal">
     <div class="p-4 sm:p-6 space-y-4 text-sm">
       <p v-if="itemsToMove.length > 0">
-        将 {{ itemsToMove.length }} 个项目:
+        {{ t('fileManager.moveModal.itemsToMove', { count: itemsToMove.length }) }}
       <ul class="list-disc list-inside max-h-32 overflow-y-auto bg-background-base p-2 rounded-md mt-1">
         <li v-for="item in itemsToMove" :key="item.logicalPath" class="truncate" v-comfy-tooltip="item.name">
           <component :is="item.itemType === 'directory' ? FolderIcon : DocumentIcon"
@@ -12,19 +12,19 @@
         </li>
       </ul>
       </p>
-      <p v-else>没有选中的项目可移动。</p>
+      <p v-else>{{ t('fileManager.moveModal.noItemsToMove') }}</p>
 
       <div>
         <label for="targetPathInput" class="block text-sm font-medium text-text-base mb-1">
-          移动到目标文件夹:
+          {{ t('fileManager.moveModal.targetFolderLabel') }}
         </label>
         <!-- 简化的路径输入，未来可以替换为路径选择器组件 -->
         <input id="targetPathInput" ref="targetPathInputRef" v-model="targetPath" type="text"
           class="input input-bordered input-sm w-full bg-background-base text-text-base border-border-base"
-          placeholder="例如: user://documents/new_folder/" @keydown.enter="handleConfirm" />
+          :placeholder="t('fileManager.moveModal.targetPathPlaceholder')" @keydown.enter="handleConfirm" />
         <p v-if="pathError" class="text-xs text-error mt-1">{{ pathError }}</p>
         <p class="text-xs text-text-muted mt-1">
-          请输入完整的目标文件夹逻辑路径，并以 / 结尾。
+          {{ t('fileManager.moveModal.pathHint') }}
         </p>
       </div>
       <!-- TODO: 未来可以集成一个迷你文件浏览器或树状视图来选择目标路径 -->
@@ -33,12 +33,12 @@
     <template #footer>
       <div class="flex justify-end space-x-2 p-3 bg-background-surface rounded-b-md">
         <button @click="handleClose" class="btn btn-sm btn-ghost" data-testid="fm-move-cancel-btn">
-          取消
+          {{ t('common.cancel') }}
         </button>
         <button @click="handleConfirm" class="btn btn-sm btn-primary" :disabled="!canConfirm"
           data-testid="fm-move-confirm-btn">
           <ArrowRightCircleIcon class="h-5 w-5 mr-1.5" />
-          移动
+          {{ t('fileManager.moveModal.moveButton') }}
         </button>
       </div>
     </template>
@@ -47,6 +47,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import BaseModal from '@/components/common/BaseModal.vue'; // 确保路径正确
 import type { FAMItem } from '@comfytavern/types';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
@@ -62,6 +63,7 @@ const emit = defineEmits<{
   (e: 'confirmMove', items: FAMItem[], targetPath: string): void;
 }>();
 
+const { t } = useI18n();
 const fileManagerStore = useFileManagerStore();
 const targetPath = ref('');
 const pathError = ref<string | null>(null);
@@ -74,15 +76,15 @@ const canConfirm = computed(() => {
 const validatePath = (path: string): boolean => {
   pathError.value = null;
   if (!path.trim()) {
-    // pathError.value = '目标路径不能为空。'; // 允许为空，由 canConfirm 控制按钮
+    // pathError.value = t('fileManager.moveModal.errors.pathRequired'); // 允许为空，由 canConfirm 控制按钮
     return false;
   }
   if (!path.includes('://')) {
-    pathError.value = '路径必须包含协议头 (如 user://, shared://)。';
+    pathError.value = t('fileManager.moveModal.errors.protocolRequired');
     return false;
   }
   if (!path.endsWith('/')) {
-    pathError.value = '文件夹路径必须以 / 结尾。';
+    pathError.value = t('fileManager.moveModal.errors.folderPathMustEndWithSlash');
     return false;
   }
   // 检查是否移动到自身或子目录
@@ -90,14 +92,14 @@ const validatePath = (path: string): boolean => {
     if (item.itemType === 'directory') {
       // 目标路径是源路径本身，或目标路径是源路径的子路径
       if (path === item.logicalPath || path.startsWith(item.logicalPath)) {
-        pathError.value = `不能将文件夹 "${item.name}" 移动到其自身或其子文件夹中。`;
+        pathError.value = t('fileManager.moveModal.errors.cannotMoveIntoSelfOrChild', { itemName: item.name });
         return false;
       }
     }
     // 检查是否移动到当前位置
     const sourceParentPath = item.logicalPath.substring(0, item.logicalPath.lastIndexOf('/', item.logicalPath.length - 2) + 1);
     if (path === sourceParentPath) {
-      pathError.value = `项目 "${item.name}" 已在目标位置。`;
+      pathError.value = t('fileManager.moveModal.errors.alreadyAtTarget', { itemName: item.name });
       return false;
     }
   }

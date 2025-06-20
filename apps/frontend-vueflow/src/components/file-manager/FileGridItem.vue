@@ -12,12 +12,12 @@
     <div class="absolute top-1.5 left-1.5 z-20">
       <input type="checkbox" :checked="isSelected" @change.stop="emit('toggleSelect', item)" @click.stop
         class="checkbox checkbox-xs sm:checkbox-sm rounded border-border-base text-primary focus:ring-primary ring-offset-background-base bg-background-surface opacity-0 group-hover:opacity-100 focus:opacity-100"
-        :class="{ 'opacity-100': isSelected }" aria-label="选择此项目" />
+        :class="{ 'opacity-100': isSelected }" :aria-label="t('fileManager.gridItem.selectItem')" />
     </div>
     <div class="absolute top-1 right-1 z-20 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
       <button @click.stop="emit('itemContextMenu', $event, item, true)"
         class="p-1 rounded-full text-text-muted hover:bg-background-surface hover:text-text-base"
-        v-comfy-tooltip="'更多操作'" aria-label="更多操作">
+        v-comfy-tooltip="t('fileManager.gridItem.moreActions')" :aria-label="t('fileManager.gridItem.moreActions')">
         <EllipsisVerticalIcon class="h-4 w-4" />
       </button>
     </div>
@@ -35,19 +35,22 @@
         class="text-xxs text-text-muted">
         {{ formatSize(item.size) }}
       </p>
-      <StarIcon v-if="isFavorite" class="h-3 w-3 mt-0.5 text-accent flex-shrink-0" v-comfy-tooltip="'已收藏'" />
+      <StarIcon v-if="isFavorite" class="h-3 w-3 mt-0.5 text-accent flex-shrink-0" v-comfy-tooltip="t('fileManager.detailPanel.favorited')" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { FAMItem } from '@comfytavern/types';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
 import {
   FolderIcon, DocumentIcon, StarIcon, EllipsisVerticalIcon,
   PhotoIcon, DocumentTextIcon, CodeBracketIcon, ArchiveBoxIcon, TableCellsIcon, FilmIcon, MusicalNoteIcon
 } from '@heroicons/vue/24/outline';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   item: FAMItem;

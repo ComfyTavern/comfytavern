@@ -1,34 +1,34 @@
 <template>
-  <BaseModal :visible="visible" v-comfy-tooltip="'筛选文件与文件夹'" @close="handleClose" modal-class="w-full max-w-lg"
+  <BaseModal :visible="visible" v-comfy-tooltip="t('fileManager.filterModal.title')" @close="handleClose" modal-class="w-full max-w-lg"
     data-testid="fm-filter-modal">
     <form @submit.prevent="applyFilters" class="p-4 sm:p-6 space-y-4">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label for="filter-filename"
-            class="block text-sm font-medium text-text-base mb-1">文件名包含</label>
+            class="block text-sm font-medium text-text-base mb-1">{{ t('fileManager.filterModal.filenameLabel') }}</label>
           <input type="text" id="filter-filename" v-model="localFilters.namePattern"
-            placeholder="例如: report, image, .txt"
+            :placeholder="t('fileManager.filterModal.filenamePlaceholder')"
             class="input input-bordered input-sm w-full bg-background-base border-border-base" />
         </div>
         <div>
-          <label for="filter-type" class="block text-sm font-medium text-text-base mb-1">类型</label>
+          <label for="filter-type" class="block text-sm font-medium text-text-base mb-1">{{ t('fileManager.filterModal.typeLabel') }}</label>
           <select id="filter-type" v-model="localFilters.itemType"
             class="select select-bordered select-sm w-full bg-background-base border-border-base">
-            <option value="">任何类型</option>
-            <option value="file">文件</option>
-            <option value="directory">文件夹</option>
+            <option value="">{{ t('fileManager.filterModal.anyType') }}</option>
+            <option value="file">{{ t('fileManager.filterModal.fileType') }}</option>
+            <option value="directory">{{ t('fileManager.filterModal.folderType') }}</option>
             <!-- 更多具体文件类型可以后续添加，如 image, document, video 等 -->
           </select>
         </div>
       </div>
 
       <div>
-        <p class="block text-sm font-medium text-text-base mb-1">大小范围</p>
+        <p class="block text-sm font-medium text-text-base mb-1">{{ t('fileManager.filterModal.sizeRangeLabel') }}</p>
         <div class="grid grid-cols-2 gap-3 items-center">
           <div>
-            <label for="filter-min-size" class="sr-only">最小大小</label>
+            <label for="filter-min-size" class="sr-only">{{ t('fileManager.filterModal.minSizeLabel') }}</label>
             <div class="flex items-center">
-              <input type="number" id="filter-min-size" v-model.number="minSizeInput" min="0" placeholder="最小"
+              <input type="number" id="filter-min-size" v-model.number="minSizeInput" min="0" :placeholder="t('fileManager.filterModal.minSizePlaceholder')"
                 class="input input-bordered input-sm w-full bg-background-base border-border-base" />
               <select v-model="minSizeUnitInput"
                 class="select select-bordered select-sm ml-2 bg-background-base border-border-base">
@@ -40,9 +40,9 @@
             </div>
           </div>
           <div>
-            <label for="filter-max-size" class="sr-only">最大大小</label>
+            <label for="filter-max-size" class="sr-only">{{ t('fileManager.filterModal.maxSizeLabel') }}</label>
             <div class="flex items-center">
-              <input type="number" id="filter-max-size" v-model.number="maxSizeInput" min="0" placeholder="最大"
+              <input type="number" id="filter-max-size" v-model.number="maxSizeInput" min="0" :placeholder="t('fileManager.filterModal.maxSizePlaceholder')"
                 class="input input-bordered input-sm w-full bg-background-base border-border-base" />
               <select v-model="maxSizeUnitInput"
                 class="select select-bordered select-sm ml-2 bg-background-base border-border-base">
@@ -57,15 +57,15 @@
       </div>
 
       <div>
-        <p class="block text-sm font-medium text-text-base mb-1">修改日期范围</p>
+        <p class="block text-sm font-medium text-text-base mb-1">{{ t('fileManager.filterModal.dateRangeLabel') }}</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label for="filter-date-after" class="sr-only">在此日期之后</label>
+            <label for="filter-date-after" class="sr-only">{{ t('fileManager.filterModal.dateAfterLabel') }}</label>
             <input type="date" id="filter-date-after" v-model="modifiedAfterDateInput"
               class="input input-bordered input-sm w-full bg-background-base border-border-base dark:[color-scheme:dark]" />
           </div>
           <div>
-            <label for="filter-date-before" class="sr-only">在此日期之前</label>
+            <label for="filter-date-before" class="sr-only">{{ t('fileManager.filterModal.dateBeforeLabel') }}</label>
             <input type="date" id="filter-date-before" v-model="modifiedBeforeDateInput"
               class="input input-bordered input-sm w-full bg-background-base border-border-base dark:[color-scheme:dark]" />
           </div>
@@ -76,7 +76,7 @@
         <label class="label cursor-pointer justify-start gap-2">
           <input type="checkbox" v-model="localFilters.showHiddenFiles"
             class="checkbox checkbox-sm checkbox-primary" />
-          <span class="label-text text-text-base">显示隐藏文件</span>
+          <span class="label-text text-text-base">{{ t('fileManager.filterModal.showHiddenLabel') }}</span>
         </label>
       </div>
     </form>
@@ -85,14 +85,14 @@
       <div class="flex justify-between items-center p-3 bg-background-surface rounded-b-md">
         <button @click="resetFilters" type="button"
           class="btn btn-sm btn-ghost text-error hover:bg-error/10">
-          重置筛选
+          {{ t('fileManager.filterModal.resetButton') }}
         </button>
         <div>
           <button @click="handleClose" type="button" class="btn btn-sm btn-ghost mr-2">
-            取消
+            {{ t('common.cancel') }}
           </button>
           <button @click="applyFilters" type="submit" class="btn btn-sm btn-primary">
-            应用筛选
+            {{ t('fileManager.filterModal.applyButton') }}
           </button>
         </div>
       </div>
@@ -102,6 +102,7 @@
 
 <script setup lang="ts">
 import { ref, watch, reactive } from 'vue';
+import { useI18n } from 'vue-i18n';
 import BaseModal from '@/components/common/BaseModal.vue';
 import { useFileManagerStore, type FilterOptions } from '@/stores/fileManagerStore';
 
@@ -121,6 +122,7 @@ const emit = defineEmits<{
   (e: 'close'): void;
 }>();
 
+const { t } = useI18n();
 const fileManagerStore = useFileManagerStore();
 
 // Local state for form inputs, initialized from store or defaults

@@ -5,7 +5,7 @@
       <input
         type="text"
         v-model="searchQuery"
-        :placeholder="searchPlaceholder"
+        :placeholder="searchPlaceholder || t('common.searchEllipsis')"
         class="menu-search-input"
         @input="onSearch"
         ref="searchInputRef"
@@ -15,7 +15,7 @@
 
     <!-- 加载状态 -->
     <div v-if="loading" class="menu-loading">
-      <span>{{ loadingText }}</span>
+      <span>{{ loadingText || t('common.loading') }}</span>
     </div>
 
     <!-- 搜索结果 -->
@@ -36,7 +36,7 @@
     
     <!-- 无搜索结果 -->
     <div v-else-if="searchQuery && filteredItems.length === 0" class="menu-no-results">
-      <span>{{ noResultsText }}</span>
+      <span>{{ noResultsText || t('common.noResults') }}</span>
     </div>
 
     <!-- 层级菜单 -->
@@ -122,9 +122,9 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
   showSearch: true,
-  searchPlaceholder: t('common.searchEllipsis'),
-  loadingText: t('common.loading'),
-  noResultsText: t('common.noResults')
+  searchPlaceholder: undefined,
+  loadingText: undefined,
+  noResultsText: undefined
 });
 
 const emit = defineEmits<{

@@ -1,7 +1,22 @@
 {
-  "_meta": {
-    "name": "[TODO: English name for the language, e.g., French (France)]",
-    "nativeName": "[TODO: Native name for the language, e.g., Français (France)]"
+  "auth": {
+    "initialUsernameSetup": {
+      "changeLaterHint": "[TODO]",
+      "confirmAndEmbark": "[TODO]",
+      "decideLater": "[TODO]",
+      "errors": {
+        "networkError": "[TODO]",
+        "nicknameRequired": "[TODO]",
+        "nicknameTooLong": "[TODO]",
+        "nicknameTooShort": "[TODO]",
+        "saveFailed": "[TODO]"
+      },
+      "nicknameLabel": "[TODO]",
+      "nicknamePlaceholder": "[TODO]",
+      "processing": "[TODO]",
+      "subtitle": "[TODO]",
+      "title": "[TODO]"
+    }
   },
   "characterPreview": {
     "loadError": "[TODO]",
@@ -26,8 +41,12 @@
     "error": "[TODO]",
     "file": "[TODO]",
     "folder": "[TODO]",
+    "loading": "[TODO]",
     "name": "[TODO]",
     "no": "[TODO]",
+    "noMatchingResults": "[TODO]",
+    "noResults": "[TODO]",
+    "noSuggestions": "[TODO]",
     "refresh": "[TODO]",
     "retry": "[TODO]",
     "searchEllipsis": "[TODO]",
@@ -35,6 +54,9 @@
     "type": "[TODO]",
     "warning": "[TODO]",
     "yes": "[TODO]"
+  },
+  "editorHost": {
+    "noActiveTabs": "[TODO]"
   },
   "editorView": {
     "loadingDefinitions": "[TODO]",
@@ -103,7 +125,46 @@
       "typePdf": "[TODO]",
       "typeText": "[TODO]"
     },
+    "filterModal": {
+      "anyType": "[TODO]",
+      "applyButton": "[TODO]",
+      "dateAfterLabel": "[TODO]",
+      "dateBeforeLabel": "[TODO]",
+      "dateRangeLabel": "[TODO]",
+      "fileType": "[TODO]",
+      "filenameLabel": "[TODO]",
+      "filenamePlaceholder": "[TODO]",
+      "folderType": "[TODO]",
+      "maxSizeLabel": "[TODO]",
+      "maxSizePlaceholder": "[TODO]",
+      "minSizeLabel": "[TODO]",
+      "minSizePlaceholder": "[TODO]",
+      "resetButton": "[TODO]",
+      "showHiddenLabel": "[TODO]",
+      "sizeRangeLabel": "[TODO]",
+      "title": "[TODO]",
+      "typeLabel": "[TODO]"
+    },
+    "gridItem": {
+      "moreActions": "[TODO]",
+      "selectItem": "[TODO]"
+    },
     "initializing": "[TODO]",
+    "moveModal": {
+      "errors": {
+        "alreadyAtTarget": "[TODO]",
+        "cannotMoveIntoSelfOrChild": "[TODO]",
+        "folderPathMustEndWithSlash": "[TODO]",
+        "protocolRequired": "[TODO]"
+      },
+      "itemsToMove": "[TODO]",
+      "moveButton": "[TODO]",
+      "noItemsToMove": "[TODO]",
+      "pathHint": "[TODO]",
+      "targetFolderLabel": "[TODO]",
+      "targetPathPlaceholder": "[TODO]",
+      "title": "[TODO]"
+    },
     "sidebarNav": {
       "clearRecent": "[TODO]",
       "collapse": "[TODO]",
@@ -144,6 +205,15 @@
       "favorites": {
         "added": "[TODO]",
         "removed": "[TODO]"
+      },
+      "itemTypes": {
+        "archive": "[TODO]",
+        "file": "[TODO]",
+        "fileWithType": "[TODO]",
+        "folder": "[TODO]",
+        "image": "[TODO]",
+        "pdf": "[TODO]",
+        "text": "[TODO]"
       },
       "move": {
         "error": "[TODO]",
@@ -192,6 +262,52 @@
       "upload": "[TODO]",
       "uploadFile": "[TODO]",
       "viewSettings": "[TODO]"
+    },
+    "uploadManager": {
+      "allSuccess": "[TODO]",
+      "cancelUpload": "[TODO]",
+      "close": "[TODO]",
+      "done": "[TODO]",
+      "errorPrefix": "[TODO]",
+      "noFilesHint": "[TODO]",
+      "noFilesToUpload": "[TODO]",
+      "overallProgress": "[TODO]",
+      "someSuccess": "[TODO]",
+      "startAll": "[TODO]",
+      "statusPaused": "[TODO]",
+      "statusWaiting": "[TODO]",
+      "targetPathLabel": "[TODO]",
+      "title": "[TODO]",
+      "unknownPath": "[TODO]",
+      "unknownUploadError": "[TODO]",
+      "uploadFailed": "[TODO]",
+      "uploading": "[TODO]"
+    },
+    "viewSettings": {
+      "applySettings": "[TODO]",
+      "ascending": "[TODO]",
+      "columnLabels": {
+        "itemType": "[TODO]",
+        "lastModified": "[TODO]",
+        "name": "[TODO]",
+        "size": "[TODO]"
+      },
+      "densityComfortable": "[TODO]",
+      "densityCompact": "[TODO]",
+      "densitySpacious": "[TODO]",
+      "descending": "[TODO]",
+      "gridView": "[TODO]",
+      "informationDensity": "[TODO]",
+      "listView": "[TODO]",
+      "sizeLarge": "[TODO]",
+      "sizeMedium": "[TODO]",
+      "sizeSmall": "[TODO]",
+      "sortDirection": "[TODO]",
+      "sortField": "[TODO]",
+      "thumbnailSize": "[TODO]",
+      "title": "[TODO]",
+      "viewMode": "[TODO]",
+      "visibleColumns": "[TODO]"
     }
   },
   "graph": {
@@ -683,6 +799,11 @@
       "title": "[TODO]"
     }
   },
+  "tooltip": {
+    "copyContent": "[TODO]",
+    "copyFailed": "[TODO]",
+    "copySuccess": "[TODO]"
+  },
   "workflowInfoPanel": {
     "buttons": {
       "logJson": "[TODO]"
@@ -753,5 +874,9 @@
       "orphanGroup": "[TODO]",
       "referencedBy": "[TODO]"
     }
+  },
+  "_meta": {
+    "name": "[TODO: English name for the language, e.g., French (France)]",
+    "nativeName": "[TODO: Native name for the language, e.g., Français (France)]"
   }
 }
