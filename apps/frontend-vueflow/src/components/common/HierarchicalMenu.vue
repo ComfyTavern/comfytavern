@@ -221,21 +221,19 @@ const onItemSelect = (item: MenuItem) => {
 }
 
 .menu-section-title {
-  @apply flex justify-between items-center px-3 py-1.5
-    bg-background-base text-text-base font-medium text-sm
-    cursor-pointer mb-0.5 hover:bg-background-surface
-    transition-colors duration-150 ease-in-out;
+  @apply flex justify-between items-center px-2 py-1 rounded
+    bg-primary/20 text-text-base font-medium text-sm
+    cursor-pointer mb-1;
 }
 
 .menu-category-title {
-  @apply flex justify-between items-center px-3 py-1.5
-    text-text-secondary font-medium text-sm
-    cursor-pointer hover:bg-background-base
-    transition-colors duration-150 ease-in-out;
+  @apply flex justify-between items-center px-2 py-1 rounded
+    bg-primary/10 text-text-secondary font-medium text-sm
+    cursor-pointer mt-1;
 }
 
 .menu-section-content {
-  @apply mb-1;
+  /* Spacing is now handled by title margins */
 }
 
 .menu-category-content {
