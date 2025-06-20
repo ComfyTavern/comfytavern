@@ -80,6 +80,26 @@ function extractKeysFromJS(content: string, isExpression: boolean = false): Set<
           }
         }
       },
+
+      ObjectProperty(path) {
+        const keyNode = path.node.key;
+        const valueNode = path.node.value;
+
+        // 扫描诸如 labelKey: 'path.to.key' 之类的属性
+        const I18N_KEY_PROPS = new Set([
+          'labelKey', 'titleKey', 'messageKey', 'placeholderKey',
+          'label', 'title', 'message', 'placeholder', 'text', 'header', 'content', 'name'
+        ]);
+
+        if (
+          keyNode.type === 'Identifier' &&
+          I18N_KEY_PROPS.has(keyNode.name) &&
+          valueNode.type === 'StringLiteral' &&
+          valueNode.value.includes('.') // 基本启发式规则：i18n key 通常包含'.'
+        ) {
+          keys.add(valueNode.value);
+        }
+      },
     });
   } catch (e) {
     // console.error(`Babel parsing error for content: ${content}`, e);

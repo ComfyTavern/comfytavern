@@ -487,6 +487,32 @@
       "system": "系统",
       "dark": "暗色",
       "light": "亮色"
+    },
+    "tabs": {
+      "nodes": {
+        "label": "节点",
+        "title": "节点库"
+      },
+      "workflows": {
+        "label": "工作流",
+        "title": "工作流管理"
+      },
+      "interface": {
+        "label": "接口",
+        "title": "工作流接口"
+      },
+      "history": {
+        "label": "历史",
+        "title": "操作历史"
+      },
+      "performance": {
+        "label": "统计",
+        "title": "节点统计"
+      },
+      "info": {
+        "label": "信息",
+        "title": "工作流信息"
+      }
     }
   },
   "workflowInfoPanel": {

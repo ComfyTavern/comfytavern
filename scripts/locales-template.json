@@ -509,6 +509,32 @@
       "goHome": "[TODO]",
       "settings": "[TODO]"
     },
+    "tabs": {
+      "history": {
+        "label": "[TODO]",
+        "title": "[TODO]"
+      },
+      "info": {
+        "label": "[TODO]",
+        "title": "[TODO]"
+      },
+      "interface": {
+        "label": "[TODO]",
+        "title": "[TODO]"
+      },
+      "nodes": {
+        "label": "[TODO]",
+        "title": "[TODO]"
+      },
+      "performance": {
+        "label": "[TODO]",
+        "title": "[TODO]"
+      },
+      "workflows": {
+        "label": "[TODO]",
+        "title": "[TODO]"
+      }
+    },
     "theme": {
       "dark": "[TODO]",
       "light": "[TODO]",
