@@ -6,36 +6,36 @@
     <div class="context-menu-items">
       <div class="context-menu-item" @mouseenter="handleShowNodeSubMenu" @mouseleave="handleHideNodeSubMenuDelayed"
         ref="addNodeMenuItemRef">
-        <span class="icon">+</span> 添加节点 <span class="submenu-arrow-static">▶</span>
+        <span class="icon">+</span> {{ t('graph.menus.context.addNode') }} <span class="submenu-arrow-static">▶</span>
       </div>
       <div class="context-menu-item" @click="handleOpenSearchPanel">
-        <span class="icon">🔍</span> 查找节点...
+        <span class="icon">🔍</span> {{ t('graph.menus.context.findNode') }}
       </div>
       <div class="context-menu-item" @click="onAddGroup">
-        <span class="icon">⊞</span> 添加分组框
+        <span class="icon">⊞</span> {{ t('graph.menus.context.addGroupbox') }}
       </div>
       <div class="context-menu-separator"></div>
       <div class="context-menu-item" @click="onLocalCopy" :class="{ disabled: !hasSelectedNodes }">
-        <span class="icon">⎘</span> 复制选中项 (本地)
+        <span class="icon">⎘</span> {{ t('graph.menus.context.copySelectionLocal') }}
       </div>
       <div class="context-menu-item" @click="onSystemCopy" :class="{ disabled: !hasSelectedNodes }">
-        <span class="icon">📋</span> 复制选中项 (剪贴板)
+        <span class="icon">📋</span> {{ t('graph.menus.context.copySelectionClipboard') }}
       </div>
       <div class="context-menu-item" @click="onLocalPaste">
-        <span class="icon">📥</span> 粘贴 (本地)
+        <span class="icon">📥</span> {{ t('graph.menus.context.pasteLocal') }}
       </div>
       <div class="context-menu-item" @click="onSystemPaste">
-        <span class="icon">📲</span> 从剪贴板粘贴
+        <span class="icon">📲</span> {{ t('graph.menus.context.pasteFromClipboard') }}
       </div>
       <div class="context-menu-item" @click="onDelete" :class="{ disabled: !hasSelectedNodes }">
-        <span class="icon">🗑</span> 删除选中项
+        <span class="icon">🗑</span> {{ t('graph.menus.context.deleteSelection') }}
       </div>
       <div class="context-menu-separator"></div>
       <div class="context-menu-item" @click="onSelectAll">
-        <span class="icon">☑</span> 全选
+        <span class="icon">☑</span> {{ t('graph.menus.context.selectAll') }}
       </div>
       <div class="context-menu-item" @click="onResetView">
-        <span class="icon">⟲</span> 重置视图
+        <span class="icon">⟲</span> {{ t('graph.menus.context.resetView') }}
       </div>
     </div>
 
@@ -51,6 +51,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { XYPosition } from '@vue-flow/core';
 import { useNodeStore } from '../../../stores/nodeStore';
 import { storeToRefs } from 'pinia';
@@ -80,6 +81,7 @@ const emit = defineEmits<{
 }>();
 
 // Store
+const { t } = useI18n();
 const nodeStore = useNodeStore();
 const { nodeDefinitions } = storeToRefs(nodeStore);
 const loading = ref(false);
@@ -109,7 +111,7 @@ const nodeMenuSections = computed(() => {
     })
     .forEach((node: FrontendNodeDefinition) => {
       const namespace = node.namespace || 'core';
-      const category = node.category || '未分类';
+      const category = node.category || t('editorView.unclassified');
 
       // 初始化命名空间
       if (!sections[namespace]) {

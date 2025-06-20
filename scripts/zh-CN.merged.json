@@ -884,6 +884,101 @@
         "unnamedNode": "未命名节点",
         "unknownType": "未知"
       }
+    },
+    "menus": {
+      "context": {
+        "addNode": "添加节点",
+        "findNode": "查找节点...",
+        "addGroupbox": "添加分组框",
+        "copySelectionLocal": "复制选中项 (本地)",
+        "copySelectionClipboard": "复制选中项 (剪贴板)",
+        "pasteLocal": "粘贴 (本地)",
+        "pasteFromClipboard": "从剪贴板粘贴",
+        "deleteSelection": "删除选中项",
+        "selectAll": "全选",
+        "resetView": "重置视图"
+      },
+      "node": {
+        "viewGroupOutput": "查看组输出",
+        "connectTo": "连接到...",
+        "disconnectAll": "断开所有连接",
+        "copySelectionLocalCount": "复制选中项 (本地) ({count})",
+        "copySelectionClipboardCount": "复制选中项 (剪贴板) ({count})",
+        "createNodeGroup": "创建节点组 (Ctrl+G)",
+        "createFrameForSelection": "创建分组框",
+        "deleteSelectionCount": "删除选中项 ({count})"
+      },
+      "slot": {
+        "disconnect": "断开连接",
+        "input": "输入",
+        "output": "输出",
+        "deleteSlot": "删除插槽 ({id})",
+        "setAsPreview": "设为预览",
+        "clearPreview": "取消预览",
+        "unknownNode": "未知节点",
+        "unknownSlot": "未知插槽",
+        "history": {
+          "disconnectAll": "断开节点 {nodeLabel} {handleDirection} {handleLabel} 的所有连接",
+          "deleteGroupInput": "删除组输入 {slotNameToRemove}",
+          "deleteGroupOutput": "删除组输出 {slotNameToRemove}",
+          "setPreview": "将节点 {nodeLabel} 的输出 {slotLabel} 设为预览目标",
+          "clearPreview": "取消节点 {nodeLabel} 输出 {slotLabel} 的预览目标"
+        }
+      },
+      "workflow": {
+        "new": "新建",
+        "open": "打开...",
+        "save": "保存",
+        "saveAs": "另存为...",
+        "import": "导入...",
+        "export": "导出",
+        "undo": "撤销",
+        "redo": "重做",
+        "errors": {
+          "cannotCreateNoActiveTab": "无法创建新工作流：没有活动的标签页。",
+          "cannotCreatePleaseOpenTab": "无法创建新工作流：请先打开一个标签页。",
+          "cannotSaveNoActiveTab": "无法保存：没有活动的标签页。",
+          "cannotSavePleaseOpenTab": "无法保存：请先打开一个标签页。",
+          "saveFailed": "保存工作流失败: {error}",
+          "cannotSaveAsNoActiveTab": "无法另存为：没有活动的标签页。",
+          "cannotSaveAsNoProject": "无法另存为：当前项目ID未知。",
+          "cannotSaveAsNoState": "无法获取当前工作流的完整状态以进行另存为。",
+          "saveAsFailed": "另存为失败: {error}",
+          "cannotImportNoActiveTab": "无法导入：没有活动的标签页。",
+          "cannotImportPleaseOpenTab": "无法导入：请先打开一个标签页。",
+          "invalidFileFormat": "无效的工作流文件格式。需要包含 nodes, edges, 和 viewport。",
+          "importFailed": "导入工作流失败: {error}",
+          "readFileFailed": "读取文件失败。",
+          "cannotExportNoActiveTab": "无法导出：没有活动的标签页。",
+          "cannotExportPleaseOpenTab": "无法导出：请先打开一个标签页。",
+          "cannotExportNoInstance": "无法导出：标签页 {currentTabId} 的 VueFlow 实例不可用。",
+          "cannotExportInstanceUnavailable": "无法导出：VueFlow 实例不可用。"
+        },
+        "logs": {
+          "sidebarRefUnavailable": "侧边栏引用不可用，请确保 SidebarManager 已正确加载",
+          "openSidebarFailed": "打开侧边栏工作流面板失败:",
+          "saveError": "保存工作流时出错:",
+          "saveAsError": "另存为操作时发生严重错误:",
+          "importSuccessTemporary": "工作流导入成功（临时实现）。",
+          "importError": "导入工作流时出错:",
+          "readFileError": "读取文件时出错:"
+        },
+        "notifications": {
+          "saveAsSuccess": "工作流 \"{name}\" 已成功另存为并在新标签页中打开。",
+          "saveAsFailed": "另存为失败：未能保存新的工作流记录。请检查控制台获取更多信息。",
+          "importSuccess": "工作流 \"{name}\" 已导入到当前标签页。请记得保存。",
+          "importSuccessTitle": "导入成功"
+        },
+        "dialogs": {
+          "saveAs": {
+            "copySuffix": "副本",
+            "newWorkflowCopy": "新工作流副本",
+            "title": "另存为新工作流",
+            "message": "请输入新工作流的名称：",
+            "placeholder": "工作流名称"
+          }
+        }
+      }
     }
   }
 }

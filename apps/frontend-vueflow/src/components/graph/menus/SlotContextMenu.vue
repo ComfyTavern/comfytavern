@@ -7,7 +7,7 @@
   >
     <div class="context-menu-items">
       <div class="context-menu-item" @click="onDisconnect">
-        <span class="icon">✂️</span> 断开连接 ({{ handleType === "target" ? "输入" : "输出" }}:
+        <span class="icon">✂️</span> {{ t('graph.menus.slot.disconnect') }} ({{ handleType === "target" ? t('graph.menus.slot.input') : t('graph.menus.slot.output') }}:
         {{ handleId }})
       </div>
       <!-- 删除插槽选项（可能仅对 GroupInput/Output 节点或类似有增减插槽功能的节点有效） -->
@@ -16,7 +16,7 @@
         class="context-menu-item context-menu-item-danger"
         @click="onDeleteSlot"
       >
-        <span class="icon">🗑️</span> 删除插槽 ({{ handleId }})
+        <span class="icon">🗑️</span> {{ t('graph.menus.slot.deleteSlot', { id: handleId }) }}
       </div>
       <!-- 预览相关菜单项 -->
       <template v-if="isOutputSlot">
@@ -25,14 +25,14 @@
           class="context-menu-item"
           @click="setAsPreview"
         >
-          <span class="icon">👁️</span> 设为预览
+          <span class="icon">👁️</span> {{ t('graph.menus.slot.setAsPreview') }}
         </div>
         <div
           v-if="isCurrentSlotPreviewTarget"
           class="context-menu-item"
           @click="clearPreview"
         >
-          <span class="icon">🚫</span> 取消预览
+          <span class="icon">🚫</span> {{ t('graph.menus.slot.clearPreview') }}
         </div>
       </template>
     </div>
@@ -42,6 +42,7 @@
 <script setup lang="ts">
 import type { XYPosition, Node as VueFlowNode } from "@vue-flow/core";
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { useWorkflowStore } from "@/stores/workflowStore"; // 保持，因为 onDisconnect 和 onDeleteSlot 仍在使用
 import { useTabStore } from "@/stores/tabStore";
 import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager";
@@ -74,6 +75,7 @@ const emit = defineEmits<{
   (e: "close"): void; // 关闭菜单事件
 }>();
 
+const { t } = useI18n();
 const workflowStore = useWorkflowStore(); // 保留
 const tabStore = useTabStore();
 const workflowManager = useWorkflowManager();
@@ -206,10 +208,10 @@ const onDisconnect = async () => {
     | undefined;
   const nodeLabel = node?.data?.label || props.nodeId;
   const handleLabel = props.handleId; // 可以考虑从节点数据中获取更友好的句柄名称
-  const handleDirection = props.handleType === "target" ? "输入" : "输出";
+  const handleDirection = props.handleType === "target" ? t('graph.menus.slot.input') : t('graph.menus.slot.output');
 
   // 1. 创建历史记录条目
-  const summary = `断开节点 ${nodeLabel} ${handleDirection} ${handleLabel} 的所有连接`;
+  const summary = t('graph.menus.slot.history.disconnectAll', { nodeLabel, handleDirection, handleLabel });
   const entry: HistoryEntry = createHistoryEntry(
     "delete", // 操作类型: 'delete' (删除边)
     "edge", // 对象类型: 'edge'
@@ -330,7 +332,9 @@ const onDeleteSlot = () => {
   };
 
   // 6. 准备历史记录条目所需信息
-  const summary = `删除组${ioType === "input" ? "输入" : "输出"} ${slotNameToRemove}`;
+  const summary = ioType === "input"
+    ? t('graph.menus.slot.history.deleteGroupInput', { slotNameToRemove })
+    : t('graph.menus.slot.history.deleteGroupOutput', { slotNameToRemove });
   const entry: HistoryEntry = createHistoryEntry(
     "delete", // 操作类型: 'delete'
     interfaceType, // 对象类型: 'interfaceInput' 或 'interfaceOutput'
@@ -363,7 +367,7 @@ const setAsPreview = async () => {
   const entry: HistoryEntry = createHistoryEntry(
     "update",
     "workflow", // 对象类型: 'workflow' (因为预览目标是工作流级别的属性)
-    `将节点 ${nodeLabel} 的输出 ${slotLabel} 设为预览目标`,
+    t('graph.menus.slot.history.setPreview', { nodeLabel, slotLabel }),
     {
       targetNodeId: props.nodeId,
       targetSlotKey: props.handleId,
@@ -385,14 +389,14 @@ const clearPreview = async () => {
   }
 
   const oldTarget = klona(activePreviewTarget.value);
-  const nodeLabel = oldTarget?.nodeId || '未知节点';
-  const slotLabel = oldTarget?.slotKey || '未知插槽';
+  const nodeLabel = oldTarget?.nodeId || t('graph.menus.slot.unknownNode');
+  const slotLabel = oldTarget?.slotKey || t('graph.menus.slot.unknownSlot');
 
 
   const entry: HistoryEntry = createHistoryEntry(
     "update",
     "workflow",
-    `取消节点 ${nodeLabel} 输出 ${slotLabel} 的预览目标`,
+    t('graph.menus.slot.history.clearPreview', { nodeLabel, slotLabel }),
     {
       previousTarget: oldTarget, // 记录旧目标以便撤销
     }

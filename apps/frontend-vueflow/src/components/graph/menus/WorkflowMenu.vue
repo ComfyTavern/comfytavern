@@ -8,7 +8,7 @@
             stroke="currentColor" class="w-4 h-4 mr-2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          新建
+          {{ t('graph.menus.workflow.new') }}
         </button>
       </li>
       <li>
@@ -18,7 +18,7 @@
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.08a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6.75A2.25 2.25 0 0 1 5.625 4.5h12.75a2.25 2.25 0 0 1 2.25 2.25v3.026" />
           </svg>
-          打开...
+          {{ t('graph.menus.workflow.open') }}
         </button>
       </li>
       <li class="menu-separator">
@@ -32,7 +32,7 @@
               d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
               transform="rotate(180 12 12)" />
           </svg>
-          保存
+          {{ t('graph.menus.workflow.save') }}
           <span class="ml-auto text-xs text-text-muted">Ctrl+S</span>
         </button>
       </li>
@@ -43,7 +43,7 @@
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2m-6 12h8a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z" />
           </svg>
-          另存为...
+          {{ t('graph.menus.workflow.saveAs') }}
         </button>
       </li>
       <li class="menu-separator">
@@ -56,7 +56,7 @@
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15m0-3-3-3m0 0-3 3m3-3v11.25" />
           </svg>
-          导入...
+          {{ t('graph.menus.workflow.import') }}
         </button>
         <input type="file" ref="importInputRef" @change="handleFileChange" accept=".json" style="display: none" />
       </li>
@@ -67,7 +67,7 @@
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
           </svg>
-          导出
+          {{ t('graph.menus.workflow.export') }}
         </button>
       </li>
       <li class="menu-separator">
@@ -79,7 +79,7 @@
             stroke="currentColor" class="w-4 h-4 mr-2 transform scale-x-[-1]">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
           </svg>
-          撤销
+          {{ t('graph.menus.workflow.undo') }}
           <span class="ml-auto text-xs text-text-muted">Ctrl+Z</span>
         </button>
       </li>
@@ -89,7 +89,7 @@
             stroke="currentColor" class="w-4 h-4 mr-2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
           </svg>
-          重做
+          {{ t('graph.menus.workflow.redo') }}
           <span class="ml-auto text-xs text-text-muted">Ctrl+Shift+Z</span>
         </button>
       </li>
@@ -104,6 +104,7 @@ import { useTabStore } from "@/stores/tabStore";
 import { useProjectStore } from "@/stores/projectStore"; // 咕咕：新增导入
 import { storeToRefs } from "pinia";
 import { ref, computed } from "vue";
+import { useI18n } from "vue-i18n";
 import sanitize from "sanitize-filename";
 import { inject } from "vue";
 import { deepClone } from '@/utils/deepClone'; // 咕咕：重新加入导入
@@ -113,6 +114,7 @@ import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core"; 
 import { transformVueFlowToCoreWorkflow } from '@/utils/workflowTransformer'; // 咕咕：确保导入
 
 const emit = defineEmits(["close"]);
+const { t } = useI18n();
 const sidebarRef = inject<{ setActiveTab: (tabId: string) => void }>('sidebarRef');
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore();
@@ -152,20 +154,20 @@ const handleNew = () => {
     // 调用 store action 创建新工作流（现在需要 tab id）
     workflowStore.createNewWorkflow(activeTabId.value);
   } else {
-    console.error("无法创建新工作流：没有活动的标签页。");
-    dialogService.showError("无法创建新工作流：请先打开一个标签页。");
+    console.error(t('graph.menus.workflow.errors.cannotCreateNoActiveTab'));
+    dialogService.showError(t('graph.menus.workflow.errors.cannotCreatePleaseOpenTab'));
   }
   closeMenu();
 };
 const handleOpen = () => {
   if (!sidebarRef) {
-    console.warn("侧边栏引用不可用，请确保 SidebarManager 已正确加载");
+    console.warn(t('graph.menus.workflow.logs.sidebarRefUnavailable'));
     return;
   }
   try {
     sidebarRef.setActiveTab('workflows');
   } catch (error) {
-    console.warn("打开侧边栏工作流面板失败:", error);
+    console.warn(t('graph.menus.workflow.logs.openSidebarFailed'), error);
   } finally {
     closeMenu();
   }
@@ -173,8 +175,8 @@ const handleOpen = () => {
 
 const handleSave = async () => {
   if (!activeTabId.value) {
-    console.error("无法保存：没有活动的标签页。");
-    dialogService.showError("无法保存：请先打开一个标签页。");
+    console.error(t('graph.menus.workflow.errors.cannotSaveNoActiveTab'));
+    dialogService.showError(t('graph.menus.workflow.errors.cannotSavePleaseOpenTab'));
     closeMenu();
     return;
   }
@@ -195,8 +197,8 @@ const handleSave = async () => {
       await workflowStore.saveWorkflow(); // 调用 store action 保存，不需要参数
       closeMenu();
     } catch (error) {
-      console.error("保存工作流时出错:", error);
-      dialogService.showError(`保存工作流失败: ${error instanceof Error ? error.message : "未知错误"}`);
+      console.error(t('graph.menus.workflow.logs.saveError'), error);
+      dialogService.showError(t('graph.menus.workflow.errors.saveFailed', { error: error instanceof Error ? error.message : t('common.error') }));
       closeMenu();
     }
   }
@@ -204,21 +206,21 @@ const handleSave = async () => {
 const handleSaveAs = async () => {
   const currentTabInternalId = activeTabId.value;
   if (!currentTabInternalId) {
-    dialogService.showError("无法另存为：没有活动的标签页。");
+    dialogService.showError(t('graph.menus.workflow.errors.cannotSaveAsNoActiveTab'));
     closeMenu();
     return;
   }
 
   const projectId = currentProjectId.value;
   if (!projectId) {
-    dialogService.showError("无法另存为：当前项目ID未知。");
+    dialogService.showError(t('graph.menus.workflow.errors.cannotSaveAsNoProject'));
     closeMenu();
     return;
   }
 
   const currentTabState = workflowStore.getTabState(currentTabInternalId);
   if (!currentTabState || !currentTabState.elements || !currentTabState.workflowData) {
-    dialogService.showError("无法获取当前工作流的完整状态以进行另存为。");
+    dialogService.showError(t('graph.menus.workflow.errors.cannotSaveAsNoState'));
     closeMenu();
     return;
   }
@@ -230,16 +232,16 @@ const handleSaveAs = async () => {
 
   // 2. 提示用户输入新工作流的名称
   const newNameSuggestion = originalWorkflowMeta.name
-    ? `${originalWorkflowMeta.name} 副本`
-    : "新工作流副本";
+    ? `${originalWorkflowMeta.name} ${t('graph.menus.workflow.dialogs.saveAs.copySuffix')}`
+    : t('graph.menus.workflow.dialogs.saveAs.newWorkflowCopy');
   
   const newName = await dialogService.showInput({
-    title: "另存为新工作流",
-    message: "请输入新工作流的名称：",
+    title: t('graph.menus.workflow.dialogs.saveAs.title'),
+    message: t('graph.menus.workflow.dialogs.saveAs.message'),
     initialValue: newNameSuggestion,
-    inputPlaceholder: "工作流名称",
-    confirmText: "确定",
-    cancelText: "取消",
+    inputPlaceholder: t('graph.menus.workflow.dialogs.saveAs.placeholder'),
+    confirmText: t('common.confirm'),
+    cancelText: t('common.cancel'),
   });
 
   if (newName === null || newName.trim() === "") { // 用户取消或输入为空
@@ -291,14 +293,14 @@ const handleSaveAs = async () => {
       // 5. 在新标签页中打开这个刚保存的工作流
       // addTab 会处理 setActiveTab
       tabStore.addTab("workflow", savedWorkflow.name, savedWorkflow.id, true, projectId);
-      dialogService.showSuccess(`工作流 "${savedWorkflow.name}" 已成功另存为并在新标签页中打开。`);
+      dialogService.showSuccess(t('graph.menus.workflow.notifications.saveAsSuccess', { name: savedWorkflow.name }));
     } else {
       // 如果 savedWorkflow 为 null 或没有 id，说明保存失败
-      dialogService.showError("另存为失败：未能保存新的工作流记录。请检查控制台获取更多信息。");
+      dialogService.showError(t('graph.menus.workflow.notifications.saveAsFailed'));
     }
   } catch (error) {
-    console.error("另存为操作时发生严重错误:", error);
-    dialogService.showError(`另存为失败: ${error instanceof Error ? error.message : "未知错误"}`);
+    console.error(t('graph.menus.workflow.logs.saveAsError'), error);
+    dialogService.showError(t('graph.menus.workflow.errors.saveAsFailed', { error: error instanceof Error ? error.message : t('common.error') }));
   } finally {
     closeMenu();
   }
@@ -315,8 +317,8 @@ const handleFileChange = (event: Event) => {
   if (!file) return;
 
   if (!activeTabId.value) {
-    console.error("无法导入：没有活动的标签页。");
-    dialogService.showError("无法导入：请先打开一个标签页。");
+    console.error(t('graph.menus.workflow.errors.cannotImportNoActiveTab'));
+    dialogService.showError(t('graph.menus.workflow.errors.cannotImportPleaseOpenTab'));
     // 重置文件输入
     if (importInputRef.value) {
       importInputRef.value.value = "";
@@ -393,16 +395,16 @@ const handleFileChange = (event: Event) => {
         }
         // 更新 Tab 标签名称
         tabStore.updateTab(currentTabId, { label: name, isDirty: true, associatedId: "" });
-
-        console.log("工作流导入成功（临时实现）。"); // Keep as log - user action feedback
-        dialogService.showSuccess(`工作流 "${name}" 已导入到当前标签页。请记得保存。`, '导入成功');
+  
+        console.log(t('graph.menus.workflow.logs.importSuccessTemporary')); // Keep as log - user action feedback
+        dialogService.showSuccess(t('graph.menus.workflow.notifications.importSuccess', { name }), t('graph.menus.workflow.notifications.importSuccessTitle'));
         // --- 临时方案结束 ---
       } else {
-        throw new Error("无效的工作流文件格式。需要包含 nodes, edges, 和 viewport。");
+        throw new Error(t('graph.menus.workflow.errors.invalidFileFormat'));
       }
     } catch (error) {
-      console.error("导入工作流时出错:", error);
-      dialogService.showError(`导入工作流失败: ${error instanceof Error ? error.message : "未知错误"}`);
+      console.error(t('graph.menus.workflow.logs.importError'), error);
+      dialogService.showError(t('graph.menus.workflow.errors.importFailed', { error: error instanceof Error ? error.message : t('common.error') }));
     } finally {
       // 重置文件输入，以便可以再次选择相同的文件
       if (importInputRef.value) {
@@ -411,8 +413,8 @@ const handleFileChange = (event: Event) => {
     }
   };
   reader.onerror = (error) => {
-    console.error("读取文件时出错:", error);
-    dialogService.showError("读取文件失败。");
+    console.error(t('graph.menus.workflow.logs.readFileError'), error);
+    dialogService.showError(t('graph.menus.workflow.errors.readFileFailed'));
     if (importInputRef.value) {
       importInputRef.value.value = "";
     }
@@ -423,15 +425,15 @@ const handleFileChange = (event: Event) => {
 const handleExport = () => {
   const currentTabId = activeTabId.value;
   if (!currentTabId) {
-    console.error("无法导出：没有活动的标签页。");
-    dialogService.showError("无法导出：请先打开一个标签页。");
+    console.error(t('graph.menus.workflow.errors.cannotExportNoActiveTab'));
+    dialogService.showError(t('graph.menus.workflow.errors.cannotExportPleaseOpenTab'));
     closeMenu();
     return;
   }
   const instance = workflowStore.getVueFlowInstance(currentTabId);
   if (!instance) {
-    console.error(`无法导出：标签页 ${currentTabId} 的 VueFlow 实例不可用。`);
-    dialogService.showError("无法导出：VueFlow 实例不可用。");
+    console.error(t('graph.menus.workflow.errors.cannotExportNoInstance', { currentTabId }));
+    dialogService.showError(t('graph.menus.workflow.errors.cannotExportInstanceUnavailable'));
     closeMenu();
     return;
   }

@@ -2,33 +2,33 @@
   <div v-if="visible" class="node-context-menu context-menu-base"
     :style="{ left: `${position.x}px`, top: `${position.y}px` }" @click.stop>
     <div v-if="isGroupOutputNode" class="context-menu-item" @click="onViewGroupOutput">
-      <span class="icon">📊</span> 查看组输出
+      <span class="icon">📊</span> {{ t('graph.menus.node.viewGroupOutput') }}
     </div>
     <div v-if="isGroupOutputNode" class="context-menu-separator"></div>
     <div class="context-menu-items">
       <div class="context-menu-item" @click="onConnect">
-        <span class="icon">🔗</span> 连接到...
+        <span class="icon">🔗</span> {{ t('graph.menus.node.connectTo') }}
       </div>
       <div class="context-menu-item" @click="onDisconnect">
-        <span class="icon">✂️</span> 断开所有连接
+        <span class="icon">✂️</span> {{ t('graph.menus.node.disconnectAll') }}
       </div>
     </div>
     <div class="context-menu-separator"></div>
     <div class="context-menu-items">
       <div class="context-menu-item" @click="onCopySelectionToLocal">
-        <span class="icon">⎘</span> 复制选中项 (本地) ({{ selectedNodeCount }})
+        <span class="icon">⎘</span> {{ t('graph.menus.node.copySelectionLocalCount', { count: selectedNodeCount }) }}
       </div>
       <div class="context-menu-item" @click="onCopySelectionToSystem">
-        <span class="icon">📋</span> 复制选中项 (剪贴板) ({{ selectedNodeCount }})
+        <span class="icon">📋</span> {{ t('graph.menus.node.copySelectionClipboardCount', { count: selectedNodeCount }) }}
       </div>
       <div class="context-menu-item" @click="onCreateGroup">
-        <span class="icon">🧱</span> 创建节点组 (Ctrl+G)
+        <span class="icon">🧱</span> {{ t('graph.menus.node.createNodeGroup') }}
       </div>
       <div class="context-menu-item" @click="onCreateFrame">
-        <span class="icon">🖼️</span> 创建分组框
+        <span class="icon">🖼️</span> {{ t('graph.menus.node.createFrameForSelection') }}
       </div>
       <div class="context-menu-item" @click="onDeleteSelection">
-        <span class="icon">🗑</span> 删除选中项 ({{ selectedNodeCount }})
+        <span class="icon">🗑</span> {{ t('graph.menus.node.deleteSelectionCount', { count: selectedNodeCount }) }}
       </div>
     </div>
   </div>
@@ -37,6 +37,7 @@
 <script setup lang="ts">
 import type { XYPosition } from "@vue-flow/core";
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useWorkflowManager } from '@/composables/workflow/useWorkflowManager';
 import { useCanvasClipboard } from '@/composables/canvas/useCanvasClipboard'; // <-- 新增导入
 
@@ -59,6 +60,7 @@ const emit = defineEmits<{
   (e: "close"): void;
 }>();
 
+const { t } = useI18n();
 const workflowManager = useWorkflowManager();
 const { handleLocalCopy, handleSystemCopy } = useCanvasClipboard(); // <-- 使用新的 composable
 

@@ -311,6 +311,101 @@
     }
   },
   "graph": {
+    "menus": {
+      "context": {
+        "addGroupbox": "[TODO]",
+        "addNode": "[TODO]",
+        "copySelectionClipboard": "[TODO]",
+        "copySelectionLocal": "[TODO]",
+        "deleteSelection": "[TODO]",
+        "findNode": "[TODO]",
+        "pasteFromClipboard": "[TODO]",
+        "pasteLocal": "[TODO]",
+        "resetView": "[TODO]",
+        "selectAll": "[TODO]"
+      },
+      "node": {
+        "connectTo": "[TODO]",
+        "copySelectionClipboardCount": "[TODO]",
+        "copySelectionLocalCount": "[TODO]",
+        "createFrameForSelection": "[TODO]",
+        "createNodeGroup": "[TODO]",
+        "deleteSelectionCount": "[TODO]",
+        "disconnectAll": "[TODO]",
+        "viewGroupOutput": "[TODO]"
+      },
+      "slot": {
+        "clearPreview": "[TODO]",
+        "deleteSlot": "[TODO]",
+        "disconnect": "[TODO]",
+        "history": {
+          "clearPreview": "[TODO]",
+          "deleteGroupInput": "[TODO]",
+          "deleteGroupOutput": "[TODO]",
+          "disconnectAll": "[TODO]",
+          "setPreview": "[TODO]"
+        },
+        "input": "[TODO]",
+        "output": "[TODO]",
+        "setAsPreview": "[TODO]",
+        "unknownNode": "[TODO]",
+        "unknownSlot": "[TODO]"
+      },
+      "workflow": {
+        "dialogs": {
+          "saveAs": {
+            "copySuffix": "[TODO]",
+            "message": "[TODO]",
+            "newWorkflowCopy": "[TODO]",
+            "placeholder": "[TODO]",
+            "title": "[TODO]"
+          }
+        },
+        "errors": {
+          "cannotCreateNoActiveTab": "[TODO]",
+          "cannotCreatePleaseOpenTab": "[TODO]",
+          "cannotExportInstanceUnavailable": "[TODO]",
+          "cannotExportNoActiveTab": "[TODO]",
+          "cannotExportNoInstance": "[TODO]",
+          "cannotExportPleaseOpenTab": "[TODO]",
+          "cannotImportNoActiveTab": "[TODO]",
+          "cannotImportPleaseOpenTab": "[TODO]",
+          "cannotSaveAsNoActiveTab": "[TODO]",
+          "cannotSaveAsNoProject": "[TODO]",
+          "cannotSaveAsNoState": "[TODO]",
+          "cannotSaveNoActiveTab": "[TODO]",
+          "cannotSavePleaseOpenTab": "[TODO]",
+          "importFailed": "[TODO]",
+          "invalidFileFormat": "[TODO]",
+          "readFileFailed": "[TODO]",
+          "saveAsFailed": "[TODO]",
+          "saveFailed": "[TODO]"
+        },
+        "export": "[TODO]",
+        "import": "[TODO]",
+        "logs": {
+          "importError": "[TODO]",
+          "importSuccessTemporary": "[TODO]",
+          "openSidebarFailed": "[TODO]",
+          "readFileError": "[TODO]",
+          "saveAsError": "[TODO]",
+          "saveError": "[TODO]",
+          "sidebarRefUnavailable": "[TODO]"
+        },
+        "new": "[TODO]",
+        "notifications": {
+          "importSuccess": "[TODO]",
+          "importSuccessTitle": "[TODO]",
+          "saveAsFailed": "[TODO]",
+          "saveAsSuccess": "[TODO]"
+        },
+        "open": "[TODO]",
+        "redo": "[TODO]",
+        "save": "[TODO]",
+        "saveAs": "[TODO]",
+        "undo": "[TODO]"
+      }
+    },
     "nodes": {
       "baseNode": {
         "clientScriptErrorTitle": "[TODO]",
