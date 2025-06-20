@@ -134,12 +134,11 @@ async function onFileSelected(event: Event) {
 // --- 占位符组件 ---
 // 后续这些将被替换为真实的自定义组件
 const PlaceholderComponent = defineComponent({
-  props: { title: String },
-  setup() {
-    const { t } = useI18n();
-    return { t };
+  props: {
+    title: String,
+    message: String,
   },
-  template: `<div class="placeholder-component"><h3>{{ title }}</h3><p>{{ t('settings.placeholders.custom_module_wip') }}</p></div>`,
+  template: `<div class="placeholder-component"><h3>{{ title }}</h3><p>{{ message }}</p></div>`,
 });
 
 // === 定义所有设置分区 ===
@@ -355,14 +354,14 @@ const sections = computed<SettingsSection[]>(() => [
     label: t("settings.sections.keybindings"),
     icon: "keyboard",
     type: "component",
-    component: { ...PlaceholderComponent, props: { title: "快捷键编辑器" } },
+    component: { ...PlaceholderComponent, props: { title: "快捷键编辑器", message: t('settings.placeholders.custom_module_wip') } },
   },
   {
     id: "llm",
     label: t("settings.sections.llm"),
     icon: "brain",
     type: "component",
-    component: { ...PlaceholderComponent, props: { title: "LLM API 管理器" } },
+    component: { ...PlaceholderComponent, props: { title: "LLM API 管理器", message: t('settings.placeholders.custom_module_wip') } },
   },
   {
     id: "mcp",
@@ -383,7 +382,7 @@ const sections = computed<SettingsSection[]>(() => [
     label: t("settings.sections.about"),
     icon: "info",
     type: "component",
-    component: { ...PlaceholderComponent, props: { title: "关于 ComfyTavern" } },
+    component: { ...PlaceholderComponent, props: { title: "关于 ComfyTavern", message: t('settings.placeholders.custom_module_wip') } },
   },
 ]);
 

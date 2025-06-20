@@ -4,7 +4,9 @@
     "nativeName": "简体中文"
   },
   "common": {
+    "confirm": "确认",
     "cancel": "取消",
+    "delete": "删除",
     "error": "错误",
     "success": "成功",
     "warning": "警告",
@@ -12,7 +14,11 @@
     "searchEllipsis": "搜索...",
     "name": "名称",
     "type": "类型",
+    "yes": "是",
+    "no": "否",
     "retry": "重试",
+    "file": "文件",
+    "folder": "文件夹",
     "actions": "操作",
     "description": "描述"
   },
@@ -129,7 +135,12 @@
     "userAvatar": "用户头像",
     "guest": "游客",
     "toggleTheme": "切换主题",
+    "themeSystem": "跟随系统",
+    "themeDark": "暗色模式",
+    "themeLight": "亮色模式",
     "toggleSidebar": "折叠/展开侧边栏",
+    "expand": "展开",
+    "collapse": "折叠",
     "groupIOEdit": {
       "title": "工作流接口",
       "inputsTitle": "输入 (Inputs)",
@@ -202,6 +213,8 @@
       "uploadFile": "上传文件",
       "newFolder": "新建文件夹",
       "paste": "粘贴",
+      "switchToGridView": "切换到网格视图",
+      "switchToListView": "切换到列表视图",
       "sortBy": "排序方式",
       "gridSize": "网格视图尺寸",
       "sortDirection": "反向排序",
@@ -211,6 +224,8 @@
       "sortByDate": "修改日期",
       "sortBySize": "大小",
       "advancedFilter": "高级筛选",
+      "hideDetailPanel": "隐藏详情面板",
+      "showDetailPanel": "显示详情面板",
       "viewSettings": "显示设置",
       "filtersCleared": "筛选已清除",
       "openAdvancedFilterPlaceholder": "打开高级筛选（占位）",
@@ -267,6 +282,8 @@
       "typeArchive": "压缩文件",
       "typeFile": "{ext} 文件",
       "typeGenericFile": "文件",
+      "favorited": "已收藏",
+      "notFavorited": "未收藏",
       "previewFailed": "预览失败:",
       "loadingPreview": "正在加载预览...",
       "previewUnsupported": "此文件类型不支持预览，或预览内容为空。",
@@ -275,6 +292,8 @@
     },
     "sidebarNav": {
       "title": "导航",
+      "expand": "展开导航",
+      "collapse": "折叠导航",
       "locations": "位置",
       "recentAccess": "最近访问",
       "clearRecent": "清空最近访问",
@@ -533,6 +552,7 @@
     "loading": "加载中...",
     "noWorkflowsToLoad": "没有可加载的工作流。",
     "noMatchingWorkflows": "没有匹配的工作流。",
+    "noDescription": "没有描述",
     "status": {
       "unused": "未使用"
     },
@@ -681,6 +701,10 @@
         "c": "选项 C (option3)",
         "d": "选项 D (原计划禁用)"
       }
+    },
+    "dialogContent": {
+      "inputTitle": "[TODO]",
+      "messageTitle": "[TODO]"
     }
   },
   "graph": {

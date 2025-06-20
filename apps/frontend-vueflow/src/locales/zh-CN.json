@@ -281,7 +281,8 @@
         "delete": "删除",
         "newFolder": "新建文件夹",
         "paste": "粘贴",
-        "noActions": "无可用操作"
+        "noActions": "无可用操作",
+        "refresh": "刷新"
       }
     },
     "detailPanel": {
@@ -761,6 +762,49 @@
         "b": "选项 B (option2)",
         "c": "选项 C (option3)",
         "d": "选项 D (原计划禁用)"
+      }
+    }
+  },
+  "graph": {
+    "nodes": {
+      "baseNode": {
+        "clientScriptErrorTitle": "客户端脚本错误: {error}",
+        "consoleErrorCannotOpenReferencedWorkflowNoProjectId": "无法打开引用的工作流：当前项目 ID 未找到。",
+        "consoleLogPreviewActionTriggered": "[BaseNode {nodeId}] 预览操作已在输入项 '{inputKey}' 上触发，值为: {value}",
+        "consoleWarnActionTriggeredUnknownInput": "[BaseNode {nodeId}] 操作由未知的输入项触发: {inputKey}",
+        "consoleWarnCannotHandleAltClickNoActiveTab": "[BaseNode] 无法处理输出项的 Alt+Click 事件：没有活动的标签页。",
+        "consoleWarnCannotOpenEditorNoActiveTab": "[BaseNode {nodeId}] 无法打开编辑器：没有活动的标签页。",
+        "consoleWarnCannotOpenRegexEditorNoActiveTab": "[BaseNode {nodeId}] 无法打开正则表达式编辑器：没有活动的标签页。",
+        "consoleWarnCannotRecordBlurNoActiveTab": "[BaseNode {nodeId}] 无法记录组件失焦：没有活动的标签页。",
+        "consoleWarnCannotRecordResizeNoActiveTab": "[BaseNode {nodeId}] 无法记录组件调整大小：没有活动的标签页。",
+        "consoleWarnCannotSaveRegexRulesNoActiveTab": "[BaseNode {nodeId}] 无法保存正则表达式规则：没有活动的标签页。",
+        "consoleWarnCannotSetPreviewForType": "[BaseNode] Alt+Click: 无法将类型为 {type} 的接口 ({nodeId}::{slotKey}) 设为预览目标。",
+        "consoleWarnClientScriptHookMissingHookName": "[BaseNode {nodeId}] 'client_script_hook' 操作缺少 hookName。",
+        "consoleWarnEmitEventMissingArgs": "[BaseNode {nodeId}] 'emit_event' 操作缺少 eventName 或 nodeRootRef。",
+        "consoleWarnOpenDockedEditorNotFound": "[BaseNode {nodeId}] `openDockedEditorForNodeInput` 方法未找到。",
+        "consoleWarnOpenPanelUnhandledPanelId": "[BaseNode {nodeId}] 'open_panel' 操作接收到未处理的 panelId '{panelId}'。",
+        "consoleWarnUnknownActionHandlerType": "[BaseNode {nodeId}] 未知的操作处理器类型: {handlerType}",
+        "executionErrorTooltip": "执行错误: {error}",
+        "historyClearPreviewSummary": "清除了节点「{nodeIdentifier}」接口「{slotIdentifier}」的预览",
+        "historyEditSummary": "编辑 {nodeName} - {inputDisplayName}: \"{value}\"",
+        "historyRegexUpdatedMultipleRules": "规则: {rules} 等 ({count} 条)",
+        "historyRegexUpdatedRulesCount": "更新了 {count} 条规则。",
+        "historyRegexUpdatedSpecificRules": "规则: {rules}",
+        "historyResizeSummary": "调整 {nodeName} - {inputDisplayName} 高度: {height}px",
+        "historySetPreviewSummary": "将节点「{nodeIdentifier}」的接口「{slotIdentifier}」设为预览目标",
+        "jumpToReferencedWorkflowTooltip": "跳转到引用的工作流",
+        "multiInputChildHandleTooltip": "{type} (接口 {index})",
+        "nodeGroupInfoInputs": "{count} 个输入",
+        "nodeGroupInfoNodes": "{count} 个节点",
+        "nodeGroupInfoOutputs": "{count} 个输出",
+        "tooltipCurrentCachedResult": "当前缓存结果:",
+        "tooltipDefaultName": "默认名称: {name}",
+        "tooltipNoValue": "无",
+        "tooltipPreview": "预览:",
+        "tooltipType": "类型: {type}",
+        "tooltipUnserializableObject": "[无法序列化的对象]",
+        "unnamedNode": "未命名节点",
+        "unknownType": "未知"
       }
     }
   }

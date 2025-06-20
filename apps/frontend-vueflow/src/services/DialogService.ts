@@ -1,5 +1,6 @@
 import { ref, shallowRef, markRaw, type Component } from 'vue';
 import { defineStore } from 'pinia';
+import i18n from '@/locales';
 
 // 对话框类型 (DialogInstance 内部使用)
 type DialogInstanceType = 'message' | 'confirm' | 'input';
@@ -71,6 +72,7 @@ interface ToastInstance {
 }
 
 export const useDialogService = defineStore('dialogService', () => {
+  const t = i18n.global.t;
   const activeDialog = shallowRef<DialogInstance | null>(null);
   const dialogQueue = ref<DialogInstance[]>([]);
   const toasts = ref<ToastInstance[]>([]);
@@ -118,9 +120,9 @@ export const useDialogService = defineStore('dialogService', () => {
           ...options,
           visible: true,
           type: 'message' as const, // 传递给 Dialog.vue 的 type
-          title: options.title || '消息',
-          message: options.message, 
-          confirmText: options.confirmText || '确定',
+          title: options.title || t('testPanel.dialogContent.messageTitle'),
+          message: options.message,
+          confirmText: options.confirmText || t('common.confirm'),
           showCloseIcon: options.showCloseIcon !== undefined ? options.showCloseIcon : true,
           closeOnBackdrop: options.closeOnBackdrop !== undefined ? options.closeOnBackdrop : true,
           autoClose: options.autoClose || 0,
@@ -164,10 +166,10 @@ export const useDialogService = defineStore('dialogService', () => {
           ...options,
           visible: true,
           type: 'confirm' as const,
-          title: options.title || '确认',
+          title: options.title || t('common.confirm'),
           message: options.message,
-          confirmText: options.confirmText || '确定',
-          cancelText: options.cancelText || '取消',
+          confirmText: options.confirmText || t('common.confirm'),
+          cancelText: options.cancelText || t('common.cancel'),
           showCloseIcon: options.showCloseIcon !== undefined ? options.showCloseIcon : true,
           closeOnBackdrop: options.closeOnBackdrop !== undefined ? options.closeOnBackdrop : false,
           dangerConfirm: options.dangerConfirm || false,
@@ -210,10 +212,10 @@ export const useDialogService = defineStore('dialogService', () => {
           ...options,
           visible: true,
           type: 'input' as const,
-          title: options.title || '请输入',
-          message: options.message, 
-          confirmText: options.confirmText || '确定',
-          cancelText: options.cancelText || '取消',
+          title: options.title || t('testPanel.dialogContent.inputTitle'),
+          message: options.message,
+          confirmText: options.confirmText || t('common.confirm'),
+          cancelText: options.cancelText || t('common.cancel'),
           showCloseIcon: options.showCloseIcon !== undefined ? options.showCloseIcon : true,
           closeOnBackdrop: options.closeOnBackdrop !== undefined ? options.closeOnBackdrop : false,
           dangerConfirm: options.dangerConfirm || false,

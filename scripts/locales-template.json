@@ -16,15 +16,21 @@
   "common": {
     "actions": "[TODO]",
     "cancel": "[TODO]",
+    "confirm": "[TODO]",
+    "delete": "[TODO]",
     "description": "[TODO]",
     "error": "[TODO]",
+    "file": "[TODO]",
+    "folder": "[TODO]",
     "name": "[TODO]",
+    "no": "[TODO]",
     "refresh": "[TODO]",
     "retry": "[TODO]",
     "searchEllipsis": "[TODO]",
     "success": "[TODO]",
     "type": "[TODO]",
-    "warning": "[TODO]"
+    "warning": "[TODO]",
+    "yes": "[TODO]"
   },
   "editorView": {
     "loadingDefinitions": "[TODO]",
@@ -66,8 +72,10 @@
     },
     "detailPanel": {
       "close": "[TODO]",
+      "favorited": "[TODO]",
       "loadingPreview": "[TODO]",
       "noItemSelected": "[TODO]",
+      "notFavorited": "[TODO]",
       "preview": "[TODO]",
       "previewFailed": "[TODO]",
       "previewTooLarge": "[TODO]",
@@ -94,6 +102,8 @@
     "initializing": "[TODO]",
     "sidebarNav": {
       "clearRecent": "[TODO]",
+      "collapse": "[TODO]",
+      "expand": "[TODO]",
       "favorites": "[TODO]",
       "locations": "[TODO]",
       "noFavorites": "[TODO]",
@@ -160,10 +170,12 @@
       "advancedFilter": "[TODO]",
       "filtersCleared": "[TODO]",
       "gridSize": "[TODO]",
+      "hideDetailPanel": "[TODO]",
       "newFolder": "[TODO]",
       "openAdvancedFilterPlaceholder": "[TODO]",
       "openViewSettingsPlaceholder": "[TODO]",
       "paste": "[TODO]",
+      "showDetailPanel": "[TODO]",
       "sortBy": "[TODO]",
       "sortByDate": "[TODO]",
       "sortByExtension": "[TODO]",
@@ -171,6 +183,8 @@
       "sortByName": "[TODO]",
       "sortBySize": "[TODO]",
       "sortDirection": "[TODO]",
+      "switchToGridView": "[TODO]",
+      "switchToListView": "[TODO]",
       "upload": "[TODO]",
       "uploadFile": "[TODO]",
       "viewSettings": "[TODO]"
@@ -214,6 +228,7 @@
         "tooltipPreview": "[TODO]",
         "tooltipType": "[TODO]",
         "tooltipUnserializableObject": "[TODO]",
+        "unknownType": "[TODO]",
         "unnamedNode": "[TODO]"
       }
     }
@@ -447,6 +462,8 @@
     "title": "[TODO]"
   },
   "sidebar": {
+    "collapse": "[TODO]",
+    "expand": "[TODO]",
     "groupIOEdit": {
       "addInput": "[TODO]",
       "addOutput": "[TODO]",
@@ -480,6 +497,9 @@
       "typeLabel": "[TODO]"
     },
     "guest": "[TODO]",
+    "themeDark": "[TODO]",
+    "themeLight": "[TODO]",
+    "themeSystem": "[TODO]",
     "toggleSidebar": "[TODO]",
     "toggleTheme": "[TODO]",
     "userAvatar": "[TODO]"
@@ -501,6 +521,10 @@
     }
   },
   "testPanel": {
+    "dialogContent": {
+      "inputTitle": "[TODO]",
+      "messageTitle": "[TODO]"
+    },
     "dialogService": {
       "buttons": {
         "showAutoClose": "[TODO]",
@@ -684,6 +708,7 @@
       "loadErrorNotFound": "[TODO]",
       "openedNewTab": "[TODO]"
     },
+    "noDescription": "[TODO]",
     "noMatchingWorkflows": "[TODO]",
     "noWorkflowsToLoad": "[TODO]",
     "refreshButton": "[TODO]",

@@ -25,7 +25,12 @@
     "db:upgrade": "bun scripts/upgradeDatabase.ts"
   },
   "devDependencies": {
+    "@babel/parser": "^7.27.5",
+    "@babel/traverse": "^7.27.4",
+    "@types/babel__parser": "^7.1.5",
+    "@types/babel__traverse": "^7.20.7",
     "@types/bun": "latest",
+    "@vue/compiler-sfc": "^3.5.17",
     "drizzle-orm": "^0.44.2",
     "esbuild": "0.25.1",
     "estree-walker": "2.0.2",
@@ -35,8 +40,7 @@
     "vitest": "^3.0.8",
     "vue-tsc": "^2.2.8"
   },
-  "overrides": {
-  },
+  "overrides": {},
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.3",
     "@codemirror/lang-json": "^6.0.1",
