@@ -1,5 +1,5 @@
 <template>
-  <div ref="canvasContainerRef" class="canvas-container h-full w-full" tabindex="-1" @dragover.prevent="onDragOver"
+  <div ref="canvasContainerRef" class="canvas-container h-full w-full relative" tabindex="-1" @dragover.prevent="onDragOver"
     @dragleave="onDragLeave" @drop.prevent="onDrop" @dragenter.prevent>
     <VueFlow v-bind="$attrs" ref="vueFlowRef" v-model="internalElements" :node-types="props.nodeTypes"
       :edge-types="edgeTypes" :default-viewport="{ x: 0, y: 0, zoom: 1 }" :min-zoom="0.2" :max-zoom="4" fit-view-on-init

@@ -409,6 +409,7 @@ const clearPreview = async () => {
 
 <style scoped>
 .slot-context-menu {
+  position: absolute;
   /* 基本样式已移至全局或通过 'context-menu-base' 类应用 */
   min-width: 180px;
 }

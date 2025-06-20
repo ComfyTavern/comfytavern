@@ -117,7 +117,7 @@ const onDeleteSelection = () => {
 
 <style scoped>
 .node-context-menu {
-  position: fixed; /* 与 ContextMenu.vue 保持一致，使用视口坐标 */
+  position: absolute;
   /* Base styles are now applied directly via class="context-menu-base" */
   min-width: 180px;
   /* 保持最小宽度 */

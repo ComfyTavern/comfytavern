@@ -310,7 +310,7 @@ const onResetView = () => {
 
 <style scoped>
 .context-menu {
-  position: fixed;
+  position: absolute;
   min-width: 250px;
   max-height: 75vh;
   overflow-y: auto;
