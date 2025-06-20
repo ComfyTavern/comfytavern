@@ -55,6 +55,8 @@ import styles from "./handleStyles.module.css";
 
 // 第 2 部分：Props
 const props = defineProps<NodeProps>();
+// 调试日志：打印接收到的节点定义内容 (深拷贝以展开)
+// console.log(`[BaseNode Debug] Received node definition for ${props.id}:`, JSON.parse(JSON.stringify(props.data)));
 
 // 第 3 部分：本地 Refs
 const nodeRootRef = ref<HTMLDivElement | null>(null); // 节点根元素引用

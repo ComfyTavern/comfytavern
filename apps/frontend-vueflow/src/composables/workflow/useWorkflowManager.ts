@@ -20,9 +20,12 @@ import type {
 } from "../../types/workflowTypes";
 import { useEdgeStyles } from "../canvas/useEdgeStyles";
 import defaultWorkflowTemplateUntyped from "@/data/DefaultWorkflow.json"; // <-- 导入默认模板
-import type { DataFlowTypeName } from "@comfytavern/types"; // 确保导入 DataFlowTypeName
 import { useDialogService } from "../../services/DialogService"; // 导入 DialogService
 import { useNodeStore } from "../../stores/nodeStore";
+import {
+  transformWorkflowToVueFlow,
+} from "@/utils/workflowTransformer";
+import type { WorkflowStorageObject } from "@comfytavern/types";
 
 // --- 辅助函数 (来自 useWorkflowCoreLogic) ---
 function findNextSlotIndex(
@@ -156,14 +159,13 @@ function createWorkflowManager() {
 
     // --- 正确构建 vueNode.data ---
     const vueFlowData: Record<string, any> = {
-      // 从 nodeDef 复制一些基础属性 (如果需要，例如 category, icon)
-      // category: nodeDef?.category,
-      // icon: nodeDef?.icon,
-      configValues: klona(storageNode.configValues || {}), // 直接使用存储的配置值，并深拷贝
+      ...(nodeDef || {}), // 浅拷贝定义，并处理 nodeDef 可能为 undefined 的情况
+      // 覆盖或添加存储的/计算的属性
+      configValues: klona(storageNode.configValues || {}),
       defaultDescription: nodeDef?.description || "",
       description: storageNode.customDescription || nodeDef?.description || "",
-      inputs: {},
-      outputs: {},
+      inputs: {}, // 显式设置为空，由下面填充
+      outputs: {},// 显式设置为空，由下面填充
     };
 
     if (nodeDef?.inputs) {
@@ -357,107 +359,64 @@ function createWorkflowManager() {
     internalId: string
   ): Promise<WorkflowStateSnapshot | null> {
     const tabInfo = tabStore.tabs.find((t) => t.internalId === internalId);
+    const projectId = tabInfo?.projectId || "default"; // 需要一个 projectId
     const associatedId = tabInfo?.associatedId || `temp-${internalId}`;
-    const labelToUse = tabInfo?.label || defaultWorkflowTemplateUntyped.name || "*新工作流*"; // 使用模板名称或默认值
-
-    // console.debug(
-    //   `[useWorkflowManager/applyDefaultWorkflowToTab] 正在将默认模板应用于 ${internalId} (ID: ${associatedId})`
-    // );
+    const labelToUse =
+      tabInfo?.label || defaultWorkflowTemplateUntyped.name || "*新工作流*";
 
     try {
-      // 确保节点定义已加载，以便正确填充节点数据
       await nodeStore.ensureDefinitionsLoaded();
 
-      // 深拷贝模板以避免修改原始导入对象
-      const defaultWorkflowTemplate = defaultWorkflowTemplateUntyped as unknown as WorkflowData; // Add type assertion
-      const templateData = klona(defaultWorkflowTemplate);
-
-      // 显式处理 interfaceInputs 和 interfaceOutputs 的类型
-      const typedInterfaceInputs: Record<string, GroupSlotInfo> = {};
-      if (templateData.interfaceInputs) {
-        for (const key in templateData.interfaceInputs) {
-          const slot = templateData.interfaceInputs[key];
-          if (slot) {
-            // Add null check for slot
-            typedInterfaceInputs[key] = {
-              ...slot,
-              key: slot.key, // Explicitly assign key
-              dataFlowType: slot.dataFlowType as DataFlowTypeName, // 确保类型正确
-            };
-          }
-        }
-      }
-
-      const typedInterfaceOutputs: Record<string, GroupSlotInfo> = {};
-      if (templateData.interfaceOutputs) {
-        for (const key in templateData.interfaceOutputs) {
-          const slot = templateData.interfaceOutputs[key];
-          if (slot) {
-            // Add null check for slot
-            typedInterfaceOutputs[key] = {
-              ...slot,
-              key: slot.key, // Explicitly assign key
-              dataFlowType: slot.dataFlowType as DataFlowTypeName, // 确保类型正确
-            };
-          }
-        }
-      }
-
-      // 准备 VueFlow elements
-      const elements: Array<VueFlowNode | VueFlowEdge> = [];
-
-      // Remove unused interface DefaultWorkflowNodeTpl
-
-      // 处理节点
-      for (const nodeTpl of templateData.nodes as StorageNode[]) {
-        // 使用 StorageNode 类型
-        const vueNode = _storageNodeToVueFlowNode(nodeTpl); // 使用辅助函数
-        elements.push(vueNode);
-      }
-
-      // 处理边
-      if (Array.isArray(templateData.edges) && templateData.edges.length > 0) {
-        for (const edgeTpl of templateData.edges as StorageEdge[]) {
-          // 使用 StorageEdge 类型
-          if (
-            typeof edgeTpl === "object" &&
-            edgeTpl !== null &&
-            edgeTpl.id &&
-            edgeTpl.source &&
-            edgeTpl.target
-          ) {
-            const vueEdge = _storageEdgeToVueFlowEdge(edgeTpl); // 使用辅助函数
-            elements.push(vueEdge);
-          } else {
-            console.warn(`[applyDefaultWorkflowToTab] 跳过无效的边模板:`, edgeTpl);
-          }
-        }
-      }
-
-      // 准备最终的 WorkflowData (使用模板数据，但更新 ID 和 name)
-      // 确保 nodes 和 edges 引用原始模板数据
-      const finalWorkflowData: WorkflowData = {
-        ...templateData, // 包含 viewport, interfaceInputs, interfaceOutputs 等
+      // 1. 将 JSON 模板构造成一个 WorkflowStorageObject
+      const templateStorageObject: WorkflowStorageObject = {
+        ...(klona(defaultWorkflowTemplateUntyped) as any), // any to satisfy base properties
         id: associatedId,
         name: labelToUse,
-        nodes: templateData.nodes, // 引用原始模板节点
-        edges: templateData.edges, // 引用原始模板边
-        interfaceInputs: typedInterfaceInputs, // 使用类型处理过的版本
-        interfaceOutputs: typedInterfaceOutputs, // 使用类型处理过的版本
+        projectId: projectId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        referencedWorkflows: [], // 确保属性存在
       };
 
-      // 使用 _applyWorkflowToTab 应用状态，它会处理边的样式
+      // 2. 使用 transformWorkflowToVueFlow 进行转换
+      // 对于默认模板，它不引用其他工作流，所以 loadWorkflowByIdFunc 可以是空的
+      const mockLoadWorkflowFunc = async (
+        _pId: string,
+        wfId: string
+      ): Promise<WorkflowStorageObject | null> => {
+        console.warn(
+          `[applyDefaultWorkflowToTab] mockLoadWorkflowFunc called for ${wfId}, but default template should not have references.`
+        );
+        return null;
+      };
+
+      const { flowData, viewport } = await transformWorkflowToVueFlow(
+        templateStorageObject,
+        projectId,
+        isDark.value,
+        getEdgeStyleProps,
+        mockLoadWorkflowFunc
+      );
+
+      // 3. 准备最终的 WorkflowData (现在基于 templateStorageObject)
+      const finalWorkflowData: WorkflowData = {
+        ...templateStorageObject,
+        id: associatedId, // 显式地传递 id 以满足类型要求
+        name: labelToUse, // 显式地传递 name 以满足类型要求
+        // 确保 viewport 和其他核心数据与 flowData 一致
+        viewport: viewport,
+      };
+
+      // 4. 使用 _applyWorkflowToTab 应用状态
       const snapshot = await _applyWorkflowToTab(
         internalId,
-        finalWorkflowData, // 传递包含原始 nodes/edges 的 workflow 数据
-        elements, // 传递转换后的 VueFlow elements (包含基础边)
-        finalWorkflowData.viewport // 使用模板的 viewport
+        finalWorkflowData,
+        [...flowData.nodes, ...flowData.edges], // 传递转换后的 VueFlow elements
+        viewport
       );
 
       if (snapshot) {
-        // console.info(
-        //   `[useWorkflowManager/applyDefaultWorkflowToTab] 已成功将默认模板状态应用于 ${internalId}。`
-        // );
+        // console.info(`[useWorkflowManager/applyDefaultWorkflowToTab] 已成功将默认模板状态应用于 ${internalId}。`);
       } else {
         console.error(
           `[useWorkflowManager/applyDefaultWorkflowToTab] _applyWorkflowToTab 未能返回快照 for ${internalId}。`
@@ -469,10 +428,10 @@ function createWorkflowManager() {
         `[useWorkflowManager/applyDefaultWorkflowToTab] 应用默认模板失败 for ${internalId}:`,
         error
       );
-      // 可以考虑添加一个回退机制，比如应用一个最小化的硬编码模板
-      // 或者直接返回 null 并显示错误
       dialogService.showError(
-        `创建新工作流时应用默认模板失败: ${error instanceof Error ? error.message : String(error)}`
+        `创建新工作流时应用默认模板失败: ${
+          error instanceof Error ? error.message : String(error)
+        }`
       );
       return null;
     }
@@ -876,9 +835,9 @@ function createWorkflowManager() {
       if (nodeGroupInData) {
         // console.log(`[DEBUG getCurrentSnapshot - ${internalId}] BEFORE klona. NodeGroup (${nodeGroupInData.id}) data.inputValues:`, JSON.stringify((nodeGroupInData as VueFlowNode).data?.inputValues));
       } else {
-        console.log(
-          `[DEBUG getCurrentSnapshot - ${internalId}] BEFORE klona. No NodeGroup found in state.elements.`
-        );
+        // console.log(
+        //   `[DEBUG getCurrentSnapshot - ${internalId}] BEFORE klona. No NodeGroup found in state.elements.`
+        // );
       }
 
       // 返回状态的深拷贝
@@ -893,9 +852,9 @@ function createWorkflowManager() {
       if (nodeGroupInSnapshot) {
         // console.log(`[DEBUG getCurrentSnapshot - ${internalId}] AFTER klona. NodeGroup (${nodeGroupInSnapshot.id}) data.inputValues in snapshot:`, JSON.stringify((nodeGroupInSnapshot as VueFlowNode).data?.inputValues));
       } else {
-        console.log(
-          `[DEBUG getCurrentSnapshot - ${internalId}] AFTER klona. No NodeGroup found in snapshot.elements.`
-        );
+        // console.log(
+        //   `[DEBUG getCurrentSnapshot - ${internalId}] AFTER klona. No NodeGroup found in snapshot.elements.`
+        // );
       }
       return snapshot;
     } catch (error) {
