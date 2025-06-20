@@ -30,10 +30,10 @@
         <div class="bg-background-surface p-6 rounded-lg shadow-md">
           <h3 class="text-xl font-semibold mb-4 text-text-secondary">{{ t('testPanel.dialogService.toasts') }}</h3>
           <div class="space-y-4">
-            <button @click="showInfoToast" class="btn btn-blue w-full">{{ t('testPanel.dialogService.buttons.showInfoToast') }}</button>
-            <button @click="showSuccessToast" class="btn btn-green w-full">{{ t('testPanel.dialogService.buttons.showSuccessToast') }}</button>
-            <button @click="showWarningToast" class="btn btn-yellow w-full">{{ t('testPanel.dialogService.buttons.showWarningToast') }}</button>
-            <button @click="showErrorToast" class="btn btn-red w-full">{{ t('testPanel.dialogService.buttons.showErrorToast') }}</button>
+            <button @click="showInfoToast" class="btn btn-info w-full">{{ t('testPanel.dialogService.buttons.showInfoToast') }}</button>
+            <button @click="showSuccessToast" class="btn btn-success w-full">{{ t('testPanel.dialogService.buttons.showSuccessToast') }}</button>
+            <button @click="showWarningToast" class="btn btn-warning w-full">{{ t('testPanel.dialogService.buttons.showWarningToast') }}</button>
+            <button @click="showErrorToast" class="btn btn-error w-full">{{ t('testPanel.dialogService.buttons.showErrorToast') }}</button>
             <button @click="showCustomToast" class="btn btn-purple w-full">{{ t('testPanel.dialogService.buttons.showCustomToast') }}</button>
             <button @click="showMultipleToasts" class="btn btn-gray w-full">{{ t('testPanel.dialogService.buttons.showMultipleToasts') }}</button>
             <button @click="showLargeTextToast" class="btn btn-lime w-full">{{ t('testPanel.dialogService.buttons.showLargeToast') }}</button>
@@ -410,6 +410,22 @@ watch(
   @apply bg-red-600 hover:bg-red-700 focus:ring-red-500;
 }
 
+.btn-info {
+  @apply bg-info hover:opacity-90 focus:ring-info text-primary-content;
+}
+
+.btn-success {
+  @apply bg-success hover:opacity-90 focus:ring-success text-primary-content;
+}
+
+.btn-warning {
+  @apply bg-warning hover:opacity-90 focus:ring-warning text-primary-content;
+}
+
+.btn-error {
+  @apply bg-error hover:opacity-90 focus:ring-error text-primary-content;
+}
+
 .btn-purple {
   @apply bg-purple-600 hover:bg-purple-700 focus:ring-purple-500;
 }
@@ -423,7 +439,7 @@ watch(
 }
 
 .btn-yellow {
-  @apply bg-warning hover:opacity-90 focus:ring-warning text-text-base;
+  @apply bg-yellow-500 hover:bg-yellow-600 focus:ring-yellow-400 text-text-base;
   /* 黄色按钮通常用深色文字 */
 }
 
