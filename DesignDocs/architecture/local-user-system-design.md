@@ -39,7 +39,11 @@
 2.  **外部服务凭证 (External Service Credentials)**:
     - **方向**: 出站 (Outbound)，即 `本应用 -> 外部第三方服务 (如 OpenAI, Anthropic, Stability AI 等)`。
     - **目的**: 安全地存储用户提供的、用于访问这些第三方服务的认证信息（如 API Key、Token 等）。本应用在执行工作流或特定功能时，会使用这些凭证**代表用户**去调用外部服务。
-    - **安全策略**: 凭证由用户提供。在存储时，采用**可逆加密存储 (Encrypted Storage)**，使用由环境变量配置的主加密密钥进行对称加密。确保凭证在静止状态下的安全，同时应用在需要时能够解密并使用它们。
+    - **安全策略**: 凭证由用户提供。存储时，加密是**可选的**。
+      - **多用户共享模式**: 强烈建议**开启加密**，以保护共享环境中各个用户的凭证安全。
+      - **个人自用模式**: 用户可根据自身安全需求和便利性，选择**明文存储**或**加密存储**。
+      - **加密机制**: 若启用，则采用**可逆加密存储 (Encrypted Storage)**，使用由环境变量配置的主加密密钥进行对称加密，确保凭证在静止状态下的安全，同时应用在需要时能够解密并使用它们。
+      - **实施优先级**: 凭证加密功能的实现优先级将根据平台核心功能的开发进度进行调整。
 
 ### 1.3. 扩展性考量
 
@@ -105,7 +109,8 @@ export interface ExternalCredentialMetadata {
  */
 export interface StoredExternalCredential extends ExternalCredentialMetadata {
   userId: string; // 关联的用户ID ('default_user' 或多用户的 uid)
-  encryptedCredential: string; // 使用主加密密钥加密后的完整凭证内容
+  storageMode: 'plaintext' | 'encrypted'; // 凭证的存储模式
+  credentialValue: string; // 凭证内容（根据 storageMode，可能是明文或加密后的密文）
 }
 
 // --- 服务 API 密钥模型 ---
@@ -250,7 +255,8 @@ CREATE TABLE external_credentials (
     service_name TEXT NOT NULL,          -- 凭证对应的服务标识符 (e.g., "openai", "anthropic_claude")
     display_name TEXT,                   -- 用户为凭证设置的可选显示名称/备注
     display_hint TEXT,                   -- 用于UI安全展示凭证的部分信息 (存储为 JSON 对象, e.g., {"prefix": "sk-...", "suffix": "...AbCd"})
-    encrypted_credential TEXT NOT NULL,  -- 使用主加密密钥加密后的完整凭证内容
+    storage_mode TEXT NOT NULL DEFAULT 'plaintext' CHECK(storage_mode IN ('plaintext', 'encrypted')), -- 存储模式
+    credential_value TEXT NOT NULL,      -- 凭证内容（根据 storage_mode，可能是明文或加密后的密文）
     created_at TEXT NOT NULL,            -- 凭证创建时间 (ISO 8601)
     UNIQUE(user_id, service_name, display_name), -- 确保同一用户对于同一服务，凭证的显示名称是唯一的 (如果display_name允许为空，则可能需要调整此约束)
     FOREIGN KEY (user_id) REFERENCES users(uid) ON DELETE CASCADE -- 级联删除，当用户被删除时，其所有外部服务凭证也一并删除
@@ -282,28 +288,43 @@ CREATE TABLE external_credentials (
       - 对于用户登录：接收用户输入的明文密码，从数据库根据用户名取出存储的 `password_hash`，然后调用 `Bun.password.verify()` 进行比对。
       - 对于服务 API 密钥认证：接收客户端提供的明文 API 密钥 `secret`，对其进行哈希运算，然后在 `service_api_keys` 表的 `hashed_key` 字段中进行查找匹配的记录。
 
-#### 2.4.2. 外部服务凭证的加密存储
+#### 2.4.2. 外部服务凭证的存储与安全策略
 
-对于用户提供给本应用、用于访问第三方服务的凭证（如 OpenAI API Key），必须进行可逆加密后存储，因为应用在后台需要解密它们以供使用。
+对于用户提供给本应用、用于访问第三方服务的凭证（如 OpenAI API Key），本方案提供两种存储模式：**明文存储**和**可逆加密存储**。加密功能是**可选的**，旨在平衡不同场景下的安全性和便捷性。
 
-- **主加密密钥 (Master Encryption Key - MEK)**:
-  - 这是进行对称加密和解密的根密钥。
-  - **来源**: 必须通过**环境变量** (例如 `COMFYTAVERN_MASTER_ENCRYPTION_KEY`) 提供给应用进程。
-  - **安全性**: 此 MEK **绝对不能**硬编码到代码中，也**绝对不能**存入数据库或任何版本控制系统。其安全性至关重要，一旦泄露，所有加密的外部服务凭证都将面临风险。
-  - **生成与管理**: 应指导用户生成一个高强度的随机字符串（例如，至少 32 字节的随机数据，然后进行 Base64 编码）作为 MEK，并在部署应用时配置好该环境变量。
-- **加密算法**: 推荐使用经过认证的强对称加密算法，如 `AES-256-GCM` (Galois/Counter Mode)。AES-GCM 不仅提供机密性，还能提供真实性（防篡改）和完整性。
-  - Bun 的 `Bun.CryptoHasher` 目前主要用于哈希，对于对称加密，可以使用 Node.js 的 `crypto` 模块（Bun 兼容大部分 Node.js API）或专门的、经过审计的第三方加密库。
-  - 例如，使用 Node.js `crypto` 模块的 `crypto.createCipheriv()` 和 `crypto.createDecipheriv()`。
-- **加密流程**:
-  1.  **接收明文凭证**: 从用户输入获取第三方服务的明文凭证。
-  2.  **生成初始化向量 (IV)**: 对于每次加密操作，都应生成一个唯一的、密码学安全的随机 IV (例如，AES-GCM 通常使用 12 字节或 16 字节的 IV)。IV 无需保密，但必须唯一且不可预测。
-  3.  **执行加密**: 使用从环境变量获取的 MEK、生成的 IV 以及选定的加密算法（如 AES-256-GCM）对明文凭证进行加密。
-  4.  **存储密文**: 将 IV 和加密后生成的密文（以及 GCM 模式下的认证标签 Authentication Tag）组合成一个字符串（例如，`iv_hex:ciphertext_hex:auth_tag_hex` 的格式，或使用 Base64 编码），存入数据库 `external_credentials` 表的 `encrypted_credential` 字段。
-- **解密流程**:
-  1.  **读取密文**: 当应用需要使用某个外部服务凭证时，从数据库中读取存储的组合字符串。
-  2.  **解析 IV、密文和认证标签**: 从组合字符串中分离出 IV、密文和认证标签。
-  3.  **执行解密**: 使用从环境变量获取的 MEK、解析出的 IV、认证标签以及选定的解密算法，对密文进行解密，得到原始的明文凭证。
-  4.  **使用凭证**: 将解密后的明文凭证用于调用相应的第三方服务。**注意：明文凭证应仅在内存中使用，并尽可能缩短其在内存中的生命周期，避免写入日志或持久化到其他地方。**
+- **核心原则**:
+  - **实施优先级**: 考虑到平台主体功能尚在开发中，为了不因强制加密增加用户使用门槛，凭证加密功能的实现优先级将适当后调。早期版本可先提供明文存储，并逐步引入可选的加密功能。
+  - **场景化推荐**:
+    - **多用户共享模式**: 强烈建议**开启加密**。在多用户环境中，加密是保护每个用户凭证不被其他用户或潜在的数据库访问者窥探的关键措施。
+    - **个人自用模式**: 用户可以自行选择。对于在完全受信任的本地环境中运行的用户，**明文存储**提供了最大的便利性。如果用户将应用暴露到公网，则推荐开启加密。
+
+- **存储模式详解**:
+
+  1.  **明文存储 (`storage_mode: 'plaintext'`)**:
+      - **行为**: 用户提供的凭证直接以明文形式存储在数据库的 `credential_value` 字段。
+      - **优点**: 实现简单，无需配置加密密钥，方便用户直接在数据库层面查看或修改（不推荐但可能）。
+      - **风险**: 安全性最低。一旦数据库文件被未授权访问，所有凭证将完全暴露。此模式仅适用于物理和网络环境都高度安全可信的纯单机自用场景。
+
+  2.  **可逆加密存储 (`storage_mode: 'encrypted'`)**:
+      - **行为**: 用户提供的凭证在存入数据库前，会经过对称加密。`credential_value` 字段存储的是加密后的密文。应用在需要使用凭证时，会从内存中解密。
+      - **优点**: 提供了强大的静态数据保护。即使数据库文件泄露，没有主加密密钥也无法解读取凭证内容。
+      - **实现细节 (若启用)**:
+        - **主加密密钥 (Master Encryption Key - MEK)**:
+          - 这是进行对称加密和解密的根密钥。
+          - **来源**: 必须通过**环境变量** (例如 `COMFYTAVERN_MASTER_ENCRYPTION_KEY`) 提供给应用进程。
+          - **安全性**: 此 MEK **绝对不能**硬编码到代码中，也**绝对不能**存入数据库或任何版本控制系统。其安全性至关重要。
+          - **生成与管理**: 应指导用户生成一个高强度的随机字符串作为 MEK，并在部署应用时配置好该环境变量。如果 MEK 丢失，所有已加密的凭证将**无法解密**，导致数据事实上的丢失。
+        - **加密算法**: 推荐使用经过认证的强对称加密算法，如 `AES-256-GCM`。
+        - **加密流程**:
+          1.  接收明文凭证。
+          2.  生成唯一的初始化向量 (IV)。
+          3.  使用 MEK 和 IV 对凭证进行加密。
+          4.  将 IV 和密文组合成一个字符串（例如 `iv_hex:ciphertext_hex:auth_tag_hex`），存入 `credential_value` 字段。
+        - **解密流程**:
+          1.  从 `credential_value` 读取组合字符串。
+          2.  解析出 IV 和密文。
+          3.  使用 MEK 和 IV 解密，得到明文凭证。
+          4.  **安全使用**: 明文凭证应仅在内存中使用，并尽可能缩短其生命周期。
 
 ### 2.5. 服务 API 密钥系统详解
 
@@ -370,23 +391,27 @@ CREATE TABLE external_credentials (
   1.  **添加 (Creation/Addition)**:
       - 用户通过特定的 API 端点（见 4.3 节）提交要添加的外部服务凭证。
       - 请求中通常需要包含：
-        - `serviceName`: 标识凭证对应的外部服务 (例如 "openai_gpt4", "anthropic_claude3_opus")。这个标识符应预定义或有规范，方便后端逻辑查找和使用。
+        - `serviceName`: 标识凭证对应的外部服务。
         - `credential`: 用户提供的明文凭证字符串。
         - `displayName` (可选): 用户为此凭证设置的易于识别的名称/备注。
-      - 后端接收到明文凭证后，按照 2.4.2 节描述的加密流程，使用主加密密钥 (MEK) 和唯一的 IV 对其进行加密。
-      - 生成凭证的元数据，如 `id` (UUID), `userId`, `createdAt`。根据明文凭证生成 `displayHint` (例如，取明文的前 4 位和后 4 位，如果凭证长度不足则做相应处理)。
-      - 将 `StoredExternalCredential`（包含 `id`, `userId`, `serviceName`, `displayName`, `displayHint`, `encryptedCredential`, `createdAt`）存入数据库 `external_credentials` 表。
+        - `storageMode` (可选): 用户指定的存储模式 (`'plaintext'` 或 `'encrypted'`)。如果未提供，后端可根据系统配置（如多用户模式下默认为加密）或全局默认设置来决定。
+      - 后端接收到请求后，根据 `storageMode` 进行处理：
+        - 如果是 `'encrypted'` 模式，且系统已配置主加密密钥 (MEK)，则按照 2.4.2 节描述的加密流程对 `credential` 进行加密。
+        - 如果是 `'plaintext'` 模式，则直接使用原始 `credential`。
+      - 生成凭证的元数据，如 `id` (UUID), `userId`, `createdAt`。根据明文凭证生成 `displayHint`。
+      - 将 `StoredExternalCredential`（包含 `id`, `userId`, `serviceName`, `displayName`, `displayHint`, `storageMode`, `credentialValue`, `createdAt`）存入数据库 `external_credentials` 表。
       - 向用户返回该凭证的元数据 (`ExternalCredentialMetadata`)。
   2.  **存储 (Storage)**:
       - 后端数据库中存储的是**加密后的凭证** (`encryptedCredential`)。
       - 相关的元数据与加密凭证一同存储。
   3.  **使用 (Usage)**:
       - 当后端应用逻辑（如某个工作流节点）需要调用某个外部服务时：
-        - 根据当前用户 (`userId`) 和所需服务 (`serviceName`，可能还有 `displayName` 或 `id` 作为筛选条件) 从数据库 `external_credentials` 表中查询对应的 `StoredExternalCredential` 记录。
-        - 如果找到记录，则提取 `encryptedCredential`。
-        - 按照 2.4.2 节描述的解密流程，使用主加密密钥 (MEK) 和存储时使用的 IV（需要从 `encryptedCredential` 字符串中解析出来）对其进行解密，得到明文凭证。
-        - 使用解密后的明文凭证向目标外部服务发起请求。
-        - **注意安全**: 明文凭证应仅在需要时解密，并在内存中短暂停留，用后即弃，避免写入日志。
+        - 根据当前用户 (`userId`) 和所需服务 (`serviceName` 等) 从数据库 `external_credentials` 表中查询对应的 `StoredExternalCredential` 记录。
+        - 如果找到记录，检查其 `storageMode` 字段。
+        - 如果 `storageMode` 为 `'encrypted'`，则提取 `credentialValue` (密文)，并按照 2.4.2 节描述的解密流程，使用主加密密钥 (MEK) 对其进行解密，得到明文凭证。
+        - 如果 `storageMode` 为 `'plaintext'`，则直接使用 `credentialValue` 作为明文凭证。
+        - 使用获取到的明文凭证向目标外部服务发起请求。
+        - **注意安全**: 解密后的明文凭证应仅在内存中短暂停留，用后即弃，避免写入日志。
   4.  **展示 (Display)**:
       - 在用户界面管理外部服务凭证时，仅显示其元数据 (`ExternalCredentialMetadata`)，如服务名称、用户自定义的显示名称、创建时间以及 `displayHint`（例如 "sk-xxxx...xxxx"）。**绝不显示完整的明文凭证或加密后的凭证字符串。**
   5.  **删除 (Deletion)**:
@@ -743,7 +768,7 @@ CREATE TABLE external_credentials (
   - **响应**: `200 OK` - `{ "credentials": ExternalCredentialMetadata[] }`
 - **`POST /`**:
   - **目的**: 为当前认证用户添加一个新的外部服务凭证。
-  - **请求体**: `{ "serviceName": string; "credential": "明文凭证内容"; "displayName"?: string; }`
+  - **请求体**: `{ "serviceName": string; "credential": "明文凭证内容"; "displayName"?: string; "storageMode"?: "plaintext" | "encrypted" }` (storageMode 可选，由后端根据策略决定默认值)。
   - **响应**: `201 Created` - `ExternalCredentialMetadata` (返回新创建凭证的元数据，不含敏感信息)。
 - **`DELETE /{credentialId}`**:
   - **目的**: 删除当前认证用户指定的某个外部服务凭证。
@@ -753,8 +778,8 @@ CREATE TABLE external_credentials (
     - `403 Forbidden`: 如上。
     - `404 Not Found`: 指定的 `credentialId` 不存在。
 - **`PUT /{credentialId}`** (可选扩展)
-  - **目的**: 更新一个已存在的外部服务凭证（例如，替换密钥内容或修改显示名称）。
-  - **请求体**: `{ "credential"?: "新的明文凭证内容"; "displayName"?: string; }` (只提供需要更新的字段)。
+  - **目的**: 更新一个已存在的外部服务凭证（例如，替换密钥内容、修改显示名称或更改存储模式）。
+  - **请求体**: `{ "credential"?: "新的明文凭证内容"; "displayName"?: string; "storageMode"?: "plaintext" | "encrypted" }` (只提供需要更新的字段)。
   - **响应**: `200 OK` - `ExternalCredentialMetadata` (返回更新后的元数据)。
 
 ### 4.4. 管理员 API (`/api/admin/*`)
@@ -1119,11 +1144,13 @@ classDiagram
 
     - **用户模式**: 实现**纯本地自用模式 (Mode 1)** 和 **个人远程访问模式 (Mode 2)**。
     - **数据存储**: 搭建 SQLite 数据库基础结构（`users`, `external_credentials`, `service_api_keys` 表）。在应用初始化时，为单用户模式创建 `'default_user'` 的占位记录在 `users` 表。
-    - **核心密钥类型**: 优先实现**外部服务凭证 (External Service Credentials)** 的加密存储、解密使用、以及相应的管理 API (`/api/users/me/credentials`) 和前端 UI。这是因为应用的核心工作流很可能依赖于调用第三方服务。
-    - **认证**: 实现全局密码的设置 (`POST /api/auth/setup-global-password`) 和验证 (`POST /api/auth/verify-global-password`) 流程，以及相应的会话 Cookie 管理（可使用 Elysia 内置机制或简单 JWT）。
-    - **`GET /api/auth/current`**: 实现此接口，使其能正确返回 `LocalNoPasswordUserContext` 和 `LocalWithPasswordUserContext` (包括 `globalPasswordSetupRequired` 状态)。
-    - **安全**: 确保主加密密钥 (MEK) 通过环境变量配置，外部服务凭证的加解密逻辑正确实现。
-    - **暂时不实现**: 服务 API 密钥功能、多用户模式。
+    - **核心密钥类型**: 优先实现**外部服务凭证 (External Service Credentials)** 的管理功能。
+      - **存储**: 初期实现以**明文存储**为主，提供完整的增删查改 API (`/api/users/me/credentials`) 和前端 UI。
+      - **加密**: 可选的加密功能实现优先级后调，不在 MVP 阶段强制要求。
+    - **认证**: 实现全局密码的设置 (`POST /api/auth/setup-global-password`) 和验证 (`POST /api/auth/verify-global-password`) 流程。
+    - **`GET /api/auth/current`**: 实现此接口，使其能正确返回 `LocalNoPasswordUserContext` 和 `LocalWithPasswordUserContext`。
+    - **安全**: 在界面和文档中明确告知用户，在未开启加密功能时，凭证将以明文形式存储，并提示相关风险。
+    - **暂时不实现**: 服务 API 密钥功能、多用户模式、凭证加密。
 
 2.  **阶段二 (程序化访问支持 - 单用户)**:
 

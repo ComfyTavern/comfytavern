@@ -14,8 +14,9 @@
 - **API 配置服务 (`ApiConfigService`)**: 管理用户配置的 **API 渠道 (`ApiCredentialConfig`)** 和 **渠道组 (`ApiChannelGroup`)**。
 - **模型能力预设库 (`default_models.json`)**: 定义基于模型名称模式匹配的规则，用于预填充模型的能力、图标、分组等。
 - **激活模型注册表 (SQLite DB)**: 存储用户明确选择并激活的模型及其最终确认的**能力 (`capabilities`)**。
-- **模型注册服务 (`ModelRegistryService`)**: 统一管理模型信息，结合预设库和激活注册表，并支持从渠道动态发现模型。
-- **模型/渠道路由服务 (`ModelRouterService`)**: **新增核心组件**。在运行时根据节点的**能力请求**（例如，来自 Agent 核心审议工作流中 `GenericLlmRequestNode` 的能力声明）和用户的**全局偏好/规则**，选择合适的**模型 (`model_id`)** 和**渠道组 (`channel_group_ref`)**。
+- **激活模型服务 (`ActivatedModelService`)**: **新增服务**。专门负责对用户激活的模型列表（`ActivatedModelInfo`）进行数据库 CRUD 操作。
+- **模型预设服务 (`ModelPresetService`)**: **新增服务**。负责加载和解析 `default_models.json`，并提供应用预设规则的能力。
+- **模型/渠道路由服务 (`ModelRouterService`)**: **新增核心组件**。在运行时根据节点的**能力请求**（例如，来自 Agent 核心审议工作流中 `GenericLlmRequestNode` 的能力声明）和用户的**全局偏好/规则**，从 `ActivatedModelService` 中选择合适的**模型 (`model_id`)** 和**渠道组 (`channel_group_ref`)**。
 - **重试与 Key 选择逻辑 (`RetryHandler` & `KeySelector`)**: **新增逻辑** (可内聚在 `ModelRouterService` 或 `ExecutionEngine` 中)。负责根据选定的渠道组执行**故障转移**，并根据渠道配置选择**具体的 API Key**。
 - **Tokenization 服务 (`TokenizationService`)**: **新增核心服务**。负责提供全局的 `token` 计算能力。详见 [全局 Tokenization 服务设计方案](./tokenization-service-plan.md)。
 - **用户偏好/路由规则存储 (DB/Config)**: **新增配置项**。存储用户定义的模型和渠道组选择规则。
@@ -349,15 +350,31 @@ export interface ActivatedModelInfo {
 
 ## 4. 核心流程
 
-### 4.1. 模型管理流程
+### 4.1. 模型管理流程 (重构后)
 
-1.  **启动加载:** `ModelRegistryService` 启动时加载 `default_models.json` 中的预设规则，并连接 SQLite DB 加载用户已激活的模型列表 (`ActivatedModelInfo`)。
-2.  **发现模型:** 用户在渠道配置页面选择一个渠道 (`ApiCredentialConfig`)，点击“发现模型”。
-3.  **后端处理发现:** `ModelRegistryService` 尝试调用该渠道的 `model_list_endpoint` (如果配置了)。获取到原始模型 ID 列表后，与预设规则匹配，生成带有建议能力、分组、图标的“待添加模型列表”。
-4.  **前端展示:** 前端在一个模态框中展示这个“待添加模型列表”。
-5.  **用户添加:** 用户点击“+”按钮，选择要激活的模型。
-6.  **后端保存激活:** `ModelRegistryService` 将用户选择的模型信息（应用预设或用户微调后）保存到 SQLite DB (`ActivatedModelInfo`)。
-7.  **用户编辑:** 用户可以随时编辑已激活模型的信息（名称、分组、能力等），更改直接保存到 SQLite DB。
+1.  **启动加载:**
+    *   `ModelPresetService` 在应用启动时加载并解析 `default_models.json` 中的预设规则。
+    *   `ActivatedModelService` 准备好对数据库进行操作。
+
+2.  **发现模型 (由 API Endpoint 协调):**
+    a. **触发**: 用户在前端为某个渠道 (`channelRef`) 点击“发现模型”。
+    b. **API 调用**: 前端请求 `POST /api/llm/channels/:channelRef/discover-models`。
+    c. **后端处理**:
+        i.  **获取配置**: API Endpoint 调用 `ApiConfigService` 获取该渠道的完整配置。
+        ii. **获取适配器**: 调用 `LlmApiAdapterRegistry` 获取对应的适配器实例。
+        iii. **调用适配器**: 调用 `adapter.listModels(channelConfig)`，从外部 API 获取原始模型 ID 列表。
+        iv. **应用预设**: 调用 `ModelPresetService.applyPresets()`，为原始列表丰富上预设的能力、图标等信息。
+        v.  **检查激活状态**: 调用 `ActivatedModelService.getActivatedModels()`，获取用户已激活的所有模型，用于在结果中标记每个模型是否“已激活”。
+        vi. **整合响应**: API Endpoint 整合上述信息，生成一个包含模型列表（已丰富、已标记激活状态）的最终结果。
+    d. **前端展示**: 前端在一个模态框中展示这个“待添加模型列表”。
+
+3.  **用户添加/激活模型:**
+    a. **触发**: 用户点击“+”按钮，选择要激活的模型。
+    b. **API 调用**: 前端请求 `POST /api/llm/activated-models`，请求体中包含完整的 `ActivatedModelInfo`。
+    c. **后端保存**: API Endpoint 调用 `ActivatedModelService.addActivatedModel()` 将模型信息保存到数据库。
+
+4.  **用户编辑/删除模型:**
+    *   通过对应的 API Endpoint (`PUT`, `DELETE`) 调用 `ActivatedModelService` 中的方法，直接对数据库中的 `ActivatedModelInfo` 进行操作。
 
 ### 4.2. 工作流执行流程 (运行时)
 
@@ -373,7 +390,7 @@ export interface ActivatedModelInfo {
 3.  **路由与执行逻辑 (由 `ModelRouterService` 和 `RetryHandler` 协调):**
     a. **路由选择 (由 `ModelRouterService` 执行):**
     i. 接收节点的请求（能力、偏好、消息、参数）。当调用来自 Agent 的核心审议工作流时，这些请求反映了 Agent 当前决策周期对 LLM 的具体需求。
-    ii. 从 `context.ModelRegistryService` 查询满足 `required_capabilities` 的**激活模型**。
+    ii. 从 `context.ActivatedModelService` 查询满足 `required_capabilities` 的**激活模型**。
     iii. (可选) 根据 `preferred_model_tags` 和 `performance_preference` 筛选/排序候选模型。
     iv. 根据用户的**全局偏好/路由规则** (从 `context` 获取)，从候选模型中确定最终的 `selected_model_id`。
     v. 同样根据用户偏好/规则（或模型的默认设置），确定要使用的 `selected_channel_group_ref`。
@@ -404,43 +421,62 @@ interface IApiConfigService {
 }
 ```
 
-### 5.2. `IModelRegistryService`
+### 5.2. `IActivatedModelService`
 
 ```typescript
-interface IModelRegistryService {
+interface IActivatedModelService {
   /**
-   * 查询激活的模型，支持按能力过滤。
+   * 查询激活的模型，支持按能力和用户过滤。
    * 这是 ModelRouterService 选择模型的基础。
    */
-  getActivatedModels(filter?: {
+  getActivatedModels(filter: {
+    userId: string;
     capabilities?: string[]; // 查找包含所有这些能力的模型
     type?: string;
   }): Promise<ActivatedModelInfo[]>;
 
-  getActivatedModel(modelId: string): Promise<ActivatedModelInfo | null>;
+  getActivatedModel(modelId: string, userId: string): Promise<ActivatedModelInfo | null>;
 
-  // 管理激活的模型 (增删改)
-  addActivatedModel(modelInfo: ActivatedModelInfo): Promise<void>;
-  updateActivatedModel(modelInfo: ActivatedModelInfo): Promise<void>;
-  deleteActivatedModel(modelId: string): Promise<void>;
-
-  /**
-   * 从指定渠道发现可用模型。
-   * 返回模型列表及其建议的预设信息和是否已激活状态，供用户在 UI 上选择添加。
-   */
-  discoverModelsFromChannel(
-    channelRef: string
-  ): Promise<Array<Partial<ActivatedModelInfo> & { model_id: string; isActivated: boolean }>>;
-
-  // 加载预设规则 (内部或启动时)
-  loadPresetRules(): Promise<void>;
+  // 管理激活的模型 (增删改)，始终需要 userId
+  addActivatedModel(modelInfo: ActivatedModelInfo, userId: string): Promise<void>;
+  updateActivatedModel(modelInfo: ActivatedModelInfo, userId: string): Promise<void>;
+  deleteActivatedModel(modelId: string, userId: string): Promise<void>;
 }
 ```
 
-### 5.3. `ILlmApiAdapter`
+### 5.3. `IModelPresetService`
+
+```typescript
+interface IModelPresetService {
+  /**
+   * 加载并解析预设规则。
+   */
+  loadPresetRules(): Promise<void>;
+
+  /**
+   * 将预设规则应用于给定的模型ID列表。
+   * @param modelIds 从适配器获取的原始模型ID列表。
+   * @returns 丰富了预设信息（能力、图标、分组等）的模型信息列表。
+   */
+  applyPresets(modelIds: string[]): Promise<Array<Partial<ActivatedModelInfo> & { model_id: string }>>;
+}
+```
+
+### 5.4. `ILlmApiAdapter`
 
 ```typescript
 interface ILlmApiAdapter {
+  /**
+   * 从该适配器对应的外部服务发现可用的模型列表。
+   * @param credentials 包含 base_url, api_key 等认证信息。
+   * @returns 返回一个只包含模型基础信息的列表。
+   */
+  listModels(credentials: {
+    base_url: string;
+    api_key?: string;
+    custom_headers?: Record<string, string>;
+  }): Promise<Array<{ id: string; [key: string]: any }>>;
+
   /**
    * 发送请求到具体的 LLM API 端点。
    * @param payload 包含消息、参数、模型 ID 和**已选定的单个**凭证信息。
@@ -515,20 +551,28 @@ interface ILlmApiAdapter {
     - **不包含 `ApiChannelGroup` (渠道组)**。每个渠道独立配置和使用。
     - 存储: SQLite 数据库 (`credentials.sqlite`)，API Key 明文存储（强调安全风险，或仅支持从环境变量加载）。
 
-5.  **`ModelRegistryService` (基础版):**
+5.  **`ActivatedModelService` (基础版):**
 
-    - 管理 `ActivatedModelInfo` (激活模型信息)。
-    - 提供基础的 CRUD 操作 (通过 API 或简单的 UI 界面)。
-    - 用户需要 **手动添加模型 ID** 并为其指定 **核心能力** (`capabilities: string[]`, e.g., `['llm']`, `['llm', 'vision']`, `['embedding']`)。
-    - **可选 (增强 MVP):** 实现基于 OpenAI 兼容 `/models` 端点的 **基础模型发现** 功能，辅助用户添加模型 ID。
-    - **不包含:** `default_models.json` 预设库，复杂元数据 (tags, icons, groups)。
-    - 存储: SQLite 数据库 (`models.sqlite`)。
+    - 专门管理 `ActivatedModelInfo` (激活模型信息) 的数据库 CRUD。
+    - 提供基础的 `get`, `add`, `update`, `delete` 方法，所有操作都与 `userId` 关联。
+    - **不包含:** 模型发现逻辑、预设应用逻辑。
 
-6.  **`ModelRouterService` (极简版):**
+6.  **模型发现流程 (MVP 实现):**
+
+    - **移除** `ModelRegistryService` 中的发现逻辑。
+    - 在 `llmConfigRoutes.ts` 中创建一个新的 API Endpoint: `POST /api/llm/channels/:channelRef/discover-models`。
+    - 该 Endpoint 的处理器将：
+        1.  获取渠道配置 (`ApiConfigService`)。
+        2.  获取 `OpenAIAdapter` 实例 (`LlmApiAdapterRegistry`)。
+        3.  调用 `adapter.listModels()` 获取模型列表。
+        4.  将原始模型列表直接返回给前端。
+    - 前端 UI 负责展示列表，用户选择后，调用 `ActivatedModelService` 的 API 来手动添加模型信息（包括手动输入能力）。
+
+7.  **`ModelRouterService` (极简版):**
 
     - 如果节点不直接指定模型/渠道，则此服务被调用。
     - 接收 `required_capabilities`。
-    - 从 `ModelRegistryService` 查询第一个满足所有能力的 `ActivatedModelInfo`。
+    - 从 `ActivatedModelService` 查询第一个满足所有能力的 `ActivatedModelInfo`。
     - 从 `ApiConfigService` 查询第一个（或某个硬编码/全局配置的）可用的 `ApiCredentialConfig`。
     - 返回 `selected_model_id` 和 `selected_channel_ref` 给执行逻辑。
     - **不包含:** 复杂的规则匹配、偏好处理、渠道组选择。
@@ -675,3 +719,27 @@ interface ILlmApiAdapter {
 
 5.  **测试与验证:**
     - 建立更完善的单元测试、集成测试和端到端测试框架。
+
+---
+
+## 附录：与 `new-api` 项目渠道管理模块的对比分析
+
+在制定本方案时，我们参考了一份外部项目（`new-api`）的渠道管理模块分析报告。经过详细对比，我们得出以下结论：
+
+本 V2 方案在**核心架构**（如故障转移、模型与渠道解耦、基于能力的智能路由）的深度和广度上，已全面超越 `new-api` 方案。
+
+然而，`new-api` 报告在一些具体的、**面向用户体验的辅助功能和 API 设计**上，提供了非常有价值的参考。我们建议将以下“闪光点”作为对本 V2 方案的补充和增强，并纳入未来的开发计划中：
+
+1.  **明确的渠道测试功能**:
+    -   **建议**: 在 `ApiConfigService` 中增加 `testCredential(refName: string)` 方法，并在前端提供专门的“测试连接”按钮，以便用户在配置渠道后能立即获得有效性反馈。
+
+2.  **渠道余额查询功能**:
+    -   **建议**: 在 `ApiCredentialConfig` 数据结构中增加 `balance: number` 和 `lastBalanceCheck: Date` 字段。提供一个服务方法 `updateBalance(refName)` 及对应的 API，方便用户直接在平台内监控预付费渠道的余额。
+
+3.  **精细化的批量操作 API**:
+    -   **建议**: 参考 `new-api` 的设计，为 `ApiConfigService` 和 `ModelRegistryService` 设计专门的批量操作 API（如批量删除、批量更新标签），以提升后台管理效率。
+
+4.  **前端 UI/UX 增强**:
+    -   **建议**: 在开发前端管理界面时，采纳报告中提到的“标签聚合模式”（按 tag 对渠道或模型进行分组展示）和“列自定义”（允许用户自定义表格列并保存偏好）等优秀设计，以优化用户操作体验。
+
+通过吸收这些经过实践检验的优秀功能点，我们可以将一个架构强大、设计先进的系统，打造成一个用户真正爱用、好用的平台。
