@@ -3,7 +3,7 @@
  */
 import type { ExecutionNode, ExecutionEdge } from './schemas';
 import type { GroupSlotInfo } from './node';
-import { ExecutionStatus, type NanoId, type ChunkPayload, type CustomMessage } from './common';
+import { ExecutionStatus, type NanoId, type ChunkPayload } from './common';
 import type { NodeExecutionResult } from './node';
 
 // --- Core Execution Status ---
@@ -215,32 +215,4 @@ export interface PromptStatusResponse extends PromptInfo {
 export interface HistoryEntryResponse extends PromptStatusResponse {
   completedAt?: string | number;
   durationMs?: number;
-}
-
-/**
- * 标准化的 LLM 服务响应结构。
- * 基于 llm-adapter-architecture-plan.md
- */
-export interface StandardResponse {
-  text: string; // 主要文本内容
-  choices?: Array<{
-    index: number;
-    message: CustomMessage; // 使用导入的 CustomMessage 类型
-    finish_reason: string;
-  }>;
-  usage?: {
-    prompt_tokens?: number;
-    completion_tokens?: number;
-    total_tokens?: number;
-    [key: string]: any;
-  };
-  raw_response?: any; // 原始的、未经处理的 LLM API 响应
-  error?: {
-    code?: string | number;
-    message: string;
-    type?: string;
-    details?: any;
-  };
-  model: string; // 实际使用的模型
-  response_id?: string; // 响应的唯一标识符
 }

@@ -67,3 +67,57 @@ export const externalCredentialsRelations = relations(externalCredentials, ({ on
     references: [users.uid],
   }),
 }));
+
+// --- LLM Adapter Tables ---
+
+/**
+ * `apiChannels` 表 (用于存储 `ApiCredentialConfig`)
+ * 存储用户配置的第三方 LLM 服务的 API 渠道（凭证和端点）。
+ */
+export const apiChannels = sqliteTable('api_channels', {
+  id: text('id').primaryKey(), // UUID
+  userId: text('user_id').notNull().references(() => users.uid, { onDelete: 'cascade' }),
+  refName: text('ref_name').notNull(), // 用户定义的引用名称
+  label: text('label'), // UI 显示的标签
+  providerId: text('provider_id'), // e.g., "openai", "anthropic"
+  adapterType: text('adapter_type'), // e.g., "openai", "ollama"
+  baseUrl: text('base_url').notNull(),
+  apiKey: text('api_key').notNull(), // MVP 阶段为单个 key, 存储加密后的值或明文
+  storageMode: text('storage_mode', { enum: ['plaintext', 'encrypted'] }).notNull().default('plaintext'),
+  customHeaders: text('custom_headers', { mode: 'json' }), // JSON
+  modelListEndpoint: text('model_list_endpoint'),
+  disabled: integer('disabled', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at').notNull(),
+});
+
+export const apiChannelsRelations = relations(apiChannels, ({ one }) => ({
+  user: one(users, {
+    fields: [apiChannels.userId],
+    references: [users.uid],
+  }),
+}));
+
+
+/**
+ * `activatedModels` 表 (用于存储 `ActivatedModelInfo`)
+ * 存储用户手动添加和管理、希望在工作流中使用的模型。
+ */
+export const activatedModels = sqliteTable('activated_models', {
+  modelId: text('model_id').primaryKey(), // e.g., "gpt-4o"
+  userId: text('user_id').notNull().references(() => users.uid, { onDelete: 'cascade' }),
+  displayName: text('display_name').notNull(),
+  capabilities: text('capabilities', { mode: 'json' }).notNull(), // string[]
+  modelType: text('model_type', { enum: ['llm', 'embedding', 'unknown'] }).default('unknown'),
+  groupName: text('group_name'),
+  icon: text('icon'),
+  defaultChannelRef: text('default_channel_ref'), // 关联到 apiChannels.refName
+  tags: text('tags', { mode: 'json' }), // string[]
+  tokenizerId: text('tokenizer_id'),
+});
+
+export const activatedModelsRelations = relations(activatedModels, ({ one }) => ({
+  user: one(users, {
+    fields: [activatedModels.userId],
+    references: [users.uid],
+  }),
+}));

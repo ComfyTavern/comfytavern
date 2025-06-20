@@ -105,11 +105,3 @@ export const BuiltInSocketMatchCategory = {
 } as const;
 
 export type BuiltInSocketMatchCategoryName = (typeof BuiltInSocketMatchCategory)[keyof typeof BuiltInSocketMatchCategory];
-
-/**
- * Openai式的聊天消息结构。
- */
-export interface CustomMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
