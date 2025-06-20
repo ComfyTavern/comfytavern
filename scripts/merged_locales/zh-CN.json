@@ -59,6 +59,15 @@
     "warning": "警告",
     "yes": "是"
   },
+  "dialog": {
+    "input": {
+      "placeholder": "请输入内容...",
+      "title": "请输入"
+    },
+    "message": {
+      "title": "消息"
+    }
+  },
   "editorHost": {
     "noActiveTabs": "没有活动的编辑标签页。请从节点输入处打开编辑器。"
   },
@@ -766,10 +775,6 @@
     }
   },
   "testPanel": {
-    "dialogContent": {
-      "inputTitle": "[TODO]",
-      "messageTitle": "[TODO]"
-    },
     "dialogService": {
       "buttons": {
         "showAutoClose": "显示自动关闭对话框",

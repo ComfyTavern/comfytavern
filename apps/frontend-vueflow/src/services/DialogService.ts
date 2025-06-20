@@ -120,7 +120,7 @@ export const useDialogService = defineStore('dialogService', () => {
           ...options,
           visible: true,
           type: 'message' as const, // 传递给 Dialog.vue 的 type
-          title: options.title || t('testPanel.dialogContent.messageTitle'),
+          title: options.title || t('dialog.message.title'),
           message: options.message,
           confirmText: options.confirmText || t('common.confirm'),
           showCloseIcon: options.showCloseIcon !== undefined ? options.showCloseIcon : true,
@@ -212,7 +212,7 @@ export const useDialogService = defineStore('dialogService', () => {
           ...options,
           visible: true,
           type: 'input' as const,
-          title: options.title || t('testPanel.dialogContent.inputTitle'),
+          title: options.title || t('dialog.input.title'),
           message: options.message,
           confirmText: options.confirmText || t('common.confirm'),
           cancelText: options.cancelText || t('common.cancel'),
@@ -220,7 +220,7 @@ export const useDialogService = defineStore('dialogService', () => {
           closeOnBackdrop: options.closeOnBackdrop !== undefined ? options.closeOnBackdrop : false,
           dangerConfirm: options.dangerConfirm || false,
           initialValue: options.initialValue || '',
-          inputPlaceholder: options.inputPlaceholder || '请输入内容...',
+          inputPlaceholder: options.inputPlaceholder || t('dialog.input.placeholder'),
           inputType: options.inputType || 'text',
           inputRows: options.inputRows || 3,
           onConfirm: (inputValue?: string) => { 

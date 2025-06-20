@@ -59,6 +59,15 @@
     "warning": "[TODO]",
     "yes": "[TODO]"
   },
+  "dialog": {
+    "input": {
+      "placeholder": "[TODO]",
+      "title": "[TODO]"
+    },
+    "message": {
+      "title": "[TODO]"
+    }
+  },
   "editorHost": {
     "noActiveTabs": "[TODO]"
   },
@@ -766,10 +775,6 @@
     }
   },
   "testPanel": {
-    "dialogContent": {
-      "inputTitle": "[TODO]",
-      "messageTitle": "[TODO]"
-    },
     "dialogService": {
       "buttons": {
         "showAutoClose": "[TODO]",

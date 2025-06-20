@@ -314,6 +314,15 @@
       "visibleColumns": "列表视图显示列"
     }
   },
+  "dialog": {
+    "input": {
+      "placeholder": "请输入内容...",
+      "title": "请输入"
+    },
+    "message": {
+      "title": "消息"
+    }
+  },
   "graph": {
     "menus": {
       "context": {
@@ -767,8 +776,8 @@
   },
   "testPanel": {
     "dialogContent": {
-      "inputTitle": "[TODO]",
-      "messageTitle": "[TODO]"
+      "inputTitle": "请输入信息",
+      "messageTitle": "消息提示"
     },
     "dialogService": {
       "buttons": {

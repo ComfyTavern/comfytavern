@@ -8,9 +8,10 @@ import type { Node as BabelNode } from '@babel/types';
 import type { Node as VueNode, ElementNode, InterpolationNode, AttributeNode, DirectiveNode, SimpleExpressionNode } from '@vue/compiler-core';
 
 const SCAN_DIRECTORY = 'apps/frontend-vueflow/src';
-const EXISTING_LANG_FILE = 'apps/frontend-vueflow/src/locales/zh-CN.json';
+const REFERENCE_LANG_FILE = 'apps/frontend-vueflow/src/locales/zh-CN.json'; // For diff report
+const LANG_DIR = 'apps/frontend-vueflow/src/locales';
 const OUTPUT_TEMPLATE_FILE = 'scripts/locales-template.json';
-const OUTPUT_MERGED_FILE = 'scripts/zh-CN.merged.json';
+const MERGED_OUTPUT_DIR = 'scripts/merged_locales'; // Output directory for all merged files
 const FILE_EXTENSIONS = ['.vue', '.ts'];
 
 // --- AST Traversal and Key Extraction ---
@@ -378,37 +379,61 @@ async function main() {
     console.error(`Error writing scanned template file:`, error);
   }
 
-  let existingLangObject: NestedObject = {};
+  // --- Language File Merging and Reporting ---
+
+  console.log("\n--- Merging all language files against the new template ---");
+  await fs.mkdir(MERGED_OUTPUT_DIR, { recursive: true });
+
+  // 1. Generate diff report against the reference language file (e.g., zh-CN)
+  console.log(`\nGenerating comparison report against reference file: ${REFERENCE_LANG_FILE}`);
   try {
-    const existingLangContent = await fs.readFile(EXISTING_LANG_FILE, 'utf-8');
-    existingLangObject = JSON.parse(existingLangContent);
-    console.log(`\nSuccessfully loaded existing language file: ${EXISTING_LANG_FILE}`);
+    const referenceLangContent = await fs.readFile(REFERENCE_LANG_FILE, 'utf-8');
+    const referenceLangObject = JSON.parse(referenceLangContent);
+    const { _meta, ...content } = referenceLangObject;
+    const diffResult = compareLangObjects(scannedTemplateObject, content as NestedObject);
+
+    console.log("\n--- Comparison Report (vs zh-CN) ---");
+    console.log(`Added keys (${diffResult.added.length}):`);
+    diffResult.added.forEach(key => console.log(`  + ${key}`));
+    console.log(`\nObsolete keys in ${REFERENCE_LANG_FILE} (${diffResult.obsolete.length}):`);
+    diffResult.obsolete.forEach(key => console.log(`  - ${key}`));
+    console.log("------------------------------------\n");
   } catch (error) {
-    console.error(`Error loading existing language file ${EXISTING_LANG_FILE}:`, error);
-    console.log("Proceeding with an empty existing language object for comparison.");
+    console.error(`Could not generate comparison report for ${REFERENCE_LANG_FILE}:`, error);
   }
 
-  const { _meta: existingMeta, ...existingContent } = existingLangObject;
-  const diffResult = compareLangObjects(scannedTemplateObject, existingContent as NestedObject);
+  // 2. Iterate over all language files and merge them
+  const localeFiles = await fs.readdir(LANG_DIR);
+  for (const fileName of localeFiles) {
+    if (path.extname(fileName) !== '.json') {
+      console.log(`Skipping non-JSON file: ${fileName}`);
+      continue;
+    }
 
-  console.log("\n--- Comparison Report ---");
-  console.log(`Added keys (${diffResult.added.length}):`);
-  diffResult.added.forEach(key => console.log(`  + ${key}`));
+    const filePath = path.join(LANG_DIR, fileName);
+    const outputFilePath = path.join(MERGED_OUTPUT_DIR, fileName);
 
-  console.log(`\nObsolete keys in ${EXISTING_LANG_FILE} (${diffResult.obsolete.length}):`);
-  diffResult.obsolete.forEach(key => console.log(`  - ${key}`));
-  console.log("-------------------------\n");
+    console.log(`Processing ${filePath}...`);
+    let existingLangObject: NestedObject = {};
+    try {
+      const existingLangContent = await fs.readFile(filePath, 'utf-8');
+      existingLangObject = JSON.parse(existingLangContent);
+    } catch (error) {
+      console.error(`! Error loading language file ${filePath}, will create from template.`);
+    }
 
-  const mergedTranslations = mergeTranslations(existingLangObject, finalTemplateObject);
+    const mergedTranslations = mergeTranslations(existingLangObject, finalTemplateObject);
 
-  try {
-    await fs.writeFile(OUTPUT_MERGED_FILE, JSON.stringify(mergedTranslations, null, 2), 'utf-8');
-    console.log(`Merged translations written to ${path.resolve(OUTPUT_MERGED_FILE)}`);
-    console.log(`Please review ${OUTPUT_MERGED_FILE} and then you can replace your original language file if satisfied.`);
-  } catch (error) {
-    console.error(`Error writing merged file:`, error);
+    try {
+      await fs.writeFile(outputFilePath, JSON.stringify(mergedTranslations, null, 2), 'utf-8');
+      console.log(`  -> Merged file written to ${path.resolve(outputFilePath)}`);
+    } catch (error) {
+      console.error(`  -> Error writing merged file for ${fileName}:`, error);
+    }
   }
 
+  console.log(`\nAll merged files are available in ${path.resolve(MERGED_OUTPUT_DIR)}.`);
+  console.log("Please review the files and then replace them in the locales directory if satisfied.");
   console.log("\nProcess complete.");
 }
 
