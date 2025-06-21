@@ -1,4 +1,4 @@
-import { onMounted, onUnmounted } from "vue";
+import { onMounted, onUnmounted, type Ref } from "vue";
 import { useVueFlow, type NodeMouseEvent } from "@vue-flow/core"; // 保留 useVueFlow，添加类型
 import { useWorkflowStore } from "@/stores/workflowStore"; // <-- 导入 WorkflowStore
 import { useTabStore } from "@/stores/tabStore"; // <-- 导入 TabStore
@@ -12,8 +12,9 @@ import { useCanvasClipboard } from "./useCanvasClipboard"; // <-- 新增导入
 
 /**
  * 用于处理 VueFlow 画布上键盘快捷键的 Composable。
+ * @param containerRef - 指向画布容器元素的 Ref。
  */
-export function useCanvasKeyboardShortcuts() {
+export function useCanvasKeyboardShortcuts(containerRef: Ref<HTMLElement | null>) {
   const {
     getNodes,
     getEdges,
@@ -29,10 +30,28 @@ export function useCanvasKeyboardShortcuts() {
   const nodeStore = useNodeStore();
   const { handleLocalCopy, handleLocalPaste, handleSystemCopy, handleSystemPaste } = useCanvasClipboard(); // <-- 使用新的 composable
 
-
   // 处理键盘按下事件
   const handleKeyDown = (event: KeyboardEvent) => {
     const activeElement = document.activeElement;
+
+    // 检查焦点是否在画布或其子元素中
+    const isCanvasFocused = () => {
+      if (!containerRef.value || !activeElement) {
+        return false;
+      }
+      // 如果焦点在 body 上，通常意味着点击了画布背景，应该响应快捷键
+      if (activeElement === document.body) {
+        return true;
+      }
+      // 检查活动元素是否在 VueFlow 容器内
+      return containerRef.value.contains(activeElement);
+    };
+
+    // 如果焦点不在画布相关区域，则忽略所有快捷键
+    if (!isCanvasFocused()) {
+      return;
+    }
+
     const isInputFocused =
       activeElement?.tagName === "INPUT" ||
       activeElement?.tagName === "TEXTAREA" ||

@@ -1,5 +1,5 @@
 <template>
-  <div class="editor-container flex flex-col bg-background-base">
+  <div ref="editorContainerRef" class="editor-container flex flex-col bg-background-base" tabindex="-1">
     <!-- 主要内容区域 -->
     <div class="editor-main flex-1 relative overflow-hidden">
       <div v-if="loading" class="loading-overlay">
@@ -129,6 +129,7 @@ type SidebarManagerInstance = InstanceType<typeof SidebarManager> & {
 };
 
 const { t } = useI18n();
+const editorContainerRef = ref<HTMLElement | null>(null);
 const canvasRef = ref<InstanceType<typeof Canvas> | null>(null);
 const dockedEditorWrapperRef = ref<InstanceType<typeof DockedEditorWrapper> | null>(null);
 const sidebarManagerRef = ref<SidebarManagerInstance | null>(null);
@@ -261,7 +262,7 @@ useTabManagement(activeTabId, currentInstance, selectedNodeForPreview);
 
 useInterfaceWatcher(activeTabId, currentElements);
 
-useKeyboardShortcuts(activeTabId);
+useKeyboardShortcuts(activeTabId, editorContainerRef);
 
 // 更新元素函数
 function updateElements(_newElements: Array<Node | Edge>) {

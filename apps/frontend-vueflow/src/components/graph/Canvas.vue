@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, type PropType } from "vue"; // 导入 PropType
+import { ref, computed, onMounted, onUnmounted, type PropType, type Ref } from "vue"; // 导入 PropType
 import { watch, nextTick } from "vue";
 import {
   VueFlow,
@@ -236,7 +236,7 @@ const { removeNodeConnections } = useCanvasConnections({
 });
 
 // Initialize keyboard shortcuts and get needed methods
-const { deleteSelectedElements } = useCanvasKeyboardShortcuts(); // <-- selectAllElements 不再需要从这里解构
+const { deleteSelectedElements } = useCanvasKeyboardShortcuts(canvasContainerRef as Ref<HTMLElement | null>); // <-- selectAllElements 不再需要从这里解构
 
 // Assign to names expected by the template for context menu
 const deleteSelected = deleteSelectedElements;

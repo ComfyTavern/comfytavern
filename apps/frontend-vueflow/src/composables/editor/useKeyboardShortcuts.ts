@@ -4,11 +4,30 @@ import { useWorkflowStore } from "@/stores/workflowStore";
 /**
  * 用于处理键盘快捷键的组合式函数，特别是用于保存的 Ctrl+S/Cmd+S。
  * @param activeTabId - 计算属性 ref，表示活动选项卡的 ID。
+ * @param containerRef - 指向编辑器容器元素的 Ref。
  */
-export function useKeyboardShortcuts(activeTabId: Ref<string | null>) {
+export function useKeyboardShortcuts(activeTabId: Ref<string | null>, containerRef: Ref<HTMLElement | null>) {
   const workflowStore = useWorkflowStore();
 
   const handleKeyDown = async (event: KeyboardEvent) => {
+    const activeElement = document.activeElement;
+
+    // 检查焦点是否在编辑器或其子元素中
+    const isEditorFocused = () => {
+      if (!containerRef.value || !activeElement) {
+        return false;
+      }
+      if (activeElement === document.body) {
+        // 如果焦点在 body 上，也认为是在编辑器上下文中，允许保存
+        return true;
+      }
+      return containerRef.value.contains(activeElement);
+    };
+
+    if (!isEditorFocused()) {
+      return;
+    }
+
     if (!activeTabId.value) return; // 需要一个活动的选项卡
 
     // Ctrl+S / Cmd+S 用于保存
