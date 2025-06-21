@@ -69,10 +69,25 @@ export const useThemeStore = defineStore('theme', () => {
     // 确保 variant 和 variant.variables 都有效，并且 variables 对象不是空的
     if (variant && variant.variables && Object.keys(variant.variables).length > 0) {
       // console.log(`[ThemeStore] Applying theme "${presetToApply.id}", mode "${modeToApply}". Variables:`, JSON.parse(JSON.stringify(variant.variables)));
-      // 正常应用选中的变体
-      Object.entries(variant.variables).forEach(([key, value]) => {
-        document.documentElement.style.setProperty(key, value);
-      });
+      
+      // 批量应用 CSS 变量以减少闪烁
+      // 先构建完整的 CSS 文本，然后一次性应用
+      const cssText = Object.entries(variant.variables)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('; ');
+      
+      // 保存当前的 cssText，添加新的变量，然后一次性设置
+      const currentCssText = document.documentElement.style.cssText;
+      const existingStyles = currentCssText ? currentCssText.split(';').filter(style => {
+        const trimmed = style.trim();
+        if (!trimmed) return false;
+        const [prop] = trimmed.split(':');
+        return prop && !prop.trim().startsWith('--ct-');
+      }).join('; ') : '';
+      
+      const newCssText = existingStyles ? `${existingStyles}; ${cssText}` : cssText;
+      document.documentElement.style.cssText = newCssText;
+      
       // 将应用的主题变量和模式缓存到 localStorage
       try {
         localStorage.setItem('comfyTavern_cachedThemeVariables', JSON.stringify(variant.variables));

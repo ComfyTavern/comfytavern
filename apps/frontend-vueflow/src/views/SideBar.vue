@@ -131,7 +131,7 @@ function cycleDisplayMode() {
           isExactActive ? 'bg-primary-soft' : '' // 激活状态使用更深一点的 primary 半透明背景
         ]">
           <span class="inline text-lg">🏠</span>
-          <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
+          <span class="text-base transition-[opacity,max-width,margin-left] duration-150 ease-in-out overflow-hidden whitespace-nowrap"
             :class="textClasses">{{ t('nav.home') }}</span>
         </div>
       </RouterLink>
@@ -141,7 +141,7 @@ function cycleDisplayMode() {
         'hover:bg-primary-softest active:bg-primary-soft'
       ]" active-class="bg-primary-soft">
         <span class="inline text-lg">📁</span>
-        <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
+        <span class="text-base transition-[opacity,max-width,margin-left] duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">{{ t('nav.projects') }}</span>
       </RouterLink>
       <RouterLink v-comfy-tooltip="{ content: t('nav.characters'), placement: 'right' }" to="/home/characters" class="w-full p-2 rounded flex items-center" :class="[
@@ -149,7 +149,7 @@ function cycleDisplayMode() {
         'hover:bg-primary-softest active:bg-primary-soft'
       ]" active-class="bg-primary-soft">
         <span class="inline text-lg">🎭</span>
-        <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
+        <span class="text-base transition-[opacity,max-width,margin-left] duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">{{ t('nav.characters') }}</span>
       </RouterLink>
 
@@ -158,7 +158,7 @@ function cycleDisplayMode() {
         'hover:bg-primary-softest active:bg-primary-soft'
       ]" active-class="bg-primary-soft">
         <span class="inline text-lg">🗂️</span>
-        <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
+        <span class="text-base transition-[opacity,max-width,margin-left] duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">{{ t('nav.files') }}</span>
       </RouterLink>
 
@@ -167,7 +167,7 @@ function cycleDisplayMode() {
         'hover:bg-primary-softest active:bg-primary-soft'
       ]" active-class="bg-primary-soft">
         <span class="inline text-lg">ℹ️</span>
-        <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
+        <span class="text-base transition-[opacity,max-width,margin-left] duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">{{ t('nav.about') }}</span>
       </RouterLink>
     </nav>
@@ -184,7 +184,7 @@ function cycleDisplayMode() {
           <span v-else-if="displayMode === 'light'">☀️</span>
           <span v-else>🌙</span>
         </span>
-        <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
+        <span class="text-base transition-[opacity,max-width,margin-left] duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">
           {{ t(displayMode === 'system' ? 'sidebar.themeSystem' : displayMode === 'dark' ? 'sidebar.themeDark' : 'sidebar.themeLight') }}
         </span>
@@ -196,7 +196,7 @@ function cycleDisplayMode() {
         'hover:bg-primary-softest active:bg-primary-soft'
       ]" active-class="bg-primary-soft">
         <span class="inline text-lg">⚙️</span>
-        <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
+        <span class="text-base transition-[opacity,max-width,margin-left] duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">{{ t('nav.settings') }}</span>
       </RouterLink>
 
@@ -221,7 +221,7 @@ function cycleDisplayMode() {
               fill="currentColor"></path>
           </svg>
         </span>
-        <span class="text-base transition-all duration-150 ease-in-out overflow-hidden whitespace-nowrap"
+        <span class="text-base transition-[opacity,max-width,margin-left] duration-150 ease-in-out overflow-hidden whitespace-nowrap"
           :class="textClasses">
           {{ t(uiStore.isMainSidebarCollapsed ? 'sidebar.expand' : 'sidebar.collapse') }}
         </span>
