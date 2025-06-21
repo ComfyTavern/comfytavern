@@ -312,7 +312,7 @@ export const mergeMessagesNodeDefinition: NodeDefinition = {
   category: 'LLM',
   displayName: '🤝合并消息',
   description: '将多条消息或消息列表合并成一个完整的消息历史',
-  width: 300,
+  width: 200,
   inputs: {
     message_inputs: {
       dataFlowType: 'OBJECT', // 接受单条消息
