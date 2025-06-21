@@ -3,12 +3,17 @@ import { LlmApiAdapterRegistry } from '../../services/LlmApiAdapterRegistry';
 import { ApiConfigService } from '../../services/ApiConfigService';
 import { ActivatedModelService } from '../../services/ActivatedModelService';
 
-// Placeholder validation for messages
+// Placeholder validation for a single message
+function isValidCustomMessage(item: any): item is CustomMessage {
+  return typeof item === 'object' && item !== null && 'role' in item && 'content' in item;
+}
+
+// Placeholder validation for an array of messages
 function isValidCustomMessageArray(data: any): data is CustomMessage[] {
   if (!Array.isArray(data)) {
     return false;
   }
-  return data.every(item => typeof item === 'object' && item !== null && 'role' in item && 'content' in item);
+  return data.every(isValidCustomMessage);
 }
 
 class GenericLlmRequestNodeImpl {
@@ -117,7 +122,7 @@ class GenericLlmRequestNodeImpl {
   }
 }
 
-export const definition: NodeDefinition = {
+export const genericLlmRequestNodeDefinition: NodeDefinition = {
   type: 'GenericLlmRequest',
   category: 'LLM',
   displayName: '⚡通用 LLM 请求',
@@ -215,4 +220,117 @@ export const definition: NodeDefinition = {
   configSchema: {},
 
   execute: GenericLlmRequestNodeImpl.execute,
+};
+
+// --- 节点2: 创建单条消息 ---
+class CreateMessageNodeImpl {
+  static async execute(inputs: Record<string, any>): Promise<Record<string, any>> {
+    const { role = 'user', content = '' } = inputs;
+    if (!content) {
+      // 如果内容为空，可以返回一个空消息或抛出错误，这里选择返回空，让合并节点忽略
+      return { message: null };
+    }
+    return {
+      message: { role, content },
+    };
+  }
+}
+
+export const createMessageNodeDefinition: NodeDefinition = {
+  type: 'CreateMessage',
+  category: 'LLM',
+  displayName: '💬创建消息',
+  description: '创建一条单独的对话消息',
+  width: 300,
+  inputs: {
+    role: {
+      dataFlowType: 'STRING',
+      displayName: '角色',
+      description: '消息发送者的角色',
+      required: true,
+      matchCategories: ['ComboOption'],
+      config: {
+        default: 'user',
+        suggestions: ['system', 'user', 'assistant'],
+      },
+    },
+    content: {
+      dataFlowType: 'STRING',
+      displayName: '内容',
+      description: '消息的具体内容',
+      required: true,
+      matchCategories: ['UiBlock', 'CanPreview'],
+      config: {
+        default: '',
+        multiline: true,
+        placeholder: '请输入消息内容...',
+      },
+    },
+  },
+  outputs: {
+    message: {
+      dataFlowType: 'OBJECT',
+      displayName: '消息',
+      description: '创建的单条消息对象',
+      matchCategories: ['ChatMessage'],
+    },
+  },
+  execute: CreateMessageNodeImpl.execute,
+};
+
+
+// --- 节点3: 合并多条消息 ---
+class MergeMessagesNodeImpl {
+  static async execute(inputs: Record<string, any>): Promise<Record<string, any>> {
+    const { message_inputs = [] } = inputs;
+
+    const flattenedMessages: CustomMessage[] = [];
+
+    // 确保输入是数组
+    const values = Array.isArray(message_inputs) ? message_inputs : [message_inputs];
+
+    for (const item of values) {
+      if (!item) continue; // 跳过 null 或 undefined
+
+      if (Array.isArray(item)) {
+        // 如果是数组 (来自另一个合并节点或历史记录), 则展开并过滤
+        flattenedMessages.push(...item.filter(isValidCustomMessage));
+      } else if (isValidCustomMessage(item)) {
+        // 如果是单条消息对象
+        flattenedMessages.push(item);
+      }
+    }
+
+    return {
+      messages: flattenedMessages,
+    };
+  }
+}
+
+export const mergeMessagesNodeDefinition: NodeDefinition = {
+  type: 'MergeMessages',
+  category: 'LLM',
+  displayName: '🤝合并消息',
+  description: '将多条消息或消息列表合并成一个完整的消息历史',
+  width: 300,
+  inputs: {
+    message_inputs: {
+      dataFlowType: 'OBJECT', // 接受单条消息
+      displayName: '消息输入',
+      description: '要合并的消息或消息列表',
+      required: true,
+      multi: true,
+      // 允许连接单条消息或完整的消息历史记录
+      matchCategories: ['ChatMessage', 'ChatHistory'],
+    },
+  },
+  outputs: {
+    messages: {
+      dataFlowType: 'ARRAY',
+      displayName: '消息列表',
+      description: '合并后的消息列表',
+      matchCategories: ['ChatHistory'],
+    },
+  },
+  execute: MergeMessagesNodeImpl.execute,
 };

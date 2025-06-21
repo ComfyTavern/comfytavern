@@ -4,11 +4,17 @@
 import type { NodeDefinition } from '@comfytavern/types';
 
 // 导入 LLM 节点的定义
-import { definition as GenericLlmRequestNodeDefinition } from './GenericLlmRequestNode';
+import {
+  genericLlmRequestNodeDefinition,
+  createMessageNodeDefinition,
+  mergeMessagesNodeDefinition,
+} from './GenericLlmRequestNode';
 
 // 定义并导出节点定义数组
 export const definitions: NodeDefinition[] = [
-  { ...GenericLlmRequestNodeDefinition, namespace: 'core' },
+  { ...genericLlmRequestNodeDefinition, namespace: 'core' },
+  { ...createMessageNodeDefinition, namespace: 'core' },
+  { ...mergeMessagesNodeDefinition, namespace: 'core' },
   // Add other LLM nodes here in the future
 ];
 
