@@ -107,11 +107,12 @@ function cycleDisplayMode() {
         :src="displayedAvatarUrl"
         :alt="t('sidebar.userAvatar')"
         @error="onAvatarError"
-        class="w-12 h-12 rounded-full object-cover border-2 border-border-base"
+        class="rounded-full object-cover border-2 border-border-base transition-all duration-300 ease-in-out"
+        :class="uiStore.isMainSidebarCollapsed ? 'w-12 h-12' : 'w-40 h-40'"
       />
       <div
         v-if="displayedUsername"
-        class="mt-2 text-sm font-medium transition-opacity duration-150 ease-in-out overflow-hidden whitespace-nowrap text-text-muted"
+        class="mt-4 text-lg font-medium transition-opacity duration-150 ease-in-out overflow-hidden whitespace-nowrap text-text-muted"
         :class="[
           uiStore.isMainSidebarCollapsed ? 'opacity-0 max-h-0' : 'opacity-100 max-h-10 delay-150'
         ]"
