@@ -144,7 +144,7 @@ export const definition: NodeDefinition = {
     activated_model_id: {
       dataFlowType: 'STRING',
       displayName: '模型 ID',
-      description: '要使用的已激活模型的 ID \n比如`claude-4-opus-20250522`、`gemini-2.5-pro`、`deepseek-reasoner`等',
+      description: '要使用的已激活模型的 ID \n比如`claude-opus-4-20250522`、`gemini-2.5-pro`、`deepseek-reasoner`等',
     },
     temperature: {
       dataFlowType: 'FLOAT',
