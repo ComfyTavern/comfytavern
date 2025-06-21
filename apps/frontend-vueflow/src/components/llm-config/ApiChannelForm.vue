@@ -5,18 +5,9 @@
       <label class="block text-sm font-medium text-text-base mb-2">
         提供商类型 <span class="text-error">*</span>
       </label>
-      <select
-        v-model="formData.providerId"
-        required
-        class="w-full p-3 border border-border-base rounded-md focus:ring-2 focus:ring-primary focus:border-primary bg-background-surface text-text-base invalid:text-text-muted"
-      >
-        <option value="" disabled>
-          {{ isLoadingProviders ? "正在加载..." : "选择提供商" }}
-        </option>
-        <option v-for="provider in providers" :key="provider.id" :value="provider.id">
-          {{ provider.name }}
-        </option>
-      </select>
+      <SelectInput v-model="formData.providerId" :suggestions="providerOptions"
+        :placeholder="isLoadingProviders ? '正在加载...' : '选择提供商'" :disabled="isLoadingProviders"
+        :apply-canvas-scale="false" size="large" required />
     </div>
 
     <!-- 渠道名称 -->
@@ -24,13 +15,9 @@
       <label class="block text-sm font-medium text-text-base mb-2">
         渠道名称 <span class="text-error">*</span>
       </label>
-      <input
-        v-model="formData.label"
-        type="text"
-        required
-        placeholder="例如: OpenAI 主要账户"
+      <input v-model="formData.label" type="text" required placeholder="例如: 从谷大善人那免费拿到的Gemini key"
         class="w-full p-3 border border-border-base rounded-md focus:ring-2 focus:ring-primary focus:border-primary bg-background-surface text-text-base"
-      />
+        autocomplete="channelname" />
       <p class="text-sm text-text-secondary mt-1">在UI中显示的名称，建议保持唯一</p>
     </div>
 
@@ -39,13 +26,8 @@
       <label class="block text-sm font-medium text-text-base mb-2">
         Base URL <span class="text-error">*</span>
       </label>
-      <input
-        v-model="formData.baseUrl"
-        type="url"
-        required
-        placeholder="https://api.openai.com/v1"
-        class="w-full p-3 border border-border-base rounded-md focus:ring-2 focus:ring-primary focus:border-primary bg-background-surface text-text-base"
-      />
+      <input v-model="formData.baseUrl" type="url" required placeholder="https://api.openai.com/v1"
+        class="w-full p-3 border border-border-base rounded-md focus:ring-2 focus:ring-primary focus:border-primary bg-background-surface text-text-base" />
       <p class="text-sm text-text-secondary mt-1">API的基础URL地址</p>
     </div>
 
@@ -54,14 +36,9 @@
       <label class="block text-sm font-medium text-text-base mb-2">
         API Key <span class="text-error">*</span>
       </label>
-      <input
-        v-model="formData.apiKey"
-        type="password"
-        autocomplete="current-password"
-        :required="!isEditMode"
+      <input v-model="formData.apiKey" type="password" autocomplete="new-password" :required="!isEditMode"
         :placeholder="isEditMode ? '如需更改，请输入新的 API Key' : 'sk-...'"
-        class="w-full p-3 border border-border-base rounded-md focus:ring-2 focus:ring-primary focus:border-primary bg-background-surface text-text-base"
-      />
+        class="w-full p-3 border border-border-base rounded-md focus:ring-2 focus:ring-primary focus:border-primary bg-background-surface text-text-base" />
     </div>
 
     <!-- 支持的模型 -->
@@ -73,26 +50,18 @@
       <!-- 预设模型快捷按钮 -->
       <div class="mb-3">
         <div class="flex flex-wrap gap-2 mb-2">
-          <button
-            v-for="preset in getPresetModels()"
-            :key="preset.value"
-            type="button"
-            @click="togglePresetModel(preset.value)"
-            :class="[
+          <button v-for="preset in getPresetModels()" :key="preset.value" type="button"
+            @click="togglePresetModel(preset.value)" :class="[
               'px-3 py-1 text-xs rounded-full border transition-colors',
               formData.supportedModels?.includes(preset.value)
                 ? 'bg-primary text-primary-content border-primary'
                 : 'bg-background-surface text-text-secondary border-border-base hover:bg-background-surface/80',
-            ]"
-          >
+            ]">
             {{ preset.label }}
           </button>
         </div>
-        <button
-          type="button"
-          @click="fillAllPresetModels"
-          class="px-3 py-1 text-xs bg-primary-soft text-primary rounded-md hover:bg-primary-soft/80"
-        >
+        <button type="button" @click="fillAllPresetModels"
+          class="px-3 py-1 text-xs bg-primary-soft text-primary rounded-md hover:bg-primary-soft/80">
           添加全部预设模型
         </button>
       </div>
@@ -100,17 +69,10 @@
       <!-- 已选模型列表 -->
       <div v-if="formData.supportedModels && formData.supportedModels.length > 0" class="mb-3">
         <div class="flex flex-wrap gap-2">
-          <span
-            v-for="model in formData.supportedModels"
-            :key="model"
-            class="inline-flex items-center px-2 py-1 bg-primary-soft text-primary rounded-md text-sm"
-          >
+          <span v-for="model in formData.supportedModels" :key="model"
+            class="inline-flex items-center px-2 py-1 bg-primary-soft text-primary rounded-md text-sm">
             {{ model }}
-            <button
-              type="button"
-              @click="removeModel(model)"
-              class="ml-2 text-error hover:text-error/80"
-            >
+            <button type="button" @click="removeModel(model)" class="ml-2 text-error hover:text-error/80">
               ×
             </button>
           </span>
@@ -119,19 +81,11 @@
 
       <!-- 自定义模型输入 -->
       <div class="flex gap-2">
-        <input
-          v-model="newModelName"
-          type="text"
-          placeholder="输入自定义模型名称，例如: gpt-4-turbo"
+        <input v-model="newModelName" type="text" placeholder="输入自定义模型名称，例如: gpt-4-turbo"
           class="flex-1 p-2 border border-border-base rounded-md focus:ring-2 focus:ring-primary focus:border-primary bg-background-surface text-text-base text-sm"
-          @keypress.enter.prevent="addCustomModel"
-        />
-        <button
-          type="button"
-          @click="addCustomModel"
-          :disabled="!newModelName.trim()"
-          class="px-4 py-2 bg-primary text-primary-content rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-        >
+          autocomplete="on" @keypress.enter.prevent="addCustomModel" />
+        <button type="button" @click="addCustomModel" :disabled="!newModelName.trim()"
+          class="px-4 py-2 bg-primary text-primary-content rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
           添加
         </button>
       </div>
@@ -144,15 +98,10 @@
 
     <!-- 是否禁用 -->
     <div class="flex items-center">
-      <input
-        v-model="formData.disabled"
-        type="checkbox"
-        id="disabled"
-        class="h-4 w-4 text-primary focus:ring-primary border-border-base rounded"
-      />
+      <input v-model="formData.disabled" type="checkbox" id="disabled"
+        class="h-4 w-4 text-primary focus:ring-primary border-border-base rounded" />
       <label for="disabled" class="ml-2 block text-sm text-text-base"> 禁用此渠道 </label>
     </div>
-
   </form>
 </template>
 
@@ -161,6 +110,7 @@ import { ref, computed, watch, onMounted } from "vue";
 import { storeToRefs } from "pinia";
 import type { ApiCredentialConfig } from "@comfytavern/types";
 import { useLlmConfigStore } from "@/stores/llmConfigStore";
+import SelectInput from "@/components/graph/inputs/SelectInput.vue";
 
 // 定义组件的 Props
 interface Props {
@@ -171,7 +121,7 @@ const props = defineProps<Props>();
 // 定义组件的 Emits
 interface ApiChannelFormData {
   label: string;
-  providerId?: string;
+  providerId: string;
   adapterType?: string;
   baseUrl: string;
   apiKey?: string;
@@ -194,33 +144,48 @@ const modelPresets = {
   openai: [
     { label: "GPT-4o", value: "gpt-4o" },
     { label: "GPT-4o Mini", value: "gpt-4o-mini" },
-    { label: "GPT-4 Turbo", value: "gpt-4-turbo" },
-    { label: "GPT-4", value: "gpt-4" },
-    { label: "GPT-3.5 Turbo", value: "gpt-3.5-turbo" },
+    { label: "GPT-4.1", value: "gpt-4.1" },
+    { label: "GPT-4.1 Mini", value: "gpt-4.1-mini" },
+    { label: "O1", value: "o1" },
+    { label: "O1 Pro", value: "o1-pro" },
+    { label: "O1 Mini", value: "o1-mini" },
+    { label: "O3", value: "o3" },
+    { label: "O3 Pro", value: "o3-pro" },
+    { label: "O3 Mini", value: "o3-mini" },
+    { label: "O4 Mini", value: "o4-mini" },
   ],
   anthropic: [
+    { label: "Claude 4 Opus", value: "claude-4-opus-20250522" },
+    { label: "Claude 4 Sonnet", value: "claude-4-sonnet-20250522" },
+    { label: "Claude 3.7 Sonnet", value: "claude-3.7-sonnet-20250224" },
     { label: "Claude 3.5 Sonnet", value: "claude-3-5-sonnet-20241022" },
     { label: "Claude 3.5 Haiku", value: "claude-3-5-haiku-20241022" },
     { label: "Claude 3 Opus", value: "claude-3-opus-20240229" },
-    { label: "Claude 3 Sonnet", value: "claude-3-sonnet-20240229" },
-    { label: "Claude 3 Haiku", value: "claude-3-haiku-20240307" },
   ],
   google: [
     { label: "Gemini 2.5 Pro", value: "gemini-2.5-pro" },
-    { label: "Gemini 2.0 Flash", value: "gemini-2.0-flash-exp" },
+    { label: "Gemini 2.5 Flash", value: "gemini-2.5-flash" },
+    { label: "Gemini 2.5 Flash-Lite", value: "gemini-2.5-flash-lite" },
     { label: "Gemini 1.5 Pro", value: "gemini-1.5-pro" },
     { label: "Gemini 1.5 Flash", value: "gemini-1.5-flash" },
   ],
+  deepseek: [
+    { label: "DeepSeek V3", value: "deepseek-chat" },
+    { label: "DeepSeek R1", value: "deepseek-reasoner" },
+  ],
   cohere: [
-    { label: "Command R Plus", value: "command-r-plus" },
+    { label: "Command A", value: "command-a" },
+    { label: "Command R+", value: "command-r-plus" },
     { label: "Command R", value: "command-r" },
-    { label: "Command", value: "command" },
+    { label: "Command Light", value: "command-light" },
+    { label: "Aya", value: "aya" },
   ],
   ollama: [
     { label: "Llama 3.2", value: "llama3.2" },
-    { label: "Mistral", value: "mistral" },
-    { label: "CodeLlama", value: "codellama" },
-    { label: "Phi-3", value: "phi3" },
+    { label: "Mistral Nemo", value: "mistral-nemo" },
+    { label: "Phi-4", value: "phi-4" },
+    { label: "Qwen2", value: "qwen2" },
+    { label: "DeepSeek V3", value: "deepseek-v3" },
   ],
   custom: [],
 };
@@ -239,6 +204,10 @@ const formData = ref<ApiChannelFormData>({
 const newModelName = ref("");
 
 // 计算属性
+const providerOptions = computed(() => {
+  return providers.value.map((p) => ({ value: p.id, label: p.name }));
+});
+
 const isEditMode = computed(() => !!props.initialData?.id);
 
 const isModelsValid = computed(
@@ -347,7 +316,6 @@ const handleSubmit = () => {
   }
 };
 
-
 // 初始化表单数据
 const initForm = (data: ApiCredentialConfig | null | undefined) => {
   if (data) {
@@ -388,9 +356,13 @@ watch(
   }
 );
 
-watch(isFormValid, (value) => {
-  emit("validity-change", !!value);
-}, { immediate: true });
+watch(
+  isFormValid,
+  (value) => {
+    emit("validity-change", !!value);
+  },
+  { immediate: true }
+);
 
 // 导出类型供父组件使用
 export type { ApiChannelFormData };

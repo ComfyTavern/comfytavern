@@ -2,8 +2,7 @@
   <div class="llm-config-manager">
     <div class="flex h-full text-text-base">
       <!-- Sidebar -->
-      <aside class="w-40 bg-background-surface p-4 rounded-l-lg border-r border-border-base">
-        <h3 class="text-lg font-semibold mb-4 text-text-secondary">管理类别</h3>
+      <aside class="w-40 p-4 rounded-l-lg border-r border-border-base">
         <nav>
           <ul>
             <li>

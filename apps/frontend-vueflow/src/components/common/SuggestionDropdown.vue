@@ -113,7 +113,7 @@ const searchQuery = ref(""); // 搜索关键词
 const dropdownSizeClasses = computed(() => {
   if (props.size === 'large') {
     return {
-      ul: 'suggestion-dropdown absolute z-[9999] min-w-[100px] mt-1 max-h-60 overflow-y-auto bg-background-surface border-border-base rounded shadow-lg text-text-base text-sm py-1.5 focus:outline-none',
+      ul: 'suggestion-dropdown absolute z-[9999] min-w-[100px] mt-1 max-h-60 overflow-y-auto bg-background-surface border border-border-base rounded shadow-lg text-text-base text-sm py-1.5 focus:outline-none',
       searchInput: 'w-full px-2 py-1.5 text-sm border-border-base rounded bg-background-base text-text-base focus:outline-none focus:ring-1 focus:ring-primary',
       listItem: 'px-3 py-2', // py-2 to match h-10 (40px) of large SelectInput button. (2*8px padding + 24px line height approx)
       listItemHighlightedClass: 'bg-primary-soft text-text-base'
@@ -121,7 +121,7 @@ const dropdownSizeClasses = computed(() => {
   }
   // small (default)
   return {
-    ul: 'suggestion-dropdown absolute z-[9999] min-w-[100px] mt-1 max-h-60 overflow-y-auto bg-background-surface border-border-base rounded shadow-lg text-text-base text-xs py-1 focus:outline-none',
+    ul: 'suggestion-dropdown absolute z-[9999] min-w-[100px] mt-1 max-h-60 overflow-y-auto bg-background-surface border border-border-base rounded shadow-lg text-text-base text-xs py-1 focus:outline-none',
     searchInput: 'w-full px-2 py-1 text-xs border-border-base rounded bg-background-base text-text-base focus:outline-none focus:ring-1 focus:ring-primary',
     listItem: 'px-3 py-1',
     listItemHighlightedClass: 'bg-primary-soft text-text-base'
