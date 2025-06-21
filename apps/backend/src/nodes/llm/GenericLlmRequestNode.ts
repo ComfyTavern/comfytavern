@@ -17,10 +17,9 @@ class GenericLlmRequestNodeImpl {
       messages,
       parameters = {},
       activated_model_id,
-      channel_ref_name,
     } = inputs;
 
-    const { nodeId, services } = context;
+    const { nodeId, services, userId } = context;
     const { apiConfigService, activatedModelService, llmApiAdapterRegistry } = services;
 
     // --- 1. Validate Inputs ---
@@ -30,11 +29,10 @@ class GenericLlmRequestNodeImpl {
     if (typeof activated_model_id !== 'string' || !activated_model_id) {
       throw new Error('Input "activated_model_id" is missing or invalid.');
     }
-    if (typeof channel_ref_name !== 'string' || !channel_ref_name) {
-      throw new Error('Input "channel_ref_name" is missing or invalid.');
-    }
 
-    console.log(`[GenericLlmRequestNode ${nodeId}] Executing... Model: ${activated_model_id}, Channel: ${channel_ref_name}`);
+    // channel_id is removed from inputs. The router service will handle channel selection.
+    // For now, we'll fetch the first available channel as a placeholder.
+    console.log(`[GenericLlmRequestNode ${nodeId}] Executing... Model: ${activated_model_id}`);
 
     // --- 2. Get Services and Config ---
     if (!apiConfigService || !activatedModelService || !llmApiAdapterRegistry) {
@@ -42,10 +40,20 @@ class GenericLlmRequestNodeImpl {
     }
 
     // For MVP, we assume services are pre-initialized with a db connection and userId is handled by the service layer
-    const channelConfig = await apiConfigService.getCredentials(channel_ref_name);
+    // TODO: Replace this with a call to a ModelRouterService that determines the appropriate channel.
+    const allChannels = await apiConfigService.getAllCredentials(userId);
+    // Sort by creation time to have a deterministic order
+    allChannels.sort((a: ApiCredentialConfig, b: ApiCredentialConfig) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+
+    const channelConfig = allChannels.find((c: ApiCredentialConfig) =>
+      !c.disabled &&
+      (!c.supportedModels || c.supportedModels.length === 0 || c.supportedModels.includes(activated_model_id))
+    );
+
     if (!channelConfig) {
-      throw new Error(`Channel configuration for "${channel_ref_name}" not found.`);
+      throw new Error(`No active channel found for user that supports model "${activated_model_id}".`);
     }
+    console.log(`[GenericLlmRequestNode ${nodeId}] Using channel: ${channelConfig.label} (${channelConfig.id})`);
 
     // We don't strictly need model info for the request itself in MVP, but it's good practice to check.
     const modelInfo = await activatedModelService.getActivatedModel(activated_model_id);
@@ -96,7 +104,7 @@ export const definition: NodeDefinition = {
   type: 'GenericLlmRequest',
   category: 'LLM',
   displayName: '⚡通用 LLM 请求',
-  description: '向指定的 LLM 模型和渠道发送请求 (MVP)',
+  description: '向指定的 LLM 模型发送请求，渠道由后端自动路由',
   width: 350,
 
   inputs: {
@@ -122,12 +130,7 @@ export const definition: NodeDefinition = {
       description: '要使用的已激活模型的 ID',
       // In a real UI, this would be a dropdown populated by ActivatedModelService
     },
-    channel_ref_name: {
-      dataFlowType: 'STRING',
-      displayName: '渠道引用名称',
-      description: '要使用的 API 渠道的引用名称',
-      // In a real UI, this would be a dropdown populated by ApiConfigService
-    },
+    // The channel_id input is removed. Channel selection is now a backend routing concern.
   },
   outputs: {
     response: {
@@ -149,5 +152,5 @@ export const definition: NodeDefinition = {
   // The 'required_capabilities' logic will be added in a later phase.
   configSchema: {},
 
-  execute: GenericLlmRequestNodeImpl.execute
+  execute: GenericLlmRequestNodeImpl.execute,
 };

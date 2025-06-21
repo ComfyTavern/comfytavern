@@ -164,11 +164,10 @@ export interface StandardResponse {
  */
 export interface ApiCredentialConfig {
   /**
-   * 用户定义的引用名称，必须全局唯一。
-   * 工作流节点和渠道组将通过此名称引用该配置。
-   * 例如: "openai_official_key1", "my_azure_gpt4", "local_ollama"
+   * 数据库中的唯一 ID (UUID)。
+   * 这是在系统内部引用渠道的唯一标识符。
    */
-  ref_name: string;
+  id: string;
 
   /**
    * API 端点地址。
@@ -251,12 +250,12 @@ export interface ApiChannelGroup {
   group_name: string;
 
   /**
-   * 包含的渠道引用名称 (ApiCredentialConfig.ref_name) 的**有序列表**。
+   * 包含的渠道 ID (ApiCredentialConfig.id) 的**有序列表**。
    * 列表的顺序严格定义了故障转移的优先级。
    * index 0 是最高优先级，index 1 是次高，以此类推。
-   * 必须至少包含一个 channel_ref。
+   * 必须至少包含一个 channel_id。
    */
-  ordered_channel_refs: string[];
+  ordered_channel_ids: string[];
 
   /**
    * 可选，对此渠道组的描述，方便用户理解其用途。
@@ -480,11 +479,10 @@ export interface ActivatedModelInfo {
 ```typescript
 interface IApiConfigService {
   // 管理 API 渠道凭证
-  getAvailableCredentialRefs(providerId?: string): Promise<string[]>;
-  getCredentials(refName: string): Promise<ApiCredentialConfig | null>;
-  getAllCredentials(): Promise<ApiCredentialConfig[]>;
-  saveCredentials(config: ApiCredentialConfig): Promise<void>;
-  deleteCredentials(refName: string): Promise<void>;
+  getCredentialsById(id: string): Promise<ApiCredentialConfig | null>;
+  getAllCredentials(userId: string): Promise<ApiCredentialConfig[]>;
+  saveCredentials(config: ApiCredentialConfig): Promise<ApiCredentialConfig>;
+  deleteCredentials(id: string): Promise<void>;
 
   // 管理渠道组 (故障转移策略)
   getAvailableChannelGroupRefs(): Promise<string[]>;
