@@ -33,7 +33,7 @@
             <td class="p-4">{{ channel.label }}</td>
             <td class="p-4">
               <span :class="[
-                'px-3 py-1 text-sm font-medium rounded-md',
+                'px-3 py-1 text-sm font-medium rounded-md whitespace-nowrap',
                 channel.disabled
                   ? 'bg-error-soft text-error'
                   : 'bg-success-soft text-success',
@@ -51,11 +51,11 @@
                   v-comfy-tooltip="channel.disabled ? '点击启用' : '点击禁用'"
                 />
                 <button @click="openEditModal(channel)"
-                  class="px-3 py-1 text-sm font-medium text-primary bg-primary-soft rounded-md hover:bg-primary-soft/80">
+                  class="px-3 py-1 text-sm font-medium text-primary bg-primary-soft rounded-md hover:bg-primary-soft/80 whitespace-nowrap">
                   编辑
                 </button>
                 <button @click="confirmDelete(channel)"
-                  class="px-3 py-1 text-sm font-medium text-error bg-error-soft rounded-md hover:bg-error-soft/80">
+                  class="px-3 py-1 text-sm font-medium text-error bg-error-soft rounded-md hover:bg-error-soft/80 whitespace-nowrap">
                   删除
                 </button>
               </div>

@@ -166,8 +166,9 @@ const handleSaveAvatar = async (payload: { file?: File }) => {
 }
 
 .label-area {
-  flex: 1;
-  padding-right: 32px;
+  flex: 2; /* 占据2/3的空间 */
+  padding-right: 24px;
+  min-width: 0; /* 允许文本截断 */
 }
 .setting-item-row.avatar-row .label-area {
   padding-top: 4px; /* 微调头像行标签的垂直位置，使其与头像预览大致对齐 */
@@ -187,11 +188,49 @@ const handleSaveAvatar = async (payload: { file?: File }) => {
 }
 
 .control-area {
+  flex: 1; /* 占据1/3的空间 */
   flex-shrink: 0;
-  min-width: 320px;
+  min-width: 200px; /* 设置合理的最小宽度，确保控件不会过小 */
+  max-width: 400px; /* 设置最大宽度，避免在超宽屏幕上过度拉伸 */
   display: flex;
   justify-content: flex-end;
   align-items: center; /* 默认控件垂直居中 */
+}
+
+/* 响应式设计：在较小屏幕上调整布局 */
+@media (max-width: 768px) {
+  .setting-item-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .setting-item-row.avatar-row {
+    flex-direction: row; /* 头像行保持水平布局 */
+    align-items: flex-start;
+  }
+  
+  .label-area {
+    flex: none;
+    padding-right: 0;
+    padding-bottom: 12px;
+  }
+  
+  .setting-item-row.avatar-row .label-area {
+    flex: 2;
+    padding-right: 16px;
+    padding-bottom: 0;
+  }
+  
+  .control-area {
+    flex: none;
+    min-width: auto;
+    max-width: none;
+    justify-content: stretch;
+  }
+  
+  .setting-item-row.avatar-row .control-area {
+    flex: 1;
+  }
 }
 
 .avatar-control-area {

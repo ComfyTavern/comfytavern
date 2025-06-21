@@ -129,6 +129,7 @@ const currentValue = computed({
 /* 确保输入控件有合适的样式 */
 .w-full {
   width: 100%;
-  max-width: 320px; /* 限制一下最大宽度，避免在宽屏上过长 */
+  /* 移除固定的 max-width，让控件能够适应容器宽度 */
+  /* max-width: 320px; */
 }
 </style>

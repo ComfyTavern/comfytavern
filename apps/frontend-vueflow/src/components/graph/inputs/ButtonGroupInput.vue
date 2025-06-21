@@ -1,7 +1,7 @@
 <template>
   <div class="button-group-input" role="group">
     <button
-      v-for="(option, index) in props.options"
+      v-for="option in props.options"
       :key="String(option.value)"
       type="button"
       @click="onClick(option.value)"
@@ -14,11 +14,8 @@
           ? 'bg-primary text-primary-content shadow-sm' // Active state
           : !props.disabled
             ? 'text-text-base hover:bg-primary-softest focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50' // Inactive state
-            : 'text-text-muted opacity-70 cursor-not-allowed', // Disabled state
-        // Add spacing between buttons if not the last one, alternative to gap on parent
-        // For a true segmented control, they might touch or have minimal border.
-        // Using gap on parent is cleaner if supported, or add margin here:
-        { 'mr-1': index < props.options.length - 1 } // Example spacing, adjust if .button-group-input uses gap
+            : 'text-text-muted opacity-70 cursor-not-allowed' // Disabled state
+        // 移除手动间距，使用 CSS gap 属性处理间距
       ]"
     >
       {{ option.label }}
@@ -69,12 +66,15 @@ const sizeClasses = computed(() => {
 
 <style scoped>
 .button-group-input {
-  display: inline-flex;
+  display: flex; /* 改为 flex 以获得更好的响应性 */
   justify-content: flex-end; /* 让内部按钮组右对齐 */
   border-radius: 0.375rem; /* rounded-md */
   padding: 2px; /* Adjust as needed, creates a slight inset for buttons */
   background-color: var(--ct-background-surface); /* Match DisplayModeSwitcher's container */
-  /* gap: 2px; Let Tailwind manage spacing or if buttons are directly adjacent*/
+  gap: 2px; /* 添加按钮之间的间距 */
+  width: 100%; /* 确保容器占满可用宽度 */
+  /* 在小宽度时允许换行 */
+  flex-wrap: wrap;
 }
 
 /* Base styles for individual segments, Tailwind will handle most active/hover states */
@@ -87,6 +87,22 @@ const sizeClasses = computed(() => {
   border: none; /* Buttons themselves don't have borders unless active/focused with ring */
   line-height: normal;
   white-space: nowrap;
+  /* 让按钮能够适应可用空间 */
+  flex: 1;
+  min-width: fit-content; /* 确保按钮文本不会被截断 */
   /* Base text color is handled by Tailwind 'text-text-base' in inactive state */
+}
+
+/* 当容器宽度不足时的响应式处理 */
+@media (max-width: 480px) {
+  .button-group-input {
+    flex-direction: column; /* 在很小的屏幕上垂直排列 */
+    align-items: stretch;
+  }
+  
+  .btn-segment {
+    flex: none; /* 在垂直布局时取消 flex 拉伸 */
+    width: 100%;
+  }
 }
 </style>
