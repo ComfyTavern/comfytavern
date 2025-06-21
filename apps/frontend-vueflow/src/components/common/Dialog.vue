@@ -3,7 +3,7 @@
     <!-- 遮罩层 -->
     <div
       v-if="props.visible"
-      class="fixed inset-0 bg-backdrop flex items-center justify-center transition-opacity duration-300"
+      class="fixed inset-0 bg-backdrop bg-opacity-[var(--ct-backdrop-opacity)] flex items-center justify-center transition-opacity duration-300"
       :style="{ zIndex: dynamicZIndex }"
       :class="{ 'opacity-0': !showContent, 'opacity-100': showContent }"
       @click="props.closeOnBackdrop && handleCancel()"
