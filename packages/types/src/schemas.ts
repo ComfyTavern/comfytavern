@@ -407,8 +407,7 @@ export type StandardResponse = z.infer<typeof standardResponseSchema>;
 export const apiCredentialConfigSchema = z.object({
   id: z.string().uuid().optional(), // 在数据库层面生成
   userId: z.string(),
-  refName: z.string().min(1, "引用名称不能为空"),
-  label: z.string().optional(),
+  label: z.string().min(1, "渠道名称不能为空"),
   providerId: z.string().optional(),
   adapterType: z.string().optional(),
   baseUrl: z.string().url("必须是有效的 URL"),
@@ -416,6 +415,7 @@ export const apiCredentialConfigSchema = z.object({
   storageMode: z.enum(['plaintext', 'encrypted']).default('plaintext'),
   customHeaders: z.record(z.string()).optional(),
   modelListEndpoint: z.string().optional(),
+  supportedModels: z.array(z.string()).optional().describe("该渠道支持的模型ID列表"),
   disabled: z.boolean().default(false),
   createdAt: z.string().datetime().optional(),
 });

@@ -19,14 +19,16 @@
         :style="{ width: props.width || 'max-w-md', height: props.height }"
         @click.stop
       >
-        <div v-if="props.title || props.showCloseButton"
+        <div v-if="hasHeaderSlot || props.title || props.showCloseButton"
             class="flex justify-between items-center p-4"
-            :class="{ 'border-b border-border-base': !props.bare && (props.title || props.showCloseButton) }"
+            :class="{ 'border-b border-border-base': !props.bare && (hasHeaderSlot || props.title || props.showCloseButton) }"
         >
-          <h3 v-if="props.title" class="text-lg font-medium text-text-base">
-            {{ props.title }}
-          </h3>
-          <div v-else></div> <!-- 占位符，保持关闭按钮在右侧 -->
+          <slot name="header">
+            <h3 v-if="props.title" class="text-lg font-medium text-text-base">
+              {{ props.title }}
+            </h3>
+            <div v-else></div> <!-- 占位符，保持关闭按钮在右侧 -->
+          </slot>
           <button
             v-if="props.showCloseButton"
             @click="handleClose"
@@ -88,6 +90,7 @@ const emit = defineEmits<{
 
 const slots = useSlots();
 const hasFooterSlot = computed(() => !!slots.footer);
+const hasHeaderSlot = computed(() => !!slots.header);
 
 const showContentTransition = ref(false);
 const uiStore = useUiStore();

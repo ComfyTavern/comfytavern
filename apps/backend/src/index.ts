@@ -34,6 +34,10 @@ import { userKeysRoutes } from './routes/userKeysRoutes'; // 导入 userKeysRout
 import { userProfileRoutes } from './routes/userProfileRoutes'; // + 导入 userProfileRoutes
 import { fileManagerRoutes } from './routes/fileManagerRoutes'; // ++ 导入文件管理路由
 import { globalWorkflowRoutes } from './routes/workflowRoutes';
+import { llmConfigRoutes } from './routes/llmConfigRoutes'; // + 导入 LLM 配置路由
+import { ApiConfigService } from './services/ApiConfigService'; // +
+import { ActivatedModelService } from './services/ActivatedModelService'; // +
+import { LlmApiAdapterRegistry } from './services/LlmApiAdapterRegistry'; // +
 import { ConcurrencyScheduler } from './services/ConcurrencyScheduler';
 import { NodeLoader } from './services/NodeLoader';
 import { nodeManager } from './services/NodeManager'; // + 导入 NodeManager
@@ -202,6 +206,11 @@ app.use(
   .use(globalWorkflowRoutes) // 挂载全局工作流路由
   .use(executionApiRoutes) // 新增: 挂载执行 API 路由
   .use(characterApiRoutes) // 挂载角色卡 API 路由
+  .use(llmConfigRoutes(
+    new ApiConfigService(),
+    new ActivatedModelService(),
+    new LlmApiAdapterRegistry()
+  )) // 挂载 LLM 配置路由
 
   // --- 项目 API 路由已移至 projectRoutes.ts ---
 

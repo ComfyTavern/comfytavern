@@ -68,8 +68,7 @@ graph TD
     export const apiChannels = sqliteTable('api_channels', {
       id: text('id').primaryKey(), // UUID
       userId: text('user_id').notNull().references(() => users.uid, { onDelete: 'cascade' }),
-      refName: text('ref_name').notNull(), // 用户定义的引用名称
-      label: text('label'), // UI 显示的标签
+      label: text('label').notNull(), // UI 显示的标签
       providerId: text('provider_id'), // e.g., "openai", "anthropic"
       adapterType: text('adapter_type'), // e.g., "openai", "ollama"
       baseUrl: text('base_url').notNull(),
@@ -95,7 +94,7 @@ graph TD
       // MVP 阶段以下字段可为空
       groupName: text('group_name'),
       icon: text('icon'),
-      defaultChannelRef: text('default_channel_ref'), // 关联到 apiChannels.refName
+      defaultChannelRef: text('default_channel_ref'), // 关联到 apiChannels.id
       tags: text('tags', { mode: 'json' }), // string[]
       tokenizerId: text('tokenizer_id'),
     });
@@ -141,13 +140,13 @@ graph TD
         *   `messages`: `CustomMessage[]`
         *   `parameters`: `JSON` (透传给 API)
         *   `activated_model_id`: `string` (通过下拉框选择，数据源是 `ModelRegistryService`)
-        *   `channel_ref_name`: `string` (通过下拉框选择，数据源是 `ApiConfigService`)
+        *   `channel_id`: `string` (通过下拉框选择，数据源是 `ApiConfigService`)
         *   `required_capabilities`: `string[]` (MVP 阶段可选，用于简化路由)
     *   **输出**:
         *   `response`: `StandardResponse`
 3.  **实现 `execute` 方法**:
     *   从执行上下文中获取 `ApiConfigService` 和 `ActivatedModelService`。
-    *   根据节点输入的 `channel_ref_name` 获取渠道配置。
+    *   根据节点输入的 `channel_id` 获取渠道配置。
     *   从 `LlmApiAdapterRegistry` 获取对应的适配器实例。
     *   调用适配器的 `request` 方法。
     *   处理结果，如果失败则返回包含 `error` 的 `StandardResponse`。
@@ -167,7 +166,7 @@ graph TD
         *   `POST /api/llm/models`: 添加新模型。
         *   `PUT /api/llm/models/:modelId`: 更新模型。
         *   `DELETE /api/llm/models/:modelId`: 删除模型。
-        *   `POST /api/llm/channels/:channelRef/discover-models`: 从指定渠道发现模型。该端点的处理器将协调 `ApiConfigService` 和 `LlmApiAdapterRegistry` 来调用适配器的 `listModels` 方法，并将结果直接返回。
+        *   `POST /api/llm/channels/:channelId/discover-models`: 从指定渠道发现模型。该端点的处理器将协调 `ApiConfigService` 和 `LlmApiAdapterRegistry` 来调用适配器的 `listModels` 方法，并将结果直接返回。
 3.  **集成认证**: 确保所有路由都经过[`authMiddleware`](apps/backend/src/middleware/authMiddleware.ts:1)，以便服务层能获取到 `userId`。
 
 #### 第 6 步：前端 UI 实现
@@ -178,8 +177,15 @@ graph TD
     *   添加一个新的设置区域 "API Channels"。
     *   实现一个表单用于添加/编辑渠道配置 (`ApiCredentialConfig`)。
     *   实现一个列表用于展示和删除已有的渠道。
-3.  **创建模型管理界面**:
-    *   添加一个新的设置区域 "Model Management"。
-    *   实现一个列表展示已激活的模型 (`ActivatedModelInfo`)。
-    *   提供一个“手动添加模型”的表单。
-    *   实现“从渠道发现模型”的功能：用户选择一个已配置的渠道，点击按钮后，前端调用发现 API，并在模态框中展示可添加的模型列表。
+3.  **创建模型管理界面 (激活模型)**:
+    *   **核心思路**: 实现模型与渠道的解耦。模型的“激活”是核心操作，而“渠道”是获取模型的来源之一。
+    *   **API 渠道页面**:
+        *   在每个已配置的渠道旁边，提供一个“发现模型”按钮。
+        *   点击后，调用 `POST /api/llm/channels/:channelId/discover-models` API。
+        *   在一个模态框中展示从该渠道发现的模型列表，并清晰地标记出哪些模型已经被添加到了全局的“激活模型”池中。
+        *   用户可以从列表中选择一个或多个模型，点击“添加”按钮，将其加入到“激活模型”池。
+    *   **激活模型页面**:
+        *   此页面是管理所有已激活模型 (`ActivatedModelInfo`) 的统一入口。
+        *   实现一个列表，展示所有已激活的模型，无论它们最初是从哪个渠道发现的。
+        *   提供对每个已激活模型的管理功能，如编辑其元数据（显示名称、能力、图标等）和删除。
+        *   “手动添加模型”功能应作为次要补充，主要用于添加无法通过渠道发现的自定义模型。

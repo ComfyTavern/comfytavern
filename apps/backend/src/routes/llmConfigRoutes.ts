@@ -36,6 +36,9 @@ export const llmConfigRoutes = (
   // Now, group the routes with the prefix
   return new Elysia({ prefix: '/api/llm' })
     .use(app) // Use the instance that has the auth middleware
+    .get('/providers', () => {
+      return llmApiAdapterRegistry.getAvailableProviders();
+    })
     // API Channels Endpoints
     .group('/channels', (app) => app
       .get('/', async (context) => {
@@ -54,17 +57,20 @@ export const llmConfigRoutes = (
           userId: userId,
           createdAt: new Date().toISOString(),
         };
-        await apiConfigService.saveCredentials(newChannel);
-        return newChannel;
+        const savedChannel = await apiConfigService.saveCredentials(newChannel);
+        return savedChannel;
       }, {
         body: t.Object({
-          refName: t.String(),
-          label: t.Optional(t.String()),
+          label: t.String(),
           providerId: t.Optional(t.String()),
           adapterType: t.Optional(t.String()),
           baseUrl: t.String(),
           apiKey: t.String(),
-          // Add other fields from ApiCredentialConfig as needed for creation
+          supportedModels: t.Optional(t.Array(t.String())),
+          storageMode: t.Optional(t.Enum({ plaintext: 'plaintext', encrypted: 'encrypted' })),
+          customHeaders: t.Optional(t.Record(t.String(), t.String())),
+          modelListEndpoint: t.Optional(t.String()),
+          disabled: t.Optional(t.Boolean()),
         })
       })
       .put('/:id', async (context) => {
@@ -76,16 +82,20 @@ export const llmConfigRoutes = (
           throw new Error('Channel not found or access denied.');
         }
         const updatedChannel = { ...existingChannel, ...body, id: params.id };
-        await apiConfigService.saveCredentials(updatedChannel);
-        return updatedChannel;
+        const savedChannel = await apiConfigService.saveCredentials(updatedChannel);
+        return savedChannel;
       }, {
         body: t.Object({
-          refName: t.Optional(t.String()),
           label: t.Optional(t.String()),
           providerId: t.Optional(t.String()),
           adapterType: t.Optional(t.String()),
           baseUrl: t.Optional(t.String()),
           apiKey: t.Optional(t.String()),
+          supportedModels: t.Optional(t.Array(t.String())),
+          storageMode: t.Optional(t.Enum({ plaintext: 'plaintext', encrypted: 'encrypted' })),
+          customHeaders: t.Optional(t.Record(t.String(), t.String())),
+          modelListEndpoint: t.Optional(t.String()),
+          disabled: t.Optional(t.Boolean()),
         })
       })
       .delete('/:id', async (context) => {
@@ -97,15 +107,15 @@ export const llmConfigRoutes = (
          if (!existingChannel || existingChannel.userId !== userId) {
           throw new Error('Channel not found or access denied.');
         }
-        await apiConfigService.deleteCredentials(existingChannel.refName); // deleteCredentials uses refName
+        await apiConfigService.deleteCredentials(params.id); // deleteCredentials now uses id
         return { success: true, id: params.id };
       })
-      .post('/:channelRef/discover-models', async (context) => {
-          const { params, userContext } = context as unknown as AuthContext & { params: { channelRef: string } };
+      .post('/:channelId/discover-models', async (context) => {
+          const { params, userContext } = context as unknown as AuthContext & { params: { channelId: string } };
           const userId = getUserIdFromContext(userContext);
           if (!userId) throw new Error('Authentication required.');
-          const { channelRef } = params;
-          const channelConfig = await apiConfigService.getCredentials(channelRef);
+          const { channelId } = params;
+          const channelConfig = await apiConfigService.getCredentialsById(channelId);
 
           if (!channelConfig || channelConfig.userId !== userId) {
               throw new Error('Channel not found or access denied.');

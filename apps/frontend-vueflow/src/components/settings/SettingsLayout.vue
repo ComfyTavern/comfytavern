@@ -41,6 +41,7 @@
 <script setup lang="ts">
 import { ref, computed, defineComponent, defineAsyncComponent, markRaw, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { useRoute } from 'vue-router';
 import type { SettingsSection, SettingItemConfig } from "@/types/settings";
 import { fileManagerApiClient } from "@/api/fileManagerApi"; // + 咕咕：导入 fileManagerApiClient
 import { useDialogService } from "@/services/DialogService"; // + 咕咕：导入 DialogService
@@ -55,6 +56,7 @@ import { storeToRefs } from "pinia";
 
 // --- Store 实例化 ---
 const { t } = useI18n();
+const route = useRoute();
 const themeStore = useThemeStore(); // 移动到顶部
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
@@ -361,7 +363,7 @@ const sections = computed<SettingsSection[]>(() => [
     label: t("settings.sections.llm"),
     icon: "brain",
     type: "component",
-    component: { ...PlaceholderComponent, props: { title: "LLM API 管理器", message: t('settings.placeholders.custom_module_wip') } },
+    component: markRaw(defineAsyncComponent(() => import("@/components/llm-config/LlmConfigManager.vue"))),
   },
   {
     id: "mcp",
@@ -386,9 +388,16 @@ const sections = computed<SettingsSection[]>(() => [
   },
 ]);
 
-const activeSectionId = ref(sections.value[0]?.id ?? ""); // 默认选中第一个, 如果数组为空则默认为空字符串
+const activeSectionId = ref(sections.value.find(s => s.id === route.params.section)?.id || sections.value[0]?.id || '');
 
 const activeSection = computed(() => sections.value.find((s) => s.id === activeSectionId.value));
+
+// Watch for route changes to update the active section
+watch(() => route.params.section, (newSection) => {
+  if (newSection && typeof newSection === 'string' && sections.value.some(s => s.id === newSection)) {
+    activeSectionId.value = newSection;
+  }
+});
 
 // const themeStore = useThemeStore(); // 已提前实例化
 // const isDark = computed(() => themeStore.currentAppliedMode === 'dark'); // currentAppliedMode 是 themeStore 的 getter

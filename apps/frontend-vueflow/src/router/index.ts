@@ -39,9 +39,10 @@ const router = createRouter({
           component: () => import('../views/AboutView.vue'),
         },
         {
-          path: 'settings',
+          path: 'settings/:section?', // 添加可选的 section 参数
           name: 'settings', // 名字统一小写
           component: () => import('../views/SettingsView.vue'),
+          props: true, // 将路由参数作为 props 传递给组件
         },
         {
           path: 'settings/test-panel', // 新增测试面板路由

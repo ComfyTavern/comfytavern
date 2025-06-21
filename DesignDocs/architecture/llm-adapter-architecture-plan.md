@@ -8,7 +8,7 @@
 
 系统主要由以下几个核心组件构成：
 
-- **通用 LLM 请求节点 (`GenericLlmRequestNode`)**: 工作流中的统一入口，负责声明所需**能力**和偏好，接收标准化输入/输出。**不再负责选择具体模型或渠道**。当此节点被用于 Agent 的核心审议工作流时，其声明的“能力”反映了 Agent 审议逻辑对 LLM 功能的需求。
+- **通用 LLM 请求节点 (`GenericLlmRequestNode`)**: 工作流中的统一入口。它允许用户**直接指定要使用的模型 ID**，这是最高优先级的选择。同时，它也支持通过声明所需**能力**和偏好，让系统自动路由到合适的模型。这种基于能力的路由主要用于**辅助筛选和自动化场景**，但用户始终保留最终控制权。当此节点被用于 Agent 的核心审议工作流时，其声明的“能力”反映了 Agent 审议逻辑对 LLM 功能的需求。
 - **LLM API 适配器 (`ILlmApiAdapter` & Implementations)**: 封装与特定 API 格式（如 OpenAI, Anthropic, Gemini, Ollama 等）的通信细节。接收**单一、具体的渠道配置和 API Key**。
 - **适配器注册表 (`LlmApiAdapterRegistry`)**: 管理可用的适配器实例。
 - **API 配置服务 (`ApiConfigService`)**: 管理用户配置的 **API 渠道 (`ApiCredentialConfig`)** 和 **渠道组 (`ApiChannelGroup`)**。
@@ -16,7 +16,7 @@
 - **激活模型注册表 (SQLite DB)**: 存储用户明确选择并激活的模型及其最终确认的**能力 (`capabilities`)**。
 - **激活模型服务 (`ActivatedModelService`)**: **新增服务**。专门负责对用户激活的模型列表（`ActivatedModelInfo`）进行数据库 CRUD 操作。
 - **模型预设服务 (`ModelPresetService`)**: **新增服务**。负责加载和解析 `default_models.json`，并提供应用预设规则的能力。
-- **模型/渠道路由服务 (`ModelRouterService`)**: **新增核心组件**。在运行时根据节点的**能力请求**（例如，来自 Agent 核心审议工作流中 `GenericLlmRequestNode` 的能力声明）和用户的**全局偏好/规则**，从 `ActivatedModelService` 中选择合适的**模型 (`model_id`)** 和**渠道组 (`channel_group_ref`)**。
+- **模型/渠道路由服务 (`ModelRouterService`)**: **新增核心组件**。在运行时，**优先响应节点直接指定的模型 ID**。如果未直接指定，则根据节点的**能力请求**（例如，来自 Agent 核心审议工作流中 `GenericLlmRequestNode` 的能力声明）和用户的**全局偏好/规则**，从 `ActivatedModelService` 中选择合适的**模型 (`model_id`)** 和**渠道组 (`channel_group_ref`)**。
 - **重试与 Key 选择逻辑 (`RetryHandler` & `KeySelector`)**: **新增逻辑** (可内聚在 `ModelRouterService` 或 `ExecutionEngine` 中)。负责根据选定的渠道组执行**故障转移**，并根据渠道配置选择**具体的 API Key**。
 - **Tokenization 服务 (`TokenizationService`)**: **新增核心服务**。负责提供全局的 `token` 计算能力。详见 [全局 Tokenization 服务设计方案](./tokenization-service-plan.md)。
 - **用户偏好/路由规则存储 (DB/Config)**: **新增配置项**。存储用户定义的模型和渠道组选择规则。
@@ -271,7 +271,48 @@ export interface ApiChannelGroup {
 }
 ```
 
-### 3.5. `ModelPresetRule` (能力预设库 `default_models.json`)
+### 3.5. `ModelGroup` (用户自定义模型组)
+
+```typescript
+/**
+ * 定义一个用户自定义的模型组，用于将特定模型聚合在一起，并定义选择策略。
+ * 用户可以创建如 "快速响应"、"高智能"、"多模态" 等模型组。
+ */
+export interface ModelGroup {
+  /**
+   * 用户定义的组名，必须全局唯一。
+   * 例如: "fast-response-group", "smart-group", "multimodal-group"
+   */
+  group_name: string;
+
+  /**
+   * 包含的模型 ID (ActivatedModelInfo.model_id) 的**有序或无序列表**。
+   */
+  model_ids: string[];
+
+  /**
+   * 当从此组中选择模型时的策略。
+   * 'priority-order': 严格按照 `model_ids` 列表的顺序选择第一个可用的模型。
+   * 'random': 随机选择一个模型。
+   * 'round-robin': (未来扩展) 轮询选择。
+   * @default 'priority-order'
+   */
+  selection_strategy?: "priority-order" | "random" | "round-robin";
+
+  /**
+   * 可选，对此模型组的描述，方便用户理解其用途。
+   */
+  description?: string;
+
+  /**
+   * 可选，是否禁用此模型组。
+   * @default false
+   */
+  disabled?: boolean;
+}
+```
+
+### 3.6. `ModelPresetRule` (能力预设库 `default_models.json`)
 
 ```typescript
 export interface ModelPresetRule {
@@ -285,7 +326,7 @@ export interface ModelPresetRule {
 }
 ```
 
-### 3.6. `ActivatedModelInfo` (激活模型注册表 SQLite DB)
+### 3.7. `ActivatedModelInfo` (激活模型注册表 SQLite DB)
 
 ```typescript
 export interface ActivatedModelInfo {
@@ -323,7 +364,7 @@ export interface ActivatedModelInfo {
 }
 ```
 
-### 3.7. 用户偏好/路由规则 (概念定义)
+### 3.8. 用户偏好/路由规则 (概念定义)
 
 这部分配置定义了系统如何在运行时根据节点请求选择模型和渠道组。具体实现方式待定，但可能包含：
 
@@ -356,22 +397,47 @@ export interface ActivatedModelInfo {
     *   `ModelPresetService` 在应用启动时加载并解析 `default_models.json` 中的预设规则。
     *   `ActivatedModelService` 准备好对数据库进行操作。
 
-2.  **发现模型 (由 API Endpoint 协调):**
-    a. **触发**: 用户在前端为某个渠道 (`channelRef`) 点击“发现模型”。
-    b. **API 调用**: 前端请求 `POST /api/llm/channels/:channelRef/discover-models`。
-    c. **后端处理**:
-        i.  **获取配置**: API Endpoint 调用 `ApiConfigService` 获取该渠道的完整配置。
-        ii. **获取适配器**: 调用 `LlmApiAdapterRegistry` 获取对应的适配器实例。
-        iii. **调用适配器**: 调用 `adapter.listModels(channelConfig)`，从外部 API 获取原始模型 ID 列表。
-        iv. **应用预设**: 调用 `ModelPresetService.applyPresets()`，为原始列表丰富上预设的能力、图标等信息。
-        v.  **检查激活状态**: 调用 `ActivatedModelService.getActivatedModels()`，获取用户已激活的所有模型，用于在结果中标记每个模型是否“已激活”。
-        vi. **整合响应**: API Endpoint 整合上述信息，生成一个包含模型列表（已丰富、已标记激活状态）的最终结果。
-    d. **前端展示**: 前端在一个模态框中展示这个“待添加模型列表”。
+2.  **模型发现与激活流程**:
+    这是一个核心的用户交互流程，旨在将模型从外部渠道引入系统，并由用户确认激活。
 
-3.  **用户添加/激活模型:**
-    a. **触发**: 用户点击“+”按钮，选择要激活的模型。
-    b. **API 调用**: 前端请求 `POST /api/llm/activated-models`，请求体中包含完整的 `ActivatedModelInfo`。
-    c. **后端保存**: API Endpoint 调用 `ActivatedModelService.addActivatedModel()` 将模型信息保存到数据库。
+    ```mermaid
+    sequenceDiagram
+        participant U as 用户
+        participant FE as 前端 UI (设置页面)
+        participant BE as 后端 API
+        participant DB as 数据库
+
+        U->>FE: 1. 在“API 渠道”页, 点击渠道 A 的“发现模型”
+        FE->>BE: 2. POST /api/llm/channels/{id}/discover-models
+        BE->>BE: 3. 调用适配器, 从远程获取模型列表
+        BE->>DB: 4. 查询已激活模型, 用于状态标记
+        DB-->>BE:
+        BE-->>FE: 5. 返回发现的模型列表 (含激活状态)
+
+        FE-->>U: 6. 弹窗展示待添加模型
+        U->>FE: 7. 选择模型 'model-x' 并点击“添加”
+        FE->>BE: 8. POST /api/llm/models (body: ActivatedModelInfo)
+        BE->>DB: 9. INSERT INTO activated_models
+        DB-->>BE: 成功
+        BE-->>FE: 成功
+        FE-->>U: 10. 提示成功, 更新UI
+    ```
+
+3.  **流程详解**:
+    a. **触发**: 用户在前端的“API 渠道”管理界面，为某个已配置的渠道点击“发现模型”按钮。
+    b. **API 调用**: 前端向后端发起 `POST /api/llm/channels/:channelId/discover-models` 请求。
+    c. **后端协调处理**:
+        i.  **获取配置与适配器**: 根据 `channelId` 获取渠道配置和对应的 `LlmApiAdapter`。
+        ii. **远程发现**: 调用 `adapter.listModels()` 从外部服务获取原始模型列表。
+        iii. **信息增强与比对**:
+            - (可选) 调用 `ModelPresetService` 为发现的模型应用预设规则（填充能力、图标等）。
+            - 调用 `ActivatedModelService` 获取所有已激活模型的列表，用于在返回结果中标记每个模型的激活状态。
+        iv. **返回结果**: 后端将整合后的模型列表（包含模型ID、预设信息、是否已激活等）返回给前端。
+    d. **前端展示与用户激活**:
+        i.  前端在一个模态框中展示待添加的模型列表，并清晰地显示其激活状态。
+        ii. 用户选择一个或多个未激活的模型，点击“添加”或“激活”按钮。
+        iii. 前端发起 `POST /api/llm/models` 请求，请求体中包含要激活的模型的完整 `ActivatedModelInfo`。
+    e. **后端保存**: `ActivatedModelService` 接收到请求，将新的模型信息存入 `activated_models` 数据库表中。
 
 4.  **用户编辑/删除模型:**
     *   通过对应的 API Endpoint (`PUT`, `DELETE`) 调用 `ActivatedModelService` 中的方法，直接对数据库中的 `ActivatedModelInfo` 进行操作。
@@ -380,20 +446,28 @@ export interface ActivatedModelInfo {
 
 1.  **节点输入:** 用户在 `GenericLlmRequestNode` 上配置（或者当此节点在 Agent 的核心审议工作流中时，这些配置可能由 Agent Profile 或审议逻辑间接提供）：
 
-- `required_capabilities: string[]`: 必须满足的能力列表 (e.g., `['llm', 'chat']`, `['llm', 'vision', 'planning']`)。通过 Tag 输入框配置，详见 [LLM 适配器 - Tag 输入框方案](./llm-adapter-tag-input-plan.md)。Agent Profile 中对 LLM 的需求也应能映射到这些能力标签上。
-- `preferred_model_or_tags?: string[]`: (可选) 倾向于选择的模型 ID 或自定义标签。路由服务会优先匹配此处的模型 ID，其次使用标签进行偏好排序。通过 Tag 输入框配置，详见 [LLM 适配器 - Tag 输入框方案](./llm-adapter-tag-input-plan.md)。
+- `model_id?: string`: (可选, **最高优先级**) 直接指定要使用的模型 ID。如果提供了此值，将忽略所有其他路由和选择逻辑。
+- `model_group_ref?: string`: (可选, 次高优先级) 指定一个用户定义的模型组 (`ModelGroup.group_name`)。路由服务将在此组内根据其策略选择模型。
+- `required_capabilities: string[]`: (可选) 必须满足的能力列表 (e.g., `['llm', 'chat']`, `['llm', 'vision', 'planning']`)。在未直接指定模型或模型组时，用于筛选候选模型。
+- `preferred_model_or_tags?: string[]`: (可选) 在基于能力筛选后，倾向于选择的模型 ID 或自定义标签，用于对候选模型进行排序。
 - `performance_preference?: 'latency' | 'cost' | 'quality'`: (可选) 优化目标提示。
 - `messages`: 输入的 `CustomMessage[]`。
 - `parameters`: JSON 格式的 API 参数。
 
 2.  **引擎调用:** `ExecutionEngine` 调用节点的 `execute` 方法，传入上述输入和包含各服务引用的 `context`。
 3.  **路由与执行逻辑 (由 `ModelRouterService` 和 `RetryHandler` 协调):**
-    a. **路由选择 (由 `ModelRouterService` 执行):**
-    i. 接收节点的请求（能力、偏好、消息、参数）。当调用来自 Agent 的核心审议工作流时，这些请求反映了 Agent 当前决策周期对 LLM 的具体需求。
-    ii. 从 `context.ActivatedModelService` 查询满足 `required_capabilities` 的**激活模型**。
-    iii. (可选) 根据 `preferred_model_tags` 和 `performance_preference` 筛选/排序候选模型。
-    iv. 根据用户的**全局偏好/路由规则** (从 `context` 获取)，从候选模型中确定最终的 `selected_model_id`。
-    v. 同样根据用户偏好/规则（或模型的默认设置），确定要使用的 `selected_channel_group_ref`。
+    a. **路由选择 (由 `ModelRouterService` 执行，按以下优先级顺序):**
+        i. **(最高优先级) 检查直接指定的 `model_id`**:
+            - 如果节点输入中包含 `model_id`，则直接将其作为 `selected_model_id`。路由过程结束。
+        ii. **(次高优先级) 检查指定的 `model_group_ref`**:
+            - 如果节点输入中包含 `model_group_ref`，则从服务中获取该模型组的配置。
+            - 根据组的 `selection_strategy` 和 `model_ids` 列表，选择一个模型作为 `selected_model_id`。路由过程结束。
+        iii. **(默认流程) 基于能力的路由**:
+            - 如果以上两者都未提供，则执行基于能力的路由逻辑。
+            - 从 `context.ActivatedModelService` 查询满足 `required_capabilities` 的**激活模型**列表。
+            - (可选) 根据 `preferred_model_tags` 和 `performance_preference` 筛选/排序候选模型。
+            - 根据用户的**全局偏好/路由规则** (从 `context` 获取)，从候选模型中确定最终的 `selected_model_id`。
+        v. 同样根据用户偏好/规则（或模型的默认设置），确定要使用的 `selected_channel_group_ref`。
     b. **故障转移与 Key 选择 (由 `RetryHandler` 处理):**
     i. `RetryHandler` 从 `context.ApiConfigService` 获取 `selected_channel_group_ref` 对应的 `ApiChannelGroup` 配置 (包含 `ordered_channel_refs`)。
     ii. **按顺序迭代** `ordered_channel_refs` 列表中的每个 `channel_ref`： 1. 从 `context.ApiConfigService` 获取该 `channel_ref` 对应的 `ApiCredentialConfig`。 2. 使用 `KeySelector` (根据 `config.key_selection_strategy`) 从 `config.api_key` (如果是数组) 中选择一个 `selectedKey`。 3. 确定适配器类型 (`adapter_type`)：优先使用 `config.adapter_type`，否则尝试推断。 4. 从 `context.LlmApiAdapterRegistry` 获取适配器实例。 5. **调用适配器:** 调用 `adapter.request()` 方法，传入 `messages`, `parameters`, `selected_model_id` (由 Router 确定) 以及**具体的**认证信息 (`base_url`, `selectedKey`, `custom_headers`)。 6. **处理结果:** - 如果成功，`RetryHandler` 返回 `StandardResponse`，执行结束。 - 如果失败，检查错误码是否在 `config.retry_on_codes` (或全局默认) 中。 - 如果是可重试错误且列表中还有下一个渠道，则继续迭代。 - 如果是不可重试错误或所有渠道都已尝试失败，`RetryHandler` 返回包含 `error` 的 `StandardResponse`。
@@ -527,7 +601,8 @@ interface ILlmApiAdapter {
 1.  **`GenericLlmRequestNode` (基础版):**
 
     - 输入: `messages: CustomMessage[]` (支持 text 和 basic image_url), `required_capabilities: string[]` (例如 `['llm']` 或 `['llm', 'vision']`), `parameters: JSON` (透传基础参数如 `temperature`, `max_tokens`).
-    - **简化路由:** 节点内直接指定 `activated_model_id: string` 和 `channel_ref: string` (通过下拉列表选择已配置项)，或者通过 `required_capabilities` 触发一个非常简单的全局默认查找（例如，第一个匹配能力的模型+第一个匹配的渠道）。
+    - **核心调用方式:** 节点内必须支持直接指定 `model_id: string` (通过下拉列表选择已激活模型)。这是 MVP 的主要调用方式。
+    - **辅助路由:** 同时，节点可以接受 `required_capabilities: string[]` 输入。如果 `model_id` 未被指定，则触发一个非常简单的全局默认查找（例如，查找第一个满足能力的模型，并使用其关联的默认渠道或一个全局默认渠道）。
     - 输出: `response: StandardResponse` (包含 `text`, `model`, `usage`, `error` 基础字段)。
     - **不支持:** 复杂的路由规则、性能偏好、模型标签。
 

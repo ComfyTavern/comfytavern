@@ -1,7 +1,7 @@
 import { DatabaseService } from './DatabaseService';
 import type { ApiCredentialConfig } from '@comfytavern/types';
 import { apiChannels } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite';
 import * as schema from '../db/schema';
 
@@ -20,30 +20,58 @@ export class ApiConfigService {
     return results as ApiCredentialConfig[];
   }
 
-  async getCredentials(refName: string): Promise<ApiCredentialConfig | null> {
-    const result = await this.db.select().from(apiChannels).where(eq(apiChannels.refName, refName)).get();
-    return (result as ApiCredentialConfig) ?? null;
-  }
-  
   async getCredentialsById(id: string): Promise<ApiCredentialConfig | null> {
     const result = await this.db.select().from(apiChannels).where(eq(apiChannels.id, id)).get();
     return (result as ApiCredentialConfig) ?? null;
   }
 
-  async saveCredentials(config: ApiCredentialConfig): Promise<void> {
-    const valuesToSave = {
-      ...config,
-      id: config.id || crypto.randomUUID(),
-      createdAt: config.createdAt || new Date().toISOString(),
-    };
+  async saveCredentials(config: ApiCredentialConfig): Promise<ApiCredentialConfig> {
+    const id = config.id;
+    if (!id) {
+      throw new Error('[ApiConfigService] An ID must be provided to save credentials.');
+    }
 
-    await this.db.insert(apiChannels).values(valuesToSave).onConflictDoUpdate({
-      target: apiChannels.id,
-      set: valuesToSave,
-    });
+    const existingChannel = await this.getCredentialsById(id);
+
+    if (existingChannel) {
+      // --- UPDATE LOGIC ---
+      console.log(`[ApiConfigService] Updating channel with ID: ${id}`);
+      const { id: _, userId: __, createdAt: ___, ...dataToUpdate } = config;
+
+      // 如果 apiKey 为空或未定义，则不更新它
+      if (!config.apiKey) {
+        delete (dataToUpdate as Partial<typeof dataToUpdate>).apiKey;
+      }
+      
+      await this.db.update(apiChannels)
+        .set(dataToUpdate)
+        .where(eq(apiChannels.id, id));
+      console.log(`[ApiConfigService] Channel ${id} updated successfully.`);
+
+    } else {
+      // --- INSERT LOGIC ---
+      console.log(`[ApiConfigService] Inserting new channel with ID: ${id}`);
+      const dataToInsert = {
+        ...config,
+        id: id, // 明确 id 是 string
+        storageMode: config.storageMode ?? 'plaintext',
+        disabled: config.disabled ?? false,
+        createdAt: config.createdAt || new Date().toISOString(),
+      };
+      await this.db.insert(apiChannels).values(dataToInsert);
+      console.log(`[ApiConfigService] New channel ${id} inserted successfully.`);
+    }
+
+    // 返回完整、已保存的对象
+    const savedChannel = await this.getCredentialsById(id);
+    if (!savedChannel) {
+      console.error(`[ApiConfigService] CRITICAL: Failed to retrieve channel ${id} immediately after saving.`);
+      throw new Error('Failed to save or retrieve channel after operation.');
+    }
+    return savedChannel;
   }
 
-  async deleteCredentials(refName: string): Promise<void> {
-    await this.db.delete(apiChannels).where(eq(apiChannels.refName, refName));
+  async deleteCredentials(id: string): Promise<void> {
+    await this.db.delete(apiChannels).where(eq(apiChannels.id, id));
   }
 }

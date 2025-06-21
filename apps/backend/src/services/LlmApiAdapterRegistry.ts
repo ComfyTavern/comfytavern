@@ -38,4 +38,25 @@ export class LlmApiAdapterRegistry {
   public getAdapter(adapterType: string): ILlmApiAdapter | undefined {
     return this.adapters.get(adapterType);
   }
+
+  /**
+   * 获取所有可用的提供商及其基本信息。
+   * @returns 一个包含提供商信息的数组。
+   */
+  public getAvailableProviders(): { id: string; name: string }[] {
+    // 在未来，这个 name 应该从适配器本身的一个属性中获取
+    const providerDisplayNames: Record<string, string> = {
+      openai: 'OpenAI',
+      anthropic: 'Anthropic (Claude)',
+      google: 'Google (Gemini)',
+      cohere: 'Cohere',
+      ollama: 'Ollama',
+      custom: '自定义',
+    };
+
+    return Array.from(this.adapters.keys()).map(id => ({
+      id,
+      name: providerDisplayNames[id] || id,
+    }));
+  }
 }

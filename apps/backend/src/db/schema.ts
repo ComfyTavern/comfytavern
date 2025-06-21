@@ -77,15 +77,15 @@ export const externalCredentialsRelations = relations(externalCredentials, ({ on
 export const apiChannels = sqliteTable('api_channels', {
   id: text('id').primaryKey(), // UUID
   userId: text('user_id').notNull().references(() => users.uid, { onDelete: 'cascade' }),
-  refName: text('ref_name').notNull(), // 用户定义的引用名称
-  label: text('label'), // UI 显示的标签
+  label: text('label').notNull(), // UI 显示的标签
   providerId: text('provider_id'), // e.g., "openai", "anthropic"
   adapterType: text('adapter_type'), // e.g., "openai", "ollama"
   baseUrl: text('base_url').notNull(),
   apiKey: text('api_key').notNull(), // MVP 阶段为单个 key, 存储加密后的值或明文
   storageMode: text('storage_mode', { enum: ['plaintext', 'encrypted'] }).notNull().default('plaintext'),
-  customHeaders: text('custom_headers', { mode: 'json' }), // JSON
+  customHeaders: text('custom_headers', { mode: 'json' }), // Stored as a JSON object
   modelListEndpoint: text('model_list_endpoint'),
+  supportedModels: text('supported_models', { mode: 'json' }), // Stored as a JSON array of model IDs
   disabled: integer('disabled', { mode: 'boolean' }).default(false),
   createdAt: text('created_at').notNull(),
 });
@@ -110,7 +110,7 @@ export const activatedModels = sqliteTable('activated_models', {
   modelType: text('model_type', { enum: ['llm', 'embedding', 'unknown'] }).default('unknown'),
   groupName: text('group_name'),
   icon: text('icon'),
-  defaultChannelRef: text('default_channel_ref'), // 关联到 apiChannels.refName
+  defaultChannelId: text('default_channel_id'), // 关联到 apiChannels.id
   tags: text('tags', { mode: 'json' }), // string[]
   tokenizerId: text('tokenizer_id'),
   createdAt: text('created_at').notNull().default(new Date().toISOString()),
