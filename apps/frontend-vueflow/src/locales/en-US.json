@@ -640,7 +640,7 @@
       "display_fontSize_label": "Interface Font Size",
       "display_showConnectionStatus_desc": "Show the connection status indicator to the backend service at the bottom of the interface.",
       "display_showConnectionStatus_label": "Show Backend Connection Status",
-      "display_showMinimap_desc": "Display the code minimap on the right side of the node editor.",
+      "display_showMinimap_desc": "Display the node overview minimap in the bottom right corner of the node editor.",
       "display_showMinimap_label": "Show Editor Minimap",
       "fontSize_large": "Large",
       "fontSize_medium": "Medium",

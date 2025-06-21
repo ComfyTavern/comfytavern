@@ -640,7 +640,7 @@
       "display_fontSize_label": "界面字体大小",
       "display_showConnectionStatus_desc": "在界面底部显示与后端服务的连接状态指示。",
       "display_showConnectionStatus_label": "显示后端连接状态",
-      "display_showMinimap_desc": "在节点编辑器右侧显示代码小地图。",
+      "display_showMinimap_desc": "在节点编辑器右下角显示节点总览小地图。",
       "display_showMinimap_label": "显示编辑器小地图",
       "fontSize_large": "大",
       "fontSize_medium": "中",

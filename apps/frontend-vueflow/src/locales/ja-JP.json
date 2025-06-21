@@ -640,7 +640,7 @@
       "display_fontSize_label": "インターフェースフォントサイズ",
       "display_showConnectionStatus_desc": "インターフェース下部にバックエンドサービスへの接続ステータスインジケーターを表示します。",
       "display_showConnectionStatus_label": "バックエンド接続ステータスを表示",
-      "display_showMinimap_desc": "ノードエディターの右側にコードミニマップを表示します。",
+      "display_showMinimap_desc": "ノードエディターの右下にノード概要ミニマップを表示します。",
       "display_showMinimap_label": "エディターミニマップを表示",
       "fontSize_large": "大",
       "fontSize_medium": "中",
