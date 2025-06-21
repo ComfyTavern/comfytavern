@@ -1,9 +1,9 @@
 <template>
   <div class="api-channel-list">
-    <div class="flex justify-between items-center mb-4">
+    <div class="flex flex-wrap gap-3 mb-4 sm:flex-row sm:justify-between sm:items-center">
       <h2 class="text-2xl font-bold text-text-base">API 渠道管理</h2>
       <button @click="openAddModal"
-        class="px-4 py-2 text-sm font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90">
+        class="px-4 py-2 text-sm font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 whitespace-nowrap self-start">
         &#43; 新建渠道
       </button>
     </div>
@@ -17,52 +17,112 @@
       <button @click="openAddModal" class="btn btn-primary mt-4">立即创建第一个</button>
     </div>
 
-    <div v-else class="overflow-x-auto bg-background-surface rounded-lg shadow">
-      <table class="table-auto w-full text-left">
-        <thead class="bg-neutral-softest">
-          <tr>
-            <th class="p-4 font-semibold">渠道名称</th>
-            <th class="p-4 font-semibold">状态</th>
-            <th class="p-4 font-semibold">Base URL</th>
-            <th class="p-4 font-semibold">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="channel in channels" :key="channel.id"
-            class="border-t border-border-base hover:bg-primary-softest transition-colors">
-            <td class="p-4">{{ channel.label }}</td>
-            <td class="p-4">
-              <span :class="[
-                'px-3 py-1 text-sm font-medium rounded-md whitespace-nowrap',
-                channel.disabled
-                  ? 'bg-error-soft text-error'
-                  : 'bg-success-soft text-success',
-              ]">
-                {{ channel.disabled ? "禁用" : "启用" }}
-              </span>
-            </td>
-            <td class="p-4 text-sm">{{ channel.baseUrl }}</td>
-            <td class="p-4">
-              <div class="flex items-center space-x-2">
-                <BooleanToggle
-                  :model-value="!channel.disabled"
-                  @update:model-value="toggleChannelStatus(channel, $event)"
-                  size="small"
-                  v-comfy-tooltip="channel.disabled ? '点击启用' : '点击禁用'"
-                />
-                <button @click="openEditModal(channel)"
-                  class="px-3 py-1 text-sm font-medium text-primary bg-primary-soft rounded-md hover:bg-primary-soft/80 whitespace-nowrap">
-                  编辑
-                </button>
-                <button @click="confirmDelete(channel)"
-                  class="px-3 py-1 text-sm font-medium text-error bg-error-soft rounded-md hover:bg-error-soft/80 whitespace-nowrap">
-                  删除
-                </button>
+    <div v-else>
+      <!-- 表格视图 - 当容器宽度足够时 -->
+      <div v-if="containerWidth >= 680" class="overflow-x-auto bg-background-surface rounded-lg shadow">
+        <table class="table-fixed w-full text-left min-w-[680px]">
+          <thead class="bg-neutral-softest">
+            <tr>
+              <th class="w-1/4 p-4 font-semibold">渠道名称</th>
+              <th class="w-20 p-4 font-semibold">状态</th>
+              <th class="w-1/4 p-4 font-semibold">Base URL</th>
+              <th class="w-1/3 p-4 font-semibold">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="channel in channels" :key="channel.id"
+              class="border-t border-border-base hover:bg-primary-softest transition-colors">
+              <td class="p-4">
+                <div class="truncate" v-comfy-tooltip="channel.label">
+                  {{ channel.label }}
+                </div>
+              </td>
+              <td class="p-4">
+                <span :class="[
+                  'px-3 py-1 text-sm font-medium rounded-md whitespace-nowrap',
+                  channel.disabled
+                    ? 'bg-error-soft text-error'
+                    : 'bg-success-soft text-success',
+                ]">
+                  {{ channel.disabled ? "禁用" : "启用" }}
+                </span>
+              </td>
+              <td class="p-4 text-sm">
+                <div class="truncate" v-comfy-tooltip="channel.baseUrl">
+                  {{ channel.baseUrl }}
+                </div>
+              </td>
+              <td class="p-4">
+                <div class="flex items-center space-x-2 flex-wrap gap-y-1">
+                  <BooleanToggle
+                    :model-value="!channel.disabled"
+                    @update:model-value="toggleChannelStatus(channel, $event)"
+                    size="small"
+                    v-comfy-tooltip="channel.disabled ? '点击启用' : '点击禁用'"
+                  />
+                  <button @click="openEditModal(channel)"
+                    class="px-3 py-1 text-sm font-medium text-primary bg-primary-soft rounded-md hover:bg-primary-soft/80 whitespace-nowrap flex-shrink-0">
+                    编辑
+                  </button>
+                  <button @click="confirmDelete(channel)"
+                    class="px-3 py-1 text-sm font-medium text-error bg-error-soft rounded-md hover:bg-error-soft/80 whitespace-nowrap flex-shrink-0">
+                    删除
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 卡片视图 - 当容器宽度不够时 -->
+      <div v-else class="space-y-4">
+        <div v-for="channel in channels" :key="channel.id"
+          class="bg-background-surface rounded-lg shadow p-4 border border-border-base">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-text-base truncate" v-comfy-tooltip="channel.label">
+                {{ channel.label }}
+              </h3>
+              <div class="mt-1">
+                <span :class="[
+                  'inline-flex px-2 py-1 text-xs font-medium rounded-md',
+                  channel.disabled
+                    ? 'bg-error-soft text-error'
+                    : 'bg-success-soft text-success',
+                ]">
+                  {{ channel.disabled ? "禁用" : "启用" }}
+                </span>
               </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </div>
+            <BooleanToggle
+              :model-value="!channel.disabled"
+              @update:model-value="toggleChannelStatus(channel, $event)"
+              size="small"
+              v-comfy-tooltip="channel.disabled ? '点击启用' : '点击禁用'"
+              class="ml-3 flex-shrink-0"
+            />
+          </div>
+          
+          <div class="mb-3">
+            <label class="text-xs font-medium text-text-secondary uppercase tracking-wide">Base URL</label>
+            <div class="mt-1 text-sm text-text-base break-all" v-comfy-tooltip="channel.baseUrl">
+              {{ channel.baseUrl }}
+            </div>
+          </div>
+          
+          <div class="flex items-center space-x-2">
+            <button @click="openEditModal(channel)"
+              class="flex-1 px-3 py-2 text-sm font-medium text-primary bg-primary-soft rounded-md hover:bg-primary-soft/80 text-center">
+              编辑
+            </button>
+            <button @click="confirmDelete(channel)"
+              class="flex-1 px-3 py-2 text-sm font-medium text-error bg-error-soft rounded-md hover:bg-error-soft/80 text-center">
+              删除
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Add/Edit Modal -->
@@ -105,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useLlmConfigStore } from "@/stores/llmConfigStore";
 import { storeToRefs } from "pinia";
 import { useDialogService } from "@/services/DialogService";
@@ -122,6 +182,28 @@ const dialogService = useDialogService();
 const isModalOpen = ref(false);
 const editingChannel = ref<ApiCredentialConfig | null>(null);
 const isFormForFooterValid = ref(false);
+
+const containerRef = ref<HTMLElement | null>(null);
+const containerWidth = ref(0);
+
+const observer = new ResizeObserver(entries => {
+  if (entries[0]) {
+    containerWidth.value = entries[0].contentRect.width;
+  }
+});
+
+onMounted(() => {
+  if (containerRef.value) {
+    observer.observe(containerRef.value);
+    containerWidth.value = containerRef.value.offsetWidth;
+  }
+});
+
+onUnmounted(() => {
+  if (containerRef.value) {
+    observer.unobserve(containerRef.value);
+  }
+});
 
 const openAddModal = () => {
   editingChannel.value = null;
