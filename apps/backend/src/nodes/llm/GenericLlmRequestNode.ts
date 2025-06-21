@@ -15,8 +15,12 @@ class GenericLlmRequestNodeImpl {
   static async execute(inputs: Record<string, any>, context: any): Promise<Record<string, any>> {
     const {
       messages,
-      parameters = {},
+      parameters: baseParameters = {},
       activated_model_id,
+      temperature,
+      max_tokens,
+      top_p,
+      seed,
     } = inputs;
 
     const { nodeId, services, userId } = context;
@@ -69,10 +73,23 @@ class GenericLlmRequestNodeImpl {
       throw new Error(`LLM adapter for type "${adapterType}" not found.`);
     }
 
+    // --- 4. Prepare Parameters ---
+    // Start with individual parameters from the node's UI.
+    const individualParameters: Record<string, any> = {};
+    if (temperature !== undefined) individualParameters.temperature = temperature;
+    if (max_tokens !== undefined) individualParameters.max_tokens = max_tokens;
+    if (top_p !== undefined) individualParameters.top_p = top_p;
+    // Only add seed if it's a positive integer and not 0, as 0 can sometimes be ignored.
+    if (seed !== undefined && seed > 0) individualParameters.seed = seed;
+
+    // Merge with the parameters from the input slot.
+    // The input slot (`baseParameters`) will override the individual settings.
+    const finalParameters = { ...individualParameters, ...baseParameters };
+
     try {
       const response = await adapter.request({
         messages,
-        parameters,
+        parameters: finalParameters,
         model_id: activated_model_id,
         credentials: {
           base_url: channelConfig.baseUrl,
@@ -111,15 +128,15 @@ export const definition: NodeDefinition = {
     messages: {
       dataFlowType: 'ARRAY',
       displayName: '消息列表',
-      description: '要发送给 LLM 的消息数组 (CustomMessage[])',
-      matchCategories: ['ChatHistory'],
+      description: '要发送给 LLM 的消息数组 (CustomMessage[])\n\n示例格式:\n```json\n[\n  {\n    "role": "user",\n    "content": "你好，请介绍一下你自己"\n  },\n  {\n    "role": "assistant",\n    "content": "我是ComfyTavern助手，很高兴为你服务"\n  }\n]\n```',
+      matchCategories: ['ChatHistory','NoDefaultEdit'],
     },
     parameters: {
       dataFlowType: 'OBJECT',
       displayName: '参数',
-      description: '传递给 LLM API 的参数 (e.g., temperature, max_tokens)',
+      description: '传递给 LLM API 的参数 (e.g., temperature, max_tokens) \n会覆盖本节点 UI 中的单独设置',
       required: false,
-      matchCategories: ['LlmConfig'],
+      matchCategories: ['LlmConfig','NoDefaultEdit'],
       config: {
         default: {},
       },
@@ -128,9 +145,54 @@ export const definition: NodeDefinition = {
       dataFlowType: 'STRING',
       displayName: '激活的模型 ID',
       description: '要使用的已激活模型的 ID',
-      // In a real UI, this would be a dropdown populated by ActivatedModelService
     },
-    // The channel_id input is removed. Channel selection is now a backend routing concern.
+    temperature: {
+      dataFlowType: 'FLOAT',
+      displayName: '温度',
+      description: ' (Temperature) 控制生成文本的随机性。较高的值会使输出更随机。',
+      required: false,
+      config: {
+        default: 0.7,
+        min: 0.0,
+        max: 2.0,
+        step: 0.01,
+      }
+    },
+    max_tokens: {
+      dataFlowType: 'INTEGER',
+      displayName: '最大令牌数',
+      description: ' (Max Tokens) 生成的最大令牌数。',
+      required: false,
+      config: {
+        default: 2048,
+        min: 1,
+        max: 65536,
+        step: 64,
+      }
+    },
+    top_p: {
+      dataFlowType: 'FLOAT',
+      displayName: 'Top P',
+      description: '核心采样。模型会考虑概率质量为 top_p 的令牌。0.1 意味着只考虑构成前 10% 概率质量的令牌。',
+      required: false,
+      config: {
+        default: 1.0,
+        min: 0.0,
+        max: 1.0,
+        step: 0.01,
+      }
+    },
+    seed: {
+      dataFlowType: 'INTEGER',
+      displayName: '随机种子',
+      description: ' (Seed) 用于可复现输出的随机种子。',
+      required: false,
+      config: {
+        default: 0,
+        min: 0,
+        step: 1,
+      }
+    },
   },
   outputs: {
     response: {
