@@ -282,6 +282,10 @@ const isSimpleInlineInput = (input: InputDefinition): boolean => {
   );
 };
 
+const isBooleanInput = (input: InputDefinition): boolean => {
+  return input.dataFlowType === DataFlowType.BOOLEAN;
+};
+
 // showActionButtonsForInput 函数已移除，其逻辑由 NodeInputActionsBar 处理
 
 const getLanguageHintForInput = (input: InputDefinition): string | undefined => {
@@ -1010,7 +1014,7 @@ const handleActionTriggered = (payload: {
                   :input-key="String((input as any).key)" :input-definition="input"
                   @update:modelValue="updateInputValue(String((input as any).key), $event)"
                   @blur="($event: any) => handleComponentBlur(String((input as any).key), String($event))"
-                  class="w-full max-w-full" />
+                  :class="[isBooleanInput(input) ? '' : 'w-full max-w-full']" />
               </template>
               <!-- 情况2: 显示 NodeInputActionsBar (如果不是简单内联输入且不显示 Sorter) -->
               <template v-else-if="!isSimpleInlineInput(input) && !shouldShowSorter(input)">

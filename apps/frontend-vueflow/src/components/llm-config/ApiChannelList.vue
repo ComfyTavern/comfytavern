@@ -24,7 +24,7 @@
             <th class="p-4 font-semibold">渠道名称</th>
             <th class="p-4 font-semibold">状态</th>
             <th class="p-4 font-semibold">Base URL</th>
-            <th class="p-4 font-semibold text-center">操作</th>
+            <th class="p-4 font-semibold">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -42,15 +42,23 @@
               </span>
             </td>
             <td class="p-4 text-sm">{{ channel.baseUrl }}</td>
-            <td class="p-4 text-center">
-              <button @click="openEditModal(channel)"
-                class="px-3 py-1 text-sm font-medium text-primary bg-primary-soft rounded-md hover:bg-primary-soft/80 mr-2">
-                编辑
-              </button>
-              <button @click="confirmDelete(channel)"
-                class="px-3 py-1 text-sm font-medium text-error bg-error-soft rounded-md hover:bg-error-soft/80">
-                删除
-              </button>
+            <td class="p-4">
+              <div class="flex items-center space-x-2">
+                <BooleanToggle
+                  :model-value="!channel.disabled"
+                  @update:model-value="toggleChannelStatus(channel, $event)"
+                  size="small"
+                  v-comfy-tooltip="channel.disabled ? '点击启用' : '点击禁用'"
+                />
+                <button @click="openEditModal(channel)"
+                  class="px-3 py-1 text-sm font-medium text-primary bg-primary-soft rounded-md hover:bg-primary-soft/80">
+                  编辑
+                </button>
+                <button @click="confirmDelete(channel)"
+                  class="px-3 py-1 text-sm font-medium text-error bg-error-soft rounded-md hover:bg-error-soft/80">
+                  删除
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -105,6 +113,7 @@ import type { ApiCredentialConfig } from "@comfytavern/types";
 import BaseModal from "@/components/common/BaseModal.vue";
 import ApiChannelForm from "./ApiChannelForm.vue";
 import type { ApiChannelFormData } from "./ApiChannelForm.vue";
+import BooleanToggle from "@/components/graph/inputs/BooleanToggle.vue";
 
 const llmConfigStore = useLlmConfigStore();
 const { channels, isLoadingChannels } = storeToRefs(llmConfigStore);
@@ -165,6 +174,19 @@ const handleFormSubmit = async (formData: ApiChannelFormData) => {
   } catch (error) {
     // The store already shows an error toast, so we just log it here
     console.error("保存 API 渠道失败:", error);
+  }
+};
+
+const toggleChannelStatus = async (channel: ApiCredentialConfig, isEnabled: boolean) => {
+  try {
+    const updatedChannel = { ...channel, disabled: !isEnabled };
+    await llmConfigStore.updateChannel(updatedChannel);
+    dialogService.showSuccess(`渠道 "${channel.label}" 已${isEnabled ? '启用' : '禁用'}`);
+  } catch (error) {
+    // The store already shows an error toast
+    console.error(`切换渠道状态失败:`, error);
+    // Revert the toggle on error
+    await llmConfigStore.fetchChannels();
   }
 };
 </script>

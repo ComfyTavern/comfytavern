@@ -68,7 +68,7 @@ const toggle = (event?: Event) => {
 
 <style scoped>
 .boolean-toggle {
-  @apply flex justify-end w-full;
+  @apply inline-flex items-center;
 }
 
 button:disabled {
