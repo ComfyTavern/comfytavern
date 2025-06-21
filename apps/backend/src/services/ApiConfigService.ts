@@ -43,10 +43,16 @@ export class ApiConfigService {
         delete (dataToUpdate as Partial<typeof dataToUpdate>).apiKey;
       }
       
-      await this.db.update(apiChannels)
-        .set(dataToUpdate)
-        .where(eq(apiChannels.id, id));
-      console.log(`[ApiConfigService] Channel ${id} updated successfully.`);
+      try {
+        await this.db.update(apiChannels)
+          .set(dataToUpdate)
+          .where(eq(apiChannels.id, id));
+        console.log(`[ApiConfigService] Channel ${id} updated successfully.`);
+      } catch (error) {
+        console.error(`[ApiConfigService] Database update failed for channel ${id}:`, error);
+        // 重新抛出原始错误，以便由路由层处理
+        throw error;
+      }
 
     } else {
       // --- INSERT LOGIC ---
