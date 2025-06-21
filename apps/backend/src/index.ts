@@ -104,18 +104,8 @@ try {
   console.error("Failed to read application version from package.json:", error);
 }
 
-// --- 确定用户操作模式 ---
-let currentUserMode: 'LocalNoPassword' | 'LocalWithPassword' | 'MultiUserShared';
-
-if (MULTI_USER_MODE) {
-  currentUserMode = 'MultiUserShared';
-} else {
-  if (ACCESS_PASSWORD_HASH && ACCESS_PASSWORD_HASH.trim() !== '') {
-    currentUserMode = 'LocalWithPassword';
-  } else {
-    currentUserMode = 'LocalNoPassword';
-  }
-}
+// --- 确定用户操作模式 (v4 简化) ---
+const currentUserMode = MULTI_USER_MODE ? 'MultiUser' : 'SingleUser';
 console.log(`[ComfyTavern Backend] Determined user operation mode: ${currentUserMode}`);
 // SINGLE_USER_PATH 已移除，相关日志也移除
 

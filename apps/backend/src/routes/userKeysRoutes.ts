@@ -8,15 +8,13 @@ import type { AuthContext } from '../middleware/authMiddleware';
 import { DatabaseService } from '../services/DatabaseService';
 import { CryptoService } from '../services/CryptoService';
 import * as schema from '../db/schema'; // 导入数据库 schema
-import { 
+import {
   ServiceApiKeyMetadata,
   ServiceApiKeyWithSecret,
-  // StoredServiceApiKey, // StoredServiceApiKey 接口用于类型提示，实际插入时用符合表结构的对象
-  AuthenticatedMultiUserIdentity, // 用于类型检查
-  DefaultUserIdentity,
-  ExternalCredentialMetadata, // 用于类型检查
+  ExternalCredentialMetadata,
+  UserContext,
   // Zod schemas for response validation (optional, can be added later)
-  // ServiceApiKeyMetadataZodSchema, 
+  // ServiceApiKeyMetadataZodSchema,
   // ServiceApiKeyWithSecretZodSchema
 } from '@comfytavern/types';
 
@@ -41,11 +39,9 @@ export const userKeysRoutes = new Elysia({ prefix: '/api/users/me', name: 'user-
             return { error: authError?.message || 'Unauthorized: No current user in context.' };
           }
 
-          // 正确获取 userId
-          const currentUser = userContext.currentUser;
-          const userId = 'id' in currentUser ? currentUser.id : (currentUser as AuthenticatedMultiUserIdentity).uid;
+          const userId = userContext.currentUser.uid;
 
-          if (!userId) { // 理论上 currentUser 存在时，id 或 uid 也应该存在
+          if (!userId) {
             context.set.status = 400; // 或者 500，因为这是上下文构建的问题
             return { error: 'User ID not found in current user context.' };
           }
@@ -93,8 +89,7 @@ export const userKeysRoutes = new Elysia({ prefix: '/api/users/me', name: 'user-
           }
           const { name, scopes } = validationResult.data;
 
-          const currentUser = userContext.currentUser;
-          const userId = 'id' in currentUser ? currentUser.id : (currentUser as AuthenticatedMultiUserIdentity).uid;
+          const userId = userContext.currentUser.uid;
           if (!userId) {
             context.set.status = 400;
             return { error: 'User ID not found in current user context.' };
@@ -171,8 +166,7 @@ export const userKeysRoutes = new Elysia({ prefix: '/api/users/me', name: 'user-
             return { error: 'Invalid or missing keyId parameter.' };
           }
 
-          const currentUser = userContext.currentUser;
-          const userId = 'id' in currentUser ? currentUser.id : (currentUser as AuthenticatedMultiUserIdentity).uid;
+          const userId = userContext.currentUser.uid;
           if (!userId) {
             context.set.status = 400; // Bad Request or 500 if context is malformed
             return { error: 'User ID not found in current user context.' };
@@ -245,8 +239,7 @@ export const userKeysRoutes = new Elysia({ prefix: '/api/users/me', name: 'user-
             context.set.status = authError ? 500 : 401;
             return { error: authError?.message || 'Unauthorized: No current user in context.' };
           }
-          const currentUser = userContext.currentUser;
-          const userId = 'id' in currentUser ? currentUser.id : (currentUser as AuthenticatedMultiUserIdentity).uid;
+          const userId = userContext.currentUser.uid;
 
           if (!userId) {
             context.set.status = 400;
@@ -302,8 +295,7 @@ export const userKeysRoutes = new Elysia({ prefix: '/api/users/me', name: 'user-
           }
           const { serviceName, credential: plainCredential, displayName } = validationResult.data;
 
-          const currentUser = userContext.currentUser;
-          const userId = 'id' in currentUser ? currentUser.id : (currentUser as AuthenticatedMultiUserIdentity).uid;
+          const userId = userContext.currentUser.uid;
           if (!userId) {
             context.set.status = 400;
             return { error: 'User ID not found in current user context.' };
@@ -384,8 +376,7 @@ export const userKeysRoutes = new Elysia({ prefix: '/api/users/me', name: 'user-
             return { error: 'Invalid or missing credentialId parameter.' };
           }
 
-          const currentUser = userContext.currentUser;
-          const userId = 'id' in currentUser ? currentUser.id : (currentUser as AuthenticatedMultiUserIdentity).uid;
+          const userId = userContext.currentUser.uid;
           if (!userId) {
             context.set.status = 400;
             return { error: 'User ID not found in current user context.' };

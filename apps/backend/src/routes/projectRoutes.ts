@@ -109,18 +109,7 @@ const CreateProjectBodySchema = z.object({
 
 // 辅助函数：从 UserContext 中安全地提取 userId
 function getUserIdFromContext(userContext: UserContext | null): string | null {
-  if (!userContext || !userContext.currentUser) {
-    return null;
-  }
-  // 'id' 属性用于 DefaultUserIdentity (LocalNoPasswordUserContext, LocalWithPasswordUserContext)
-  if ('id' in userContext.currentUser && userContext.currentUser.id === "default_user") {
-    return userContext.currentUser.id;
-  }
-  // 'uid' 属性用于 AuthenticatedMultiUserIdentity (MultiUserSharedContext)
-  if ('uid' in userContext.currentUser && typeof userContext.currentUser.uid === 'string') {
-    return userContext.currentUser.uid;
-  }
-  return null;
+  return userContext?.currentUser?.uid ?? null;
 }
 
 // 定义一个辅助类型，用于路由处理函数的上下文，确保 userContext 被识别

@@ -41,15 +41,15 @@
 ### 2.1. [`AuthService.ts`](apps/backend/src/services/AuthService.ts:1)
 
 *   **核心职责**：
-    *   管理和确定应用的当前认证操作模式（例如：`LocalNoPassword`, `LocalWithPassword`, `MultiUserShared`）。
+    *   管理和确定应用的当前认证操作模式（例如：`SingleUser`, `MultiUser`）。
     *   根据当前模式构建和提供用户上下文信息 (`UserContext`)。
     *   （未来）处理 API 密钥认证。
 *   **关键公共方法/接口**：
-    *   `static getCurrentOperationMode(): 'LocalNoPassword' | 'LocalWithPassword' | 'MultiUserShared'`：返回当前应用配置的认证操作模式。此模式在服务加载时根据 [`apps/backend/src/config.ts`](apps/backend/src/config.ts:1) 中的 `MULTI_USER_MODE` 和 `ACCESS_PASSWORD_HASH` 确定。
-    *   `static async getUserContext(elysiaContext?: any): Promise<UserContext>`：异步获取当前请求的用户上下文。根据不同的操作模式，它会构造并返回相应的 `UserContext` 对象（如 [`LocalNoPasswordUserContext`](../../packages/types/src/schemas.ts:1)，[`LocalWithPasswordUserContext`](../../packages/types/src/schemas.ts:1)，或 [`MultiUserSharedContext`](../../packages/types/src/schemas.ts:1)）。在 `LocalNoPassword` 模式下，它会从数据库加载默认用户信息及其关联的 API 密钥和服务凭证元数据。其他模式的实现尚不完整。
-    *   `static async authenticateViaApiKey(apiKeySecret: string): Promise<DefaultUserIdentity | AuthenticatedMultiUserIdentity | null>`：一个占位符方法，用于未来通过 API 密钥进行用户认证。目前未完全实现。
+    *   `static getCurrentOperationMode(): 'SingleUser' | 'MultiUser'`：返回当前应用配置的认证操作模式。此模式在服务加载时根据 [`apps/backend/src/config.ts`](apps/backend/src/config.ts:1) 中的 `MULTI_USER_MODE` 确定。
+    *   `static async getUserContext(elysiaContext?: any): Promise<UserContext>`：异步获取当前请求的用户上下文。根据不同的操作模式，它会构造并返回相应的 `UserContext` 对象（如 `SingleUserContext` 或 `MultiUserContext`）。在 `SingleUser` 模式下，它会从数据库加载默认用户信息及其关联的 API 密钥和服务凭证元数据。
+    *   `static async authenticateViaApiKey(apiKeySecret: string): Promise<UserIdentity | null>`：一个占位符方法，用于未来通过 API 密钥进行用户认证。目前未完全实现。
 *   **依赖关系**：
-    *   [`DatabaseService`](#34-databaseservicets)：在 `LocalNoPassword` 模式下，用于查询默认用户信息、服务 API 密钥和外部凭证。
+    *   [`DatabaseService`](#34-databaseservicets)：在 `SingleUser` 模式下，用于查询默认用户信息、服务 API 密钥和外部凭证。
     *   [`apps/backend/src/config.ts`](apps/backend/src/config.ts:1)：用于读取 `MULTI_USER_MODE` 和 `ACCESS_PASSWORD_HASH` 配置项，以确定操作模式。
     *   [`@comfytavern/types`](../../packages/types/src/index.ts)：依赖多种用户上下文和身份相关的类型定义。
 *   **交互方式**：
@@ -117,10 +117,10 @@
     *   初始化和管理应用的 SQLite 数据库连接 (使用 Drizzle ORM 和 `bun:sqlite`)。
     *   提供对数据库实例的全局访问点。
     *   确保数据库目录和文件存在。
-    *   在特定认证模式下（如 `LocalNoPassword`），确保默认用户记录存在于数据库中。
+    *   在特定认证模式下（如 `SingleUser`），确保默认用户记录存在于数据库中。
     *   （未来）处理数据库迁移。
 *   **关键公共方法/接口**：
-    *   `static async initialize(currentUserMode: 'LocalNoPassword' | 'LocalWithPassword' | 'MultiUserShared'): Promise<void>`：异步初始化数据库服务。它会确保数据目录存在，创建 SQLite 数据库实例，配置 Drizzle ORM，并根据 `currentUserMode` 确保默认用户存在。此方法应在应用启动时调用。
+    *   `static async initialize(currentUserMode: 'SingleUser' | 'MultiUser'): Promise<void>`：异步初始化数据库服务。它会确保数据目录存在，创建 SQLite 数据库实例，配置 Drizzle ORM，并根据 `currentUserMode` 确保默认用户存在。此方法应在应用启动时调用。
     *   `static getDb(): BunSQLiteDatabase<typeof schema>`：返回已初始化的 Drizzle ORM 数据库实例 (`BunSQLiteDatabase`)，用于执行数据库查询和操作。如果数据库未初始化，则抛出错误。
 *   **依赖关系**：
     *   `drizzle-orm/bun-sqlite`：Drizzle ORM 库，用于与 SQLite 交互。

@@ -51,11 +51,4 @@ export const authRoutes = new Elysia({ prefix: '/api/auth', name: 'auth-routes',
 // .post('/logout', async ({ cookie, store }) => { /* ... */ }, {
 //   detail: { tags: ['Authentication'], summary: 'User Logout (Multi-User Mode)' }
 // })
-// .post('/verify-global-password', async ({ body, cookie }) => { /* ... */ }, {
-//   body: t.Object({ password: t.String() }),
-//   detail: { tags: ['Authentication'], summary: 'Verify Global Access Password (LocalWithPassword Mode)' }
-// })
-// .post('/setup-global-password', async ({ body }) => { /* ... */ }, {
-//   body: t.Object({ password: t.String() }),
-//   detail: { tags: ['Authentication'], summary: 'Setup Initial Global Access Password (LocalWithPassword Mode)' }
 // });

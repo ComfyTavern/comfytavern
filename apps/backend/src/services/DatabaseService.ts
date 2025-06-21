@@ -35,7 +35,7 @@ async function ensureDbDirectoryExists(): Promise<void> {
 
 export class DatabaseService {
   static async initialize(
-    currentUserMode: 'LocalNoPassword' | 'LocalWithPassword' | 'MultiUserShared'
+    currentUserMode: 'SingleUser' | 'MultiUser'
   ): Promise<void> {
     if (dbInstance) {
       console.warn('[DatabaseService] Database already initialized.');
@@ -62,7 +62,7 @@ export class DatabaseService {
     console.log('[DatabaseService] Migrations step skipped for now.');
 
 
-    if (currentUserMode === 'LocalNoPassword' || currentUserMode === 'LocalWithPassword') {
+    if (currentUserMode === 'SingleUser') {
       await this.ensureDefaultUserExists();
     }
 
@@ -87,7 +87,7 @@ export class DatabaseService {
           uid: USERS_UID_DEFAULT,
           username: USERNAME_DEFAULT,
           passwordHash: null, // 在单用户模式下，密码哈希可以为NULL
-          isAdmin: false, // 单用户模式下，isAdmin 无实际意义
+          isAdmin: true, // 在单用户模式下，默认用户就是管理员
           createdAt: new Date().toISOString(),
         });
         console.log(`[DatabaseService] Default user ('${USERS_UID_DEFAULT}') created.`);

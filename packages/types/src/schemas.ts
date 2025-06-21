@@ -163,8 +163,9 @@ export interface ExternalCredentialMetadata {
  * 存储在数据库中的外部服务凭证结构 (内部使用)
  */
 export interface StoredExternalCredential extends ExternalCredentialMetadata {
-  userId: string; // 关联的用户ID ('default_user' 或多用户的 uid)
-  encryptedCredential: string; // 使用主加密密钥加密后的完整凭证内容
+  userId: string; // 关联的用户ID (统一为 uid)
+  storageMode: 'plaintext' | 'encrypted';
+  credentialValue: string;
 }
 
 export const CreateExternalCredentialPayloadSchema = z.object({
@@ -192,8 +193,8 @@ export interface ServiceApiKeyMetadata {
  * 存储在数据库中的服务 API 密钥结构 (内部使用)
  */
 export interface StoredServiceApiKey extends ServiceApiKeyMetadata {
-  userId: string; // 关联的用户ID ('default_user' 或多用户的 uid)
-  hashedKey: string; // 使用强哈希算法处理后的完整密钥
+  userId: string; // 关联的用户ID (统一为 uid)
+  hashedKey: string;
 }
 
 /**
@@ -209,7 +210,7 @@ export const CreateServiceApiKeyPayloadSchema = z.object({
 });
 export type CreateServiceApiKeyPayload = z.infer<typeof CreateServiceApiKeyPayloadSchema>;
 
-// --- 用户身份模型 ---
+// --- 统一的用户身份与上下文模型 (v4 核心简化) ---
 
 /**
  * 代表一个可以拥有两种密钥的用户身份的基础接口
@@ -221,64 +222,49 @@ export interface UserIdentityBase {
 }
 
 /**
- * 单用户模式下的默认用户身份信息
+ * 统一的用户身份模型 (v4 新增)
+ * 该模型同时适用于单用户模式下的“默认用户”和多用户模式下的注册用户。
  */
-export interface DefaultUserIdentity extends UserIdentityBase {
-  id: "default_user"; // 固定ID，用于在数据库中标识默认用户
-  username: string; // 例如 "本地用户" 或从配置中读取的名称
+export interface UserIdentity extends UserIdentityBase {
+  // 统一的用户标识符。
+  // - 在单用户模式下，其值为固定的 'default_user'。
+  // - 在多用户模式下，其值为用户的 UUID。
+  uid: string;
+  username: string;
+  isAdmin: boolean; // 在单用户模式下，此值无实际意义，可默认为 false。
+  createdAt: string;
 }
 
 /**
- * 多用户模式下已认证的用户身份信息
+ * 单用户模式上下文 (v4 新增, 统一了有无密码的场景)
  */
-export interface AuthenticatedMultiUserIdentity extends UserIdentityBase {
-  uid: string; // 用户的唯一ID (通常为 UUID)
-  username: string; // 用户名
-  isAdmin: boolean; // 是否为管理员
-  createdAt: string; // ISO 8601 创建时间戳
-}
-
-// --- 用户上下文模型 ---
-
-/**
- * 纯本地自用模式上下文 (无全局密码)
- */
-export interface LocalNoPasswordUserContext {
-  mode: "LocalNoPassword";
+export interface SingleUserContext {
+  mode: "SingleUser";
   multiUserMode: false;
-  accessPasswordRequired: false;
-  isAuthenticated: true; // 在此模式下，应用始终可用
-  currentUser: DefaultUserIdentity; // 当前用户为默认用户
+  accessPasswordRequired: boolean; // 标记是否配置了全局访问密码
+  isAuthenticated: boolean; // 标记浏览器会话是否已通过认证。在无密码时，恒为 true。
+  currentUser: UserIdentity | null; // 认证成功后为默认用户信息，否则为 null。
+  globalPasswordSetupRequired?: boolean; // (可选) 用于首次设置密码的引导
 }
 
 /**
- * 个人远程访问模式上下文 (有全局密码)
+ * 多用户共享模式上下文 (v4 调整)
  */
-export interface LocalWithPasswordUserContext {
-  mode: "LocalWithPassword";
-  multiUserMode: false;
-  accessPasswordRequired: true;
-  isAuthenticatedWithGlobalPassword: boolean; // 标记浏览器会话是否已通过全局密码验证
-  currentUser: DefaultUserIdentity | null; // 浏览器会话验证成功后为 DefaultUserIdentity。若通过服务 API Key 认证，则 currentUser 始终为 DefaultUserIdentity。
-}
-
-/**
- * 多用户共享模式上下文
- */
-export interface MultiUserSharedContext {
-  mode: "MultiUserShared";
+export interface MultiUserContext {
+  mode: "MultiUser";
   multiUserMode: true;
   isAuthenticated: boolean; // 标记用户是否已通过账户密码登录
-  currentUser: AuthenticatedMultiUserIdentity | null; // 登录后为该用户的详细信息
+  currentUser: UserIdentity | null; // 登录后为该用户的详细信息
+  adminRegistrationRequired?: boolean; // (可选) 用于首次注册管理员的引导
 }
 
 /**
- * 应用的统一用户上下文类型，由后端在每次请求时动态确定和填充
+ * 应用的统一用户上下文类型 (v4 简化)
+ * 由后端在每次请求时动态确定和填充。
  */
 export type UserContext =
-  | LocalNoPasswordUserContext
-  | LocalWithPasswordUserContext
-  | MultiUserSharedContext;
+  | SingleUserContext
+  | MultiUserContext;
 
 
 // --- LLM Adapter Schemas ---

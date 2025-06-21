@@ -8,7 +8,7 @@ import { DatabaseService, USERS_UID_DEFAULT } from '../services/DatabaseService'
 import * as schema from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { famService } from '../services/FileManagerService'; // 导入 FAMService
-import type { UserContext, DefaultUserIdentity } from '@comfytavern/types';
+import type { UserContext, UserIdentity } from '@comfytavern/types';
 import type { AuthContext } from '../middleware/authMiddleware';
 import type { Context as ElysiaContext } from 'elysia';
 
@@ -59,16 +59,14 @@ export const userProfileRoutes = new Elysia({ prefix: '/api/users/me' })
       }
       const { username: newUsername } = validationResult.data;
 
-      const typedUserContext = userContext as UserContext;
-
-      if (typedUserContext.mode !== 'LocalNoPassword' && typedUserContext.mode !== 'LocalWithPassword') {
+      if (userContext.mode !== 'SingleUser') {
         set.status = 403; // Forbidden
         return { error: '此操作仅在本地单用户模式下可用' };
       }
       
-      const currentUser = typedUserContext.currentUser as DefaultUserIdentity | null;
+      const currentUser = userContext.currentUser as UserIdentity | null;
 
-      if (!currentUser || currentUser.id !== USERS_UID_DEFAULT) {
+      if (!currentUser || currentUser.uid !== USERS_UID_DEFAULT) {
         set.status = 403; // Forbidden
         return { error: '无法修改非默认用户的用户名或用户身份不正确' };
       }
@@ -126,16 +124,7 @@ export const userProfileRoutes = new Elysia({ prefix: '/api/users/me' })
         return { error: '用户未认证' };
       }
 
-      const typedUserContext = userContext as UserContext;
-      let userUid: string | undefined;
-      const currentUser = typedUserContext.currentUser;
-      if (currentUser) {
-        if ('uid' in currentUser && typeof currentUser.uid === 'string') {
-          userUid = currentUser.uid;
-        } else if ('id' in currentUser && typeof currentUser.id === 'string') {
-          userUid = currentUser.id;
-        }
-      }
+      const userUid = userContext.currentUser?.uid;
 
       if (!userUid) {
         set.status = 403;

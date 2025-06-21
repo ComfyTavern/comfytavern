@@ -9,7 +9,7 @@ CREATE TABLE `activated_models` (
 	`default_channel_id` text,
 	`tags` text,
 	`tokenizer_id` text,
-	`created_at` text DEFAULT '2025-06-21T08:28:06.845Z' NOT NULL,
+	`created_at` text DEFAULT '2025-06-21T11:09:53.832Z' NOT NULL,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`uid`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint

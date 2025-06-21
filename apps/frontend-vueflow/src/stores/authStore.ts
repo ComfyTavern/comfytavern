@@ -38,20 +38,8 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     isAuthenticated(state): boolean {
       if (!state.userContext) return false;
-      // 根据不同模式判断认证状态
-      switch (state.userContext.mode) {
-        case 'LocalNoPassword':
-          return state.userContext.isAuthenticated; // 总是 true
-        case 'LocalWithPassword':
-          return state.userContext.isAuthenticatedWithGlobalPassword;
-        case 'MultiUserShared':
-          return state.userContext.isAuthenticated;
-        default:
-          // 此处理论上不可达，因为 UserContext 的所有已知模式都已处理。
-          // 如果 UserContext 联合类型未来添加新成员而未在此处更新，
-          // TypeScript 会在 state.userContext.mode 上给出类型错误。
-          return false;
-      }
+      // v4 简化：所有上下文类型都有一个 `isAuthenticated` 标志
+      return state.userContext.isAuthenticated;
     },
     currentUser(state) {
       return state.userContext?.currentUser || null;
@@ -137,11 +125,11 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async updateUsername(newUsername: string): Promise<{ success: boolean; message: string; username?: string }> {
-      if (!this.userContext || !this.currentUser || (this.currentMode !== 'LocalNoPassword' && this.currentMode !== 'LocalWithPassword')) {
+      if (!this.userContext || !this.currentUser || this.currentMode !== 'SingleUser') {
         console.warn('[AuthStore] updateUsername called in invalid state or mode.');
         return { success: false, message: '无法更新用户名：无效的状态或模式。' };
       }
-      // 理论上，在这些模式下，currentUser.id 总是 'default_user'
+      // 在 SingleUser 模式下, currentUser.uid 总是 'default_user'
       // 后端 API 会做最终校验
 
       try {

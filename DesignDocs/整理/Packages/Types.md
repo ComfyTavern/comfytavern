@@ -25,7 +25,7 @@
     *   `CreateServiceApiKeyPayloadSchema`: 创建 ComfyTavern 服务 API 密钥的负载。
     *   相关的接口如 `ExternalCredentialMetadata`, `StoredExternalCredential`, `ServiceApiKeyMetadata`, `StoredServiceApiKey`, `ServiceApiKeyWithSecret` 定义了凭证和密钥的不同表示形式。
     *   `UserIdentityBase`, `DefaultUserIdentity`, `AuthenticatedMultiUserIdentity` 定义了不同用户身份模型。
-    *   `UserContext` (及其组成部分 `LocalNoPasswordUserContext`, `LocalWithPasswordUserContext`, `MultiUserSharedContext`) 定义了应用的用户上下文状态。
+    *   `UserContext` (及其组成部分 `SingleUserContext`, `MultiUserContext`) 定义了应用的用户上下文状态。
 
 这些 Zod schemas 不仅用于验证从外部（如 API 请求、文件加载）接收的数据，还在内部数据转换和状态管理中扮演重要角色。
 

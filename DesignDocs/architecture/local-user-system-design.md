@@ -1,28 +1,25 @@
-# 本地用户系统设计方案 - v3 (统一密钥管理)
+# 本地用户系统设计方案 - v4 (简化与统一)
 
 ## 1. 目标与核心场景
 
-本设计旨在为应用提供灵活的本地用户管理机制，并统一管理两种核心类型的密钥：用于程序化访问本应用的 **“服务 API 密钥 (Service API Keys)”** 和用于本应用访问第三方服务的 **“外部服务凭证 (External Service Credentials)”**。目标是适应不同的部署、使用场景和未来的扩展需求，同时确保系统的安全性、便捷性和可维护性。
+本设计旨在为应用提供灵活的本地用户管理机制，并统一管理两种核心类型的密钥：用于程序化访问本应用的 **“服务 API 密钥 (Service API Keys)”** 和用于本应用访问第三方服务的 **“外部服务凭证 (External Service Credentials)”**。**v4 版本核心目标是简化 v3 中过于复杂的单用户模式，统一用户身份模型，降低逻辑复杂性，提升系统的一致性和可维护性。**
 
 ### 1.1. 核心用户操作模式
 
-应用支持以下三种核心用户操作模式，以满足不同用户的需求：
+应用支持以下两种核心用户操作模式，以满足不同用户的需求：
 
-1.  **纯本地自用模式 (默认)**:
+1.  **单用户模式 (Single-User Mode)**:
+    - **场景**: 应用由单个用户独占使用，无论是在本地设备上还是通过网络远程访问。
+    - **特点**:
+        - **统一身份**: 所有数据（工作流、项目、配置、密钥等）都归属于一个固定的“默认用户” (`uid: 'default_user'`)。
+        - **可选的全局密码**:
+            - **无密码访问 (默认)**: 开箱即用，无需任何登录或密码输入，追求极致便捷。
+            - **带密码访问**: 用户可以设置一个全局访问密码。当通过浏览器访问时，需要输入此密码才能进入应用，为远程访问提供基础安全保障。
+    - **配置**: 通过 `config.json` 设置 `userManagement.multiUserMode: false`。是否需要密码由 `userManagement.accessPasswordHash` 字段决定。
 
-    - **场景**: 用户在单台设备上本地运行和使用应用，无需网络共享，追求极致的便捷性。这是应用的开箱即用体验。
-    - **特点**: 无需任何用户创建、登录或密码输入，应用启动即用。所有数据（包括工作流、项目、配置以及两种类型的密钥）均归属于一个预定义的、全局共享的“默认用户”上下文。
-    - **配置**: 通过 `config.json` 设置 `userManagement.multiUserMode: false` 且不设置 `userManagement.accessPasswordHash`。
-
-2.  **个人远程访问模式 (自用模式 + 全局访问密码)**:
-
-    - **场景**: 用户将部署在本地的应用通过网络（例如内网穿透、端口转发）暴露，以便个人从外部设备访问。此时需要在便捷性的基础上增加一层基础的安全防护。
-    - **特点**: 应用的数据上下文仍为单用户（默认用户），但所有通过浏览器进行的访问都需要输入一个预设的全局访问密码。通过服务 API 密钥的程序化访问不受此浏览器会话锁的直接影响。
-    - **配置**: 通过 `config.json` 设置 `userManagement.multiUserMode: false` 并配置 `userManagement.accessPasswordHash`。
-
-3.  **多用户共享模式 (独立账户认证)**:
-    - **场景**: 应用部署在一台主机上（例如局域网服务器或小型团队服务器），允许多个用户通过各自的设备独立访问和使用。每个用户拥有自己的账户、密码、配置、数据以及独立的密钥管理。
-    - **特点**: 强制用户注册和登录。提供用户级别的数据隔离。系统会包含初步的管理员角色，用于用户管理等。
+2.  **多用户共享模式 (Multi-User Mode)**:
+    - **场景**: 应用部署在共享主机上，允许多个用户通过各自的独立账户访问和使用。
+    - **特点**: 强制用户注册和登录。每个用户拥有自己的数据和密钥，实现数据隔离。
     - **配置**: 通过 `config.json` 设置 `userManagement.multiUserMode: true`。
 
 ### 1.2. 统一密钥管理目标
@@ -63,10 +60,8 @@
   1.  应用启动时读取 `config.json`。
   2.  检查 `userManagement.multiUserMode` 字段：
       - 如果 `multiUserMode` 为 `true`，则激活 **“多用户共享模式”**。
-      - 如果 `multiUserMode` 为 `false` (或配置文件/该字段缺失，均视为 `false`)，则进一步检查：
-        - `userManagement.accessPasswordHash` 字段是否已配置且非空。
-        - 如果 `accessPasswordHash` 已配置，则激活 **“个人远程访问模式”**。
-        - 如果 `accessPasswordHash` 未配置或为空，则激活 **“纯本地自用模式”** (此为应用的最终默认行为)。
+      - 如果 `multiUserMode` 为 `false` (或配置文件/该字段缺失，均视为 `false`)，则激活 **“单用户模式”**。
+        - 在此模式下，是否需要全局密码，由 `userManagement.accessPasswordHash` 字段是否已配置且非空来决定。这两种情况共享同一个用户上下文，仅认证行为不同。
 
 - **`config.json` 示例**:
   ```json
@@ -84,65 +79,46 @@
 
 ### 2.2. 用户上下文与身份 (`UserContext`)
 
-为了在不同模式下统一处理用户信息、认证状态以及两种密钥的元数据，我们定义了以下核心 TypeScript 类型结构（通常位于 `packages/types/src/schemas.ts` 或类似共享模块中）。
+为了在不同模式下统一处理用户信息、认证状态以及两种密钥的元数据，我们定义了以下核心 TypeScript 类型结构（通常位于 `packages/types/src/schemas.ts` 或类似共享模块中）。v4 版本对此进行了大幅简化。
 
 ```typescript
-// --- 外部服务凭证模型 ---
+// --- 外部服务凭证模型 (与 v3 保持一致) ---
 
-/**
- * 外部服务凭证的元数据信息 (安全展示给用户，不包含完整凭证)
- */
 export interface ExternalCredentialMetadata {
-  id: string; // 凭证在数据库中的唯一ID
-  serviceName: string; // 凭证对应的服务标识符, e.g., "openai", "anthropic_claude"
-  displayName?: string; // 用户为该凭证设置的可选显示名称/备注
-  displayHint?: {
-    // 用于UI安全展示凭证的部分信息
-    prefix: string; // 例如 "sk-..."
-    suffix: string; // 例如 "...AbCd"
-  };
-  createdAt: string; // ISO 8601 创建时间戳
+  id: string;
+  serviceName: string;
+  displayName?: string;
+  displayHint?: { prefix: string; suffix: string; };
+  createdAt: string;
 }
 
-/**
- * 存储在数据库中的外部服务凭证结构 (内部使用)
- */
 export interface StoredExternalCredential extends ExternalCredentialMetadata {
-  userId: string; // 关联的用户ID ('default_user' 或多用户的 uid)
-  storageMode: 'plaintext' | 'encrypted'; // 凭证的存储模式
-  credentialValue: string; // 凭证内容（根据 storageMode，可能是明文或加密后的密文）
+  userId: string; // 关联的用户ID (统一为 uid)
+  storageMode: 'plaintext' | 'encrypted';
+  credentialValue: string;
 }
 
-// --- 服务 API 密钥模型 ---
+// --- 服务 API 密钥模型 (与 v3 保持一致) ---
 
-/**
- * 服务 API 密钥的元数据信息 (安全展示给用户，不包含完整密钥)
- */
 export interface ServiceApiKeyMetadata {
-  id: string; // 密钥在数据库中的唯一ID
-  name?: string; // 用户为密钥设置的可选显示名称/备注
-  prefix: string; // 密钥的前几位字符，用于识别，例如 "ctsk-xxxx" (ComfyTavern Service Key)
-  scopes?: string[]; // (预留) 权限范围，例如 ["workflow:execute:*", "project:read:project_id_123"]
-  createdAt: string; // ISO 8601 创建时间戳
-  lastUsedAt?: string; // ISO 8601 最后成功使用时间戳 (可选)
+  id: string;
+  name?: string;
+  prefix: string;
+  scopes?: string[];
+  createdAt: string;
+  lastUsedAt?: string;
 }
 
-/**
- * 存储在数据库中的服务 API 密钥结构 (内部使用)
- */
 export interface StoredServiceApiKey extends ServiceApiKeyMetadata {
-  userId: string; // 关联的用户ID ('default_user' 或多用户的 uid)
-  hashedKey: string; // 使用强哈希算法处理后的完整密钥
+  userId: string; // 关联的用户ID (统一为 uid)
+  hashedKey: string;
 }
 
-/**
- * 创建服务 API 密钥时，一次性返回给用户的包含完整密钥的结构
- */
 export interface ServiceApiKeyWithSecret extends ServiceApiKeyMetadata {
-  secret: string; // 完整、明文的 API 密钥，仅在生成时一次性显示
+  secret: string;
 }
 
-// --- 用户身份模型 ---
+// --- 统一的用户身份与上下文模型 (v4 核心简化) ---
 
 /**
  * 代表一个可以拥有两种密钥的用户身份的基础接口
@@ -153,68 +129,53 @@ export interface UserIdentityBase {
 }
 
 /**
- * 单用户模式下的默认用户身份信息
+ * 统一的用户身份模型 (v4 新增)
+ * 该模型同时适用于单用户模式下的“默认用户”和多用户模式下的注册用户。
  */
-export interface DefaultUserIdentity extends UserIdentityBase {
-  id: "default_user"; // 固定ID，用于在数据库中标识默认用户
-  username: string; // 例如 "本地用户" 或从配置中读取的名称
+export interface UserIdentity extends UserIdentityBase {
+  // 统一的用户标识符。
+  // - 在单用户模式下，其值为固定的 'default_user'。
+  // - 在多用户模式下，其值为用户的 UUID。
+  uid: string;
+  username: string;
+  isAdmin: boolean; // 在单用户模式下，此值无实际意义，可默认为 false。
+  createdAt: string;
 }
 
 /**
- * 多用户模式下已认证的用户身份信息
+ * 单用户模式上下文 (v4 新增, 统一了有无密码的场景)
  */
-export interface AuthenticatedMultiUserIdentity extends UserIdentityBase {
-  uid: string; // 用户的唯一ID (通常为 UUID)
-  username: string; // 用户名
-  isAdmin: boolean; // 是否为管理员
-  createdAt: string; // ISO 8601 创建时间戳
-}
-
-// --- 用户上下文模型 ---
-
-/**
- * 纯本地自用模式上下文 (无全局密码)
- */
-export interface LocalNoPasswordUserContext {
-  mode: "LocalNoPassword";
+export interface SingleUserContext {
+  mode: "SingleUser";
   multiUserMode: false;
-  accessPasswordRequired: false;
-  isAuthenticated: true; // 在此模式下，应用始终可用
-  currentUser: DefaultUserIdentity; // 当前用户为默认用户
+  accessPasswordRequired: boolean; // 标记是否配置了全局访问密码
+  isAuthenticated: boolean; // 标记浏览器会话是否已通过认证。在无密码时，恒为 true。
+  currentUser: UserIdentity | null; // 认证成功后为默认用户信息，否则为 null。
+  globalPasswordSetupRequired?: boolean; // (可选) 用于首次设置密码的引导
 }
 
 /**
- * 个人远程访问模式上下文 (有全局密码)
+ * 多用户共享模式上下文 (v4 调整)
  */
-export interface LocalWithPasswordUserContext {
-  mode: "LocalWithPassword";
-  multiUserMode: false;
-  accessPasswordRequired: true;
-  isAuthenticatedWithGlobalPassword: boolean; // 标记浏览器会话是否已通过全局密码验证
-  currentUser: DefaultUserIdentity | null; // 浏览器会话验证成功后为 DefaultUserIdentity。若通过服务 API Key 认证，则 currentUser 始终为 DefaultUserIdentity。
-}
-
-/**
- * 多用户共享模式上下文
- */
-export interface MultiUserSharedContext {
-  mode: "MultiUserShared";
+export interface MultiUserContext {
+  mode: "MultiUser";
   multiUserMode: true;
   isAuthenticated: boolean; // 标记用户是否已通过账户密码登录
-  currentUser: AuthenticatedMultiUserIdentity | null; // 登录后为该用户的详细信息
+  currentUser: UserIdentity | null; // 登录后为该用户的详细信息
+  adminRegistrationRequired?: boolean; // (可选) 用于首次注册管理员的引导
 }
 
 /**
- * 应用的统一用户上下文类型，由后端在每次请求时动态确定和填充
+ * 应用的统一用户上下文类型 (v4 简化)
+ * 由后端在每次请求时动态确定和填充。
  */
 export type UserContext =
-  | LocalNoPasswordUserContext
-  | LocalWithPasswordUserContext
-  | MultiUserSharedContext;
+  | SingleUserContext
+  | MultiUserContext;
 ```
 
-**关于 `DefaultUserIdentity` 的说明**:
-在“纯本地自用模式”和“个人远程访问模式”下，`DefaultUserIdentity` 代表同一个逻辑上的“默认用户”实体。这个默认用户拥有其专属的服务 API 密钥和外部服务凭证，这些信息将存储在数据库中，并与固定的用户标识符 `'default_user'` 相关联。“个人远程访问模式”仅仅是在“纯本地自用模式”的基础上，为**浏览器会话**增加了一道全局访问密码的门槛。通过服务 API 密钥进行的程序化访问，其认证逻辑独立于此浏览器会话锁（详见 2.8 节认证中间件逻辑）。
+**关于 `UserIdentity` 的说明**:
+v4 方案引入了统一的 `UserIdentity` 模型。它消除了 v3 中 `DefaultUserIdentity` 和 `AuthenticatedMultiUserIdentity` 的区别。现在，所有用户，无论是单用户模式下的“默认用户”还是多用户模式下的注册用户，都由 `UserIdentity` 表示。它们的区别仅在于 `uid` 字段的值：默认用户为固定的 `'default_user'`，而注册用户为唯一的 UUID。这种设计使得类型定义与数据库的 `users` 表结构 (`uid` 作为主键) 完全对齐，极大地简化了代码逻辑。
 
 ### 2.3. 数据存储 (SQLite)
 
@@ -265,9 +226,10 @@ CREATE TABLE external_credentials (
 
 **数据存储说明**:
 
-- **单用户模式下的 `users` 表记录**:
-  - 为了维护 `service_api_keys` 和 `external_credentials` 表中 `user_id` 字段的外键约束，即使在单用户模式下，也应在应用首次初始化时，在 `users` 表中创建一条记录，其 `uid` 为 `'default_user'`。
-  - 这条记录的 `username` 可以是 "本地用户" 或从 `config.json` 中读取（例如，可以默认为 `'default_user'`），`password_hash` 可以为 `NULL` 或一个明确的不可登录标记（因为单用户模式不通过此表进行密码认证），`is_admin` 在此模式下无实际意义，可设为 `false`，`created_at` 设为当前时间。
+- **`users` 表的统一设计**:
+  - `users` 表的设计对两种模式是统一的。`uid` 是主键。
+  - **单用户模式**: 该表中有且仅有一条记录，其 `uid` 固定为 `'default_user'`。这条记录的存在是为了维护外键约束。其 `password_hash` 为 `NULL`，`is_admin` 为 `false`。
+  - **多用户模式**: 该表存储所有注册用户的记录，`uid` 为各自的 UUID。
 - **数据目录**: 用户相关的文件型数据（如工作流定义、项目文件等）在单用户模式下存储于基于固定用户ID `'default_user'` 的路径下 (例如 `userData/default_user/`)；在多用户模式下存储于 `userData/<user_uuid>/`。数据库文件 (如 `app.sqlite`) 通常建议存放在 `data/` 目录或项目根目录下的一个专门的 `database` 子目录下。
 - **事务与并发**: 使用 SQLite 和 ORM 可以有效处理事务和并发控制，确保数据操作的原子性和一致性，这是相比 JSON 文件存储的巨大优势。
 
@@ -421,65 +383,37 @@ CREATE TABLE external_credentials (
       - 可以提供 API 允许用户更新某个已存储凭证的明文内容（例如，当用户轮换了其 OpenAI Key 时）或其显示名称。
       - 更新流程类似于添加：接收新的明文凭证，加密后替换数据库中旧的 `encryptedCredential`，并更新相关元数据（如 `displayHint`）。
 
-### 2.7. 用户模式详解 (基于 SQLite)
+### 2.7. 用户模式详解 (基于 SQLite, v4 简化版)
 
-#### 2.7.1. 纯本地自用模式 (Mode 1)
+#### 2.7.1. 单用户模式 (Single-User Mode)
 
-- **激活条件**: `config.json` 中 `userManagement.multiUserMode: false` 且 `userManagement.accessPasswordHash` 未设置或为空。
-- **用户上下文**: `LocalNoPasswordUserContext`。
+- **激活条件**: `config.json` 中 `userManagement.multiUserMode: false`。
+- **用户上下文**: `SingleUserContext`。
 - **核心行为**:
-  - **无浏览器认证**: 应用启动时不显示任何登录或密码输入界面。
-  - **默认用户身份**: 所有操作都在一个预定义的“默认用户”上下文中执行。其身份信息为 `DefaultUserIdentity` (id: `'default_user'`)。
-    - 应用初始化时，应确保数据库 `users` 表中存在 `uid='default_user'` 的记录。
-  - **数据存储**:
-    - 用户账户信息（占位记录）、服务 API 密钥、外部服务凭证均存储在 SQLite 数据库中，并关联到 `user_id='default_user'`。
-    - 用户的文件型数据（工作流、项目等）存储在基于 `user_id='default_user'` 的文件系统路径下 (例如 `userData/default_user/`)。
+  - **统一身份**: 所有操作都在“默认用户” (`uid: 'default_user'`) 的上下文中执行。应用初始化时，应确保数据库 `users` 表中存在 `uid='default_user'` 的记录。
+  - **数据存储**: 所有密钥和文件数据都与 `uid='default_user'` 关联。
+  - **可选的全局密码认证**:
+    - **无密码 (默认)**: 如果 `accessPasswordHash` 未设置，应用直接可用，无需认证。`SingleUserContext` 中 `accessPasswordRequired: false`, `isAuthenticated: true`。
+    - **带密码**: 如果 `accessPasswordHash` 已设置，用户通过浏览器访问时必须输入全局密码。认证成功后，`SingleUserContext` 中 `isAuthenticated: true`。
   - **API 影响**:
-    - 用户账户管理相关的 API (如用户注册 `/api/auth/register`、登录 `/api/auth/login`) 在此模式下通常被禁用或返回特定状态，因为不存在多账户概念。
-    - `/api/auth/current` 将始终返回 `LocalNoPasswordUserContext`，其 `currentUser` 属性为 `DefaultUserIdentity`，并包含该默认用户的所有服务 API 密钥元数据和外部服务凭证元数据。
-  - **密钥管理**: 默认用户可以通过相应的 API (见 4.2, 4.3 节) 管理其名下的服务 API 密钥和外部服务凭证。
+    - 多用户相关的 API (注册、登录等) 被禁用。
+    - `/api/auth/current` 返回 `SingleUserContext`，其状态根据全局密码的配置和验证情况动态填充。
+  - **密钥管理**: 默认用户在认证后（无密码时自动认证，有密码时输入密码后认证）可管理其名下的所有密钥。
   - **管理员角色**: 不适用。
 
-#### 2.7.2. 个人远程访问模式 (Mode 2: 自用模式 + 全局访问密码)
-
-- **激活条件**: `config.json` 中 `userManagement.multiUserMode: false` 且 `userManagement.accessPasswordHash` 已设置。
-- **用户上下文**: `LocalWithPasswordUserContext`。
-- **核心行为**:
-  - **全局密码认证 (浏览器会话)**:
-    - 应用启动或用户首次通过浏览器访问时，必须输入预设的全局访问密码。
-    - 后端通过 `POST /api/auth/verify-global-password` 接口验证密码哈希。
-    - 验证成功后，可建立一个简单的会话（例如，通过设置一个特定的 `HttpOnly` Cookie，标记该浏览器会话已通过全局密码验证）。
-  - **默认用户身份**: 全局密码验证成功后，所有操作仍在“默认用户” (`DefaultUserIdentity`, id: `'default_user'`) 上下文中执行。
-  - **数据存储**: 与纯本地自用模式类似，用户账户（占位）、密钥信息存数据库，文件数据存文件系统。
-  - **API 影响**:
-    - `/api/auth/current`:
-      - 若全局密码未验证，返回 `LocalWithPasswordUserContext` 且 `isAuthenticatedWithGlobalPassword: false`, `currentUser: null`。
-      - 若全局密码已验证，返回 `LocalWithPasswordUserContext` 且 `isAuthenticatedWithGlobalPassword: true`, `currentUser` 为 `DefaultUserIdentity` (包含密钥元数据)。
-      - 若 `accessPasswordHash` 在 `config.json` 中未设置但模式判断逻辑错误地进入此分支（理论上不应发生，但作为防御性设计），应引导用户设置全局密码（参考 3.1.3.d 节）。
-    - 其他用户账户管理 API (注册、登录) 禁用。
-  - **密钥管理**: 默认用户在通过全局密码验证后，可以通过 API 管理其密钥。通过服务 API 密钥的程序化访问，则直接进行密钥认证，无需全局密码。
-  - **管理员角色**: 不适用。
-
-#### 2.7.3. 多用户共享模式 (Mode 3: 独立账户认证)
+#### 2.7.2. 多用户共享模式 (Multi-User Mode)
 
 - **激活条件**: `config.json` 中 `userManagement.multiUserMode: true`。
-- **用户上下文**: `MultiUserSharedContext`。
+- **用户上下文**: `MultiUserContext`。
 - **核心行为**:
-  - **强制用户账户认证**: 用户必须通过用户名和密码进行注册和登录。
-  - **独立用户数据与密钥**: 每个注册用户在数据库 `users` 表中有唯一记录 (`uid`)。其服务 API 密钥和外部服务凭证在相应表中也通过此 `uid` 进行关联和隔离。用户的文件型数据存储在其专属目录 `userData/<user_uuid>/`。
-  - **会话管理**:
-    - 推荐使用成熟的库如 `Lucia Auth` (配合 `@lucia-auth/adapter-drizzle` 等) 或 `@elysiajs/jwt` 来管理用户会话。
-    - 登录成功后，后端生成安全的会话凭证 (如 Session ID 或 JWT)，通过 `HttpOnly` Cookie 传递给客户端。
-  - **管理员角色**:
-    - **识别**: 第一个通过系统注册的用户默认为管理员（在 `users` 表中标记 `isAdmin: true`）。后续可由管理员通过特定 API 指定其他用户为管理员。
-    - **权限**: 管理员拥有额外权限，如查看所有用户列表、创建/修改/删除用户账户、访问和修改全局应用配置等（详见 4.4 节）。
+  - **强制用户账户认证**: 用户必须通过用户名和密码注册、登录。
+  - **独立用户数据与密钥**: 每个用户拥有独立的 `uid` (UUID)，所有数据和密钥均与此 `uid` 关联，实现完全隔离。
+  - **会话管理**: 推荐使用 `Lucia Auth` 等库管理用户会话。
+  - **管理员角色**: 第一个注册的用户默认为管理员 (`isAdmin: true`)，拥有额外管理权限。
   - **API 影响**:
     - 用户账户管理 API (`/api/auth/register`, `/api/auth/login`, `/api/auth/logout`) 正常工作。
-    - `/api/auth/current`:
-      - 若用户未登录，返回 `MultiUserSharedContext` 且 `isAuthenticated: false`, `currentUser: null`。
-      - 若用户已登录，返回 `MultiUserSharedContext` 且 `isAuthenticated: true`, `currentUser` 为该用户的 `AuthenticatedMultiUserIdentity` (包含其密钥元数据)。
-      - 若数据库中无任何用户（首次启动多用户模式），应引导注册首个管理员账户（参考 3.1.4.b.i 节）。
-  - **密钥管理**: 每个注册用户在登录后，可以通过 API 管理其自身名下的服务 API 密钥和外部服务凭证。
+    - `/api/auth/current` 返回 `MultiUserContext`，其 `isAuthenticated` 和 `currentUser` (`UserIdentity`) 根据登录状态填充。
+  - **密钥管理**: 每个用户登录后，只能管理自己名下的密钥。
 
 ### 2.8. 认证中间件逻辑与优先级
 
@@ -503,22 +437,17 @@ CREATE TABLE external_credentials (
 2.  **若无有效服务 API 密钥，则检查会话凭证 (Session Cookie)**:
 
     - 根据 `config.json` 中的 `userManagement.multiUserMode` 判断当前运行模式：
-      - **纯本地自用模式 (Mode 1)**:
-        - 无需任何 Cookie 验证。
-        - 直接从数据库加载 `user_id='default_user'` 的信息构建 `DefaultUserIdentity`。
-        - 认证（或视为自动认证）成功。在请求上下文中填充 `LocalNoPasswordUserContext`。
-      - **个人远程访问模式 (Mode 2 - 全局密码)**:
-        - 检查是否存在标记“全局密码已验证通过”的有效会话 Cookie。
-        - 如果 Cookie 有效：
-          - 从数据库加载 `user_id='default_user'` 的信息构建 `DefaultUserIdentity`。
-          - 认证成功。在请求上下文中填充 `LocalWithPasswordUserContext`，并设置 `isAuthenticatedWithGlobalPassword: true`。
-        - 如果 Cookie 无效或缺失，认证失败。通常对于需要认证的路由，应返回 401 未授权或重定向到全局密码输入页。对于 `/api/auth/current` 这类接口，则填充 `LocalWithPasswordUserContext` 并设置 `isAuthenticatedWithGlobalPassword: false`, `currentUser: null`。
-      - **多用户共享模式 (Mode 3 - 用户登录)**:
-        - 检查是否存在有效的用户登录会话 Cookie (例如由 Lucia Auth 管理的 Session ID，或包含 JWT 的 Cookie)。
-        - 如果会话 Cookie 有效，并通过会话管理器（如 Lucia Auth）成功解析出用户身份（通常是 `uid`）：
-          - 根据 `uid` 从数据库 `users` 表加载用户信息，构建 `AuthenticatedMultiUserIdentity`。
-          - 认证成功。在请求上下文中填充 `MultiUserSharedContext`，并设置 `isAuthenticated: true`。
-        - 如果会话 Cookie 无效、缺失或无法解析出有效用户身份，认证失败。对于需要认证的路由，返回 401 或重定向到登录页。对于 `/api/auth/current`，则填充 `MultiUserSharedContext` 并设置 `isAuthenticated: false`, `currentUser: null`。
+      - **单用户模式 (Single-User Mode)**:
+        - **无密码**: 无需 Cookie 验证。直接加载 `uid='default_user'` 的信息构建 `UserIdentity`。认证成功，填充 `SingleUserContext` (`isAuthenticated: true`)。
+        - **带密码**: 检查是否存在标记“全局密码已验证”的有效会话 Cookie。
+          - 若 Cookie 有效，则加载默认用户信息，认证成功，填充 `SingleUserContext` (`isAuthenticated: true`)。
+          - 若 Cookie 无效，则认证失败。对于 `/api/auth/current`，填充 `SingleUserContext` (`isAuthenticated: false`, `currentUser: null`)。
+      - **多用户共享模式 (Multi-User Mode)**:
+        - 检查是否存在有效的用户登录会话 Cookie (如 Lucia Auth 的 Session ID)。
+        - 如果会话有效并能解析出 `uid`：
+          - 根据 `uid` 从数据库加载用户信息，构建 `UserIdentity`。
+          - 认证成功。在请求上下文中填充 `MultiUserContext` (`isAuthenticated: true`)。
+        - 如果会话无效，认证失败。对于 `/api/auth/current`，则填充 `MultiUserContext` (`isAuthenticated: false`, `currentUser: null`)。
 
 3.  **认证失败**: 如果以上所有检查均未成功认证用户，则对于需要认证的受保护路由，应返回 `401 Unauthorized`。
 
@@ -546,7 +475,7 @@ CREATE TABLE external_credentials (
     _ **数据库初始化**: 同纯本地自用模式，确保 `default_user` 记录存在。
     b. **提示输入全局密码**: 应用前端应显示一个界面，提示用户输入预设的全局访问密码。
     c. **验证密码**: 用户提交密码后，通过 `POST /api/auth/verify-global-password` API 进行验证。
-    _ **成功**: 后端设置会话 Cookie，前端导航至应用主界面。用户上下文为 `LocalWithPasswordUserContext` (已认证)。
+    _ **成功**: 后端设置会话 Cookie，前端导航至应用主界面。用户上下文为 `SingleUserContext` (已认证)。
     _ **失败**: 停留在密码输入界面，并提示错误。
     d. **首次设置全局密码 (重要)**: 如果应用检测到 `userManagement.multiUserMode: false` 但 `userManagement.accessPasswordHash` **为空或未设置** (通常在首次配置为远程访问时发生)：
     _ 当应用首次被浏览器访问时，**不应直接进入主界面或要求输入密码**。
@@ -579,7 +508,7 @@ CREATE TABLE external_credentials (
 3.  **个人远程访问模式 (Mode 2 - 带全局密码)**:
     a. **提示输入全局密码**: 同 3.1.3.b。
     b. **验证密码**: 同 3.1.3.c。验证通过后，加载与 `default_user` 关联的密钥等数据。
-    c. **进入应用**: 成功后进入应用主界面。用户上下文为 `LocalWithPasswordUserContext` (已认证)。
+    c. **进入应用**: 成功后进入应用主界面。用户上下文为 `SingleUserContext` (已认证)。
 
 4.  **多用户共享模式 (Mode 3)**:
     a. **显示登录页面**: 应用前端显示登录页面，可包含“注册新账户”的入口。
@@ -695,46 +624,27 @@ CREATE TABLE external_credentials (
   - **目的**: 验证全局访问密码。
   - **请求体**: `{ "password": "用户输入的全局密码" }`
   - **响应**:
-    - `200 OK`: 密码验证成功。后端应设置一个简单的 `HttpOnly` 会话 Cookie，标记该浏览器会话已通过全局密码验证。响应体应包含完整的 `LocalWithPasswordUserContext` (其中 `isAuthenticatedWithGlobalPassword: true`, `currentUser` 为 `DefaultUserIdentity` 并包含密钥元数据)。
+    - `200 OK`: 密码验证成功。后端应设置一个简单的 `HttpOnly` 会话 Cookie，标记该浏览器会话已通过全局密码验证。响应体应包含完整的 `SingleUserContext` (其中 `isAuthenticated: true`, `currentUser` 为 `UserIdentity` 并包含密钥元数据)。
     - `401 Unauthorized`: 密码错误。
     - `429 Too Many Requests`: 达到尝试次数限制。
 - **`POST /api/auth/setup-global-password`** (仅首次配置个人远程访问模式时)
   - **目的**: 设置初始的全局访问密码。
   - **请求体**: `{ "password": "用户设置的新全局密码" }`
   - **响应**:
-    - `200 OK`: 密码设置成功并已保存到 `config.json`。响应体可包含 `LocalWithPasswordUserContext` (已认证状态)。
+    - `200 OK`: 密码设置成功并已保存到 `config.json`。响应体可包含 `SingleUserContext` (已认证状态)。
     - `400 Bad Request`: 密码不符合要求，或 `config.json` 写入失败。
     - `403 Forbidden`: 如果全局密码已设置，则不允许再次调用此接口。
 - **`GET /api/auth/current`** (所有模式)
   - **目的**: 获取当前应用的用户上下文状态。此接口对于前端根据不同模式和认证状态动态调整 UI 至关重要。
   - **请求体**: (空)
   - **响应**: `200 OK` - 响应体为一个准确描述当前应用状态和用户认证情况的 `UserContext` 结构。
-    - **纯本地自用模式**: 返回 `LocalNoPasswordUserContext`，其中 `isAuthenticated: true`，`currentUser` 为 `DefaultUserIdentity` (包含其名下的服务 API 密钥元数据和外部服务凭证元数据)。
-    - **个人远程访问模式 (需要设置全局密码)**: 如果 `config.json` 中 `accessPasswordHash` 未设置，应返回一个特殊的 `LocalWithPasswordUserContext` 变体，例如：
-      ```json
-      {
-        "mode": "LocalWithPassword",
-        "multiUserMode": false,
-        "accessPasswordRequired": true,
-        "isAuthenticatedWithGlobalPassword": false,
-        "currentUser": null,
-        "globalPasswordSetupRequired": true // 特殊标志，指示前端引导用户设置全局密码
-      }
-      ```
-    - **个人远程访问模式 (需要输入全局密码)**: 如果 `accessPasswordHash` 已设置但当前浏览器会话未通过验证（无有效会话 Cookie），返回 `LocalWithPasswordUserContext`，其中 `isAuthenticatedWithGlobalPassword: false`, `currentUser: null`。
-    - **个人远程访问模式 (已通过全局密码验证)**: 返回 `LocalWithPasswordUserContext`，其中 `isAuthenticatedWithGlobalPassword: true`, `currentUser` 为 `DefaultUserIdentity` (包含密钥元数据)。
-    - **多用户共享模式 (需要注册首个管理员)**: 如果 `multiUserMode: true` 但数据库 `users` 表为空，应返回一个特殊的 `MultiUserSharedContext` 变体，例如：
-      ```json
-      {
-        "mode": "MultiUserShared",
-        "multiUserMode": true,
-        "isAuthenticated": false,
-        "currentUser": null,
-        "adminRegistrationRequired": true // 特殊标志，指示前端引导用户注册首个管理员账户
-      }
-      ```
-    - **多用户共享模式 (需要登录)**: 如果用户未登录（无有效会话 Cookie），返回 `MultiUserSharedContext`，其中 `isAuthenticated: false`, `currentUser: null`。
-    - **多用户共享模式 (已登录)**: 返回 `MultiUserSharedContext`，其中 `isAuthenticated: true`, `currentUser` 为当前登录用户的 `AuthenticatedMultiUserIdentity` (包含其名下的服务 API 密钥元数据和外部服务凭证元数据)。
+    - **单用户模式 (无密码)**: 返回 `SingleUserContext`，其中 `accessPasswordRequired: false`, `isAuthenticated: true`, `currentUser` 为默认用户的 `UserIdentity`。
+    - **单用户模式 (需要设置全局密码)**: 如果 `accessPasswordHash` 未设置，返回 `SingleUserContext`，其中 `accessPasswordRequired: true`, `isAuthenticated: false`, `currentUser: null`, `globalPasswordSetupRequired: true`。
+    - **单用户模式 (需要输入全局密码)**: 如果 `accessPasswordHash` 已设置但会话未验证，返回 `SingleUserContext`，其中 `accessPasswordRequired: true`, `isAuthenticated: false`, `currentUser: null`。
+    - **单用户模式 (已通过全局密码验证)**: 返回 `SingleUserContext`，其中 `accessPasswordRequired: true`, `isAuthenticated: true`, `currentUser` 为默认用户的 `UserIdentity`。
+    - **多用户共享模式 (需要注册首个管理员)**: 如果 `multiUserMode: true` 但数据库 `users` 表为空，返回 `MultiUserContext`，其中 `isAuthenticated: false`, `currentUser: null`, `adminRegistrationRequired: true`。
+    - **多用户共享模式 (需要登录)**: 如果用户未登录，返回 `MultiUserContext`，其中 `isAuthenticated: false`, `currentUser: null`。
+    - **多用户共享模式 (已登录)**: 返回 `MultiUserContext`，其中 `isAuthenticated: true`, `currentUser` 为当前登录用户的 `UserIdentity`。
 
 ### 4.2. 服务 API 密钥管理 API (`/api/users/me/service-keys`)
 
@@ -788,7 +698,7 @@ CREATE TABLE external_credentials (
 
 - **`GET /api/admin/users`**:
   - **目的**: 获取所有用户账户列表的详细信息（可包含 `uid`, `username`, `isAdmin`, `createdAt`，但不应包含密码哈希）。
-  - **响应**: `200 OK` - `{ "users": Omit<AuthenticatedMultiUserIdentity, 'serviceApiKeys' | 'externalCredentials' | 'passwordHash'>[] }` (或其他合适的管理员视角的用户列表结构)。
+  - **响应**: `200 OK` - `{ "users": Omit<UserIdentity, 'serviceApiKeys' | 'externalCredentials'>[] }` (或其他合适的管理员视角的用户列表结构)。
 - **`POST /api/admin/users`**:
   - **目的**: (管理员) 创建新的用户账户。
   - **请求体**: `{ "username": string; "password": string; "isAdmin"?: boolean }`
@@ -839,7 +749,7 @@ CREATE TABLE external_credentials (
 - **模式识别与状态驱动**:
 
   - 应用加载时，前端应首先调用 `GET /api/auth/current` 接口。
-  - 根据响应中的 `mode` (`LocalNoPassword`, `LocalWithPassword`, `MultiUserShared`) 以及 `isAuthenticated*`, `currentUser`, `globalPasswordSetupRequired`, `adminRegistrationRequired` 等字段，来决定渲染哪个主界面或引导流程。
+  - 根据响应中的 `mode` (`SingleUser`, `MultiUser`) 以及 `isAuthenticated`, `currentUser`, `accessPasswordRequired`, `globalPasswordSetupRequired`, `adminRegistrationRequired` 等字段，来决定渲染哪个主界面或引导流程。
   - 使用状态管理库 (如 Pinia, Zustand, Redux Toolkit 等) 存储当前的用户上下文、认证状态、用户信息、以及从 `currentUser` 中获取的服务 API 密钥元数据列表和外部服务凭证元数据列表。这些状态将驱动整个应用的 UI 变化。
 
 - **UI 动态调整**:
@@ -974,54 +884,46 @@ classDiagram
         class ConfigJson {
             +userManagement: object
             +accessPasswordHash: string?
-            // singleUserPath removed
         }
         class EnvVariables {
             +COMFYTAVERN_MASTER_ENCRYPTION_KEY: string
         }
     }
 
-    package "User Identity & Context" {
+    package "User Identity & Context (v4 Simplified)" {
         class UserIdentityBase {
             +ServiceApiKeyMetadata[] serviceApiKeys
             +ExternalCredentialMetadata[] externalCredentials
         }
-        class DefaultUserIdentity {
-            +id: "default_user"
-            +username: string
-        }
-        UserIdentityBase <|-- DefaultUserIdentity
-        class AuthenticatedMultiUserIdentity {
+        class UserIdentity {
             +uid: string
             +username: string
             +isAdmin: boolean
             +createdAt: string
         }
-        UserIdentityBase <|-- AuthenticatedMultiUserIdentity
+        UserIdentityBase <|-- UserIdentity
 
         class UserContext {
             <<Union>>
             +mode: string
             +multiUserMode: boolean
-        }
-        class LocalNoPasswordUserContext {
-            +currentUser: DefaultUserIdentity
-        }
-        UserContext <|-- LocalNoPasswordUserContext
-        class LocalWithPasswordUserContext {
-            +isAuthenticatedWithGlobalPassword: boolean
-            +currentUser: DefaultUserIdentity | null
-        }
-        UserContext <|-- LocalWithPasswordUserContext
-        class MultiUserSharedContext {
             +isAuthenticated: boolean
-            +currentUser: AuthenticatedMultiUserIdentity | null
+            +currentUser: UserIdentity | null
         }
-        UserContext <|-- MultiUserSharedContext
+        class SingleUserContext {
+            +mode: "SingleUser"
+            +accessPasswordRequired: boolean
+            +globalPasswordSetupRequired: boolean
+        }
+        UserContext <|-- SingleUserContext
+        class MultiUserContext {
+            +mode: "MultiUser"
+            +adminRegistrationRequired: boolean
+        }
+        UserContext <|-- MultiUserContext
 
-        LocalNoPasswordUserContext o-- DefaultUserIdentity
-        LocalWithPasswordUserContext o-- DefaultUserIdentity
-        MultiUserSharedContext o-- AuthenticatedMultiUserIdentity
+        SingleUserContext o-- UserIdentity
+        MultiUserContext o-- UserIdentity
     }
 
     package "Data Storage (SQLite via Drizzle ORM)" {
@@ -1148,7 +1050,7 @@ classDiagram
       - **存储**: 初期实现以**明文存储**为主，提供完整的增删查改 API (`/api/users/me/credentials`) 和前端 UI。
       - **加密**: 可选的加密功能实现优先级后调，不在 MVP 阶段强制要求。
     - **认证**: 实现全局密码的设置 (`POST /api/auth/setup-global-password`) 和验证 (`POST /api/auth/verify-global-password`) 流程。
-    - **`GET /api/auth/current`**: 实现此接口，使其能正确返回 `LocalNoPasswordUserContext` 和 `LocalWithPasswordUserContext`。
+    - **`GET /api/auth/current`**: 实现此接口，使其能正确返回 `SingleUserContext`。
     - **安全**: 在界面和文档中明确告知用户，在未开启加密功能时，凭证将以明文形式存储，并提示相关风险。
     - **暂时不实现**: 服务 API 密钥功能、多用户模式、凭证加密。
 

@@ -258,9 +258,8 @@ markmap:
     - **用户凭证**: 安全存储 (具体机制依赖 `CryptoService`)。
 - **用户系统**:
     - **认证模式**:
-        - `LocalNoPassword` (默认单用户，无密码)。
-        - `LocalWithPassword` (单用户，有主密码，用于加密敏感数据)。
-        - `MultiUserShared` (多用户共享模式，规划中)。
+        - `SingleUser` (单用户模式，可选择是否带全局密码)。
+        - `MultiUser` (多用户共享模式)。
     - **用户上下文 (`UserContext`)**: 包含用户身份、认证模式、API密钥元数据、外部凭证元数据。
     - **API 密钥与外部凭证管理**: 用户可以创建和管理用于访问 ComfyTavern 服务或其他外部服务的密钥/凭证。
 

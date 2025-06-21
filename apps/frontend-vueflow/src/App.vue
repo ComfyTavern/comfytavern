@@ -152,23 +152,22 @@ watchEffect(() => {
     return;
   }
 
-  // 首先处理非 LocalNoPassword 模式，这些模式下不应显示此弹窗
-  if (userContext.value.mode !== 'LocalNoPassword') {
+  // 首先处理非 SingleUser 模式，这些模式下不应显示此弹窗
+  if (userContext.value.mode !== 'SingleUser') {
     showInitialUsernameModal.value = false;
     return;
   }
 
-  // 此处，userContext.value.mode 必定是 'LocalNoPassword'
-  // currentUser.value 的类型应为 DefaultUserIdentity
-  const currentUserVal = currentUser.value as import('@comfytavern/types').DefaultUserIdentity | null;
+  // 此处，userContext.value.mode 必定是 'SingleUser'
+  const currentUserVal = currentUser.value; // 类型已是 UserIdentity | null
 
-  if (!currentUserVal) { // 理论上在 LocalNoPassword 模式下，currentUser 不应为 null
+  if (!currentUserVal) { // 在 SingleUser 模式下，如果未认证，currentUser 可能为 null
     showInitialUsernameModal.value = false;
     return;
   }
 
-  // 此时 currentUserVal.id 是 'default_user'
-  const userSpecificSetupKey = `comfytavern_initial_setup_processed_${currentUserVal.id}`;
+  // 此时 currentUserVal.uid 是 'default_user'
+  const userSpecificSetupKey = `comfytavern_initial_setup_processed_${currentUserVal.uid}`;
   const setupProcessed = localStorage.getItem(userSpecificSetupKey) === 'true';
 
   if (setupProcessed) {
@@ -187,10 +186,9 @@ watchEffect(() => {
 });
 
 const handleModalInteraction = () => {
-  if (userContext.value && userContext.value.mode === 'LocalNoPassword' && currentUser.value) {
-    // 明确知道是 LocalNoPassword 模式，currentUser 类型是 DefaultUserIdentity
-    const user = currentUser.value as import('@comfytavern/types').DefaultUserIdentity;
-    const userSpecificSetupKey = `comfytavern_initial_setup_processed_${user.id}`;
+  if (userContext.value && userContext.value.mode === 'SingleUser' && currentUser.value) {
+    // 在 SingleUser 模式下, currentUser.uid 总是 'default_user'
+    const userSpecificSetupKey = `comfytavern_initial_setup_processed_${currentUser.value.uid}`;
     localStorage.setItem(userSpecificSetupKey, 'true');
   }
   showInitialUsernameModal.value = false;

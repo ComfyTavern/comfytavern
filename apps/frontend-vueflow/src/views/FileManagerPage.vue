@@ -26,49 +26,24 @@ const storeInitialized = ref(false);
 onMounted(async () => {
   // 确保 authStore 已加载完毕，可以获取到 userId
   // 在实际应用中，路由守卫可能已经处理了 authStore 的初始化
-  // 这里我们假设 authStore.currentUser 已经是响应式的，或者有一个加载状态
-  if (authStore.currentUser || authStore.userContext?.mode === 'LocalNoPassword') { // 简单判断用户已加载
+  // 使用 isAuthenticated getter 来判断是否可以初始化
+  if (authStore.isAuthenticated) {
     initializeFileManager();
   } else {
-    // 如果 authStore 还在加载，可以监听其变化
-    const unwatch = watch(() => authStore.currentUser, (newUser) => {
-      if (newUser || authStore.userContext?.mode === 'LocalNoPassword') {
+    // 如果 authStore 还在加载或用户未认证，监听其变化
+    const unwatch = watch(() => authStore.isAuthenticated, (isAuth) => {
+      if (isAuth) {
         initializeFileManager();
         unwatch(); // 初始化后停止监听
       }
-    }, { immediate: true }); // immediate true 确保如果已有值也会立即执行
+    }, { immediate: true });
   }
 });
 
 function initializeFileManager() {
   const initialPathFromRoute = route.query.path as string | undefined;
-  let userId: string | null = null;
-
-  if (authStore.userContext) {
-    const context = authStore.userContext;
-    switch (context.mode) {
-      case 'LocalNoPassword':
-        // currentUser is DefaultUserIdentity, id is 'default_user'
-        userId = context.currentUser.id;
-        break;
-      case 'LocalWithPassword':
-        // In LocalWithPassword mode, if authenticated, currentUser is DefaultUserIdentity
-        if (context.isAuthenticatedWithGlobalPassword && context.currentUser) {
-          userId = context.currentUser.id; // DefaultUserIdentity, id is 'default_user'
-        }
-        break;
-      case 'MultiUserShared':
-        // In MultiUserShared mode, if authenticated, currentUser is AuthenticatedMultiUserIdentity
-        if (context.isAuthenticated && context.currentUser) {
-          userId = context.currentUser.uid; // AuthenticatedMultiUserIdentity has uid
-        }
-        break;
-      default:
-        // Exhaustiveness check, or handle unexpected modes
-        console.warn('Unknown auth context mode in FileManagerPage:', (context as any).mode);
-        break;
-    }
-  }
+  // v4 简化：直接从 currentUser 获取 uid
+  const userId = authStore.currentUser?.uid ?? null;
 
   // console.log('Initializing FileManagerPage with userId:', userId, 'and initialPath:', initialPathFromRoute);
   fileManagerStore.initialize(userId, initialPathFromRoute);

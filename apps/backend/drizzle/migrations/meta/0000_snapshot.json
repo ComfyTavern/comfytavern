@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "54089053-c5b6-4c0b-afff-50e907ca8d85",
+  "id": "47758257-ed2b-4db8-8bf4-7d2672cf571a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "activated_models": {
@@ -84,7 +84,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'2025-06-21T08:28:06.845Z'"
+          "default": "'2025-06-21T11:09:53.832Z'"
         }
       },
       "indexes": {},

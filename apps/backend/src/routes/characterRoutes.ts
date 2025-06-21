@@ -73,15 +73,10 @@ export const characterApiRoutes = new Elysia({ prefix: '/api/characters' })
       return { success: false, message: '用户未认证' };
     }
 
-    let userId: string;
-    const currentUser = userContext.currentUser;
-    if ('id' in currentUser) { // DefaultUserIdentity
-      userId = currentUser.id;
-    } else if ('uid' in currentUser) { // AuthenticatedMultiUserIdentity
-      userId = currentUser.uid;
-    } else {
+    const userId = userContext.currentUser.uid;
+    if (!userId) {
       set.status = 500; // Or 400 if it's a malformed context
-      console.error('[CharacterRoutes] GET / - Failed to determine user ID from currentUser:', currentUser);
+      console.error('[CharacterRoutes] GET / - Failed to determine user ID from currentUser:', userContext.currentUser);
       return { success: false, message: '无法从用户上下文中确定用户ID' };
     }
 
@@ -269,15 +264,10 @@ export const characterApiRoutes = new Elysia({ prefix: '/api/characters' })
       return { success: false, message: '用户未认证，无法获取图片' };
     }
 
-    let userId: string;
-    const currentUser = userContext.currentUser;
-    if ('id' in currentUser) { // DefaultUserIdentity
-      userId = currentUser.id;
-    } else if ('uid' in currentUser) { // AuthenticatedMultiUserIdentity
-      userId = currentUser.uid;
-    } else {
+    const userId = userContext.currentUser.uid;
+    if (!userId) {
       set.status = 500;
-      console.error('[CharacterRoutes] GET /image - Failed to determine user ID from currentUser:', currentUser);
+      console.error('[CharacterRoutes] GET /image - Failed to determine user ID from currentUser:', userContext.currentUser);
       return { success: false, message: '无法从用户上下文中确定用户ID以获取图片' };
     }
     

@@ -10,7 +10,7 @@
 
 1.  **环境初始化**：
     *   加载并解析配置文件（如 [`config.ts`](../../../../apps/backend/src/config.ts:1)），获取端口、路径、模式等关键配置。
-    *   确定并打印当前的用户操作模式（例如 `LocalNoPassword`, `LocalWithPassword`, `MultiUserShared`）。
+    *   确定并打印当前的用户操作模式（例如 `SingleUser`, `MultiUser`）。
     *   确保应用运行所需的关键目录（如日志目录、数据目录、工作流目录、项目目录）存在。
 2.  **节点加载**：
     *   加载内置节点：从 [`apps/backend/src/nodes`](../../../../apps/backend/src/nodes:1) 目录加载核心节点定义。
