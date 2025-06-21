@@ -1,5 +1,5 @@
 <template>
-  <div class="settings-layout">
+  <div class="settings-layout" ref="settingsLayoutRef" :class="{ 'is-compact': isCompact }">
     <!-- 咕咕：添加隐藏的文件输入框 -->
     <input type="file" ref="languageFileInput" @change="onFileSelected" accept=".json" style="display: none;" />
     <!-- 顶部标签页导航 -->
@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineComponent, defineAsyncComponent, markRaw, watch } from "vue";
+import { ref, computed, defineComponent, defineAsyncComponent, markRaw, watch, onMounted, onUnmounted, provide } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from 'vue-router';
 import type { SettingsSection, SettingItemConfig } from "@/types/settings";
@@ -53,6 +53,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useLanguagePackManager } from "@/composables/useLanguagePackManager"; // + i18n
 import { storeToRefs } from "pinia";
+import { IsSettingsCompactKey } from "@/constants/injectionKeys";
 
 // --- Store 实例化 ---
 const { t } = useI18n();
@@ -67,6 +68,30 @@ const { currentUser } = storeToRefs(authStore);
 const { displayMode, availableThemes, selectedThemeId } = storeToRefs(themeStore);
 const { i18nSettings } = storeToRefs(settingsStore); // + i18n
 const { availableLanguages } = languageManager; // + i18n (直接从 composable 获取 ref)
+
+const settingsLayoutRef = ref<HTMLElement | null>(null);
+const isCompact = ref(false);
+
+let resizeObserver: ResizeObserver;
+
+provide(IsSettingsCompactKey, isCompact);
+
+onMounted(() => {
+  if (settingsLayoutRef.value) {
+    resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        isCompact.value = entry.contentRect.width < 768;
+      }
+    });
+    resizeObserver.observe(settingsLayoutRef.value);
+  }
+});
+
+onUnmounted(() => {
+  if (resizeObserver && settingsLayoutRef.value) {
+    resizeObserver.unobserve(settingsLayoutRef.value);
+  }
+});
 
 const languageFileInput = ref<HTMLInputElement | null>(null); // + 咕咕：为文件输入添加 ref
 
@@ -544,5 +569,22 @@ watch(
   border-radius: 8px;
   border: 1px dashed hsl(var(--ct-border-base-hsl));
   /* 使用 CSS 变量 */
+}
+
+/* --- 响应式紧凑布局 --- */
+.settings-layout.is-compact .settings-nav ul {
+  margin: 0 16px;
+}
+
+.settings-layout.is-compact .settings-content {
+  padding: 16px 24px;
+}
+
+.settings-layout.is-compact .settings-nav li {
+  padding: 4px 10px;
+}
+
+.settings-layout.is-compact .settings-nav li span {
+  font-size: 1.1rem;
 }
 </style>

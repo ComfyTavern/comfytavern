@@ -1,5 +1,5 @@
 <template>
-  <div class="setting-item-row" :class="{ 'avatar-row': itemConfig.type === 'avatar' }">
+  <div class="setting-item-row" :class="[{ 'avatar-row': itemConfig.type === 'avatar' }, { 'is-compact': isCompact }]">
     <div class="label-area">
       <label :for="itemConfig.key" class="item-label">{{ itemConfig.label }}</label>
       <p v-if="itemConfig.description" class="item-description">{{ itemConfig.description }}</p>
@@ -46,8 +46,9 @@ import type { SettingItemConfig } from '@/types/settings';
 import SettingControl from './SettingControl.vue';
 import { useAuthStore } from '@/stores/authStore';
 import { storeToRefs } from 'pinia';
-import { computed, ref, onMounted } from 'vue'; // + 导入 onMounted
+import { computed, ref, onMounted, inject } from 'vue'; // + 导入 onMounted
 import AvatarEditorModal from '@/components/modals/AvatarEditorModal.vue';
+import { IsSettingsCompactKey } from '@/constants/injectionKeys';
 import { uploadAvatar as apiUploadAvatar } from '@/api/userProfileApi';
 import { getBackendBaseUrl } from '@/utils/urlUtils';
 import { useI18n } from 'vue-i18n';
@@ -63,6 +64,7 @@ props.itemConfig; // 确保 props 被 TypeScript 插件认为是读取过的
 
 const { t } = useI18n();
 const authStore = useAuthStore();
+const isCompact = inject(IsSettingsCompactKey, ref(false));
 const { currentUser } = storeToRefs(authStore);
 // console.log('[SettingItemRow] Initial currentUser from store (at setup):', JSON.parse(JSON.stringify(currentUser.value)));
 
@@ -190,7 +192,7 @@ const handleSaveAvatar = async (payload: { file?: File }) => {
 .control-area {
   flex: 1; /* 占据1/3的空间 */
   flex-shrink: 0;
-  min-width: 200px; /* 设置合理的最小宽度，确保控件不会过小 */
+  min-width: 220px; /* 设置合理的最小宽度，确保控件不会过小 */
   max-width: 400px; /* 设置最大宽度，避免在超宽屏幕上过度拉伸 */
   display: flex;
   justify-content: flex-end;
@@ -198,39 +200,38 @@ const handleSaveAvatar = async (payload: { file?: File }) => {
 }
 
 /* 响应式设计：在较小屏幕上调整布局 */
-@media (max-width: 768px) {
-  .setting-item-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .setting-item-row.avatar-row {
-    flex-direction: row; /* 头像行保持水平布局 */
-    align-items: flex-start;
-  }
-  
-  .label-area {
-    flex: none;
-    padding-right: 0;
-    padding-bottom: 12px;
-  }
-  
-  .setting-item-row.avatar-row .label-area {
-    flex: 2;
-    padding-right: 16px;
-    padding-bottom: 0;
-  }
-  
-  .control-area {
-    flex: none;
-    min-width: auto;
-    max-width: none;
-    justify-content: stretch;
-  }
-  
-  .setting-item-row.avatar-row .control-area {
-    flex: 1;
-  }
+.setting-item-row.is-compact {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 8px;
+}
+
+.setting-item-row.is-compact.avatar-row {
+  flex-direction: row; /* 头像行保持水平布局 */
+  align-items: flex-start;
+}
+
+.setting-item-row.is-compact .label-area {
+  flex: none;
+  padding-right: 0;
+  padding-bottom: 12px;
+}
+
+.setting-item-row.is-compact.avatar-row .label-area {
+  flex: 2;
+  padding-right: 16px;
+  padding-bottom: 0;
+}
+
+.setting-item-row.is-compact .control-area {
+  flex: none;
+  min-width: auto;
+  max-width: none;
+  justify-content: stretch;
+}
+
+.setting-item-row.is-compact.avatar-row .control-area {
+  flex: 1;
 }
 
 .avatar-control-area {

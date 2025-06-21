@@ -1,5 +1,5 @@
 <template>
-  <section class="setting-group">
+  <section class="setting-group" :class="{ 'is-compact': isCompact }">
     <h3 v-if="title" class="group-title">{{ title }}</h3>
     <div class="group-content">
       <slot /> <!-- 渲染传入的 SettingItemRow -->
@@ -8,9 +8,14 @@
 </template>
 
 <script setup lang="ts">
+import { inject, ref } from 'vue';
+import { IsSettingsCompactKey } from '@/constants/injectionKeys';
+
 defineProps<{
   title?: string;
 }>();
+
+const isCompact = inject(IsSettingsCompactKey, ref(false));
 </script>
 
 <style scoped>
@@ -38,5 +43,23 @@ defineProps<{
   display: flex;
   flex-direction: column;
   gap: 12px; /* 调整设置项之间的垂直间距，使其更紧凑 */
+}
+
+/* --- 响应式紧凑布局 --- */
+.setting-group.is-compact {
+  padding: 8px;
+}
+
+.setting-group.is-compact:has(h3) {
+  padding-top: 16px;
+}
+
+.setting-group.is-compact .group-title {
+  font-size: 1.25rem;
+  margin-bottom: 12px;
+}
+
+.setting-group.is-compact .group-content {
+  gap: 8px;
 }
 </style>
