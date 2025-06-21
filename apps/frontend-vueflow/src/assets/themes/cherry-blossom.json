@@ -33,7 +33,7 @@
         "--ct-border-decorative-opacity": "0.5",
 
         "--ct-backdrop-bg-hsl": "0 0% 0%",
-        "--ct-backdrop-opacity": "0.45",
+        "--ct-backdrop-opacity": "0.3",
         "--ct-focus-ring-opacity": "0.5",
         "--ct-node-skipped-opacity": "0.6",
         "--ct-node-skipped-overlay-color": "rgba(240, 210, 220, 0.15)"
@@ -69,7 +69,7 @@
         "--ct-border-decorative-opacity": "0.5",
 
         "--ct-backdrop-bg-hsl": "0 0% 0%",
-        "--ct-backdrop-opacity": "0.55",
+        "--ct-backdrop-opacity": "0.3",
         "--ct-focus-ring-opacity": "0.5",
         "--ct-node-skipped-opacity": "0.5",
         "--ct-node-skipped-overlay-color": "rgba(160, 120, 140, 0.25)"

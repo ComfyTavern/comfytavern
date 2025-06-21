@@ -12,7 +12,7 @@
         :class="[
           props.bare
             ? ''
-            : 'bg-background-surface rounded-lg shadow-xl border border-border-base',
+            : 'bg-background-surface/90 rounded-lg shadow-xl border border-border-base',
           props.dialogClass,
           { 'opacity-0 scale-95': !showContentTransition, 'opacity-100 scale-100': showContentTransition }
         ]"

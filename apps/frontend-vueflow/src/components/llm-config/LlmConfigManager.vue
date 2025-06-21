@@ -2,7 +2,7 @@
   <div class="llm-config-manager">
     <div class="flex h-full text-text-base">
       <!-- Sidebar -->
-      <aside class="w-36 p-4 rounded-l-lg border-r border-border-base">
+      <aside class="w-36 p-4 bg-background-base/15 rounded-l-lg border-r border-border-base">
         <nav>
           <ul>
             <li>
@@ -32,7 +32,7 @@
       </aside>
 
       <!-- Main Content -->
-      <main class="flex-1 p-6 bg-background-base rounded-r-lg min-w-0">
+      <main class="flex-1 p-6 bg-background-base/15 rounded-r-lg min-w-0">
         <div v-if="activeTab === 'channels'">
           <ApiChannelList />
         </div>
