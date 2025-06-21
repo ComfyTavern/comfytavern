@@ -33,7 +33,7 @@
             <td class="p-4">{{ channel.label }}</td>
             <td class="p-4">
               <span :class="[
-                'px-2 py-1 text-xs font-semibold rounded-full',
+                'px-3 py-1 text-sm font-medium rounded-md',
                 channel.disabled
                   ? 'bg-error-soft text-error'
                   : 'bg-success-soft text-success',
