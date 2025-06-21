@@ -642,6 +642,8 @@
       "display_showConnectionStatus_label": "显通幽之径",
       "display_showMinimap_desc": "于机括坊右下隅显节点总览之舆图。",
       "display_showMinimap_label": "显天工坊缩略图",
+      "display_showControls_label": "显画布之控",
+      "display_showControls_desc": "于天工坊左下隅显缩放、锁定等控件。",
       "fontSize_large": "大",
       "fontSize_medium": "中",
       "fontSize_small": "小",

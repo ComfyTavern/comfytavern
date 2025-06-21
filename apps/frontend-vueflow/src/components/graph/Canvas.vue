@@ -10,10 +10,10 @@
       <Background pattern-color="var(--ct-bg-pattern-color, #aaa)" :gap="16" />
 
       <!-- 控制器 -->
-      <Controls />
+      <Controls v-if="showControls" />
 
       <!-- 小地图 -->
-      <MiniMap />
+      <MiniMap v-if="showMinimap" />
 
       <!-- 默认节点和边的样式 -->
       <!-- 自定义节点组件 -->
@@ -57,6 +57,7 @@ import UnplugConnectionLine from "./edges/UnplugConnectionLine.vue";
 import { useNodeStore } from "../../stores/nodeStore";
 import { useWorkflowStore } from "../../stores/workflowStore"; // 导入 WorkflowStore
 import { useTabStore } from "../../stores/tabStore"; // 导入 TabStore
+import { useSettingsStore } from "@/stores/settingsStore";
 import useDragAndDrop from "../../composables/canvas/useDnd";
 import { useCanvasKeyboardShortcuts } from "../../composables/canvas/useCanvasKeyboardShortcuts"; // <-- Import the composable
 import { useContextMenuPositioning, getEventClientPosition } from "../../composables/canvas/useContextMenuPositioning"; // <-- Import the new composable and getEventClientPosition
@@ -207,6 +208,11 @@ const { nodeDefinitions } = storeToRefs(nodeStore); // 从 nodeStore 获取响�
 const workflowStore = useWorkflowStore(); // 实例化 WorkflowStore
 const tabStore = useTabStore(); // 实例化 TabStore
 const dialogService = useDialogService(); // 实例化 DialogService
+const settingsStore = useSettingsStore();
+
+const showMinimap = computed(() => settingsStore.getSetting('display.showMinimap', true));
+const showControls = computed(() => settingsStore.getSetting('display.showControls', true));
+
 const activeTabId = computed(() => tabStore.activeTabId); // 获取活动标签页 ID
 // const currentWorkflowInterface = computed(() => {
 //   if (activeTabId.value) {

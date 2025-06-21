@@ -308,6 +308,15 @@ const displaySettingsConfig = computed<SettingItemConfig[]>(() => [
     description: t("settings.items.display_showMinimap_desc"),
   },
   {
+    key: "display.showControls",
+    type: "boolean",
+    label: t("settings.items.display_showControls_label"),
+    defaultValue: true,
+    categoryKey: "editor",
+    category: t("settings.categories.editor"),
+    description: t("settings.items.display_showControls_desc"),
+  },
+  {
     key: "display.showConnectionStatus",
     type: "boolean",
     label: t("settings.items.display_showConnectionStatus_label"),

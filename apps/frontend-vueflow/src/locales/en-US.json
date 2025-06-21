@@ -642,6 +642,8 @@
       "display_showConnectionStatus_label": "Show Backend Connection Status",
       "display_showMinimap_desc": "Display the node overview minimap in the bottom right corner of the node editor.",
       "display_showMinimap_label": "Show Editor Minimap",
+      "display_showControls_label": "Show Canvas Controls",
+      "display_showControls_desc": "Show controls like zoom and lock in the bottom left corner of the node editor.",
       "fontSize_large": "Large",
       "fontSize_medium": "Medium",
       "fontSize_small": "Small",

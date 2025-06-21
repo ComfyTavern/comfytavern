@@ -642,6 +642,8 @@
       "display_showConnectionStatus_label": "显示后端连接状态",
       "display_showMinimap_desc": "在节点编辑器右下角显示节点总览小地图。",
       "display_showMinimap_label": "显示编辑器小地图",
+      "display_showControls_label": "显示画布控件",
+      "display_showControls_desc": "在节点编辑器左下角显示缩放、锁定等控件。",
       "fontSize_large": "大",
       "fontSize_medium": "中",
       "fontSize_small": "小",

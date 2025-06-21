@@ -642,6 +642,8 @@
       "display_showConnectionStatus_label": "バックエンド接続ステータスを表示",
       "display_showMinimap_desc": "ノードエディターの右下にノード概要ミニマップを表示します。",
       "display_showMinimap_label": "エディターミニマップを表示",
+      "display_showControls_label": "キャンバスコントロールを表示",
+      "display_showControls_desc": "ノードエディターの左下にズームやロックなどのコントロールを表示します。",
       "fontSize_large": "大",
       "fontSize_medium": "中",
       "fontSize_small": "小",
