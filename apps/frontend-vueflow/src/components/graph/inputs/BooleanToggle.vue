@@ -4,7 +4,7 @@
       <input type="checkbox" :checked="modelValue" @change="toggle" class="sr-only peer"
         :disabled="props.disabled || props.readonly">
       <div
-        class="rounded-full peer peer-focus:ring-4 peer-focus:ring-primary/50 dark:peer-focus:ring-primary/70 bg-background-surface/50 dark:bg-background-surface peer-checked:after:border-background-base after:content-[''] after:absolute after:bg-background-base after:border-border-base after:border after:rounded-full after:transition-all peer-checked:bg-primary"
+        class="rounded-full peer peer-focus:ring-4 peer-focus:ring-primary-soft bg-neutral-soft peer-checked:after:border-transparent after:content-[''] after:absolute after:bg-background-base after:border-border-base after:border after:rounded-full after:transition-all peer-checked:bg-primary peer-disabled:border peer-disabled:border-border-base"
         :class="sizeClasses.wrapper">
       </div>
     </label>

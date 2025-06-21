@@ -97,10 +97,14 @@
     </div>
 
     <!-- 是否禁用 -->
-    <div class="flex items-center">
-      <input v-model="formData.disabled" type="checkbox" id="disabled"
-        class="h-4 w-4 text-primary focus:ring-primary border-border-base rounded" />
-      <label for="disabled" class="ml-2 block text-sm text-text-base"> 禁用此渠道 </label>
+    <div class="flex items-center justify-between rounded-md border border-border-base p-3 bg-background-surface">
+      <div class="flex-1 pr-4">
+        <span class="font-medium text-text-base">禁用此渠道</span>
+        <p class="text-sm text-text-secondary mt-1">禁用后,此渠道将无法在任何工作流中使用。</p>
+      </div>
+      <div class="flex-shrink-2">
+        <BooleanToggle v-model="formData.disabled" size="large" />
+      </div>
     </div>
   </form>
 </template>
@@ -111,6 +115,7 @@ import { storeToRefs } from "pinia";
 import type { ApiCredentialConfig } from "@comfytavern/types";
 import { useLlmConfigStore } from "@/stores/llmConfigStore";
 import SelectInput from "@/components/graph/inputs/SelectInput.vue";
+import BooleanToggle from "@/components/graph/inputs/BooleanToggle.vue";
 
 // 定义组件的 Props
 interface Props {
@@ -126,7 +131,7 @@ interface ApiChannelFormData {
   baseUrl: string;
   apiKey?: string;
   supportedModels?: string[];
-  disabled?: boolean;
+  disabled: boolean;
 }
 
 const emit = defineEmits<{
