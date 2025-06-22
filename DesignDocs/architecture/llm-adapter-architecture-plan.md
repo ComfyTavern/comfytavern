@@ -16,8 +16,8 @@
 - **激活模型注册表 (SQLite DB)**: 存储用户明确选择并激活的模型及其最终确认的**能力 (`capabilities`)**。
 - **激活模型服务 (`ActivatedModelService`)**: **新增服务**。专门负责对用户激活的模型列表（`ActivatedModelInfo`）进行数据库 CRUD 操作。
 - **模型预设服务 (`ModelPresetService`)**: **新增服务**。负责加载和解析 `default_models.json`，并提供应用预设规则的能力。
-- **模型/渠道路由服务 (`ModelRouterService`)**: **新增核心组件**。在运行时，**优先响应节点直接指定的模型 ID**。如果未直接指定，则根据节点的**能力请求**（例如，来自 Agent 核心审议工作流中 `GenericLlmRequestNode` 的能力声明）和用户的**全局偏好/规则**，从 `ActivatedModelService` 中选择合适的**模型 (`model_id`)** 和**渠道组 (`channel_group_ref`)**。
-- **重试与 Key 选择逻辑 (`RetryHandler` & `KeySelector`)**: **新增逻辑** (可内聚在 `ModelRouterService` 或 `ExecutionEngine` 中)。负责根据选定的渠道组执行**故障转移**，并根据渠道配置选择**具体的 API Key**。
+- **模型/渠道路由服务 (`ModelRouterService`)**: **新增核心组件**。其核心职责是在运行时，接收一个 `model_id`，并根据系统配置的路由规则，返回最适合执行该模型的渠道组 ID (`channel_group_id`)。它将模型选择的“意图”与执行的“方式”解耦。
+- **策略化执行器 (`RetryHandler`)**: **新增核心组件**。其核心职责是接收一个包含工作流载荷和顶层 `channel_group_id` 的请求。它将**解析**这个可能包含嵌套组的、带优先级和权重的路由策略树（建议逻辑上限制嵌套层级，例如仅允许一层），并根据解析结果执行请求、处理多 Key 选择、实现复杂的故障转移和负载均衡。
 - **Tokenization 服务 (`TokenizationService`)**: **新增核心服务**。负责提供全局的 `token` 计算能力。详见 [全局 Tokenization 服务设计方案](./tokenization-service-plan.md)。
 - **用户偏好/路由规则存储 (DB/Config)**: **新增配置项**。存储用户定义的模型和渠道组选择规则。
 - **执行上下文 (`context`)**: 在工作流执行期间，由 `ExecutionEngine` 注入，包含对上述服务的引用。
@@ -235,38 +235,45 @@ export interface ApiCredentialConfig {
 }
 ```
 
-### 3.4. `ApiChannelGroup` (渠道组，定义故障转移策略)
+### 3.4. `ApiChannelGroup` (渠道组，定义可嵌套的路由策略)
 
 ```typescript
 /**
- * 定义一个渠道组，代表一个有序的故障转移序列。
+ * 定义一个渠道组，它是一个“策略容器”。虽然数据结构上支持递归嵌套，但在实践中建议限制嵌套层级（例如，仅允许一层组嵌套或完全不允许），以避免前端展示和用户理解的复杂性。
  */
 export interface ApiChannelGroup {
-  /**
-   * 用户定义的组名，必须全局唯一。
-   * 工作流节点将通过此名称引用该故障转移策略。
-   * 例如: "default_gpt4_failover", "claude_haiku_fast"
-   */
+  id: string; // UUID
   group_name: string;
-
-  /**
-   * 包含的渠道 ID (ApiCredentialConfig.id) 的**有序列表**。
-   * 列表的顺序严格定义了故障转移的优先级。
-   * index 0 是最高优先级，index 1 是次高，以此类推。
-   * 必须至少包含一个 channel_id。
-   */
-  ordered_channel_ids: string[];
-
-  /**
-   * 可选，对此渠道组的描述，方便用户理解其用途。
-   */
   description?: string;
-
   /**
-   * 可选，是否禁用此渠道组。
-   * @default false
+   * 组的成员列表，定义了复杂的路由和故障转移逻辑。
    */
+  members: ChannelGroupMember[];
   disabled?: boolean;
+}
+
+/**
+ * 定义渠道组成员的结构和路由规则。
+ */
+export interface ChannelGroupMember {
+  /**
+   * 成员的唯一 ID，可以是渠道的 ID 或另一个渠道组的 ID。
+   */
+  id: string;
+  /**
+   * 成员的类型。
+   */
+  type: 'channel' | 'group';
+  /**
+   * 优先级，用于故障转移。数字越大，优先级越高。
+   * 执行器会先尝试高优先级的成员。
+   */
+  priority: number;
+  /**
+   * 权重，用于在同一优先级的成员中进行负载均衡。
+   * 权重越大的成员被选中的概率越高。
+   */
+  weight: number;
 }
 ```
 
@@ -441,36 +448,96 @@ export interface ActivatedModelInfo {
 4.  **用户编辑/删除模型:**
     *   通过对应的 API Endpoint (`PUT`, `DELETE`) 调用 `ActivatedModelService` 中的方法，直接对数据库中的 `ActivatedModelInfo` 进行操作。
 
-### 4.2. 工作流执行流程 (运行时)
+### 4.2. 工作流执行流程 (运行时 - V5 架构)
 
-1.  **节点输入:** 用户在 `GenericLlmRequestNode` 上配置（或者当此节点在 Agent 的核心审议工作流中时，这些配置可能由 Agent Profile 或审议逻辑间接提供）：
+V5 架构的核心在于通过清晰的逻辑分层，实现从“模型意图”到“渠道策略”再到“可靠执行”的完整解耦。执行流程遵循一个两阶段路由模式：
 
-- `model_id?: string`: (可选, **最高优先级**) 直接指定要使用的模型 ID。如果提供了此值，将忽略所有其他路由和选择逻辑。
-- `model_group_ref?: string`: (可选, 次高优先级) 指定一个用户定义的模型组 (`ModelGroup.group_name`)。路由服务将在此组内根据其策略选择模型。
-- `required_capabilities: string[]`: (可选) 必须满足的能力列表 (e.g., `['llm', 'chat']`, `['llm', 'vision', 'planning']`)。在未直接指定模型或模型组时，用于筛选候选模型。
-- `preferred_model_or_tags?: string[]`: (可选) 在基于能力筛选后，倾向于选择的模型 ID 或自定义标签，用于对候选模型进行排序。
-- `performance_preference?: 'latency' | 'cost' | 'quality'`: (可选) 优化目标提示。
-- `messages`: 输入的 `CustomMessage[]`。
-- `parameters`: JSON 格式的 API 参数。
+**阶段 0: 模型确定 (路由前)**
 
-2.  **引擎调用:** `ExecutionEngine` 调用节点的 `execute` 方法，传入上述输入和包含各服务引用的 `context`。
-3.  **路由与执行逻辑 (由 `ModelRouterService` 和 `RetryHandler` 协调):**
-    a. **路由选择 (由 `ModelRouterService` 执行，按以下优先级顺序):**
-        i. **(最高优先级) 检查直接指定的 `model_id`**:
-            - 如果节点输入中包含 `model_id`，则直接将其作为 `selected_model_id`。路由过程结束。
-        ii. **(次高优先级) 检查指定的 `model_group_ref`**:
-            - 如果节点输入中包含 `model_group_ref`，则从服务中获取该模型组的配置。
-            - 根据组的 `selection_strategy` 和 `model_ids` 列表，选择一个模型作为 `selected_model_id`。路由过程结束。
-        iii. **(默认流程) 基于能力的路由**:
-            - 如果以上两者都未提供，则执行基于能力的路由逻辑。
-            - 从 `context.ActivatedModelService` 查询满足 `required_capabilities` 的**激活模型**列表。
-            - (可选) 根据 `preferred_model_tags` 和 `performance_preference` 筛选/排序候选模型。
-            - 根据用户的**全局偏好/路由规则** (从 `context` 获取)，从候选模型中确定最终的 `selected_model_id`。
-        v. 同样根据用户偏好/规则（或模型的默认设置），确定要使用的 `selected_channel_group_ref`。
-    b. **故障转移与 Key 选择 (由 `RetryHandler` 处理):**
-    i. `RetryHandler` 从 `context.ApiConfigService` 获取 `selected_channel_group_ref` 对应的 `ApiChannelGroup` 配置 (包含 `ordered_channel_refs`)。
-    ii. **按顺序迭代** `ordered_channel_refs` 列表中的每个 `channel_ref`： 1. 从 `context.ApiConfigService` 获取该 `channel_ref` 对应的 `ApiCredentialConfig`。 2. 使用 `KeySelector` (根据 `config.key_selection_strategy`) 从 `config.api_key` (如果是数组) 中选择一个 `selectedKey`。 3. 确定适配器类型 (`adapter_type`)：优先使用 `config.adapter_type`，否则尝试推断。 4. 从 `context.LlmApiAdapterRegistry` 获取适配器实例。 5. **调用适配器:** 调用 `adapter.request()` 方法，传入 `messages`, `parameters`, `selected_model_id` (由 Router 确定) 以及**具体的**认证信息 (`base_url`, `selectedKey`, `custom_headers`)。 6. **处理结果:** - 如果成功，`RetryHandler` 返回 `StandardResponse`，执行结束。 - 如果失败，检查错误码是否在 `config.retry_on_codes` (或全局默认) 中。 - 如果是可重试错误且列表中还有下一个渠道，则继续迭代。 - 如果是不可重试错误或所有渠道都已尝试失败，`RetryHandler` 返回包含 `error` 的 `StandardResponse`。
-    c. **节点输出:** `ModelRouterService` (或 `ExecutionEngine`) 将 `RetryHandler` 返回的最终 `StandardResponse` 作为节点的输出。
+此阶段在调用路由服务之前完成，由工作流的设计者或更上层的应用（如 Agent）负责。
+
+- **职责**: 确定一个明确的、将要被执行的 **`model_id`**。
+- **输入**: `GenericLlmRequestNode` 节点的配置，或由 Agent 审议逻辑动态提供。
+- **输出**: 一个具体的 `model_id` 字符串，作为下一阶段的输入。
+
+**阶段 1: 策略路由 (`ModelRouterService`)**
+
+- **职责**: 将一个明确的 `model_id` 映射到一套**执行策略**，即一个**渠道组 (`channel_group_id`)**。它回答了“用哪一套方案去执行”的问题，而非“用哪一个渠道”。
+- **调用**: `ExecutionEngine` 调用 `modelRouterService.findGroupForModel(model_id)`。
+- **输出**: 一个 `channel_group_id`。
+
+- **阶段 2: 策略执行 (`RetryHandler`)**
+
+- **职责**: 接收顶层 `channel_group_id` 和请求负载，并根据该组定义的、可能包含嵌套（建议限制层级）的、带优先级和权重的复杂路由策略，可靠地完成执行。它内置了递归解析、故障转移和负载均衡的完整逻辑。
+- **调用**: `ExecutionEngine` 调用 `retryHandler.executeWithStrategy(payload, channel_group_id)`。
+- **输出**: 最终的 `StandardResponse`。
+
+---
+
+**详细服务协调流程:**
+
+`ExecutionEngine` 在执行 `GenericLlmRequestNode` 时，会按上述分层协调以下服务：
+
+    ```mermaid
+    sequenceDiagram
+        participant Engine as ExecutionEngine
+        participant Node as GenericLlmRequestNode
+        participant Router as ModelRouterService
+        participant Retryer as RetryHandler
+        participant Config as ApiConfigService
+        participant Registry as LlmApiAdapterRegistry
+        participant LLM_API as 外部 LLM API
+
+        Engine->>Node: 执行节点 (已确定 model_id)
+        
+        Node->>Router: 1. [策略路由] findGroupForModel(model_id)
+        Router->>Config: 查询路由规则
+        Config-->>Router:
+        Router-->>Node: 返回 channel_group_id
+
+        Node->>Retryer: 2. [策略执行] executeWithStrategy(payload, channel_group_id)
+        Retryer->>Config: 获取渠道组和渠道列表
+        Config-->>Retryer:
+        
+        loop 遍历渠道组中的渠道
+            Retryer->>Retryer: 选择 API Key
+            Retryer->>Registry: 获取适配器实例
+            Registry-->>Retryer:
+            Retryer->>LLM_API: adapter.request(...)
+            alt 请求成功
+                LLM_API-->>Retryer: 成功响应
+                Retryer-->>Node: 返回 StandardResponse
+                break
+            else 请求失败 (可重试)
+                LLM_API-->>Retryer: 失败响应
+                Note right of Retryer: 记录失败, 继续下一个渠道
+            end
+        end
+        
+        Note right of Retryer: 所有渠道失败
+        Retryer-->>Node: 9. 返回带 error 的 StandardResponse
+    ```
+
+3.  **流程详解:**
+    a. **节点执行**: `GenericLlmRequestNode` 被执行，它拿到核心输入 `model_id`。
+    b. **路由决策 (`ModelRouterService`)**:
+        i. 节点调用 `context.ModelRouterService.findGroupForModel(model_id)`。
+        ii. `ModelRouterService` 内部根据预设的路由规则（例如，一个从 `model_id` 到 `channel_group_id` 的映射表），找到最适合执行该模型的渠道组 ID。
+        iii. 如果没有找到特定规则，它可能会回退到一个全局默认的渠道组。
+        iv. `ModelRouterService` 返回一个 `channel_group_id`。
+    c. **执行与故障转移 (`RetryHandler`)**:
+        i. 节点拿到 `channel_group_id` 后，调用 `context.RetryHandler.executeWithFailover(payload, channel_group_id)`，其中 `payload` 包含了 `messages`, `parameters`, `model_id` 等所有需要的信息。
+        ii. `RetryHandler` 从 `ApiConfigService` 获取该渠道组的详细信息，特别是其**有序的渠道列表**。
+        iii. `RetryHandler` 开始**遍历**这个有序列表：
+            - 对于列表中的第一个渠道，它获取其凭证配置 (`ApiCredentialConfig`)。
+            - 如果该渠道有多个 API Key，它根据 `key_selection_strategy` 选择一个 Key。
+            - 它获取对应的 `LlmApiAdapter` 实例。
+            - 它调用 `adapter.request()`，将所有必要信息（包括选定的模型、Key、URL等）传递给适配器，发起请求。
+        iv. **结果处理**:
+            - **成功**: 如果请求成功，`RetryHandler` 立刻将成功的 `StandardResponse` 返回，整个流程结束。
+            - **失败 (可重试)**: 如果请求失败，且错误码是可重试的（根据渠道配置或全局配置判断），`RetryHandler` 会继续循环，尝试列表中的**下一个渠道**。
+            - **失败 (不可重试或所有渠道已试完)**: 如果遇到不可重试的错误，或者所有渠道都尝试失败了，`RetryHandler` 将返回最后一个失败的、包含详细错误信息的 `StandardResponse`。
+    d. **节点输出**: `GenericLlmRequestNode` 将从 `RetryHandler` 收到的最终 `StandardResponse` 作为自己的输出。
 
 ## 5. 服务接口概要
 
@@ -668,51 +735,35 @@ interface ILlmApiAdapter {
 
 ---
 
-### Phase 1: 核心增强与健壮性
+### Phase 1: 核心增强与健壮性 (V5 实施计划)
 
-**目标:** 增强系统的健壮性、灵活性和易用性，支持更多 API 类型和核心高级特性。
+**目标:** 实现 V5 架构的核心，构建一个高可用、可路由、支持多样化模型的基础服务层，以支撑 Agent 等上层应用的稳定运行。
 
-**包含组件与功能:**
+**包含组件与功能 (按实施步骤):**
 
-1.  **故障转移与多 Key 支持:**
+1.  **第一步：数据与服务层升级 (为高可用性奠基)**
+    - **数据结构**:
+        - 在数据库 (`db/schema.ts`) 和类型定义 (`packages/types/src/schemas.ts`) 中，创建 `ApiChannelGroup`。
+        - 修改 `ApiCredentialConfig`，使其 `apiKey` 字段支持 `string | string[]`。
+    - **服务层 (`ApiConfigService`)**:
+        - 实现对 `ApiChannelGroup` 的完整 CRUD 方法。
+        - 在 `saveCredentials` 方法中，实现当 `apiKey` 为数组时，自动创建关联的隐式渠道组的逻辑。
+    - **UI**: 提供基础的渠道组管理界面。
 
-    - 实现 `ApiChannelGroup` 数据结构和 `ApiConfigService` 对其的 CRUD 管理。
-    - 实现 `RetryHandler` 逻辑，处理渠道组内的有序故障转移 (基于 `retry_on_codes`)。
-    - 增强 `ApiCredentialConfig` 支持 `api_key: string[]`。
-    - 实现 `KeySelector` 逻辑 (至少支持 `round-robin` 策略)，集成到 `RetryHandler` 中。
-    - `ModelRouterService` 升级为选择 `channel_group_ref`。
-    - 节点 `GenericLlmRequestNode` 移除直选 `channel_ref`，改为依赖路由结果。
+2.  **第二步：创建 `RetryHandler` (打造“不死心脏”)**
+    - **服务层 (`RetryHandler.ts`)**:
+        - 创建新的 `RetryHandler.ts` 服务文件。
+        - 实现核心方法 `executeWithFailover(payload, channel_group_id)`。
+        - 该方法内部逻辑包含：获取渠道组的有序渠道列表 -> 遍历渠道 -> 根据策略选择 Key -> 调用适配器 -> 在失败且可重试时尝试下一个渠道。
+    - **集成**: 暂时可以在 `GenericLlmRequestNode` 中直接调用此服务进行测试。
 
-2.  **更多适配器:**
-
-    - 实现 `AnthropicAdapter`。
-    - 实现 `GoogleGeminiAdapter`。
-    - 实现 `OllamaNativeAdapter` (使用 Ollama 的原生 API `/api/generate`, `/api/chat`)。
-    - 增强 `LlmApiAdapterRegistry` 以管理多个适配器。
-    - `ApiCredentialConfig` 增加 `adapter_type` 字段，允许显式指定或辅助推断。
-
-3.  **模型预设与增强发现:**
-
-    - 引入 `default_models.json` (包含 `ModelPresetRule`)。
-    - `ModelRegistryService` 在启动时加载预设，并在模型发现/添加时应用预设（填充能力、类型、分组、图标等建议值）。
-    - 增强模型发现能力，支持不同适配器（如果 API 支持）。
-
-4.  **基础路由规则:**
-
-    - 实现基于 `required_capabilities` 的简单映射规则 (如 3.7 示例)，存储在配置或数据库中。
-    - `ModelRouterService` 使用这些规则来选择 `default_model_id` (如果节点未指定) 和 `default_channel_group_ref`。
-    - `ActivatedModelInfo` 增加 `default_channel_group_ref` 字段作为备选。
-
-5.  **流式响应 (`stream`) 支持:**
-
-    - 修改 `ILlmApiAdapter` 接口，`request` 方法返回 `Promise<StandardResponse | AsyncGenerator<StandardResponse>>`。
-    - 在 `OpenAIAdapter` 和其他适配器中实现流式响应逻辑 (返回 `AsyncGenerator`)。
-    - `GenericLlmRequestNode` 需要能处理 `AsyncGenerator` 输出（例如，逐步累积文本，或提供流式输出端口）。
-    - **明确流式失败行为:** 确认流中断时 `RetryHandler` 会重新发起完整请求到下一个渠道。
-
-6.  **增强错误处理:**
-    - 适配器负责将提供商错误映射到 `StandardResponse.error` 中的标准化 `type`。
-    - `RetryHandler` 根据 `error.type` 和 `retry_on_codes` 做出更智能的重试决策。
+3.  **第三步：逻辑重构与解耦 (连接新组件)**
+    - **服务层 (`ModelRouterService.ts`)**:
+        - 创建新的 `ModelRouterService.ts` 服务文件。
+        - 将当前在 `GenericLlmRequestNode` 中的简单路由逻辑迁移到 `ModelRouterService` 中，并增强其功能，使其能够根据 `model_id` 查找并返回一个 `channel_group_id`。
+    - **节点重构 (`GenericLlmRequestNode.ts`)**:
+        - 移除节点内部所有关于查找渠道、调用适配器的逻辑。
+        - 其新职责简化为：**调用 `ModelRouterService` 获取 `channel_group_id` -> 调用 `RetryHandler` 并传入 `channel_group_id` 来执行请求 -> 处理最终返回结果。**
 
 ---
 

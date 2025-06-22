@@ -272,13 +272,42 @@ interface MappingRule {
 - **Webhook & Server-Sent Events (SSE)**
   - 继续支持 Webhook 回调和 SSE 事件流，用于异步通知。
 
-### 5.3. 面向外部系统的 OpenAI 兼容层 (Phase 2)
+### 5.3. 统一外部 API 网关：将工作流封装为标准 API
 
-如果仍需为**不经过前端 UI 的纯外部系统**提供 OpenAI 兼容 API，可以单独在后端或一个独立的 API 网关中实现。
+为了让用户能将 ComfyTavern 强大的工作流能力集成到任何支持 OpenAI API 的外部应用中，平台将提供一个统一的、符合 OpenAI 规范的 API 网关。
 
-- `POST /v1/chat/completions`
-  - 此端点内部会加载并执行与前端**相同**的 `ApiAdapter` 转换逻辑，然后调用内部的工作流执行引擎。这确保了无论调用来自前端面板还是外部 API，行为都保持一致。
-  - **`modelIdentifier` 的作用**：在此场景下，API 请求中的 `model` 字段将用于查找 `modelIdentifier` 匹配的 `ApiAdapter`，从而实现路由。
+**核心定位**: 此网关的核心价值在于**将 ComfyTavern 的工作流执行能力封装成一个标准的 API 端点**。每一个通过此网关的外部 API 调用，都精确地映射并触发一次内部工作流的执行。
+
+- **统一端点**: `POST /v1/chat/completions`
+
+#### 5.3.1. 核心机制
+
+1.  **API 适配器 (`ApiAdapter`)**: 这是实现封装的核心。一个 `ApiAdapter` 定义了：
+    *   一个外部可见的“模型别名” (`modelIdentifier`)，例如 `my-character-chat-v1`。
+    *   一个内部对应的 ComfyTavern 工作流 ID (`targetWorkflowId`)。
+    *   一套转换规则 (`requestMapping`)，用于将传入的 OpenAI 格式请求体，转换为目标工作流所需的输入。
+
+2.  **访问令牌 (Access Token)**:
+    *   用户必须在 ComfyTavern 内部为自己的账户生成专用的访问令牌。
+    *   这些令牌用于认证用户身份，并授权其使用 API 网关。
+
+#### 5.3.2. 调用流程
+
+1.  **配置**: 用户在 ComfyTavern 中创建一个 `ApiAdapter`，将一个工作流（例如，一个复杂的 Agent 对话流）映射到一个模型别名（如 `elara-the-agent`）。
+2.  **认证**: 外部应用在请求头中携带用户生成的 ComfyTavern 访问令牌 (`Authorization: Bearer <comfytavern_token>`)。
+3.  **请求**: 外部应用向 `POST /v1/chat/completions` 发起请求，请求体中指定 `model` 为之前配置的别名，例如 `{"model": "elara-the-agent", "messages": [...]}`。
+4.  **路由与执行**:
+    a. ComfyTavern 后端通过令牌认证用户。
+    b. 系统使用请求中的 `model` 字段 (`elara-the-agent`)，在当前用户可访问的 `ApiAdapter` 中查找匹配的 `modelIdentifier`。
+    c. 找到匹配的 `ApiAdapter` 后，系统使用其 `requestMapping` 规则，将请求中的 `messages` 等字段转换为目标工作流所需的输入。
+    d. 系统执行 `ApiAdapter` 中指定的 `targetWorkflowId`，并将转换后的数据作为输入。
+    e. 如果找不到匹配的 `ApiAdapter`，则返回标准的“模型未找到”错误。
+
+#### 5.3.3. 战略意义
+
+- **价值聚焦**: 此设计聚焦于对外提供 ComfyTavern 的核心价值——**强大的工作流执行能力**。
+- **强大的封装性**: 即便是最复杂的多节点、多 LLM 调用的工作流，也可以被封装成一个单一、标准的 API 调用。
+- **无缝集成**: 用户可以轻松地将他们创造的 Agent、RAG 应用或任何自动化流程，集成到任何现有的、支持 OpenAI API 的生态系统中。
 
 ### 5.4. 前后端一致性保障
 
@@ -292,7 +321,6 @@ interface MappingRule {
   - 在前端，它可能利用 Web Worker。
   - 在后端（Bun/Node.js），它可能利用 `vm` 模块或一个独立的进程。
   - 无论实现方式如何，其暴露的接口和功能（如允许的全局变量、可用的预置函数）必须是完全一致的。
-
 ## 6. 通用设计原则与安全
 
 - **认证与授权**：所有后端 HTTP API 均需通过 API Key 进行认证。
