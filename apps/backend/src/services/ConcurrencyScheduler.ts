@@ -10,6 +10,7 @@ import { ExecutionEngine } from '../ExecutionEngine'; // 导入 ExecutionEngine
 interface RunningExecution extends PromptInfo {
   payload: WorkflowExecutionPayload;
   startTime: number;
+  userId: string; // + 添加 userId
   // 添加 ExecutionEngine 实例的引用
   engineInstance?: ExecutionEngine;
 }
@@ -18,6 +19,7 @@ interface RunningExecution extends PromptInfo {
 interface WaitingExecution extends PromptInfo {
   payload: WorkflowExecutionPayload;
   queuedTime: number;
+  userId: string; // + 添加 userId
 }
 
 type AppServices = {
@@ -30,12 +32,14 @@ export class ConcurrencyScheduler {
   private waitingQueue: WaitingExecution[] = [];
   private wsManager: WebSocketManager; // 引用 WebSocket 管理器
   private services: AppServices; // 存储服务引用
+  private multiUserMode: boolean; // + 添加 multiUserMode
 
-  constructor(wsManager: WebSocketManager, services: AppServices) {
+  constructor(wsManager: WebSocketManager, services: AppServices, multiUserMode: boolean) {
     this.maxConcurrentWorkflows = MAX_CONCURRENT_WORKFLOWS;
     this.wsManager = wsManager;
     this.services = services;
-    console.log(`Concurrency Scheduler initialized with max ${this.maxConcurrentWorkflows} concurrent workflows.`);
+    this.multiUserMode = multiUserMode; // +
+    console.log(`Concurrency Scheduler initialized with max ${this.maxConcurrentWorkflows} concurrent workflows. Multi-User Mode: ${this.multiUserMode}`);
   }
 
   /**
@@ -48,12 +52,30 @@ export class ConcurrencyScheduler {
   public submitExecution(
     payload: WorkflowExecutionPayload,
     source: 'websocket' | 'http',
-    clientId?: string
+    clientId?: string,
+    userId?: string, // + 添加 userId
   ): PromptAcceptedResponsePayload {
     const promptId = nanoid();
     const now = Date.now();
 
-    console.log(`[Scheduler] Received execution request ${promptId} from ${source}${clientId ? ` (client: ${clientId})` : ''}`);
+    // --- 确定用户 ID ---
+    let finalUserId: string;
+    if (this.multiUserMode) {
+      if (!userId) {
+        // 在多用户模式下，userId 是必需的
+        console.error('[Scheduler] CRITICAL: Execution submitted in multi-user mode without a userId.');
+        // 这里可以根据策略决定是抛出错误还是拒绝
+        // 为了健壮性，暂时拒绝，但理想情况下应该有更严格的入口控制
+        // 注意：直接抛出错误可能会使调用者崩溃，返回一个错误响应或记录可能更好
+        // 此处暂时简单拒绝，实际应用中应有更完善的错误处理
+        throw new Error("Execution in multi-user mode requires a userId.");
+      }
+      finalUserId = userId;
+    } else {
+      // 在单用户模式下，如果没提供 userId，则使用默认值
+      finalUserId = userId || 'default_user';
+    }
+    console.log(`[Scheduler] Received execution request ${promptId} for user ${finalUserId} from ${source}${clientId ? ` (client: ${clientId})` : ''}`);
 
     // 发送接受确认 (主要针对 WebSocket)
     if (source === 'websocket' && clientId) {
@@ -68,10 +90,11 @@ export class ConcurrencyScheduler {
         status: ExecutionStatus.RUNNING,
         payload,
         startTime: now,
+        userId: finalUserId, // +
         // workflowName: payload.metadata?.name // 可选
       };
       this.runningExecutions.set(promptId, executionInfo);
-      console.log(`[Scheduler] Starting execution ${promptId} immediately. Running: ${this.runningExecutions.size}/${this.maxConcurrentWorkflows}`);
+      console.log(`[Scheduler] Starting execution ${promptId} for user ${finalUserId} immediately. Running: ${this.runningExecutions.size}/${this.maxConcurrentWorkflows}`);
       this._startExecution(executionInfo);
 
       // 发送状态更新 (运行中)
@@ -84,6 +107,7 @@ export class ConcurrencyScheduler {
         status: ExecutionStatus.QUEUED,
         payload,
         queuedTime: now,
+        userId: finalUserId, // +
         // workflowName: payload.metadata?.name // 可选
       };
       this.waitingQueue.push(waitingInfo);
@@ -102,10 +126,10 @@ export class ConcurrencyScheduler {
    * @param executionInfo 运行中的执行信息
    */
   private async _startExecution(executionInfo: RunningExecution): Promise<void> {
-    const { promptId, payload } = executionInfo;
-    console.log(`[Scheduler] Starting execution logic for ${promptId}...`);
+    const { promptId, payload, userId } = executionInfo; // + 解构出 userId
+    console.log(`[Scheduler] Starting execution logic for ${promptId} (user: ${userId})...`);
 
-    const engine = new ExecutionEngine(promptId, payload, this.wsManager, this.services);
+    const engine = new ExecutionEngine(promptId, payload, this.wsManager, this.services, userId); // + 传递 userId
     executionInfo.engineInstance = engine; // 保存实例引用以便中断
 
     try {
@@ -162,13 +186,14 @@ export class ConcurrencyScheduler {
     if (this.waitingQueue.length > 0 && this.runningExecutions.size < this.maxConcurrentWorkflows) {
       const nextExecution = this.waitingQueue.shift();
       if (nextExecution) {
-        const { promptId, payload } = nextExecution;
+        const { promptId, payload, userId } = nextExecution; // + 解构出 userId
         const now = Date.now();
         const executionInfo: RunningExecution = {
           promptId,
           status: ExecutionStatus.RUNNING, // 状态变为 RUNNING
           payload,
           startTime: now,
+          userId, // +
           // workflowName: payload.metadata?.name // 可选
         };
         this.runningExecutions.set(promptId, executionInfo);

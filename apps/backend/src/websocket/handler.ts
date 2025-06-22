@@ -53,7 +53,7 @@ export function createWebsocketHandler(
     },
 
     async message(ws: any, message: WebSocketMessage<any>) {
-      const clientId = ws.data?.clientId; // 从 ws.data 获取 clientId
+      const { clientId, userId } = ws.data || {}; // 从 ws.data 获取 clientId 和 userId
       if (!clientId) {
         console.error('[Handler] Received message from WebSocket without a clientId in ws.data. Ignoring message.', message);
         // 可以选择关闭这个无法识别的连接
@@ -72,9 +72,9 @@ export function createWebsocketHandler(
             } else {
               console.log(`[Handler DEBUG] PROMPT_REQUEST payload from ${clientId} DOES NOT CONTAIN interfaceInputs AFTER type assertion.`);
             }
-            console.log(`[Handler] Received PROMPT_REQUEST from ${clientId}`);
-            // 将请求提交给调度器
-            scheduler.submitExecution(payload, 'websocket', clientId);
+            console.log(`[Handler] Received PROMPT_REQUEST from ${clientId} (User: ${userId || 'default'})`);
+            // 将请求提交给调度器，并传递 userId
+            scheduler.submitExecution(payload, 'websocket', clientId, userId);
             // 调度器内部会发送 PROMPT_ACCEPTED_RESPONSE
             break;
           }

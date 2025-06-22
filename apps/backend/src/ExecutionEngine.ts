@@ -182,6 +182,7 @@ export class ExecutionEngine {
   private payload: WorkflowExecutionPayload;
   private wsManager: WebSocketManager;
   private services: AppServices; // 存储服务引用
+  private userId: string;
   // private outputManager: OutputManager; // TODO: Inject OutputManager
   // private historyService: HistoryService; // TODO: Inject HistoryService
 
@@ -201,7 +202,8 @@ export class ExecutionEngine {
     promptId: NanoId,
     payload: WorkflowExecutionPayload,
     wsManager: WebSocketManager,
-    services: AppServices // 接收服务
+    services: AppServices, // 接收服务
+    userId: string
     // outputManager: OutputManager, // TODO
     // historyService: HistoryService // TODO
   ) {
@@ -214,6 +216,7 @@ export class ExecutionEngine {
     }
     this.wsManager = wsManager;
     this.services = services; // 存储服务
+    this.userId = userId;
     // this.outputManager = outputManager;
     // this.historyService = historyService;
 
@@ -670,6 +673,7 @@ export class ExecutionEngine {
         workflowInterfaceInputs: this.payload.interfaceInputs,
         workflowInterfaceOutputs: this.payload.interfaceOutputs,
         services: this.services, // <--- 注入 services
+        userId: this.userId,
       };
 
       const executeFn = definition.execute;

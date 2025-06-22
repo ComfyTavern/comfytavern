@@ -68,11 +68,12 @@ class GenericLlmRequestNodeImpl {
     }
     console.log(`[GenericLlmRequestNode ${nodeId}] Using channel: ${channelConfig.label} (${channelConfig.id})`);
 
+    // TODO: 激活模型管理功能完成后，需要恢复此处的检查
     // We don't strictly need model info for the request itself in MVP, but it's good practice to check.
-    const modelInfo = await activatedModelService.getActivatedModel(activated_model_id);
-    if (!modelInfo) {
-      throw new Error(`Activated model "${activated_model_id}" not found.`);
-    }
+    // const modelInfo = await activatedModelService.getActivatedModel(activated_model_id);
+    // if (!modelInfo) {
+    //   throw new Error(`Activated model "${activated_model_id}" not found.`);
+    // }
 
     // --- 4. Get Adapter and Execute Request ---
     const adapterType = channelConfig.adapterType || 'openai'; // Default to openai for MVP
