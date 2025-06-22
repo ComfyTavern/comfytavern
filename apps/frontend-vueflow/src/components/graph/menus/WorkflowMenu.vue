@@ -290,9 +290,16 @@ const handleSaveAs = async () => {
     const savedWorkflow = await workflowStore.saveWorkflowAsNew(projectId, newWorkflowDataObject);
 
     if (savedWorkflow && savedWorkflow.id) {
-      // 5. 在新标签页中打开这个刚保存的工作流
-      // addTab 会处理 setActiveTab
-      tabStore.addTab("workflow", savedWorkflow.name, savedWorkflow.id, true, projectId);
+      // 5. 更新当前标签页以反映“另存为”的新工作流
+      tabStore.updateTab(currentTabInternalId, {
+        label: savedWorkflow.name,
+        associatedId: savedWorkflow.id,
+        isDirty: false, // 保存后，标签页不再是脏的
+      });
+
+      // 6. 更新 workflowStore 中当前标签页的状态
+      workflowStore.updateWorkflowData(currentTabInternalId, savedWorkflow, false);
+
       dialogService.showSuccess(t('graph.menus.workflow.notifications.saveAsSuccess', { name: savedWorkflow.name }));
     } else {
       // 如果 savedWorkflow 为 null 或没有 id，说明保存失败

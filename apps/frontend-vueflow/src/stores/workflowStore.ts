@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core";
-import type { WorkflowStateSnapshot, TabWorkflowState } from "../types/workflowTypes"; // 导入 TabWorkflowState
+import type { WorkflowStateSnapshot, TabWorkflowState, WorkflowData } from "../types/workflowTypes"; // 导入 TabWorkflowState
 import type { HistoryEntry, GroupInterfaceInfo, WorkflowStorageObject, GroupSlotInfo } from "@comfytavern/types"; // <-- Import HistoryEntry, GroupInterfaceInfo, WorkflowStorageObject, GroupSlotInfo
 import { useTabStore, type Tab } from "./tabStore"; // 导入 Tab 类型
 import { ref, nextTick, watch, computed } from "vue";
@@ -408,6 +408,24 @@ export const useWorkflowStore = defineStore("workflow", () => {
   }
 
   /**
+   * 更新指定标签页的工作流数据和脏状态。
+   * @param internalId 标签页的内部 ID
+   * @param newData 新的工作流数据
+   * @param isDirty 新的脏状态
+   */
+  function updateWorkflowData(internalId: string, newData: WorkflowData, isDirty: boolean) {
+    const state = workflowManager.getAllTabStates.value.get(internalId);
+    if (state) {
+      state.workflowData = newData;
+      state.isDirty = isDirty;
+      // 可以在这里添加一些调试日志
+      console.debug(`[WorkflowStore] Updated workflow data for tab ${internalId}.`);
+    } else {
+      console.warn(`[WorkflowStore] Could not find state for tab ${internalId} to update workflow data.`);
+    }
+  }
+
+  /**
    * 将 NodeGroup 实例特定输入槽的值重置为模板默认值，并记录历史。
    * 此操作会将该输入槽的当前值更改为模板中定义的默认值。
    * @param internalId 当前标签页的内部 ID。
@@ -730,5 +748,6 @@ export const useWorkflowStore = defineStore("workflow", () => {
     },
     resetNodeGroupInputToDefaultAndRecord, // 新增导出
     synchronizeGroupNodeInterfaceAndValues,
+    updateWorkflowData, // 导出新函数
   };
 });
