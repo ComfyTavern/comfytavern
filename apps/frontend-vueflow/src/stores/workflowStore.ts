@@ -17,6 +17,7 @@ import { WebSocketMessageType, DataFlowType, BuiltInSocketMatchCategory } from "
 import { getEffectiveDefaultValue } from "@comfytavern/utils"; // 确保导入
 import { klona } from "klona";
 import { useDialogService } from '../services/DialogService';
+import { getWorkflow } from '@/utils/api'; // 导入新的 API 函数
 
 export const useWorkflowStore = defineStore("workflow", () => {
   const availableWorkflows = ref<
@@ -613,8 +614,21 @@ export const useWorkflowStore = defineStore("workflow", () => {
     console.info(`[WorkflowStore:synchronizeGroupNodeInterfaceAndValues] NodeGroup ${nodeGroupInstanceId} 已与模板 ${referencedWorkflowId} 同步。`);
   }
 
+  async function fetchWorkflow(projectId: string, workflowId: string) {
+    try {
+      const workflow = await getWorkflow(projectId, workflowId);
+      return workflow;
+    } catch (error) {
+      console.error(`[WorkflowStore] fetchWorkflow failed for project ${projectId}, workflow ${workflowId}:`, error);
+      // 可选：在这里显示错误通知
+      // dialogService.showError(`获取工作流失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      return null;
+    }
+  }
+
   return {
     availableWorkflows,
+    fetchWorkflow, // 导出新函数
     changedTemplateWorkflowIds: computed(() => changedTemplateWorkflowIds.value),
     getActiveTabState: workflowManager.getActiveTabState,
     getWorkflowData: workflowManager.getWorkflowData,

@@ -8,6 +8,7 @@ import './assets/styles/theme-variables.css' // 导入主题 CSS 变量
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import i18n from './locales'; // 直接导入 i18n 实例
 
 import App from './App.vue'
@@ -16,7 +17,10 @@ import { vComfyTooltip } from './directives/vComfyTooltip';
 
 const app = createApp(App)
 
-app.use(createPinia())
+const pinia = createPinia()
+pinia.use(piniaPluginPersistedstate)
+
+app.use(pinia)
 app.use(router)
 app.use(i18n); // 注册 i18n 插件
 app.directive('comfy-tooltip', vComfyTooltip);

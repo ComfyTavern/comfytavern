@@ -96,6 +96,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, markRaw, watch, nextTick, provide } from "vue"; // watch 已经存在，无需重复导入, 移除 ComputedRef
 import { useI18n } from "vue-i18n";
+import { useRoute, useRouter } from 'vue-router';
 import Canvas from "../components/graph/Canvas.vue";
 import HierarchicalMenu from '../components/common/HierarchicalMenu.vue';
 import type { MenuItem as HierarchicalMenuItem } from '../components/common/HierarchicalMenu.vue';
@@ -111,7 +112,6 @@ import { useNodeStore } from "../stores/nodeStore";
 import { useWorkflowStore } from "../stores/workflowStore";
 import { useTabStore } from "../stores/tabStore";
 import { storeToRefs } from "pinia";
-import { useRouteHandler } from "../composables/editor/useRouteHandler";
 import { useCanvasInteraction } from "../composables/canvas/useCanvasInteraction";
 import { useTabManagement } from "../composables/editor/useTabManagement";
 import { useInterfaceWatcher } from "../composables/editor/useInterfaceWatcher";
@@ -144,7 +144,8 @@ const { isRegexEditorModalVisible, regexEditorModalData } = storeToRefs(uiStore)
 const nodeDefinitionsLoaded = computed(
   () => !!nodeDefinitions.value && nodeDefinitions.value.length > 0
 );
-const { initializeRouteHandling } = useRouteHandler();
+const route = useRoute();
+const router = useRouter();
 const {
   loading,
   selectedNodeForPreview,
@@ -339,8 +340,55 @@ onMounted(async () => {
     workflowStore.ensureTabState(activeTabId.value);
   }
 
-  // 初始化路由处理
-  initializeRouteHandling();
+  // --- 状态恢复与 URL 同步 ---
+
+  // 1. 监听 activeTabId 的变化，更新 URL
+  watch(activeTabId, (newTabId, oldTabId) => {
+    if (newTabId && newTabId !== oldTabId) {
+      const tab = tabStore.tabs.find(t => t.internalId === newTabId);
+      const workflowId = tab?.associatedId;
+      const currentWorkflowId = route.params.workflowId;
+
+      // 仅当 URL 需要更新时才操作
+      if (workflowId && workflowId !== currentWorkflowId) {
+        router.replace({ params: { ...route.params, workflowId } });
+      } else if (!workflowId && currentWorkflowId) {
+        // 如果新标签页没有关联工作流，但 URL 中有，则移除它
+        const newParams = { ...route.params };
+        delete newParams.workflowId;
+        router.replace({ params: newParams });
+      }
+    }
+  }, { immediate: false }); // 初始加载时不触发
+
+  // 2. 监听 URL 中 workflowId 的变化，切换标签页
+  watch(() => route.params.workflowId, (newWorkflowId, oldWorkflowId) => {
+    if (newWorkflowId && newWorkflowId !== oldWorkflowId) {
+      const projectId = route.params.projectId as string;
+      if (projectId) {
+        // 检查是否已经因为切换 tab 导致 URL 变化，避免循环
+        const activeTab = tabStore.activeTab;
+        if (activeTab?.associatedId !== newWorkflowId) {
+          tabStore.loadAndOpenWorkflowById(projectId, newWorkflowId as string);
+        }
+      }
+    }
+  }, { immediate: false }); // 初始加载时由 onMounted 处理
+
+  // 3. onMounted 中的初始加载逻辑
+  const projectId = route.params.projectId as string;
+  const initialWorkflowId = route.params.workflowId as string | undefined;
+
+  if (initialWorkflowId) {
+    // 如果 URL 指定了工作流，则优先加载
+    await tabStore.loadAndOpenWorkflowById(projectId, initialWorkflowId);
+  } else if (activeTabId.value) {
+    // 如果 tabStore 从 localStorage 恢复了 activeTabId，确保其状态被加载
+    await workflowStore.ensureTabState(activeTabId.value);
+  } else {
+    // 如果两者都没有，则初始化一个默认标签页
+    tabStore.initializeDefaultTab();
+  }
 
   // --- NodeGroup 同步逻辑 ---
   const performNodeGroupSyncCheck = async (tabId: string | null | undefined) => {
@@ -440,7 +488,7 @@ const handleModalSave = (updatedRules: any /* RegexRule[] */) => {
 <style scoped>
 .editor-container {
   width: 100%;
-  height: 100vh;
+  height: 100%; /* 从 100vh 改为 100% 以适应父容器 */
   position: relative;
   overflow: hidden;
 }

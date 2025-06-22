@@ -1,11 +1,14 @@
 import { createRouter, createWebHistory, type NavigationGuardNext, type RouteLocationNormalized } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
-import EditorView from '../views/EditorView.vue'
 import ProjectListView from '../views/ProjectListView.vue'
 import CharacterCardView from '../views/CharacterCardView.vue'
 import FileManagerPage from '../views/FileManagerPage.vue' // 导入文件管理器页面
 import HomeLayout from '../views/HomeLayout.vue' // 导入新的布局组件
 import { useProjectStore } from '../stores/projectStore' // 导入项目 store
+// 导入新组件和视图
+import ProjectLayout from '../views/ProjectLayout.vue' // 导入新的项目布局
+import ProjectDashboardView from '../views/ProjectDashboardView.vue'
+import EditorView from '../views/EditorView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -56,49 +59,55 @@ const router = createRouter({
         },
       ],
     },
+    // 新的项目根路由
     {
-      path: '/projects/:projectId/editor/:workflowId?', // 添加可选的 workflowId 参数
-      name: 'Editor', // 更新路由名称为 Editor
-      component: EditorView,
-      beforeEnter: async (to: RouteLocationNormalized, _from: RouteLocationNormalized, next: NavigationGuardNext) => { // Prefix unused 'from' with underscore
-        const projectId = to.params.projectId as string;
-        // 在守卫内部获取 store 实例
-        // 注意：这要求 Pinia 实例已在应用入口处创建 (main.ts)
-        const projectStore = useProjectStore();
+      path: '/project/:projectId',
+      component: ProjectLayout, // 使用项目布局容器
+      beforeEnter: async (to: RouteLocationNormalized, _from: RouteLocationNormalized, next: NavigationGuardNext) => {
+        const projectId = to.params.projectId as string
+        const projectStore = useProjectStore()
 
         if (!projectId) {
-          console.error('Router Guard: Project ID is missing in route params.');
-          // 如果没有项目 ID，重定向到主页或其他安全页面
-          return next({ name: 'home' }); // 重定向到 home
+          console.error('Router Guard: Project ID is missing in route params.')
+          return next({ name: 'home' })
         }
 
-        // 如果请求的项目已经是当前加载的项目，则无需重新加载
-        if (projectStore.currentProjectId === projectId) {
-          console.debug(`Router Guard: Project ${projectId} is already loaded.`);
-          return next(); // 允许导航
-        }
-
-        console.debug(`Router Guard: Attempting to load project ${projectId}...`);
-        try {
-          // 调用 store 的 action 来加载项目
-          const loaded = await projectStore.loadProject(projectId);
-
-          if (loaded) {
-            console.info(`Router Guard: Project ${projectId} loaded successfully.`); // 改为 info
-            return next(); // 加载成功，允许导航
-          } else {
-            console.error(`Router Guard: Failed to load project ${projectId}. Redirecting to home.`);
-            // 加载失败，重定向到主页或错误页面
-            // TODO: 可以考虑显示一个错误提示给用户
-            return next({ name: 'home' }); // 重定向到 home
+        // 只有在项目未加载或切换项目时才加载
+        if (projectStore.currentProjectId !== projectId) {
+          try {
+            const loaded = await projectStore.loadProject(projectId)
+            if (!loaded) {
+              console.error(`Router Guard: Failed to load project ${projectId}. Redirecting to home.`)
+              return next({ name: 'home' })
+            }
+          } catch (error) {
+            console.error(`Router Guard: Error loading project ${projectId}:`, error)
+            return next({ name: 'home' })
           }
-        } catch (error) {
-          console.error(`Router Guard: Error loading project ${projectId}:`, error);
-          // 捕获加载过程中的异常，重定向
-          // TODO: 可以考虑显示一个错误提示给用户
-          return next({ name: 'home' }); // 重定向到 home
         }
+        // 加载成功或已加载，放行
+        return next()
       },
+      children: [
+        {
+          path: '',
+          name: 'ProjectRoot', // 根路径名
+          redirect: to => ({ name: 'ProjectDashboard', params: { projectId: to.params.projectId } }),
+        },
+        // 仪表盘子路由
+        {
+          path: 'dashboard',
+          name: 'ProjectDashboard',
+          component: ProjectDashboardView,
+        },
+        // 编辑器子路由
+        {
+          path: 'editor/:workflowId?',
+          name: 'ProjectEditor',
+          component: EditorView,
+        },
+        // 未来可以添加更多子路由，如 'scenes', 'settings' 等
+      ],
     },
   ],
 })

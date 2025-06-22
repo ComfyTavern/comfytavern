@@ -1,18 +1,20 @@
 import axios from 'axios';
 import { getApiBaseUrl } from './urlUtils'; // 导入新的工具函数
+import type { WorkflowStorageObject } from '@comfytavern/types';
 
 // 使用工具函数获取 API 基础 URL
 const API_BASE_URL = getApiBaseUrl();
 
-export const useApi = () => {
-  const api = axios.create({
-    baseURL: API_BASE_URL,
-    timeout: 5000,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 5000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
+
+export const useApi = () => {
   const get = async <T>(url: string): Promise<T> => {
     const response = await api.get<T>(url);
     return response.data;
@@ -39,4 +41,10 @@ export const useApi = () => {
     put,
     del,
   };
+};
+
+// 新增的独立 API 函数
+export const getWorkflow = async (projectId: string, workflowId: string): Promise<WorkflowStorageObject> => {
+  const response = await api.get<WorkflowStorageObject>(`/projects/${projectId}/workflows/${workflowId}`);
+  return response.data;
 };

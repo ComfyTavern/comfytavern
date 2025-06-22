@@ -19,17 +19,19 @@ export interface Tab {
   isDirty: boolean; // 是否有未保存的更改
 }
 
-export const useTabStore = defineStore("tab", () => {
-  const workflowStore = useWorkflowStore(); // 获取 workflow store 实例
-  const projectStore = useProjectStore(); // 获取 project store 实例
-  const router = useRouter(); // 获取 router 实例
-  const dialogService = useDialogService(); // 获取 DialogService 实例
-  const performanceStatsStore = usePerformanceStatsStore(); // + 初始化 performanceStatsStore
-  // --- State ---
-  const tabs = ref<Tab[]>([]);
-  const activeTabId = ref<string | null>(null);
+export const useTabStore = defineStore(
+  "tab",
+  () => {
+    const workflowStore = useWorkflowStore(); // 获取 workflow store 实例
+    const projectStore = useProjectStore(); // 获取 project store 实例
+    const router = useRouter(); // 获取 router 实例
+    const dialogService = useDialogService(); // 获取 DialogService 实例
+    const performanceStatsStore = usePerformanceStatsStore(); // + 初始化 performanceStatsStore
+    // --- State ---
+    const tabs = ref<Tab[]>([]);
+    const activeTabId = ref<string | null>(null);
 
-  // --- Getters ---
+    // --- Getters ---
   const activeTab = computed(
     () => tabs.value.find((tab) => tab.internalId === activeTabId.value) || null
   );
@@ -195,48 +197,7 @@ export const useTabStore = defineStore("tab", () => {
 
     if (internalId === null || tabs.value.some((tab) => tab.internalId === internalId)) {
       activeTabId.value = internalId;
-
-      // --- URL Synchronization ---
-      const newActiveTab = activeTab.value; // 获取新激活的标签页对象
-      const currentProjectId = projectStore.currentProjectId; // 获取当前项目 ID
-
-      if (!currentProjectId) {
-        console.warn("TabStore: Cannot sync URL, current project ID is missing.");
-        return; // 没有项目 ID，无法同步 URL
-      }
-
-      // --- URL Synchronization with Loop Prevention ---
-      const currentParams = router.currentRoute.value.params;
-      const targetWorkflowId =
-        newActiveTab?.type === "workflow" || newActiveTab?.type === "groupEditor"
-          ? newActiveTab.associatedId
-          : null; // Get target workflowId or null
-
-      // Check if URL update is needed
-      const needsUpdate =
-        currentParams.projectId !== currentProjectId || // Project ID mismatch
-        (targetWorkflowId && currentParams.workflowId !== targetWorkflowId) || // Workflow ID exists and mismatches
-        (!targetWorkflowId && currentParams.workflowId); // Target has no workflow ID, but URL does
-
-      if (needsUpdate) {
-        const params: Record<string, string> = { projectId: currentProjectId };
-        if (targetWorkflowId) {
-          params.workflowId = targetWorkflowId;
-          console.debug(`TabStore: setActiveTab - Updating URL for workflow ${targetWorkflowId}`);
-        } else {
-          console.debug(`TabStore: setActiveTab - Updating URL (removing workflowId)`);
-        }
-        router.replace({ name: "Editor", params }).catch((err) => {
-          if (err.name !== "NavigationDuplicated") {
-            console.error("Router replace error in setActiveTab:", err);
-          }
-        });
-      } else {
-        console.debug(
-          `TabStore: setActiveTab - URL already matches target state for tab ${internalId}. Skipping router.replace.`
-        );
-      }
-      // --- End URL Synchronization ---
+      // URL 同步逻辑现在由 EditorView 中的 watcher 处理
     } else {
       console.warn(`TabStore: Attempted to activate non-existent tab with ID: ${internalId}`);
     }
@@ -396,7 +357,8 @@ export const useTabStore = defineStore("tab", () => {
           if (targetWorkflowId) {
             params.workflowId = targetWorkflowId;
           }
-          router.replace({ name: "Editor", params }).catch((err) => {
+          // 使用新的路由名称
+          router.replace({ name: "ProjectEditor", params }).catch((err) => {
             if (err.name !== "NavigationDuplicated") {
               console.error("Router replace error in watcher:", err);
             }
@@ -414,6 +376,50 @@ export const useTabStore = defineStore("tab", () => {
   // 移除旧的 workflowStore.isCurrentWorkflowDirty 监听器 (如果存在)
   // watch(() => workflowStore.isCurrentWorkflowDirty, ...); // 假设这个监听器不再需要或已移至 workflowStore 内部处理 isDirty 状态同步
 
+  /**
+   * 根据 workflowId 加载并打开工作流标签页，如果不存在则创建。
+   * @param projectId 项目ID
+   * @param workflowId 工作流ID
+   */
+  async function loadAndOpenWorkflowById(projectId: string, workflowId: string) {
+    // 检查是否已存在该工作流的标签页
+    const existingTab = tabs.value.find(
+      (tab) =>
+        tab.projectId === projectId &&
+        tab.associatedId === workflowId &&
+        (tab.type === 'workflow' || tab.type === 'groupEditor')
+    );
+
+    if (existingTab) {
+      setActiveTab(existingTab.internalId);
+      return;
+    }
+
+    // 如果不存在，则创建新标签页
+    try {
+      // 我们需要获取工作流的名称来作为标签页的 label
+      const workflow = await workflowStore.fetchWorkflow(projectId, workflowId);
+      if (workflow) {
+        addTab(
+          'workflow',
+          workflow.name || '未命名工作流',
+          workflowId,
+          true,
+          projectId
+        );
+      } else {
+        dialogService.showError(`无法找到 ID 为 ${workflowId} 的工作流。`);
+        // 可选：跳转回项目仪表盘
+        router.replace({ name: 'ProjectDashboard', params: { projectId } });
+      }
+    } catch (error) {
+      console.error(`加载工作流 ${workflowId} 失败:`, error);
+      dialogService.showError(`加载工作流失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      router.replace({ name: 'ProjectDashboard', params: { projectId } });
+    }
+  }
+
+
   // --- Initialization ---
   // initializeDefaultTab() // Removed: Call will be made explicitly from App.vue after project load
 
@@ -428,5 +434,38 @@ export const useTabStore = defineStore("tab", () => {
     openGroupEditorTab, // Export the new function
     initializeDefaultTab, // Export the initialization function
     clearTabsForProject, // Export the new function
+    loadAndOpenWorkflowById, // 导出新函数
   };
-});
+},
+{
+  persist: {
+    // 自定义序列化，只保存必要的标签页信息
+    serializer: {
+      serialize: (state: any) => {
+        const simplifiedState = {
+          ...state,
+          tabs: state.tabs.map((tab: Tab) => ({
+            internalId: tab.internalId,
+            projectId: tab.projectId,
+            workflowId: tab.associatedId, // 将 associatedId 重命名为 workflowId
+            label: tab.label,
+            type: tab.type,
+            isDirty: tab.isDirty,
+          })),
+        };
+        return JSON.stringify(simplifiedState);
+      },
+      deserialize: (storedState: string) => {
+        const state = JSON.parse(storedState);
+        // 从持久化存储中恢复时，恢复 isDirty 状态
+        state.tabs = state.tabs.map((tab: any) => ({
+          ...tab,
+          associatedId: tab.workflowId, // 恢复时将 workflowId 映射回 associatedId
+          isDirty: tab.isDirty || false, // 恢复 isDirty 状态，如果不存在则为 false
+        }));
+        return state;
+      },
+    },
+  },
+}
+);

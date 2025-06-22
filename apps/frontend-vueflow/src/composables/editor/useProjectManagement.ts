@@ -42,8 +42,8 @@ export function useProjectManagement() {
       // 将项目名称传递给 store action
       const newProject = await projectStore.createProject({ name: projectName });
       if (newProject) {
-        // 导航到新项目的编辑器页面
-        router.push({ name: 'Editor', params: { projectId: newProject.id } });
+        // 导航到新项目的根页面
+        router.push({ name: 'ProjectRoot', params: { projectId: newProject.id } });
       } else {
         console.error('创建新项目失败');
         error.value = '创建新项目失败，请检查后端服务或联系管理员。';
@@ -60,7 +60,7 @@ export function useProjectManagement() {
 
   // 打开现有项目
   const openProject = (projectId: string) => {
-    router.push({ name: 'Editor', params: { projectId } });
+    router.push({ name: 'ProjectRoot', params: { projectId } });
   };
 
   // 在 Composable 挂载时自动加载项目

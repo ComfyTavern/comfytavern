@@ -50,6 +50,7 @@
     "overlayscrollbars": "^2.11.1",
     "overlayscrollbars-vue": "^0.5.9",
     "pinia": "^3.0.1",
+    "pinia-plugin-persistedstate": "^4.3.0",
     "png-chunk-text": "^1.0.0",
     "png-chunks-extract": "^1.0.0",
     "postcss": "8",
