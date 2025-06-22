@@ -173,10 +173,15 @@ class BoundedBuffer<T> {
  * 负责执行单个工作流实例的引擎。
  * 每个执行请求都会创建一个新的 ExecutionEngine 实例。
  */
+type AppServices = {
+  [key: string]: any; // 简单定义，可以从 index.ts 导入更具体的类型
+};
+
 export class ExecutionEngine {
   private promptId: NanoId;
   private payload: WorkflowExecutionPayload;
   private wsManager: WebSocketManager;
+  private services: AppServices; // 存储服务引用
   // private outputManager: OutputManager; // TODO: Inject OutputManager
   // private historyService: HistoryService; // TODO: Inject HistoryService
 
@@ -195,7 +200,8 @@ export class ExecutionEngine {
   constructor(
     promptId: NanoId,
     payload: WorkflowExecutionPayload,
-    wsManager: WebSocketManager
+    wsManager: WebSocketManager,
+    services: AppServices // 接收服务
     // outputManager: OutputManager, // TODO
     // historyService: HistoryService // TODO
   ) {
@@ -207,6 +213,7 @@ export class ExecutionEngine {
       // console.log(`[ExecutionEngine CONSTRUCTOR DEBUG] Payload for prompt ${promptId} DOES NOT CONTAIN interfaceInputs.`);
     }
     this.wsManager = wsManager;
+    this.services = services; // 存储服务
     // this.outputManager = outputManager;
     // this.historyService = historyService;
 
@@ -662,6 +669,7 @@ export class ExecutionEngine {
         nodeId: nodeId, // <--- 添加 nodeId 到 context
         workflowInterfaceInputs: this.payload.interfaceInputs,
         workflowInterfaceOutputs: this.payload.interfaceOutputs,
+        services: this.services, // <--- 注入 services
       };
 
       const executeFn = definition.execute;

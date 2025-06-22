@@ -241,9 +241,22 @@ app.use(
 app.use(projectRoutesPlugin({ appVersion }));;
 
 // --- 实例化管理器 ---
+// 将服务实例化提升到这里，以便注入到调度器
+const apiConfigService = new ApiConfigService();
+const activatedModelService = new ActivatedModelService();
+const llmApiAdapterRegistry = new LlmApiAdapterRegistry();
+
+// 将所有需要传递的服务打包
+const services = {
+  apiConfigService,
+  activatedModelService,
+  llmApiAdapterRegistry,
+  // 如果其他服务也需要，在这里添加
+};
+
 // WebSocketManager 需要 HTTP 服务器，在 listen 回调中附加
 const wsManager = new WebSocketManager(); // 初始时不传入 server
-export const scheduler = new ConcurrencyScheduler(wsManager); // 将 wsManager 注入 scheduler 并导出
+export const scheduler = new ConcurrencyScheduler(wsManager, services); // 将 wsManager 和 services 注入 scheduler 并导出
 export { wsManager }; // 导出 wsManager 实例
 
 // --- 挂载 WebSocket 路由 ---

@@ -28,10 +28,18 @@ class GenericLlmRequestNodeImpl {
       seed,
     } = inputs;
 
-    const { nodeId, services, userId } = context;
-    const { apiConfigService, activatedModelService, llmApiAdapterRegistry } = services;
+    const { nodeId, services, userId } = context || {};
 
-    // --- 1. Validate Inputs ---
+    // --- 1. Validate Context and Services ---
+    if (!services) {
+      throw new Error('Execution context is missing the "services" object. This is a critical error.');
+    }
+    const { apiConfigService, activatedModelService, llmApiAdapterRegistry } = services;
+    if (!apiConfigService || !activatedModelService || !llmApiAdapterRegistry) {
+      throw new Error('One or more required services (ApiConfigService, ActivatedModelService, LlmApiAdapterRegistry) are not available in the context.');
+    }
+
+    // --- 2. Validate Inputs ---
     if (!isValidCustomMessageArray(messages)) {
       throw new Error('Input "messages" is missing or not a valid CustomMessage array.');
     }
@@ -43,11 +51,7 @@ class GenericLlmRequestNodeImpl {
     // For now, we'll fetch the first available channel as a placeholder.
     console.log(`[GenericLlmRequestNode ${nodeId}] Executing... Model: ${activated_model_id}`);
 
-    // --- 2. Get Services and Config ---
-    if (!apiConfigService || !activatedModelService || !llmApiAdapterRegistry) {
-      throw new Error('One or more required services (ApiConfigService, ActivatedModelService, LlmApiAdapterRegistry) are not available in the context.');
-    }
-
+    // --- 3. Get Config ---
     // For MVP, we assume services are pre-initialized with a db connection and userId is handled by the service layer
     // TODO: Replace this with a call to a ModelRouterService that determines the appropriate channel.
     const allChannels = await apiConfigService.getAllCredentials(userId);
@@ -70,7 +74,7 @@ class GenericLlmRequestNodeImpl {
       throw new Error(`Activated model "${activated_model_id}" not found.`);
     }
 
-    // --- 3. Get Adapter and Execute Request ---
+    // --- 4. Get Adapter and Execute Request ---
     const adapterType = channelConfig.adapterType || 'openai'; // Default to openai for MVP
     const adapter = llmApiAdapterRegistry.getAdapter(adapterType);
 
@@ -78,7 +82,7 @@ class GenericLlmRequestNodeImpl {
       throw new Error(`LLM adapter for type "${adapterType}" not found.`);
     }
 
-    // --- 4. Prepare Parameters ---
+    // --- 5. Prepare Parameters ---
     // Start with individual parameters from the node's UI.
     const individualParameters: Record<string, any> = {};
     if (temperature !== undefined) individualParameters.temperature = temperature;

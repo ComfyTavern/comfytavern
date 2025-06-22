@@ -20,15 +20,21 @@ interface WaitingExecution extends PromptInfo {
   queuedTime: number;
 }
 
+type AppServices = {
+  [key: string]: any; // 简单定义，可以从 index.ts 导入更具体的类型
+};
+
 export class ConcurrencyScheduler {
   private maxConcurrentWorkflows: number;
   private runningExecutions: Map<NanoId, RunningExecution> = new Map();
   private waitingQueue: WaitingExecution[] = [];
   private wsManager: WebSocketManager; // 引用 WebSocket 管理器
+  private services: AppServices; // 存储服务引用
 
-  constructor(wsManager: WebSocketManager) {
+  constructor(wsManager: WebSocketManager, services: AppServices) {
     this.maxConcurrentWorkflows = MAX_CONCURRENT_WORKFLOWS;
     this.wsManager = wsManager;
+    this.services = services;
     console.log(`Concurrency Scheduler initialized with max ${this.maxConcurrentWorkflows} concurrent workflows.`);
   }
 
@@ -99,7 +105,7 @@ export class ConcurrencyScheduler {
     const { promptId, payload } = executionInfo;
     console.log(`[Scheduler] Starting execution logic for ${promptId}...`);
 
-    const engine = new ExecutionEngine(promptId, payload, this.wsManager);
+    const engine = new ExecutionEngine(promptId, payload, this.wsManager, this.services);
     executionInfo.engineInstance = engine; // 保存实例引用以便中断
 
     try {
