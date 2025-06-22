@@ -97,17 +97,20 @@ class GenericLlmRequestNodeImpl {
     const finalParameters = { ...individualParameters, ...baseParameters };
 
     try {
-      const response = await adapter.request({
+      const payload = {
         messages,
-        parameters: finalParameters,
-        model_id: activated_model_id,
-        credentials: {
-          base_url: channelConfig.baseUrl,
-          api_key: channelConfig.apiKey, // Assuming single string key for MVP
-          custom_headers: channelConfig.customHeaders,
+        modelConfig: {
+          model: activated_model_id,
+          ...finalParameters,
         },
-        stream: false, // MVP does not support streaming
-      }) as StandardResponse; // Cast because request can also return a generator
+        channelConfig: {
+          baseUrl: channelConfig.baseUrl,
+          apiKey: channelConfig.apiKey,
+        },
+        stream: false,
+      };
+
+      const response = await adapter.execute(payload) as StandardResponse;
 
       if (response.error) {
         throw new Error(`LLM API Error: ${response.error.message}`);
