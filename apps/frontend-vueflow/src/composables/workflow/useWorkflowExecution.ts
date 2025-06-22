@@ -19,6 +19,8 @@ import { klona } from "klona/full"; // 新增导入
 import { useDialogService } from "../../services/DialogService"; // 导入 DialogService
 import { useWorkflowData } from "./useWorkflowData";
 import { useWorkflowManager } from "./useWorkflowManager";
+import { useSlotDefinitionHelper } from "../node/useSlotDefinitionHelper";
+import { useEdgeStyles } from "../canvas/useEdgeStyles";
 
 /**
  * Composable for handling workflow execution logic.
@@ -31,6 +33,8 @@ export function useWorkflowExecution() {
   const { sendMessage, setInitiatingTabForNextPrompt } = useWebSocket(); // 获取 setInitiatingTabForNextPrompt
   const workflowDataHandler = useWorkflowData();
   const dialogService = useDialogService(); // 获取 DialogService 实例
+  const { getSlotDefinition } = useSlotDefinitionHelper();
+  const { getEdgeStyleProps } = useEdgeStyles();
 
   /**
    * 触发当前活动工作流的完整执行。
@@ -122,12 +126,18 @@ export function useWorkflowExecution() {
     console.info(
       `[WorkflowExecution:executeWorkflow] Flattening workflow for tab ${internalId} using elements after client scripts...`
     );
+    const getEdgeStylePropsAdapter = (sourceType: string, targetType: string) => {
+      const isDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+      return getEdgeStyleProps(sourceType, targetType, isDark);
+    };
+
     const flattenedResult = await flattenWorkflow(
       internalId,
       elementsAfterClientScripts, // 使用执行完客户端脚本后的最新元素
       workflowDataHandler,
       projectStore,
-      workflowManager
+      getSlotDefinition,
+      getEdgeStylePropsAdapter
     );
 
     if (!flattenedResult) {

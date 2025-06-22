@@ -112,9 +112,9 @@ export function useWorkflowLifecycleCoordinator() {
       _recordHistory(internalId, loadEntry, initialSnapshot); // 使用内部辅助函数
       // console.debug(`[LifecycleCoordinator] Cleared history and recorded initial snapshot for tab ${internalId}: "${loadEntry.summary}"`);
 
-      // 5. 更新 VueFlow 实例视图
-      const instance = workflowViewManagement.getVueFlowInstance(internalId);
-      if (instance) {
+      // 5. 等待并更新 VueFlow 实例视图
+      try {
+        const instance = await workflowViewManagement.waitForVueFlowInstance(internalId, 5000); // 等待最多5秒
         const nodes = initialSnapshot.elements.filter(
           (el): el is VueFlowNode => !("source" in el)
         );
@@ -125,9 +125,10 @@ export function useWorkflowLifecycleCoordinator() {
         instance.setEdges(edges);
         instance.setViewport(initialSnapshot.viewport);
         // console.debug(`[LifecycleCoordinator] Updated VueFlow instance for tab ${internalId} after load.`);
-      } else {
-        console.warn(
-          `[LifecycleCoordinator] Could not get VueFlow instance for tab ${internalId} after load`
+      } catch (error) {
+        console.error(
+          `[LifecycleCoordinator] Failed to get VueFlow instance for tab ${internalId} after load:`,
+          error
         );
       }
 

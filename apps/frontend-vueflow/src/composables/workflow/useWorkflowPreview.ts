@@ -1,11 +1,12 @@
 import { useWebSocket } from "@/composables/useWebSocket";
 import { useWorkflowData } from "@/composables/workflow/useWorkflowData";
-import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager";
 import { useExecutionStore } from "@/stores/executionStore";
 import { useNodeStore, type FrontendNodeDefinition } from "@/stores/nodeStore"; // Import FrontendNodeDefinition from nodeStore
 import { useProjectStore } from "@/stores/projectStore";
 import { useTabStore } from "@/stores/tabStore";
 import { flattenWorkflow } from "@/utils/workflowFlattener";
+import { useSlotDefinitionHelper } from "../node/useSlotDefinitionHelper";
+import { useEdgeStyles } from "../canvas/useEdgeStyles";
 import {
   WebSocketMessageType,
   type ExecutionEdge,
@@ -40,10 +41,11 @@ export function useWorkflowPreview() {
   const tabStore = useTabStore(); // Initialize tabStore
   const projectStore = useProjectStore(); // Initialize projectStore
   const workflowDataHandler = useWorkflowData(); // Initialize workflowDataHandler
-  const workflowManager = useWorkflowManager(); // Initialize workflowManager
-
-  const { sendMessage, isConnected } = useWebSocket(); // clientId removed, will be handled as TODO
-  const { getNodes, getEdges, findNode } = useVueFlow();
+  const { getSlotDefinition } = useSlotDefinitionHelper();
+  const { getEdgeStyleProps } = useEdgeStyles();
+ 
+   const { sendMessage, isConnected } = useWebSocket(); // clientId removed, will be handled as TODO
+   const { getNodes, getEdges, findNode } = useVueFlow();
 
   // currentOutputsSnapshot is no longer directly from storeToRefs
   const { isPreviewEnabled: isPreviewEnabledFromStore } = storeToRefs(executionStore);
@@ -88,13 +90,19 @@ export function useWorkflowPreview() {
     });
     console.debug("[WorkflowPreview:triggerPreview] Constructed snapshot:", snapshot);
 
+    const getEdgeStylePropsAdapter = (sourceType: string, targetType: string) => {
+      const isDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+      return getEdgeStyleProps(sourceType, targetType, isDark);
+    };
+
     // 2. 获取完整扁平化视图 G_flat
     const flatWorkflow = await flattenWorkflow(
       activeInternalId,
       [...allNodesRaw, ...allEdgesRaw],
       workflowDataHandler,
       projectStore,
-      workflowManager
+      getSlotDefinition,
+      getEdgeStylePropsAdapter
     );
 
     if (!flatWorkflow) {

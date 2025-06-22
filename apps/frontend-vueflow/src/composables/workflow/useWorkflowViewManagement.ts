@@ -114,10 +114,39 @@ export function useWorkflowViewManagement() {
     }
   }
 
+  /**
+   * 等待指定标签页的 VueFlow 实例可用。
+   * @param internalId 标签页的内部 ID
+   * @param timeout 超时时间 (毫秒)
+   * @returns Promise<ManagedVueFlowInstance>
+   */
+  function waitForVueFlowInstance(
+    internalId: string,
+    timeout = 3000
+  ): Promise<ManagedVueFlowInstance> {
+    return new Promise((resolve, reject) => {
+      const startTime = Date.now();
+
+      const checkInstance = () => {
+        const instance = getVueFlowInstance(internalId);
+        if (instance) {
+          resolve(instance);
+        } else if (Date.now() - startTime > timeout) {
+          reject(new Error(`等待 VueFlow 实例超时: ${timeout}ms (标签页 ID: ${internalId})`));
+        } else {
+          setTimeout(checkInstance, 100); // 每 100ms 检查一次
+        }
+      };
+
+      checkInstance();
+    });
+  }
+
   return {
     setVueFlowInstance,
     getVueFlowInstance,
     setViewport,
     updateEdgeStylesForTab,
+    waitForVueFlowInstance, // 导出新函数
   };
 }

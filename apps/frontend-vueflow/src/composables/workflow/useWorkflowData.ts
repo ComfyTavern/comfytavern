@@ -5,7 +5,6 @@ import {
   loadWorkflowApi,
   saveWorkflowApi,
 } from "@/api/workflow";
-import { useThemeStore } from "@/stores/theme";
 import type {
   GroupSlotInfo,
   WorkflowViewport as SharedViewport,
@@ -30,7 +29,6 @@ import { useDialogService } from "../../services/DialogService"; // 导入 Dialo
 export function useWorkflowData() {
   const workflowStore = useWorkflowStore(); // 访问主 store (用于 ensureTabState 和类型)
   const projectStore = useProjectStore(); // 获取项目 store 实例
-  const themeStore = useThemeStore();
   const dialogService = useDialogService(); // 获取 DialogService 实例
 
   // --- 类型转换函数已被移动到 utils/workflowTransformer.ts ---
@@ -240,25 +238,18 @@ export function useWorkflowData() {
     loadedData?: WorkflowStorageObject;
     flowToLoad?: FlowExportObject;
   }> {
-    const state = await workflowStore.ensureTabState(internalId);
-    const instance = state.vueFlowInstance;
-    if (!instance) {
-      console.warn(
-        `[loadWorkflow] Instance not available for tab ${internalId} during load. Loading data only.`
-      );
-    }
+    // 确保标签页状态存在，但不关心 VueFlow 实例
+    await workflowStore.ensureTabState(internalId);
+
     try {
       // 使用新的适配器函数加载工作流
       const loadedWorkflowObject = await loadAndAdaptWorkflowApi(projectId, workflowId);
       if (loadedWorkflowObject) {
-        const isDark = themeStore.currentAppliedMode === 'dark';
         // 调用已修改的 transformWorkflowToVueFlow，并传递适配后的加载函数
         const { flowData: flowToLoad } = await transformWorkflowToVueFlow(
           loadedWorkflowObject,
-          projectId, // 传递 projectId
-          isDark,
-          getEdgeStyleProps,
-          loadAndAdaptWorkflowApi // 传递适配后的 API 函数作为加载器
+          (wfId: string) => loadAndAdaptWorkflowApi(projectId, wfId), // 传递适配后的 API 函数作为加载器
+          getEdgeStyleProps
         );
         console.info(
           `[loadWorkflow] Workflow loaded (tab ${internalId}, project ${projectId}, workflow ${workflowId}):`,
@@ -374,7 +365,6 @@ export function useWorkflowData() {
     console.debug(`[useWorkflowData] Attempting to load default workflow for tab ${internalId}.`);
     try {
       const defaultStorageObject = defaultWorkflowData as WorkflowStorageObject;
-      const isDark = themeStore.currentAppliedMode === 'dark';
 
       // Mock loader for default workflow, as it shouldn't reference other API-loaded workflows
       const mockLoadWorkflowById = async (
@@ -390,10 +380,8 @@ export function useWorkflowData() {
       const { flowData: defaultFlowData } = await transformWorkflowToVueFlow(
         // <-- await
         defaultStorageObject,
-        "", // Placeholder projectId, not expected to be used for default workflow's internal refs
-        isDark,
-        getEdgeStyleProps,
-        mockLoadWorkflowById // Pass the mock loader
+        (wfId: string) => mockLoadWorkflowById("", wfId), // Pass the mock loader
+        getEdgeStyleProps
       );
 
       const interfaceInputs = defaultStorageObject.interfaceInputs || {};
