@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { GroupSlotInfoSchema } from './node';
+import type { ChunkPayload } from './common';
 
 // --- Stream & Regex Schemas ---
 
@@ -276,6 +277,7 @@ export interface LlmAdapterRequestPayload {
   messages: CustomMessage[];
   modelConfig: Record<string, any>; // e.g., { temperature: 0.7, max_tokens: 1024 }
   channelConfig: ApiCredentialConfig;
+  stream?: boolean; // 可选的流式请求标志，默认为 false
 }
 
 /**
@@ -288,6 +290,13 @@ export interface ILlmApiAdapter {
    * @returns 一个解析为标准化响应的 Promise。
    */
   execute(payload: LlmAdapterRequestPayload): Promise<StandardResponse>;
+
+  /**
+   * 执行对 LLM 的流式请求（例如聊天补全）。
+   * @param payload - 包含消息、模型配置和渠道配置的标准化负载。
+   * @returns 一个异步生成器，产生 ChunkPayload 数据块。
+   */
+  executeStream(payload: LlmAdapterRequestPayload): AsyncGenerator<ChunkPayload, void, unknown>;
 
   /**
    * 从该适配器对应的外部服务发现可用的模型列表。

@@ -5,6 +5,7 @@ import {
   ILlmApiAdapter,
   LlmAdapterRequestPayload,
   StandardResponse,
+  ChunkPayload,
 } from '@comfytavern/types';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
@@ -58,6 +59,7 @@ export class OpenAIAdapter implements ILlmApiAdapter {
       const openAIResponse = await client.chat.completions.create({
         model: model,
         messages: this.transformMessagesToOpenAI(messages),
+        stream: false, // 显式设置为非流式
         ...restOfModelConfig,
       });
 
@@ -68,6 +70,112 @@ export class OpenAIAdapter implements ILlmApiAdapter {
       const statusCode = error.status || 500;
       return this.createErrorResponse(errorBody, statusCode, modelConfig.model || 'unknown_model');
     }
+  }
+
+  /**
+   * 执行对 OpenAI API 的流式聊天补全请求。
+   * @param payload - 包含消息、模型配置和渠道配置的标准化负载。
+   * @returns 一个异步生成器，产生 ChunkPayload 数据块。
+   */
+  public async* executeStream(payload: LlmAdapterRequestPayload): AsyncGenerator<ChunkPayload, void, unknown> {
+    const { messages, modelConfig, channelConfig } = payload;
+    const { baseUrl, apiKey } = channelConfig;
+
+    const client = new OpenAI({
+      baseURL: baseUrl,
+      apiKey: apiKey,
+    });
+
+    try {
+      const { model, ...restOfModelConfig } = modelConfig;
+      if (!model) {
+        throw new Error('Model ID is required in modelConfig.');
+      }
+
+      const stream = await client.chat.completions.create({
+        model: model,
+        messages: this.transformMessagesToOpenAI(messages),
+        stream: true, // 启用流式响应
+        ...restOfModelConfig,
+      });
+
+      let accumulatedText = '';
+      
+      for await (const part of stream) {
+        const chunk = this.transformOpenAIStreamChunk(part);
+        if (chunk) {
+          // 如果是文本块，累积文本内容
+          if (chunk.type === 'text_chunk' && typeof chunk.content === 'string') {
+            accumulatedText += chunk.content;
+          }
+          yield chunk;
+        }
+      }
+
+      // 流结束时发送完成信息
+      yield {
+        type: 'finish_reason_chunk',
+        content: {
+          finish_reason: 'stop',
+          accumulated_text: accumulatedText,
+        },
+      } as ChunkPayload;
+
+    } catch (error: any) {
+      const errorBody = error.response?.data || { message: error.message };
+      const statusCode = error.status || 500;
+      
+      yield {
+        type: 'error_chunk',
+        content: {
+          message: errorBody?.error?.message || error.message,
+          code: errorBody?.error?.code || statusCode,
+          type: errorBody?.error?.type || 'stream_error',
+        },
+      } as ChunkPayload;
+    }
+  }
+
+  /**
+   * 将 OpenAI 流式响应块转换为标准化的 ChunkPayload 格式。
+   * @param chunk - OpenAI 流式响应的单个块。
+   * @returns 转换后的 ChunkPayload，如果块无效则返回 null。
+   */
+  private transformOpenAIStreamChunk(chunk: any): ChunkPayload | null {
+    if (!chunk.choices || chunk.choices.length === 0) {
+      return null;
+    }
+
+    const choice = chunk.choices[0];
+    const delta = choice.delta;
+
+    // 处理文本增量
+    if (delta.content) {
+      return {
+        type: 'text_chunk',
+        content: delta.content,
+      };
+    }
+
+    // 处理完成原因
+    if (choice.finish_reason) {
+      return {
+        type: 'finish_reason_chunk',
+        content: {
+          finish_reason: choice.finish_reason,
+        },
+      };
+    }
+
+    // 处理用量信息（如果有）
+    if (chunk.usage) {
+      return {
+        type: 'usage_chunk',
+        content: chunk.usage,
+      };
+    }
+
+    return null;
   }
 
   /**

@@ -1,4 +1,4 @@
-import type { NodeDefinition, CustomMessage, StandardResponse, ApiCredentialConfig } from '@comfytavern/types';
+import type { NodeDefinition, CustomMessage, StandardResponse, ApiCredentialConfig, ChunkPayload } from '@comfytavern/types';
 import { LlmApiAdapterRegistry } from '../../services/LlmApiAdapterRegistry';
 import { ApiConfigService } from '../../services/ApiConfigService';
 import { ActivatedModelService } from '../../services/ActivatedModelService';
@@ -17,7 +17,7 @@ function isValidCustomMessageArray(data: any): data is CustomMessage[] {
 }
 
 class GenericLlmRequestNodeImpl {
-  static async execute(inputs: Record<string, any>, context: any): Promise<Record<string, any>> {
+  static async* execute(inputs: Record<string, any>, context: any): AsyncGenerator<ChunkPayload, Record<string, any> | void, undefined> {
     const {
       messages,
       parameters: baseParameters = {},
@@ -26,6 +26,7 @@ class GenericLlmRequestNodeImpl {
       max_tokens,
       top_p,
       seed,
+      stream = false, // 新增的流式控制参数
     } = inputs;
 
     const { nodeId, services, userId } = context || {};
@@ -107,21 +108,53 @@ class GenericLlmRequestNodeImpl {
           baseUrl: channelConfig.baseUrl,
           apiKey: channelConfig.apiKey,
         },
-        stream: false,
+        stream: stream,
       };
 
-      const response = await adapter.execute(payload) as StandardResponse;
+      if (stream) {
+        // 流式模式
+        let accumulatedText = '';
+        let finalResponse: StandardResponse | null = null;
 
-      if (response.error) {
-        throw new Error(`LLM API Error: ${response.error.message}`);
+        for await (const chunk of adapter.executeStream(payload)) {
+          // 将每个流块发送给前端
+          yield chunk;
+
+          // 累积文本内容
+          if (chunk.type === 'text_chunk' && typeof chunk.content === 'string') {
+            accumulatedText += chunk.content;
+          }
+
+          // 处理完成块
+          if (chunk.type === 'finish_reason_chunk') {
+            finalResponse = {
+              text: chunk.content?.accumulated_text || accumulatedText,
+              model: activated_model_id,
+            };
+          }
+        }
+
+        // 在流结束后返回最终结果
+        return {
+          response: finalResponse,
+          responseText: accumulatedText,
+        };
+
+      } else {
+        // 非流式模式
+        const response = await adapter.execute(payload) as StandardResponse;
+
+        if (response.error) {
+          throw new Error(`LLM API Error: ${response.error.message}`);
+        }
+
+        console.log(`[GenericLlmRequestNode ${nodeId}] Execution successful. Model used: ${response.model}`);
+
+        return {
+          response: response,
+          responseText: response.text,
+        };
       }
-
-      console.log(`[GenericLlmRequestNode ${nodeId}] Execution successful. Model used: ${response.model}`);
-
-      return {
-        response: response,
-        responseText: response.text,
-      };
 
     } catch (error: any) {
       console.error(`[GenericLlmRequestNode ${nodeId}] Error during LLM request execution: ${error.message}`);
@@ -206,21 +239,35 @@ export const genericLlmRequestNodeDefinition: NodeDefinition = {
         step: 1,
       }
     },
+    stream: {
+      dataFlowType: 'BOOLEAN',
+      displayName: '启用流式输出',
+      description: '如果为 true，将以流的形式输出结果，否则在完成后一次性输出。',
+      required: false,
+      config: {
+        default: false,
+      },
+    },
   },
   outputs: {
     response: {
       dataFlowType: 'OBJECT',
       displayName: '完整响应',
-      description: 'LLM 返回的完整标准化响应对象',
+      description: 'LLM 返回的完整标准化响应对象。\n在流式模式下，此输出在流结束后才可用。',
       matchCategories: ['LlmOutput']
     },
     responseText: {
       dataFlowType: 'STRING',
       displayName: '响应文本',
-      description: 'LLM 返回的主要文本内容',
+      description: 'LLM 返回的主要文本内容。\n在流式模式下，这是累积所有文本块后的最终结果。',
       matchCategories: ['LlmOutput']
+    },
+    stream_output: {
+      dataFlowType: 'STREAM',
+      displayName: '流式输出',
+      description: '当启用流式输出时，从这里逐块输出结果。',
+      matchCategories: ['StreamChunk']
     }
-    // No error output port, throws on error
   },
 
   // MVP version uses direct inputs, so no config schema is needed for now.
