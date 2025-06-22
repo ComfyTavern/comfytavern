@@ -45,9 +45,9 @@
 *   `LlmOutput`: LLM 输出结果
 *   `VectorEmbedding`: 向量嵌入数据
 *   `CharacterProfile`: 角色配置文件/对象
-*   `ImageData`: 实际图像数据 (通常为 `OBJECT` 或 `BINARY` DataFlowType)
-*   `AudioData`: 实际音频数据 (通常为 `OBJECT` 或 `BINARY` DataFlowType)
-*   `VideoData`: 实际视频数据 (通常为 `OBJECT` 或 `BINARY` DataFlowType)
+*   `Image`: 图像数据 (可用于 `OBJECT`/`BINARY` 数据，或 `STRING` 类型的路径/URL 引用)
+*   `Audio`: 音频数据 (可用于 `OBJECT`/`BINARY` 数据，或 `STRING` 类型的路径/URL 引用)
+*   `Video`: 视频数据 (可用于 `OBJECT`/`BINARY` 数据，或 `STRING` 类型的路径/URL 引用)
 *   `ResourceId`: 资源标识符
 *   `Trigger`: 触发信号 (常用于按钮类交互)
 *   `StreamChunk`: 数据流块，通常作为 `DataFlowType.STREAM` 类型输出的流中的数据单元。
