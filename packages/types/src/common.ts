@@ -56,8 +56,6 @@ export const DataFlowType = {
   OBJECT: "OBJECT",
   ARRAY: "ARRAY",
   BINARY: "BINARY",
-  /** 代表一个数据流 */
-  STREAM: "STREAM",
   WILDCARD: "WILDCARD",
   CONVERTIBLE_ANY: "CONVERTIBLE_ANY",
 } as const;

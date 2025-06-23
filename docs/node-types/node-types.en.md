@@ -19,7 +19,6 @@ The new type system aims to clearly distinguish the actual data format of the da
 | `OBJECT`            | General JavaScript object                                                                                                                             | `object`                                |
 | `ARRAY`             | General JavaScript array                                                                                                                              | `any[]`                                 |
 | `BINARY`            | Binary data                                                                                                                                           | `ArrayBuffer`, `Uint8Array`             |
-| `STREAM`            | Represents a data stream. When a node executes, an output slot of this type will provide a readable stream (Node.js `Stream.Readable`), which downstream nodes can consume. The data in the stream typically consists of a series of `ChunkPayload` objects. | `Stream.Readable` (at runtime), `AsyncGenerator<ChunkPayload, any, any>` (node implementation) |
 | `WILDCARD`          | Special type: Wildcard, does not specify data format, can connect to any type, no forced conversion upon connection.                                  | `any`                                   |
 | `CONVERTIBLE_ANY`   | Special type: Dynamically converts upon connection, changing its own `dataFlowType` and `matchCategories` to exactly match the connected counterpart. | `any` (initially)                       |
 
@@ -69,7 +68,8 @@ Developers can create new tags based on application scenarios, such as `"MySpeci
 
 In a node's `InputDefinition` and `OutputDefinition`:
 
-*   The old `type: string` field in slot definitions has been replaced by `dataFlowType: DataFlowTypeName`. An output slot's `dataFlowType` can be `STREAM`, indicating that the output is a data stream.
+*   The old `type: string` field in slot definitions has been replaced by `dataFlowType: DataFlowTypeName`.
+*   A new **optional** `isStream?: boolean` field is added. If `true`, it indicates the slot transmits a data stream instead of a single value.
 *   A new **optional** `matchCategories: string[]` field is added to define semantic or behavioral tags.
 *   The `config` object contains specific configuration items to guide frontend UI rendering and interaction behavior.
 
@@ -207,10 +207,10 @@ The validity of a connection is determined by the following order and logic:
     *   `INTEGER`, `FLOAT`, `BOOLEAN` can connect to `STRING` (implicitly converted to string).
     *   `WILDCARD` can connect to any `DataFlowType`. Any `DataFlowType` can also connect to `WILDCARD`.
     *   `CONVERTIBLE_ANY` changes its own `dataFlowType` to exactly match the counterpart upon connection.
-    *   `STREAM` type:
-        *   An output of `STREAM` type can typically only connect to an input slot with `dataFlowType` as `STREAM`.
-        *   If an input slot's `dataFlowType` is `WILDCARD` or `CONVERTIBLE_ANY`, it can also accept a `STREAM` output, provided the receiving node's internal logic can correctly handle and consume the incoming stream data.
-        *   The `STREAM` type does not automatically convert to other non-stream `DataFlowType`s (like `STRING`, `OBJECT`, etc.). Connection requires an exact match or handling by `WILDCARD`/`CONVERTIBLE_ANY`.
+    *   **Stream Slots (`isStream: true`)**:
+        *   A stream slot can only connect to another stream slot (`output.isStream === input.isStream`).
+        *   When connecting, their `dataFlowType` compatibility is also checked (following the rules above). For example, an output with `isStream: true, dataFlowType: 'STRING'` can connect to an input with `isStream: true, dataFlowType: 'WILDCARD'`.
+        *   Direct connections between stream and non-stream slots are not allowed.
 *   If compatibility is found through `DataFlowType` rules, the connection is considered valid.
 
 **Summary of Connection Logic Priority:**
@@ -244,11 +244,11 @@ A `NodeDefinition` can include configurations independent of its slots:
 A node's `execute` method is responsible for its core logic. In addition to returning an object containing all output values (usually wrapped in a `Promise`), the `execute` method can also return an asynchronous generator (`AsyncGenerator<ChunkPayload, Record<string, any> | void, undefined>`) to implement streamed output.
 
 When the `execute` method returns an asynchronous generator:
-*   The node should have at least one output slot whose `dataFlowType` is defined as `STREAM`.
-*   Each value `yield`ed by the generator should be a `ChunkPayload` object. These chunks are sent in real-time to the frontend via `NODE_YIELD` WebSocket messages and are passed to the input slots of downstream nodes connected to the corresponding `STREAM` output slot.
+*   The node should have at least one output slot with `isStream` set to `true`.
+*   Each value `yield`ed by the generator should be a `ChunkPayload` object. These chunks are sent in real-time to the frontend via `NODE_YIELD` WebSocket messages and are passed to the input slots of downstream nodes connected to the corresponding stream output slot.
 *   The value eventually `return`ed by the generator (if any, typically an object containing batch results) will be part of the node's final output after the stream has ended. This batch result is separate from the stream output slot (whose value during execution is the stream instance itself).
 
-For output slots declared with the `STREAM` data flow type, the value passed to downstream nodes during workflow execution is a Node.js `Stream.Readable` instance. Downstream nodes are responsible for consuming this stream.
+For output slots declared with `isStream: true`, the value passed to downstream nodes during workflow execution is a Node.js `Stream.Readable` instance. Downstream nodes are responsible for consuming this stream.
 
 ## 5. Execution Status
 

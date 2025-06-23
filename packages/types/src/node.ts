@@ -25,6 +25,7 @@ export const GroupSlotInfoSchema = z.object({
 }).merge(z.object({
   displayName: z.string().optional(),
   dataFlowType: z.enum(Object.values(DataFlowType) as [DataFlowTypeName, ...DataFlowTypeName[]]),
+  isStream: z.boolean().optional(),
   matchCategories: z.array(z.string()).optional(),
   allowDynamicType: z.boolean().optional(),
   hideHandle: z.boolean().optional(),
@@ -103,6 +104,7 @@ export type CustomInputOptions = z.infer<typeof zCustomInputOptions>;
 export interface SlotDefinitionBase {
   displayName?: string;
   dataFlowType: DataFlowTypeName;
+  isStream?: boolean;
   matchCategories?: string[];
   allowDynamicType?: boolean;
   hideHandle?: boolean;

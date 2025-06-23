@@ -14,6 +14,11 @@ import type { InputDefinition, DataFlowTypeName } from '@comfytavern/types';
  * @returns 解析出的默认值
  */
 export function getEffectiveDefaultValue(inputDef: InputDefinition): any { // 返回类型改回 any
+  // 如果插槽是流类型，其默认值总是 null，表示没有活动的流。
+  if (inputDef.isStream) {
+    return null;
+  }
+
   // 1. 优先使用 inputDef.config.default (如果已定义)
   if (inputDef.config?.default !== undefined) {
     return inputDef.config.default;
@@ -50,8 +55,6 @@ export function getEffectiveDefaultValue(inputDef: InputDefinition): any { // �
       return null;
     case 'CONVERTIBLE_ANY':
       return null;
-    case 'STREAM': // 新增对 STREAM 类型的处理
-      return null; // 流类型的默认值通常是 null，表示没有活动的流
     default:
       // 对于未知或未显式处理的 dataFlowType，记录警告并返回 null
       // eslint-disable-next-line no-console

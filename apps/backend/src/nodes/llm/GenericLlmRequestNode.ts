@@ -263,7 +263,8 @@ export const genericLlmRequestNodeDefinition: NodeDefinition = {
       matchCategories: ['LlmOutput']
     },
     stream_output: {
-      dataFlowType: 'STREAM',
+      dataFlowType: 'STRING',
+      isStream: true,
       displayName: '流式输出',
       description: '当启用流式输出时，从这里逐块输出结果。',
       matchCategories: ['StreamChunk']

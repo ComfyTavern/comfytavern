@@ -266,7 +266,8 @@ export const definition: NodeDefinition = {
       matchCategories: ["LlmOutput"],
     },
     stream_output: {
-      dataFlowType: "STREAM",
+      dataFlowType: "STRING",
+      isStream: true,
       displayName: "回复流 (流式)",
       description: "逐块生成的文本回复数据流。仅当“启用流式输出”为 true 时有效。",
       matchCategories: ["LlmOutput", "TextStream"], // TextStream 用于标识这是一个文本内容的流

@@ -402,7 +402,7 @@ const activeSlotDefinition = computed<OutputDefinition | undefined>(() => {
 
 // 判断当前选中的插槽是否为 STREAM 类型 (保持)
 const isStreamSlot = computed(() => {
-  return activeSlotDefinition.value?.dataFlowType === DataFlowType.STREAM;
+  return !!activeSlotDefinition.value?.isStream;
 });
 
 const slotDisplayName = computed(() => {
@@ -522,7 +522,7 @@ const isMarkdownSlot = computed(() => {
 
 // 核心方法：获取组输出项的合并内容
 const getMergedGroupContent = (key: string, outputDef: OutputDefinition) => {
-  const isStream = outputDef.dataFlowType === DataFlowType.STREAM;
+  const isStream = !!outputDef.isStream;
   const finalData = groupPreviewData.value?.[key];
   const streamText = getInterfaceStreamText(key); // 已有方法
   const streamDone = isInterfaceStreamDone(key); // 已有方法
@@ -544,7 +544,7 @@ const getMergedGroupContent = (key: string, outputDef: OutputDefinition) => {
 
 // 获取组输出项的状态文本和样式
 const getGroupStatusText = (key: string, outputDef: OutputDefinition): { text: string, class: string } | null => {
-  const isStream = outputDef.dataFlowType === DataFlowType.STREAM;
+  const isStream = !!outputDef.isStream;
   if (!isStream) return null;
 
   const streamProcessing = isInterfaceStreamProcessing(key); // 已有方法
@@ -574,7 +574,7 @@ const getGroupEmptyText = (key: string, outputDef: OutputDefinition, content: an
   const contentIsEmpty = content === null || content === undefined || content === "";
   if (!contentIsEmpty) return "";
 
-  const isStream = outputDef.dataFlowType === DataFlowType.STREAM;
+  const isStream = !!outputDef.isStream;
   const streamProcessing = isInterfaceStreamProcessing(key); // 已有方法
 
   if (isStream && streamProcessing) return t('rightPreviewPanel.waitingForStreamData');
@@ -597,7 +597,7 @@ const processedGroupOutputs = computed(() => {
       isEmpty,
       isMarkdown: markdown, // Use the renamed variable
       emptyText,
-      isStream: outputDef.dataFlowType === DataFlowType.STREAM,
+      isStream: !!outputDef.isStream,
     };
   });
 });

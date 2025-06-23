@@ -1,4 +1,12 @@
-# ComfyTavern 流式功能详细设计与执行方案 (v2.0)
+> **[!] 本文档已过时**
+>
+> 本文档描述的设计方案已被后续的重构所取代。核心变化是将流式特性从 `DataFlowType` 中解耦，引入了独立的 `isStream: boolean` 字段。
+>
+> **请参考最新的类型系统文档以获取当前实现的信息：**
+> - [节点类型系统文档 (中文版)](../../docs/node-types/node-types.zh.md)
+> - [Node Type System Documentation (English Version)](../../docs/node-types/node-types.en.md)
+
+# ComfyTavern 流式功能详细设计与执行方案 (v2.0) - [已过时]
 
 ## 1. 摘要 (Executive Summary)
 

@@ -47,8 +47,8 @@
   - **NodeGroup 特定数据**:
     - `referencedWorkflowId`: 如果该节点是一个“节点组 (NodeGroup)”，此字段存储其引用的子工作流的 ID。
     - `groupInterface`: 这是被引用子工作流输入输出接口定义的一个副本。它有两个主要作用：首先，在编辑器加载节点组实例时，即使子工作流尚未完全加载，也能基于此信息快速展示节点组的输入输出插槽；其次，它使得节点组实例能够在其自身的 `data.inputs` 中直接存储这些输入接口的值（特别是对于那些支持在节点上直接编辑的输入类型，如文本框、数字输入等）。这样，用户可以直接在节点组节点上配置这些输入值，而无需为每个输入都连接外部边。
-- **输入插槽 (Inputs)**: 定义节点期望接收的数据。每个输入插槽都有名称、数据类型 (如 `STRING`, `NUMBER`, `IMAGE`, `STREAM`, `CONVERTIBLE_ANY` 等)、描述以及是否必需等属性。这些定义来源于节点的 `NodeDefinition`。
-- **输出插槽 (Outputs)**: 定义节点执行后产生的数据。与输入插槽类似，也包含名称、数据类型和描述等，同样来源于 `NodeDefinition`。
+- **输入插槽 (Inputs)**: 定义节点期望接收的数据。每个输入插槽都有名称、数据类型 (`dataFlowType`)、是否为流 (`isStream`)、描述以及是否必需等属性。这些定义来源于节点的 `NodeDefinition`。
+- **输出插槽 (Outputs)**: 定义节点执行后产生的数据。与输入插槽类似，也包含名称、数据类型、是否为流和描述等，同样来源于 `NodeDefinition`。
 
 ### 2.2. 边 (Edge)
 
@@ -187,7 +187,7 @@
     2.  **调用执行逻辑**: 引擎调用该节点类型定义（`NodeDefinition`）中的 `execute()` 方法，并将准备好的输入数据和上下文信息（如 `promptId`）传递给它。
     3.  **处理输出**:
         - **普通输出**: 如果节点的 `execute()` 方法返回一个 Promise 解析为普通对象，则该对象的键值对被视为节点的输出。
-        - **流式输出**: 如果节点定义了流式输出（`dataFlowType: DataFlowType.STREAM`），其 `execute()` 方法会返回一个异步生成器 (AsyncGenerator)。引擎会特殊处理这种输出，允许数据块 (chunks) 被逐步产生并通过 WebSocket 以 `NODE_YIELD` 消息发送给前端，直到生成器完成。最终的批处理结果（如果有）也会在流结束后确定。
+        - **流式输出**: 如果节点定义了流式输出（`isStream: true`），其 `execute()` 方法会返回一个异步生成器 (AsyncGenerator)。引擎会特殊处理这种输出，允许数据块 (chunks) 被逐步产生并通过 WebSocket 以 `NODE_YIELD` 消息发送给前端，直到生成器完成。最终的批处理结果（如果有）也会在流结束后确定。
   - **状态广播**: 在节点执行的各个阶段（开始执行、产生数据块、完成、出错），引擎都会通过 WebSocket 向前端广播相应的状态消息（如 `NODE_EXECUTING`, `NODE_YIELD`, `NODE_COMPLETE`, `NODE_ERROR`）。
   - **接口输出处理**: 对于工作流的 `interfaceOutputs`，引擎会根据前端提供的 `outputInterfaceMappings`，将内部节点的实际输出（无论是普通值还是流）正确地路由和广播出去。
 
@@ -209,7 +209,7 @@
     - 默认行为：尝试将类型兼容的第一个输入传递给第一个类型兼容的输出，以此类推。
 - **流式处理 (Streaming)**:
   - 某些节点（如大型语言模型节点）可以逐步产生输出，而不是一次性返回所有结果。
-  - 这些节点的输出插槽 `dataFlowType` 会被标记为 `DataFlowType.STREAM`。
+  - 这些节点的输出插槽 `isStream` 属性会被标记为 `true`。
   - 后端 `ExecutionEngine` 会迭代异步生成器，并将每个产生的数据块通过 `NODE_YIELD` WebSocket 消息发送给前端，前端可以实时显示这些数据。
 - **数据转换 (`apps/frontend-vueflow/src/utils/workflowTransformer.ts`)**:
   - 这是连接前端视图、后端存储和执行引擎之间数据格式差异的桥梁。

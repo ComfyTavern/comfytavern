@@ -99,7 +99,8 @@ const StreamLoggerNodeDefInternal: NodeDefinition = {
   inputs: { // 定义节点的输入槽
     inputStream: {
       displayName: '流输入',
-      dataFlowType: 'STREAM', // 输入类型为流
+      dataFlowType: 'WILDCARD', // 输入类型为流
+      isStream: true,
       required: true, // 此输入是必需的
       description: '输入流，将被记录到控制台',
     } as InputDefinition, // 类型断言，确保符合 InputDefinition
@@ -107,7 +108,8 @@ const StreamLoggerNodeDefInternal: NodeDefinition = {
   outputs: { // 定义节点的输出槽
     outputStream: {
       displayName: '流输出',
-      dataFlowType: DataFlowType.STREAM, // 输出类型为流
+      dataFlowType: 'WILDCARD', // 输出类型为流
+      isStream: true,
       description: '记录后传出的原始流数据',
     } as OutputDefinition, // 类型断言，确保符合 OutputDefinition
   },
