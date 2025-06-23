@@ -381,7 +381,6 @@ function createWorkflowManager() {
       // 2. 使用 transformWorkflowToVueFlow 进行转换
       // 对于默认模板，它不引用其他工作流，所以 loadWorkflowByIdFunc 可以是空的
       const mockLoadWorkflowFunc = async (
-        _pId: string,
         wfId: string
       ): Promise<WorkflowStorageObject | null> => {
         console.warn(
@@ -392,10 +391,8 @@ function createWorkflowManager() {
 
       const { flowData, viewport } = await transformWorkflowToVueFlow(
         templateStorageObject,
-        projectId,
-        isDark.value,
-        getEdgeStyleProps,
-        mockLoadWorkflowFunc
+        mockLoadWorkflowFunc,
+        getEdgeStyleProps
       );
 
       // 3. 准备最终的 WorkflowData (现在基于 templateStorageObject)

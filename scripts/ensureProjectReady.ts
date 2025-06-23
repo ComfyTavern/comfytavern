@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { checkAndMergeConfigs } from './check-config';
 
 /**
  * 检查字符串是否包含非 ASCII 字符。
@@ -101,6 +102,11 @@ function setupDatabase(): boolean {
 
 function ensureProjectReady() {
   console.log('[ensureProjectReady] 开始检查项目状态...');
+
+  // 步骤 0: 检查并合并配置文件
+  console.log('[ensureProjectReady] 检查配置文件...');
+  checkAndMergeConfigs(projectRoot);
+  console.log('[ensureProjectReady] 配置文件检查完成。');
 
   // 步骤 1: 确保 ./data 目录存在
   if (!fs.existsSync(dbDir)) {

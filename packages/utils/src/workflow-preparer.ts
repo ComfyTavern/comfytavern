@@ -6,8 +6,6 @@ import type {
   WorkflowExecutionPayload,
   ExecutionNode,
   ExecutionEdge,
-  InputDefinition,
-  OutputDefinition,
   GroupInterfaceInfo,
   WorkflowViewport,
 } from "@comfytavern/types";
@@ -457,7 +455,7 @@ export async function flattenStorageWorkflow(
         processedGroupIds.delete(referencedWorkflowId);
         return null;
       }
-      
+
       if (node.inputValues && Object.keys(node.inputValues).length > 0) {
         const instanceInputValues = node.inputValues;
         const subNodes = flattenedSubWorkflow.nodes;
@@ -473,7 +471,7 @@ export async function flattenStorageWorkflow(
               if (instanceInputValues.hasOwnProperty(slotKey)) {
                 const overrideValue = instanceInputValues[slotKey];
                 const edgesToReplace = subEdges.filter(e => e.source === groupInputNode.id && e.sourceHandle === slotKey);
-                
+
                 subEdges = subEdges.filter(e => !(e.source === groupInputNode.id && e.sourceHandle === slotKey));
 
                 for (const edge of edgesToReplace) {
@@ -536,12 +534,12 @@ export async function flattenStorageWorkflow(
         )
       );
       flattenedEdges.push(...flattenedSubWorkflow.edges.filter(edge => {
-          const sourceNode = internalNodesMap.get(edge.source);
-          const targetNode = internalNodesMap.get(edge.target);
-          if (!sourceNode || !targetNode) return false;
-          const sourceIsIO = getNodeFullType(sourceNode).startsWith('core:Group');
-          const targetIsIO = getNodeFullType(targetNode).startsWith('core:Group');
-          return !sourceIsIO && !targetIsIO;
+        const sourceNode = internalNodesMap.get(edge.source);
+        const targetNode = internalNodesMap.get(edge.target);
+        if (!sourceNode || !targetNode) return false;
+        const sourceIsIO = getNodeFullType(sourceNode).startsWith('core:Group');
+        const targetIsIO = getNodeFullType(targetNode).startsWith('core:Group');
+        return !sourceIsIO && !targetIsIO;
       }));
 
       processedGroupIds.delete(referencedWorkflowId);
