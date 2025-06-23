@@ -121,16 +121,36 @@ function ensureProjectReady() {
     }
   }
 
-  // 步骤 2: 检查数据库文件是否存在，如果不存在则进行数据库设置
+  // 步骤 2: 检查数据库文件是否存在，如果不存在或无效则进行数据库设置
+  let dbNeedsSetup = false;
   if (!fs.existsSync(dbFilePath)) {
-    console.log(`[ensureProjectReady] 数据库文件 ${dbFilePath} 未找到。将执行数据库设置 (generate & migrate)...`);
-    if (!setupDatabase()) { // 调用新的包含 generate 和 migrate 的函数
+    dbNeedsSetup = true;
+    console.log(`[ensureProjectReady] 数据库文件 ${dbFilePath} 未找到。`);
+  } else {
+    // 检查文件大小。如果文件为空，它可能是无效的或未初始化的。
+    const stats = fs.statSync(dbFilePath);
+    if (stats.size === 0) {
+      dbNeedsSetup = true;
+      console.log(`[ensureProjectReady] 数据库文件 ${dbFilePath} 已存在但为空。将重新进行设置。`);
+      try {
+        fs.unlinkSync(dbFilePath); // 删除空文件以触发重新创建
+        console.log(`[ensureProjectReady] 已删除空的数据库文件。`);
+      } catch (err: any) {
+        console.error(`[ensureProjectReady] 删除空的数据库文件失败: ${err.message}`);
+        process.exit(1);
+      }
+    }
+  }
+
+  if (dbNeedsSetup) {
+    console.log(`[ensureProjectReady] 将执行数据库设置 (generate & migrate)...`);
+    if (!setupDatabase()) { // 调用包含 generate 和 migrate 的函数
       console.error('[ensureProjectReady] 数据库设置步骤执行失败。请检查上面的错误信息。');
       process.exit(1); // 数据库设置失败是一个严重错误，应终止程序
     }
     console.log('[ensureProjectReady] 数据库已成功设置。');
   } else {
-    console.log(`[ensureProjectReady] 数据库文件 ${dbFilePath} 已存在。跳过数据库设置步骤。`);
+    console.log(`[ensureProjectReady] 数据库文件 ${dbFilePath} 已存在且有效。跳过数据库设置步骤。`);
   }
   console.log('[ensureProjectReady] 项目状态检查完成。');
 }

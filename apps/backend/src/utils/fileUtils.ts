@@ -30,9 +30,13 @@ export function getProjectRootDir(): string {
   const currentFileDir = path.dirname(new URL(import.meta.url).pathname);
   if (process.platform === "win32" && currentFileDir.startsWith("/")) {
     // 在 Windows 上，URL.pathname 会以 / 开头，例如 /E:/path，需要移除开头的 /
-    return path.resolve(currentFileDir.substring(1), "../../../..");
+    // 同时，需要对路径进行解码，以处理非 ASCII 字符（如中文）
+    const decodedPath = decodeURIComponent(currentFileDir.substring(1));
+    return path.resolve(decodedPath, "../../../..");
   }
-  return path.resolve(currentFileDir, "../../../..");
+  // 对于非 Windows 或路径不以 / 开头的情况，也进行解码
+  const decodedPath = decodeURIComponent(currentFileDir);
+  return path.resolve(decodedPath, "../../../..");
 }
 
 /**
