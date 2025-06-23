@@ -126,6 +126,8 @@ export interface WorkflowInterface {
   id: string;
   /** 工作流名称 */
   name: string;
+  /** 工作流的详细描述 */
+  description?: string;
   /** 输入参数定义 */
   inputs: SlotDefinition[];
   /** 输出结果定义 */
@@ -140,6 +142,8 @@ export interface SlotDefinition {
   id: string;
   /** 显示名称 */
   displayName: string;
+  /** 自定义描述 */
+  customDescription?: string;
   /** 数据类型 */
   dataType: string;
   /** 是否必需 */
