@@ -953,8 +953,15 @@
     "title": "Workflow Info"
   },
   "workflowPanel": {
+    "confirmDelete": {
+      "title": "Confirm Workflow Deletion",
+      "message": "Are you sure you want to delete the workflow \"{name}\"? This action cannot be undone.",
+      "confirmButton": "Delete",
+      "cancelButton": "Cancel"
+    },
     "defaultTabName": "Workflow {idSuffix}",
     "errors": {
+      "deleteNotFound": "Unable to delete workflow: Not found in list.",
       "loadNoProject": "Unable to load workflow: Missing project information.",
       "loadNotFound": "Unable to load workflow: Not found in list."
     },

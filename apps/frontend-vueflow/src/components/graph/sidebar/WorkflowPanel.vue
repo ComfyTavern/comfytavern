@@ -196,8 +196,24 @@ const handleLoad = async (workflowId: string) => {
 };
 
 const handleDelete = async (workflowId: string) => {
-  // 确认对话已在 store action 中处理
-  await workflowStore.deleteWorkflow(workflowId);
+  const workflowToDelete = availableWorkflows.value.find(wf => wf.id === workflowId);
+  if (!workflowToDelete) {
+    console.error(`Workflow with id ${workflowId} not found.`);
+    dialogService.showError(t('workflowPanel.errors.deleteNotFound'));
+    return;
+  }
+
+  const confirmed = await dialogService.showConfirm({
+    title: t('workflowPanel.confirmDelete.title'),
+    message: t('workflowPanel.confirmDelete.message', { name: workflowToDelete.name }),
+    dangerConfirm: true,
+    confirmText: t('workflowPanel.confirmDelete.confirmButton'),
+    cancelText: t('workflowPanel.confirmDelete.cancelButton'),
+  });
+
+  if (confirmed) {
+    await workflowStore.deleteWorkflow(workflowId);
+  }
 };
 
 // 组件挂载时获取列表

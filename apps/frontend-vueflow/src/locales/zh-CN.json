@@ -957,8 +957,15 @@
     "title": "工作流信息"
   },
   "workflowPanel": {
+    "confirmDelete": {
+      "title": "确认删除工作流",
+      "message": "您确定要删除工作流 \"{name}\" 吗？此操作不可撤销。",
+      "confirmButton": "删除",
+      "cancelButton": "取消"
+    },
     "defaultTabName": "工作流 {idSuffix}",
     "errors": {
+      "deleteNotFound": "无法删除工作流：未在列表中找到。",
       "loadNoProject": "无法加载工作流：缺少项目信息。",
       "loadNotFound": "无法加载工作流：未在列表中找到。"
     },
