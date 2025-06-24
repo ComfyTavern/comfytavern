@@ -283,11 +283,12 @@ class CreateMessageNodeImpl {
   static async execute(inputs: Record<string, any>): Promise<Record<string, any>> {
     const { role = 'user', content = '' } = inputs;
     if (!content) {
-      // 如果内容为空，可以返回一个空消息或抛出错误，这里选择返回空，让合并节点忽略
-      return { message: null };
+      // 如果内容为空，返回一个空数组
+      return { messages: [] };
     }
+    // 直接返回包含单条消息的数组
     return {
-      message: { role, content },
+      messages: [{ role, content }],
     };
   }
 }
@@ -324,11 +325,11 @@ export const createMessageNodeDefinition: NodeDefinition = {
     },
   },
   outputs: {
-    message: {
-      dataFlowType: 'OBJECT',
-      displayName: '消息',
-      description: '创建的单条消息对象',
-      matchCategories: ['ChatMessage'],
+    messages: {
+      dataFlowType: 'ARRAY',
+      displayName: '消息列表',
+      description: '包含单条消息的消息列表',
+      matchCategories: ['ChatHistory'],
     },
   },
   execute: CreateMessageNodeImpl.execute,

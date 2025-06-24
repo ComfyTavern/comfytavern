@@ -510,9 +510,16 @@ export class ExecutionEngine {
           const sourceResult = this.nodeResults[sourceNodeId];
           const sourceNodeState = this.nodeStates[sourceNodeId];
           // 流式节点的状态可能是 RUNNING，但其流输出已经可用
+          // 检查上游节点是否就绪的条件
+          // 就绪条件：
+          // 1. 节点已成功完成 (COMPLETE) 或被跳过 (SKIPPED)。
+          // 2. 节点正在运行 (RUNNING)，并且其对应的输出已经存在，且该输出是以下两者之一：
+          //    a) 一个可读流 (Stream.Readable)，代表这是一个流式输出。
+          //    b) 一个 Promise，代表这是一个非流式节点的、将在未来完成的批处理结果。
           const isSourceReady = sourceNodeState === ExecutionStatus.COMPLETE ||
             sourceNodeState === ExecutionStatus.SKIPPED ||
-            (sourceNodeState === ExecutionStatus.RUNNING && sourceResult && sourceResult[sourceOutputKey] instanceof Stream.Readable);
+            (sourceNodeState === ExecutionStatus.RUNNING && sourceResult &&
+              (sourceResult[sourceOutputKey] instanceof Stream.Readable || sourceResult[sourceOutputKey] instanceof Promise));
 
 
           if (isSourceReady && sourceResult) {
