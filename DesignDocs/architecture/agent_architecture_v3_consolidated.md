@@ -349,7 +349,7 @@ Agent 定义（我们暂定其文件名为 `agent_profile.json`，后续可根�
 - **自身的私有状态 (`PrivateState`)**：由 `AgentRuntime` 管理和持久化，是 Agent 个性、记忆和内部动机的载体。
 - **可访问的知识库 (Accessible KnowledgeBases)**：在 Agent Profile 中声明，由知识库服务提供实际访问。
 - **可用的能力 (Available Capabilities)**：在 Agent Profile 中声明的技能工作流和原子工具。
-- **关联的应用面板 (Associated App Panels)**：如果场景配置了面板，Agent 可以通过交互式执行流与用户通过面板进行交互。
+- **关联的应用面板 (Associated App Panels)**：如果场景配置了应用面板，Agent 的工作流可以产出“交互请求”，由前端面板响应并构建新的工作流，以此实现与用户的交互。
 
 理解 Agent 实例的生命周期及其所处的运行时上下文，对于设计和调试 Agent 的行为至关重要。它确保了 Agent 的行动既有自主性，又能与其所处的“世界”和“任务”紧密结合。
 
@@ -522,15 +522,21 @@ Agent 定义（我们暂定其文件名为 `agent_profile.json`，后续可根�
 应用面板是 Agent 与最终用户进行交互的主要界面，也是 Agent 行动结果的可视化呈现场所。其规范遵循 [`DesignDocs/architecture/面板与接口/panel-spec-and-lifecycle.md`](DesignDocs/architecture/面板与接口/panel-spec-and-lifecycle.md:1)，与后端的交互机制则参考 [`DesignDocs/architecture/面板与接口/frontend-api-manager-and-integration.md`](DesignDocs/architecture/面板与接口/frontend-api-manager-and-integration.md:1)。
 
 - **定位**：作为沙盒化的微型 Web 应用，通过平台注入的 `window.comfyTavern.panelApi` 与宿主环境通信。
-- **与 Agent 的关系**：
-  - **用户输入/输出通道**：当 Agent 的审议工作流或技能工作流需要用户输入（如文本、选择、确认）或需要向用户展示复杂信息时，它会调用一个特殊的“面板交互工具/节点”。
-  - **交互式执行流**：此工具/节点在后端会触发“交互式执行流”。`AgentRuntime` (或 `ExecutionEngine`) 通过 WebSocket 向前端（具体是 `InteractionService`）发送 `BE_REQUEST_FE_INTERACTION` 事件，请求在当前场景关联的应用面板中执行特定的 UI 动作。
-  - **面板响应**：应用面板通过 `panelApi` 提供的机制（如自定义 UI Provider）响应这些交互请求，渲染界面，收集用户输入，并将结果通过 `POST /api/v1/submit_interaction_result` 返回给后端，Agent 的工作流得以继续。
-  - **状态展示**：应用面板可以订阅由 Agent 或场景发布的特定事件（通过 `panelApi` 包装的 WebSocket 连接），以实时更新界面，展示 Agent 的状态、行动结果或世界环境的变化。
+- **与 Agent 的交互模型**：
+  Agent 与用户的交互是通过一个多轮次的、非阻塞的“请求-响应”模型来驱动的。这个模型确保了 Agent 决策的完整性和响应性。
+
+  其流程如下：
+  1.  **生成交互请求**：Agent 的审议工作流在执行过程中，若判断需要用户输入，会生成一个结构化的“交互请求”作为其执行结果的一部分。这个请求包含了需要呈现给用户的信息和选项。
+  2.  **前端渲染与用户输入**：前端服务捕获此交互请求，并在应用面板上渲染出相应的用户界面（如选项按钮、输入框等）。用户在界面上进行操作，其输入被前端捕获。
+  3.  **启动新一轮审议**：用户的输入被封装成新的上下文信息，并提交给 Agent 的运行时。`AgentRuntime` 会将此输入与当前的其他上下文（如世界状态、Agent 私有状态）结合，启动一次全新的、完整的审议工作流。
+
+  通过这种方式，用户的每次输入都将触发 Agent 的一次完整决策过程，使其能够综合最新信息做出最合适的响应，而不是简单地在预设的流程分支中选择。
+
+  同时，应用面板也可以通过订阅事件总线的事件，来实时展示 Agent 的状态、行动结果或世界环境的变化。
 - **核心职责 (平台侧)**：
   - **`panelApi` 注入**：向运行在 `<iframe>` 中的应用面板安全地注入 `window.comfyTavern.panelApi`。
-  - **`InteractionService` (前端)**：监听来自后端的 `BE_REQUEST_FE_INTERACTION` 事件，协调应用面板进行 UI 渲染和用户输入收集。
-  - **API 接口**：提供 `POST /api/v1/submit_interaction_result` 等接口，接收面板提交的交互结果。
+  - **前端服务 (`InteractionService` / `WorkflowBuilder`)**：监听工作流执行结果。如果结果包含交互请求，则负责协调应用面板进行 UI 渲染，并在用户交互后构建和提交新的工作流。
+  - **API 接口**：提供执行工作流的 API (`POST /api/v1/execute_workflow`)。
   - **安全沙箱**：确保应用面板在严格的沙箱环境中运行。
 
 通过这些核心服务与组件的紧密协作，我们能够为 Agent 提供一个功能丰富、信息通畅且安全可控的运行环境，使其能够有效地执行其审议循环，与世界交互，并最终达成其目标。
@@ -605,11 +611,11 @@ graph LR
     KB_Service -- "访问全局KB(未显示)" --> KB_Service
 
 
-    AgentRuntime1 -- "请求用户交互" --> EventBusChannel %% BE_REQUEST_FE_INTERACTION
-    EventBusChannel -- "传递交互请求" --> FrontendInteraction
-    FrontendInteraction -- "驱动" --> ActivePanelInst
-    ActivePanelInst -- "提交交互结果" --> FrontendInteraction
-    FrontendInteraction -- "提交结果给" --> ExecEngine %% 或 AgentRuntime
+    ExecEngine -- "返回含[交互请求]的结果" --> FrontendInteraction
+    FrontendInteraction -- "驱动UI & 捕获用户输入" --> ActivePanelInst
+    ActivePanelInst -- "用户交互" --> FrontendInteraction
+    FrontendInteraction -- "将用户输入提交给" --> AgentRuntime1
+    AgentRuntime1 -- "作为新上下文, 启动下一次审议" --> ExecEngine
 
     SceneInst -- "可选:调用编排工作流" --> ExecEngine
 
@@ -761,6 +767,7 @@ Agent 也可以通过观察和修改共享的 `WorldState` 来实现间接的协
       - `gm_agent_instance` 的 `AgentRuntime` 也订阅了 `comfytavern.rpg.image_generation_result` 事件。
       - 收到结果事件后，其审议工作流被触发（或从等待状态中被唤醒）。它根据 `task_id` 匹配结果，获取图像 URL。
       - 审议后，GM Agent 决定下一步行动，例如，通过“面板交互工具”将场景描述和生成的图像一起展示给用户。
+      - **生成玩家选项**: 为了让玩家能够与场景互动，GM Agent 可能会接着决定为玩家生成一组行动选项。此时，它会调用一个专门的工具（例如 `RequestUserInteractionTool`），这个调用指令会封装生成选项所需的上下文（如“玩家正站在森林边缘，面前有一条小径和一座古老的雕像”）和期望的选项数量或类型。这个工具调用的结果是一个结构化的选项列表，前端应用面板可以将其渲染为可点击的按钮，从而将 Agent 的决策无缝转化为用户的交互界面。这体现了 Agent 如何通过工具调用来主动驱动和塑造用户体验。
 
 3.  **学习沉淀 (可选)**：
     - 如果在图像生成过程中，GM Agent 或 Image Agent（或其工作流）发现某种特定的 Prompt 组合或参数设置效果特别好，其反思机制（如果实现）可以将此经验作为 `best_practice` 类型的 CAIU 贡献到共享知识库中，供未来参考。
@@ -823,7 +830,7 @@ Agent 也可以通过观察和修改共享的 `WorldState` 来实现间接的协
 
 *   [`DesignDocs/architecture/project-architecture.md`](DesignDocs/architecture/project-architecture.md:1): 需要在其 `project.json` Schema 中增加对 `Agent Profile` 定义文件引用的支持。
 *   [`DesignDocs/architecture/knowledgebase-architecture.md`](DesignDocs/architecture/knowledgebase-architecture.md:1): 其 CAIU 结构和 Agent 知识贡献机制与本 v3 架构高度兼容，可能只需微调或补充关于 `goal`, `best_practice`, `reflection_note` 等特定 CAIU 类型的示例和应用场景。
-*   [`DesignDocs/architecture/面板与接口/frontend-api-manager-and-integration.md`](DesignDocs/architecture/面板与接口/frontend-api-manager-and-integration.md:1) 和 [`DesignDocs/architecture/面板与接口/panel-spec-and-lifecycle.md`](DesignDocs/architecture/面板与接口/panel-spec-and-lifecycle.md:1): 其关于应用面板与后端（特别是通过交互式执行流）的交互机制，是 Agent 与用户交互的重要实现路径，与本 v3 架构兼容良好，无需大的调整，只需确保术语和概念统一。
+*   [`DesignDocs/architecture/面板与接口/frontend-api-manager-and-integration.md`](DesignDocs/architecture/面板与接口/frontend-api-manager-and-integration.md:1) 和 [`DesignDocs/architecture/面板与接口/panel-spec-and-lifecycle.md`](DesignDocs/architecture/面板与接口/panel-spec-and-lifecycle.md:1): 这两份文档中关于应用面板与后端交互的机制，需要进行修订，以精确对齐本 v3 架构所确立的“审议循环驱动”模型。核心是明确：用户的输入是作为 Agent 下一次审议循环的新上下文，而不是用于续跑或触发一个分裂的工作流。
 
 通过上述处理，我们可以确保 ComfyTavern 的核心架构文档体系保持最新、一致和聚焦，为后续的开发工作提供清晰的指引。姐姐的决定——将本 v3 报告作为主要的 Agent 文档，并将旧的两篇核心 Agent 文档（v1 和 v2 方案）移入回收站（或存档），是非常明智的，有助于避免未来的混淆。
 
@@ -958,7 +965,7 @@ Agent 也可以通过观察和修改共享的 `WorldState` 来实现间接的协
     "WriteToKnowledgeBaseTool", // For reflections
     "PublishEventTool",
     "ReadWorldStateTool",
-    "PanelInteractionTool" // For direct UI interaction via BE_REQUEST_FE_INTERACTION
+    "RequestUserInteractionTool" // 生成一个交互请求，由前端处理并构建新工作流
   ],
 
   "initial_goals_reference": [

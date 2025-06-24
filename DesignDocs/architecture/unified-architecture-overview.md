@@ -85,7 +85,7 @@ graph TD
     *   **职责**:
         *   **主要交互**: 通过向场景的事件总线发布事件来影响场景或 Agent。
         *   **状态呈现**: 订阅场景事件，将 Agent 的行为和世界状态的变化可视化给用户。
-        *   **响应请求**: 响应由 Agent 发起的交互式执行流请求（如弹窗确认）。
+        *   **响应请求**: 响应由 Agent 工作流执行后产出的交互请求（如弹窗确认）。
         *   **次要交互**: 可直接调用独立的、工具性的工作流（此过程可由 `ApiAdapterManager` 辅助）。 **(注：`ApiAdapterManager` 是一个计划中的概念，目前尚未在代码中完全实现)**
     *   **参考文档**: [`面板与接口/panel-spec-and-lifecycle.md`](./面板与接口/panel-spec-and-lifecycle.md:1), [`面板与接口/frontend-api-manager-and-integration.md`](./面板与接口/frontend-api-manager-and-integration.md:1)
 
@@ -104,7 +104,7 @@ graph TD
 面板与 Agent 的交互是**间接的、通过场景介导的**。
 
 *   **面板 -> Agent**: 用户在面板操作 -> 面板发布事件到场景事件总线 -> Agent 订阅并响应事件。
-*   **Agent -> 面板**: Agent 需要用户输入 -> Agent 调用“面板交互工具” -> 后端触发交互式执行流 -> 前端服务监听到请求 -> 在面板上弹出相应 UI -> 用户输入 -> 结果返回给 Agent。
+*   **Agent -> 面板**: Agent 执行工作流，其产出包含一个“交互请求” -> 前端交互协调器 (`InteractionCoordinator`) 捕获此请求并通知面板 -> 面板渲染相应 UI -> 用户输入 -> 面板将结果返回，由协调器负责触发**新一轮**工作流执行 -> 新的执行结果用于更新 Agent 状态或触发其后续行为。
 
 ### 5.2. Agent 调用工作流
 

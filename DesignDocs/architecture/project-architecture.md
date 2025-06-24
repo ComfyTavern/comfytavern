@@ -77,7 +77,7 @@ ComfyTavern 项目由多种资源类型和在工作流中使用的节点构成�
   - `PublishEventToolNode`: 向场景的事件总线发布事件。
   - `ReadWorldStateToolNode`: 读取当前场景的共享世界状态。
   - `RequestWorldStateUpdateToolNode`: 请求更新当前场景的共享世界状态。
-  - `PanelInteractionToolNode`: 触发与应用面板的交互式执行流，用于获取用户输入或向用户展示信息。
+  - `PanelInteractionToolNode`: 作为 Agent 的一个工具，当 Agent 决策需要用户交互时，通过调用此工具（例如 `RequestUserInteractionTool`）来生成结构化的交互请求数据。前端捕获此数据后，会向用户展示 UI，并在获得用户输入后，将输入作为观察结果，触发 Agent **新一轮**的审议工作流。
 - **逻辑控制与实用节点**:
   - 条件分支节点、循环节点、数据转换节点、数学运算节点、文本处理节点等。
 

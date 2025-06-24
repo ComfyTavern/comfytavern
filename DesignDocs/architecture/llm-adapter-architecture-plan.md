@@ -779,12 +779,12 @@ interface ILlmApiAdapter {
     - 支持更多条件：`preferred_model_tags`, `performance_preference`, 节点标签等。
     - 提供用户界面来配置和管理这些路由规则。
 
-2.  **Tool Calling / Function Calling 支持:**
+- **Tool Calling / Function Calling 支持:**
 
-    - 标准化 `CustomMessage` 中的 `tool_calls` 和 `tool` 角色 (如果未来在 CustomMessage 中添加支持)。
-    - 适配器支持序列化 `tools` 参数和解析 `tool_calls` 响应。
-    - `GenericLlmRequestNode` 能够处理 `tool_calls` 响应，暂停执行或输出调用请求。
-    - 可能需要引入 `ToolExecutorNode` 或类似机制来执行工具并返回结果。
+  - 标准化 `CustomMessage` 中的 `tool_calls` 和 `tool` 角色。
+  - 适配器支持序列化 `tools` 参数和解析 `tool_calls` 响应。
+  - `GenericLlmRequestNode` 在处理 `tool_calls` 响应时，会将工具调用请求作为结构化数据输出。外部的执行协调器（如 `AgentRuntime`）捕获此输出，执行相应的工具，并将工具执行结果作为上下文，启动新一轮的工作流。
+  - 可能需要引入 `ToolExecutorNode` 或类似机制，由外部协调器调用，来执行工具并返回结果。
     - 完善将工具结果注入回 LLM 请求的流程。
 
 3.  **参数标准化与映射:**

@@ -10,7 +10,7 @@
 
 -   **能力扩展**：赋予平台浏览器本身无法实现的原生系统交互能力。
 -   **架构解耦**：避免原生逻辑与核心业务逻辑的紧密耦合，主应用依然可以在任何标准浏览器中独立运行。
--   **遵循现有规范**：将 Tauri 提供的原生能力，无缝整合进现有的 `ApiAdapterManager` 和 `panelApi` 体系中，特别是利用 [`frontend-api-manager-and-integration.md`](./面板与接口/frontend-api-manager-and-integration.md) 中定义的 `requestHostService` 和**交互式执行流**机制。
+-   **遵循现有规范**：将 Tauri 提供的原生能力，无缝整合进现有的 `ApiAdapterManager` 和 `panelApi` 体系中，特别是利用 [`frontend-api-manager-and-integration.md`](./面板与接口/frontend-api-manager-and-integration.md) 中定义的 `requestHostService` 和**非阻塞、多轮次的交互式执行流**机制。
 -   **提升用户体验**：为主应用的用户提供更丰富、更便捷的跨应用操作体验（如全局划词、快捷操作等）。
 -   **安全可控**：确保所有原生能力的调用都在一个明确定义的、安全的框架内进行。
 
@@ -128,20 +128,19 @@ graph TD
     -   **支持同步返回**: 适用于需要立即获得返回值的原生操作。
     -   **可扩展性强**: 未来可以引入其他原生扩展（如浏览器插件），同样遵循此模式注册服务。
 
-## 4. 与交互式执行流的结合
+## 4. 与 Agent/工作流的交互
 
-此集成方案与设计文档中的**“交互式执行流” (Phase 2)** 可以完美结合，实现由后端工作流驱动的原生交互。
+此集成方案与 Agent 的审议-行动循环可以完美结合，实现由 Agent 决策驱动的原生交互。
 
-**案例：工作流中需要用户原生确认**
+**案例：Agent 决策需要用户进行原生确认**
 
-1.  **工作流定义**: 包含一个特殊的 `InteractiveNode`，其定义为 `{ "type": "NATIVE_CONFIRMATION", "params": { "title": "任务确认", "message": "是否批准执行此高风险操作？" } }`。
-2.  **后端触发**: 执行引擎遇到此节点，通过 WebSocket 向前端发送 `BE_REQUEST_FE_INTERACTION` 事件。
-3.  **前端响应**: 前端的 `InteractionService` 监听到事件，解析后发现是原生交互请求。
-4.  **调用原生服务**: `InteractionService` 调用 `window.comfytavern.panelApi.requestHostService('native:showConfirmation', params)`。
-5.  **Tauri 执行**: 请求通过控制通道转发给 Tauri 助手，Tauri 调用系统 API 弹出一个原生的确认对话框。
-6.  **结果返回**: 用户点击“是”或“否”，结果通过控制通道返回给 `InteractionService`。
-7.  **提交结果**: `InteractionService` 将用户选择通过 `POST /api/v1/submit_interaction_result` 提交给后端。
-8.  **工作流继续**: 后端执行引擎收到结果，工作流从暂停处继续执行。
+1.  **Agent 审议与决策**: Agent 在其核心审议工作流中，根据当前上下文判断需要用户批准一个高风险操作。
+2.  **发起工具调用**: Agent 的 LLM 核心输出一个工具调用指令，该指令旨在调用一个原生确认服务。这遵循标准的 Agent 工具调用协议。
+3.  **前端捕获与执行**: 前端的 `AgentRuntime` 或 `InteractionCoordinator` 解析此工具调用，并执行 `window.comfytavern.panelApi.requestHostService('native:showConfirmation', params)`。
+4.  **Tauri 执行**: 请求通过控制通道转发给 Tauri 助手，Tauri 调用系统 API 弹出一个原生的确认对话框。
+5.  **收集用户输入**: 用户点击“是”或“否”，结果通过控制通道返回给前端。
+6.  **作为观察结果，触发新一轮审议**: 前端将用户的选择（例如 `{"user_confirmation": true}`）格式化为一个“观察结果 (Observation)”，并将其作为输入，启动 Agent 的**新一轮**审议工作流。
+7.  **后续流程**: Agent 在新的审议循环中，接收到用户的确认结果作为观察信息，并据此决定执行相应的后续逻辑。
 
 ## 5. 实现路线图
 
@@ -156,9 +155,9 @@ graph TD
     -   实现 `native:readClipboard` 和 `native:showNotification` 两个核心服务的完整调用链路。
     -   迁移阶段一的功能到此新模式下。
 
-3.  **阶段三：与交互式执行流深度整合**
-    -   在 `InteractiveNode` 中正式支持 `native:*` 类型的交互。
-    -   完善 `InteractionService` 以支持对原生服务请求的路由。
-    -   开发并测试至少一个由工作流驱动的原生交互场景。
+3.  **阶段三：与 Agent 交互流深度整合**
+    -   确保 Agent 的工具调用机制可以正确地请求 `native:*` 前缀的服务。
+    -   完善前端的 `InteractionCoordinator` 或 `AgentRuntime`，使其能够正确解析并执行对原生服务的工具调用。
+    -   开发并测试至少一个由 Agent 决策驱动的原生交互场景。
 
 通过以上设计，Tauri 将不再是一个孤立的应用，而是作为平台生态系统中有机的一部分，极大地扩展了 ComfyTavern 的能力边界。
