@@ -446,6 +446,10 @@
         "historyResizeSummary": "{nodeName} - {inputDisplayName} の高さをリサイズ: {height}px",
         "historySetPreviewSummary": "ノード「{nodeIdentifier}」のスロット「{slotIdentifier}」をプレビューに設定しました",
         "jumpToReferencedWorkflowTooltip": "参照ワークフローにジャンプ",
+        "missingNodeCheckConsole": "コンソールで元のデータを確認してください。",
+        "missingNodeMessage": "このノードタイプは登録されていないか、読み込みに失敗しました。",
+        "missingNodeOriginalData": "元のノードデータ：",
+        "missingNodeTooltipTitle": "見つからないノード: {type}",
         "multiInputChildHandleTooltip": "{type} (スロット {index})",
         "nodeGroupInfoInputs": "{count} 入力",
         "nodeGroupInfoNodes": "{count} ノード",
@@ -640,10 +644,10 @@
       "display_fontSize_label": "インターフェースフォントサイズ",
       "display_showConnectionStatus_desc": "インターフェース下部にバックエンドサービスへの接続ステータスインジケーターを表示します。",
       "display_showConnectionStatus_label": "バックエンド接続ステータスを表示",
+      "display_showControls_desc": "ノードエディターの左下にズームやロックなどのコントロールを表示します。",
+      "display_showControls_label": "キャンバスコントロールを表示",
       "display_showMinimap_desc": "ノードエディターの右下にノード概要ミニマップを表示します。",
       "display_showMinimap_label": "エディターミニマップを表示",
-      "display_showControls_label": "キャンバスコントロールを表示",
-      "display_showControls_desc": "ノードエディターの左下にズームやロックなどのコントロールを表示します。",
       "fontSize_large": "大",
       "fontSize_medium": "中",
       "fontSize_small": "小",
@@ -953,8 +957,15 @@
     "title": "ワークフロー情報"
   },
   "workflowPanel": {
+    "confirmDelete": {
+      "cancelButton": "キャンセル",
+      "confirmButton": "削除",
+      "message": "本当にワークフロー「{name}」を削除しますか？この操作は元に戻せません。",
+      "title": "ワークフロー削除の確認"
+    },
     "defaultTabName": "ワークフロー {idSuffix}",
     "errors": {
+      "deleteNotFound": "ワークフローを削除できません：リストに見つかりませんでした。",
       "loadNoProject": "ワークフローを読み込めません: プロジェクト情報がありません。",
       "loadNotFound": "ワークフローを読み込めません: リストに見つかりませんでした。"
     },

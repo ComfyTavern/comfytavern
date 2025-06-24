@@ -22,7 +22,8 @@
     "manage:pm2": "bun ./scripts/pm2-manager.ts",
     "db:generate": "bun run ./node_modules/drizzle-kit/bin.cjs generate --config ./drizzle.config.ts",
     "db:migrate": "bun run ./node_modules/drizzle-kit/bin.cjs migrate --config ./drizzle.config.ts",
-    "db:upgrade": "bun scripts/upgradeDatabase.ts"
+    "db:upgrade": "bun scripts/upgradeDatabase.ts",
+    "i18n:scan": "bun run ./scripts/i18n-scanner.ts"
   },
   "devDependencies": {
     "@babel/parser": "^7.27.5",

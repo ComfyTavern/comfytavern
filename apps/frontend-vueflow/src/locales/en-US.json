@@ -446,6 +446,10 @@
         "historyResizeSummary": "Resize {nodeName} - {inputDisplayName} height: {height}px",
         "historySetPreviewSummary": "Set preview for node '{nodeIdentifier}' slot '{slotIdentifier}'",
         "jumpToReferencedWorkflowTooltip": "Jump to referenced workflow",
+        "missingNodeCheckConsole": "Check the console for original data.",
+        "missingNodeMessage": "This node type is not registered or failed to load.",
+        "missingNodeOriginalData": "Original Node Data:",
+        "missingNodeTooltipTitle": "Missing Node: {type}",
         "multiInputChildHandleTooltip": "{type} (Slot {index})",
         "nodeGroupInfoInputs": "{count} inputs",
         "nodeGroupInfoNodes": "{count} nodes",
@@ -457,11 +461,7 @@
         "tooltipType": "Type: {type}",
         "tooltipUnserializableObject": "[Unserializable Object]",
         "unknownType": "Unknown",
-        "unnamedNode": "Unnamed Node",
-        "missingNodeTooltipTitle": "Missing Node: {type}",
-        "missingNodeOriginalData": "Original Node Data:",
-        "missingNodeMessage": "This node type is not registered or failed to load.",
-        "missingNodeCheckConsole": "Check the console for original data."
+        "unnamedNode": "Unnamed Node"
       }
     }
   },
@@ -644,10 +644,10 @@
       "display_fontSize_label": "Interface Font Size",
       "display_showConnectionStatus_desc": "Show the connection status indicator to the backend service at the bottom of the interface.",
       "display_showConnectionStatus_label": "Show Backend Connection Status",
+      "display_showControls_desc": "Show controls like zoom and lock in the bottom left corner of the node editor.",
+      "display_showControls_label": "Show Canvas Controls",
       "display_showMinimap_desc": "Display the node overview minimap in the bottom right corner of the node editor.",
       "display_showMinimap_label": "Show Editor Minimap",
-      "display_showControls_label": "Show Canvas Controls",
-      "display_showControls_desc": "Show controls like zoom and lock in the bottom left corner of the node editor.",
       "fontSize_large": "Large",
       "fontSize_medium": "Medium",
       "fontSize_small": "Small",
@@ -958,10 +958,10 @@
   },
   "workflowPanel": {
     "confirmDelete": {
-      "title": "Confirm Workflow Deletion",
-      "message": "Are you sure you want to delete the workflow \"{name}\"? This action cannot be undone.",
+      "cancelButton": "Cancel",
       "confirmButton": "Delete",
-      "cancelButton": "Cancel"
+      "message": "Are you sure you want to delete the workflow \"{name}\"? This action cannot be undone.",
+      "title": "Confirm Workflow Deletion"
     },
     "defaultTabName": "Workflow {idSuffix}",
     "errors": {

@@ -446,6 +446,10 @@
         "historyResizeSummary": "调整 {nodeName} - {inputDisplayName} 高度: {height}px",
         "historySetPreviewSummary": "将机括「{nodeIdentifier}」的枢纽「{slotIdentifier}」设为预览目标",
         "jumpToReferencedWorkflowTooltip": "跳转到引用的机巧流",
+        "missingNodeCheckConsole": "请览幽府录以知其本源。",
+        "missingNodeMessage": "此机括未载册，或倾覆于途。",
+        "missingNodeOriginalData": "机括之本源:",
+        "missingNodeTooltipTitle": "机括失载：{type}",
         "multiInputChildHandleTooltip": "{type}（枢纽 {index}）",
         "nodeGroupInfoInputs": "{count} 个输入",
         "nodeGroupInfoNodes": "{count} 个机括",
@@ -640,10 +644,10 @@
       "display_fontSize_label": "界面墨迹大小",
       "display_showConnectionStatus_desc": "于境底显与幽府通联之状。",
       "display_showConnectionStatus_label": "显通幽之径",
+      "display_showControls_desc": "于天工坊左下隅显缩放、锁定等控件。",
+      "display_showControls_label": "显画布之控",
       "display_showMinimap_desc": "于机括坊右下隅显节点总览之舆图。",
       "display_showMinimap_label": "显天工坊缩略图",
-      "display_showControls_label": "显画布之控",
-      "display_showControls_desc": "于天工坊左下隅显缩放、锁定等控件。",
       "fontSize_large": "大",
       "fontSize_medium": "中",
       "fontSize_small": "小",
@@ -953,8 +957,15 @@
     "title": "机巧流注疏"
   },
   "workflowPanel": {
+    "confirmDelete": {
+      "cancelButton": "罢之",
+      "confirmButton": "毁之",
+      "message": "确欲毁机巧流“{name}”乎？此举如覆水难收。",
+      "title": "确乎毁之？"
+    },
     "defaultTabName": "机巧流 {idSuffix}",
     "errors": {
+      "deleteNotFound": "毁机巧流未竟：名册无寻。",
       "loadNoProject": "无法加载机巧流：缺少项目信息。",
       "loadNotFound": "无法加载机巧流：未在列表中找到。"
     },

@@ -446,6 +446,10 @@
         "historyResizeSummary": "调整 {nodeName} - {inputDisplayName} 高度: {height}px",
         "historySetPreviewSummary": "将节点「{nodeIdentifier}」的接口「{slotIdentifier}」设为预览目标",
         "jumpToReferencedWorkflowTooltip": "跳转到引用的工作流",
+        "missingNodeCheckConsole": "请检查控制台以获取原始数据。",
+        "missingNodeMessage": "此节点类型未注册或加载失败。",
+        "missingNodeOriginalData": "原始节点数据:",
+        "missingNodeTooltipTitle": "缺失节点: {type}",
         "multiInputChildHandleTooltip": "{type} (接口 {index})",
         "nodeGroupInfoInputs": "{count} 个输入",
         "nodeGroupInfoNodes": "{count} 个节点",
@@ -640,7 +644,9 @@
       "display_fontSize_label": "界面字体大小",
       "display_showConnectionStatus_desc": "在界面底部显示与后端服务的连接状态指示。",
       "display_showConnectionStatus_label": "显示后端连接状态",
-      "display_showMinimap_desc": "在节点编辑器右侧显示代码小地图。",
+      "display_showControls_desc": "在节点编辑器左下角显示缩放、锁定等控件。",
+      "display_showControls_label": "显示画布控件",
+      "display_showMinimap_desc": "在节点编辑器右下角显示节点总览小地图。",
       "display_showMinimap_label": "显示编辑器小地图",
       "fontSize_large": "大",
       "fontSize_medium": "中",
@@ -951,8 +957,15 @@
     "title": "工作流信息"
   },
   "workflowPanel": {
+    "confirmDelete": {
+      "cancelButton": "取消",
+      "confirmButton": "删除",
+      "message": "您确定要删除工作流 \"{name}\" 吗？此操作不可撤销。",
+      "title": "确认删除工作流"
+    },
     "defaultTabName": "工作流 {idSuffix}",
     "errors": {
+      "deleteNotFound": "无法删除工作流：未在列表中找到。",
       "loadNoProject": "无法加载工作流：缺少项目信息。",
       "loadNotFound": "无法加载工作流：未在列表中找到。"
     },

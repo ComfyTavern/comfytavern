@@ -446,6 +446,10 @@
         "historyResizeSummary": "[TODO]",
         "historySetPreviewSummary": "[TODO]",
         "jumpToReferencedWorkflowTooltip": "[TODO]",
+        "missingNodeCheckConsole": "[TODO]",
+        "missingNodeMessage": "[TODO]",
+        "missingNodeOriginalData": "[TODO]",
+        "missingNodeTooltipTitle": "[TODO]",
         "multiInputChildHandleTooltip": "[TODO]",
         "nodeGroupInfoInputs": "[TODO]",
         "nodeGroupInfoNodes": "[TODO]",
@@ -640,6 +644,8 @@
       "display_fontSize_label": "[TODO]",
       "display_showConnectionStatus_desc": "[TODO]",
       "display_showConnectionStatus_label": "[TODO]",
+      "display_showControls_desc": "[TODO]",
+      "display_showControls_label": "[TODO]",
       "display_showMinimap_desc": "[TODO]",
       "display_showMinimap_label": "[TODO]",
       "fontSize_large": "[TODO]",
@@ -951,8 +957,15 @@
     "title": "[TODO]"
   },
   "workflowPanel": {
+    "confirmDelete": {
+      "cancelButton": "[TODO]",
+      "confirmButton": "[TODO]",
+      "message": "[TODO]",
+      "title": "[TODO]"
+    },
     "defaultTabName": "[TODO]",
     "errors": {
+      "deleteNotFound": "[TODO]",
       "loadNoProject": "[TODO]",
       "loadNotFound": "[TODO]"
     },

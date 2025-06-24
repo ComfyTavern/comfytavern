@@ -145,52 +145,53 @@ const llmConfigStore = useLlmConfigStore();
 const { providers, isLoadingProviders } = storeToRefs(llmConfigStore);
 
 // 预设模型配置
-const modelPresets = {
+// 以 [label, value] 格式存储，避免 i18n 扫描器将 label 视为待翻译文本
+const modelPresets: Record<string, [string, string][]> = {
   openai: [
-    { label: "GPT-4o", value: "gpt-4o" },
-    { label: "GPT-4o Mini", value: "gpt-4o-mini" },
-    { label: "GPT-4.1", value: "gpt-4.1" },
-    { label: "GPT-4.1 Mini", value: "gpt-4.1-mini" },
-    { label: "O1", value: "o1" },
-    { label: "O1 Pro", value: "o1-pro" },
-    { label: "O1 Mini", value: "o1-mini" },
-    { label: "O3", value: "o3" },
-    { label: "O3 Pro", value: "o3-pro" },
-    { label: "O3 Mini", value: "o3-mini" },
-    { label: "O4 Mini", value: "o4-mini" },
+    ["GPT-4o", "gpt-4o"],
+    ["GPT-4o Mini", "gpt-4o-mini"],
+    ["GPT-4.1", "gpt-4.1"],
+    ["GPT-4.1 Mini", "gpt-4.1-mini"],
+    ["O1", "o1"],
+    ["O1 Pro", "o1-pro"],
+    ["O1 Mini", "o1-mini"],
+    ["O3", "o3"],
+    ["O3 Pro", "o3-pro"],
+    ["O3 Mini", "o3-mini"],
+    ["O4 Mini", "o4-mini"],
   ],
   anthropic: [
-    { label: "Claude 4 Opus", value: "claude-opus-4-20250522" },
-    { label: "Claude 4 Sonnet", value: "claude-sonnet-4-20250522" },
-    { label: "Claude 3.7 Sonnet", value: "claude-3.7-sonnet-20250224" },
-    { label: "Claude 3.5 Sonnet", value: "claude-3-5-sonnet-20241022" },
-    { label: "Claude 3.5 Haiku", value: "claude-3-5-haiku-20241022" },
-    { label: "Claude 3 Opus", value: "claude-3-opus-20240229" },
+    ["Claude 4 Opus", "claude-opus-4-20250522"],
+    ["Claude 4 Sonnet", "claude-sonnet-4-20250522"],
+    ["Claude 3.7 Sonnet", "claude-3.7-sonnet-20250224"],
+    ["Claude 3.5 Sonnet", "claude-3-5-sonnet-20241022"],
+    ["Claude 3.5 Haiku", "claude-3-5-haiku-20241022"],
+    ["Claude 3 Opus", "claude-3-opus-20240229"],
   ],
   google: [
-    { label: "Gemini 2.5 Pro", value: "gemini-2.5-pro" },
-    { label: "Gemini 2.5 Flash", value: "gemini-2.5-flash" },
-    { label: "Gemini 2.5 Flash-Lite", value: "gemini-2.5-flash-lite" },
-    { label: "Gemini 1.5 Pro", value: "gemini-1.5-pro" },
-    { label: "Gemini 1.5 Flash", value: "gemini-1.5-flash" },
+    ["Gemini 2.5 Pro", "gemini-2.5-pro"],
+    ["Gemini 2.5 Flash", "gemini-2.5-flash"],
+    ["Gemini 2.5 Flash-Lite", "gemini-2.5-flash-lite"],
+    ["Gemini 1.5 Pro", "gemini-1.5-pro"],
+    ["Gemini 1.5 Flash", "gemini-1.5-flash"],
   ],
   deepseek: [
-    { label: "DeepSeek V3", value: "deepseek-chat" },
-    { label: "DeepSeek R1", value: "deepseek-reasoner" },
+    ["DeepSeek V3", "deepseek-chat"],
+    ["DeepSeek R1", "deepseek-reasoner"],
   ],
   cohere: [
-    { label: "Command A", value: "command-a" },
-    { label: "Command R+", value: "command-r-plus" },
-    { label: "Command R", value: "command-r" },
-    { label: "Command Light", value: "command-light" },
-    { label: "Aya", value: "aya" },
+    ["Command A", "command-a"],
+    ["Command R+", "command-r-plus"],
+    ["Command R", "command-r"],
+    ["Command Light", "command-light"],
+    ["Aya", "aya"],
   ],
   ollama: [
-    { label: "Llama 3.2", value: "llama3.2" },
-    { label: "Mistral Nemo", value: "mistral-nemo" },
-    { label: "Phi-4", value: "phi-4" },
-    { label: "Qwen2", value: "qwen2" },
-    { label: "DeepSeek V3", value: "deepseek-v3" },
+    ["Llama 3.2", "llama3.2"],
+    ["Mistral Nemo", "mistral-nemo"],
+    ["Phi-4", "phi-4"],
+    ["Qwen2", "qwen2"],
+    ["DeepSeek V3", "deepseek-v3"],
   ],
   custom: [],
 };
@@ -233,10 +234,11 @@ const isFormValid = computed(() => {
 // 根据选择的提供商返回预设模型
 const getPresetModels = () => {
   const providerId = formData.value.providerId;
-  if (!providerId || !modelPresets[providerId as keyof typeof modelPresets]) {
+  const presets = modelPresets[providerId];
+  if (!providerId || !presets) {
     return [];
   }
-  return modelPresets[providerId as keyof typeof modelPresets];
+  return presets.map(([label, value]) => ({ label, value }));
 };
 
 // 切换预设模型的选择状态
