@@ -457,7 +457,11 @@
         "tooltipType": "Type: {type}",
         "tooltipUnserializableObject": "[Unserializable Object]",
         "unknownType": "Unknown",
-        "unnamedNode": "Unnamed Node"
+        "unnamedNode": "Unnamed Node",
+        "missingNodeTooltipTitle": "Missing Node: {type}",
+        "missingNodeOriginalData": "Original Node Data:",
+        "missingNodeMessage": "This node type is not registered or failed to load.",
+        "missingNodeCheckConsole": "Check the console for original data."
       }
     }
   },

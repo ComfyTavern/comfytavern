@@ -323,13 +323,53 @@ export async function transformStorageToVueFlow(
     return promise;
   };
 
+  const allHandles = new Map<string, { inputs: Set<string>; outputs: Set<string> }>();
+  for (const edge of workflow.edges) {
+    if (edge.sourceHandle) {
+      if (!allHandles.has(edge.source)) {
+        allHandles.set(edge.source, { inputs: new Set(), outputs: new Set() });
+      }
+      allHandles.get(edge.source)!.outputs.add(edge.sourceHandle);
+    }
+    if (edge.targetHandle) {
+      if (!allHandles.has(edge.target)) {
+        allHandles.set(edge.target, { inputs: new Set(), outputs: new Set() });
+      }
+      allHandles.get(edge.target)!.inputs.add(edge.targetHandle);
+    }
+  }
+
   const nodes: VueFlowNode[] = await Promise.all(
     workflow.nodes.map(async (storageNode: WorkflowStorageNode): Promise<VueFlowNode> => {
       const nodeDef = nodeDefinitionsMap.get(storageNode.type);
       if (!nodeDef) {
+        const connectedHandles = allHandles.get(storageNode.id) || { inputs: new Set(), outputs: new Set() };
+        const inputs: Record<string, any> = {};
+        for (const handleId of connectedHandles.inputs) {
+          inputs[handleId] = { name: handleId, dataFlowType: 'any', BEHAVIOR_CONVERTIBLE: true };
+        }
+        const outputs: Record<string, any> = {};
+        for (const handleId of connectedHandles.outputs) {
+          outputs[handleId] = { name: handleId, dataFlowType: 'any', BEHAVIOR_CONVERTIBLE: true };
+        }
+        
+        const label = `Missing: ${storageNode.displayName || storageNode.type}`;
         return {
-          id: storageNode.id, type: "error", position: storageNode.position,
-          label: `Error: Unknown Type ${storageNode.type}`,
+          id: storageNode.id,
+          type: storageNode.type,
+          position: storageNode.position,
+          label: label,
+          data: {
+            isMissing: true,
+            originalNodeData: klona(storageNode),
+            inputs,
+            outputs,
+            displayName: label,
+            description: `Node definition for type "${storageNode.type}" could not be found.`,
+            defaultLabel: `Missing: ${storageNode.type}`,
+          },
+          width: storageNode.width,
+          height: storageNode.height,
         } as VueFlowNode;
       }
 

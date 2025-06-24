@@ -457,7 +457,11 @@
         "tooltipType": "类型: {type}",
         "tooltipUnserializableObject": "[无法序列化的对象]",
         "unknownType": "未知",
-        "unnamedNode": "未命名节点"
+        "unnamedNode": "未命名节点",
+        "missingNodeTooltipTitle": "缺失节点: {type}",
+        "missingNodeOriginalData": "原始节点数据:",
+        "missingNodeMessage": "此节点类型未注册或加载失败。",
+        "missingNodeCheckConsole": "请检查控制台以获取原始数据。"
       }
     }
   },

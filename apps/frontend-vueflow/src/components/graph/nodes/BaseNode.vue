@@ -186,9 +186,31 @@ const inputOrderKey = computed(() => finalInputs.value.map((i) => String(i.key))
 const outputOrderKey = computed(() => finalOutputs.value.map((o) => String(o.key)).join(","));
 
 // Tooltip 内容
+// 节点是否缺失的计算属性
+const isMissingNode = computed(() => !!props.data.isMissing);
+
+// Tooltip 内容
 const tooltipContentForNodeTitle = computed(() => {
   let content = "";
-  if (props.data.description) {
+  if (isMissingNode.value) {
+    // 标题：缺失节点类型
+    content += `**${t('graph.nodes.baseNode.missingNodeTooltipTitle', { type: props.type })}**\n\n`;
+    // 消息：此节点类型未注册或加载失败
+    content += `${t('graph.nodes.baseNode.missingNodeMessage')}\n\n`;
+
+    if (props.data.originalNodeData) {
+      // 分隔线
+      content += `---\n\n`;
+      // 原始数据标题
+      content += `**${t('graph.nodes.baseNode.missingNodeOriginalData')}**\n`;
+      // 原始数据作为 JSON 代码块显示
+      content += '```json\n';
+      content += JSON.stringify(props.data.originalNodeData, null, 2);
+      content += '\n```\n\n';
+      // 提示检查控制台
+      content += `*${t('graph.nodes.baseNode.missingNodeCheckConsole')}*`;
+    }
+  } else if (props.data.description) {
     // formatDescription 仅处理 \n，Markdown 渲染器处理 Markdown 语法
     content += formatDescription(props.data.description);
   }
@@ -704,6 +726,7 @@ const handleActionTriggered = (payload: {
       selected,
       'pointer-events-none': isResizing,
       'cursor-move': !isResizing,
+      'node-missing': isMissingNode, // 新增：缺失节点样式
       // dark: isDark, // 暗色模式类 - 移除，由 Tailwind dark: 前缀自动处理
       // 执行状态相关的类
       'node-running': nodeExecutionStatus === ExecutionStatus.RUNNING,
@@ -725,7 +748,7 @@ const handleActionTriggered = (payload: {
     </div>
     <!-- 节点头部区域 -->
     <div class="custom-node-header">
-      <!-- 头部左侧：节点 ID、错误图标和标题 -->
+      <!-- 头部左侧：节点 ID、错误图标、缺失图标和标题 -->
       <div class="flex items-center flex-grow min-w-0">
         <span v-if="nodeIdNumber" class="node-id-badge mr-0.5">{{ nodeIdNumber }}</span>
         <!-- 节点 ID 徽章 -->
@@ -733,6 +756,13 @@ const handleActionTriggered = (payload: {
         <svg v-if="clientScriptError" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
           stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-error mr-1 flex-shrink-0"
           v-comfy-tooltip="t('graph.nodes.baseNode.clientScriptErrorTitle', { error: clientScriptError })">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+        </svg>
+        <!-- 缺失节点图标 -->
+        <svg v-else-if="isMissingNode" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+          stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-warning mr-1 flex-shrink-0"
+          v-comfy-tooltip="tooltipContentForNodeTitle">
           <path stroke-linecap="round" stroke-linejoin="round"
             d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
         </svg>
@@ -780,7 +810,7 @@ const handleActionTriggered = (payload: {
     </div>
 
     <!-- 节点配置项区域 -->
-    <div v-if="data.configSchema && Object.keys(data.configSchema).length > 0" class="node-configs">
+    <div v-if="data.configSchema && Object.keys(data.configSchema).length > 0 && !isMissingNode" class="node-configs">
       <div v-for="configKeyName in Object.keys(data.configSchema)" :key="`config-${configKeyName}`"
         class="node-config-item">
         <div v-if="configPropsMap[String(configKeyName)]?.component" class="config-content" @mousedown.stop>
@@ -794,9 +824,13 @@ const handleActionTriggered = (payload: {
 
     <div class="custom-node-body">
       <!-- 节点描述现在通过标题的 Tooltip 显示 -->
+      <div v-if="isMissingNode" class="node-missing-content p-2 text-center text-text-muted text-sm">
+        <p>{{ t('graph.nodes.baseNode.missingNodeMessage', { type: props.type }) }}</p>
+        <p class="text-xs mt-1">{{ t('graph.nodes.baseNode.missingNodeCheckConsole') }}</p>
+      </div>
 
       <!-- 节点输出区域 -->
-      <div class="node-outputs" :key="`outputs-${finalOutputs.map((o) => o.key).join(',')}`">
+      <div v-if="!isMissingNode" class="node-outputs" :key="`outputs-${finalOutputs.map((o) => o.key).join(',')}`">
         <!-- 直接迭代 finalOutputs -->
         <div v-for="output in finalOutputs" :key="`output-${output.key}`" class="node-param">
           <!-- 输出参数行 -->
@@ -875,7 +909,7 @@ const handleActionTriggered = (payload: {
     </div>
 
     <!-- 节点组信息区域 (仅节点组显示) -->
-    <div v-if="isNodeGroup && nodeGroupInfo" class="node-group-info">
+    <div v-if="isNodeGroup && nodeGroupInfo && !isMissingNode" class="node-group-info">
       <!-- 添加 v-if="nodeGroupInfo" 来确保在访问属性前 nodeGroupInfo 不是 null -->
       <template v-if="nodeGroupInfo">
         <span class="info-item">
@@ -906,7 +940,7 @@ const handleActionTriggered = (payload: {
       </div>
 
     <!-- 节点输入区域 -->
-    <div class="node-inputs" :key="`inputs-${finalInputs.map((i) => i.key).join(',')}`">
+    <div v-if="!isMissingNode" class="node-inputs" :key="`inputs-${finalInputs.map((i) => i.key).join(',')}`">
       <!-- 直接迭代 finalInputs -->
       <div v-for="input in finalInputs" :key="`input-${input.key}`" class="node-param">
         <!-- 输入参数行布局：连接点、名称、内联输入组件 -->
@@ -1393,5 +1427,14 @@ export default {
 /* 编辑组按钮样式 */
 .edit-group-button {
   /* 尺寸和内边距已在 class 中定义 */
+}
+
+/* --- 缺失节点样式 --- */
+.custom-node.node-missing {
+  @apply border-dashed border-warning bg-warning/10;
+}
+
+.custom-node.node-missing .custom-node-header {
+  @apply bg-warning/20;
 }
 </style>

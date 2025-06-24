@@ -34,7 +34,11 @@ export const WorkflowNodeDataSchema = z.intersection(
   z.record(z.any()),
   z.object({
     /** 存储节点内部组件的状态 */
-    componentStates: ComponentStatesSchema
+    componentStates: ComponentStatesSchema,
+    /** 标记此节点定义是否缺失 */
+    isMissing: z.boolean().optional(),
+    /** 当节点缺失时，存储原始节点数据 */
+    originalNodeData: z.record(z.any()).optional(),
   })
 ).optional();
 
