@@ -1,13 +1,15 @@
-import type {
-  WorkflowStorageObject,
-  WorkflowStorageNode,
-  WorkflowStorageEdge,
-  NodeDefinition,
-  WorkflowExecutionPayload,
-  ExecutionNode,
-  ExecutionEdge,
-  GroupInterfaceInfo,
-  WorkflowViewport,
+import {
+  type WorkflowStorageObject,
+  type WorkflowStorageNode,
+  type WorkflowStorageEdge,
+  type NodeDefinition,
+  type WorkflowExecutionPayload,
+  type ExecutionNode,
+  type ExecutionEdge,
+  type GroupInterfaceInfo,
+  type WorkflowViewport,
+  WorkflowStorageNodeSchema,
+  WorkflowStorageEdgeSchema,
 } from "@comfytavern/types";
 import { klona } from "klona";
 import isEqual from "lodash-es/isEqual";
@@ -263,29 +265,34 @@ export function transformVueFlowToStorage(
     const inputValues = _extractInputValuesForStorage(vueNode, nodeDef);
     const customSlotDescriptions = _extractCustomSlotDescriptionsForStorage(vueNode, nodeDef);
 
-    const storageNode: WorkflowStorageNode = { ...baseProperties } as WorkflowStorageNode;
-
+    const rawStorageNode: any = { ...baseProperties };
     if (Object.keys(inputValues).length > 0) {
-      storageNode.inputValues = inputValues;
+      rawStorageNode.inputValues = inputValues;
     }
     if (customSlotDescriptions) {
-      storageNode.customSlotDescriptions = customSlotDescriptions;
+      rawStorageNode.customSlotDescriptions = customSlotDescriptions;
     }
 
     if (nodeType === "core:NodeGroup" && vueNode.data?.configValues?.referencedWorkflowId) {
       referencedWorkflowIds.add(vueNode.data.configValues.referencedWorkflowId as string);
     }
-    return storageNode;
+    
+    // 使用 Zod schema 进行验证和解析
+    return WorkflowStorageNodeSchema.parse(rawStorageNode);
   });
 
-  const edges = flow.edges.map((vueEdge: VueFlowEdge): WorkflowStorageEdge => ({
-    id: vueEdge.id,
-    source: vueEdge.source,
-    target: vueEdge.target,
-    sourceHandle: vueEdge.sourceHandle ?? "",
-    targetHandle: vueEdge.targetHandle ?? "",
-    ...(typeof vueEdge.label === "string" && vueEdge.label && { label: vueEdge.label }),
-  }));
+  const edges = flow.edges.map((vueEdge: VueFlowEdge): WorkflowStorageEdge => {
+    const rawEdge = {
+      id: vueEdge.id,
+      source: vueEdge.source,
+      target: vueEdge.target,
+      sourceHandle: vueEdge.sourceHandle, // Zod schema handles null/undefined
+      targetHandle: vueEdge.targetHandle, // Zod schema handles null/undefined
+      ...(typeof vueEdge.label === "string" && vueEdge.label && { label: vueEdge.label }),
+    };
+    // 使用 Zod schema 进行验证和解析
+    return WorkflowStorageEdgeSchema.parse(rawEdge);
+  });
 
   return {
     nodes,

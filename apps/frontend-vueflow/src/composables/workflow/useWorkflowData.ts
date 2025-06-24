@@ -5,11 +5,13 @@ import {
   loadWorkflowApi,
   saveWorkflowApi,
 } from "@/api/workflow";
+import {
+  WorkflowStorageObjectSchema,
+} from "@comfytavern/types";
 import type {
   GroupSlotInfo,
   WorkflowViewport as SharedViewport,
   WorkflowObject,
-  WorkflowStorageEdge,
   WorkflowStorageObject,
 } from "@comfytavern/types";
 import type { FlowExportObject, Edge as VueFlowEdge, Node as VueFlowNode } from "@vue-flow/core";
@@ -47,17 +49,15 @@ export function useWorkflowData() {
     if (!workflow) {
       return null;
     }
-    // 确保 workflow.edges 存在且是数组
-    const adaptedEdges = (workflow.edges || []).map((edge) => ({
-      ...edge,
-      sourceHandle: edge.sourceHandle ?? "",
-      targetHandle: edge.targetHandle ?? "",
-    })) as WorkflowStorageEdge[]; // 类型断言为 WorkflowStorageEdge[]
-
-    return {
-      ...workflow,
-      edges: adaptedEdges,
-    } as WorkflowStorageObject; // 最终断言为 WorkflowStorageObject
+    // 使用 Zod schema 进行验证和解析，取代手动适配和类型断言
+    // Zod schema 会处理可选/nullable 字段，无需手动转换
+    try {
+      return WorkflowStorageObjectSchema.parse(workflow);
+    } catch (error) {
+      console.error("加载的工作流数据验证失败:", error);
+      dialogService.showError("从服务器加载的工作流数据格式无效。");
+      return null;
+    }
   }
 
   // --- API 交互 ---
@@ -364,7 +364,8 @@ export function useWorkflowData() {
   }> {
     console.debug(`[useWorkflowData] Attempting to load default workflow for tab ${internalId}.`);
     try {
-      const defaultStorageObject = defaultWorkflowData as WorkflowStorageObject;
+      // 使用 Zod schema 验证默认工作流数据，取代类型断言
+      const defaultStorageObject = WorkflowStorageObjectSchema.parse(defaultWorkflowData);
 
       // Mock loader for default workflow, as it shouldn't reference other API-loaded workflows
       const mockLoadWorkflowById = async (

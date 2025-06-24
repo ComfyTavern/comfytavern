@@ -211,44 +211,50 @@ export type UpdateWorkflowObject = z.infer<typeof UpdateWorkflowObjectSchema>;
 
 
 /**
+ * 定义了用于持久化存储的节点数据结构。
+ * 这是 `WorkflowNodeSchema` 的一个简化版本，只包含需要保存到数据库或文件中的核心字段。
+ */
+export const WorkflowStorageNodeSchema = WorkflowNodeSchema.pick({
+  id: true,
+  type: true,
+  position: true,
+  width: true,
+  height: true,
+  displayName: true,
+  customDescription: true,
+  customSlotDescriptions: true,
+  inputValues: true,
+  configValues: true,
+  inputConnectionOrders: true,
+});
+export type WorkflowStorageNode = z.infer<typeof WorkflowStorageNodeSchema>;
+
+/**
+ * 定义了用于持久化存储的边数据结构。
+ * 这是 `WorkflowEdgeSchema` 的一个简化版本。
+ */
+export const WorkflowStorageEdgeSchema = WorkflowEdgeSchema.pick({
+  id: true,
+  source: true,
+  target: true,
+  sourceHandle: true,
+  targetHandle: true,
+  label: true,
+});
+export type WorkflowStorageEdge = z.infer<typeof WorkflowStorageEdgeSchema>;
+
+
+/**
  * 表示用于存储的完整工作流结构。
- * 这是为了向后兼容或与旧存储格式交互。
+ * 这个结构旨在成为前端画布状态与后端执行/存储之间的标准中间表示。
  */
-export interface WorkflowStorageObject {
-  name?: string;
-  viewport?: { x: number; y: number; zoom: number };
-  nodes: WorkflowStorageNode[];
-  edges: WorkflowStorageEdge[];
-  interfaceInputs?: Record<string, GroupSlotInfo>;
-  interfaceOutputs?: Record<string, GroupSlotInfo>;
-  referencedWorkflows?: string[];
-}
-
-/**
- * 表示存储在数据库或文件中的节点。
- */
-export interface WorkflowStorageNode {
-  id: string;
-  type: string;
-  position: { x: number; y: number };
-  width?: number;
-  height?: number;
-  displayName?: string;
-  customDescription?: string;
-  customSlotDescriptions?: { inputs?: Record<string, string>; outputs?: Record<string, string> };
-  inputValues?: Record<string, any>;
-  configValues?: Record<string, any>;
-  inputConnectionOrders?: Record<string, string[]>;
-}
-
-/**
- * 表示存储在数据库或文件中的边。
- */
-export interface WorkflowStorageEdge {
-  id: string;
-  source: string;
-  target: string;
-  sourceHandle: string;
-  targetHandle: string;
-  label?: string;
-}
+export const WorkflowStorageObjectSchema = z.object({
+  name: z.string().optional(),
+  viewport: WorkflowViewportSchema.optional(),
+  nodes: z.array(WorkflowStorageNodeSchema),
+  edges: z.array(WorkflowStorageEdgeSchema),
+  interfaceInputs: z.record(GroupSlotInfoSchema).optional(),
+  interfaceOutputs: z.record(GroupSlotInfoSchema).optional(),
+  referencedWorkflows: z.array(z.string()).optional(),
+});
+export type WorkflowStorageObject = z.infer<typeof WorkflowStorageObjectSchema>;

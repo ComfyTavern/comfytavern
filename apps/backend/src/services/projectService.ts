@@ -1,4 +1,17 @@
-import { CreateWorkflowObject, GroupInterfaceInfo, NodeGroupData, ProjectMetadata, ProjectMetadataSchema, UpdateWorkflowObject, WorkflowNode, WorkflowObject, WorkflowObjectSchema, WorkflowStorageObject, FAMItem } from "@comfytavern/types"; // + FAMItem
+import {
+  CreateWorkflowObject,
+  GroupInterfaceInfo,
+  NodeGroupData,
+  ProjectMetadata,
+  ProjectMetadataSchema,
+  UpdateWorkflowObject,
+  WorkflowNode,
+  WorkflowObject,
+  WorkflowObjectSchema,
+  WorkflowStorageObject,
+  FAMItem,
+  WorkflowStorageObjectSchema,
+} from "@comfytavern/types"; // + FAMItem, WorkflowStorageObjectSchema
 import { basename, extname } from "node:path"; // path.join 等不再需要，由 FAMService 处理
 // import { promises as fs } from "node:fs"; // FAMService 将处理文件操作
 import isEqual from "lodash/isEqual";
@@ -6,7 +19,7 @@ import { z } from "zod"; // 导入 zod
 
 import { generateSafeWorkflowFilename, sanitizeProjectId } from "../utils/helpers";
 // import { getUserDataRoot as getGlobalUserDataRoot } from '../utils/fileUtils'; // 不再直接使用
-import { famService } from './FileManagerService'; // + 导入 FAMService
+import { famService } from "./FileManagerService"; // + 导入 FAMService
 
 // --- 用户特定路径常量和辅助函数 ---
 const RECYCLE_BIN_DIR_NAME = ".recycle_bin"; // 用于构建逻辑回收站路径
@@ -16,18 +29,18 @@ const RECYCLE_BIN_DIR_NAME = ".recycle_bin"; // 用于构建逻辑回收站路�
 /**
  * 确保用户的库目录存在。
  * @param userId 用户 ID。
- export async function ensureUserLibraryDirExists(userId: string): Promise<void> {
-   const logicalUserLibraryPath = `user://library/`;
-   try {
-     await famService.createDir(userId, logicalUserLibraryPath);
-     console.log(`[Service:ensureUserLibraryDirExists] Ensured library directory exists for user ${userId} at ${logicalUserLibraryPath}`);
-   } catch (error) {
-     console.error(`[Service:ensureUserLibraryDirExists] Failed to ensure library directory for user ${userId} at ${logicalUserLibraryPath}. Error: ${error instanceof Error ? error.message : String(error)}`);
-     throw new ProjectCreationError(`Failed to ensure user library directory for user '${userId}'.`);
-   }
- }
- 
- /**
+  export async function ensureUserLibraryDirExists(userId: string): Promise<void> {
+    const logicalUserLibraryPath = `user://library/`;
+    try {
+      await famService.createDir(userId, logicalUserLibraryPath);
+      console.log(`[Service:ensureUserLibraryDirExists] Ensured library directory exists for user ${userId} at ${logicalUserLibraryPath}`);
+    } catch (error) {
+      console.error(`[Service:ensureUserLibraryDirExists] Failed to ensure library directory for user ${userId} at ${logicalUserLibraryPath}. Error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new ProjectCreationError(`Failed to ensure user library directory for user '${userId}'.`);
+    }
+  }
+*/
+
 /**
  * 确保用户的核心根目录结构存在 (userData/userId, userData/userId/projects, userData/userId/library)。
  * @param userId 用户 ID。
@@ -53,11 +66,16 @@ export async function ensureUserRootDirs(userId: string): Promise<void> {
 
     // console.log(`${logPrefix} Ensured root directories for user ${userId} using FAMService.`);
   } catch (error) {
-    console.error(`${logPrefix} Failed to ensure root directories for user ${userId} using FAMService. Error: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(
+      `${logPrefix} Failed to ensure root directories for user ${userId} using FAMService. Error: ${error instanceof Error ? error.message : String(error)
+      }`
+    );
     // FAMService 的 createDir 应该会抛出可识别的错误，或者我们可以包装它
     // 暂时保持与之前类似的错误抛出逻辑
     if (error instanceof ProjectCreationError) throw error; // 如果 FAMService 抛出这个，或者我们在这里包装
-    throw new ProjectCreationError(`Failed to ensure root directories for user ${userId} via FAMService.`);
+    throw new ProjectCreationError(
+      `Failed to ensure root directories for user ${userId} via FAMService.`
+    );
   }
 }
 // --- 结束：新增部分 ---
@@ -94,7 +112,9 @@ export async function syncReferencingNodeGroups(
 
     const dirItems: FAMItem[] = await famService.listDir(userId, logicalWorkflowsDir);
     const workflowFiles = dirItems.filter(
-      (item: FAMItem) => // Explicitly type item
+      (
+        item: FAMItem // Explicitly type item
+      ) =>
         item.itemType === "file" && // Changed from item.type
         extname(item.name).toLowerCase() === ".json" &&
         basename(item.name, ".json") !== updatedWorkflowId // 排除自身
@@ -109,14 +129,19 @@ export async function syncReferencingNodeGroups(
 
       try {
         const fileContent = await famService.readFile(userId, logicalWorkflowPath, "utf-8");
-        if (typeof fileContent !== 'string') {
-          console.error(`Error reading workflow file ${logicalWorkflowPath} as string during sync: content is Buffer.`);
+        if (typeof fileContent !== "string") {
+          console.error(
+            `Error reading workflow file ${logicalWorkflowPath} as string during sync: content is Buffer.`
+          );
           continue;
         }
         try {
           workflowData = JSON.parse(fileContent) as WorkflowObject;
         } catch (parseError) {
-          console.error(`Error parsing workflow file ${logicalWorkflowPath} during sync:`, parseError);
+          console.error(
+            `Error parsing workflow file ${logicalWorkflowPath} during sync:`,
+            parseError
+          );
           continue; // 跳到下一个文件
         }
 
@@ -152,19 +177,29 @@ export async function syncReferencingNodeGroups(
 
         if (needsSave && workflowData) {
           workflowData.updatedAt = new Date().toISOString();
-          await famService.writeFile(userId, logicalWorkflowPath, JSON.stringify(workflowData, null, 2));
+          await famService.writeFile(
+            userId,
+            logicalWorkflowPath,
+            JSON.stringify(workflowData, null, 2)
+          );
           console.log(
             `Saved updated workflow ${referencingWorkflowId} with synced NodeGroup interface.`
           );
         }
       } catch (readWriteError) {
-        console.error(`Error processing workflow file ${logicalWorkflowPath} during sync:`, readWriteError);
+        console.error(
+          `Error processing workflow file ${logicalWorkflowPath} during sync:`,
+          readWriteError
+        );
       }
     }
   } catch (error) {
     // FAMService 操作的错误应该由其自身处理或抛出特定错误
     // 此处的 ENOENT 检查可能不再直接适用，取决于 FAMService 的错误类型
-    console.error(`Error listing/processing workflows in project ${projectId} during sync using FAMService:`, error);
+    console.error(
+      `Error listing/processing workflows in project ${projectId} during sync using FAMService:`,
+      error
+    );
     // 记录错误，但不影响主流程（例如，更新操作本身不应失败）
   }
 }
@@ -196,7 +231,7 @@ async function _readAndValidateJsonFile<T>({
   let fileContentBuffer: string | Buffer;
   try {
     fileContentBuffer = await famService.readFile(userId, logicalPath, "utf-8");
-    if (typeof fileContentBuffer !== 'string') {
+    if (typeof fileContentBuffer !== "string") {
       const message = `Failed to read ${descriptiveEntityName} file as string. Path: ${logicalPath}. Content was a Buffer.`;
       console.error(`${logPrefix} ${message}`);
       throw new loadErrorClass(message);
@@ -261,7 +296,7 @@ export async function updateProjectMetadata(
   await ensureUserRootDirs(userId); // 确保用户根目录存在
   console.log(`Updating metadata for project ${projectId} for user ${userId}`);
   const logicalMetadataPath = `user://projects/${projectId}/project.json`;
-  
+
   try {
     // 1. 读取现有元数据
     let existingMetadata: ProjectMetadata;
@@ -280,7 +315,9 @@ export async function updateProjectMetadata(
       // _readAndValidateJsonFile 内部会处理 ENOENT 并抛出 ProjectNotFoundError
       // 其他读取或解析错误会抛出 ProjectMetadataError
       // 所以这里可以直接重新抛出，或者根据需要进一步包装
-      console.error(`[Service:updateProjectMetadata] Error reading existing metadata for project '${projectId}', user '${userId}': ${readError.message}`);
+      console.error(
+        `[Service:updateProjectMetadata] Error reading existing metadata for project '${projectId}', user '${userId}': ${readError.message}`
+      );
       throw readError; // 重新抛出由 _readAndValidateJsonFile 抛出的错误
     }
 
@@ -298,14 +335,20 @@ export async function updateProjectMetadata(
     const finalValidation = ProjectMetadataSchema.safeParse(updatedMetadata);
     if (!finalValidation.success) {
       const errorDetails = finalValidation.error.flatten().fieldErrors;
-      const message = `Internal error: Updated metadata for project ID '${projectId}' for user '${userId}' failed validation. Details: ${JSON.stringify(errorDetails)}`;
+      const message = `Internal error: Updated metadata for project ID '${projectId}' for user '${userId}' failed validation. Details: ${JSON.stringify(
+        errorDetails
+      )}`;
       console.error(`[Service:updateProjectMetadata] ${message}`);
       throw new ProjectMetadataError(message);
     }
 
     // 4. 写回文件
     try {
-      await famService.writeFile(userId, logicalMetadataPath, JSON.stringify(finalValidation.data, null, 2));
+      await famService.writeFile(
+        userId,
+        logicalMetadataPath,
+        JSON.stringify(finalValidation.data, null, 2)
+      );
     } catch (writeError: any) {
       const message = `Failed to write updated metadata for project ID '${projectId}' for user '${userId}'. Logical Path: ${logicalMetadataPath}. Error: ${writeError.message}`;
       console.error(`[Service:updateProjectMetadata] ${message}`);
@@ -320,7 +363,8 @@ export async function updateProjectMetadata(
     if (error instanceof ProjectNotFoundError || error instanceof ProjectMetadataError) {
       throw error;
     }
-    const message = `Unexpected error updating project metadata for ID '${projectId}' for user '${userId}'. Error: ${error instanceof Error ? error.message : String(error)}`;
+    const message = `Unexpected error updating project metadata for ID '${projectId}' for user '${userId}'. Error: ${error instanceof Error ? error.message : String(error)
+      }`;
     console.error(`[Service:updateProjectMetadata] ${message}`);
     throw new ProjectMetadataError(message);
   }
@@ -341,12 +385,16 @@ export async function updateProjectMetadata(
 export async function listProjects(userId: string): Promise<ProjectMetadata[]> {
   await ensureUserRootDirs(userId); // 确保用户根目录存在
   const logicalUserProjectsRoot = `user://projects/`; // 正确的逻辑路径，列出此目录下的项目
-  console.log(`[Service:listProjects] Listing all projects for user ${userId} from: ${logicalUserProjectsRoot}`);
+  console.log(
+    `[Service:listProjects] Listing all projects for user ${userId} from: ${logicalUserProjectsRoot}`
+  );
   try {
     // 确保 user://projects/ 目录本身存在，如果不存在，则表示没有项目
     const projectsRootDirExists = await famService.exists(userId, logicalUserProjectsRoot);
     if (!projectsRootDirExists) {
-      console.log(`[Service:listProjects] User projects root directory ${logicalUserProjectsRoot} does not exist for user ${userId}. Returning empty list.`);
+      console.log(
+        `[Service:listProjects] User projects root directory ${logicalUserProjectsRoot} does not exist for user ${userId}. Returning empty list.`
+      );
       return [];
     }
 
@@ -393,7 +441,9 @@ export async function listProjects(userId: string): Promise<ProjectMetadata[]> {
 
     const resolvedProjects = await Promise.all(projectsPromises);
     const validProjects = resolvedProjects.filter((p): p is ProjectMetadata => p !== null);
-    console.log(`[Service:listProjects] Found ${validProjects.length} valid projects for user ${userId}.`);
+    console.log(
+      `[Service:listProjects] Found ${validProjects.length} valid projects for user ${userId}.`
+    );
     return validProjects;
   } catch (error: any) {
     console.error(`[Service:listProjects] Error listing projects for user ${userId}:`, error);
@@ -445,10 +495,15 @@ export class ProjectMetadataError extends Error {
  * @returns Promise<ProjectMetadata> 项目的元数据。
  * @throws 如果项目目录或元数据文件不存在 (ProjectNotFoundError)，或发生读写/解析错误 (ProjectMetadataError)。
  */
-export async function getProjectMetadata(userId: string, projectId: string): Promise<ProjectMetadata> {
+export async function getProjectMetadata(
+  userId: string,
+  projectId: string
+): Promise<ProjectMetadata> {
   await ensureUserRootDirs(userId); // 确保用户根目录存在
   const logPrefix = `[Service:getProjectMetadata]`;
-  console.log(`${logPrefix} Attempting to get metadata for project ID '${projectId}' for user '${userId}'`);
+  console.log(
+    `${logPrefix} Attempting to get metadata for project ID '${projectId}' for user '${userId}'`
+  );
   const logicalMetadataPath = `user://projects/${projectId}/project.json`;
 
   const metadata = await _readAndValidateJsonFile<ProjectMetadata>({
@@ -501,7 +556,9 @@ export async function createProject(
     // 2. 创建项目目录和 workflows 子目录
     // FAMService.createDir 会递归创建，所以创建最深的 workflows 目录即可
     await famService.createDir(userId, logicalProjectWorkflowsDir);
-    console.log(`[Service:createProject] Ensured project workflows directory exists: ${logicalProjectWorkflowsDir} for user ${userId}`);
+    console.log(
+      `[Service:createProject] Ensured project workflows directory exists: ${logicalProjectWorkflowsDir} for user ${userId}`
+    );
 
     // 3. 创建 project.json 元数据文件
     const now = new Date().toISOString();
@@ -537,8 +594,14 @@ export async function createProject(
 
     // 4. 写入元数据文件
     try {
-      await famService.writeFile(userId, logicalMetadataPath, JSON.stringify(metadataValidation.data, null, 2));
-      console.log(`[Service:createProject] Created project metadata file for user '${userId}': ${logicalMetadataPath}`);
+      await famService.writeFile(
+        userId,
+        logicalMetadataPath,
+        JSON.stringify(metadataValidation.data, null, 2)
+      );
+      console.log(
+        `[Service:createProject] Created project metadata file for user '${userId}': ${logicalMetadataPath}`
+      );
     } catch (writeError: any) {
       console.error(
         `[Service:createProject] Error writing metadata file for ID '${projectId}' for user '${userId}':`,
@@ -600,7 +663,9 @@ interface ListedWorkflow {
  */
 export async function listWorkflows(userId: string, projectId: string): Promise<ListedWorkflow[]> {
   await ensureUserRootDirs(userId); // 确保用户根目录存在
-  console.log(`[Service:listWorkflows] Listing workflows for project ID '${projectId}' for user '${userId}'`);
+  console.log(
+    `[Service:listWorkflows] Listing workflows for project ID '${projectId}' for user '${userId}'`
+  );
   const logicalProjectWorkflowsDir = `user://projects/${projectId}/workflows/`;
 
   try {
@@ -615,8 +680,13 @@ export async function listWorkflows(userId: string, projectId: string): Promise<
         );
       } catch (createDirError: any) {
         // 如果创建也失败，则抛出错误
-        console.error(`[Service:listWorkflows] Failed to create workflows directory ${logicalProjectWorkflowsDir} for user ${userId}:`, createDirError);
-        throw new Error(`Failed to ensure workflows directory exists for project ${projectId}, user ${userId}: ${createDirError.message}`);
+        console.error(
+          `[Service:listWorkflows] Failed to create workflows directory ${logicalProjectWorkflowsDir} for user ${userId}:`,
+          createDirError
+        );
+        throw new Error(
+          `Failed to ensure workflows directory exists for project ${projectId}, user ${userId}: ${createDirError.message}`
+        );
       }
       return [];
     }
@@ -626,34 +696,38 @@ export async function listWorkflows(userId: string, projectId: string): Promise<
       (item: FAMItem) => item.itemType === "file" && extname(item.name).toLowerCase() === ".json" // Changed from item.type
     );
 
-    const workflowsPromises = workflowFileItems.map(async (item): Promise<ListedWorkflow | null> => {
-      const id = basename(item.name, ".json");
-      const logicalWorkflowPath = item.logicalPath; // item.path 是完整的逻辑路径 -> item.logicalPath
-      let name = id;
-      let description: string | undefined;
-      let creationMethod: string | undefined;
-      let referencedWorkflows: string[] | undefined;
+    const workflowsPromises = workflowFileItems.map(
+      async (item): Promise<ListedWorkflow | null> => {
+        const id = basename(item.name, ".json");
+        const logicalWorkflowPath = item.logicalPath; // item.path 是完整的逻辑路径 -> item.logicalPath
+        let name = id;
+        let description: string | undefined;
+        let creationMethod: string | undefined;
+        let referencedWorkflows: string[] | undefined;
 
-      try {
-        const fileContentBuffer = await famService.readFile(userId, logicalWorkflowPath, "utf-8");
-        if (typeof fileContentBuffer !== 'string') {
-          console.error(`[Service:listWorkflows] Failed to read workflow file ${logicalWorkflowPath} as string content for user ${userId}.`);
+        try {
+          const fileContentBuffer = await famService.readFile(userId, logicalWorkflowPath, "utf-8");
+          if (typeof fileContentBuffer !== "string") {
+            console.error(
+              `[Service:listWorkflows] Failed to read workflow file ${logicalWorkflowPath} as string content for user ${userId}.`
+            );
+            return null; // 跳过此文件
+          }
+          const workflowData: Partial<WorkflowObject> = JSON.parse(fileContentBuffer);
+          name = workflowData.name || (workflowData as any).label || id;
+          description = workflowData.description;
+          creationMethod = workflowData.creationMethod;
+          referencedWorkflows = workflowData.referencedWorkflows;
+        } catch (readError: any) {
+          console.error(
+            `[Service:listWorkflows] Error reading/parsing workflow file ${logicalWorkflowPath} for listing in project ${projectId}, user ${userId}:`,
+            readError.message
+          );
           return null; // 跳过此文件
         }
-        const workflowData: Partial<WorkflowObject> = JSON.parse(fileContentBuffer);
-        name = workflowData.name || (workflowData as any).label || id;
-        description = workflowData.description;
-        creationMethod = workflowData.creationMethod;
-        referencedWorkflows = workflowData.referencedWorkflows;
-      } catch (readError: any) {
-        console.error(
-          `[Service:listWorkflows] Error reading/parsing workflow file ${logicalWorkflowPath} for listing in project ${projectId}, user ${userId}:`,
-          readError.message
-        );
-        return null; // 跳过此文件
+        return { id, name, description, creationMethod, referencedWorkflows };
       }
-      return { id, name, description, creationMethod, referencedWorkflows };
-    });
+    );
 
     const resolvedWorkflows = (await Promise.all(workflowsPromises)).filter(
       (w): w is ListedWorkflow => w !== null
@@ -667,7 +741,9 @@ export async function listWorkflows(userId: string, projectId: string): Promise<
       `[Service:listWorkflows] Error listing workflows for project ID '${projectId}' for user '${userId}':`,
       error
     );
-    throw new Error(`Failed to list workflows for project ${projectId}, user ${userId}: ${error.message}`);
+    throw new Error(
+      `Failed to list workflows for project ${projectId}, user ${userId}: ${error.message}`
+    );
   }
 }
 
@@ -730,22 +806,17 @@ export async function createWorkflow(
 
     // 3. 准备要保存的数据
     const now = new Date().toISOString();
-    const storageData: WorkflowStorageObject = {
+
+    // 首先创建一个符合 WorkflowStorageObjectSchema 的对象
+    const storageData = WorkflowStorageObjectSchema.parse({
       name,
-      nodes: nodes || [], // 确保有默认值
-      edges: (edges || []).map((edge) => ({
-        // 确保有默认值并转换
-        ...edge,
-        sourceHandle: edge.sourceHandle ?? "",
-        targetHandle: edge.targetHandle ?? "",
-        markerEnd: undefined,
-      })),
-      viewport: viewport || { x: 0, y: 0, zoom: 1 }, // 确保有默认值
+      nodes: nodes || [],
+      edges: edges || [], // Zod schema 会处理 null/undefined handles，无需手动 map
+      viewport: viewport || { x: 0, y: 0, zoom: 1 },
       interfaceInputs: interfaceInputs || {},
       interfaceOutputs: interfaceOutputs || {},
       referencedWorkflows: referencedWorkflows || [],
-      // creationMethod is not part of CreateWorkflowObject, will be undefined
-    };
+    });
 
     const dataToSave: WorkflowObject = {
       id: workflowId, // id 在 WorkflowObject 中是必须的
@@ -775,8 +846,14 @@ export async function createWorkflow(
 
     // 4. 写入工作流文件
     try {
-      await famService.writeFile(userId, logicalFilePath, JSON.stringify(validationResult.data, null, 2));
-      console.log(`[Service:createWorkflow] Workflow file created for user '${userId}': ${logicalFilePath}`);
+      await famService.writeFile(
+        userId,
+        logicalFilePath,
+        JSON.stringify(validationResult.data, null, 2)
+      );
+      console.log(
+        `[Service:createWorkflow] Workflow file created for user '${userId}': ${logicalFilePath}`
+      );
     } catch (writeError: any) {
       const message = `Failed to write workflow file for '${name}' (ID: ${workflowId}) in project '${projectId}' for user '${userId}'. Error: ${writeError.message}`;
       console.error(`[Service:createWorkflow] ${message}`);
@@ -832,7 +909,11 @@ export class WorkflowLoadError extends Error {
  * @returns Promise<WorkflowObject> 工作流对象。
  * @throws 如果工作流文件不存在 (WorkflowNotFoundError)，或读取/解析/验证失败 (WorkflowLoadError)。
  */
-export async function getWorkflow(userId: string, projectId: string, workflowId: string): Promise<WorkflowObject> {
+export async function getWorkflow(
+  userId: string,
+  projectId: string,
+  workflowId: string
+): Promise<WorkflowObject> {
   await ensureUserRootDirs(userId); // <--- 新增：确保用户根目录存在
   const logPrefix = `[Service:getWorkflow]`;
   console.log(
@@ -938,7 +1019,7 @@ export async function updateWorkflow(
     let existingData: Partial<WorkflowObject> = {};
     try {
       const oldContentBuffer = await famService.readFile(userId, logicalCurrentFilePath, "utf-8");
-      if (typeof oldContentBuffer === 'string') {
+      if (typeof oldContentBuffer === "string") {
         existingData = JSON.parse(oldContentBuffer);
       } else {
         console.warn(
@@ -958,12 +1039,7 @@ export async function updateWorkflow(
     const dataToSave: WorkflowObject = {
       name: newName,
       nodes: updatePayload.nodes || [],
-      edges: (updatePayload.edges || []).map((edge) => ({
-        ...edge,
-        sourceHandle: edge.sourceHandle ?? "",
-        targetHandle: edge.targetHandle ?? "",
-        markerEnd: undefined,
-      })),
+      edges: updatePayload.edges || [], // Zod schema 会处理 null/undefined handles
       viewport: updatePayload.viewport || { x: 0, y: 0, zoom: 1 },
       interfaceInputs: updatePayload.interfaceInputs || {},
       interfaceOutputs: updatePayload.interfaceOutputs || {},
@@ -998,13 +1074,21 @@ export async function updateWorkflow(
     const logicalFinalFilePath = `user://projects/${projectId}/workflows/${validatedDataToSave.id}.json`;
 
     try {
-      await famService.writeFile(userId, logicalFinalFilePath, JSON.stringify(validatedDataToSave, null, 2));
-      console.log(`[Service:updateWorkflow] Workflow file saved for user '${userId}': ${logicalFinalFilePath}`);
+      await famService.writeFile(
+        userId,
+        logicalFinalFilePath,
+        JSON.stringify(validatedDataToSave, null, 2)
+      );
+      console.log(
+        `[Service:updateWorkflow] Workflow file saved for user '${userId}': ${logicalFinalFilePath}`
+      );
 
       if (newSafeWorkflowId !== workflowId && logicalCurrentFilePath !== logicalFinalFilePath) {
         try {
           await famService.delete(userId, logicalCurrentFilePath);
-          console.log(`[Service:updateWorkflow] Old workflow file deleted for user '${userId}': ${logicalCurrentFilePath}`);
+          console.log(
+            `[Service:updateWorkflow] Old workflow file deleted for user '${userId}': ${logicalCurrentFilePath}`
+          );
         } catch (deleteError: any) {
           console.warn(
             `[Service:updateWorkflow] Failed to delete old workflow file ${logicalCurrentFilePath} for user '${userId}' after rename: ${deleteError.message}. Continuing.`
@@ -1022,12 +1106,15 @@ export async function updateWorkflow(
       outputs: validatedDataToSave.interfaceOutputs || {},
     };
 
-    syncReferencingNodeGroups(userId, projectId, newSafeWorkflowId, newInterface).catch((syncError) => { // Pass userId
-      console.error(
-        `[Service:updateWorkflow] Error during background NodeGroup sync for ${newSafeWorkflowId} in project ${projectId}, user ${userId}:`,
-        syncError
-      );
-    });
+    syncReferencingNodeGroups(userId, projectId, newSafeWorkflowId, newInterface).catch(
+      (syncError) => {
+        // Pass userId
+        console.error(
+          `[Service:updateWorkflow] Error during background NodeGroup sync for ${newSafeWorkflowId} in project ${projectId}, user ${userId}:`,
+          syncError
+        );
+      }
+    );
 
     try {
       await updateProjectMetadata(userId, projectId, {}); // Pass userId

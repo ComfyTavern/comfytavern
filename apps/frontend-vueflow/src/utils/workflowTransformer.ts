@@ -1,12 +1,15 @@
 import type { FlowExportObject, Node as VueFlowNode } from "@vue-flow/core";
-import type {
-  WorkflowStorageObject,
-  WorkflowStorageNode,
-  WorkflowStorageEdge,
-  WorkflowViewport as SharedViewport,
-  NodeDefinition,
-  WorkflowExecutionPayload,
+import {
+  type WorkflowStorageObject,
+  type WorkflowStorageNode,
+  type WorkflowStorageEdge,
+  type WorkflowViewport as SharedViewport,
+  type NodeDefinition,
+  type WorkflowExecutionPayload,
+  WorkflowStorageNodeSchema, // +
+  WorkflowStorageEdgeSchema, // +
 } from "@comfytavern/types";
+import { z } from 'zod'; // +
 import {
   transformVueFlowToStorage,
   transformStorageToVueFlow,
@@ -27,16 +30,19 @@ export const extractGroupInterface = extractGroupInterfaceFromUtils;
 export const WORKFLOW_FRAGMENT_SOURCE = "ComfyTavernWorkflowFragment";
 export const WORKFLOW_FRAGMENT_VERSION = "1.0";
 
-export interface WorkflowFragmentData {
-  nodes: WorkflowStorageNode[];
-  edges: WorkflowStorageEdge[];
-}
+// 用 Zod 定义剪贴板片段的数据结构，以实现更安全的解析
+export const WorkflowFragmentDataSchema = z.object({
+  nodes: z.array(WorkflowStorageNodeSchema),
+  edges: z.array(WorkflowStorageEdgeSchema),
+});
+export type WorkflowFragmentData = z.infer<typeof WorkflowFragmentDataSchema>;
 
-export interface SerializedWorkflowFragment {
-  source: typeof WORKFLOW_FRAGMENT_SOURCE;
-  version: string;
-  data: WorkflowFragmentData;
-}
+export const SerializedWorkflowFragmentSchema = z.object({
+  source: z.literal(WORKFLOW_FRAGMENT_SOURCE),
+  version: z.string(),
+  data: WorkflowFragmentDataSchema,
+});
+export type SerializedWorkflowFragment = z.infer<typeof SerializedWorkflowFragmentSchema>;
 
 type GetEdgeStylePropsFunc = (
   sourceType: string,
@@ -153,7 +159,10 @@ export function serializeWorkflowFragment(
     const fragment: SerializedWorkflowFragment = {
       source: WORKFLOW_FRAGMENT_SOURCE,
       version: WORKFLOW_FRAGMENT_VERSION,
-      data: { nodes, edges },
+      data: {
+        nodes: nodes.map(n => WorkflowStorageNodeSchema.parse(n)),
+        edges: edges.map(e => WorkflowStorageEdgeSchema.parse(e)),
+      },
     };
     return JSON.stringify(fragment);
   } catch (error) {
@@ -170,16 +179,15 @@ export function deserializeWorkflowFragment(
   jsonString: string
 ): { nodes: VueFlowNodeType[]; edges: VueFlowEdgeType[] } | null {
   try {
-    const parsed: any = JSON.parse(jsonString);
-    if (
-      !parsed || typeof parsed !== "object" || parsed.source !== WORKFLOW_FRAGMENT_SOURCE ||
-      !parsed.data || !Array.isArray(parsed.data.nodes) || !Array.isArray(parsed.data.edges)
-    ) {
-      console.warn("Invalid workflow fragment format in clipboard.", parsed);
+    const parsedJson = JSON.parse(jsonString);
+    const validationResult = SerializedWorkflowFragmentSchema.safeParse(parsedJson);
+
+    if (!validationResult.success) {
+      console.warn("Invalid workflow fragment format in clipboard.", validationResult.error);
       return null;
     }
 
-    const fragmentData = parsed.data as WorkflowFragmentData;
+    const fragmentData = validationResult.data.data;
     const nodeDefinitionsMap = getNodeDefinitionsMap();
 
     const vueFlowNodes: VueFlowNodeType[] = fragmentData.nodes.map((storageNode) => {

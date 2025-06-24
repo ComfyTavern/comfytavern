@@ -25,7 +25,7 @@ import { useNodeStore } from "../../stores/nodeStore";
 import {
   transformWorkflowToVueFlow,
 } from "@/utils/workflowTransformer";
-import type { WorkflowStorageObject } from "@comfytavern/types";
+import { WorkflowStorageObjectSchema, type WorkflowStorageObject } from "@comfytavern/types";
 
 // --- 辅助函数 (来自 useWorkflowCoreLogic) ---
 function findNextSlotIndex(
@@ -367,16 +367,24 @@ function createWorkflowManager() {
     try {
       await nodeStore.ensureDefinitionsLoaded();
 
-      // 1. 将 JSON 模板构造成一个 WorkflowStorageObject
-      const templateStorageObject: WorkflowStorageObject = {
-        ...(klona(defaultWorkflowTemplateUntyped) as any), // any to satisfy base properties
+      // 1. 构造一个基础对象，然后用 Zod 解析以确保类型安全
+      const rawTemplateObject = {
+        ...(klona(defaultWorkflowTemplateUntyped)),
         id: associatedId,
         name: labelToUse,
         projectId: projectId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        referencedWorkflows: [], // 确保属性存在
+        referencedWorkflows: [],
       };
+      
+      const validationResult = WorkflowStorageObjectSchema.safeParse(rawTemplateObject);
+      if (!validationResult.success) {
+        console.error("默认工作流模板数据验证失败:", validationResult.error);
+        dialogService.showError("默认工作流模板格式无效。");
+        return null;
+      }
+      const templateStorageObject = validationResult.data;
 
       // 2. 使用 transformWorkflowToVueFlow 进行转换
       // 对于默认模板，它不引用其他工作流，所以 loadWorkflowByIdFunc 可以是空的
