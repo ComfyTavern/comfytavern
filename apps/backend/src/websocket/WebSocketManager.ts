@@ -28,6 +28,14 @@ export class WebSocketManager {
   // 使用 WeakMap 来从 ws 对象快速查找 clientId，用于 close/error 事件
   private wsToClientId: WeakMap<WsContext, NanoId> = new WeakMap();
 
+  // --- 新增数据结构 ---
+  // 场景实例 ID -> 订阅该场景的客户端 ID 集合
+  private sceneChannels: Map<NanoId, Set<NanoId>> = new Map();
+  // 客户端 ID -> 该客户端订阅的场景实例 ID
+  private clientSubscriptions: Map<NanoId, NanoId> = new Map();
+  // (可选增强) 场景实例 ID -> 命名空间前缀
+  private sceneNamespaces: Map<NanoId, string> = new Map();
+
   constructor() {
     // 构造函数简化
     console.log('[WS Manager] Instance created. Ready for Elysia integration.');
@@ -77,6 +85,9 @@ export class WebSocketManager {
   public removeClient(ws: WsContext): void {
     const clientId = this.wsToClientId.get(ws);
     if (clientId) {
+      // --- 新增逻辑：清理订阅信息 ---
+      this.unsubscribeFromScene(clientId, 'disconnect');
+
       this.clients.delete(clientId);
       this.wsToClientId.delete(ws);
       console.log(`[WS Manager] Client disconnected: ${clientId}`);
@@ -123,6 +134,54 @@ export class WebSocketManager {
     return this.wsToClientId.get(ws); // 使用 WeakMap 获取
   }
 
+  // --- 新增方法：处理由 SessionManager 发起的订阅 ---
+  /**
+   * 将客户端订阅到指定的场景频道。此方法应由 SessionManager 调用。
+   * @param clientId 客户端 ID
+   * @param sceneInstanceId 场景实例 ID
+   * @param sceneConfig 可选的场景配置，如 `event_bus_config`
+   */
+  public subscribeToScene(clientId: NanoId, sceneInstanceId: NanoId, sceneConfig?: { eventBusConfig?: { namespacePrefix?: string } }): void {
+    // 如果客户端已订阅其他场景，先取消订阅
+    this.unsubscribeFromScene(clientId, 'resubscribe');
+
+    if (!this.sceneChannels.has(sceneInstanceId)) {
+      this.sceneChannels.set(sceneInstanceId, new Set());
+    }
+    this.sceneChannels.get(sceneInstanceId)!.add(clientId);
+    this.clientSubscriptions.set(clientId, sceneInstanceId);
+    
+    // (可选增强) 存储命名空间
+    if (sceneConfig?.eventBusConfig?.namespacePrefix) {
+        this.sceneNamespaces.set(sceneInstanceId, sceneConfig.eventBusConfig.namespacePrefix);
+    }
+    
+    console.log(`[WS Manager] Client ${clientId} was subscribed to scene ${sceneInstanceId} by SessionManager.`);
+  }
+
+  // --- 新增方法：处理取消订阅 ---
+  /**
+   * 取消客户端对场景的订阅。此方法可由 SessionManager 调用，或在客户端断开连接时内部调用。
+   * @param clientId 客户端 ID
+   * @param reason 取消订阅的原因，用于日志记录
+   */
+  public unsubscribeFromScene(clientId: NanoId, reason: 'disconnect' | 'resubscribe' | 'session_end'): void {
+    const currentSceneId = this.clientSubscriptions.get(clientId);
+    if (currentSceneId) {
+      const subscribers = this.sceneChannels.get(currentSceneId);
+      if (subscribers) {
+        subscribers.delete(clientId);
+        if (subscribers.size === 0) {
+          // 如果没有订阅者了，可以清理场景频道和命名空间
+          this.sceneChannels.delete(currentSceneId);
+          this.sceneNamespaces.delete(currentSceneId);
+          console.log(`[WS Manager] Scene channel ${currentSceneId} is now empty and has been removed.`);
+        }
+      }
+      this.clientSubscriptions.delete(clientId);
+      console.log(`[WS Manager] Client ${clientId} unsubscribed from scene ${currentSceneId}. Reason: ${reason}.`);
+    }
+  }
 
   /**
    * 向特定客户端发送消息。
@@ -152,7 +211,8 @@ export class WebSocketManager {
   }
 
   /**
-   * 向所有连接的客户端广播消息。
+   * [保持不变] 向所有连接的客户端广播消息。
+   * 这个方法现在主要用于系统级的、非场景隔离的通知。
    * @param type 消息类型
    * @param payload 消息载荷
    */
@@ -177,6 +237,32 @@ export class WebSocketManager {
     });
 
     clientsToRemove.forEach(ws => this.removeClient(ws));
+  }
+
+  // --- 新增方法：向特定场景发布事件 ---
+  /**
+   * 向特定场景的所有订阅者发布事件。
+   * 这是 Agent 与环境交互的主要方式。
+   * @param sceneInstanceId 目标场景 ID
+   * @param type 事件类型
+   * @param payload 事件载荷
+   */
+  public publishToScene(sceneInstanceId: NanoId, type: string, payload: any): void {
+    const subscribers = this.sceneChannels.get(sceneInstanceId);
+    if (subscribers && subscribers.size > 0) {
+      const namespace = this.sceneNamespaces.get(sceneInstanceId);
+      const finalType = namespace ? `[${namespace}]${type}` : type;
+
+      const messageString = JSON.stringify({ type: finalType, payload });
+      console.log(`[WS Manager] Publishing to scene ${sceneInstanceId} (${subscribers.size} subscribers). Event: ${finalType}`);
+      
+      subscribers.forEach(clientId => {
+        // 复用现有的 sendMessageToClient 逻辑来发送, 注意这里我们发送包装后的 finalType
+        this.sendMessageToClient(clientId, finalType, payload);
+      });
+    } else {
+        console.log(`[WS Manager] No subscribers found for scene ${sceneInstanceId} when publishing event ${type}.`);
+    }
   }
 
   // 可以添加获取所有客户端 ID 的方法等
