@@ -12,6 +12,8 @@
   <a href="./README.ja.md"><b>日本語</b></a>
   &nbsp;•&nbsp;
   <a href="./README.ru.md">Русский</a>
+  &nbsp;•&nbsp;
+  <a href="./README.wyw.md">文言</a>
 </p>
 
 ### 🌉 AI創作とエンドユーザー体験を繋ぐ

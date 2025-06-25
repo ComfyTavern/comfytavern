@@ -12,6 +12,8 @@
   <a href="./README.ja.md">日本語</a>
   &nbsp;•&nbsp;
   <a href="./README.ru.md">Русский</a>
+  &nbsp;•&nbsp;
+  <a href="./README.wyw.md">文言</a>
 </p>
 
 ### 🌉 Connecting AI Creation with End-User Experience
