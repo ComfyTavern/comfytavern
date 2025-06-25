@@ -86,10 +86,19 @@
         </div>
       </div>
     </section>
+
+    <!-- PanelContainer 测试 -->
+    <section class="mt-12">
+      <h2 class="text-2xl font-semibold mb-6 text-text-base border-b pb-2">PanelContainer Test</h2>
+      <div class="bg-background-surface p-6 rounded-lg shadow-md" style="height: 500px;">
+        <PanelContainer panel-id="panel_chat_default_v1" />
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
+import PanelContainer from '@/components/panel/PanelContainer.vue'; // + 导入 PanelContainer
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useDialogService } from '@/services/DialogService';

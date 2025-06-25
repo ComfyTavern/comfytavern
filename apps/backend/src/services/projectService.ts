@@ -4,13 +4,16 @@ import {
   NodeGroupData,
   ProjectMetadata,
   ProjectMetadataSchema,
+  FAMItem,
+  WorkflowStorageObjectSchema,
+  PanelDeclaration,
+  PanelDefinition,
+  PanelDefinitionSchema,
   UpdateWorkflowObject,
   WorkflowNode,
   WorkflowObject,
   WorkflowObjectSchema,
   WorkflowStorageObject,
-  FAMItem,
-  WorkflowStorageObjectSchema,
 } from "@comfytavern/types"; // + FAMItem, WorkflowStorageObjectSchema
 import { basename, extname } from "node:path"; // path.join 等不再需要，由 FAMService 处理
 // import { promises as fs } from "node:fs"; // FAMService 将处理文件操作
@@ -485,6 +488,20 @@ export class ProjectMetadataError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ProjectMetadataError";
+  }
+}
+
+export class PanelNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PanelNotFoundError";
+  }
+}
+
+export class PanelLoadError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PanelLoadError";
   }
 }
 
@@ -1218,5 +1235,106 @@ export async function deleteWorkflowToRecycleBin(
     const message = `Unexpected error deleting workflow '${workflowId}' in project '${projectId}' for user '${userId}'. Error: ${error.message}`;
     console.error(`[Service:deleteWorkflowToRecycleBin] ${message}`);
     throw new WorkflowDeletionError(message);
+  }
+}
+
+/**
+ * 通过扫描项目 `ui` 目录自动发现所有可用的应用面板。
+ * @param userId - 用户 ID。
+ * @param projectId - 清理后的项目 ID。
+ * @returns Promise<PanelDefinition[]> 发现的面板定义对象数组。
+ */
+export async function getPanels(
+  userId: string,
+  projectId: string
+): Promise<PanelDefinition[]> {
+  const logPrefix = `[Service:getPanels:auto-discovery]`;
+  const logicalUiPath = `user://projects/${projectId}/ui/`;
+  console.log(`${logPrefix} Discovering panels in '${logicalUiPath}' for project '${projectId}', user '${userId}'.`);
+
+  try {
+    const uiDirExists = await famService.exists(userId, logicalUiPath);
+    if (!uiDirExists) {
+      console.log(`${logPrefix} UI directory not found at '${logicalUiPath}'. No panels to discover.`);
+      return [];
+    }
+
+    const dirItems = await famService.listDir(userId, logicalUiPath);
+    const panelDirs = dirItems.filter(item => item.itemType === "directory");
+
+    const panelPromises = panelDirs.map(async (panelDir): Promise<PanelDefinition | null> => {
+      // 修复：确保路径中有斜杠
+      const panelJsonLogicalPath = `${panelDir.logicalPath}/panel.json`;
+      try {
+        const panelDef = await _readAndValidateJsonFile<PanelDefinition>({
+          userId,
+          logicalPath: panelJsonLogicalPath,
+          schema: PanelDefinitionSchema,
+          // 如果 panel.json 不存在或无效，我们只记录错误并跳过，不抛出让整个请求失败的错误
+          notFoundErrorClass: Error,
+          loadErrorClass: Error,
+          entityName: `panel definition for '${panelDir.name}'`,
+          entityId: `${userId}/${projectId}`,
+        });
+        // 动态填充面板所在的目录名
+        panelDef.panelDirectory = panelDir.name;
+        return panelDef;
+      } catch (error) {
+        console.warn(`${logPrefix} Skipping panel in directory '${panelDir.name}' due to error: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+      }
+    });
+
+    const results = await Promise.all(panelPromises);
+    const validPanels = results.filter((p): p is PanelDefinition => p !== null);
+
+    console.log(`${logPrefix} Found ${validPanels.length} valid panels for project '${projectId}'.`);
+    return validPanels;
+
+  } catch (error) {
+    console.error(`${logPrefix} Failed to list panels for project '${projectId}':`, error);
+    // 抛出一个通用错误，而不是特定于元数据的错误
+    throw new PanelLoadError(`Failed to discover panels for project '${projectId}'.`);
+  }
+}
+
+
+/**
+ * 根据 ID 获取特定面板的完整定义（通过自动发现）。
+ * @param userId - 用户 ID。
+ * @param projectId - 清理后的项目 ID。
+ * @param panelId - 面板 ID。
+ * @returns Promise<PanelDefinition> 完整的面板定义对象。
+ * @throws 如果面板未找到 (PanelNotFoundError) 或加载失败 (PanelLoadError)。
+ */
+export async function getPanelById(
+  userId: string,
+  projectId: string,
+  panelId: string
+): Promise<PanelDefinition> {
+  const logPrefix = `[Service:getPanelById:auto-discovery]`;
+  console.log(`${logPrefix} Getting panel '${panelId}' in project '${projectId}', user '${userId}'.`);
+
+  try {
+    // 1. 获取所有自动发现的面板
+    const allPanels = await getPanels(userId, projectId);
+
+    // 2. 在列表中查找匹配的面板
+    const panelDefinition = allPanels.find(p => p.id === panelId);
+
+    if (!panelDefinition) {
+      throw new PanelNotFoundError(`Panel with ID '${panelId}' not found after auto-discovery in project '${projectId}'.`);
+    }
+
+    console.log(`${logPrefix} Successfully found panel definition for '${panelId}'.`);
+    return panelDefinition;
+  } catch (error) {
+    // 如果是已知的错误类型，直接重新抛出
+    if (error instanceof PanelNotFoundError || error instanceof PanelLoadError) {
+      throw error;
+    }
+    // 对于其他未知错误，包装成 PanelLoadError
+    console.error(`${logPrefix} Unexpected error getting panel '${panelId}':`, error);
+    throw new PanelLoadError(`An unexpected error occurred while trying to get panel '${panelId}'.`);
   }
 }

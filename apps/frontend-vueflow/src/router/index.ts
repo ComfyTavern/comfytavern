@@ -9,6 +9,8 @@ import { useProjectStore } from '../stores/projectStore' // 导入项目 store
 import ProjectLayout from '../views/ProjectLayout.vue' // 导入新的项目布局
 import ProjectDashboardView from '../views/ProjectDashboardView.vue'
 import EditorView from '../views/EditorView.vue'
+import PanelListView from '../views/PanelListView.vue'
+import PanelContainer from '../components/panel/PanelContainer.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -105,6 +107,18 @@ const router = createRouter({
           path: 'editor/:workflowId?',
           name: 'ProjectEditor',
           component: EditorView,
+        },
+        // 应用面板子路由
+        {
+          path: 'panels',
+          name: 'ProjectPanels',
+          component: PanelListView,
+        },
+        {
+          path: 'panel/:panelId', // 新增：单个面板的路由
+          name: 'ProjectPanel',
+          component: PanelContainer,
+          props: true, // 将 panelId 作为 prop 传递给 PanelContainer
         },
         // 未来可以添加更多子路由，如 'scenes', 'settings' 等
       ],

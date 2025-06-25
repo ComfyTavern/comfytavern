@@ -16,6 +16,18 @@
         </router-link>
       </div>
 
+      <!-- 应用面板入口 -->
+      <div class="bg-background-surface p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+        <h2 class="text-xl font-semibold mb-2 text-text-base">应用面板</h2>
+        <p class="text-text-secondary mb-4">运行和管理封装为应用的交互式工作流。</p>
+        <router-link
+          :to="{ name: 'ProjectPanels', params: { projectId: projectStore.currentProjectId } }"
+          class="font-semibold text-primary hover:underline"
+        >
+          管理面板 &rarr;
+        </router-link>
+      </div>
+
       <!-- 占位符：Agents -->
       <div class="rounded-lg bg-neutral-softest p-6 shadow">
         <h2 class="text-xl font-semibold mb-2 text-text-muted">Agents (即将推出)</h2>

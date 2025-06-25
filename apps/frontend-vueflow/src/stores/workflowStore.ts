@@ -1,8 +1,16 @@
 import { defineStore } from "pinia";
 import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core";
-import type { WorkflowStateSnapshot, TabWorkflowState, WorkflowData } from "../types/workflowTypes"; // 导入 TabWorkflowState
-import type { HistoryEntry, GroupInterfaceInfo, WorkflowStorageObject, GroupSlotInfo } from "@comfytavern/types"; // <-- Import HistoryEntry, GroupInterfaceInfo, WorkflowStorageObject, GroupSlotInfo
-import { useTabStore, type Tab } from "./tabStore"; // 导入 Tab 类型
+import type { WorkflowStateSnapshot, TabWorkflowState, WorkflowData } from "../types/workflowTypes";
+import type {
+  HistoryEntry,
+  GroupInterfaceInfo,
+  WorkflowStorageObject,
+  GroupSlotInfo,
+  WorkflowStorageNode,
+  WorkflowStorageEdge,
+  WebSocketMessage
+} from "@comfytavern/types";
+import { useTabStore, type Tab } from "./tabStore";
 import { ref, nextTick, watch, computed } from "vue";
 import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager";
 import { useWorkflowHistory } from "@/composables/workflow/useWorkflowHistory";
@@ -12,12 +20,14 @@ import { useWorkflowInterfaceManagement } from "@/composables/workflow/useWorkfl
 import { useWorkflowGrouping } from "@/composables/group/useWorkflowGrouping";
 import { useWorkflowLifecycleCoordinator } from "@/composables/workflow/useWorkflowLifecycleCoordinator";
 import { useWorkflowInteractionCoordinator } from "@/composables/workflow/useWorkflowInteractionCoordinator";
-import { sendMessage } from "@/composables/useWebSocket";
 import { WebSocketMessageType, DataFlowType, BuiltInSocketMatchCategory } from "@comfytavern/types";
-import { getEffectiveDefaultValue } from "@comfytavern/utils"; // 确保导入
+import { getEffectiveDefaultValue } from "@comfytavern/utils";
 import { klona } from "klona";
 import { useDialogService } from '../services/DialogService';
-import { getWorkflow } from '@/utils/api'; // 导入新的 API 函数
+import { getWorkflow } from '../utils/api';
+import { useExecutionStore } from './executionStore';
+import { transformVueFlowToExecutionPayload } from "@/utils/workflowTransformer";
+import { useWebSocket } from '@/composables/useWebSocket';
 
 export const useWorkflowStore = defineStore("workflow", () => {
   const availableWorkflows = ref<
@@ -32,6 +42,8 @@ export const useWorkflowStore = defineStore("workflow", () => {
 
   const tabStore = useTabStore();
   const dialogService = useDialogService();
+  const executionStore = useExecutionStore();
+  const { sendMessage, setInitiatingTabForNextPrompt } = useWebSocket();
 
   const workflowManager = useWorkflowManager();
   const workflowData = useWorkflowData();
@@ -638,15 +650,129 @@ export const useWorkflowStore = defineStore("workflow", () => {
       return workflow;
     } catch (error) {
       console.error(`[WorkflowStore] fetchWorkflow failed for project ${projectId}, workflow ${workflowId}:`, error);
-      // 可选：在这里显示错误通知
-      // dialogService.showError(`获取工作流失败: ${error instanceof Error ? error.message : '未知错误'}`);
       return null;
     }
   }
 
+  /**
+   * 核心工作流执行函数 (私有)
+   */
+  async function _executeWorkflowCore(
+    executionId: string,
+    workflowToExecute: {
+      id: string,
+      name: string,
+      nodes: WorkflowStorageNode[],
+      edges: WorkflowStorageEdge[],
+      interfaceInputs: Record<string, any>,
+      interfaceOutputs: Record<string, any>,
+    },
+    projectId: string
+  ): Promise<{ promptId: string; executionId: string; } | null> {
+
+    const payload = transformVueFlowToExecutionPayload({
+      nodes: workflowToExecute.nodes,
+      edges: workflowToExecute.edges,
+    });
+
+    setInitiatingTabForNextPrompt(executionId);
+
+    const message: WebSocketMessage = {
+      type: WebSocketMessageType.PROMPT_REQUEST,
+      payload: {
+        ...payload,
+        metadata: {
+          internalId: executionId,
+          workflowId: workflowToExecute.id,
+          workflowName: workflowToExecute.name,
+          projectId: projectId,
+        },
+        interfaceInputs: workflowToExecute.interfaceInputs,
+        interfaceOutputs: workflowToExecute.interfaceOutputs,
+      },
+    };
+
+    sendMessage(message);
+    console.debug(`[WorkflowStore] PROMPT_REQUEST sent for executionId ${executionId}.`, message);
+
+    // 等待并返回 promptId，并手动实现超时
+    return new Promise((resolve) => {
+      let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+      const unwatch = watch(
+        () => executionStore.tabExecutionStates.get(executionId)?.promptId,
+        (newPromptId) => {
+          if (newPromptId) {
+            console.log(`[WorkflowStore] Received promptId ${newPromptId} for executionId ${executionId}`);
+            if (timeoutHandle) clearTimeout(timeoutHandle);
+            unwatch();
+            resolve({ promptId: newPromptId, executionId: executionId }); // 返回 executionId
+          }
+        },
+        { immediate: false } // 初始不触发，等待消息
+      );
+
+      timeoutHandle = setTimeout(() => {
+        console.error(`[WorkflowStore] Timed out waiting for promptId for executionId ${executionId}`);
+        unwatch();
+        resolve(null);
+      }, 100000); // 100秒超时
+    });
+  }
+
+
+  /**
+   * 从面板执行工作流，不依赖UI。
+   */
+  async function executeWorkflowFromPanel(
+    workflowId: string,
+    inputs: Record<string, any>,
+    projectId: string
+  ): Promise<{ promptId: string; executionId: string; } | null> {
+    console.log(`[WorkflowStore] Executing workflow ${workflowId} from panel with inputs:`, inputs);
+
+    const workflowStorage = await fetchWorkflow(projectId, workflowId);
+    if (!workflowStorage) {
+      console.error(`[WorkflowStore] executeWorkflowFromPanel: Failed to load workflow ${workflowId}`);
+      dialogService.showError(`执行失败：无法加载工作流 ${workflowId}`);
+      return null;
+    }
+
+    const workflowToExecute = klona(workflowStorage);
+
+    // 注入输入值
+    const groupInputNode = workflowToExecute.nodes.find(n => n.type === 'core:GroupInput');
+    if (groupInputNode) {
+      for (const [inputKey, inputValue] of Object.entries(inputs)) {
+        const edge = workflowToExecute.edges.find(e => e.source === groupInputNode.id && e.sourceHandle === inputKey);
+        if (edge && edge.targetHandle) {
+          const targetNode = workflowToExecute.nodes.find(n => n.id === edge.target);
+          if (targetNode) {
+            if (!targetNode.inputValues) {
+              targetNode.inputValues = {};
+            }
+            targetNode.inputValues[edge.targetHandle] = inputValue;
+            console.log(`[WorkflowStore] Injected input '${inputKey}' -> Node '${targetNode.id}'.'${edge.targetHandle}' with value:`, inputValue);
+          }
+        }
+      }
+    }
+
+    const panelExecutionId = `panel_exec_${Date.now()}`;
+    return _executeWorkflowCore(panelExecutionId, {
+      id: workflowId,
+      name: workflowToExecute.name || 'Untitled Workflow',
+      nodes: workflowToExecute.nodes,
+      edges: workflowToExecute.edges,
+      interfaceInputs: workflowToExecute.interfaceInputs || {},
+      interfaceOutputs: workflowToExecute.interfaceOutputs || {},
+    }, projectId);
+  }
+
   return {
     availableWorkflows,
-    fetchWorkflow, // 导出新函数
+    fetchWorkflow,
+    executeWorkflowFromPanel,
     changedTemplateWorkflowIds: computed(() => changedTemplateWorkflowIds.value),
     getActiveTabState: workflowManager.getActiveTabState,
     getWorkflowData: workflowManager.getWorkflowData,
@@ -746,8 +872,8 @@ export const useWorkflowStore = defineStore("workflow", () => {
     markTemplateAsChanged: (templateId: string) => {
       changedTemplateWorkflowIds.value.add(templateId);
     },
-    resetNodeGroupInputToDefaultAndRecord, // 新增导出
+    resetNodeGroupInputToDefaultAndRecord,
     synchronizeGroupNodeInterfaceAndValues,
-    updateWorkflowData, // 导出新函数
+    updateWorkflowData,
   };
 });

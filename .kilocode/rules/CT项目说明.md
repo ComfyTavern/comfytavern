@@ -1,5 +1,6 @@
 ## 开发要求
 
+
 **AI 需要说中文** **AI 需要说中文** **AI 需要说中文** **AI 需要说中文** **AI 需要说中文** **AI 需要说中文** **AI 需要说中文** **AI 需要说中文**
 **注释也要用中文** **注释也要用中文** **注释也要用中文** **注释也要用中文** **注释也要用中文** **注释也要用中文** **注释也要用中文** **注释也要用中文**
 
@@ -124,6 +125,38 @@ ComfyTavern 的核心价值主张体现在以下两个层面：
 - **后端入口**: `apps/backend/src/index.ts` (已重构，具体路由见 `apps/backend/src/routes/`)
 - **核心类型定义**: `packages/types/src/schemas.ts` (使用 Zod 定义和验证)
 - **节点或插槽的显示**：优先使用`displayName`,其次再是 id。
+
+- 关于微型应用面板的文件路径：ComfyTavern所在\userData\{用户UID}\projects\{项目名称}\ui\{一个目录名字}\index.html(或其他什么的反正是个入口) 是类似这种结构的
+
+- 项目目录结构 （参考）
+
+```
+/YourProjectName/                  # 项目根目录 (位于 userData/{userId}/projects/ 下)
+├── project.json                   # 项目元数据与核心资产声明文件
+│
+├── agent_profiles/                # 存放 Agent Profile 定义文件 (.json)
+│   └── npc_herbalist_profile.json
+│
+├── workflows/                     # 存放工作流定义文件 (.json)
+│   ├── core_deliberation/
+│   ├── skills/
+│   └── scene_logic/
+│
+├── knowledgebases/                # 存放项目本地知识库
+│   └── world_lore_kb/
+│
+├── scenes/                        # 存放场景/剧本定义文件 (.json)
+│   └── market_square_scene.json
+│
+├── ui/                            # 存放应用面板的定义和 UI 资产
+│   ├── my_chat_panel/
+│   │   ├── panel.json
+│   │   └── index.html
+│   └── image_gen_panel.json
+│
+└── assets/                        # 存放项目直接使用的媒体资源
+└── outputs/                       # 存放项目运行时输出文件
+```
 
 ## 参考资料
 

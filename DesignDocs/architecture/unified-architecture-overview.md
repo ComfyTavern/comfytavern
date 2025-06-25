@@ -1,18 +1,17 @@
-# ComfyTavern 统一架构总览 (v1)
+# ComfyTavern 统一架构总览 (v2)
 
 ## 1. 引言
 
-本文档旨在提供 ComfyTavern 平台核心架构的顶层视图，并澄清各个关键概念——项目 (Project)、场景 (Scene)、智能体 (Agent)、应用面板 (Panel)、工作流 (Workflow) 与知识库 (KB)——之间的关系。它是在整合了多份早期设计文档（特别是关于 Agent、场景和面板接口的文档）后，形成的统一架构蓝图。
-
-本文档的目标是作为所有开发者理解平台架构的起点，并为后续详细设计文档的修订和新功能的开发提供一致的指导原则。
+本文档旨在提供 ComfyTavern 平台核心架构的顶层视图，并澄清各个关键概念——项目 (Project)、场景 (Scene)、智能体 (Agent)、应用面板 (Panel)、工作流 (Workflow) 与知识库 (KB)——之间的关系。它是在整合了多份早期设计文档后，形成的统一架构蓝图，为所有开发者提供一致的指导原则。
 
 ## 2. 核心设计哲学
 
 *   **分层与解耦**: 严格区分静态的“资产定义层”（项目）和动态的“运行时实例层”（场景）。
 *   **场景作为核心**: 场景 (Scene) 是 Agent 运行的“舞台”和生命周期管理者，是连接后端逻辑与前端交互的核心枢纽。
-*   **Agent 的自主性**: Agent 是运行在场景中的、以目标为驱动的自主实体，其核心思考逻辑由一个可配置的“审议工作流”承载。
+*   **Agent 的自主性**: Agent 是运行在场景中的、以目标为驱动的自主实体。
 *   **事件驱动的交互**: Agent、场景和应用面板之间的主要通信方式是异步的、解耦的事件。
-*   **同构工具包**: 关键的、无副作用的逻辑（如工作流准备工具）应被封装在前后端共享的通用包中，以确保行为一致性。
+*   **用户数据中心化**: 所有用户产生的数据和项目都严格隔离并存储在用户各自的操作系统主目录中，确保隐私和可移植性。
+*   **逻辑路径抽象**: 应用通过统一的 URI 方案访问文件，屏蔽底层物理存储细节。
 
 ## 3. 核心概念关系图
 
@@ -63,64 +62,202 @@ graph TD
     AgentInst -- 可请求交互 --> PanelInst
 ```
 
-## 4. 概念详解与职责划分
+## 4. 统一文件与资产管理 (FAM)
 
-1.  **项目 (Project)**: **顶层容器与资产库**。
-    *   **职责**: 定义和管理构建一个完整 AI 应用所需的所有**静态资产**，包括 Agent Profile、场景、工作流、面板和知识库的定义。
-    *   **关键产物**: `project.json` 文件，作为所有资产的清单。
-    *   **参考文档**: [`project-architecture.md`](./project-architecture.md:1)
+### 4.1. 逻辑路径方案
 
-2.  **场景 (Scene)**: **运行时舞台与 Agent 宿主**。
-    *   **职责**:
-        *   根据场景定义，实例化并管理其内部所有 Agent 的生命周期。
-        *   为 Agent 提供隔离的运行时上下文（世界状态、事件总线）。
-        *   作为可选的宏观流程编排器，与 Agent 自主行为协同工作。
-    *   **参考文档**: [`scene-architecture.md`](./scene-architecture.md:1)
+系统采用 URI 风格的逻辑路径来访问所有资源，屏蔽物理存储细节。
 
-3.  **智能体 (Agent)**: **场景中的自主行动者**。
-    *   **职责**: 在场景中运行，通过其核心审议工作流进行感知、思考、决策，并调用技能（工作流）或工具来执行行动，以达成目标。
-    *   **参考文档**: [`agent_architecture_v3_consolidated.md`](./agent_architecture_v3_consolidated.md:1)
+- **用户空间 (`user://`)**: 特定于单个用户的数据。
+  - **用户项目**: `user://projects/{projectId}/`
+    - 工作流: `user://projects/{projectId}/workflows/{workflowId}.json`
+    - 项目输出: `user://projects/{projectId}/outputs/{...filePath}`
+    - 项目资产: `user://projects/{projectId}/assets/{...filePath}`
+    - 项目元数据: `user://projects/{projectId}/project.json`
+  - **用户个人库**: `user://library/`
+    - 个人模板/脚本: `user://library/templates/{templateName}.json`
+    - 个人知识库: `user://library/knowledgebases/{userKbId}/{...filePath}`
 
-4.  **应用面板 (Panel)**: **场景的交互界面 (UI)**。
-    *   **职责**:
-        *   **主要交互**: 通过向场景的事件总线发布事件来影响场景或 Agent。
-        *   **状态呈现**: 订阅场景事件，将 Agent 的行为和世界状态的变化可视化给用户。
-        *   **响应请求**: 响应由 Agent 工作流执行后产出的交互请求（如弹窗确认）。
-        *   **次要交互**: 可直接调用独立的、工具性的工作流（此过程可由 `ApiAdapterManager` 辅助）。 **(注：`ApiAdapterManager` 是一个计划中的概念，目前尚未在代码中完全实现)**
-    *   **参考文档**: [`面板与接口/panel-spec-and-lifecycle.md`](./面板与接口/panel-spec-and-lifecycle.md:1), [`面板与接口/frontend-api-manager-and-integration.md`](./面板与接口/frontend-api-manager-and-integration.md:1)
+- **共享空间 (`shared://`)**: 所有用户均可访问的只读资源。
+  - **应用共享库**: `shared://library/`
+    - 全局模板/示例: `shared://library/workflows/{templateId}.json`
+    - 全局知识库: `shared://library/knowledgebases/{sharedKbId}/{...filePath}`
 
-5.  **工作流 (Workflow)**: **可复用的能力单元**。
-    *   **职责**: 封装具体的、无状态的执行逻辑。
-    *   **调用方**: 可被 Agent (作为技能)、场景 (作为编排步骤) 或面板 (作为工具) 调用。
+- **系统空间 (`system://`)**: 应用自身的非用户文件。
+  - **公共静态资源**: `system://public/{...filePath}`
+  - **应用数据**: `system://data/{...filePath}`
+  - **日志文件**: `system://logs/{...filePath}`
 
-6.  **知识库 (KB)**: **共享的知识中心**。
-    *   **职责**: 为 Agent 和工作流提供结构化的长期记忆和背景知识。
-    *   **参考文档**: [`knowledgebase-architecture.md`](./knowledgebase-architecture.md:1)
+### 4.2. 物理存储结构
 
-## 5. 关键交互流程澄清
+**核心原则：所有用户相关的数据默认存储在操作系统的用户主目录下的 `ComfyTavern/userData` 目录中。** 例如，在 Windows 上是 `C:\Users\<YourUser>\ComfyTavern\userData`，在 Linux/macOS 上是 `~/ComfyTavern/userData`。这为 AI 代理和开发者提供了明确、一致的路径预期。
 
-### 5.1. 面板与 Agent 的交互
+```
+<应用根目录>/ (e.g., a portable installation of ComfyTavern)
+├── data/                 (映射到 system://data/)
+├── logs/                 (映射到 system://logs/)
+├── public/               (映射到 system://public/)
+├── library/              (映射到 shared://library/)
+│   ├── workflows/
+│   └── knowledgebases/
+│       └── {sharedKbId1}/
+└── ...
 
-面板与 Agent 的交互是**间接的、通过场景介导的**。
+<操作系统用户主目录>/ComfyTavern/
+└── userData/             (用户数据根目录, 映射到 user://)
+    ├── {userId1}/
+    │   ├── projects/
+    │   │   └── {projectId1_1}/
+    │   │       ├── project.json
+    │   │       ├── workflows/
+    │   │       ├── outputs/
+    │   │       └── assets/
+    │   ├── library/
+    │   │   └── knowledgebases/
+    │   │       └── {userKbId1_1}/
+    │   └── .recycle_bin/
+    └── {userId2}/
+        └── ...
+```
 
-*   **面板 -> Agent**: 用户在面板操作 -> 面板发布事件到场景事件总线 -> Agent 订阅并响应事件。
-*   **Agent -> 面板**: Agent 执行工作流，其产出包含一个“交互请求” -> 前端交互协调器 (`InteractionCoordinator`) 捕获此请求并通知面板 -> 面板渲染相应 UI -> 用户输入 -> 面板将结果返回，由协调器负责触发**新一轮**工作流执行 -> 新的执行结果用于更新 Agent 状态或触发其后续行为。
+## 5. 项目 (Project): 顶层容器与资产库
 
-### 5.2. Agent 调用工作流
+项目是组织和管理构建一个完整 AI 应用所需的所有**静态资产**的顶层容器。
 
-Agent 调用其技能工作流是**内部行为**。
+### 5.1. 项目目录结构 (建议)
 
-*   `AgentRuntime` 在后端根据审议结果，直接准备工作流所需的原生输入，并请求 `ExecutionEngine` 执行。
-*   此过程**不经过** `ApiAdapterManager`，因为 `ApiAdapterManager` 是用于适配**外部** API 调用的“翻译层”。
+```
+/YourProjectName/                  # 项目根目录 (位于 userData/{userId}/projects/ 下)
+├── project.json                   # 项目元数据与核心资产声明文件
+│
+├── agent_profiles/                # 存放 Agent Profile 定义文件 (.json)
+│   └── npc_herbalist_profile.json
+│
+├── workflows/                     # 存放工作流定义文件 (.json)
+│   ├── core_deliberation/
+│   ├── skills/
+│   └── scene_logic/
+│
+├── knowledgebases/                # 存放项目本地知识库
+│   └── world_lore_kb/
+│
+├── scenes/                        # 存放场景/剧本定义文件 (.json)
+│   └── market_square_scene.json
+│
+├── ui/                            # 存放应用面板的定义和 UI 资产
+│   ├── my_chat_panel/
+│   │   ├── panel.json
+│   │   └── index.html
+│   └── image_gen_panel.json
+│
+└── assets/                        # 存放项目直接使用的媒体资源
+└── outputs/                       # 存放项目运行时输出文件
+```
 
-### 5.3. 同构的工作流准备
+### 5.2. `project.json` Schema
 
-*   **原则**: 为了确保行为一致性并遵循“同构工具包”的设计哲学，所有核心的工作流准备逻辑（例如，将可视化图形转换为可执行格式、展开节点组等）都被封装在共享包 `@comfytavern/workflow-utils` 中。
-*   **实现**: 无论是前端（在执行前进行预览或转换）还是后端（为 Agent 或场景准备执行），都调用此共享包中的工具函数。这保证了不同环境下的工作流处理逻辑是完全一致的。
+`project.json` 是项目的核心清单文件，声明了项目包含的所有关键资产。
 
-## 6. 后续步骤
+```json
+{
+  "id": "uuid",
+  "name": "My Awesome RPG Project",
+  "description": "An example project.",
+  "version": "1.0.0",
+  "schemaVersion": "2.2",
+  "createdAt": "iso_timestamp",
+  "updatedAt": "iso_timestamp",
 
-基于此统一架构，后续工作应围绕以下几点展开：
+  "agent_profiles": [
+    {
+      "id": "comfytavern_npc_herbalist_v1.2",
+      "path": "agent_profiles/npc_herbalist_profile.json",
+      "name": "Elara the Herbalist - Profile"
+    }
+  ],
 
-1.  **修订现有文档**: 根据本总览的指导，逐一修订 `scene-architecture.md`, `project-architecture.md` 以及 `面板与接口` 目录下的相关文档，确保所有细节与统一架构保持一致。
-2.  **驱动开发**: 所有新功能的开发都应遵循此统一架构进行设计和实现。
+  "knowledgeBaseReferences": [
+    {
+      "source_id": "local_kb_world_lore_main",
+      "name": "Main World Lore KB",
+      "path": "knowledgebases/world_lore_kb"
+    },
+    {
+      "source_id": "global_kb_common_fantasy_tropes_v1",
+      "name": "Common Fantasy Tropes (Global)"
+    }
+  ],
+
+  "panels": [
+    {
+      "id": "panel_chat_default_v1",
+      "path": "ui/my_chat_panel/panel.json",
+      "name": "默认聊天面板"
+    }
+  ],
+ 
+  "default_scene_id": "market_square_scene"
+}
+```
+
+## 6. 应用面板 (Panel): 场景的交互界面
+
+应用面板本质上是一个灵活的视图容器，在其中加载和运行一个功能丰富的、沙盒化的微型 Web 应用。
+
+### 6.1. 应用面板定义 (`PanelDefinition`)
+
+`PanelDefinition` 对象是描述和配置应用面板的核心数据结构，通常是一个 `.json` 文件。
+
+*   **`panelId`**: `string` (唯一标识符)
+*   **`displayName`**: `string` (UI 显示名称)
+*   **`description`**: `string` (可选, 功能描述)
+*   **`version`**: `string` (版本号)
+*   **`author`**: `string` (可选, 作者)
+*   **`uiEntryPoint`**: `string` (指向面板微应用的主入口 HTML 文件, e.g., `./my-game/index.html`)
+*   **`uiRuntimeConfig`**: `object` (可选)
+    *   `sandboxAttributes`: `string[]` (可选, 为 `<iframe>` 配置 `sandbox` 属性, e.g., `["allow-scripts", "allow-modals"]`)
+    *   `featurePermissions`: `string[]` (可选, 明确声明面板需要的浏览器特性, e.g., `["webgl", "gamepad"]`)
+*   **`workflowBindings`**: `PanelWorkflowBinding[]` (定义此面板可绑定的工作流)
+*   **`resourceBundle`**: `object` (可选, 指向面板静态资源包的 URL)
+*   **`iconUrl`**: `string` (可选, 面板图标)
+
+### 6.2. 面板微应用核心职责
+
+*   **技术栈**: 创作者可使用任何现代 Web 技术，包括框架 (Vue, React) 和 **WebAssembly (WASM)**。
+*   **运行环境**: 在 `<iframe>` 中沙盒化运行，通过 `window.comfyTavernPanelApi` 与宿主通信。
+*   **核心职责**:
+    1.  初始化自身应用逻辑和 UI。
+    2.  通过 `comfyTavernPanelApi` 与宿主通信：
+        *   获取工作流接口 (`getWorkflowInterface`)。
+        *   执行工作流 (`executeWorkflow`)。
+        *   订阅执行事件 (`subscribeToExecutionEvents`)。
+        *   响应 Agent 交互请求 (`onInteractionRequest`)。
+        *   获取宿主信息 (如主题 `getCurrentTheme`)。
+        *   请求宿主服务 (如调整尺寸 `requestResize`, 触发通知 `showNotification`)。
+    3.  管理自身状态并响应用户交互。
+
+### 6.3. 面板生命周期
+
+*   **发现与安装**: 从本地目录、URL 或市场中发现和安装。
+*   **加载与实例化**: 用户打开面板时，平台创建 `<iframe>` 实例并加载其 `uiEntryPoint`。
+*   **版本控制与更新**: 平台支持面板的版本管理。
+*   **卸载**: 从平台移除面板及其资源。
+*   **权限管理**: 平台根据面板声明和用户授权来控制其对敏感 API 的访问。
+
+## 7. 其他核心概念
+
+*   **场景 (Scene)**: **运行时舞台与 Agent 宿主**。负责实例化并管理其内部所有 Agent 的生命周期，并提供隔离的运行时上下文（世界状态、事件总线）。
+
+*   **智能体 (Agent)**: **场景中的自主行动者**。在场景中运行，通过其核心审议工作流进行感知、思考、决策，并调用技能（工作流）或工具来执行行动。
+
+*   **工作流 (Workflow)**: **可复用的能力单元**。封装具体的、无状态的执行逻辑，可被 Agent、场景或面板调用。(已实现功能)
+
+*   **知识库 (KB)**: **共享的知识中心**。为 Agent 和工作流提供结构化的长期记忆和背景知识。
+
+*   **交互模板 (Interaction Template)**: 作为项目创建的预设配置和资源集合，帮助用户快速搭建具有特定功能的应用原型。
+
+## 8. 关键交互流程
+
+*   **面板与 Agent 的交互**: **间接的、通过场景介导的**。面板通过向场景发布事件来影响 Agent；Agent 通过生成“交互请求”来请求面板 UI 响应。
+
+*   **同构的工作流准备**: 所有核心的工作流准备逻辑（如图转换、节点组展开）都被封装在前后端共享的通用包中，以确保行为一致性。

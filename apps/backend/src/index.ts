@@ -27,6 +27,7 @@ import { characterApiRoutes } from './routes/characterRoutes';
 import { executionApiRoutes } from './routes/executionRoutes';
 import { clientScriptRoutes, nodeApiRoutes } from './routes/nodeRoutes';
 import { projectRoutesPlugin } from './routes/projectRoutes'; // 修改导入名称
+import { panelRoutes } from './routes/panelRoutes'; // 导入面板路由
 import { DatabaseService } from './services/DatabaseService';
 import { applyAuthMiddleware } from './middleware/authMiddleware'; // Changed to import the function
 import { authRoutes } from './routes/authRoutes';
@@ -238,7 +239,8 @@ app.use(
 //   appVersion,
 // });
 // 使用新的插件方式
-app.use(projectRoutesPlugin({ appVersion }));;
+app.use(projectRoutesPlugin({ appVersion }));
+app.use(panelRoutes); // 挂载面板路由
 
 // --- 实例化管理器 ---
 // 将服务实例化提升到这里，以便注入到调度器

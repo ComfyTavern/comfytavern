@@ -12,7 +12,7 @@ import { useLanguagePackManager } from './composables/useLanguagePackManager'; /
 import { useI18n } from 'vue-i18n'; // + 导入 vue-i18n
 import InitialUsernameSetupModal from './components/auth/InitialUsernameSetupModal.vue'; // + Import modal
 import { storeToRefs } from 'pinia'
-import { initializeWebSocket, closeWebSocket } from './composables/useWebSocket'; // <-- ADDED: Import WebSocket functions
+import { useWebSocket } from './composables/useWebSocket';
 import DialogContainer from './components/common/DialogContainer.vue'; // 导入对话框容器组件
 import BaseModal from './components/common/BaseModal.vue'; // 导入模态框组件
 import SettingsLayout from './components/settings/SettingsLayout.vue'; // 导入设置布局组件
@@ -41,7 +41,6 @@ const showInitialUsernameModal = ref(false); // + Ref for modal visibility
 
 onMounted(async () => {
   themeStore.initTheme();
-  initializeWebSocket(); // <-- ADDED: Initialize WebSocket connection
   await authStore.fetchUserContext(); // + 获取用户上下文
   uiStore.setupMobileViewListener(); // + 设置移动端视图监听器
 
@@ -140,9 +139,9 @@ watch(currentProjectId, async (newProjectId, oldProjectId) => {
   }
 }, { immediate: false }); // 不需要立即执行，等待路由守卫先加载项目
 
-// 组件卸载时关闭 WebSocket 连接
+// WebSocket 连接由 useWebSocket() 的 onUnmounted 钩子自动管理
 onUnmounted(() => {
-  closeWebSocket(); // <-- ADDED: Close WebSocket connection
+  // closeWebSocket(); // No longer needed here
 });
 
 // + Watch for conditions to show initial username setup modal
@@ -193,6 +192,10 @@ const handleModalInteraction = () => {
   }
   showInitialUsernameModal.value = false;
 };
+
+// 在 setup 块的顶层调用 useWebSocket
+// 它会自动处理 onMounted (连接) 和 onUnmounted (断开)
+useWebSocket();
 </script>
 
 <template>

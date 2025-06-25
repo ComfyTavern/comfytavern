@@ -50,7 +50,8 @@ ComfyTavern 项目由多种资源类型和在工作流中使用的节点构成�
 - **场景/剧本 (`scene.json`)**: 定义互动叙事的结构、Agent 实例的配置及其宿主环境。
 - **工作流定义 (`workflow.json`)**: 定义可执行的逻辑流程，可用于场景编排、Agent 核心审议或 Agent 技能。
 - **知识库 (Knowledge Base)**: 项目可以包含本地知识库（目录和 CAIU 文件），并在 `project.json` 中引用它们或全局知识库。
-- **自定义 UI (Custom UI / Panel Definition)**: 用户自定义的前端交互界面的规范或实现。
+- **应用面板定义 (Application Panel Definition)**: 定义一个应用面板的元数据，包括其名称、绑定的工作流、以及指向其用户界面 (UI) 实现的路径。这通常是一个 `.json` 文件，存储在项目的 `ui/` 或 `panels/` 目录中。
+- **面板 UI 资产 (Panel UI Assets)**: 应用面板的用户界面实现，通常是 HTML, CSS, 和 JavaScript 文件。这些文件可以存储在项目目录内部（例如 `ui/my-panel/`），以便与项目一同打包和分发。
 - **脚本 (Script)**: 用户自定义的逻辑扩展，可能用于节点的客户端逻辑或其他自定义功能。
 - **媒体资源 (Assets)**: 项目中直接使用的、非知识库管理的媒体文件（如图片、音频、视频）。
 
@@ -113,8 +114,11 @@ ComfyTavern 项目由多种资源类型和在工作流中使用的节点构成�
 ├── scenes/                        # 存放场景/剧本定义文件 (.json)
 │   └── market_square_scene.json
 │
-├── ui/                            # (可选) 存放自定义界面定义或资源
-│   └── custom_dialog_panel.json
+├── ui/                            # (可选) 存放应用面板的定义和 UI 资产
+│   ├── my_chat_panel/             # 一个面板可以有自己的子目录
+│   │   ├── panel.json             # 面板定义文件
+│   │   └── index.html             # 面板 UI 入口
+│   └── image_gen_panel.json       # 也可以直接存放面板定义文件
 │
 ├── scripts/                       # (可选) 存放自定义脚本文件
 │   └── client_side_validation.js
@@ -139,7 +143,7 @@ ComfyTavern 项目由多种资源类型和在工作流中使用的节点构成�
   "createdAt": "iso_timestamp", // 项目创建时间戳
   "updatedAt": "iso_timestamp", // 项目最后更新时间戳
   "preferredView": "editor", // 用户打开项目时的默认视图, e.g., "editor", "custom_panel_id"
-  "schemaVersion": "2.1", // project.json 文件本身的 Schema 版本号
+  "schemaVersion": "2.2", // project.json 文件本身的 Schema 版本号
 
   "agent_profiles": [ // (新增) 声明项目中定义的所有 Agent Profile
     {
@@ -169,6 +173,15 @@ ComfyTavern 项目由多种资源类型和在工作流中使用的节点构成�
     // ... 可以引用更多知识库
   ],
 
+  "panels": [ // (新增) 声明项目中定义的所有应用面板
+    {
+      "id": "panel_chat_default_v1", // 面板的唯一 ID
+      "path": "ui/my_chat_panel/panel.json", // 相对于项目根目录的面板定义文件路径
+      "name": "默认聊天面板", // (可选) 用户可读的面板名称
+      "description": "一个用于基本对话的聊天面板。" // (可选) 面板的简要描述
+    }
+  ],
+ 
   "default_scene_id": "market_square_scene", // (可选) 项目启动时默认加载的场景 ID
 
   "customMetadata": { // (可选) 开放的 JSON 对象，用于存储项目相关的其他自定义元数据
@@ -182,6 +195,7 @@ ComfyTavern 项目由多种资源类型和在工作流中使用的节点构成�
 **关键字段解释**:
 
 - **`agent_profiles`**: 核心新增字段。这是一个对象数组，每个对象描述一个项目中定义的 Agent Profile，包括其唯一 `id` (用于在场景中被引用) 和指向其定义文件的 `path`。
+- **`panels`**: (新增) 声明项目包含的应用面板。每个对象描述一个面板，包括其唯一 `id` 和指向其定义文件的 `path`，使得平台能够发现和加载项目内的面板。
 - **`knowledgeBaseReferences`**: 声明项目所依赖的知识库。每个条目通过 `source_id` 唯一标识一个知识库。对于项目本地的知识库，可以额外提供 `path`。
 - **`default_scene_id`**: (可选) 指定当项目启动时，默认应该加载并运行哪个场景。
 

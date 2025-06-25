@@ -174,48 +174,6 @@ export interface PanelInteractionProvider {
   handleOptionSelectionRequest?: (request: OptionSelectionRequest) => Promise<string>;
 }
 
-/**
- * 文本输入请求
- */
-export interface TextInputRequest {
-  /** 请求ID */
-  requestId: string;
-  /** 提示文本 */
-  prompt: string;
-  /** 默认值 */
-  defaultValue?: string;
-}
-
-/**
- * 选项选择请求
- */
-export interface OptionSelectionRequest {
-  /** 请求ID */
-  requestId: string;
-  /** 提示文本 */
-  prompt: string;
-  /** 可选项列表 */
-  options: { value: string; label: string }[];
-}
-
-/**
- * 主题信息
- */
-export interface ThemeInfo {
-  /** 主题ID */
-  id: string;
-  /** 主题名称 */
-  name: string;
-  /** 主色 */
-  primaryColor: string;
-  /** 文字色 */
-  textColor: string;
-  /** 背景色 */
-  backgroundColor: string;
-  /** 字体 */
-  fontFamily: string;
-}
-```
 
 ## 5. 通信机制
 

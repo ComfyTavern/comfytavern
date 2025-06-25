@@ -686,18 +686,31 @@ export const fileManagerRoutes = new Elysia({
         // 推断 Content-Type，可以使用 'mime-types' 包或简单推断
         let contentType = "application/octet-stream"; // 默认
         const ext = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
-        if (ext === "txt") contentType = "text/plain";
+        if (ext === "html" || ext === "htm") contentType = "text/html";
+        else if (ext === "txt") contentType = "text/plain";
         else if (ext === "json") contentType = "application/json";
         else if (ext === "png") contentType = "image/png";
         else if (ext === "jpg" || ext === "jpeg") contentType = "image/jpeg";
         else if (ext === "pdf") contentType = "application/pdf";
+        else if (ext === "svg") contentType = "image/svg+xml";
+        else if (ext === "js") contentType = "application/javascript";
+        else if (ext === "css") contentType = "text/css";
         // ... 更多类型
 
-        // 不直接替换整个 headers 对象，以保留 CORS 中间件设置的头部
-        // set.headers 对象由 Elysia 或上游中间件（如 CORS）初始化
-        // 我们只添加或修改我们关心的头部
+        // 根据内容类型决定是内联显示还是作为附件下载
+        const isInlineDisplay = [
+          "text/html",
+          "text/plain",
+          "application/json",
+          "image/png",
+          "image/jpeg",
+          "image/svg+xml",
+          "application/pdf",
+        ].includes(contentType);
+        const disposition = isInlineDisplay ? "inline" : "attachment";
+
         set.headers['Content-Type'] = contentType;
-        set.headers['Content-Disposition'] = `attachment; filename="${encodeURIComponent(fileName)}"`;
+        set.headers['Content-Disposition'] = `${disposition}; filename="${encodeURIComponent(fileName)}"`;
         set.headers['Content-Length'] = String(fileBuffer.length);
         set.status = 200;
         console.log(

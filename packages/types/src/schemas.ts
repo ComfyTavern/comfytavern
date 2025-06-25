@@ -58,6 +58,33 @@ export type GroupInterfaceInfo = z.infer<typeof GroupInterfaceInfoSchema>;
 // --- Project & Execution Schemas ---
 
 /**
+ * Schema 定义：在 project.json 中声明的面板。
+ */
+export const PanelDeclarationSchema = z.object({
+  id: z.string().describe("面板的唯一标识符"),
+  path: z.string().describe("指向面板定义文件的逻辑路径 (例如: ui/my_chat_panel/panel.json)"),
+});
+export type PanelDeclaration = z.infer<typeof PanelDeclarationSchema>;
+
+/**
+ /**
+  * Schema 定义：完整的面板定义。
+  */
+export const PanelDefinitionSchema = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  description: z.string().optional(),
+  version: z.string(),
+  uiEntryPoint: z.string().describe("面板 UI 的入口文件 (例如: index.html)"),
+  panelDirectory: z.string().optional().describe("面板所在的目录名，由后端动态填充"),
+  apiSpec: z.string().optional().describe("指向面板 API 规范文件的路径"),
+  requiredWorkflows: z.array(z.string()).optional().describe("面板运行所需的 workflow ID 列表"),
+  icon: z.string().optional(),
+  customMetadata: z.record(z.any()).optional(),
+});
+export type PanelDefinition = z.infer<typeof PanelDefinitionSchema>;
+
+/**
  * Schema 定义：项目元数据。
  */
 export const ProjectMetadataSchema = z.object({
@@ -70,6 +97,7 @@ export const ProjectMetadataSchema = z.object({
   templateUsed: z.string().optional(),
   preferredView: z.enum(["editor", "custom"]).optional().default("editor"),
   schemaVersion: z.string(),
+  panels: z.array(PanelDeclarationSchema).optional().describe("项目包含的应用面板声明列表"),
   customMetadata: z.record(z.any()).optional()
 });
 export type ProjectMetadata = z.infer<typeof ProjectMetadataSchema>;
@@ -307,7 +335,7 @@ export interface ILlmApiAdapter {
     base_url: string;
     api_key?: string;
     custom_headers?: Record<string, string>;
-  }): Promise<Array<{ id: string; [key: string]: any }>>;
+  }): Promise<Array<{ id: string;[key: string]: any }>>;
 }
 
 
@@ -439,10 +467,10 @@ export type ActivatedModelInfo = z.infer<typeof activatedModelInfoSchema>;
  * Schema 定义: 场景中 Agent 实例的配置。
  */
 export const SceneAgentInstanceSchema = z.object({
-    instance_id: z.string().describe("场景中 Agent 实例的唯一 ID"),
-    profile_id: z.string().describe("引用的 Agent Profile ID"),
-    initial_private_state_override: z.record(z.any()).optional().describe("覆盖 Profile 的 PrivateState 初始值"),
-    initial_goals_override_reference: z.array(z.any()).optional().describe("覆盖 Profile 的初始目标"),
+  instance_id: z.string().describe("场景中 Agent 实例的唯一 ID"),
+  profile_id: z.string().describe("引用的 Agent Profile ID"),
+  initial_private_state_override: z.record(z.any()).optional().describe("覆盖 Profile 的 PrivateState 初始值"),
+  initial_goals_override_reference: z.array(z.any()).optional().describe("覆盖 Profile 的初始目标"),
 });
 
 /**
