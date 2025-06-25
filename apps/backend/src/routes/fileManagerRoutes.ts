@@ -66,13 +66,14 @@ export const fileManagerRoutes = new Elysia({
         return { error: "Logical path is required and cannot be empty after trimming." };
       }
 
-      // famService.listDir 会处理 userId 为 null 的情况 (例如访问 shared:// 或 system://)
+      // 从查询参数中获取 ensureExists
+      const ensureExists = ctx.query.ensureExists === 'true';
 
       try {
-        // 使用 trim 后的 logicalPath 和获取到的 userId
-        const items = await famService.listDir(userId, logicalPath);
+        // 将 ensureExists 选项传递给 famService
+        const items = await famService.listDir(userId, logicalPath, { ensureExists });
         console.log(
-          `[FileManagerRoutes] Successfully listed ${items.length} items for '${logicalPath}' (userId: ${userId})`
+          `[FileManagerRoutes] Successfully listed ${items.length} items for '${logicalPath}' (userId: ${userId}, ensureExists: ${ensureExists})`
         );
         return items;
       } catch (error: any) {
@@ -81,11 +82,10 @@ export const fileManagerRoutes = new Elysia({
           error.message,
           error.stack
         );
-        // 咕: 对于 listDir，如果目录不存在，前端期望得到一个空数组而不是 404 错误。
-        // 这样可以避免在控制台产生不必要的错误日志，因为检查一个可选的目录是否存在是正常操作。
-        if (error.message.includes("not found") || error.message.includes("Not a directory")) {
-          // set.status = 404; // 旧行为
-          return []; // 新行为：返回空数组，状态码默认为 200
+        // 现在 FileManagerService 会处理 "not found" 的情况，所以我们主要捕获其他错误
+        if (error.message.includes("Not a directory")) {
+          // 这是一个客户端错误，因为他们试图列出一个文件
+          set.status = 400;
         } else if (
           error.message.includes("Invalid logical path") ||
           error.message.includes("Unknown scheme") ||
@@ -94,9 +94,9 @@ export const fileManagerRoutes = new Elysia({
         ) {
           set.status = 400;
         } else if (error.message.includes("UserId is required")) {
-          // 如果 FAM 服务明确要求 userId 但未提供 (例如 user:// 路径但 userId 为 null)
-          set.status = 401; // Unauthorized or 400 Bad Request depending on interpretation
+          set.status = 401;
         } else {
+          // 其他未预料到的错误
           set.status = 500;
         }
         return { error: error.message };
@@ -106,11 +106,12 @@ export const fileManagerRoutes = new Elysia({
       detail: {
         summary: "List directory contents for a given logical path.",
         description:
-          "The logical path is appended to /api/fam/list/. For example, /api/fam/list/user://documents/ will list contents of user://documents/. The user ID is derived from the authentication context.",
+          "The logical path is appended to /api/fam/list/. For example, /api/fam/list/user://documents/ will list contents of user://documents/. The user ID is derived from the authentication context. Accepts an 'ensureExists=true' query parameter to create the directory if it does not exist.",
         tags: ["File Manager"],
       },
-      // Elysia infers params for wildcard routes as { '*': string }
-      // No explicit params schema needed here for the wildcard itself.
+      query: t.Object({
+        ensureExists: t.Optional(t.String()), // 'true' or undefined
+      }),
     }
   )
   // POST /api/fam/create-dir - 创建新目录

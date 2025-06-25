@@ -13,17 +13,30 @@ const API_PREFIX = '/fam';
 /**
  * 列出指定逻辑路径下的文件和目录。
  * @param logicalPath 要列出内容的逻辑路径 (例如 "user://", "user://some/folder/")
+ * @param options 可选参数
+ * @param options.ensureExists 如果为 true，当目录不存在时，后端会尝试创建它
  * @returns Promise<FAMItem[]> 文件和目录列表
  */
-export async function listDir(logicalPath: string): Promise<FAMItem[]> {
+export async function listDir(
+  logicalPath: string,
+  options?: { ensureExists?: boolean }
+): Promise<FAMItem[]> {
   const normalizedPath = logicalPath.endsWith('//') ? logicalPath : logicalPath.replace(/\/?$/, '/');
+  const url = `${API_PREFIX}/list/${encodeURIComponent(normalizedPath)}`;
+  
+  const config: { params?: { ensureExists: boolean } } = {};
+  if (options?.ensureExists) {
+    config.params = { ensureExists: true };
+  }
+
   try {
     // 后端现在直接返回 FAMItem[] 结构
-    const items = await useApi().get<FAMItem[]>(`${API_PREFIX}/list/${encodeURIComponent(normalizedPath)}`);
-    return items || []; // 如果 API 返回 null/undefined (虽然不应该)，则返回空数组
+    const items = await useApi().get<FAMItem[]>(url, config);
+    return items || []; // 如果 API 返回 null/undefined，则返回空数组
   } catch (err: any) {
-    // 如果是 404 错误，则静默处理并返回空数组，因为目录不存在是正常情况
+    // 后端现在会处理 "not found" 并返回 200 和空数组，所以 404 检查可以移除或保留作为后备
     if (err.isAxiosError && err.response?.status === 404) {
+      console.warn(`[fileManagerApi] Received a 404 for "${normalizedPath}", which should have been handled by the backend. Returning empty array.`);
       return [];
     }
     console.error(`[fileManagerApi] Failed to list directory "${normalizedPath}":`, err);

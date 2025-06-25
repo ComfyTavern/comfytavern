@@ -56,7 +56,13 @@ export interface FAMService {
   ): Promise<void>;
 
   /** 列出目录内容 */
-  listDir(userId: string | null, logicalPath: string): Promise<FAMItem[]>;
+  listDir(
+    userId: string | null,
+    logicalPath: string,
+    options?: {
+      ensureExists?: boolean;
+    }
+  ): Promise<FAMItem[]>;
 
   /** 创建目录 (递归创建) */
   createDir(userId: string | null, logicalPath: string): Promise<void>;
@@ -308,7 +314,13 @@ export class FileManagerService implements FAMService {
     }
   }
 
-  async listDir(userId: string | null, logicalPath: string): Promise<FAMItem[]> {
+  async listDir(
+    userId: string | null,
+    logicalPath: string,
+    options?: {
+      ensureExists?: boolean;
+    }
+  ): Promise<FAMItem[]> {
     try {
       const physicalPath = await this.resolvePath(userId, logicalPath);
 
@@ -318,12 +330,24 @@ export class FileManagerService implements FAMService {
         stats = await fs.stat(physicalPath);
       } catch (statError: any) {
         if (statError.code === 'ENOENT') {
-          throw new Error(`Directory not found at logical path: ${logicalPath}`);
+          if (options?.ensureExists) {
+            // 如果目录不存在且要求确保存在，则创建它
+            await fs.mkdir(physicalPath, { recursive: true });
+            console.log(
+              `[FileManagerService] Directory did not exist, created: '${physicalPath}' for logical path '${logicalPath}'`
+            );
+            // 创建后，目录为空，直接返回空数组
+            return [];
+          }
+          // 如果目录不存在，但没有要求创建，则根据新策略返回空数组而不是抛出错误
+          return [];
         }
+        // 其他 stat 错误，例如权限问题，则向上抛出
         throw statError;
       }
 
       if (!stats.isDirectory()) {
+        // 如果路径存在但不是目录，这是一个明确的错误
         throw new Error(`Not a directory at logical path: ${logicalPath}`);
       }
 
@@ -353,7 +377,7 @@ export class FileManagerService implements FAMService {
         }
  
         const itemTypeFromDirent = dirent.isDirectory() ? 'directory' : 'file';
-        console.log(`[FileManagerService.listDir] Processing dirent: name='${itemName}', isDirectory=${dirent.isDirectory()}, determinedType='${itemTypeFromDirent}' for logicalPath='${itemLogicalPath}'`);
+        // console.log(`[FileManagerService.listDir] Processing dirent: name='${itemName}', isDirectory=${dirent.isDirectory()}, determinedType='${itemTypeFromDirent}' for logicalPath='${itemLogicalPath}'`);
  
         listItems.push({
           id: itemLogicalPath, // Use logicalPath as ID
@@ -367,10 +391,10 @@ export class FileManagerService implements FAMService {
           // mimeType, childrenCount, thumbnailUrl, error can be added later if needed
         });
       }
-      console.log(`[FileManagerService.listDir] For logicalPath='${logicalPath}', returning items:`, JSON.stringify(listItems.map(it => ({ name: it.name, itemType: it.itemType, logicalPath: it.logicalPath, id: it.id }))));
+      // console.log(`[FileManagerService.listDir] For logicalPath='${logicalPath}', returning items:`, JSON.stringify(listItems.map(it => ({ name: it.name, itemType: it.itemType, logicalPath: it.logicalPath, id: it.id }))));
       return listItems;
     } catch (error: any) {
-      if (error.message.startsWith('Directory not found') || error.message.startsWith('Not a directory') || error.message.startsWith('Invalid logical path') || error.message.startsWith('UserId is required') || error.message.startsWith('Unknown scheme') || error.message.startsWith('Path traversal attempt detected') || error.message.startsWith('Unknown system area')) {
+      if (error.message.startsWith('Not a directory') || error.message.startsWith('Invalid logical path') || error.message.startsWith('UserId is required') || error.message.startsWith('Unknown scheme') || error.message.startsWith('Path traversal attempt detected') || error.message.startsWith('Unknown system area')) {
         throw error;
       }
       console.error(`[FileManagerService] Error listing directory ${logicalPath} (userId: ${userId}):`, error);

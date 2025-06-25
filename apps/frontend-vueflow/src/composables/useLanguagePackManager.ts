@@ -51,7 +51,8 @@ export function useLanguagePackManager() {
 
     for (const location of locations) {
       try {
-        const langFiles = await fileManagerApiClient.listDir(location.prefix);
+        // 要求后端确保目录存在，如果不存在则创建
+        const langFiles = await fileManagerApiClient.listDir(location.prefix, { ensureExists: true });
         for (const langFile of langFiles) {
           if (langFile.itemType === 'file' && langFile.name.endsWith('.json')) {
             try {
@@ -75,10 +76,8 @@ export function useLanguagePackManager() {
           }
         }
       } catch (error: any) {
-        // 如果目录不存在 (404)，这是正常情况，静默处理
-        if (!(error.isAxiosError && error.response?.status === 404)) {
-          console.warn(`咕: 无法发现语言包于 ${location.prefix}`, error);
-        }
+        // 由于后端现在会处理不存在的目录，这里的错误捕获主要用于处理其他非预期的 API 错误
+        console.warn(`咕: 无法发现或处理语言包于 ${location.prefix}`, error);
       }
     }
     

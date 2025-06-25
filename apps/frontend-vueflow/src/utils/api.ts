@@ -15,8 +15,8 @@ const api = axios.create({
 
 
 export const useApi = () => {
-  const get = async <T>(url: string): Promise<T> => {
-    const response = await api.get<T>(url);
+  const get = async <T>(url: string, config?: import('axios').AxiosRequestConfig): Promise<T> => {
+    const response = await api.get<T>(url, config);
     return response.data;
   };
 
