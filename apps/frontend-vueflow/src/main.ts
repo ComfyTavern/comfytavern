@@ -14,8 +14,12 @@ import i18n from './locales'; // 直接导入 i18n 实例
 import App from './App.vue'
 import router from './router'
 import { vComfyTooltip } from './directives/vComfyTooltip';
+import { connect as connectWebSocket } from './services/WebSocketCoreService';
 
 const app = createApp(App)
+
+// 启动 WebSocket 连接
+connectWebSocket();
 
 const pinia = createPinia()
 pinia.use(piniaPluginPersistedstate)

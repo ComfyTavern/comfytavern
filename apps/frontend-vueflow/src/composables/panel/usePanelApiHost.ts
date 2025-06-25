@@ -130,10 +130,15 @@ export function usePanelApiHost(iframeRef: Ref<HTMLIFrameElement | null>, panelO
     if (typeof apiMethod === 'function') {
       try {
         const result = await apiMethod(...args)
+        
+        // 如果方法是 subscribeToExecutionEvents，它的返回值是一个函数，不能被 postMessage。
+        // 我们只返回一个成功的标志。
+        const payloadToSend = (method === 'subscribeToExecutionEvents') ? true : result;
+
         const response: ApiResponseMessage = {
           type: 'comfy-tavern-api-response',
           id,
-          payload: result
+          payload: payloadToSend,
         }
         iframeRef.value?.contentWindow?.postMessage(response, panelOrigin.value)
       } catch (e: any) {

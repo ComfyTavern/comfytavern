@@ -27,7 +27,7 @@ import { useDialogService } from '../services/DialogService';
 import { getWorkflow } from '../utils/api';
 import { useExecutionStore } from './executionStore';
 import { transformVueFlowToExecutionPayload } from "@/utils/workflowTransformer";
-import { useWebSocket } from '@/composables/useWebSocket';
+import { useWebSocket, registerPanelExecution } from '@/composables/useWebSocket';
 
 export const useWorkflowStore = defineStore("workflow", () => {
   const availableWorkflows = ref<
@@ -759,6 +759,10 @@ export const useWorkflowStore = defineStore("workflow", () => {
     }
 
     const panelExecutionId = `panel_exec_${Date.now()}`;
+    
+    // 在发送 WebSocket 消息前立即注册
+    registerPanelExecution(panelExecutionId);
+
     return _executeWorkflowCore(panelExecutionId, {
       id: workflowId,
       name: workflowToExecute.name || 'Untitled Workflow',

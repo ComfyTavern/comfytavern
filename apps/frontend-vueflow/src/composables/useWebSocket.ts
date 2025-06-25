@@ -1,8 +1,11 @@
-import { ref, readonly, onMounted, onUnmounted, watch, type Ref, computed } from "vue";
+import { readonly, onMounted, onUnmounted, watch, type Ref, computed } from "vue";
 import { useExecutionStore } from "@/stores/executionStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useNodeStore } from "@/stores/nodeStore";
+import {
+  useWebSocketCore
+} from '@/services/WebSocketCoreService';
 import type {
   WebSocketMessage,
   PromptAcceptedResponsePayload,
@@ -20,18 +23,25 @@ import {
   WebSocketMessageType,
   ExecutionStatus,
 } from "@comfytavern/types";
-const ws = ref<WebSocket | null>(null);
-const isConnected = ref(false);
-const error = ref<Event | null>(null);
 
+// --- Module-level state ---
 let executionStore: ReturnType<typeof useExecutionStore> | null = null;
 let tabStore: ReturnType<typeof useTabStore> | null = null;
 let workflowStore: ReturnType<typeof useWorkflowStore> | null = null;
 let nodeStore: ReturnType<typeof useNodeStore> | null = null;
 let activeTabId: Ref<string | null> | null = null;
 
+// 用于记录下一个 prompt 请求是由哪个 tab 或 panel 发起的
 let initiatingTabIdForNextPrompt: string | null = null;
-const panelExecutionIds = new Set<string>(); // 新增：存储所有面板执行的 ID
+// 存储所有活跃的面板执行 ID
+const panelExecutionIds = new Set<string>();
+// 核心映射：将后端的 promptId 映射到前端的 panelExecutionId
+const promptIdToPanelExecutionIdMap = new Map<string, string>();
+
+let isRouterInitialized = false;
+let unsubscribeFromCore: (() => void) | null = null;
+
+// --- Private methods ---
 
 const ensureStoresInitialized = () => {
   if (!executionStore) executionStore = useExecutionStore();
@@ -43,144 +53,131 @@ const ensureStoresInitialized = () => {
   }
 };
 
-const connect = () => {
-  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-    console.log("[WebSocket] Already connected.");
-    isConnected.value = true;
+const handleRawMessage = (message: WebSocketMessage<any>) => {
+  ensureStoresInitialized();
+  if (
+    !executionStore || !tabStore || !workflowStore || !nodeStore || !activeTabId
+  ) {
+    console.error("[WebSocketRouter] Stores not properly initialized during message handling.");
     return;
   }
 
-  // 使用 Bun 默认的 WebSocket 端口，通常是 3233
-  // TODO: 从配置中获取 WebSocket URL
-  ws.value = new WebSocket(`ws://localhost:3233/ws`);
+  try {
+    console.debug("WebSocketRouter message received:", message);
 
-  ws.value.onopen = () => {
-    console.log("[WebSocket] Connected.");
-    isConnected.value = true;
-    error.value = null;
-  };
+    const payload = message.payload as any;
+    const internalId = payload?.internalId;
+    const currentActiveTabId = activeTabId.value;
 
-  ws.value.onclose = () => {
-    console.log("[WebSocket] Disconnected. Attempting to reconnect in 5 seconds...");
-    isConnected.value = false;
-    setTimeout(connect, 5000); // 5秒后尝试重连
-  };
+    // --- 1. 优先处理 PROMPT_ACCEPTED_RESPONSE (认领 promptId) ---
+    if (message.type === WebSocketMessageType.PROMPT_ACCEPTED_RESPONSE) {
+      if (initiatingTabIdForNextPrompt) {
+        const targetId = initiatingTabIdForNextPrompt;
+        initiatingTabIdForNextPrompt = null; // 认领后立即清除
 
-  ws.value.onerror = (e) => {
-    console.error("[WebSocket] Error:", e);
-    error.value = e;
-    ws.value?.close(); // 遇到错误时关闭连接，触发 onclose 尝试重连
-  };
+        const acceptedPayload = payload as PromptAcceptedResponsePayload;
+        // 如果是面板发起的执行，则创建 promptId 到其唯一执行ID的映射
+        if (panelExecutionIds.has(targetId)) {
+          promptIdToPanelExecutionIdMap.set(acceptedPayload.promptId, targetId);
+        }
 
-  ws.value.onmessage = (event) => {
-    ensureStoresInitialized();
-    if (
-      !executionStore || !tabStore || !workflowStore || !nodeStore || !activeTabId ||
-      !activeTabId.value // Check if activeTabId.value is null or undefined
-    ) {
-      console.error("[WebSocket] Stores or activeTabId not properly initialized during onmessage.");
+        console.debug(`[WebSocketRouter] Routing PROMPT_ACCEPTED_RESPONSE to initiating tab/panel: ${targetId}`);
+        processExecutionMessage(message, targetId);
+      } else {
+        console.error("[WebSocketRouter] Received PROMPT_ACCEPTED_RESPONSE but no initiating tab/panel was recorded. Ignoring.");
+      }
+      return; // 处理完毕
+    }
+
+    const messagePromptId = payload?.promptId;
+
+    // --- 2. 其次处理与已知面板PromptID相关的消息 ---
+    if (messagePromptId && promptIdToPanelExecutionIdMap.has(messagePromptId)) {
+      const panelExecutionId = promptIdToPanelExecutionIdMap.get(messagePromptId)!;
+      console.debug(`[WebSocketRouter] Routing message with promptId ${messagePromptId} to Panel Execution: ${panelExecutionId}`);
+      processExecutionMessage(message, panelExecutionId);
+
+      // 在执行结束时清理映射和注册
+      if (message.type === WebSocketMessageType.EXECUTION_STATUS_UPDATE &&
+        (payload.status === ExecutionStatus.COMPLETE || payload.status === ExecutionStatus.ERROR || payload.status === ExecutionStatus.INTERRUPTED)) {
+        promptIdToPanelExecutionIdMap.delete(messagePromptId);
+        unregisterPanelExecution(panelExecutionId);
+      }
+      return; // 处理完毕
+    }
+
+    // --- 3. (回退) 处理其他面板执行消息 (依赖 internalId) ---
+    if (internalId && panelExecutionIds.has(internalId)) {
+      console.debug(`[WebSocketRouter] Routing message for Panel Execution (fallback by internalId): ${internalId}`);
+      processExecutionMessage(message, internalId);
+      if (message.type === WebSocketMessageType.EXECUTION_STATUS_UPDATE &&
+        (payload.status === ExecutionStatus.COMPLETE || payload.status === ExecutionStatus.ERROR || payload.status === ExecutionStatus.INTERRUPTED)) {
+        unregisterPanelExecution(internalId);
+      }
+      return; // 处理完毕
+    }
+
+    // --- 4. 处理全局非执行类消息 ---
+    if (message.type === WebSocketMessageType.WORKFLOW_LIST) {
+      workflowStore.fetchAvailableWorkflows();
+      return;
+    }
+    if (message.type === WebSocketMessageType.NODES_RELOADED) {
+      nodeStore.handleNodesReloadedNotification(payload as NodesReloadedPayload);
       return;
     }
 
-    try {
-      const message = JSON.parse(event.data) as WebSocketMessage<any>;
-      console.debug("WebSocket message received:", message);
-
-      const payload = message.payload as any;
-      const internalId = payload?.internalId;
-      const currentActiveTabId = activeTabId.value;
-
-      // --- 优先处理面板执行 ---
-      if (internalId && panelExecutionIds.has(internalId)) {
-        console.debug(`[WebSocket] Routing message for Panel Execution: ${internalId}`);
-        processExecutionMessage(message, internalId);
-        // 如果是最终状态，从集合中移除
-        if (message.type === WebSocketMessageType.EXECUTION_STATUS_UPDATE && (payload.status === ExecutionStatus.COMPLETE || payload.status === ExecutionStatus.ERROR || payload.status === ExecutionStatus.INTERRUPTED)) {
-            unregisterPanelExecution(internalId);
-        }
-        return; // 处理完毕，不再继续往下走
-      }
-      
-      // --- 处理全局非执行类消息 ---
-      if (message.type === WebSocketMessageType.WORKFLOW_LIST) {
-        workflowStore.fetchAvailableWorkflows();
-        return;
-      }
-      if (message.type === WebSocketMessageType.NODES_RELOADED) {
-        nodeStore.handleNodesReloadedNotification(payload as NodesReloadedPayload);
-        return;
-      }
-
-      // --- 处理与标签页相关的执行消息 ---
-      const messageWorkflowId = payload?.workflowId || payload?.promptId;
-      let targetTabId: string | null = null;
-      
-      if (message.type === WebSocketMessageType.PROMPT_ACCEPTED_RESPONSE) {
-        if (initiatingTabIdForNextPrompt) {
-          targetTabId = initiatingTabIdForNextPrompt;
-          initiatingTabIdForNextPrompt = null;
-        } else {
-          console.error("[WebSocket] Received PROMPT_ACCEPTED_RESPONSE but no initiating tab was recorded.");
-        }
-      } else if (internalId) {
-        targetTabId = internalId;
-      } else if (messageWorkflowId) {
-        for (const [tabIdEntry, state] of executionStore.tabExecutionStates.entries()) {
-          if (state.promptId === messageWorkflowId) {
-            targetTabId = tabIdEntry;
-            break;
-          }
+    // --- 5. 处理与编辑器标签页相关的执行消息 ---
+    let targetTabId: string | null = null;
+    if (internalId) {
+      targetTabId = internalId; // 编辑器执行时，internalId就是tabId
+    } else if (messagePromptId) {
+      // 通过 promptId 找到对应的 tab
+      for (const [tabIdEntry, state] of executionStore.tabExecutionStates.entries()) {
+        if (state.promptId === messagePromptId) {
+          targetTabId = tabIdEntry;
+          break;
         }
       }
-      
-      if (!targetTabId) {
-        if(message.type !== WebSocketMessageType.ERROR) { // 全局错误可能没有 targetTabId
-          console.warn(`[WebSocket] Could not determine target tab for message type ${message.type}. Ignoring.`);
-        }
-        return;
-      }
-      
-      // 过滤非活动标签页的非最终消息
-      if (targetTabId !== currentActiveTabId) {
-        const isFinalState = [
-          WebSocketMessageType.EXECUTION_STATUS_UPDATE,
-          WebSocketMessageType.NODE_COMPLETE,
-          WebSocketMessageType.NODE_ERROR,
-          WebSocketMessageType.ERROR,
-        ].includes(message.type);
-        // 只有当是最终状态消息，并且状态确实是完成/错误/中断时才处理
-        if (!isFinalState || (payload.status !== ExecutionStatus.COMPLETE && payload.status !== ExecutionStatus.ERROR && payload.status !== ExecutionStatus.INTERRUPTED)) {
-            console.debug(`[WebSocket] Ignoring non-final message for inactive tab ${targetTabId}.`);
-            return;
-        }
-      }
-      
-      processExecutionMessage(message, targetTabId);
-
-    } catch (e) {
-      console.error("Failed to parse or process WebSocket message:", e);
     }
-  };
-};
 
-const sendMessage = (message: WebSocketMessage<any>) => {
-  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-    ws.value.send(JSON.stringify(message));
-  } else {
-    console.warn("[WebSocket] Not connected, message not sent:", message);
+    if (!targetTabId) {
+      if (message.type !== WebSocketMessageType.ERROR) {
+        console.warn(`[WebSocketRouter] Could not determine target tab for message type ${message.type}. This might be normal for background tasks. Ignoring UI update.`);
+      }
+      return;
+    }
+
+    // 过滤非活动标签页的非最终消息
+    if (currentActiveTabId && targetTabId !== currentActiveTabId) {
+      const isFinalState =
+        (message.type === WebSocketMessageType.EXECUTION_STATUS_UPDATE &&
+          (payload.status === ExecutionStatus.COMPLETE || payload.status === ExecutionStatus.ERROR || payload.status === ExecutionStatus.INTERRUPTED)) ||
+        message.type === WebSocketMessageType.ERROR;
+
+      if (!isFinalState) {
+        return;
+      }
+    }
+
+    processExecutionMessage(message, targetTabId);
+
+  } catch (e) {
+    console.error("[WebSocketRouter] Failed to process message:", e);
   }
 };
 
-// 辅助函数：处理执行相关的 WebSocket 消息
+/**
+ * 将解析后的消息派发到 executionStore
+ * @param message WebSocket 消息
+ * @param executionId 前端执行上下文ID (可以是 tabId 或 panelExecutionId)
+ */
 const processExecutionMessage = (message: WebSocketMessage<any>, executionId: string) => {
-  const payload = message.payload as any;
-  
-  // 确保 store 已初始化，尽管在 onmessage 开头已经检查过
   if (!executionStore) {
-    console.error("[WebSocket] executionStore not initialized in processExecutionMessage.");
+    console.error("[WebSocketRouter] executionStore not initialized in processExecutionMessage.");
     return;
   }
-
+  const payload = message.payload;
   switch (message.type) {
     case WebSocketMessageType.PROMPT_ACCEPTED_RESPONSE:
       executionStore.handlePromptAccepted(executionId, payload as PromptAcceptedResponsePayload);
@@ -208,20 +205,25 @@ const processExecutionMessage = (message: WebSocketMessage<any>, executionId: st
       break;
     case WebSocketMessageType.ERROR: {
       const errorPayload = payload as { message: string; details?: any };
-      console.error(`[WebSocket] Received GLOBAL ERROR message for execution ${executionId}: ${errorPayload.message}`);
+      console.error(`[WebSocketRouter] Received GLOBAL ERROR message for execution ${executionId}: ${errorPayload.message}`);
       executionStore.updateWorkflowStatus(executionId, {
-          promptId: payload?.promptId || executionStore.getCurrentPromptId(executionId) || 'unknown',
-          status: ExecutionStatus.ERROR,
-          errorInfo: { message: errorPayload.message, details: errorPayload.details },
+        promptId: payload?.promptId || executionStore.getCurrentPromptId(executionId) || 'unknown',
+        status: ExecutionStatus.ERROR,
+        errorInfo: {
+          message: errorPayload.message,
+          details: errorPayload.details
+        },
       });
       break;
     }
     default:
-      console.warn(`[WebSocket] Unhandled execution message type for ID ${executionId}: ${message.type}`);
+      console.warn(`[WebSocketRouter] Unhandled execution message type for ID ${executionId}: ${message.type}`);
       break;
   }
 };
 
+
+// --- Public API ---
 
 export const setInitiatingTabForNextPrompt = (tabId: string) => {
   initiatingTabIdForNextPrompt = tabId;
@@ -229,49 +231,67 @@ export const setInitiatingTabForNextPrompt = (tabId: string) => {
 
 export const registerPanelExecution = (executionId: string) => {
   panelExecutionIds.add(executionId);
-  console.log(`[WebSocket] Registered panel execution: ${executionId}`);
-  // 可选：添加一个清理机制，以防执行从未完成
+  console.log(`[WebSocketRouter] Registered panel execution: ${executionId}`);
+  // Optional: Timeout to clean up stale IDs
   setTimeout(() => {
     if (panelExecutionIds.has(executionId)) {
-      console.warn(`[WebSocket] Auto-cleaning stale panel execution ID: ${executionId}`);
+      console.warn(`[WebSocketRouter] Auto-cleaning stale panel execution ID: ${executionId}`);
       unregisterPanelExecution(executionId);
     }
-  }, 1000 * 60 * 5); // 5 分钟后自动清理
+  }, 1000 * 60 * 5); // 5 minutes
 };
 
 export const unregisterPanelExecution = (executionId: string) => {
   if (panelExecutionIds.has(executionId)) {
     panelExecutionIds.delete(executionId);
-    console.log(`[WebSocket] Unregistered panel execution: ${executionId}`);
+    // 清理反向映射以防万一
+    for (const [promptId, panelId] of promptIdToPanelExecutionIdMap.entries()) {
+      if (panelId === executionId) {
+        promptIdToPanelExecutionIdMap.delete(promptId);
+        break; // 假设是一对一映射
+      }
+    }
+    console.log(`[WebSocketRouter] Unregistered panel execution: ${executionId}`);
   }
 };
 
 
 export function useWebSocket() {
-  onMounted(() => {
+  const wsCore = useWebSocketCore();
+
+  const initialize = () => {
+    if (isRouterInitialized) return;
     ensureStoresInitialized();
-    connect();
+    unsubscribeFromCore = wsCore.subscribe(handleRawMessage);
+    console.log('[WebSocketRouter] Initialized and subscribed to core service.');
+    isRouterInitialized = true;
+  };
+  
+  onMounted(() => {
+    initialize();
+
+    // 监听 activeTabId 变化
+    watch(() => activeTabId?.value, (newTabId, oldTabId) => {
+      if (newTabId !== oldTabId) {
+        console.log(`[WebSocketRouter] Active tab changed from ${oldTabId} to ${newTabId}`);
+      }
+    });
   });
 
   onUnmounted(() => {
-    ws.value?.close();
-  });
-
-  // 监听 activeTabId 变化，如果需要根据活动 tab 调整 WebSocket 行为
-  watch(() => activeTabId?.value, (newTabId, oldTabId) => {
-    if (newTabId !== oldTabId) {
-      console.log(`[WebSocket] Active tab changed from ${oldTabId} to ${newTabId}`);
-      // 可以在这里发送消息通知后端当前活动 tab，如果后端需要
-      // 或者调整前端对消息的处理逻辑
+    if (unsubscribeFromCore) {
+      unsubscribeFromCore();
+      console.log('[WebSocketRouter] Unsubscribed from core service.');
     }
+    isRouterInitialized = false;
   });
 
   return {
-    isConnected: readonly(isConnected),
-    error: readonly(error),
-    sendMessage,
+    isConnected: readonly(wsCore.isConnected),
+    error: readonly(wsCore.error),
+    sendMessage: wsCore.sendMessage,
     setInitiatingTabForNextPrompt,
-    registerPanelExecution, // 暴露新的注册函数
+    registerPanelExecution,
     unregisterPanelExecution,
   };
 }
