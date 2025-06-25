@@ -27,7 +27,7 @@ import { useDialogService } from '../services/DialogService';
 import { getWorkflow } from '../utils/api';
 import { useExecutionStore } from './executionStore';
 import { transformVueFlowToExecutionPayload } from "@/utils/workflowTransformer";
-import { useWebSocket, registerPanelExecution } from '@/composables/useWebSocket';
+import { useWebSocket, setInitiatingExecution } from '@/composables/useWebSocket';
 
 export const useWorkflowStore = defineStore("workflow", () => {
   const availableWorkflows = ref<
@@ -43,7 +43,7 @@ export const useWorkflowStore = defineStore("workflow", () => {
   const tabStore = useTabStore();
   const dialogService = useDialogService();
   const executionStore = useExecutionStore();
-  const { sendMessage, setInitiatingTabForNextPrompt } = useWebSocket();
+  const { sendMessage } = useWebSocket();
 
   const workflowManager = useWorkflowManager();
   const workflowData = useWorkflowData();
@@ -675,7 +675,7 @@ export const useWorkflowStore = defineStore("workflow", () => {
       edges: workflowToExecute.edges,
     });
 
-    setInitiatingTabForNextPrompt(executionId);
+    setInitiatingExecution(executionId);
 
     const message: WebSocketMessage = {
       type: WebSocketMessageType.PROMPT_REQUEST,
@@ -760,9 +760,8 @@ export const useWorkflowStore = defineStore("workflow", () => {
 
     const panelExecutionId = `panel_exec_${Date.now()}`;
     
-    // 在发送 WebSocket 消息前立即注册
-    registerPanelExecution(panelExecutionId);
-
+    // 注意：注册逻辑已移至 setInitiatingExecution，这里不再需要手动调用
+    
     return _executeWorkflowCore(panelExecutionId, {
       id: workflowId,
       name: workflowToExecute.name || 'Untitled Workflow',

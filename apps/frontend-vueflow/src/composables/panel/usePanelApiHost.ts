@@ -3,15 +3,18 @@ import { useWorkflowStore } from '@/stores/workflowStore';
 import { useExecutionStore } from '@/stores/executionStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { ExecutionStatus } from '@comfytavern/types';
-import { registerPanelExecution, unregisterPanelExecution } from '@/composables/useWebSocket';
+// registerPanelExecution 和 unregisterPanelExecution 已被重构,不再需要直接导入
+// import { registerPanelExecution, unregisterPanelExecution } from '@/composables/useWebSocket';
 
 // 定义消息协议接口
 interface ApiRequestMessage {
-  type: 'comfy-tavern-api-call' | 'panel-ready'
+  type: 'comfy-tavern-api-call' | 'panel-ready' | 'panel-log';
   id?: string // panel-ready 消息不需要 id
   payload?: { // panel-ready 消息不需要 payload
     method: string
     args: any[]
+    level?: 'log' | 'warn' | 'error' | 'debug';
+    message?: any[];
   }
 }
 
@@ -27,7 +30,7 @@ interface ApiResponseMessage {
  * @param iframeRef - 对 iframe 元素的引用
  * @param panelOrigin - 面板的预期源，用于安全验证
  */
-export function usePanelApiHost(iframeRef: Ref<HTMLIFrameElement | null>, panelOrigin: Ref<string>) {
+export function usePanelApiHost(iframeRef: Ref<HTMLIFrameElement | null>, panelOrigin: Ref<string>, logs: Ref<any[]>) {
   const workflowStore = useWorkflowStore()
   const executionStore = useExecutionStore()
   const projectStore = useProjectStore()
@@ -41,10 +44,8 @@ export function usePanelApiHost(iframeRef: Ref<HTMLIFrameElement | null>, panelO
         console.error('[Host] No active project found.')
         throw new Error('No active project found.')
       }
+      // executeWorkflowFromPanel 内部会处理执行ID的注册，这里不再需要手动调用
       const result = await workflowStore.executeWorkflowFromPanel(request.workflowId, request.inputs, projectId)
-      if (result && result.executionId) {
-        registerPanelExecution(result.executionId);
-      }
       return result
     },
     subscribeToExecutionEvents: (executionId: string, _callbacks: { onProgress?: (data: any) => void; onResult?: (data: any) => void; onError?: (data: any) => void; }) => {
@@ -54,6 +55,28 @@ export function usePanelApiHost(iframeRef: Ref<HTMLIFrameElement | null>, panelO
         () => executionStore.tabExecutionStates.get(executionId),
         (state, oldState) => {
           if (!state) return
+
+          // 检查节点状态变化
+          if (state.nodeStates) {
+            for (const nodeId in state.nodeStates) {
+              const currentNodeStatus = state.nodeStates[nodeId];
+              const oldNodeStatus = oldState?.nodeStates?.[nodeId];
+              
+              if (currentNodeStatus !== oldNodeStatus) {
+                const eventPayload = {
+                  nodeId: nodeId,
+                  status: currentNodeStatus,
+                  outputs: state.nodeOutputs[nodeId], // May be undefined until complete
+                  error: state.nodeErrors[nodeId]
+                };
+                iframeRef.value?.contentWindow?.postMessage({
+                  type: 'execution-event',
+                  event: 'onNodeUpdate', // Custom event for node status
+                  payload: eventPayload
+                }, panelOrigin.value);
+              }
+            }
+          }
 
           // 检查流式输出
           if (state.streamingInterfaceOutputs) {
@@ -68,14 +91,14 @@ export function usePanelApiHost(iframeRef: Ref<HTMLIFrameElement | null>, panelO
           // 检查最终结果
           if (state.workflowStatus === ExecutionStatus.COMPLETE && oldState?.workflowStatus !== ExecutionStatus.COMPLETE) {
             iframeRef.value?.contentWindow?.postMessage({ type: 'execution-event', event: 'onResult', payload: { status: 'COMPLETE', outputs: state.nodeOutputs } }, panelOrigin.value)
-            unregisterPanelExecution(executionId);
+            // 清理逻辑已移至 useWebSocket.ts 内部，这里不再需要手动调用
             unwatch(); // 自动取消订阅
           }
 
           // 检查错误
           if (state.workflowStatus === ExecutionStatus.ERROR && oldState?.workflowStatus !== ExecutionStatus.ERROR) {
             iframeRef.value?.contentWindow?.postMessage({ type: 'execution-event', event: 'onError', payload: { error: state.workflowError } }, panelOrigin.value)
-            unregisterPanelExecution(executionId);
+            // 清理逻辑已移至 useWebSocket.ts 内部，这里不再需要手动调用
             unwatch(); // 自动取消订阅
           }
         },
@@ -86,8 +109,7 @@ export function usePanelApiHost(iframeRef: Ref<HTMLIFrameElement | null>, panelO
       return () => {
         console.log(`[Host] Unsubscribing from events for executionId: ${executionId}`)
         unwatch()
-        // 同时清理注册，以防万一
-        unregisterPanelExecution(executionId);
+        // 清理逻辑已移至 useWebSocket.ts 内部，这里不再需要手动调用
       }
     },
     getSettings: () => {
@@ -109,6 +131,11 @@ export function usePanelApiHost(iframeRef: Ref<HTMLIFrameElement | null>, panelO
     if (data.type === 'panel-ready') {
       console.log('[Host] Received panel-ready message from iframe. Injecting API script.');
       sendInjectionScript();
+      return;
+    }
+    
+    if (data.type === 'panel-log') {
+      logs.value.push(data.payload);
       return;
     }
 

@@ -30,7 +30,7 @@ export function useWorkflowExecution() {
   const tabStore = useTabStore();
   const projectStore = useProjectStore();
   const executionStore = useExecutionStore();
-  const { sendMessage, setInitiatingTabForNextPrompt } = useWebSocket(); // 获取 setInitiatingTabForNextPrompt
+  const { sendMessage, setInitiatingExecution } = useWebSocket(); // 获取 setInitiatingExecution
   const workflowDataHandler = useWorkflowData();
   const dialogService = useDialogService(); // 获取 DialogService 实例
   const { getSlotDefinition } = useSlotDefinitionHelper();
@@ -59,7 +59,7 @@ export function useWorkflowExecution() {
     console.info(
       `[WorkflowExecution:executeWorkflow] Initiating execution for tab ${internalId}...`
     );
-    setInitiatingTabForNextPrompt(internalId); // 设置发起标签页
+    setInitiatingExecution(internalId); // 设置发起执行
 
     // 1. 获取初始的当前元素
     const initialElements = workflowManager.getElements(internalId);

@@ -44,7 +44,7 @@ export function useWorkflowPreview() {
   const { getSlotDefinition } = useSlotDefinitionHelper();
   const { getEdgeStyleProps } = useEdgeStyles();
  
-   const { sendMessage, isConnected } = useWebSocket(); // clientId removed, will be handled as TODO
+   const { sendMessage, isConnected, setInitiatingExecution } = useWebSocket(); // clientId removed, will be handled as TODO
    const { getNodes, getEdges, findNode } = useVueFlow();
 
   // currentOutputsSnapshot is no longer directly from storeToRefs
@@ -300,6 +300,7 @@ export function useWorkflowPreview() {
       payload: payload,
     };
 
+    setInitiatingExecution(activeInternalId); // 设置发起执行
     sendMessage(message);
     console.debug(
       "[WorkflowPreview:triggerPreview] PROMPT_REQUEST for preview sent with promptId:",
