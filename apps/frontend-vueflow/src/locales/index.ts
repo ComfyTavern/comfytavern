@@ -6,12 +6,14 @@ import zhCN from './zh-CN.json';
 import zhWYW from './zh-WYW.json';
 import enUS from './en-US.json';
 import jaJP from './ja-JP.json';
+import ruRU from './ru-RU.json';
 
 export const messages = {
   'zh-CN': zhCN,
   'zh-WYW': zhWYW,
   'en-US': enUS,
   'ja-JP': jaJP,
+  'ru-RU': ruRU,
 };
 
 export const defaultLocale = 'zh-CN';
