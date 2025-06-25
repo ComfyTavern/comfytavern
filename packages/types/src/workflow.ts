@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import type { GroupSlotInfo } from './node';
 import { GroupSlotInfoSchema } from './node';
 
 // --- VueFlow & Workflow Structure Schemas ---
