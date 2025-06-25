@@ -16,6 +16,11 @@
             编辑器
           </a>
         </router-link>
+        <router-link :to="{ name: 'ProjectPanels', params: { projectId: $route.params.projectId } }" custom v-slot="{ navigate, isActive }">
+          <a @click="navigate" :class="['px-4 py-2 rounded-t-lg text-lg font-medium cursor-pointer transition-colors -mr-px', (isActive || $route.name?.toString().startsWith('ProjectPanel')) ? 'bg-background-base text-text-base border-t border-x border-border-base -mb-px z-10' : 'text-text-secondary hover:bg-primary-softest border-t border-x border-transparent']">
+            应用面板
+          </a>
+        </router-link>
         <!-- 未来可以添加更多视图的链接 -->
       </nav>
     </header>
