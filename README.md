@@ -109,7 +109,7 @@ library/                  # 全局共享资产库
 **环境要求:**
 
 -   [Bun](https://bun.sh) v1.2.5+ (主要运行时)
--   Node.js v18+ (用于开发工具)
+-   Node.js v20+ (用于开发工具)
 -   Windows / Linux / macOS
 -   (Docker 支持规划中)
 
