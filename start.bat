@@ -61,5 +61,17 @@ if %errorlevel% neq 0 (
 if "%1"=="dev" (
     bun run server.ts dev
 ) else (
-    bun run build && bun run server.ts
+    if exist "apps\frontend-vueflow\dist" (
+        echo [Start] 前端构建产物已存在，跳过构建步骤。
+        echo [Start] 如果需要强制重新构建，请手动删除 "apps\frontend-vueflow\dist" 目录或运行 "bun run build"。
+    ) else (
+        echo [Start] 未找到前端构建产物，正在执行构建...
+        bun run build
+        if %errorlevel% neq 0 (
+            echo 错误：前端构建失败。
+            pause
+            exit /b 1
+        )
+    )
+    bun run server.ts
 )

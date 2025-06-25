@@ -165,6 +165,23 @@ bun install
 -   前端: `http://localhost:5573/`
 -   后端: `http://localhost:3233/`
 
+-   前端: `http://localhost:5573/`
+-   后端: `http://localhost:3233/`
+
+### 常问之疑：
+
+**强令重构前端**
+
+为求发轫之速，`start.bat` 与 `start_fast.bat` 凡见前端营造之物（`apps/frontend-vueflow/dist` 目录）已存，则默认略过营造之步。
+
+君若修改前端之码，或疑前端显示有误，可强令重构之：
+
+```bash
+bun run build
+```
+
+此令将删旧时营造之物，另生新章，以保君所见乃最新之貌。
+
 ---
 
 ### 🛠️ 初探门径

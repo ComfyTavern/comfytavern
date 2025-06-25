@@ -94,5 +94,15 @@ fi
 if [ "$1" = "dev" ]; then
     bun run server.ts dev
 else
-    bun run build && bun run server.ts
+    if [ -d "apps/frontend-vueflow/dist" ]; then
+        echo "[Fast Start] 前端构建产物已存在，跳过构建步骤。"
+    else
+        echo "[Fast Start] 未找到前端构建产物，正在执行构建..."
+        bun run build
+        if [ $? -ne 0 ]; then
+            echo "错误：前端构建失败。"
+            exit 1
+        fi
+    fi
+    bun run server.ts
 fi

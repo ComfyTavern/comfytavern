@@ -27,11 +27,7 @@ function printCustomDevLog(logger: Logger) {
   logger.info('  如果遇到问题，可以先查看项目文档或向社区求助哦。\n');
 }
 
-function printCustomPreviewLog(logger: Logger) {
-  logger.info('\n  ✨ ComfyTavern 构建部署模式 ✨');
-  logger.info(`  前端服务器已就绪，请访问 http://localhost:${frontendPort}/ 进行体验！`);
-  logger.info('  如果遇到问题，请复制这个控制台信息并提交到社区。\n');
-}
+// printCustomPreviewLog 函数不再需要，已移除
 
 // Vite 配置文档：https://vitejs.dev/config/
 export default defineConfig({
@@ -55,23 +51,7 @@ export default defineConfig({
           printCustomDevLog(server.config.logger);
         };
       },
-      configurePreviewServer(server: PreviewServer) {
-        const originalLoggerInfo = server.config.logger.info;
-        server.config.logger.info = (msg, options) => {
-          originalLoggerInfo(msg, options);
-
-          if (typeof msg === 'string' && msg.includes('Local:') && !(server.httpServer as any)[customLogPrintedKey]) {
-            printCustomPreviewLog(server.config.logger);
-            (server.httpServer as any)[customLogPrintedKey] = true;
-          }
-        };
-
-        server.httpServer.on('close', () => {
-          if ((server.httpServer as any)[customLogPrintedKey]) {
-            delete (server.httpServer as any)[customLogPrintedKey];
-          }
-        });
-      },
+      // configurePreviewServer 钩子已移除，因为我们不再依赖它来输出日志
     },
   ],
   resolve: {

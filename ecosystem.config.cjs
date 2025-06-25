@@ -60,19 +60,19 @@ module.exports = {
       restart_delay: 5000, // Delay 5s before restarting
     },
     {
-      name: 'comfytavern-frontend', // 恢复应用名称
-      script: './scripts/run-frontend-preview-node.cjs', // 指向新的 .cjs 包装器脚本
-      args: [], // 参数在 Node.js 脚本内部处理
-      cwd: './', // Node.js 脚本会处理自己的路径
-      interpreter: 'node', // 明确指定使用 node 执行 .cjs 脚本 (可选, PM2通常能自动识别)
+      name: 'comfytavern-frontend',
+      script: './scripts/frontend-server.ts', // 直接指向我们新的 Bun 服务器脚本
+      args: ['--silent'], // 以静默模式启动，避免重复的欢迎日志
+      cwd: './',
+      interpreter: 'bun', // 明确指定使用 bun 来执行 .ts 脚本
       exec_mode: 'fork',
       watch: false,
-      instance_var: 'INSTANCE_ID_FRONTEND', // 恢复 instance_var
+      instance_var: 'INSTANCE_ID_FRONTEND',
       env_production: {
         NODE_ENV: 'production',
       },
-      out_file: './logs/frontend-out.log', // 恢复日志文件名
-      error_file: './logs/frontend-error.log', // 恢复日志文件名
+      out_file: './logs/frontend-out.log',
+      error_file: './logs/frontend-error.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       merge_logs: true,
       autorestart: true,

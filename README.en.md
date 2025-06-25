@@ -165,6 +165,23 @@ bun install
 -   Frontend: `http://localhost:5573/`
 -   Backend: `http://localhost:3233/`
 
+-   Frontend: `http://localhost:5573/`
+-   Backend: `http://localhost:3233/`
+
+### FAQ:
+
+**Forcing a Frontend Rebuild**
+
+To improve startup speed, `start.bat` and `start_fast.bat` will skip the build step by default if they detect that the frontend build artifacts (the `apps/frontend-vueflow/dist` directory) already exist.
+
+If you have modified the frontend code, or suspect that the frontend is not displaying correctly, you can force a rebuild:
+
+```bash
+bun run build
+```
+
+This command will delete the old build artifacts and generate new files, ensuring you are seeing the latest version.
+
 ---
 
 ### 🛠️ Getting Started
