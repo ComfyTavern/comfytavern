@@ -1,112 +1,125 @@
-# 统一应用面板与 Agent 实施计划
+# Agent 架构 v3 - MVP 实施计划
 
 ## 1. 引言与目标
 
-本计划旨在为 ComfyTavern 平台实现其核心愿景——将复杂的工作流封装到可交互、可自定义的应用面板（Panel）中——提供一个清晰、分阶段的实施路线图。
+**基准架构**: 本实施计划完全基于 [`DesignDocs/architecture/agent_architecture_v3_consolidated.md`](DesignDocs/architecture/agent_architecture_v3_consolidated.md:1) 中定义的统一 Agent 架构。该文档是我们的最终目标和“真理之源”。
 
-该计划基于以下核心架构原则：
+**当前起点**: 现有代码库已经实现了部分基础服务，包括一个请求驱动的 `ExecutionEngine`、支持场景隔离的 `WebSocketManager` 和 `WorldStateService`。这些被视为实现 v3 架构的“阶段0”已完成。
 
-*   **异步事件驱动**: Agent 与应用面板之间的交互，通过一个场景（Scene）范围内的事件总线（EventBus）进行，实现真正的异步、非阻塞通信。
-*   **Agent 作为核心**: 后端存在一个长期运行的、有状态的 Agent 运行时（AgentRuntime），负责驱动 Agent 的“感知-思考-行动”循环。
-*   **同构工具复用**: 充分利用 `@comfytavern/utils` 中已经完成的、前后端共享的工作流准备工具（如扁平化、转换），来处理复杂工作流。
-*   **后端原子化执行**: 后端工作流引擎（ExecutionEngine）始终负责执行完整的、无中断的工作流片段（如 Agent 的审议流或技能流），不直接参与交互流程的中断与恢复。
+**本计划目标**: 定义一个清晰、分阶段的路线图，用于构建 v3 Agent 架构的**最小可行产品 (MVP)**。我们将从现有代码出发，逐步实现 `SceneManager`、`AgentRuntime`、以及与之配套的前端应用面板。
+**设计对齐**: 本计划中关于应用面板的实现，将作为 [`DesignDocs/architecture/面板与接口/application-panel-integration-plan.md`](DesignDocs/architecture/面板与接口/application-panel-integration-plan.md:1) 中定义的、更宏大的面板集成方案的**首个 MVP 实例**。我们将遵循其核心原则（如 `iframe` 沙盒、`postMessage` 通信），但实现一个最小化的、以事件为中心的 API 子集，以达成一个可工作的、端到端的自主 Agent 交互闭环。
 
 ---
 
 ## 2. 实施阶段
 
-### 阶段 0: 后端核心服务 (基础)
+### 阶段 0: 基础服务确认 (已完成)
 
-**目标**: 搭建支持异步 Agent 运行的基础设施。
+*   **确认项**:
+    *   后端 `ExecutionEngine` 可执行工作流。
+    *   后端 `WorldStateService` 可管理场景状态。
+    *   后端 `WebSocketManager` 支持按场景隔离的事件发布/订阅。
+    *   前端 `executionStore` 可响应后端的执行状态更新。
 
-*   **任务 1: 实现/完善 `WorldStateService`**
-    *   **描述**: 提供一个场景范围内的、可进行原子性读写的共享状态存储服务。这是 Agent 感知环境的基础。
+### 阶段 1: 核心运行时骨架 (后端)
+
+**目标**: 搭建 v3 架构的核心后端组件：`SceneManager` 和 `AgentRuntime` 的基础骨架。
+
+*   **任务 1.1: 定义核心 Schema**
+    *   **描述**: 在 `packages/types` 中，根据 v3 架构文档，正式创建 `AgentProfile` 和 `SceneDefinition` 的 Zod Schema。
+    *   **关键产出**: `packages/types/src/schemas.ts` 中新增 `AgentProfileSchema` 和 `SceneDefinitionSchema`。
+
+*   **任务 1.2: 实现 `SceneManager` 服务**
+    *   **描述**: 创建 `SceneManager` 服务，负责管理场景实例的生命周期。
+    *   **MVP 功能**:
+        *   `createScene(sceneDefinition)`: 根据场景定义，创建场景实例。此过程会初始化 `WorldState`，并为场景中定义的每个 Agent 调用 `AgentRuntime` 的创建流程。
+        *   `destroyScene(sceneInstanceId)`: 销毁场景实例和其下的所有 Agent。
+        *   (此阶段暂不实现复杂的事件到工作流的路由，重点是生命周期管理)
+    *   **关键产出**: `apps/backend/src/services/SceneManager.ts` 文件和 `SceneManager` 类的基础实现。
+
+*   **任务 1.3: 实现 `AgentRuntime` 服务骨架**
+    *   **描述**: 创建 `AgentRuntime` 服务，负责驱动单个 Agent 实例。
+    *   **MVP 功能**:
+        *   **构造函数**: 接收 `agentProfile` 和场景上下文（`WorldState` 访问器、`EventBus` 发布/订阅器）。加载 Profile 并初始化 `PrivateState`。
+        *   **`start()` 方法**: 启动 Agent 的审议循环。在 MVP 阶段，这个循环可以是一个简单的定时器 (e.g., `setInterval`)。
+        *   **审议循环 (`tick()`)**: 在每次循环中：
+            1.  **准备上下文**: 收集 `WorldState`, `PrivateState` 等信息。
+            2.  **请求执行**: 将上下文和 `core_deliberation_workflow_id` 提交给 `ExecutionEngine` 执行。
+            3.  **(暂不处理)** 此时暂不复杂处理工作流的返回结果。
+    *   **关键产出**: `apps/backend/src/services/AgentRuntime.ts` 文件和 `AgentRuntime` 类的基础实现。
+
+### 阶段 2: 前端面板集成 (对齐 `panel-api` 规范)
+
+**目标**: 遵循 [`panel-spec-and-lifecycle.md`](./面板与接口/panel-spec-and-lifecycle.md:1) 和 [`panel-api-specification.md`](./面板与接口/panel-api-specification.md:1) 的核心原则，搭建前端应用面板的承载容器，并实现一个服务于 Agent 交互的 `panelApi` MVP。
+
+*   **任务 2.1: 实现 `PanelContainer.vue` 组件**
+    *   **描述**: 创建一个 Vue 组件，该组件能接收 `PanelDefinition` (依据 [`panel-spec-and-lifecycle.md`](./面板与接口/panel-spec-and-lifecycle.md:1))，并据此渲染一个安全的 `<iframe>` 沙盒来加载面板的 `uiEntryPoint`。
+    *   **安全要求**: 必须实施 `sandbox` 属性，初始阶段可限制所有权限，按需开启。
+    *   **关键产出**: `apps/frontend-vueflow/src/components/panel/PanelContainer.vue`。
+
+*   **任务 2.2: 实现 MVP 版 `panelApi` 并建立通信**
+    *   **描述**: 实现一个 MVP 版本的 `panelApi`，作为 [`panel-api-specification.md`](./面板与接口/panel-api-specification.md:1) 中定义接口的子集。此阶段，API 核心是**事件总线**，而非完整的工作流执行。
+    *   **API 设计 (注入到 `window.comfyTavern.panelApi`)**:
+        ```typescript
+        interface PanelApiMvp {
+          events: {
+            // 订阅来自 Host (由 Agent 发起) 的事件
+            subscribe: (callback: (event: { type: string; payload: any; }) => void) => () => void; // 返回取消订阅函数
+            // 向 Host (最终转发给 Agent) 发布事件
+            publish: (event: { type: string; payload: any; }) => void;
+          }
+        }
+        ```
+    *   **通信流程**:
+        1.  **Host -> Panel**: `PanelContainer` 监听后端 WebSocket 事件，通过 `iframe.contentWindow.postMessage` 转发给 `<iframe>`。`panelApi` 内部的 `subscribe` 回调函数负责接收这些消息。
+        2.  **Panel -> Host**: `panelApi` 的 `publish` 方法调用 `parent.postMessage` 将事件发送到 `PanelContainer`。`PanelContainer` 再通过 WebSocket 发送到后端对应的场景实例。
     *   **关键产出**:
-        *   一个可以在后端被调用的服务，能够为不同的场景实例（`scene_instance_id`）创建、读取、更新和删除独立的 `WorldState` JSON 对象。
-        *   需要考虑并发控制，确保更新的原子性。
+        *   `apps/frontend-vueflow/src/services/panelApiService.ts` (封装 `panelApi` 的注入和 `postMessage` 通信逻辑)。
+        *   `PanelContainer.vue` 中实现与 `<iframe>` 的双向安全通信。
+        *   `apps/frontend-vueflow/src/views/` 下可以创建一个简单的页面来测试 `PanelContainer.vue`。
 
-*   **任务 2: 扩展 `WebSocketManager` 以支持场景隔离的 `EventBus`**
-    *   **描述**: 确保每个场景实例都有自己独立的事件通道，用于 Agent 间的通信和 Agent 与环境的交互。
+### 阶段 3: 端到端交互闭环 MVP
+
+**目标**: 打通从 Agent 主动发布事件到前端面板响应并回传事件的完整异步交互流程。
+
+*   **任务 3.1: 实现核心原子工具节点**
+    *   **描述**: 在后端实现 Agent 与环境交互所需的最核心的工具节点。
     *   **关键产出**:
-        *   `WebSocketManager` 能够管理多个逻辑上的事件通道，每个通道与一个 `scene_instance_id` 关联。
-        *   实现 `subscribe` 和 `publish` 方法，允许后端服务（如 `AgentRuntime`）向特定场景通道发布事件或从中订阅事件。
-        *   前端客户端连接时，能够声明其希望监听的场景通道。
+        *   `scene:PublishEvent`: 在 `execute` 方法中，调用从 `context` 传入的场景 `EventBus` 的 `publish` 方法。
+        *   `agent:UpdatePrivateState`: 在 `execute` 方法中，调用从 `context` 传入的 `AgentRuntime` 的方法来更新 `PrivateState`。
 
----
-
-### 阶段 1: 后端集成与 Agent 运行时
-
-**目标**: 让 Agent 能够在后端利用现有工具运行起来，并能处理复杂工作流。
-
-*   **任务 1: 在后端实现 `workflowLoader` 和节点定义加载**
-    *   **描述**: 根据 `refactor-workflow-utils-plan.md` 中规划的第三阶段，在后端实现 `WorkflowLoader` 接口，使其能从数据库或文件系统加载工作流定义。同时，也需要加载所有 `NodeDefinition`。
-    *   **关键产出**:
-        *   一个 `workflowLoader` 函数，能够根据 `workflowId` 异步返回 `WorkflowStorageObject`。
-        *   一个服务或单例，持有所有已注册的 `NodeDefinition` 的 `Map<string, NodeDefinition>`。
-        *   这些产出将作为依赖，注入到后续的服务中。
-
-*   **任务 2: 实现 `SceneManager` 和 `AgentRuntime` 核心**
-    *   **描述**: `AgentRuntime` 作为核心协调器，在其“思考”阶段决定需要执行某个工作流（如技能或审议流）时，它会触发内部的**工作流准备模块**。该模块负责调用共享包 `@comfytavern/utils` 中提供的 `flattenStorageWorkflow` 和 `transformStorageToExecutionPayload` 函数，将存储格式的工作流安全、一致地转换为可被 `ExecutionEngine` 执行的最终 `WorkflowExecutionPayload`。
-    *   **关键产出**:
-        *   `SceneManager`: 负责根据场景定义，创建、管理和销毁 `AgentRuntime` 实例。
-        *   `AgentRuntime`:
-            *   能够加载 `agent_profile.json` 并据此进行初始化。
-            *   能根据 `subscribed_event_types` 向场景的 `EventBus` 订阅事件。
-            *   在收到事件或定时触发时，执行其核心的“感知-思考-行动”循环。
-            *   在“行动”阶段，能够**委托工作流准备模块**生成执行负载，并请求 `ExecutionEngine` 执行工作流。
-            *   能够解析工作流的执行结果，并执行如“发布事件”到 `EventBus` 等后续指令。
-
-*   **任务 3: 实现核心原子工具**
-    *   **描述**: 实现 Agent 工作流中最基础的与环境交互的节点，如 `PublishEventTool`, `ReadWorldStateTool`, `UpdateWorldStateTool` 等。
-    *   **关键产出**: 后端节点，这些节点在执行时会调用 `EventBus` 和 `WorldStateService` 提供的服务。
-
----
-
-### 阶段 2: 前端通信与事件驱动 UI
-
-**目标**: 让前端面板能够作为 Agent 的“感官”和“喉舌”，能与后端进行异步通信。
-
-*   **任务 1: 创建 `PanelContainer.vue` 和 `panelApi`**
-    *   **描述**: 创建一个 Vue 组件，该组件能接收 `PanelDefinition` 对象，并据此渲染一个 `<iframe>` 来安全地加载面板的 `uiEntryPoint`。同时，设计并实现向 `<iframe>` 注入 `window.comfyTavernPanelApi` 对象的机制。
-    *   **关键产出**: 一个可以展示任何静态 HTML 页面的面板容器组件。
-
-*   **任务 2: 实现 `panelApi` 的事件订阅与发布功能**
-    *   **描述**: 重点实现 `panelApi` 的两个核心方法：
-        1.  `panelApi.subscribe(eventType, callback)`: 允许面板注册一个回调函数来监听从后端（通过 WebSocket）转发来的特定类型的事件。
-        2.  `panelApi.publish(eventType, payload)`: 允许面板将用户的操作封装成事件，通过 WebSocket 发送给后端。
-    *   **关键产出**: 一套完整的前后端事件通信链路。
-
----
-
-### 阶段 3: 端到端交互闭环
-
-**目标**: 完成一个完整的、由 Agent 发起的、通过事件驱动的异步交互流程，以验证整个架构。
-
-*   **任务 1: 创建一个示例 Agent 和面板**
+*   **任务 3.2: 创建示例 Agent 和面板 (MVP 版)**
     *   **Agent (后端)**:
-        *   定义一个简单的 Agent Profile，其核心审议流逻辑如下：
-            1.  检查其 `PrivateState` 中的 `hasGreeted` 标志。
-            2.  如果为 `false`，则调用 `PublishEventTool` 发布一个 `{type: 'request_user_name'}` 事件，并将 `hasGreeted` 设为 `true`。
-            3.  Agent 订阅 `user_name_response` 事件。
-            4.  当收到此事件时，其审议流被再次触发，获取事件中的用户名，并发布一个 `{type: 'show_greeting', message: 'Hello, [username]'}` 事件。
+        *   创建一个简单的 `agent_profile.json`。
+        *   其 `core_deliberation_workflow` 审议流逻辑简化为：
+            1.  检查 `PrivateState` 中的 `hasGreeted` 标志。
+            2.  如果为 `false`，则调用 `scene:PublishEvent` 发布 `{type: 'request_user_name'}` 事件，然后调用 `agent:UpdatePrivateState` 将 `hasGreeted` 设为 `true`。
+        *   在 `scene.json` 中配置此 Agent。
     *   **面板 (前端)**:
-        *   定义一个简单的面板，其 `uiEntryPoint` 是一个包含基本 JS 逻辑的 HTML 文件。
-        *   JS 逻辑：
-            1.  调用 `panelApi.subscribe('request_user_name', ...)`，回调函数用于在页面上动态创建一个输入框和一个提交按钮。
-            2.  当用户点击提交按钮时，调用 `panelApi.publish('user_name_response', { name: ... })`。
-            3.  调用 `panelApi.subscribe('show_greeting', ...)`，回调函数用于在页面上显示最终的问候语。
+        *   创建一个简单的 `hello_panel.html` 文件。
+        *   JS 逻辑:
+            1.  调用 `window.comfyTavern.panelApi.events.subscribe(event => { ... })`。在回调中，检查 `event.type`。
+            2.  如果 `event.type === 'request_user_name'`，则在页面上动态创建输入框和按钮。
+            3.  用户点击按钮时，调用 `window.comfyTavern.panelApi.events.publish({ type: 'user_name_response', payload: { name: ... } })`。
 
-*   **任务 2: 端到端调试与验证**
-    *   **描述**: 运行整个流程，确保 Agent 和面板能够通过定义的事件流正确地协同工作，完成从请求到响应的完整交互。
-    *   **关键产出**: 一个可工作的、文档化的异步交互示例，作为未来更复杂应用的基石。
+*   **任务 3.3: 扩展 `SceneManager` 以处理入站事件**
+    *   **描述**: `SceneManager` 需要能处理从 WebSocket 传来的、由面板发布的事件。
+    *   **MVP 功能**:
+        *   实现一个方法 `handlePanelEvent(sceneInstanceId, event)`。
+        *   当此方法被调用时，它将该事件作为输入，触发关联 Agent 的一次**额外**的审议循环，而不是通过一个固定的事件->工作流映射。这简化了 MVP 实现，将事件处理逻辑保留在 Agent 的核心审议流中。
+    *   **关键产出**: `SceneManager` 和 `websocket/handler.ts` 的功能增强。
+
+*   **任务 3.4: 端到端调试**
+    *   **描述**: 启动一个包含示例 Agent 和面板的场景。验证 Agent 的 `request_user_name` 事件能被面板接收并渲染出 UI，面板回传的 `user_name_response` 事件能被后端接收并触发 Agent 的下一次审议。
+    *   **关键产出**: 一个可工作的、文档化的异步交互示例，作为 v3 架构 MVP 的成功标志。
 
 ---
 
-## 3. 后续展望
+## 4. 后续展望 (MVP之后)
 
-在完成上述核心实施计划后，可以继续推进以下优化和增强功能：
+在完成 MVP 后，我们将按照 v3 架构文档的指引，继续完善和增强系统：
 
-*   **标准化交互模板**: 设计并实现如“问答”、“确认”、“多选一”等标准交互的事件和面板 UI 模板，简化开发。
-*   **`ApiAdapterManager`**: 作为可选的便捷层，实现 `ApiAdapterManager`，用于将面板的数据格式（如 OpenAI API 格式）转换为内部工作流所需的输入，但不参与流程控制。
-*   **图形化编辑器**: 为 Agent Profile、场景定义、面板定义等提供图形化的管理界面。
-*   **开发者文档与教程**: 撰写详细的文档，指导社区开发者如何创建自己的 Agent 和应用面板。
+*   **丰富 Agent 能力**: 实现更多原子工具 (`ReadWorldState`, `WriteToKnowledgeBase` 等) 和学习反思机制。
+*   **完善 `SceneManager`**: 实现更复杂的事件到工作流的路由、场景生命周期工作流等。
+*   **增强面板功能**: 逐步完整实现 [`panel-api-specification.md`](./面板与接口/panel-api-specification.md:1) 中定义的 `panelApi`，包括 `executeWorkflow`、`getWorkflowInterface` 等高级功能，并提供标准化的交互模板。
+*   **可视化与调试**: 为 Agent 的 `PrivateState` 和审议过程提供可视化调试工具。
