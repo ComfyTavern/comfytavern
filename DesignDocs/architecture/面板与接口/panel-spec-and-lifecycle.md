@@ -2,17 +2,18 @@
 
 ## 1. 引言与目标
 
-**背景**：ComfyTavern 致力于将复杂的工作流封装成面向最终用户的交互式体验。此文档的核心是“应用面板”——一种功能丰富的、沙盒化的微型 Web 应用。这些面板由创作者构建，可以使用从简单 HTML/JS/CSS 到复杂 WebAssembly 应用（如游戏引擎、高级编辑器）等任意 Web 技术栈，并通过标准化的 API 与 ComfyTavern 平台进行深度集成。
+**背景**：ComfyTavern 致力于将复杂的工作流封装成面向最终用户的交互式体验。这些体验通过“应用面板”提供，它本质上是一个**灵活的视图容器**。该容器可以被用户任意放置——例如作为独立的全屏页面、停靠在侧边栏，或以窗口形式浮动——并在其中加载和运行一个**功能丰富的、沙盒化的微型 Web 应用**。这些微应用由创作者构建，可以使用从简单 HTML/JS/CSS 到复杂 WebAssembly 应用（如游戏引擎、高级编辑器）等任意 Web 技术栈，并通过标准化的 API 与 ComfyTavern 平台进行深度集成。
 
 **目标**：本文档旨在详细定义应用面板的规范、其数据结构、创作者如何构建和提供这些微应用，以及平台如何管理其生命周期。目标是实现一个高度灵活、功能强大、安全可控且对创作者友好的面板生态系统。
 
 ## 2. 核心设计理念
 
-*   **面板即微应用 (Panel as a Micro-Application)**：将每个应用面板视为一个独立的、功能相对完整的 Web 应用，而不仅仅是一个简单的 UI 封装。它可以拥有自己的状态管理、复杂逻辑，甚至集成第三方库或服务。
+*   **面板即微应用 (Panel as a Micro-Application)**：将每个应用面板视为一个独立的、功能完备的 Web 应用。它可以拥有自己的状态管理、复杂逻辑，甚至集成第三方库或服务。
 *   **创作者驱动的体验**：应用面板的完整用户体验由创作者完全控制和设计。
 *   **沙盒化安全执行**：所有面板都在严格的沙盒环境 (`<iframe>`) 中运行，以确保主应用和其他面板的安全。
 *   **标准化接口通信**：面板通过平台注入的标准化 JavaScript API (`window.comfyTavernPanelApi`) 与 ComfyTavern 核心功能及宿主环境进行通信。
 *   **声明式配置与能力**：面板通过 `PanelDefinition` 清晰地声明其元数据、入口点、所需权限和绑定的工作流。
+*   **响应式与自适应内容 (Responsive and Self-Adapting Content)**：平台提供灵活的容器，内容的呈现方式则由应用内部的 CSS 和 JavaScript 逻辑完全决定。创作者可以自由设定面板的初始尺寸与宽高比。
 
 ## 3. 应用面板定义 (`PanelDefinition`)
 
@@ -33,8 +34,6 @@
         *   默认：平台应提供一个安全的默认配置，并允许面板根据需要请求额外权限。
     *   `featurePermissions`: `string[]` (可选, 替代或补充 `sandboxAttributes` 中对特定 API 的控制)
         *   描述：明确声明面板需要的浏览器特性或 API，例如 `["webgl", "webaudio", "gamepad", "clipboard-read", "fullscreen"]`。平台可据此进行更细致的权限授予或向用户提示。
-    *   `initialHeight`: `string` (可选, e.g., "800px", "100vh") - 建议初始高度。
-    *   `aspectRatio`: `string` (可选, e.g., "16:9") - 建议的宽高比，用于响应式布局。
 *   **`workflowBindings`**: `PanelWorkflowBinding[]`
     *   描述：定义此面板可绑定的工作流。
     *   结构 (`PanelWorkflowBinding`):
@@ -69,11 +68,11 @@
         *   获取绑定的工作流接口定义 (`getWorkflowInterface`)。
         *   执行工作流 (`executeWorkflow`)：这既可以是用户在面板上直接触发的，也可以是面板响应用户操作后，将数据传递给一个与 Agent 交互的技能工作流。
         *   订阅执行事件 (`subscribeToExecutionEvents`)：用于接收工作流（包括 Agent 的技能工作流）执行过程中的状态更新和结果。
-        *   **响应 Agent 交互请求**：面板通过订阅 `panelApi` 的事件（例如 `onInteractionRequest`），响应由 Agent 工作流执行后产出的交互请求。面板根据请求渲染相应 UI，收集用户输入，并将结果通过回调返回给前端的交互协调器，由协调器负责后续处理（如触发新一轮的工作流）。
+        *   **响应 Agent 交互请求**：面板通过订阅 `panelApi` 的事件（例如 `onInteractionRequest`），响应由 Agent 工作流执行后产出的交互请求。面板根据请求渲染相应 UI，收集用户输入，并将结果通过回调函数交由交互协调器处理，以触发后续流程。
         *   **展示 Agent 状态与输出**: 订阅由 Agent (通过场景事件总线间接)发布的特定事件，以实时更新界面，展示 Agent 的状态、行动结果或世界环境的变化。
         *   获取宿主信息 (如主题 `getCurrentTheme`, 用户偏好等)。
         *   请求宿主服务 (如调整iframe尺寸、请求持久化存储、触发通知等，需在 `comfyTavernPanelApi` 中定义相应接口)。
-    3.  管理自身状态，响应用户交互（这些交互可能直接触发面板内逻辑，或通过 API 间接触发 Agent 行为），并根据从宿主获取的数据（包括 Agent 的输出和事件）更新 UI。
+    3.  管理自身状态并响应用户交互。这些交互既可以直接驱动面板内部逻辑，也可以通过 API 间接触发 Agent 的行为。同时，面板根据从宿主获取的数据（如 Agent 的输出和事件）来更新 UI。
 
 ## 5. 面板生命周期与管理
 
@@ -93,7 +92,7 @@
 除了核心的工作流交互，`comfyTavernPanelApi` 应设计为支持更丰富的面板-宿主通信：
 
 *   **UI/UX 服务**：
-    *   `requestResize(dimensions: { width?: string, height?: string })`
+    *   `requestResize(dimensions: { width?: string, height?: string })`: **(特定宿主环境适用)** 面板应用可以请求其宿主容器调整尺寸。此 API 主要用于面板被嵌入在原生应用（如 Tauri 扩展的窗口）中的场景，此时面板内的 Web 内容需要一种方式来控制其外部原生窗口的大小。在标准浏览器环境中，由于容器尺寸由用户直接控制，宿主环境可能会忽略此请求。
     *   `requestFullscreen()`
     *   `showNotification(message: string, type: 'info' | 'success' | 'warning' | 'error')`
     *   `getSystemColors(): Promise<object>` (获取主题色、字体等)
