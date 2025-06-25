@@ -4,6 +4,16 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 [![Stars](https://img.shields.io/github/stars/ComfyTavern/comfytavern?style=social)](https://github.com/ComfyTavern/comfytavern)
 
+<p align="center">
+  <a href="./README.md"><b>简体中文</b></a>
+  &nbsp;•&nbsp;
+  <a href="./README.en.md">English</a>
+  &nbsp;•&nbsp;
+  <a href="./README.ja.md">日本語</a>
+  &nbsp;•&nbsp;
+  <a href="./README.ru.md">Русский</a>
+</p>
+
 ### 🌉 连接 AI 创作与终端体验
 
 ComfyTavern 致力于将复杂的 AI 工作流，转化为直观、好用、可交互的**迷你应用**。
