@@ -50,7 +50,8 @@ export class ApiAdapterManager {
   public async invoke(request: InvocationRequest): Promise<InvocationResponse> {
     if (request.mode === 'native') {
       // 原生模式，检查是否有实时预览
-      const targetWorkflowId = request.workflowId;
+      // usePanelApiHost 已确保 workflowId 存在
+      const targetWorkflowId = request.workflowId!;
       const openedTab = this.tabStore.tabs.find(
         (tab) => tab.type === 'workflow' && tab.associatedId === targetWorkflowId
       );
@@ -86,15 +87,14 @@ export class ApiAdapterManager {
           { originalError: error }
         );
       }
-    }
-
-    if (request.mode === 'adapter') {
+    } else if (request.mode === 'adapter') {
       // 适配器模式，执行转换逻辑
-      const adapter = this.adapterStore.getAdapter(request.adapterId);
+      // usePanelApiHost 已确保 adapterId 存在
+      const adapter = this.adapterStore.getAdapter(request.adapterId!);
       if (!adapter) {
         throw new AdapterError(
           'ADAPTER_NOT_FOUND',
-          `未找到ID为 "${request.adapterId}" 的适配器`
+          `未找到ID为 "${request.adapterId!}" 的适配器`
         );
       }
 
@@ -137,10 +137,10 @@ export class ApiAdapterManager {
           { originalError: error }
         );
       }
+    } else {
+      // request.mode 在 usePanelApiHost 中已确保存在
+      throw new Error(`未知的调用模式: ${request.mode!}`);
     }
-    
-    // @ts-expect-error a type-guard to ensure that all request modes are handled
-    throw new Error(`未知的调用模式: ${request.mode}`);
   }
 
   /**

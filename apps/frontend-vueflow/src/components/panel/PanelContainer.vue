@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watchEffect, onMounted, computed } from 'vue';
+import { ref, watchEffect, computed } from 'vue';
 import { useClipboard } from '@vueuse/core';
 import { usePanelApiHost } from '@/composables/panel/usePanelApiHost';
 import { usePanelStore } from '@/stores/panelStore';
@@ -22,13 +22,7 @@ const currentDefinition = ref<PanelDefinition | null>(null);
 const panelOrigin = computed(() => window.location.origin);
 const logs = ref<any[]>([]);
 const isLogPanelVisible = ref(false);
-const { initializeHost } = usePanelApiHost(iframeRef, panelOrigin, logs);
-
-onMounted(() => {
-  // `load` 事件监听器已被移除，
-  // 注入脚本的逻辑现在由 usePanelApiHost 中的 `panel-ready` 消息处理器触发。
-  initializeHost();
-});
+// usePanelApiHost 将在 watchEffect 中当 projectId 和 panelId 可用时初始化
 
 const { copy, copied, isSupported } = useClipboard();
 
@@ -43,6 +37,10 @@ const copyLogs = () => {
 watchEffect(async () => {
   const projectId = projectStore.currentProjectId;
   if (props.panelId && projectId) {
+    // projectId 和 panelId 都已就绪，可以安全地初始化 API Host
+    const { initializeHost } = usePanelApiHost(iframeRef, panelOrigin, projectId, props.panelId, logs);
+    initializeHost();
+
     console.log(`[PanelContainer] 开始加载面板定义: ${props.panelId} for project: ${projectId}`);
 
     const panelDefinition = await panelStore.fetchPanelDefinition(projectId, props.panelId);

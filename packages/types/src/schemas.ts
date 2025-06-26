@@ -70,15 +70,27 @@ export type PanelDeclaration = z.infer<typeof PanelDeclarationSchema>;
  /**
   * Schema 定义：完整的面板定义。
   */
+/**
+ * Schema 定义: 单个面板工作流绑定的具体配置
+ */
+export const PanelWorkflowBindingSchema = z.object({
+  alias: z.string().describe("调用别名，面板通过此别名调用工作流"),
+  workflowId: z.string().describe("绑定的工作流ID"),
+  description: z.string().optional().describe("此绑定的功能描述"),
+  notes: z.string().optional().describe("开发者的备注"),
+});
+export type PanelWorkflowBinding = z.infer<typeof PanelWorkflowBindingSchema>;
+
 export const PanelDefinitionSchema = z.object({
   id: z.string(),
   displayName: z.string(),
   description: z.string().optional(),
   version: z.string(),
   uiEntryPoint: z.string().describe("面板 UI 的入口文件 (例如: index.html)"),
+  workflowBindings: z.array(PanelWorkflowBindingSchema).optional().describe("面板与其可调用的工作流之间的绑定关系"),
   panelDirectory: z.string().optional().describe("面板所在的目录名，由后端动态填充"),
   apiSpec: z.string().optional().describe("指向面板 API 规范文件的路径"),
-  requiredWorkflows: z.array(z.string()).optional().describe("面板运行所需的 workflow ID 列表"),
+  requiredWorkflows: z.array(z.string()).optional().describe("【旧版，待废弃】面板运行所需的 workflow ID 列表"),
   icon: z.string().optional(),
   customMetadata: z.record(z.any()).optional(),
 });

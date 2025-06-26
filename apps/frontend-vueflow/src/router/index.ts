@@ -12,6 +12,7 @@ import EditorView from '../views/EditorView.vue'
 import PanelListView from '../views/PanelListView.vue'
 import PanelContainer from '../components/panel/PanelContainer.vue'
 
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -119,6 +120,12 @@ const router = createRouter({
           name: 'ProjectPanel',
           component: PanelContainer,
           props: true, // 将 panelId 作为 prop 传递给 PanelContainer
+        },
+        // 面板设置
+        {
+          path: 'panel/:panelId/settings',
+          name: 'ProjectPanelSettings',
+          component: () => import('../views/PanelSettingsView.vue'),
         },
         // API 适配器管理
         {

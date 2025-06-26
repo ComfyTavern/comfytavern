@@ -3,6 +3,7 @@ import { ref, reactive } from 'vue';
 import type { PanelDefinition } from '@comfytavern/types';
 import { getPanels, getPanelDefinition } from '@/utils/api';
 import { useDialogService } from '@/services/DialogService';
+import { fileManagerApiClient } from '@/api/fileManagerApi';
 
 export const usePanelStore = defineStore('panel', () => {
   const dialogService = useDialogService();
@@ -12,6 +13,7 @@ export const usePanelStore = defineStore('panel', () => {
   const panelList = ref<PanelDefinition[]>([]);
   const isLoadingList = ref(false);
   const isLoadingDefinition = ref(false);
+  const isSavingDefinition = ref(false);
 
   // Actions
 
@@ -76,6 +78,48 @@ export const usePanelStore = defineStore('panel', () => {
       isLoadingDefinition.value = false;
     }
   }
+  
+    /**
+     * 保存面板定义文件。
+     * @param projectId - 项目的唯一标识符。
+     * @param panelDef - 要保存的完整面板定义对象。
+     */
+  async function savePanelDefinition(projectId: string, panelDef: PanelDefinition): Promise<boolean> {
+    if (!projectId || !panelDef.id || !panelDef.panelDirectory) {
+      console.error('[panelStore] savePanelDefinition: projectId, panelId 或 panelDirectory 缺失。', { projectId, panelDef });
+      dialogService.showError('保存失败：关键信息缺失。');
+      return false;
+    }
+    isSavingDefinition.value = true;
+    try {
+      // panel.json 的完整逻辑路径
+      // const panelPath = `user://projects/${projectId}/ui/${panelDef.panelDirectory}/panel.json`;
+      // 目标目录
+      const targetDir = `user://projects/${projectId}/ui/${panelDef.panelDirectory}/`;
+
+      const blob = new Blob([JSON.stringify(panelDef, null, 2)], { type: 'application/json' });
+      const formData = new FormData();
+      formData.append('files', blob, `panel.json`);
+
+      await fileManagerApiClient.writeFile(targetDir, formData);
+
+      // 更新本地缓存
+      panelsById.set(panelDef.id, panelDef);
+      const index = panelList.value.findIndex(p => p.id === panelDef.id);
+      if (index !== -1) {
+        panelList.value[index] = panelDef;
+      }
+
+      dialogService.showSuccess('面板配置已保存。');
+      return true;
+    } catch (error) {
+      console.error(`[panelStore] 保存面板定义失败 (ID: ${panelDef.id}):`, error);
+      dialogService.showError(`保存面板 ${panelDef.displayName} 失败。`);
+      return false;
+    } finally {
+      isSavingDefinition.value = false;
+    }
+  }
 
   return {
     // State
@@ -83,9 +127,11 @@ export const usePanelStore = defineStore('panel', () => {
     panelList,
     isLoadingList,
     isLoadingDefinition,
+    isSavingDefinition,
 
     // Actions
     fetchPanelList,
     fetchPanelDefinition,
+    savePanelDefinition,
   };
 });

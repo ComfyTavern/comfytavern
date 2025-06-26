@@ -1,7 +1,6 @@
 import { klona } from 'klona';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import { useProjectStore } from '@/stores/projectStore';
-import { useTabStore } from '@/stores/tabStore';
 import { useDialogService } from './DialogService';
 import { useWorkflowExecution } from '@/composables/workflow/useWorkflowExecution';
 import { useWorkflowData } from '@/composables/workflow/useWorkflowData';
@@ -11,7 +10,6 @@ import { useSlotDefinitionHelper } from '@/composables/node/useSlotDefinitionHel
 import { useEdgeStyles } from '@/composables/canvas/useEdgeStyles';
 import type { FlowExportObject, Node as VueFlowNode, Edge as VueFlowEdge } from '@vue-flow/core';
 import {
-  type WorkflowStorageObject,
   DataFlowType,
   type WorkflowStorageNode,
   type WorkflowStorageEdge,

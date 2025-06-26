@@ -59,7 +59,6 @@ async function create(projectId: string, payload: CreateApiAdapterPayload): Prom
   const adaptersDir = getAdaptersDir(projectId);
   // 为新适配器生成一个唯一ID
   const newAdapterId = payload.name.replace(/\s+/g, '_').toLowerCase() + '_' + uuidv4().substring(0, 8);
-  const newAdapterPath = `${adaptersDir}${newAdapterId}.json`;
 
   const newAdapter: Omit<ApiAdapter, 'id'> = {
       ...payload,
@@ -85,7 +84,6 @@ async function create(projectId: string, payload: CreateApiAdapterPayload): Prom
  * 更新一个现有的API适配器
  */
 async function update(projectId: string, adapterId: string, payload: UpdateApiAdapterPayload): Promise<ApiAdapter> {
-  const adapterPath = `${getAdaptersDir(projectId)}${adapterId}.json`;
   const existingAdapter = await get(projectId, adapterId);
 
   if (!existingAdapter) {

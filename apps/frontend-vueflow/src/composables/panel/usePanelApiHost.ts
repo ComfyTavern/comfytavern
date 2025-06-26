@@ -1,7 +1,8 @@
-import { onUnmounted, type Ref, watch } from 'vue';
+import { onUnmounted, type Ref, watch, ref } from 'vue';
 import { useExecutionStore } from '@/stores/executionStore';
 import { useApiAdapterManager } from '@/services/ApiAdapterManager';
-import { ExecutionStatus, type InvocationRequest } from '@comfytavern/types';
+import { ExecutionStatus, type InvocationRequest, type PanelDefinition } from '@comfytavern/types';
+import { usePanelStore } from '@/stores/panelStore';
 
 // 定义消息协议接口
 interface ApiRequestMessage {
@@ -31,10 +32,15 @@ interface ApiResponseMessage {
 export function usePanelApiHost(
   iframeRef: Ref<HTMLIFrameElement | null>,
   panelOrigin: Ref<string>,
+  projectId: string,
+  panelId: string,
   logs: Ref<any[]>
 ) {
   const executionStore = useExecutionStore();
   const apiAdapterManager = useApiAdapterManager();
+  const panelStore = usePanelStore();
+
+  const panelDef = ref<PanelDefinition | null>(null);
   const activeSubscriptions = new Map<string, () => void>(); // 存储 executionId -> unwatch function
 
   // --- 宿主端 API 实现 ---
@@ -53,16 +59,49 @@ export function usePanelApiHost(
     },
 
     /**
-     * 新的核心调用方法，支持原生和适配器模式。
+     * 新的核心调用方法，支持原生、适配器和别名模式。
      * @param request - InvocationRequest 对象
      * @returns 返回一个包含 executionId 的对象
      */
     invoke: async (request: InvocationRequest) => {
-       console.log('[Host] Received invoke call with mode:', request.mode);
-       // 直接将请求转发给 ApiAdapterManager
-       // ApiAdapterManager 内部会处理 'native' 和 'adapter' 模式，
-       // 并调用 WorkflowInvocationService
-       return await apiAdapterManager.invoke(request);
+      console.log('[Host] Received invoke call with request:', request);
+      
+      if (!panelDef.value) {
+        throw new Error("面板定义尚未加载，无法处理调用请求。");
+      }
+
+      let finalRequest: InvocationRequest;
+
+      // 优先处理别名
+      if (request.alias) {
+        const binding = panelDef.value.workflowBindings?.find(b => b.alias === request.alias);
+        if (!binding) {
+          throw new Error(`未找到别名为 "${request.alias}" 的工作流绑定。`);
+        }
+        
+        finalRequest = {
+          mode: 'native', // 别名绑定总是解析为原生工作流调用
+          workflowId: binding.workflowId,
+          inputs: request.inputs,
+        };
+        console.log(`[Host] Alias "${request.alias}" resolved to workflowId "${binding.workflowId}".`);
+      } else {
+        finalRequest = request;
+      }
+
+      // 验证最终请求的有效性
+      if (finalRequest.mode === 'native' && !finalRequest.workflowId) {
+        throw new Error("原生模式调用缺少 'workflowId'。");
+      }
+      if (finalRequest.mode === 'adapter' && !finalRequest.adapterId) {
+        throw new Error("适配器模式调用缺少 'adapterId'。");
+      }
+      if (!finalRequest.mode) {
+        throw new Error("调用请求缺少 'mode'。");
+      }
+
+       // 将验证和转换后的请求转发给 ApiAdapterManager
+       return await apiAdapterManager.invoke(finalRequest);
     },
 
     /**
@@ -269,7 +308,13 @@ export function usePanelApiHost(
   /**
    * 初始化宿主环境，开始监听消息。
    */
-  const initializeHost = () => {
+  const initializeHost = async () => {
+    // 初始化时获取面板定义
+    panelDef.value = await panelStore.fetchPanelDefinition(projectId, panelId);
+    if (!panelDef.value) {
+      console.error(`[Host] Failed to fetch panel definition for ${panelId}. API calls may fail.`);
+    }
+
     window.addEventListener('message', handleMessage);
     console.log('[Host] Panel API host initialized and listening for messages.');
   };

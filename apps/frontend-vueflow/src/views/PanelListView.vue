@@ -20,22 +20,39 @@
 
     <!-- 面板网格 -->
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      <router-link
+      <div
         v-for="panel in panelStore.panelList"
         :key="panel.id"
-        :to="{ name: 'ProjectPanel', params: { projectId: currentProjectId, panelId: panel.id } }"
-        class="block bg-background-surface hover:bg-background--hover p-4 rounded-lg shadow transition-transform transform hover:-translate-y-1"
+        class="flex flex-col bg-background-surface rounded-lg shadow transition-shadow hover:shadow-lg"
       >
-        <div class="flex flex-col h-full">
+        <div class="p-4 flex-grow">
           <h2 class="text-lg font-semibold text-text-base mb-2 truncate">{{ panel.displayName }}</h2>
-          <p class="text-sm text-text-secondary flex-grow">{{ panel.description }}</p>
+          <p class="text-sm text-text-secondary flex-grow min-h-[40px]">{{ panel.description }}</p>
           <div class="text-xs text-text-disabled mt-4">
             <span>ID: {{ panel.id }}</span>
             <span class="mx-2">|</span>
             <span>v{{ panel.version }}</span>
           </div>
         </div>
-      </router-link>
+        <div class="flex items-center justify-end p-2 border-t border-border-base/40 bg-background-surface/60 rounded-b-lg">
+          <router-link
+            :to="{ name: 'ProjectPanelSettings', params: { projectId: currentProjectId, panelId: panel.id } }"
+            class="btn btn-sm btn-secondary mr-2"
+            v-comfy-tooltip="'配置此面板的工作流绑定和接口'"
+          >
+            <span class="icon-[fluent--settings-20-regular] w-4 h-4"></span>
+            <span class="ml-1">配置</span>
+          </router-link>
+          <router-link
+            :to="{ name: 'ProjectPanel', params: { projectId: currentProjectId, panelId: panel.id } }"
+            class="btn btn-sm btn-primary"
+            v-comfy-tooltip="'在新标签页中打开面板'"
+          >
+            <span class="icon-[fluent--open-20-regular] w-4 h-4"></span>
+            <span class="ml-1">打开</span>
+          </router-link>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -44,6 +61,7 @@
 import { onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { usePanelStore } from '@/stores/panelStore';
+import { vComfyTooltip } from '@/directives/vComfyTooltip';
 
 const route = useRoute();
 const panelStore = usePanelStore();
