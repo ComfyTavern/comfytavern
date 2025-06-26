@@ -80,7 +80,7 @@ export const useExecutionStore = defineStore('execution', () => {
 
   // 重置/准备指定标签页以进行新的执行
   const prepareForNewExecution = (internalId: string) => {
-    console.log(`[ExecutionStore] Preparing tab ${internalId} for new execution.`);
+    // console.log(`[ExecutionStore] Preparing tab ${internalId} for new execution.`);
     const state = ensureTabExecutionState(internalId);
     state.promptId = null; // 清除旧的 promptId
     state.workflowStatus = ExecutionStatus.IDLE;
@@ -225,7 +225,7 @@ export const useExecutionStore = defineStore('execution', () => {
 
       // 如果是最后一个块，可以考虑做一些清理或标记
       if (payload.isLastChunk) {
-        console.debug(`[ExecutionStore] Last chunk received for node ${payload.sourceNodeId} on tab ${internalId}`);
+        // console.debug(`[ExecutionStore] Last chunk received for node ${payload.sourceNodeId} on tab ${internalId}`);
         // 例如: nodeStreamContent.isComplete = true; (需要扩展接口)
       }
     } else {

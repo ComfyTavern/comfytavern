@@ -291,9 +291,13 @@ export function useWorkflowExecution() {
       return null;
     }
 
+    const finalInterfaceInputs = overrideInputs || workflowToExecute.interfaceInputs || {};
+
     const payload = transformStorageToExecutionPayload({
       nodes: workflowToExecute.nodes,
       edges: workflowToExecute.edges,
+      interfaceInputs: finalInterfaceInputs,
+      interfaceOutputs: workflowToExecute.interfaceOutputs,
     });
 
     setInitiatingExecution(executionId);
@@ -308,8 +312,6 @@ export function useWorkflowExecution() {
           workflowName: workflowToExecute.name,
           projectId: projectId,
         },
-        interfaceInputs: overrideInputs || workflowToExecute.interfaceInputs || {},
-        interfaceOutputs: workflowToExecute.interfaceOutputs || {},
       },
     };
 

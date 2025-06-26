@@ -259,5 +259,9 @@ export const WorkflowStorageObjectSchema = z.object({
   interfaceInputs: z.record(GroupSlotInfoSchema).optional(),
   interfaceOutputs: z.record(GroupSlotInfoSchema).optional(),
   referencedWorkflows: z.array(z.string()).optional(),
+  previewTarget: z.object({
+    nodeId: z.string(),
+    slotKey: z.string(),
+  }).nullable().optional(),
 });
 export type WorkflowStorageObject = z.infer<typeof WorkflowStorageObjectSchema>;

@@ -698,10 +698,34 @@ export class ExecutionEngine {
         userId: this.userId,
       };
 
-      const executeFn = definition.execute;
 
       // 统一执行逻辑：所有节点都被视为可能产生流。
       // normalizeToAsyncGenerator 会将 Promise<result> 转换为一个立即返回的 AsyncGenerator。
+      const hasStreamOutput = Object.values(definition.outputs || {}).some(output => output.isStream);
+
+      if (!hasStreamOutput) {
+        // --- 非流式节点的处理 ---
+        const result = await definition.execute(inputs, context) as Record<string, any>;
+        this.nodeResults[nodeId] = result;
+        this.nodeStates[nodeId] = ExecutionStatus.COMPLETE;
+        const durationMs = Date.now() - nodeStartTime;
+        loggingService.logNodeComplete(nodeId, node.fullType, result, durationMs)
+          .catch(err => console.error(`[Engine-${this.promptId}] Failed to log batch node complete for ${nodeId}:`, err));
+        this.sendNodeComplete(nodeId, result);
+        // Manually send YIELD message for compatibility, so the UI knows the node is 'finished' streaming
+        const finalPayloadContent: ChunkPayload = { type: 'finish_reason_chunk', content: 'Stream ended' };
+        const finalPayload: NodeYieldPayload = {
+          promptId: this.promptId,
+          sourceNodeId: nodeId,
+          yieldedContent: finalPayloadContent,
+          isLastChunk: true,
+        };
+        this.wsManager.broadcast('NODE_YIELD', finalPayload);
+        return { status: ExecutionStatus.COMPLETE };
+      }
+
+      // --- 流式节点的处理 (保持原逻辑) ---
+      const executeFn = definition.execute;
       const executionResult = executeFn(inputs, context);
       const nodeGenerator = this.normalizeToAsyncGenerator(executionResult);
 

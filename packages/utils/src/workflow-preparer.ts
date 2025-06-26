@@ -606,6 +606,8 @@ export async function flattenStorageWorkflow(
 export function transformStorageToExecutionPayload(workflow: {
   nodes: WorkflowStorageNode[];
   edges: WorkflowStorageEdge[];
+  interfaceInputs?: Record<string, any>;
+  interfaceOutputs?: Record<string, any>;
 }): WorkflowExecutionPayload {
   const executionNodes: ExecutionNode[] = workflow.nodes.map(
     (storageNode): ExecutionNode => {
@@ -639,5 +641,7 @@ export function transformStorageToExecutionPayload(workflow: {
   return {
     nodes: executionNodes,
     edges: executionEdges,
+    ...(workflow.interfaceInputs && { interfaceInputs: klona(workflow.interfaceInputs) }),
+    ...(workflow.interfaceOutputs && { interfaceOutputs: klona(workflow.interfaceOutputs) }),
   };
 }

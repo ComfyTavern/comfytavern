@@ -82,7 +82,7 @@ const handleRawMessage = (message: WebSocketMessage<any>) => {
   }
 
   try {
-    console.debug("WebSocketRouter message received:", message);
+    // console.debug("WebSocketRouter message received:", message);
     const payload = message.payload as any;
     const messagePromptId = payload?.promptId;
 
