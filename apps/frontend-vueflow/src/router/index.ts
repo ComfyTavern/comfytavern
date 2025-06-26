@@ -1,15 +1,15 @@
 import { createRouter, createWebHistory, type NavigationGuardNext, type RouteLocationNormalized } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import ProjectListView from '../views/ProjectListView.vue'
-import CharacterCardView from '../views/CharacterCardView.vue'
-import FileManagerPage from '../views/FileManagerPage.vue' // 导入文件管理器页面
-import HomeLayout from '../views/HomeLayout.vue' // 导入新的布局组件
+import HomeView from '../views/home/HomeView.vue'
+import ProjectListView from '../views/home/ProjectListView.vue'
+import CharacterCardView from '../views/home/CharacterCardView.vue'
+import FileManagerPage from '../views/home/FileManagerPage.vue' // 导入文件管理器页面
+import HomeLayout from '../views/home/HomeLayout.vue' // 导入新的布局组件
 import { useProjectStore } from '../stores/projectStore' // 导入项目 store
 // 导入新组件和视图
-import ProjectLayout from '../views/ProjectLayout.vue' // 导入新的项目布局
-import ProjectDashboardView from '../views/ProjectDashboardView.vue'
-import EditorView from '../views/EditorView.vue'
-import PanelListView from '../views/PanelListView.vue'
+import ProjectLayout from '../views/project/ProjectLayout.vue' // 导入新的项目布局
+import ProjectDashboardView from '../views/project/ProjectDashboardView.vue'
+import EditorView from '../views/project/EditorView.vue'
+import PanelListView from '../views/project/PanelListView.vue'
 import PanelContainer from '../components/panel/PanelContainer.vue'
 
 
@@ -42,18 +42,18 @@ const router = createRouter({
         {
           path: 'about',
           name: 'about',
-          component: () => import('../views/AboutView.vue'),
+          component: () => import('../views/home/AboutView.vue'),
         },
         {
           path: 'settings/:section?', // 添加可选的 section 参数
           name: 'settings', // 名字统一小写
-          component: () => import('../views/SettingsView.vue'),
+          component: () => import('../views/settings/SettingsView.vue'),
           props: true, // 将路由参数作为 props 传递给组件
         },
         {
           path: 'settings/test-panel', // 新增测试面板路由
           name: 'settings-test-panel',
-          component: () => import('../views/TestPanelView.vue'),
+          component: () => import('../views/settings/TestPanelView.vue'),
         },
         {
           path: 'files', // 文件管理器路由
@@ -125,13 +125,13 @@ const router = createRouter({
         {
           path: 'panel/:panelId/settings',
           name: 'ProjectPanelSettings',
-          component: () => import('../views/PanelSettingsView.vue'),
+          component: () => import('../views/project/PanelSettingsView.vue'),
         },
         // API 适配器管理
         {
           path: 'adapters',
           name: 'ProjectApiAdapters',
-          component: () => import('../views/ApiAdaptersView.vue'),
+          component: () => import('../views/project/ApiAdaptersView.vue'),
         },
         // 未来可以添加更多子路由，如 'scenes', 'settings' 等
       ],

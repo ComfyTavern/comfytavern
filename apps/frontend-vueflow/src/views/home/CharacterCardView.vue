@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 // import SideBar from './SideBar.vue'; // SideBar 由 HomeLayout 提供
-import { useThemeStore } from '../stores/theme'; // 导入 theme store
-import CharacterCard from '../components/CharacterCard.vue';
-import { sillyTavernService } from '../services/SillyTavernService';
+import { useThemeStore } from '../../stores/theme'; // 导入 theme store
+import CharacterCard from '../../components/CharacterCard.vue';
+import { sillyTavernService } from '../../services/SillyTavernService';
 import type { CharacterCardUI } from '@comfytavern/types';
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";

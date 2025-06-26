@@ -1,9 +1,9 @@
 <script setup lang="ts">
 // import SideBar from './SideBar.vue'; // 侧边栏由 HomeLayout 提供
-import { useProjectManagement } from '../composables/editor/useProjectManagement';
-import { useThemeStore } from '../stores/theme'; // 导入 theme store
+import { useProjectManagement } from '../../composables/editor/useProjectManagement';
+import { useThemeStore } from '../../stores/theme'; // 导入 theme store
 import { computed } from 'vue';
-import { useDialogService } from '../services/DialogService'; // 导入 DialogService
+import { useDialogService } from '../../services/DialogService'; // 导入 DialogService
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
 import { useI18n } from 'vue-i18n';

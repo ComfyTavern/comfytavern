@@ -411,7 +411,7 @@ const sections = computed<SettingsSection[]>(() => [
     label: t("settings.sections.test_panel"),
     icon: "bug_report", // Material Icon name for a bug or test
     type: "component",
-    component: markRaw(defineAsyncComponent(() => import("@/views/TestPanelView.vue"))),
+    component: markRaw(defineAsyncComponent(() => import("@/views/settings/TestPanelView.vue"))),
   },
   {
     id: "about",

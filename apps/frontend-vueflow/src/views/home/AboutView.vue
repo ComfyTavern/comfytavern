@@ -341,7 +341,7 @@
 <script setup lang="ts">
 // import SideBar from "./SideBar.vue"; // SideBar 由 HomeLayout 提供
 import { onMounted, ref } from "vue";
-import { useThemeStore } from "../stores/theme";
+import { useThemeStore } from "../../stores/theme";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";
 

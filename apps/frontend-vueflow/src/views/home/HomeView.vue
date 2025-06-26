@@ -71,9 +71,9 @@
 </template>
 
 <script setup lang="ts">
-import CharacterCardPreview from '../components/CharacterCardPreview.vue';
-import { useThemeStore } from '../stores/theme'; // 导入 theme store
-import { useProjectManagement } from '../composables/editor/useProjectManagement';
+import CharacterCardPreview from '../../components/CharacterCardPreview.vue';
+import { useThemeStore } from '../../stores/theme'; // 导入 theme store
+import { useProjectManagement } from '../../composables/editor/useProjectManagement';
 import { computed } from 'vue';
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import "overlayscrollbars/overlayscrollbars.css";

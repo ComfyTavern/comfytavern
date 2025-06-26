@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import { useThemeStore, type DisplayMode } from '../stores/theme'; // Import DisplayMode
+import { useThemeStore, type DisplayMode } from '../../stores/theme'; // Import DisplayMode
 import { useUiStore } from '@/stores/uiStore'; // + 导入 uiStore
 import { computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
