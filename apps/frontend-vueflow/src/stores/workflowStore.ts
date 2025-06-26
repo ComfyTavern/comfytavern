@@ -23,7 +23,6 @@ import { klona } from "klona";
 import { useDialogService } from '../services/DialogService';
 import { getWorkflow } from '../utils/api';
 import { useWebSocket } from '@/composables/useWebSocket';
-import { useWorkflowExecution } from "@/composables/workflow/useWorkflowExecution";
 
 export const useWorkflowStore = defineStore("workflow", () => {
   const availableWorkflows = ref<
@@ -649,56 +648,9 @@ export const useWorkflowStore = defineStore("workflow", () => {
     }
   }
 
-  /**
-   * 从面板执行工作流，不依赖UI。
-   * 此函数现在遵循统一的执行路径。
-   */
-  async function executeWorkflowFromPanel(
-    workflowId: string,
-    inputs: Record<string, any>,
-    projectId: string
-  ): Promise<{ promptId: string; executionId: string } | null> {
-    const { executeWorkflowCore } = useWorkflowExecution();
-    const executionId = `panel_${workflowId}_${Date.now()}`;
-
-    console.log(`[WorkflowStore] Executing from panel. Execution ID: ${executionId}`, {
-      projectId,
-      workflowId,
-      inputs,
-    });
-
-    // 1. 加载工作流的存储对象
-    const { loadedData: workflowStorage } = await workflowData.loadWorkflow(
-      executionId, // 使用 executionId 作为 loader 的上下文 ID
-      projectId,
-      workflowId
-    );
-
-    if (!workflowStorage) {
-      console.error(`[WorkflowStore] Failed to load workflow ${workflowId} for panel execution.`);
-      dialogService.showError("执行失败", `无法加载工作流: ${workflowId}`);
-      return null;
-    }
-
-    // 2. 构建符合 executeWorkflowCore 期望的完整对象
-    // 注意：inputs 已经由 usePanelApiHost 转换为正确的 GroupSlotInfo 结构
-    const workflowToExecute = {
-      ...workflowStorage,
-      id: workflowId,
-      name: workflowStorage.name,
-      interfaceInputs: workflowStorage.interfaceInputs || {}, // 确保不是 undefined
-      interfaceOutputs: workflowStorage.interfaceOutputs || {}, // 确保不是 undefined
-    };
-
-    // 3. 调用核心执行函数，将转换后的输入作为 overrideInputs 传递
-    // inputs 已经是符合要求的 GroupSlotInfo 结构
-    return await executeWorkflowCore(executionId, workflowToExecute, projectId, inputs);
-  }
-
   return {
     availableWorkflows,
     fetchWorkflow,
-    executeWorkflowFromPanel,
     changedTemplateWorkflowIds: computed(() => changedTemplateWorkflowIds.value),
     getActiveTabState: workflowManager.getActiveTabState,
     getWorkflowData: workflowManager.getWorkflowData,

@@ -1,150 +1,175 @@
 import { onUnmounted, type Ref, watch } from 'vue';
-import { useWorkflowStore } from '@/stores/workflowStore';
 import { useExecutionStore } from '@/stores/executionStore';
-import { useProjectStore } from '@/stores/projectStore';
+import { workflowInvocationService } from '@/services/WorkflowInvocationService';
+import { useTabStore, type Tab } from '@/stores/tabStore';
 import { ExecutionStatus } from '@comfytavern/types';
-// registerPanelExecution 和 unregisterPanelExecution 已被重构,不再需要直接导入
-// import { registerPanelExecution, unregisterPanelExecution } from '@/composables/useWebSocket';
 
 // 定义消息协议接口
 interface ApiRequestMessage {
   type: 'comfy-tavern-api-call' | 'panel-ready' | 'panel-log';
-  id?: string // panel-ready 消息不需要 id
-  payload?: { // panel-ready 消息不需要 payload
-    method: string
-    args: any[]
+  id?: string;
+  payload?: {
+    method: string;
+    args: any[];
     level?: 'log' | 'warn' | 'error' | 'debug';
     message?: any[];
-  }
+  };
 }
 
 interface ApiResponseMessage {
-  type: 'comfy-tavern-api-response'
-  id: string
-  payload?: any
-  error?: { message: string }
+  type: 'comfy-tavern-api-response';
+  id: string;
+  payload?: any;
+  error?: { message: string };
 }
 
 /**
  * usePanelApiHost Composable
  * @param iframeRef - 对 iframe 元素的引用
  * @param panelOrigin - 面板的预期源，用于安全验证
+ * @param logs - 用于记录面板日志的 Ref
  */
-export function usePanelApiHost(iframeRef: Ref<HTMLIFrameElement | null>, panelOrigin: Ref<string>, logs: Ref<any[]>) {
-  const workflowStore = useWorkflowStore()
-  const executionStore = useExecutionStore()
-  const projectStore = useProjectStore()
+export function usePanelApiHost(
+  iframeRef: Ref<HTMLIFrameElement | null>,
+  panelOrigin: Ref<string>,
+  logs: Ref<any[]>
+) {
+  const executionStore = useExecutionStore();
+  const tabStore = useTabStore();
+  const activeSubscriptions = new Map<string, () => void>(); // 存储 executionId -> unwatch function
 
-  // 模拟宿主端 API 实现
+  // --- 宿主端 API 实现 ---
   const panelApiHost = {
+    /**
+     * 执行一个工作流。
+     * @param request - 包含 workflowId 和 inputs 的对象
+     * @returns 返回一个包含 executionId 的对象，供后续订阅使用
+     */
     executeWorkflow: async (request: { workflowId: string; inputs: Record<string, any> }) => {
-      console.log('[Host] Received executeWorkflow call:', request)
-      const projectId = projectStore.currentProjectId
-      if (!projectId) {
-        console.error('[Host] No active project found.')
-        throw new Error('No active project found.')
+      console.log('[Host] Received executeWorkflow call, processing with live-preview check:', request);
+
+      // 检查此工作流是否在某个标签页中打开
+      const openedTab: Tab | undefined = tabStore.tabs.find(
+        (tab) => tab.type === 'workflow' && tab.associatedId === request.workflowId
+      );
+
+      let result;
+      if (openedTab) {
+        // 如果已打开，则使用 'live' 模式执行
+        console.log(`[Host] Workflow ${request.workflowId} is open in tab ${openedTab.internalId}. Using 'live' mode.`);
+        result = await workflowInvocationService.invoke({
+          mode: 'live',
+          targetId: openedTab.internalId, // 使用标签页的 internalId
+          inputs: request.inputs,
+          source: 'panel',
+        });
+      } else {
+        // 如果未打开，则使用 'saved' 模式执行
+        console.log(`[Host] Workflow ${request.workflowId} is not open. Using 'saved' mode.`);
+        result = await workflowInvocationService.invoke({
+          mode: 'saved',
+          targetId: request.workflowId,
+          inputs: request.inputs,
+          source: 'panel',
+        });
       }
 
-      // 将面板输入（简单值）转换为后端期望的格式（完整的 GroupSlotInfo，但更新了默认值）
-      // 这是 API 适配层的核心职责 - 将简单的面板输入转换为工作流执行引擎所需的格式
-      const transformedInputs: Record<string, { config: { default: any } }> = {};
-      for (const key in request.inputs) {
-        if (Object.prototype.hasOwnProperty.call(request.inputs, key)) {
-          // 直接为每个面板输入构建正确的 GroupSlotInfo 结构
-          transformedInputs[key] = {
-            config: {
-              default: request.inputs[key],
-            },
-          };
-        }
+      if (result) {
+        // 只返回 executionId 给面板，因为 promptId 是后端概念
+        return { executionId: result.executionId };
       }
-
-      // 将转换后的输入传递给 workflowStore
-      const result = await workflowStore.executeWorkflowFromPanel(request.workflowId, transformedInputs, projectId)
-      return result
+      return null;
     },
-    subscribeToExecutionEvents: (executionId: string, _callbacks: { onProgress?: (data: any) => void; onResult?: (data: any) => void; onError?: (data: any) => void; }) => {
-      console.log(`[Host] Subscribing to events for executionId: ${executionId}`)
+
+    /**
+     * 订阅指定 executionId 的执行事件。
+     * @param executionId - 从 executeWorkflow 返回的执行 ID
+     */
+    subscribeToExecutionEvents: (executionId: string) => {
+      console.log(`[Host] Subscribing to events for executionId: ${executionId}`);
+
+      // 如果已存在订阅，先取消旧的
+      if (activeSubscriptions.has(executionId)) {
+        activeSubscriptions.get(executionId)?.();
+      }
 
       const unwatch = watch(
         () => executionStore.tabExecutionStates.get(executionId),
         (state, oldState) => {
-          if (!state) return
+          if (!state) return;
 
-          // 检查节点状态变化
-          if (state.nodeStates) {
-            for (const nodeId in state.nodeStates) {
-              const currentNodeStatus = state.nodeStates[nodeId];
-              const oldNodeStatus = oldState?.nodeStates?.[nodeId];
-              
-              if (currentNodeStatus !== oldNodeStatus) {
-                const eventPayload = {
-                  nodeId: nodeId,
-                  status: currentNodeStatus,
-                  outputs: state.nodeOutputs[nodeId], // May be undefined until complete
-                  error: state.nodeErrors[nodeId]
-                };
+          // 检查流式接口输出
+          if (state.streamingInterfaceOutputs) {
+            for (const key in state.streamingInterfaceOutputs) {
+              const stream = state.streamingInterfaceOutputs[key];
+              const oldStream = oldState?.streamingInterfaceOutputs?.[key];
+              if (stream && (!oldStream || stream.accumulatedText !== oldStream.accumulatedText)) {
                 iframeRef.value?.contentWindow?.postMessage({
                   type: 'execution-event',
-                  event: 'onNodeUpdate', // Custom event for node status
-                  payload: eventPayload
+                  event: 'onProgress', // 使用 onProgress 作为流式事件
+                  executionId,
+                  payload: { key, content: stream.accumulatedText, isComplete: !!stream.isComplete }
                 }, panelOrigin.value);
               }
             }
           }
 
-          // 检查流式输出
-          if (state.streamingInterfaceOutputs) {
-            for (const key in state.streamingInterfaceOutputs) {
-              const stream = state.streamingInterfaceOutputs[key]
-              const oldStream = oldState?.streamingInterfaceOutputs?.[key]
-              if (stream && (!oldStream || stream.accumulatedText !== oldStream.accumulatedText)) {
-                iframeRef.value?.contentWindow?.postMessage({ type: 'execution-event', event: 'onProgress', payload: { key, content: stream.accumulatedText, isComplete: !!stream.isComplete } }, panelOrigin.value)
-              }
-            }
-          }
           // 检查最终结果
           if (state.workflowStatus === ExecutionStatus.COMPLETE && oldState?.workflowStatus !== ExecutionStatus.COMPLETE) {
-            iframeRef.value?.contentWindow?.postMessage({ type: 'execution-event', event: 'onResult', payload: { status: 'COMPLETE', outputs: state.nodeOutputs } }, panelOrigin.value)
-            // 清理逻辑已移至 useWebSocket.ts 内部，这里不再需要手动调用
-            unwatch(); // 自动取消订阅
+            iframeRef.value?.contentWindow?.postMessage({
+              type: 'execution-event',
+              event: 'onResult',
+              executionId,
+              payload: { status: 'COMPLETE', outputs: state.nodeOutputs }
+            }, panelOrigin.value);
+            unwatch(); // 完成后自动取消订阅
+            activeSubscriptions.delete(executionId);
           }
 
           // 检查错误
           if (state.workflowStatus === ExecutionStatus.ERROR && oldState?.workflowStatus !== ExecutionStatus.ERROR) {
-            iframeRef.value?.contentWindow?.postMessage({ type: 'execution-event', event: 'onError', payload: { error: state.workflowError } }, panelOrigin.value)
-            // 清理逻辑已移至 useWebSocket.ts 内部，这里不再需要手动调用
-            unwatch(); // 自动取消订阅
+            iframeRef.value?.contentWindow?.postMessage({
+              type: 'execution-event',
+              event: 'onError',
+              executionId,
+              payload: { error: state.workflowError }
+            }, panelOrigin.value);
+            unwatch(); // 出错后自动取消订阅
+            activeSubscriptions.delete(executionId);
           }
         },
         { deep: true }
-      )
+      );
 
-      // 返回一个取消订阅的函数
-      return () => {
-        console.log(`[Host] Unsubscribing from events for executionId: ${executionId}`)
-        unwatch()
-        // 清理逻辑已移至 useWebSocket.ts 内部，这里不再需要手动调用
-      }
+      activeSubscriptions.set(executionId, unwatch);
+
+      // 返回一个成功的标志给面板
+      return true;
     },
+
+    /**
+     * 获取宿主环境的设置。
+     */
     getSettings: () => {
-      console.log('[Host] Received getSettings call')
-      return Promise.resolve({ theme: 'dark', language: 'zh-CN' })
+      console.log('[Host] Received getSettings call');
+      return Promise.resolve({ theme: 'dark', language: 'zh-CN' });
     }
-  }
+  };
 
+  /**
+   * 处理从 iframe 收到的消息。
+   */
   const handleMessage = async (event: MessageEvent) => {
-    // --- 安全第一：验证来源 ---
-    // 暂时不验证 origin，因为我们正在调试 postMessage 问题
-    // if (event.origin !== panelOrigin.value) {
-    //   console.warn(`[Host] Ignored message from unexpected origin: ${event.origin}. Expected: ${panelOrigin.value}`)
-    //   return
-    // }
+    // --- 安全验证 ---
+    if (event.origin !== panelOrigin.value && panelOrigin.value !== '*') {
+      console.warn(`[Host] Ignored message from unexpected origin: ${event.origin}. Expected: ${panelOrigin.value}`);
+      return;
+    }
 
-    const data = event.data as ApiRequestMessage
+    const data = event.data as ApiRequestMessage;
     
     if (data.type === 'panel-ready') {
-      console.log('[Host] Received panel-ready message from iframe. Injecting API script.');
+      console.log('[Host] Received panel-ready message. Injecting API script.');
       sendInjectionScript();
       return;
     }
@@ -155,60 +180,38 @@ export function usePanelApiHost(iframeRef: Ref<HTMLIFrameElement | null>, panelO
     }
 
     if (data.type !== 'comfy-tavern-api-call') {
-      return
-    }
-
-    console.log(`[Host] Received API call for method: ${data.payload!.method}`)
-
-    const { id, payload } = data;
-    if (!id) {
-      console.error('[Host] API call received without a request ID. Ignoring.');
       return;
     }
-    const { method, args } = payload!;
 
+    const { id, payload } = data;
+    if (!id || !payload) {
+      console.error('[Host] API call received without ID or payload. Ignoring.');
+      return;
+    }
+    
+    console.log(`[Host] Received API call for method: ${payload.method}`);
+    const { method, args } = payload;
     const apiMethod = (panelApiHost as any)[method];
 
     if (typeof apiMethod === 'function') {
       try {
-        const result = await apiMethod(...args)
-        
-        // 如果方法是 subscribeToExecutionEvents，它的返回值是一个函数，不能被 postMessage。
-        // 我们只返回一个成功的标志。
-        const payloadToSend = (method === 'subscribeToExecutionEvents') ? true : result;
-
-        const response: ApiResponseMessage = {
-          type: 'comfy-tavern-api-response',
-          id,
-          payload: payloadToSend,
-        }
-        iframeRef.value?.contentWindow?.postMessage(response, panelOrigin.value)
+        const result = await apiMethod(...args);
+        const response: ApiResponseMessage = { type: 'comfy-tavern-api-response', id, payload: result };
+        iframeRef.value?.contentWindow?.postMessage(response, panelOrigin.value);
       } catch (e: any) {
-        const response: ApiResponseMessage = {
-          type: 'comfy-tavern-api-response',
-          id,
-          error: { message: e.message || 'An unknown error occurred' }
-        }
-        iframeRef.value?.contentWindow?.postMessage(response, panelOrigin.value)
+        const response: ApiResponseMessage = { type: 'comfy-tavern-api-response', id, error: { message: e.message || 'An unknown error occurred' } };
+        iframeRef.value?.contentWindow?.postMessage(response, panelOrigin.value);
       }
     } else {
-      console.error(`[Host] Method "${method}" not found on panelApiHost.`)
-      const response: ApiResponseMessage = {
-        type: 'comfy-tavern-api-response',
-        id,
-        error: { message: `Method "${method}" not found.` }
-      }
-      iframeRef.value?.contentWindow?.postMessage(response, panelOrigin.value)
+      const response: ApiResponseMessage = { type: 'comfy-tavern-api-response', id, error: { message: `Method "${method}" not found.` } };
+      iframeRef.value?.contentWindow?.postMessage(response, panelOrigin.value);
     }
-  }
+  };
 
-  const initializeHost = () => {
-    window.addEventListener('message', handleMessage)
-    console.log('[Host] Panel API host initialized and listening for messages.')
-  }
-
+  /**
+   * 注入到 iframe 的脚本，用于创建 window.comfyTavern.panelApi 代理。
+   */
   const getInjectionScript = () => {
-    // 这个脚本将在 iframe 中执行，创建 window.comfyTavern.panelApi 代理
     return `
       (() => {
         if (window.comfyTavern && window.comfyTavern.panelApi) {
@@ -218,22 +221,29 @@ export function usePanelApiHost(iframeRef: Ref<HTMLIFrameElement | null>, panelO
         window.comfyTavern = window.comfyTavern || {};
         const pendingRequests = new Map();
         
+        // 监听来自宿主的回应或事件
         window.addEventListener('message', (event) => {
-          // 注意：这里的来源验证由宿主负责，面板侧主要是处理响应
           const data = event.data;
-          if (data.type !== 'comfy-tavern-api-response' || !pendingRequests.has(data.id)) {
+          
+          // 处理 API 响应
+          if (data.type === 'comfy-tavern-api-response' && pendingRequests.has(data.id)) {
+            const { resolve, reject } = pendingRequests.get(data.id);
+            if (data.error) {
+              reject(new Error(data.error.message));
+            } else {
+              resolve(data.payload);
+            }
+            pendingRequests.delete(data.id);
             return;
           }
 
-          const { resolve, reject } = pendingRequests.get(data.id);
-          if (data.error) {
-            reject(new Error(data.error.message));
-          } else {
-            resolve(data.payload);
+          // 处理执行事件
+          if (data.type === 'execution-event') {
+             window.dispatchEvent(new CustomEvent('comfy-execution-event', { detail: data }));
           }
-          pendingRequests.delete(data.id);
         });
 
+        // 创建 API 代理
         window.comfyTavern.panelApi = new Proxy({}, {
           get(target, prop, receiver) {
             return function(...args) {
@@ -244,22 +254,22 @@ export function usePanelApiHost(iframeRef: Ref<HTMLIFrameElement | null>, panelO
                 const requestMessage = {
                   type: 'comfy-tavern-api-call',
                   id: id,
-                  payload: {
-                    method: prop,
-                    args: args,
-                  }
+                  payload: { method: prop, args: args }
                 };
                 
-                window.parent.postMessage(requestMessage, '*'); // 目标源应由宿主验证
+                window.parent.postMessage(requestMessage, '*'); // 目标源由宿主验证
               });
             }
           }
         });
         console.log('[Panel] window.comfyTavern.panelApi proxy created.');
       })();
-    `
-  }
+    `;
+  };
 
+  /**
+   * 发送注入脚本到 iframe。
+   */
   function sendInjectionScript() {
     const iframe = iframeRef.value;
     if (!iframe || !iframe.contentWindow) {
@@ -267,18 +277,31 @@ export function usePanelApiHost(iframeRef: Ref<HTMLIFrameElement | null>, panelO
       return;
     }
     const script = getInjectionScript();
-    iframe.contentWindow.postMessage(`inject:${script}`, '*'); // 目标源仍为 *
+    // 使用一种更可靠的方式注入脚本
+    iframe.contentWindow.postMessage({ type: 'inject-script', script: script }, panelOrigin.value || '*');
     console.log('[Host] API injection script sent to iframe.');
   }
+  
+  /**
+   * 初始化宿主环境，开始监听消息。
+   */
+  const initializeHost = () => {
+    window.addEventListener('message', handleMessage);
+    console.log('[Host] Panel API host initialized and listening for messages.');
+  };
 
+  /**
+   * 组件卸载时清理资源。
+   */
   onUnmounted(() => {
-    window.removeEventListener('message', handleMessage)
-    console.log('[Host] Panel API host cleaned up.')
-  })
+    window.removeEventListener('message', handleMessage);
+    // 取消所有仍在进行的订阅
+    activeSubscriptions.forEach(unwatch => unwatch());
+    activeSubscriptions.clear();
+    console.log('[Host] Panel API host cleaned up.');
+  });
 
   return {
     initializeHost,
-    getInjectionScript,
-    sendInjectionScript // 暴露给外部调用
-  }
+  };
 }
