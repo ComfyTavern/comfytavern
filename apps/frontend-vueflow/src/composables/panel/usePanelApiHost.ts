@@ -1,8 +1,7 @@
 import { onUnmounted, type Ref, watch } from 'vue';
 import { useExecutionStore } from '@/stores/executionStore';
-import { workflowInvocationService } from '@/services/WorkflowInvocationService';
-import { useTabStore, type Tab } from '@/stores/tabStore';
-import { ExecutionStatus } from '@comfytavern/types';
+import { useApiAdapterManager } from '@/services/ApiAdapterManager';
+import { ExecutionStatus, type InvocationRequest } from '@comfytavern/types';
 
 // 定义消息协议接口
 interface ApiRequestMessage {
@@ -35,50 +34,35 @@ export function usePanelApiHost(
   logs: Ref<any[]>
 ) {
   const executionStore = useExecutionStore();
-  const tabStore = useTabStore();
+  const apiAdapterManager = useApiAdapterManager();
   const activeSubscriptions = new Map<string, () => void>(); // 存储 executionId -> unwatch function
 
   // --- 宿主端 API 实现 ---
   const panelApiHost = {
     /**
-     * 执行一个工作流。
-     * @param request - 包含 workflowId 和 inputs 的对象
-     * @returns 返回一个包含 executionId 的对象，供后续订阅使用
+     * @deprecated 将在未来版本移除，请使用 invoke 方法。
+     * 为了向后兼容，此方法内部会调用 invoke({ mode: 'native', ... })
      */
     executeWorkflow: async (request: { workflowId: string; inputs: Record<string, any> }) => {
-      console.log('[Host] Received executeWorkflow call, processing with live-preview check:', request);
+      console.warn('[Host] executeWorkflow is deprecated. Please use the new invoke() method.');
+      return panelApiHost.invoke({
+        mode: 'native',
+        workflowId: request.workflowId,
+        inputs: request.inputs,
+      });
+    },
 
-      // 检查此工作流是否在某个标签页中打开
-      const openedTab: Tab | undefined = tabStore.tabs.find(
-        (tab) => tab.type === 'workflow' && tab.associatedId === request.workflowId
-      );
-
-      let result;
-      if (openedTab) {
-        // 如果已打开，则使用 'live' 模式执行
-        console.log(`[Host] Workflow ${request.workflowId} is open in tab ${openedTab.internalId}. Using 'live' mode.`);
-        result = await workflowInvocationService.invoke({
-          mode: 'live',
-          targetId: openedTab.internalId, // 使用标签页的 internalId
-          inputs: request.inputs,
-          source: 'panel',
-        });
-      } else {
-        // 如果未打开，则使用 'saved' 模式执行
-        console.log(`[Host] Workflow ${request.workflowId} is not open. Using 'saved' mode.`);
-        result = await workflowInvocationService.invoke({
-          mode: 'saved',
-          targetId: request.workflowId,
-          inputs: request.inputs,
-          source: 'panel',
-        });
-      }
-
-      if (result) {
-        // 只返回 executionId 给面板，因为 promptId 是后端概念
-        return { executionId: result.executionId };
-      }
-      return null;
+    /**
+     * 新的核心调用方法，支持原生和适配器模式。
+     * @param request - InvocationRequest 对象
+     * @returns 返回一个包含 executionId 的对象
+     */
+    invoke: async (request: InvocationRequest) => {
+       console.log('[Host] Received invoke call with mode:', request.mode);
+       // 直接将请求转发给 ApiAdapterManager
+       // ApiAdapterManager 内部会处理 'native' 和 'adapter' 模式，
+       // 并调用 WorkflowInvocationService
+       return await apiAdapterManager.invoke(request);
     },
 
     /**
@@ -239,7 +223,7 @@ export function usePanelApiHost(
 
           // 处理执行事件
           if (data.type === 'execution-event') {
-             window.dispatchEvent(new CustomEvent('comfy-execution-event', { detail: data }));
+              window.dispatchEvent(new CustomEvent('comfy-execution-event', { detail: data }));
           }
         });
 

@@ -120,6 +120,12 @@ const router = createRouter({
           component: PanelContainer,
           props: true, // 将 panelId 作为 prop 传递给 PanelContainer
         },
+        // API 适配器管理
+        {
+          path: 'adapters',
+          name: 'ProjectApiAdapters',
+          component: () => import('../views/ApiAdaptersView.vue'),
+        },
         // 未来可以添加更多子路由，如 'scenes', 'settings' 等
       ],
     },

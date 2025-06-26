@@ -30,3 +30,9 @@ export * from './SillyTavern';
 
 // 导出所有与主题系统相关的类型
 export * from './theme';
+
+// 导出所有与适配器相关的类型
+export * from './adapter';
+
+// 导出所有
+export * from './panel';

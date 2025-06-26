@@ -28,6 +28,18 @@
         </router-link>
       </div>
 
+      <!-- API 适配器 -->
+      <div class="bg-background-surface p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+        <h2 class="text-xl font-semibold mb-2 text-text-base">API 适配器</h2>
+        <p class="text-text-secondary mb-4">将工作流封装为标准API，供应用面板或外部服务调用。</p>
+        <router-link
+          :to="{ name: 'ProjectApiAdapters', params: { projectId: projectStore.currentProjectId } }"
+          class="font-semibold text-primary hover:underline"
+        >
+          管理适配器 &rarr;
+        </router-link>
+      </div>
+
       <!-- 占位符：Agents -->
       <div class="rounded-lg bg-neutral-softest p-6 shadow">
         <h2 class="text-xl font-semibold mb-2 text-text-muted">Agents (即将推出)</h2>
