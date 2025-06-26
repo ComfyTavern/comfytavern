@@ -42,29 +42,29 @@ export interface ComfyTavernPanelApi {
   // == 核心工作流交互 ==
 
   /**
-   * 异步执行一个工作流。
+   * 异步调用一个已定义的能力（由工作流或适配器提供）。
    * 这是面板与后端核心功能交互最主要的方法。
-   * @param request 包含工作流ID和输入数据的请求对象。
-   * @returns 返回一个包含 promptId 的 Promise，可用于后续追踪。
+   * @param request 包含调用目标和输入数据的请求对象。
+   * @returns 返回一个包含 executionId 的 Promise，可用于后续追踪。
    */
-  executeWorkflow(request: WorkflowExecutionRequest): Promise<{ promptId: string }>;
+  invoke(request: InvocationRequest): Promise<InvocationResponse>;
 
   /**
-   * 获取指定工作流的公共接口定义（输入和输出）。
-   * @param workflowId 目标工作流的 ID。
-   * @returns 返回工作流的接口描述对象。
+   * 获取指定适配器或工作流的公共接口定义。
+   * @param target 一个包含类型和ID的对象，用于指定目标。
+   * @returns 返回目标的接口描述对象。
    */
-  getWorkflowInterface(workflowId: string): Promise<WorkflowInterface>;
+  getInterface(target: { type: 'adapter' | 'workflow', id: string }): Promise<WorkflowInterface>;
 
   // == 事件与状态订阅 ==
 
   /**
    * 订阅来自后端的执行事件。
-   * @param promptId 要监听的执行任务ID。
+   * @param executionId 要监听的执行任务ID，由 invoke() 方法返回。
    * @param callbacks 包含各种事件回调函数的对象。
    * @returns 返回一个取消订阅的函数。
    */
-  subscribeToExecutionEvents(promptId: string, callbacks: PanelExecutionCallbacks): () => void;
+  subscribeToExecutionEvents(executionId: string, callbacks: PanelExecutionCallbacks): () => void;
   
   /**
    * 订阅来自后端 Agent 或场景的、需要前端 UI 响应的交互请求。
@@ -103,19 +103,36 @@ export interface ComfyTavernPanelApi {
 // --- 辅助类型定义 ---
 
 /**
- * 工作流执行请求对象
+ * 能力调用请求对象。
+ * 调用者必须明确指定一种模式。
  */
-export interface WorkflowExecutionRequest {
-  /** 要执行的工作流ID */
-  workflowId: string;
-  /** 工作流的输入参数 */
-  inputs: Record<string, any>;
-  /** 
-   * 执行模式：
-   * - 'native': 直接执行原生工作流
-   * - 'adapter': 通过 ApiAdapterManager 转换后执行 
+export type InvocationRequest =
+  | {
+      /** 调用模式：使用适配器 */
+      mode: 'adapter';
+      /** 要调用的适配器ID */
+      adapterId: string;
+      /** 传递给适配器的输入参数 */
+      inputs: Record<string, any>;
+    }
+  | {
+      /** 调用模式：直接调用原生工作流（高级用法） */
+      mode: 'native';
+      /** 要执行的工作流ID */
+      workflowId: string;
+      /** 工作流的输入参数 */
+      inputs: Record<string, any>;
+    };
+
+/**
+ * 能力调用响应对象。
+ */
+export interface InvocationResponse {
+  /**
+   * 本次调用的唯一执行ID。
+   * 可用于 subscribeToExecutionEvents 来追踪进度和结果。
    */
-  mode?: 'native' | 'adapter';
+  executionId: string;
 }
 
 /**
@@ -154,10 +171,11 @@ export interface SlotDefinition {
  * 面板执行事件回调
  */
 export interface PanelExecutionCallbacks {
-  /** 执行开始回调 */
-  onStart?: (data: { promptId: string }) => void;
-  /** 执行进度更新回调 */
-  onProgress?: (data: { progress: number; message?: string }) => void;
+  /**
+   * 流式进度/内容更新回调。
+   * 可用于显示流式文本或进度条。
+   */
+  onProgress?: (data: { key: string; content: any; isComplete: boolean }) => void;
   /** 执行结果回调 */
   onResult?: (data: { outputs: Record<string, any> }) => void;
   /** 执行错误回调 */
@@ -204,8 +222,8 @@ export interface PanelInteractionProvider {
 ```typescript
 // PanelContainer.vue 伪代码实现
 const panelApi = {
-  executeWorkflow: (request) => sendToHost('executeWorkflow', request),
-  getWorkflowInterface: (id) => sendToHost('getWorkflowInterface', { id }),
+  invoke: (request) => sendToHost('invoke', request),
+  getInterface: (target) => sendToHost('getInterface', target),
   // ... 其他方法实现
 };
 
@@ -221,16 +239,21 @@ window.addEventListener('message', (event) => {
 
 面板开发者可以通过以下方式使用 API：
 ```javascript
-// 执行工作流
-const { promptId } = await window.comfyTavern.panelApi.executeWorkflow({
-  workflowId: 'story-generator',
+// 方式一：通过适配器调用能力
+const { executionId } = await window.comfyTavern.panelApi.invoke({
+  mode: 'adapter',
+  adapterId: 'story-generator-adapter',
   inputs: { theme: '科幻', length: 1000 }
 });
 
 // 订阅执行事件
-const unsubscribe = window.comfyTavern.panelApi.subscribeToExecutionEvents(promptId, {
-  onProgress: ({ progress }) => updateProgressBar(progress),
-  onResult: ({ outputs }) => displayStory(outputs.story)
+const unsubscribe = window.comfyTavern.panelApi.subscribeToExecutionEvents(executionId, {
+  onProgress: ({ key, content }) => {
+    if (key === 'story_stream') {
+      updateStoryContent(content);
+    }
+  },
+  onResult: ({ outputs }) => displayFinalStory(outputs.final_story)
 });
 
 // 请求宿主服务

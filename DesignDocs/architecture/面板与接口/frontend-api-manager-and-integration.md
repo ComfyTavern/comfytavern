@@ -113,8 +113,8 @@ flowchart TD
 
 ### 3.1. 核心方法
 
-- `async getWorkflowInterface(workflowId: string): Promise<WorkflowInterface>`
-- `subscribeToExecutionEvents(promptId: string, callbacks: PanelExecutionCallbacks): () => void`
+- `async getInterface(target: { type: 'adapter' | 'workflow', id: string }): Promise<WorkflowInterface>`
+- `subscribeToExecutionEvents(executionId: string, callbacks: PanelExecutionCallbacks): () => void`
 - `async getCurrentTheme(): Promise<ThemeInfo>`
 - `async requestHostService(serviceName: string, args?: any): Promise<any>`
   - **描述**: 允许应用面板请求宿主环境（ComfyTavern 主应用）提供的特定服务，如弹出通知、访问本地存储等。
@@ -125,44 +125,46 @@ flowchart TD
     - **限流/限频**: 必须对来自面板的服务调用实施限流策略，防止面板通过高频调用（如连续弹出通知）进行 DoS 攻击或骚扰用户。
     - **参数校验**: 宿主环境在接收到服务调用请求时，必须对传入的 `args` 进行严格的类型和内容校验，防止恶意参数注入。
 
-### 3.2. 核心交互：`executeWorkflow`
+### 3.2. 核心交互：`invoke`
 
 此方法封装了从数据准备到触发前端执行服务的完整流程。
 
-`async executeWorkflow(executionRequest: WorkflowExecutionRequest): Promise<{ promptId: string }>`
+`async invoke(request: InvocationRequest): Promise<InvocationResponse>`
 
-其中 `WorkflowExecutionRequest` 定义如下：
+其中 `InvocationRequest` 和 `InvocationResponse` 的定义与 `panel-api-specification.md` 中保持一致：
 
 ```typescript
-type WorkflowExecutionRequest = {
-  workflowId: string;
-  // 调用方选择一种模式来提供输入
-  inputs:
-    | {
-        // 模式一：原生模式
-        // 直接提供与工作流输入接口匹配的键值对。
-        mode: "native";
-        values: Record<string, any>;
-      }
-    | {
-        // 模式二：适配器模式
-        // 使用一个预定义的 API 适配器来转换数据。
-        mode: "adapter";
-        adapterId: string; // 例如: 'openai_chat_v1'
-        // 提供符合该适配器源 API 格式的数据。
-        data: any; // 例如: { model: '...', messages: [...] }
-      };
-};
+// 能力调用请求对象
+export type InvocationRequest =
+  | {
+      mode: 'adapter';
+      adapterId: string;
+      inputs: Record<string, any>;
+    }
+  | {
+      mode: 'native';
+      workflowId: string;
+      inputs: Record<string, any>;
+    };
+
+// 能力调用响应对象
+export interface InvocationResponse {
+  executionId: string;
+}
 ```
 
 **内部流程**:
 
-1.  `executeWorkflow` 接收到请求后，将其传递给 `ApiAdapterManager`。
-2.  `ApiAdapterManager` 处理 `inputs`：
-    - 如果是 `native` 模式，直接返回 `values`。
-    - 如果是 `adapter` 模式，根据 `adapterId` 查找规则，对 `data` 进行转换，返回转换后的原生 `values`。
-3.  `executeWorkflow` 将 `workflowId` 和转换后的原生 `values` 交给前端的 `ExecutionService`。
-4.  `ExecutionService` 负责构建完整的工作流 JSON 并发送到后端，最终返回 `promptId`。
+1.  `panelApi.invoke` 方法接收到 `InvocationRequest` 后，将其传递给 `ApiAdapterManager` 或直接传递给 `WorkflowInvocationService`。
+2.  **`adapter` 模式**:
+    - `ApiAdapterManager` 根据 `adapterId` 查找适配器规则。
+    - 它使用规则转换 `inputs` 数据，并获取到目标的 `targetWorkflowId`。
+    - 它将 `targetWorkflowId` 和转换后的输入传递给 `WorkflowInvocationService`。
+3.  **`native` 模式**:
+    - 请求直接（或通过一层简单的路由）到达 `WorkflowInvocationService`。
+    - 服务使用提供的 `workflowId` 和 `inputs`。
+4.  `WorkflowInvocationService` 负责获取工作流定义（无论是实时状态还是已保存的），构建最终的执行载荷，并将其发送到后端。
+5.  执行成功后，`WorkflowInvocationService` 返回 `executionId`，并由 `panelApi` 最终返回给调用方。
 
 ## 4. API 适配器 (`ApiAdapter`)
 

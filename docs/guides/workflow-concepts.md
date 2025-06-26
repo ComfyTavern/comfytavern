@@ -145,10 +145,10 @@
 -   **节点组作为引用**:
     当您在一个工作流中使用 `core:NodeGroup` 节点时，您实际上只是创建了一个对另一个独立工作流的**引用**。系统中的所有工作流，无论其用途是作为顶级图还是被嵌套的组，都遵循完全一致的数据结构。
 
--   **执行前展平**:
-    在工作流执行之前，执行引擎会进行一个关键的"展平"（Flattening）操作。此过程会递归地遍历整个节点图，将每一个 `core:NodeGroup` 节点替换为它所引用的那个工作流内部的实际节点和边。
+-   **执行前展平 (前端负责)**:
+    在工作流执行之前，**前端**的 `WorkflowInvocationService` 会进行一个关键的"展平"（Flattening）操作。无论是 `live` 模式还是 `saved` 模式，服务都会递归地遍历整个节点图，将每一个 `core:NodeGroup` 节点替换为它所引用的那个工作流内部的实际节点和边。
 
-这个机制确保了无论工作流的嵌套有多深，执行引擎最终面对的永远是一个不包含任何 `core:NodeGroup` 的、完全平坦的、可直接执行的节点图。这极大地简化了执行逻辑，无需为"组"的概念设计一套额外的、复杂的执行规则。
+这个机制确保了无论工作流的嵌套有多深，**后端执行引擎最终面对的永远是一个不包含任何 `core:NodeGroup` 的、完全平坦的、可直接执行的节点图**。这种将复杂性前置处理的设计，极大地简化了后端执行逻辑，无需为"组"的概念设计一套额外的、复杂的执行规则。
 
 ## 4. 工作流的生命周期与数据流
 
@@ -185,17 +185,19 @@
   - 此过程包括根据节点定义重新构建节点的 `data` 对象，填充输入输出信息，并处理 NodeGroup 的接口加载（如果被引用的子工作流接口发生变化，可能需要同步）。
 
 ### 4.4. 执行
+### 4.4. 执行
 
-- **触发执行 (前端)**: 用户点击执行按钮。
-  - 调用 [`useWorkflowExecution.executeWorkflow()`](../../apps/frontend-vueflow/src/composables/workflow/useWorkflowExecution.ts:26) 函数。
-  - **客户端脚本**: 首先，会执行当前工作流中节点定义的客户端脚本钩子（如 `onWorkflowExecute`），这些脚本可能会修改节点的输入数据。
-  - **扁平化**: 调用 [`flattenWorkflow()`](../../apps/frontend-vueflow/src/utils/workflowFlattener.ts:1) 来处理节点组。如果工作流中包含节点组，此步骤会递归地将节点组展开，将其内部的节点和边合并到主工作流中，形成一个扁平化的、可直接执行的节点和边列表。
-  - **数据转换**:
-    1.  使用 `transformVueFlowToCoreWorkflow()` 将（可能已扁平化的）前端 VueFlow 数据转换为核心的 `WorkflowStorageNode[]` 和 `WorkflowStorageEdge[]` 格式。
-    2.  接着，使用 [`transformVueFlowToExecutionPayload()`](../../apps/frontend-vueflow/src/utils/workflowTransformer.ts:683) 将上述核心数据转换为后端执行引擎所需的 `WorkflowExecutionPayload` 格式。此格式更精简，只包含执行必需的节点 ID、类型、输入、配置和边连接信息。
-  - **接口映射**: 构建 `outputInterfaceMappings` 对象，它告诉后端如何将扁平化后工作流内部节点的输出映射到原始工作流（或顶层工作流）的 `interfaceOutputs`。
-  - **WebSocket 通信**: 将 `WorkflowExecutionPayload`（包含节点、边、接口输入、输出接口映射和元数据）通过 WebSocket 以 `PROMPT_REQUEST` 消息类型发送给后端。
-
+- **触发执行 (前端)**: 用户通过编辑器UI（执行按钮）或应用面板API触发执行。
+  - **统一调用入口**: 所有执行请求都会被路由到统一的 [`WorkflowInvocationService`](../../apps/frontend-vueflow/src/services/WorkflowInvocationService.ts:1)。
+  - **调用 `invoke()`**: 调用 `WorkflowInvocationService.invoke(request)` 方法。`request` 对象会指明执行模式 (`mode: 'live'` 或 `mode: 'saved'`)以及目标ID (`targetId`)。
+  - **数据准备 (`live` 模式)**:
+    - **客户端脚本**: 服务首先会执行当前工作流中节点定义的客户端脚本钩子（如 `onWorkflowExecute`）。
+    - **扁平化**: 接着，调用 [`flattenWorkflow()`](../../apps/frontend-vueflow/src/utils/workflowFlattener.ts:1) 来递归地展开所有节点组，形成一个单一层级的节点图。
+    - **数据转换**: 使用 `transformVueFlowToCoreWorkflow()` 和其他转换函数，将前端的 VueFlow 状态转换为后端执行引擎所需的 `WorkflowExecutionPayload` 格式。
+  - **数据准备 (`saved` 模式)**:
+    - 服务直接从后端加载已保存的、已经是 `WorkflowStorageObject` 格式的工作流，然后将其转换为 `WorkflowExecutionPayload`。
+  - **调用核心执行器**: `WorkflowInvocationService` 准备好载荷后，会调用位于 `useWorkflowExecution.ts` 中的底层核心执行函数 `executeWorkflowCore()`。
+  - **WebSocket 通信**: `executeWorkflowCore` 将最终的 `WorkflowExecutionPayload` 通过 WebSocket 以 `PROMPT_REQUEST` 消息类型发送给后端。
 - **由 AgentRuntime 触发执行 (后端)**:
   - `AgentRuntime` 是驱动 Agent 相关工作流（特别是核心审议工作流和技能工作流）的主要调用者。
   - 当 `AgentRuntime` 需要执行一个工作流时（例如，驱动一次审议循环，或执行一个 Agent 决策调用的技能），它会：
