@@ -5,14 +5,17 @@ import { useTabStore } from "@/stores/tabStore";
 import { flattenWorkflow } from "@/utils/workflowFlattener";
 import {
   transformVueFlowToCoreWorkflow,
-  transformVueFlowToExecutionPayload,
 } from "@/utils/workflowTransformer";
 import {
+  transformStorageToExecutionPayload,
+} from "@comfytavern/utils";
+import {
   type WebSocketMessage,
-  type WorkflowExecutionPayload,
   DataFlowType,
   ExecutionStatus,
   WebSocketMessageType,
+  type WorkflowStorageNode,
+  type WorkflowStorageEdge,
 } from "@comfytavern/types";
 import type { FlowExportObject, Edge as VueFlowEdge, Node as VueFlowNode } from "@vue-flow/core"; // 新增导入
 import { klona } from "klona/full"; // 新增导入
@@ -21,6 +24,7 @@ import { useWorkflowData } from "./useWorkflowData";
 import { useWorkflowManager } from "./useWorkflowManager";
 import { useSlotDefinitionHelper } from "../node/useSlotDefinitionHelper";
 import { useEdgeStyles } from "../canvas/useEdgeStyles";
+import { watch } from "vue";
 
 /**
  * Composable for handling workflow execution logic.
@@ -175,18 +179,6 @@ export function useWorkflowExecution() {
       `[WorkflowExecution:executeWorkflow] Workflow transformed to core data successfully for tab ${internalId}. Nodes: ${coreWorkflowData.nodes.length}, Edges: ${coreWorkflowData.edges.length}`
     );
 
-    // 3. 使用转换后的核心数据构建执行载荷
-    const payload = transformVueFlowToExecutionPayload({
-      nodes: coreWorkflowData.nodes,
-      edges: coreWorkflowData.edges,
-    });
-    if (!payload) {
-      console.error(
-        `[WorkflowExecution:executeWorkflow] Failed to create execution payload from core data for tab ${internalId}. Aborting.`
-      );
-      // TODO: Show user feedback
-      return;
-    }
 
     // 新增：构建 outputInterfaceMappings
     const outputInterfaceMappings: Record<string, { sourceNodeId: string; sourceSlotKey: string }> =
@@ -258,37 +250,100 @@ export function useWorkflowExecution() {
     // 4. 准备执行状态 (此步骤在原始 StatusBar.vue 中没有，但在旧版 useWorkflowExecution 中有)
     // executionStore.prepareForNewExecution(internalId); // 暂时注释，以更接近 StatusBar 的成功路径
 
-    // 5. 构建 WebSocket 消息
-    const message: WebSocketMessage<WorkflowExecutionPayload> = {
+    const workflowForCore = {
+        id: activeWorkflowData?.id,
+        name: activeWorkflowData?.name,
+        nodes: coreWorkflowData.nodes,
+        edges: coreWorkflowData.edges,
+        interfaceInputs: activeWorkflowData?.interfaceInputs || {},
+        interfaceOutputs: activeWorkflowData?.interfaceOutputs || {},
+    };
+
+    // 编辑器执行时，没有需要覆盖的输入
+    await executeWorkflowCore(internalId, workflowForCore, projectStore.currentProjectId, null);
+  }
+
+  /**
+   * 封装了向后端发送执行请求并等待 promptId 的核心逻辑。
+   * @param executionId - 本次执行的唯一ID (对于编辑器是 aabId, 对于面板是生成的唯一ID)
+   * @param workflowToExecute - 一个符合特定格式的、准备好被执行的工作流对象
+   * @param projectId - 当前的项目ID
+   * @param isPanelExecution - 标记这是否是一次面板执行
+   * @returns 返回一个包含`promptId`和`executionId`的对象，或在失败时返回`null`
+   */
+  async function executeWorkflowCore(
+    executionId: string,
+    workflowToExecute: {
+      id: string | undefined;
+      name: string | undefined;
+      nodes: WorkflowStorageNode[];
+      edges: WorkflowStorageEdge[];
+      interfaceInputs: Record<string, any>;
+      interfaceOutputs: Record<string, any>;
+      referencedWorkflows?: string[];
+    },
+    projectId: string | null,
+    overrideInputs?: Record<string, any> | null, // 新增参数，用于面板输入
+  ): Promise<{ promptId: string; executionId: string } | null> {
+    if (!projectId) {
+      console.error("[WorkflowExecution:Core] Project ID is missing. Aborting execution.");
+      dialogService.showError("执行失败：项目 ID 丢失。");
+      return null;
+    }
+
+    const payload = transformStorageToExecutionPayload({
+      nodes: workflowToExecute.nodes,
+      edges: workflowToExecute.edges,
+    });
+
+    setInitiatingExecution(executionId);
+
+    const message: WebSocketMessage = {
       type: WebSocketMessageType.PROMPT_REQUEST,
       payload: {
-        ...payload, // 包含扁平化后的 nodes 和 edges
-        ...(Object.keys(outputInterfaceMappings).length > 0 && { outputInterfaceMappings }), // 条件性添加
-        // 从 activeWorkflowData 中获取 interfaceInputs 和 interfaceOutputs
-        interfaceInputs: activeWorkflowData?.interfaceInputs || {},
-        interfaceOutputs: activeWorkflowData?.interfaceOutputs || {}, // 保持完整性，即使后端可能主要关注 inputs
+        ...payload,
         metadata: {
-          internalId: internalId,
-          workflowId: activeWorkflowData?.id,
-          workflowName: activeWorkflowData?.name,
-          projectId: projectStore.currentProjectId,
-          version: projectStore.currentProjectMetadata?.version,
+          internalId: executionId,
+          workflowId: workflowToExecute.id,
+          workflowName: workflowToExecute.name,
+          projectId: projectId,
         },
+        interfaceInputs: overrideInputs || workflowToExecute.interfaceInputs || {},
+        interfaceOutputs: workflowToExecute.interfaceOutputs || {},
       },
     };
-    // 6. 发送消息
+
     sendMessage(message);
-    console.debug("[WorkflowExecution:executeWorkflow] PROMPT_REQUEST sent.", message); // Original debug, good to keep
+    console.debug(`[WorkflowExecution:Core] PROMPT_REQUEST sent for executionId ${executionId}.`, message);
+    executionStore.setWorkflowStatusManually(executionId, ExecutionStatus.QUEUED);
 
-    // 7. 设置状态为 QUEUED (与 StatusBar.vue 行为一致)
-    executionStore.setWorkflowStatusManually(internalId, ExecutionStatus.QUEUED);
-    // prepareForNewExecution 应该在状态更新之前或作为其一部分，以避免状态竞争
-    // executionStore.prepareForNewExecution(internalId); // 确保在设置 QUEUED 之前或之后一致地调用
 
-    // TODO: Show user feedback (e.g., "Execution started...")
+    return new Promise((resolve) => {
+      let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+      const unwatch = watch(
+        () => executionStore.getCurrentPromptId(executionId),
+        (newPromptId) => {
+          if (newPromptId) {
+            console.log(`[WorkflowExecution:Core] Received promptId ${newPromptId} for ${executionId}`);
+            if (timeoutHandle) clearTimeout(timeoutHandle);
+            unwatch();
+            resolve({ promptId: newPromptId, executionId: executionId });
+          }
+        },
+        { immediate: false }
+      );
+
+      timeoutHandle = setTimeout(() => {
+        console.error(`[WorkflowExecution:Core] Timed out waiting for promptId for executionId ${executionId}`);
+        unwatch();
+        resolve(null);
+      }, 100000); // 100s timeout
+    });
   }
+
 
   return {
     executeWorkflow,
+    executeWorkflowCore,
   };
 }

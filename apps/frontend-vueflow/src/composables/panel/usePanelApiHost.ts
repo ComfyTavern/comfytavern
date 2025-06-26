@@ -44,8 +44,23 @@ export function usePanelApiHost(iframeRef: Ref<HTMLIFrameElement | null>, panelO
         console.error('[Host] No active project found.')
         throw new Error('No active project found.')
       }
-      // executeWorkflowFromPanel 内部会处理执行ID的注册，这里不再需要手动调用
-      const result = await workflowStore.executeWorkflowFromPanel(request.workflowId, request.inputs, projectId)
+
+      // 将面板输入（简单值）转换为后端期望的格式（完整的 GroupSlotInfo，但更新了默认值）
+      // 这是 API 适配层的核心职责 - 将简单的面板输入转换为工作流执行引擎所需的格式
+      const transformedInputs: Record<string, { config: { default: any } }> = {};
+      for (const key in request.inputs) {
+        if (Object.prototype.hasOwnProperty.call(request.inputs, key)) {
+          // 直接为每个面板输入构建正确的 GroupSlotInfo 结构
+          transformedInputs[key] = {
+            config: {
+              default: request.inputs[key],
+            },
+          };
+        }
+      }
+
+      // 将转换后的输入传递给 workflowStore
+      const result = await workflowStore.executeWorkflowFromPanel(request.workflowId, transformedInputs, projectId)
       return result
     },
     subscribeToExecutionEvents: (executionId: string, _callbacks: { onProgress?: (data: any) => void; onResult?: (data: any) => void; onError?: (data: any) => void; }) => {

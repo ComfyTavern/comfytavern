@@ -5,10 +5,7 @@ import type {
   HistoryEntry,
   GroupInterfaceInfo,
   WorkflowStorageObject,
-  GroupSlotInfo,
-  WorkflowStorageNode,
-  WorkflowStorageEdge,
-  WebSocketMessage
+  GroupSlotInfo
 } from "@comfytavern/types";
 import { useTabStore, type Tab } from "./tabStore";
 import { ref, nextTick, watch, computed } from "vue";
@@ -25,9 +22,8 @@ import { getEffectiveDefaultValue } from "@comfytavern/utils";
 import { klona } from "klona";
 import { useDialogService } from '../services/DialogService';
 import { getWorkflow } from '../utils/api';
-import { useExecutionStore } from './executionStore';
-import { transformVueFlowToExecutionPayload } from "@/utils/workflowTransformer";
-import { useWebSocket, setInitiatingExecution } from '@/composables/useWebSocket';
+import { useWebSocket } from '@/composables/useWebSocket';
+import { useWorkflowExecution } from "@/composables/workflow/useWorkflowExecution";
 
 export const useWorkflowStore = defineStore("workflow", () => {
   const availableWorkflows = ref<
@@ -42,7 +38,6 @@ export const useWorkflowStore = defineStore("workflow", () => {
 
   const tabStore = useTabStore();
   const dialogService = useDialogService();
-  const executionStore = useExecutionStore();
   const { sendMessage } = useWebSocket();
 
   const workflowManager = useWorkflowManager();
@@ -655,121 +650,49 @@ export const useWorkflowStore = defineStore("workflow", () => {
   }
 
   /**
-   * 核心工作流执行函数 (私有)
-   */
-  async function _executeWorkflowCore(
-    executionId: string,
-    workflowToExecute: {
-      id: string,
-      name: string,
-      nodes: WorkflowStorageNode[],
-      edges: WorkflowStorageEdge[],
-      interfaceInputs: Record<string, any>,
-      interfaceOutputs: Record<string, any>,
-    },
-    projectId: string
-  ): Promise<{ promptId: string; executionId: string; } | null> {
-
-    const payload = transformVueFlowToExecutionPayload({
-      nodes: workflowToExecute.nodes,
-      edges: workflowToExecute.edges,
-    });
-
-    setInitiatingExecution(executionId);
-
-    const message: WebSocketMessage = {
-      type: WebSocketMessageType.PROMPT_REQUEST,
-      payload: {
-        ...payload,
-        metadata: {
-          internalId: executionId,
-          workflowId: workflowToExecute.id,
-          workflowName: workflowToExecute.name,
-          projectId: projectId,
-        },
-        interfaceInputs: workflowToExecute.interfaceInputs,
-        interfaceOutputs: workflowToExecute.interfaceOutputs,
-      },
-    };
-
-    sendMessage(message);
-    console.debug(`[WorkflowStore] PROMPT_REQUEST sent for executionId ${executionId}.`, message);
-
-    // 等待并返回 promptId，并手动实现超时
-    return new Promise((resolve) => {
-      let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
-
-      const unwatch = watch(
-        () => executionStore.tabExecutionStates.get(executionId)?.promptId,
-        (newPromptId) => {
-          if (newPromptId) {
-            console.log(`[WorkflowStore] Received promptId ${newPromptId} for executionId ${executionId}`);
-            if (timeoutHandle) clearTimeout(timeoutHandle);
-            unwatch();
-            resolve({ promptId: newPromptId, executionId: executionId }); // 返回 executionId
-          }
-        },
-        { immediate: false } // 初始不触发，等待消息
-      );
-
-      timeoutHandle = setTimeout(() => {
-        console.error(`[WorkflowStore] Timed out waiting for promptId for executionId ${executionId}`);
-        unwatch();
-        resolve(null);
-      }, 100000); // 100秒超时
-    });
-  }
-
-
-  /**
    * 从面板执行工作流，不依赖UI。
+   * 此函数现在遵循统一的执行路径。
    */
   async function executeWorkflowFromPanel(
     workflowId: string,
     inputs: Record<string, any>,
     projectId: string
-  ): Promise<{ promptId: string; executionId: string; } | null> {
-    console.log(`[WorkflowStore] Executing workflow ${workflowId} from panel with inputs:`, inputs);
+  ): Promise<{ promptId: string; executionId: string } | null> {
+    const { executeWorkflowCore } = useWorkflowExecution();
+    const executionId = `panel_${workflowId}_${Date.now()}`;
 
-    const workflowStorage = await fetchWorkflow(projectId, workflowId);
+    console.log(`[WorkflowStore] Executing from panel. Execution ID: ${executionId}`, {
+      projectId,
+      workflowId,
+      inputs,
+    });
+
+    // 1. 加载工作流的存储对象
+    const { loadedData: workflowStorage } = await workflowData.loadWorkflow(
+      executionId, // 使用 executionId 作为 loader 的上下文 ID
+      projectId,
+      workflowId
+    );
+
     if (!workflowStorage) {
-      console.error(`[WorkflowStore] executeWorkflowFromPanel: Failed to load workflow ${workflowId}`);
-      dialogService.showError(`执行失败：无法加载工作流 ${workflowId}`);
+      console.error(`[WorkflowStore] Failed to load workflow ${workflowId} for panel execution.`);
+      dialogService.showError("执行失败", `无法加载工作流: ${workflowId}`);
       return null;
     }
 
-    const workflowToExecute = klona(workflowStorage);
-
-    // 注入输入值
-    const groupInputNode = workflowToExecute.nodes.find(n => n.type === 'core:GroupInput');
-    if (groupInputNode) {
-      for (const [inputKey, inputValue] of Object.entries(inputs)) {
-        const edge = workflowToExecute.edges.find(e => e.source === groupInputNode.id && e.sourceHandle === inputKey);
-        if (edge && edge.targetHandle) {
-          const targetNode = workflowToExecute.nodes.find(n => n.id === edge.target);
-          if (targetNode) {
-            if (!targetNode.inputValues) {
-              targetNode.inputValues = {};
-            }
-            targetNode.inputValues[edge.targetHandle] = inputValue;
-            console.log(`[WorkflowStore] Injected input '${inputKey}' -> Node '${targetNode.id}'.'${edge.targetHandle}' with value:`, inputValue);
-          }
-        }
-      }
-    }
-
-    const panelExecutionId = `panel_exec_${Date.now()}`;
-    
-    // 注意：注册逻辑已移至 setInitiatingExecution，这里不再需要手动调用
-    
-    return _executeWorkflowCore(panelExecutionId, {
+    // 2. 构建符合 executeWorkflowCore 期望的完整对象
+    // 注意：inputs 已经由 usePanelApiHost 转换为正确的 GroupSlotInfo 结构
+    const workflowToExecute = {
+      ...workflowStorage,
       id: workflowId,
-      name: workflowToExecute.name || 'Untitled Workflow',
-      nodes: workflowToExecute.nodes,
-      edges: workflowToExecute.edges,
-      interfaceInputs: workflowToExecute.interfaceInputs || {},
-      interfaceOutputs: workflowToExecute.interfaceOutputs || {},
-    }, projectId);
+      name: workflowStorage.name,
+      interfaceInputs: workflowStorage.interfaceInputs || {}, // 确保不是 undefined
+      interfaceOutputs: workflowStorage.interfaceOutputs || {}, // 确保不是 undefined
+    };
+
+    // 3. 调用核心执行函数，将转换后的输入作为 overrideInputs 传递
+    // inputs 已经是符合要求的 GroupSlotInfo 结构
+    return await executeWorkflowCore(executionId, workflowToExecute, projectId, inputs);
   }
 
   return {
