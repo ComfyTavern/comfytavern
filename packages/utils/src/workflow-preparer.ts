@@ -608,6 +608,7 @@ export function transformStorageToExecutionPayload(workflow: {
   edges: WorkflowStorageEdge[];
   interfaceInputs?: Record<string, any>;
   interfaceOutputs?: Record<string, any>;
+  outputInterfaceMappings?: Record<string, { sourceNodeId: string; sourceSlotKey: string; }>; //修复对前端预览的支持
 }): WorkflowExecutionPayload {
   const executionNodes: ExecutionNode[] = workflow.nodes.map(
     (storageNode): ExecutionNode => {
@@ -643,5 +644,6 @@ export function transformStorageToExecutionPayload(workflow: {
     edges: executionEdges,
     ...(workflow.interfaceInputs && { interfaceInputs: klona(workflow.interfaceInputs) }),
     ...(workflow.interfaceOutputs && { interfaceOutputs: klona(workflow.interfaceOutputs) }),
+    ...(workflow.outputInterfaceMappings && { outputInterfaceMappings: klona(workflow.outputInterfaceMappings) }),
   };
 }

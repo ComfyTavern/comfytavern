@@ -260,7 +260,7 @@ export function useWorkflowExecution() {
     };
 
     // 编辑器执行时，没有需要覆盖的输入
-    await executeWorkflowCore(internalId, workflowForCore, projectStore.currentProjectId, null);
+    await executeWorkflowCore(internalId, workflowForCore, projectStore.currentProjectId, null, outputInterfaceMappings);
   }
 
   /**
@@ -284,6 +284,7 @@ export function useWorkflowExecution() {
     },
     projectId: string | null,
     overrideInputs?: Record<string, any> | null, // 新增参数，用于面板输入
+    outputInterfaceMappings?: Record<string, { sourceNodeId: string; sourceSlotKey: string }>,
   ): Promise<{ promptId: string; executionId: string } | null> {
     if (!projectId) {
       console.error("[WorkflowExecution:Core] Project ID is missing. Aborting execution.");
@@ -298,6 +299,7 @@ export function useWorkflowExecution() {
       edges: workflowToExecute.edges,
       interfaceInputs: finalInterfaceInputs,
       interfaceOutputs: workflowToExecute.interfaceOutputs,
+      outputInterfaceMappings, // 传递映射
     });
 
     setInitiatingExecution(executionId);

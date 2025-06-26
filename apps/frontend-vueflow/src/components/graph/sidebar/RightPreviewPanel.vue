@@ -253,24 +253,6 @@ const groupOutputs = computed(() => {
 
 const WORKFLOW_INTERFACE_OUTPUT_ID = "__WORKFLOW_INTERFACE_OUTPUTS__";
 
-const groupPreviewData = computed(() => {
-  if (!activeTabId.value || !groupOutputs.value) return null;
-  const tabState = executionStore.tabExecutionStates.get(activeTabId.value);
-  if (!tabState || !tabState.nodeOutputs || !tabState.nodeOutputs[WORKFLOW_INTERFACE_OUTPUT_ID]) {
-    return null;
-  }
-  const outputs = tabState.nodeOutputs[WORKFLOW_INTERFACE_OUTPUT_ID];
-  if (!outputs) return null;
-
-  return Object.keys(groupOutputs.value).reduce((acc, key) => {
-    const outputDefinition = groupOutputs.value![key];
-    if (outputDefinition && outputDefinition.dataFlowType !== DataFlowType.CONVERTIBLE_ANY) {
-      acc[key] = outputs && key in outputs ? outputs[key] : null;
-    }
-    return acc;
-  }, {} as Record<string, any>);
-});
-
 const displayableGroupOutputs = computed<Record<string, OutputDefinition>>(() => {
   const result: Record<string, OutputDefinition> = {};
   if (groupOutputs.value) {
@@ -523,7 +505,8 @@ const isMarkdownSlot = computed(() => {
 // 核心方法：获取组输出项的合并内容
 const getMergedGroupContent = (key: string, outputDef: OutputDefinition) => {
   const isStream = !!outputDef.isStream;
-  const finalData = groupPreviewData.value?.[key];
+  const tabState = activeTabId.value ? executionStore.tabExecutionStates.get(activeTabId.value) : undefined;
+  const finalData = tabState?.nodeOutputs?.[WORKFLOW_INTERFACE_OUTPUT_ID]?.[key];
   const streamText = getInterfaceStreamText(key); // 已有方法
   const streamDone = isInterfaceStreamDone(key); // 已有方法
 
