@@ -38,6 +38,8 @@ const promptIdToExecutionIdMap = new Map<string, string>();
 const messageBuffer = new Map<string, WebSocketMessage<any>[]>();
 // 记录已完成的执行，防止重复处理
 const completedExecutionIds = new Set<string>();
+// 记录待处理的清理任务
+const pendingCleanups = new Map<string, ReturnType<typeof setTimeout>>();
 
 
 let isRouterInitialized = false;
@@ -56,21 +58,39 @@ const ensureStoresInitialized = () => {
 };
 
 const cleanupExecution = (executionId: string) => {
-  completedExecutionIds.add(executionId);
-  for (const [promptId, execId] of promptIdToExecutionIdMap.entries()) {
-    if (execId === executionId) {
-      promptIdToExecutionIdMap.delete(promptId);
-      console.log(`[WebSocketRouter] Cleaned up mapping for promptId: ${promptId} (executionId: ${executionId})`);
-      break; 
-    }
+  // 如果该执行ID已有待处理的清理任务，先取消它
+  if (pendingCleanups.has(executionId)) {
+    clearTimeout(pendingCleanups.get(executionId)!);
+    pendingCleanups.delete(executionId);
   }
-  // 清理可能遗留的缓冲区
-  for(const [promptId, _] of messageBuffer.entries()) {
-    const execId = promptIdToExecutionIdMap.get(promptId);
-    if (execId === executionId) {
-      messageBuffer.delete(promptId);
+
+  console.log(`[WebSocketRouter] Scheduling cleanup for executionId: ${executionId} in 5 seconds.`);
+
+  // 设置一个定时器，在5秒后执行清理
+  const cleanupTimer = setTimeout(() => {
+    console.log(`[WebSocketRouter] Executing delayed cleanup for executionId: ${executionId}`);
+
+    // 查找并删除相关的 promptId 映射和缓冲区
+    let promptIdToDelete: string | null = null;
+    for (const [promptId, execId] of promptIdToExecutionIdMap.entries()) {
+      if (execId === executionId) {
+        promptIdToDelete = promptId;
+        break;
+      }
     }
-  }
+
+    if (promptIdToDelete) {
+      promptIdToExecutionIdMap.delete(promptIdToDelete);
+      messageBuffer.delete(promptIdToDelete);
+      console.log(`[WebSocketRouter] Cleaned up mapping and buffer for promptId: ${promptIdToDelete} (executionId: ${executionId})`);
+    }
+
+    // 从待处理列表中移除自己
+    pendingCleanups.delete(executionId);
+  }, 5000); // 5秒的宽限期
+
+  // 将新的清理任务记录到待处理列表
+  pendingCleanups.set(executionId, cleanupTimer);
 };
 
 
@@ -145,7 +165,7 @@ const handleRawMessage = (message: WebSocketMessage<any>) => {
       processExecutionMessage(message, targetExecutionId);
     } else {
       // 缓冲未知 promptId 的消息
-      console.warn(`[WebSocketRouter] Buffering message for unknown promptId ${acceptedPromptId}. Type: ${message.type}.`);
+      console.log(`[WebSocketRouter] Buffering message for unknown promptId ${acceptedPromptId}. Type: ${message.type}.`);
       if (!messageBuffer.has(acceptedPromptId)) {
         messageBuffer.set(acceptedPromptId, []);
       }
@@ -187,13 +207,26 @@ const processExecutionMessage = (message: WebSocketMessage<any>, executionId: st
     case WebSocketMessageType.PROMPT_ACCEPTED_RESPONSE:
       executionStore.handlePromptAccepted(executionId, payload as PromptAcceptedResponsePayload);
       break;
-    case WebSocketMessageType.EXECUTION_STATUS_UPDATE:
-      executionStore.updateWorkflowStatus(executionId, payload as ExecutionStatusUpdatePayload);
+    case WebSocketMessageType.EXECUTION_STATUS_UPDATE: {
+      const statusPayload = payload as ExecutionStatusUpdatePayload;
+      executionStore.updateWorkflowStatus(executionId, statusPayload);
+      
       // 清理阶段
-      if (payload.status === ExecutionStatus.COMPLETE || payload.status === ExecutionStatus.ERROR || payload.status === ExecutionStatus.INTERRUPTED) {
+      if (statusPayload.status === ExecutionStatus.COMPLETE || statusPayload.status === ExecutionStatus.ERROR || statusPayload.status === ExecutionStatus.INTERRUPTED) {
+        // 如果已经处理过这个执行的完成状态，则忽略，防止重复调度清理
+        if (completedExecutionIds.has(executionId)) {
+          console.debug(`[WebSocketRouter] Ignoring duplicate final status message for completed execution ${executionId}`);
+          break; // 使用 break 跳出 switch case
+        }
+        // 立即标记为完成，以防止后续消息（包括重复的完成消息）被再次处理
+        console.log(`[WebSocketRouter] Execution ${executionId} marked as completed. Final status: ${statusPayload.status}`);
+        completedExecutionIds.add(executionId);
+
+        // 安排延迟清理
         cleanupExecution(executionId);
       }
       break;
+    }
     case WebSocketMessageType.NODE_EXECUTING:
       executionStore.updateNodeExecuting(executionId, payload as NodeExecutingPayload);
       break;
@@ -213,13 +246,25 @@ const processExecutionMessage = (message: WebSocketMessage<any>, executionId: st
       executionStore.handleWorkflowInterfaceYield(executionId, payload as WorkflowInterfaceYieldPayload);
       break;
     case WebSocketMessageType.ERROR: {
+     // 检查是否已经标记为完成，以防万一
+      if (completedExecutionIds.has(executionId)) {
+        console.debug(`[WebSocketRouter] Ignoring global error for already completed execution ${executionId}`);
+        break;
+      }
+
       const errorPayload = payload as { message: string; details?: any };
       console.error(`[WebSocketRouter] Received GLOBAL ERROR message for execution ${executionId}: ${errorPayload.message}`);
+      
+      // 更新状态
       executionStore.updateWorkflowStatus(executionId, {
         promptId: payload?.promptId || executionStore.getCurrentPromptId(executionId) || 'unknown',
         status: ExecutionStatus.ERROR,
         errorInfo: { message: errorPayload.message, details: errorPayload.details },
       });
+
+      // 立即标记为完成并安排清理
+      console.log(`[WebSocketRouter] Execution ${executionId} marked as completed due to GLOBAL ERROR.`);
+      completedExecutionIds.add(executionId);
       cleanupExecution(executionId);
       break;
     }
@@ -234,8 +279,33 @@ const processExecutionMessage = (message: WebSocketMessage<any>, executionId: st
 
 export const setInitiatingExecution = (executionId: string) => {
   console.log(`[WebSocketRouter] Setting initiating execution for next prompt: ${executionId}`);
+
+  // 1. 立即取消任何为该 executionId 安排的待处理清理任务
+  if (pendingCleanups.has(executionId)) {
+    console.log(`[WebSocketRouter] Cancelling pending cleanup for reused executionId: ${executionId}`);
+    clearTimeout(pendingCleanups.get(executionId)!);
+    pendingCleanups.delete(executionId);
+  }
+
+  // 2. 立即移除任何与此 executionId 关联的旧映射
+  // 这可以防止新执行被错误地路由到已完成的旧 promptId
+  let oldPromptId: string | null = null;
+  for (const [promptId, execId] of promptIdToExecutionIdMap.entries()) {
+    if (execId === executionId) {
+      oldPromptId = promptId;
+      break;
+    }
+  }
+  if (oldPromptId) {
+    console.log(`[WebSocketRouter] Immediately cleaning up old promptId ${oldPromptId} for new execution using ID ${executionId}`);
+    promptIdToExecutionIdMap.delete(oldPromptId);
+    messageBuffer.delete(oldPromptId);
+  }
+
+  // 3. 设置新的发起执行ID
   initiatingExecutionId = executionId;
-  // 清理旧的完成状态，以防ID被重用（例如在开发热重载中）
+  
+  // 4. 从已完成集合中移除，允许此ID被重新执行
   completedExecutionIds.delete(executionId);
 };
 
