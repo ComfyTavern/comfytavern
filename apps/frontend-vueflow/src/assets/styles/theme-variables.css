@@ -56,6 +56,16 @@
   --ct-shadow-color: hsl(var(--ct-border-base-hsl) / var(--ct-shadow-opacity));
 
   /* --ct-primary-focus: color-mix(in srgb, hsl(var(--ct-primary-hsl)), black 20%); */
+
+  /* DaisyUI 派生颜色变量 */
+  --ct-primary-focus-hsl: color-mix(in srgb, hsl(var(--ct-primary-hsl)), black 15%);
+  --ct-secondary-content-hsl: var(--ct-primary-content-hsl); /* 假设与 primary content 相同 */
+  --ct-accent-content-hsl: var(--ct-primary-content-hsl);
+  --ct-neutral-content-hsl: var(--ct-primary-content-hsl);
+  --ct-info-content-hsl: var(--ct-primary-content-hsl);
+  --ct-success-content-hsl: var(--ct-primary-content-hsl);
+  --ct-warning-content-hsl: var(--ct-primary-content-hsl);
+  --ct-error-content-hsl: var(--ct-primary-content-hsl);
   /* ... 更多 DaisyUI 特定变量可以根据需要添加和映射 ... */
 }
 
@@ -114,4 +124,15 @@ html.dark {
   --ct-shadow-color: hsl(var(--ct-border-base-hsl) / var(--ct-shadow-opacity));
 
   /* --ct-primary-focus: color-mix(in srgb, hsl(var(--ct-primary-hsl)), white 20%); */
+
+  /* 暗色模式下的 DaisyUI 派生颜色 */
+  --ct-primary-focus-hsl: color-mix(in srgb, hsl(var(--ct-primary-hsl)), white 15%);
+  /* 暗色模式下 content 颜色可能需要调整，这里暂时保持一致 */
+  --ct-secondary-content-hsl: var(--ct-primary-content-hsl);
+  --ct-accent-content-hsl: var(--ct-primary-content-hsl);
+  --ct-neutral-content-hsl: var(--ct-primary-content-hsl);
+  --ct-info-content-hsl: var(--ct-primary-content-hsl);
+  --ct-success-content-hsl: var(--ct-primary-content-hsl);
+  --ct-warning-content-hsl: var(--ct-primary-content-hsl);
+  --ct-error-content-hsl: var(--ct-primary-content-hsl);
 }
