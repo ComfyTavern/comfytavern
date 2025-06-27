@@ -44,7 +44,7 @@
                   <IconDelete class="w-4 h-4 text-text-muted transition-colors group-hover:text-error" />
                 </button>
               </div>
-              <div class="space-y-2">
+              <div class="space-y-3">
                 <div>
                   <label class="text-xs font-medium text-text-secondary uppercase tracking-wide">调用别名 (Alias)</label>
                   <input type="text" v-model="binding.alias"
@@ -56,6 +56,59 @@
                   <input type="text" v-model="binding.description"
                     class="mt-1 block w-full px-3 py-2 bg-background-base border border-border-base rounded-md text-text-base focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm" />
                 </div>
+
+                <!-- Workflow IO Display -->
+                <div class="mt-3 pt-3 border-t border-border-base/50">
+                  <div class="grid grid-cols-2 gap-x-4">
+                    <!-- Inputs -->
+                    <div>
+                      <h4 class="text-xs font-semibold uppercase text-text-secondary mb-2">输入</h4>
+                      <template v-for="details in [boundWorkflowsDetails[binding.workflowId]]" :key="binding.workflowId + '-inputs'">
+                        <div v-if="details">
+                          <div v-if="Object.keys(details.inputs).length > 0" class="space-y-1.5">
+                            <div v-for="(input, key) in details.inputs" :key="key" class="flex items-center justify-between text-xs text-text-base">
+                              <span class="truncate" v-comfy-tooltip="`${input.displayName || key}`">{{ input.displayName || key }}</span>
+                              <div class="flex items-center space-x-1.5 flex-shrink-0">
+                                <span class="text-text-muted">{{ input.dataFlowType }}</span>
+                                <span :class="getHandleClasses(input, true)" style="width: 8px !important; height: 8px !important; position: static !important; transform: none !important; border-width: 1px !important; display: inline-block !important;"></span>
+                              </div>
+                            </div>
+                          </div>
+                          <div v-else class="text-xs text-text-disabled italic">
+                            无输入接口
+                          </div>
+                        </div>
+                        <div v-else class="text-xs text-text-disabled italic">
+                          正在加载...
+                        </div>
+                      </template>
+                    </div>
+                    <!-- Outputs -->
+                    <div>
+                      <h4 class="text-xs font-semibold uppercase text-text-secondary mb-2">输出</h4>
+                      <template v-for="details in [boundWorkflowsDetails[binding.workflowId]]" :key="binding.workflowId + '-outputs'">
+                        <div v-if="details">
+                          <div v-if="Object.keys(details.outputs).length > 0" class="space-y-1.5">
+                            <div v-for="(output, key) in details.outputs" :key="key" class="flex items-center justify-between text-xs text-text-base">
+                              <span class="truncate" v-comfy-tooltip="`${output.displayName || key}`">{{ output.displayName || key }}</span>
+                              <div class="flex items-center space-x-1.5 flex-shrink-0">
+                                <span class="text-text-muted">{{ output.dataFlowType }}</span>
+                                <span :class="getHandleClasses(output, false)" style="width: 8px !important; height: 8px !important; position: static !important; transform: none !important; border-width: 1px !important; display: inline-block !important;"></span>
+                              </div>
+                            </div>
+                          </div>
+                          <div v-else class="text-xs text-text-disabled italic">
+                            无输出接口
+                          </div>
+                        </div>
+                        <div v-else class="text-xs text-text-disabled italic">
+                          正在加载...
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -78,9 +131,10 @@
 import { ref, onMounted, computed } from 'vue';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import { usePanelStore } from '@/stores/panelStore';
-import type { PanelDefinition, PanelWorkflowBinding } from '@comfytavern/types';
+import { DataFlowType, type PanelDefinition, type PanelWorkflowBinding, type GroupSlotInfo } from '@comfytavern/types';
 import { klona } from 'klona';
 import { vComfyTooltip } from '@/directives/vComfyTooltip';
+import styles from '@/components/graph/nodes/handleStyles.module.css';
 import IconAdd from '@/components/icons/IconAdd.vue';
 import IconDelete from '@/components/icons/IconDelete.vue';
 import IconSpinner from '@/components/icons/IconSpinner.vue';
@@ -102,6 +156,7 @@ const panelStore = usePanelStore();
 const panelDef = ref<PanelDefinition | null>(null);
 const bindings = ref<PanelWorkflowBinding[]>([]);
 const isLoading = ref(true);
+const boundWorkflowsDetails = ref<Record<string, { inputs: Record<string, GroupSlotInfo>, outputs: Record<string, GroupSlotInfo> }>>({});
 
 const availableWorkflows = computed(() => workflowStore.availableWorkflows);
 const isWorkflowBound = (workflowId: string) => {
@@ -110,6 +165,54 @@ const isWorkflowBound = (workflowId: string) => {
 
 const getWorkflowName = (workflowId: string) => {
   return availableWorkflows.value.find(w => w.id === workflowId)?.name || workflowId;
+}
+
+const filterSlots = (slots: Record<string, GroupSlotInfo> | undefined) => {
+  if (!slots) return {};
+  return Object.fromEntries(
+    Object.entries(slots).filter(
+      ([, slotInfo]) => slotInfo && slotInfo.dataFlowType !== DataFlowType.CONVERTIBLE_ANY
+    )
+  );
+};
+
+const fetchAndStoreWorkflowDetails = async (workflowId: string) => {
+  if (!props.projectId || boundWorkflowsDetails.value[workflowId]) return;
+  try {
+    const wfData = await workflowStore.fetchWorkflow(props.projectId, workflowId);
+    if (wfData) {
+      boundWorkflowsDetails.value[workflowId] = {
+        inputs: filterSlots(wfData.interfaceInputs),
+        outputs: filterSlots(wfData.interfaceOutputs),
+      };
+    }
+  } catch (error) {
+    console.error(`获取工作流 ${workflowId} 的详细信息失败:`, error);
+  }
+};
+
+function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
+  const classes: string[] = [];
+  if (styles.handle) classes.push(styles.handle);
+
+  const typeClassKey = `handleType${slot.dataFlowType}` as keyof typeof styles;
+  const typeClass = styles[typeClassKey];
+  if (typeClass) {
+    classes.push(typeClass);
+  } else if (styles.handleAny) {
+    classes.push(styles.handleAny);
+  }
+
+  if (slot.dataFlowType === DataFlowType.CONVERTIBLE_ANY && styles.handleAny && !classes.includes(styles.handleAny)) {
+    classes.push(styles.handleAny);
+  }
+
+  // GroupSlotInfo may not have 'multi', using assertion as a safe fallback.
+  if (isInput && (slot as any).multi && styles.handleMulti && !classes.includes(styles.handleMulti)) {
+    classes.push(styles.handleMulti);
+  }
+
+  return classes;
 }
 
 const addBinding = (workflowId: string, workflowName: string) => {
@@ -124,10 +227,13 @@ const addBinding = (workflowId: string, workflowName: string) => {
     description: ``,
     notes: '',
   });
+
+  fetchAndStoreWorkflowDetails(workflowId);
 };
 
 const removeBinding = (workflowId: string) => {
   bindings.value = bindings.value.filter(b => b.workflowId !== workflowId);
+  delete boundWorkflowsDetails.value[workflowId];
 };
 
 const saveChanges = async () => {
@@ -147,6 +253,7 @@ onMounted(async () => {
       panelDef.value = data;
       if (data?.workflowBindings) {
         bindings.value = klona(data.workflowBindings);
+        bindings.value.forEach(b => fetchAndStoreWorkflowDetails(b.workflowId));
       }
     }),
   ]);
