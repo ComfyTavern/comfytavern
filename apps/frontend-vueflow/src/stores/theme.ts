@@ -7,9 +7,9 @@ import { useAuthStore } from '@/stores/authStore';
 // 定义显示模式的类型
 export type DisplayMode = 'light' | 'dark' | 'system';
 
-// 定义 DaisyUI 桥接主题的名称，后续可以考虑从主题配置中读取或更动态化
-const DAISYUI_LIGHT_THEME_NAME = 'mytheme_light';
-const DAISYUI_DARK_THEME_NAME = 'mytheme_dark';
+// 定义 DaisyUI 桥接主题的名称，现在直接使用标准的 light/dark
+const DAISYUI_LIGHT_THEME_NAME = 'light';
+const DAISYUI_DARK_THEME_NAME = 'dark';
 
 // 默认主题 ID，如果 localStorage 中没有，则使用此值
 // 假设我们有一个名为 'default' 的系统主题，或者第一个加载的主题

@@ -32,16 +32,28 @@ UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind 
 我们同时使用 Tailwind CSS 的原子类和 DaisyUI 的组件类，它们有不同的适用场景：
 
 - **原子类 (Atomic Classes)**: 用于构建独特的、非标准化的或微调布局的场景。例如 `flex`, `p-4`, `rounded-lg`。
-- **组件类 (Component Classes)**: **这是构建标准 UI 元素（按钮、输入框、卡片等）的首选方式**。例如 `btn btn-primary`, `input input-bordered`, `card`。
+- **组件类 (Component Classes)**: 用于构建标准的 UI 元素（按钮、输入框、卡片等）。例如 `btn`, `input`, `card`。
 
-**核心原则：优先使用 DaisyUI 组件类。** 只有在组件类无法满足特定设计需求时，才回退到使用原子类进行自定义组合。
+**核心原则：优先使用 DaisyUI 组件的基础类（如 `btn`, `card`）来获取结构和行为，但在应用品牌颜色时，使用我们自定义的品牌组件类。**
 
-### 3.2 DaisyUI 组件规范
+### 3.2 DaisyUI 基础类与自定义品牌颜色
 
-我们的主题系统已为 DaisyUI 的核心组件（如 `btn`, `alert`, `modal` 等）提供了完整的颜色和样式支持，包括悬停、聚焦等派生状态。
+#### 为什么要自定义？
 
-- **用法**: 直接使用 DaisyUI 文档中定义的类名。例如，创建一个主色调的按钮，应使用 `<button class="btn btn-primary">...</button>`。
-- **回退行为**: 使用原子类去“拼凑”一个看起来像标准组件的元素，例如 `<div class="bg-primary text-primary-content p-2 rounded">...</div>` 来模拟一个按钮。
+直接覆盖 DaisyUI 的主题颜色（如 `primary`）之所以困难，是因为 DaisyUI 会基于这个颜色**预先生成大量派生工具类**（如 `hover:bg-primary-focus`, `focus:ring-primary` 等）。我们的动态主题系统通过 CSS 变量在运行时改变颜色，很难在不引入大量复杂配置或覆盖所有派生类的情况下，可靠地影响 DaisyUI 的所有状态，因此我们选择解耦。
+
+#### 使用规范
+
+1.  **继承骨架**: 使用 DaisyUI 的基础类来获得组件的结构、尺寸、动画和行为。
+    - **示例**: `class="btn"`
+
+2.  **应用品牌颜色**: 使用我们自己在 [`main.css`](../../apps/frontend-vueflow/src/assets/main.css) 中通过 `@layer components` 定义的品牌颜色类来上色。
+    - **示例**: `class="btn-brand-primary"`
+
+3.  **最终组合与交互状态处理**:
+    - **正确做法 (静态)**: `<button class="btn btn-brand-primary">...</button>`
+    - **错误做法**: `<button class="btn btn-primary">...</button>` (禁止直接使用 DaisyUI 的颜色类)
+    - **手动组合用法 (Atomic Class Usage)**: `<div class="bg-primary text-primary-content p-2 rounded">...</div>` (在非组件元素上，可直接使用原子工具类手动组合样式)
 
 ---
 
@@ -62,7 +74,7 @@ UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind 
   - 将重复出现的 UI 模式抽象为通用组件。
   - `common` 组件不应包含任何特定业务逻辑。
 
-### 3.2 领域特定组件 (`/components/graph`, `/components/settings` 等)
+### 4.2 领域特定组件 (`/components/graph`, `/components/settings` 等)
 
 与核心业务（如图谱编辑器、设置页面）紧密相关的组件。
 
@@ -74,7 +86,7 @@ UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind 
   - **复用基础**: 尽可能复用 `common` 目录下的基础组件。
   - **支持多尺寸**: 为实现跨上下文复用（如节点内部和设置页面），推荐为输入组件增加 `size` 属性（如 `'small' | 'large'`），通过不同的 CSS 类来控制显式。[`BooleanToggle.vue`](../../apps/frontend-vueflow/src/components/graph/inputs/BooleanToggle.vue) 是一个很好的范例。
 
-### 3.3 数据驱动的视图构建 (设置页面)
+### 4.3 数据驱动的视图构建 (设置页面)
 
 设置页面 (`/components/settings`) 是数据驱动视图的典范。开发者不应手动编写布局，而是通过**定义配置对象数组**来动态生成。
 
@@ -84,7 +96,11 @@ UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind 
 - **开发原则**:
   - **定义优于编码**: 你的主要工作是定义 `SettingItemConfig` 对象，而不是编写 HTML。
   - **逻辑分离**: 业务逻辑（如API调用）应封装在配置项的 `onSave` 回调中，保持 UI 组件纯粹。
-
+- **该模式的优势**:
+  - **易于维护**: 增删改查设置项，只需修改作为“单一事实来源”的配置对象，无需触碰 Vue 模板。
+  - **权限控制**: 可以轻易地根据用户角色动态过滤配置数组，从而实现视图级别的权限控制。
+  - **一致性**: 保证所有设置项的外观和行为高度统一。
+ 
 ---
 
 ## 5. 布局与移动端优化

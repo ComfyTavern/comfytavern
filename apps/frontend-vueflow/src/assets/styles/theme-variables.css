@@ -136,3 +136,56 @@ html.dark {
   --ct-warning-content-hsl: var(--ct-primary-content-hsl);
   --ct-error-content-hsl: var(--ct-primary-content-hsl);
 }
+
+/*
+  ==========================================================================
+    DaisyUI <> ComfyTavern Theme Bridge
+  ==========================================================================
+
+  This section acts as a bridge between our dynamic ComfyTavern theme system
+  (using --ct- variables) and DaisyUI's theme system.
+
+  We let DaisyUI generate its standard 'light' and 'dark' themes. Then, here,
+  we override DaisyUI's core HSL color variables with our own, ensuring all
+  DaisyUI components automatically adopt our dynamic themes.
+
+  This approach is robust because it doesn't fight the build-time nature of
+  Tailwind/DaisyUI. Instead, it applies a cascading override at runtime, which
+  is exactly what CSS is designed for.
+*/
+[data-theme="light"],
+[data-theme="dark"] {
+  /* 核心颜色 Core Colors */
+  --p: var(--ct-primary-hsl); /* primary */
+  --s: var(--ct-secondary-hsl); /* secondary */
+  --a: var(--ct-accent-hsl); /* accent */
+  --n: var(--ct-neutral-hsl); /* neutral */
+
+  /* 背景色 Backgrounds */
+  --b1: var(--ct-background-base-hsl); /* base-100 */
+  --b2: var(--ct-background-surface-hsl); /* base-200 */
+  /* --b3 (base-300) 会由 daisyUI 根据 --b2 自动派生 */
+
+  /* 文本和内容颜色 Text & Content Colors */
+  --bc: var(--ct-text-base-hsl); /* base-content */
+  --pc: var(--ct-primary-content-hsl); /* primary-content */
+  --sc: var(--ct-secondary-content-hsl); /* secondary-content */
+  --ac: var(--ct-accent-content-hsl); /* accent-content */
+  --nc: var(--ct-neutral-content-hsl); /* neutral-content */
+
+  /* 状态颜色 State Colors */
+  --in: var(--ct-info-hsl); /* info */
+  --su: var(--ct-success-hsl); /* success */
+  --wa: var(--ct-warning-hsl); /* warning */
+  --er: var(--ct-error-hsl); /* error */
+
+  /* 状态内容颜色 State Content Colors */
+  --inc: var(--ct-info-content-hsl); /* info-content */
+  --suc: var(--ct-success-content-hsl); /* success-content */
+  --wac: var(--ct-warning-content-hsl); /* warning-content */
+  --erc: var(--ct-error-content-hsl); /* error-content */
+
+  /* 派生颜色 (我们覆盖了的有自定义逻辑的) Derived Colors (overridden with custom logic) */
+  --pf: var(--ct-primary-focus-hsl); /* primary-focus */
+  /* 其他焦点色，如 --sf, --af, --nf 会由 daisyUI 自动派生 */
+}

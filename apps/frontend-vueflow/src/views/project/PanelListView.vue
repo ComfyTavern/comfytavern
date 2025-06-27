@@ -2,9 +2,8 @@
   <div class="p-4 sm:p-6 lg:p-8">
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold text-text-base">应用面板</h1>
-      <button
-        class="px-3 py-2 font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 flex items-center">
-        <span class="font-bold">新建面板</span>
+      <button class="btn btn-brand-primary">
+        新建面板
       </button>
     </div>
 

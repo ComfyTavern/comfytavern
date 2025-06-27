@@ -65,68 +65,24 @@ export default {
         "neutral-soft": "hsl(var(--ct-neutral-hsl) / 0.3)",
         "neutral-softest": "hsl(var(--ct-neutral-hsl) / 0.15)",
         "primary-content": "hsl(var(--ct-primary-content-hsl) / <alpha-value>)",
+        "secondary-content": "hsl(var(--ct-secondary-content-hsl) / <alpha-value>)",
+        "accent-content": "hsl(var(--ct-accent-content-hsl) / <alpha-value>)",
+        "neutral-content": "hsl(var(--ct-neutral-content-hsl) / <alpha-value>)",
+        "info-content": "hsl(var(--ct-info-content-hsl) / <alpha-value>)",
+        "success-content": "hsl(var(--ct-success-content-hsl) / <alpha-value>)",
+        "warning-content": "hsl(var(--ct-warning-content-hsl) / <alpha-value>)",
+        "error-content": "hsl(var(--ct-error-content-hsl) / <alpha-value>)",
       },
     },
   },
   plugins: [daisyui],
   daisyui: {
-    themes: [
-      // 定义 DaisyUI 使用的“桥接”主题
-      {
-        mytheme_light: {
-          // 对应我们的亮色模式, 固定 alpha 为 1
-          primary: "hsl(var(--ct-primary-hsl) / 1)",
-          secondary: "hsl(var(--ct-secondary-hsl) / 1)",
-          accent: "hsl(var(--ct-accent-hsl) / 1)",
-          neutral: "hsl(var(--ct-neutral-hsl) / 1)",
-          "base-100": "hsl(var(--ct-background-base-hsl) / var(--ct-background-base-opacity))",
-          "base-200": "hsl(var(--ct-background-surface-hsl) / 1)",
-          info: "hsl(var(--ct-info-hsl) / 1)",
-          success: "hsl(var(--ct-success-hsl) / 1)",
-          warning: "hsl(var(--ct-warning-hsl) / 1)",
-          "error": "hsl(var(--ct-error-hsl) / 1)",
-          "primary-content": "hsl(var(--ct-primary-content-hsl) / 1)",
-
-          // 完整的 DaisyUI 派生颜色映射
-          "primary-focus": "hsl(var(--ct-primary-focus-hsl, var(--ct-primary-hsl)))", // 提供回退
-          "secondary-content": "hsl(var(--ct-secondary-content-hsl, var(--ct-primary-content-hsl)))",
-          "accent-content": "hsl(var(--ct-accent-content-hsl, var(--ct-primary-content-hsl)))",
-          "neutral-content": "hsl(var(--ct-neutral-content-hsl, var(--ct-primary-content-hsl)))",
-          "info-content": "hsl(var(--ct-info-content-hsl, var(--ct-primary-content-hsl)))",
-          "success-content": "hsl(var(--ct-success-content-hsl, var(--ct-primary-content-hsl)))",
-          "warning-content": "hsl(var(--ct-warning-content-hsl, var(--ct-primary-content-hsl)))",
-          "error-content": "hsl(var(--ct-error-content-hsl, var(--ct-primary-content-hsl)))",
-        },
-        mytheme_dark: {
-          // 对应我们的暗色模式, 固定 alpha 为 1
-          "primary": "hsl(var(--ct-primary-hsl) / 1)",
-          secondary: "hsl(var(--ct-secondary-hsl) / 1)",
-          accent: "hsl(var(--ct-accent-hsl) / 1)",
-          neutral: "hsl(var(--ct-neutral-hsl) / 1)",
-          "base-100": "hsl(var(--ct-background-base-hsl) / var(--ct-background-base-opacity))",
-          "base-200": "hsl(var(--ct-background-surface-hsl) / 1)",
-          info: "hsl(var(--ct-info-hsl) / 1)",
-          success: "hsl(var(--ct-success-hsl) / 1)",
-          warning: "hsl(var(--ct-warning-hsl) / 1)",
-          "error": "hsl(var(--ct-error-hsl) / 1)",
-          "primary-content": "hsl(var(--ct-primary-content-hsl) / 1)",
-          
-          // 完整的 DaisyUI 派生颜色映射
-          "primary-focus": "hsl(var(--ct-primary-focus-hsl, var(--ct-primary-hsl)))",
-          "secondary-content": "hsl(var(--ct-secondary-content-hsl, var(--ct-primary-content-hsl)))",
-          "accent-content": "hsl(var(--ct-accent-content-hsl, var(--ct-primary-content-hsl)))",
-          "neutral-content": "hsl(var(--ct-neutral-content-hsl, var(--ct-primary-content-hsl)))",
-          "info-content": "hsl(var(--ct-info-content-hsl, var(--ct-primary-content-hsl)))",
-          "success-content": "hsl(var(--ct-success-content-hsl, var(--ct-primary-content-hsl)))",
-          "warning-content": "hsl(var(--ct-warning-content-hsl, var(--ct-primary-content-hsl)))",
-          "error-content": "hsl(var(--ct-error-content-hsl, var(--ct-primary-content-hsl)))",
-        },
-      },
-    ],
-    darkTheme: "mytheme_dark", // 指定 DaisyUI 默认使用的暗色主题名称
+    themes: ["light", "dark"], // 我们将使用标准的 light 和 dark 主题，并通过 CSS 变量覆盖它们。
+    darkTheme: "dark", // 指定 DaisyUI 默认使用的暗色主题名称
     base: true, // 应用基础样式 (默认 true)
     styled: true, // 应用 DaisyUI 组件样式 (默认 true)
     utils: true, // 添加 DaisyUI 工具类 (默认 true)
     logs: true, // 在控制台显示 DaisyUI 版本和配置信息，方便调试
+    oklch: false, // 核心修复：禁用 oklch，强制 daisyui 使用 hsl()，以便我们的 HSL 变量能正确覆盖。
   },
 };

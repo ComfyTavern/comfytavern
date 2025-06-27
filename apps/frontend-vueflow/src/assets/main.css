@@ -4,6 +4,83 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@layer components {
+  .btn-brand-primary {
+    background-color: hsl(var(--ct-primary-hsl));
+    color: hsl(var(--ct-primary-content-hsl));
+    border-color: hsl(var(--ct-primary-hsl));
+
+    /* 关键: 必须定义所有交互状态！ */
+    &:hover {
+      background-color: hsl(var(--ct-primary-focus-hsl));
+      border-color: hsl(var(--ct-primary-focus-hsl));
+    }
+
+    &:active {
+      transform: scale(0.98); /* 示例：添加点击效果 */
+    }
+
+    &:disabled {
+      background-color: hsl(var(--ct-background-surface-hsl));
+      color: hsl(var(--ct-text-muted-hsl));
+      border-color: hsl(var(--ct-border-base-hsl));
+      opacity: var(--ct-disabled-opacity, 0.5);
+      cursor: not-allowed;
+    }
+
+    /* 推荐处理键盘聚焦状态，以符合无障碍标准 */
+    &:focus-visible {
+      outline: 2px solid hsl(var(--ct-primary-hsl));
+      outline-offset: 2px;
+    }
+  }
+
+  /* Brand Alerts */
+  .alert-brand-info {
+    @apply bg-info text-info-content;
+  }
+  .alert-brand-success {
+    @apply bg-success text-success-content;
+  }
+  .alert-brand-warning {
+    @apply bg-warning text-warning-content;
+  }
+  .alert-brand-error {
+    @apply bg-error text-error-content;
+  }
+
+  /* Brand Badges */
+  .badge-brand-primary {
+    @apply bg-primary text-primary-content;
+  }
+  .badge-brand-secondary {
+    @apply bg-secondary text-secondary-content;
+  }
+  .badge-brand-accent {
+    @apply bg-accent text-accent-content;
+  }
+  .badge-brand-info {
+    @apply bg-info text-info-content;
+  }
+  .badge-brand-success {
+    @apply bg-success text-success-content;
+  }
+  .badge-brand-warning {
+    @apply bg-warning text-warning-content;
+  }
+  .badge-brand-error {
+    @apply bg-error text-error-content;
+  }
+
+  /* Base component overrides for better theme integration */
+  .btn:not(.btn-brand-primary):not([class*="btn-"]):not(.btn-ghost):not(.btn-link) {
+    @apply bg-background-surface hover:bg-opacity-80 border-border-base text-text-base;
+  }
+
+  .card {
+    @apply bg-background-base shadow;
+  }
+}
 
 .basic-flow {
   width: 100%;
