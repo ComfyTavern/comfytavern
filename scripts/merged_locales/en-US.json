@@ -781,6 +781,40 @@
     }
   },
   "testPanel": {
+    "daisyuiShowcase": {
+      "alerts": {
+        "error": "Error: Task failed to execute.",
+        "info": "This is an informational message.",
+        "success": "Operation successful!",
+        "title": "Alerts",
+        "warning": "Warning: Please be careful with this action."
+      },
+      "badges": {
+        "accent": "Accent",
+        "error": "Error",
+        "info": "Info",
+        "primary": "Primary",
+        "secondary": "Secondary",
+        "success": "Success",
+        "title": "Badges",
+        "warning": "Warning"
+      },
+      "buttons": {
+        "basic": "Basic Button",
+        "disabled": "Disabled Button",
+        "primary": "Primary Button",
+        "title": "Buttons"
+      },
+      "card": {
+        "cardTitle": "Card Title",
+        "description": "This is an example of a card component, used to display a content summary.",
+        "newBadge": "NEW",
+        "tagFashion": "Fashion",
+        "tagProduct": "Products",
+        "title": "Card"
+      },
+      "title": "DaisyUI Component Style Showcase"
+    },
     "dialogService": {
       "buttons": {
         "showAutoClose": "Show Auto-close Dialog",
@@ -863,6 +897,9 @@
       },
       "title": "DialogService (Modal Dialogs & Toasts)",
       "toasts": "Toasts"
+    },
+    "panelContainer": {
+      "title": "PanelContainer Test"
     },
     "settingsControl": {
       "descriptions": {

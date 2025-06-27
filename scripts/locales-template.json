@@ -781,6 +781,40 @@
     }
   },
   "testPanel": {
+    "daisyuiShowcase": {
+      "alerts": {
+        "error": "[TODO]",
+        "info": "[TODO]",
+        "success": "[TODO]",
+        "title": "[TODO]",
+        "warning": "[TODO]"
+      },
+      "badges": {
+        "accent": "[TODO]",
+        "error": "[TODO]",
+        "info": "[TODO]",
+        "primary": "[TODO]",
+        "secondary": "[TODO]",
+        "success": "[TODO]",
+        "title": "[TODO]",
+        "warning": "[TODO]"
+      },
+      "buttons": {
+        "basic": "[TODO]",
+        "disabled": "[TODO]",
+        "primary": "[TODO]",
+        "title": "[TODO]"
+      },
+      "card": {
+        "cardTitle": "[TODO]",
+        "description": "[TODO]",
+        "newBadge": "[TODO]",
+        "tagFashion": "[TODO]",
+        "tagProduct": "[TODO]",
+        "title": "[TODO]"
+      },
+      "title": "[TODO]"
+    },
     "dialogService": {
       "buttons": {
         "showAutoClose": "[TODO]",
@@ -863,6 +897,9 @@
       },
       "title": "[TODO]",
       "toasts": "[TODO]"
+    },
+    "panelContainer": {
+      "title": "[TODO]"
     },
     "settingsControl": {
       "descriptions": {

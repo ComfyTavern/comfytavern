@@ -781,6 +781,40 @@
     }
   },
   "testPanel": {
+    "daisyuiShowcase": {
+      "alerts": {
+        "error": "エラー：タスクの実行に失敗しました。",
+        "info": "これは情報メッセージです。",
+        "success": "操作が成功しました！",
+        "title": "アラート",
+        "warning": "警告：この操作には注意してください。"
+      },
+      "badges": {
+        "accent": "アクセント",
+        "error": "エラー",
+        "info": "情報",
+        "primary": "プライマリ",
+        "secondary": "セカンダリ",
+        "success": "成功",
+        "title": "バッジ",
+        "warning": "警告"
+      },
+      "buttons": {
+        "basic": "基本ボタン",
+        "disabled": "無効なボタン",
+        "primary": "主要ボタン",
+        "title": "ボタン"
+      },
+      "card": {
+        "cardTitle": "カードタイトル",
+        "description": "これは、コンテンツの概要を表示するために使用されるカードコンポーネントの例です。",
+        "newBadge": "新着",
+        "tagFashion": "ファッション",
+        "tagProduct": "製品",
+        "title": "カード"
+      },
+      "title": "DaisyUIコンポーネントスタイルショーケース"
+    },
     "dialogService": {
       "buttons": {
         "showAutoClose": "自動クローズダイアログを表示",
@@ -863,6 +897,9 @@
       },
       "title": "DialogService (モーダルダイアログとトースト)",
       "toasts": "トースト"
+    },
+    "panelContainer": {
+      "title": "PanelContainer テスト"
     },
     "settingsControl": {
       "descriptions": {

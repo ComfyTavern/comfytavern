@@ -5,10 +5,9 @@ import * as babelParser from '@babel/parser';
 import traverse from '@babel/traverse';
 import * as vueCompiler from '@vue/compiler-sfc';
 import type { Node as BabelNode } from '@babel/types';
-import type { Node as VueNode, ElementNode, InterpolationNode, AttributeNode, DirectiveNode, SimpleExpressionNode } from '@vue/compiler-core';
+// import type { Node as VueNode, ElementNode, InterpolationNode, AttributeNode, DirectiveNode, SimpleExpressionNode } from '@vue/compiler-core';
 
 const SCAN_DIRECTORY = 'apps/frontend-vueflow/src';
-const REFERENCE_LANG_FILE = 'apps/frontend-vueflow/src/locales/zh-CN.json'; // For diff report
 const LANG_DIR = 'apps/frontend-vueflow/src/locales';
 const OUTPUT_TEMPLATE_FILE = 'scripts/locales-template.json';
 const MERGED_OUTPUT_DIR = 'scripts/merged_locales'; // Output directory for all merged files
@@ -384,25 +383,6 @@ async function main() {
   console.log("\n--- Merging all language files against the new template ---");
   await fs.mkdir(MERGED_OUTPUT_DIR, { recursive: true });
 
-  // 1. Generate diff report against the reference language file (e.g., zh-CN)
-  console.log(`\nGenerating comparison report against reference file: ${REFERENCE_LANG_FILE}`);
-  try {
-    const referenceLangContent = await fs.readFile(REFERENCE_LANG_FILE, 'utf-8');
-    const referenceLangObject = JSON.parse(referenceLangContent);
-    const { _meta, ...content } = referenceLangObject;
-    const diffResult = compareLangObjects(scannedTemplateObject, content as NestedObject);
-
-    console.log("\n--- Comparison Report (vs zh-CN) ---");
-    console.log(`Added keys (${diffResult.added.length}):`);
-    diffResult.added.forEach(key => console.log(`  + ${key}`));
-    console.log(`\nObsolete keys in ${REFERENCE_LANG_FILE} (${diffResult.obsolete.length}):`);
-    diffResult.obsolete.forEach(key => console.log(`  - ${key}`));
-    console.log("------------------------------------\n");
-  } catch (error) {
-    console.error(`Could not generate comparison report for ${REFERENCE_LANG_FILE}:`, error);
-  }
-
-  // 2. Iterate over all language files and merge them
   const localeFiles = await fs.readdir(LANG_DIR);
   for (const fileName of localeFiles) {
     if (path.extname(fileName) !== '.json') {
@@ -413,15 +393,33 @@ async function main() {
     const filePath = path.join(LANG_DIR, fileName);
     const outputFilePath = path.join(MERGED_OUTPUT_DIR, fileName);
 
-    console.log(`Processing ${filePath}...`);
+    console.log(`\n--- Processing ${fileName} ---`);
+
     let existingLangObject: NestedObject = {};
     try {
       const existingLangContent = await fs.readFile(filePath, 'utf-8');
       existingLangObject = JSON.parse(existingLangContent);
     } catch (error) {
-      console.error(`! Error loading language file ${filePath}, will create from template.`);
+      console.warn(`! Warning: Could not read ${filePath}. A new file will be created from the template.`);
+      // If file doesn't exist or is invalid, treat as empty object for comparison
     }
 
+    // Generate and display diff report
+    const { _meta, ...content } = existingLangObject;
+    const diffResult = compareLangObjects(scannedTemplateObject, content as NestedObject);
+
+    console.log("Comparison Report:");
+    console.log(`  Added keys: ${diffResult.added.length}`);
+    if (diffResult.added.length > 0) {
+      diffResult.added.forEach(key => console.log(`    + ${key}`));
+    }
+
+    console.log(`  Obsolete keys: ${diffResult.obsolete.length}`);
+    if (diffResult.obsolete.length > 0) {
+      diffResult.obsolete.forEach(key => console.log(`    - ${key}`));
+    }
+
+    // Merge and write the file
     const mergedTranslations = mergeTranslations(existingLangObject, finalTemplateObject);
 
     try {

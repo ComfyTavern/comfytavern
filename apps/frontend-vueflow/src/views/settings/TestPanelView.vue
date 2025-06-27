@@ -144,28 +144,36 @@
 
     <!-- PanelContainer 测试 -->
     <section class="mt-12">
-      <h2 class="text-2xl font-semibold mb-6 text-text-base border-b pb-2">PanelContainer Test</h2>
+      <h2 class="text-2xl font-semibold mb-6 text-text-base border-b pb-2">
+        {{ t("testPanel.panelContainer.title") }}
+      </h2>
       <div class="bg-background-surface p-6 rounded-lg shadow-md" style="height: 500px">
         <PanelContainer panel-id="panel_chat_default_v1" />
       </div>
     </section>
     <!-- DaisyUI Component Showcase -->
     <section class="mt-12">
-      <h2 class="text-2xl font-semibold mb-6 text-text-base border-b pb-2">DaisyUI 组件样式展示</h2>
+      <h2 class="text-2xl font-semibold mb-6 text-text-base border-b pb-2">
+        {{ t("testPanel.daisyuiShowcase.title") }}
+      </h2>
       <div class="bg-background-surface p-6 rounded-lg shadow-md space-y-8">
         <!-- Buttons -->
         <div>
-          <h3 class="text-xl font-semibold mb-4 text-text-secondary">按钮 (Button)</h3>
+          <h3 class="text-xl font-semibold mb-4 text-text-secondary">
+            {{ t("testPanel.daisyuiShowcase.buttons.title") }}
+          </h3>
           <div class="flex flex-wrap gap-4 items-center">
-            <button class="btn btn-brand-primary">主要按钮</button>
-            <button class="btn btn-brand-primary" disabled>禁用按钮</button>
-            <button class="btn">基础按钮</button>
+            <button class="btn btn-brand-primary">{{ t("testPanel.daisyuiShowcase.buttons.primary") }}</button>
+            <button class="btn btn-brand-primary" disabled>{{ t("testPanel.daisyuiShowcase.buttons.disabled")
+              }}</button>
+            <button class="btn">{{ t("testPanel.daisyuiShowcase.buttons.basic") }}</button>
           </div>
         </div>
 
         <!-- Alerts -->
         <div>
-          <h3 class="text-xl font-semibold mb-4 text-text-secondary">警告框 (Alert)</h3>
+          <h3 class="text-xl font-semibold mb-4 text-text-secondary">{{ t("testPanel.daisyuiShowcase.alerts.title")
+            }}</h3>
           <div class="space-y-4">
             <div role="alert" class="alert alert-brand-info">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -173,7 +181,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
-              <span>这是一条信息提示。</span>
+              <span>{{ t("testPanel.daisyuiShowcase.alerts.info") }}</span>
             </div>
             <div role="alert" class="alert alert-brand-success">
               <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none"
@@ -181,7 +189,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>操作已成功！</span>
+              <span>{{ t("testPanel.daisyuiShowcase.alerts.success") }}</span>
             </div>
             <div role="alert" class="alert alert-brand-warning">
               <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none"
@@ -189,7 +197,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              <span>警告：请注意此操作。</span>
+              <span>{{ t("testPanel.daisyuiShowcase.alerts.warning") }}</span>
             </div>
             <div role="alert" class="alert alert-brand-error">
               <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none"
@@ -197,41 +205,43 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>错误：任务执行失败。</span>
+              <span>{{ t("testPanel.daisyuiShowcase.alerts.error") }}</span>
             </div>
           </div>
         </div>
 
         <!-- Badges -->
         <div>
-          <h3 class="text-xl font-semibold mb-4 text-text-secondary">徽章 (Badge)</h3>
+          <h3 class="text-xl font-semibold mb-4 text-text-secondary">{{ t("testPanel.daisyuiShowcase.badges.title")
+            }}</h3>
           <div class="flex flex-wrap gap-4 items-center">
-            <div class="badge badge-brand-info gap-2">info</div>
-            <div class="badge badge-brand-success gap-2">success</div>
-            <div class="badge badge-brand-warning gap-2">warning</div>
-            <div class="badge badge-brand-error gap-2">error</div>
-            <div class="badge badge-brand-primary">primary</div>
-            <div class="badge badge-brand-secondary">secondary</div>
-            <div class="badge badge-brand-accent">accent</div>
+            <div class="badge badge-brand-info gap-2">{{ t("testPanel.daisyuiShowcase.badges.info") }}</div>
+            <div class="badge badge-brand-success gap-2">{{ t("testPanel.daisyuiShowcase.badges.success") }}</div>
+            <div class="badge badge-brand-warning gap-2">{{ t("testPanel.daisyuiShowcase.badges.warning") }}</div>
+            <div class="badge badge-brand-error gap-2">{{ t("testPanel.daisyuiShowcase.badges.error") }}</div>
+            <div class="badge badge-brand-primary">{{ t("testPanel.daisyuiShowcase.badges.primary") }}</div>
+            <div class="badge badge-brand-secondary">{{ t("testPanel.daisyuiShowcase.badges.secondary") }}</div>
+            <div class="badge badge-brand-accent">{{ t("testPanel.daisyuiShowcase.badges.accent") }}</div>
           </div>
         </div>
 
         <!-- Card -->
         <div>
-          <h3 class="text-xl font-semibold mb-4 text-text-secondary">卡片 (Card)</h3>
+          <h3 class="text-xl font-semibold mb-4 text-text-secondary">{{ t("testPanel.daisyuiShowcase.card.title") }}
+          </h3>
           <div class="card w-96">
             <figure>
               <img src="https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg" alt="Shoes" />
             </figure>
             <div class="card-body">
               <h2 class="card-title">
-                卡片标题
-                <div class="badge badge-brand-secondary">新</div>
+                {{ t("testPanel.daisyuiShowcase.card.cardTitle") }}
+                <div class="badge badge-brand-secondary">{{ t("testPanel.daisyuiShowcase.card.newBadge") }}</div>
               </h2>
-              <p>这是一个卡片组件的示例，用于展示内容摘要。</p>
+              <p>{{ t("testPanel.daisyuiShowcase.card.description") }}</p>
               <div class="card-actions justify-end">
-                <div class="badge badge-outline">时尚</div>
-                <div class="badge badge-outline">产品</div>
+                <div class="badge badge-outline">{{ t("testPanel.daisyuiShowcase.card.tagFashion") }}</div>
+                <div class="badge badge-outline">{{ t("testPanel.daisyuiShowcase.card.tagProduct") }}</div>
               </div>
             </div>
           </div>

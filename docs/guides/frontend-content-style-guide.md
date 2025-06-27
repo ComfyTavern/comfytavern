@@ -142,3 +142,22 @@ UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind 
     - **文件**: Vue 组件使用 `PascalCase.vue`，Composables 使用 `useCamelCase.ts`。
     - **目录**: 使用 `kebab-case`。
 - **自定义指令**: 对于需要直接、重复地操作 DOM 的通用功能，优先创建自定义指令，如 `vComfyTooltip`。
+---
+
+## 8. 实践范例：UI 组件测试面板
+
+为了提供一个将上述所有原则付诸实践的鲜活示例，我们创建了 **UI 组件测试面板**。这个视图是探索、测试和理解我们核心 UI 组件、服务和设计模式的最佳场所。
+
+- **源码位置**: [`apps/frontend-vueflow/src/views/settings/TestPanelView.vue`](../../apps/frontend-vueflow/src/views/settings/TestPanelView.vue)
+- **访问方式**: 在应用的设置页面中，通常会有一个“测试面板”或类似的入口。
+
+**你可以在这个文件中找到以下实践的应用：**
+
+- **服务化组件**: `DialogService` 的完整用法，包括不同类型的对话框和通知。
+- **Store 驱动的 UI**: `UiStore` 如何管理全局模态框（如设置、编辑器）。
+- **数据驱动视图**: `SettingsPanel` 如何通过一个配置对象数组动态生成复杂的设置表单。
+- **组件复用**: `PanelContainer` 等领域组件的嵌入使用。
+- **样式指南**: 大量 `btn-brand-*` 自定义品牌按钮类、`alert-brand-*` 警告框以及其他 DaisyUI 组件的实际应用，完全遵循本指南的样式规范。
+- **本地化**: 所有文本都通过 `$t()` 函数实现。
+
+我们强烈建议开发者在实现新功能或组件前，先查阅此文件，以确保与项目整体风格和最佳实践保持一致。

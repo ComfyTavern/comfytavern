@@ -781,6 +781,40 @@
     }
   },
   "testPanel": {
+    "daisyuiShowcase": {
+      "alerts": {
+        "error": "谬矣：此事未竟。",
+        "info": "此乃示谕。",
+        "success": "功成！",
+        "title": "警示",
+        "warning": "噫！此事需慎。"
+      },
+      "badges": {
+        "accent": "雅",
+        "error": "谬",
+        "info": "示",
+        "primary": "主",
+        "secondary": "副",
+        "success": "成",
+        "title": "章",
+        "warning": "警"
+      },
+      "buttons": {
+        "basic": "常钮",
+        "disabled": "禁钮",
+        "primary": "主钮",
+        "title": "钮"
+      },
+      "card": {
+        "cardTitle": "牌名",
+        "description": "此为牌之范式，以示其要。",
+        "newBadge": "新",
+        "tagFashion": "风尚",
+        "tagProduct": "珍品",
+        "title": "牌"
+      },
+      "title": "琳琅法物仪仗"
+    },
     "dialogService": {
       "buttons": {
         "showAutoClose": "启自阖示匣",
@@ -861,8 +895,11 @@
         "waitingFor": "待 {actionName} 回响",
         "warningToastTriggered": "警世飞符已发。"
       },
-      "title": "DialogService (玄机示匣与飞符)",
+      "title": "玄机示匣与飞符 (DialogService)",
       "toasts": "飞符传讯"
+    },
+    "panelContainer": {
+      "title": "应用版匣试炼场（PanelContainer）"
     },
     "settingsControl": {
       "descriptions": {
@@ -886,7 +923,7 @@
         "c": "丙策",
         "d": "丁策"
       },
-      "title": "枢要玄鉴试炼"
+      "title": "枢要玄鉴试炼 (SettingControl)"
     },
     "title": "玄机试炼场 (示匣与奇物)",
     "uiStore": {

@@ -781,6 +781,40 @@
     }
   },
   "testPanel": {
+    "daisyuiShowcase": {
+      "alerts": {
+        "error": "错误：任务执行失败。",
+        "info": "这是一条信息提示。",
+        "success": "操作已成功！",
+        "title": "警告框 (Alert)",
+        "warning": "警告：请注意此操作。"
+      },
+      "badges": {
+        "accent": "accent",
+        "error": "error",
+        "info": "info",
+        "primary": "primary",
+        "secondary": "secondary",
+        "success": "success",
+        "title": "徽章 (Badge)",
+        "warning": "warning"
+      },
+      "buttons": {
+        "basic": "基础按钮",
+        "disabled": "禁用按钮",
+        "primary": "主要按钮",
+        "title": "按钮 (Button)"
+      },
+      "card": {
+        "cardTitle": "卡片标题",
+        "description": "这是一个卡片组件的示例，用于展示内容摘要。",
+        "newBadge": "新",
+        "tagFashion": "时尚",
+        "tagProduct": "产品",
+        "title": "卡片 (Card)"
+      },
+      "title": "DaisyUI 组件样式展示"
+    },
     "dialogService": {
       "buttons": {
         "showAutoClose": "显示自动关闭对话框",
@@ -863,6 +897,9 @@
       },
       "title": "DialogService (模态对话框与通知)",
       "toasts": "通知 (Toasts)"
+    },
+    "panelContainer": {
+      "title": "PanelContainer 测试"
     },
     "settingsControl": {
       "descriptions": {
