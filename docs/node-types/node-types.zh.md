@@ -43,6 +43,7 @@
 *   `LlmConfig`: LLM 配置对象
 *   `LlmOutput`: LLM 输出结果
 *   `VectorEmbedding`: 向量嵌入数据
+*   `Matrix`: 矩阵数据，通常是二维数组
 *   `CharacterProfile`: 角色配置文件/对象
 *   `Image`: 图像数据 (可用于 `OBJECT`/`BINARY` 数据，或 `STRING` 类型的路径/URL 引用)
 *   `Audio`: 音频数据 (可用于 `OBJECT`/`BINARY` 数据，或 `STRING` 类型的路径/URL 引用)

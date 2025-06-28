@@ -4,10 +4,12 @@ import type { NodeDefinition } from '@comfytavern/types';
 import { definition as ApplyRegexNodeDefinition } from './ApplyRegexNode';
 import { definition as ContextBuilderNodeDefinition } from './ContextBuilderNode';
 import { definition as MathOperationNodeDefinition } from './MathOperationNode';
+import { definition as MatrixOperationNodeDefinition } from './MatrixOperationNode';
 
 // 定义并导出节点定义数组
 export const definitions: NodeDefinition[] = [
   { ...ApplyRegexNodeDefinition, namespace: 'core' },
   { ...ContextBuilderNodeDefinition, namespace: 'core' },
   { ...MathOperationNodeDefinition, namespace: 'core' },
+  { ...MatrixOperationNodeDefinition, namespace: 'core' },
 ];
