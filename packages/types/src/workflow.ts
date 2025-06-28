@@ -81,6 +81,8 @@ export const WorkflowNodeSchema = z.object({
   type: z.string(),
   /** 节点在画布上的位置 */
   position: PositionSchema,
+  /** 父节点的 ID，用于节点分组 */
+  parentNode: z.string().optional(),
   /** 节点的数据负载 */
   data: WorkflowNodeDataSchema,
   /** 节点的宽度 */
@@ -221,6 +223,7 @@ export const WorkflowStorageNodeSchema = WorkflowNodeSchema.pick({
   id: true,
   type: true,
   position: true,
+  parentNode: true, // +++
   width: true,
   height: true,
   displayName: true,

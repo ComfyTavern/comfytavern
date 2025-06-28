@@ -45,6 +45,7 @@ function _createBaseStorageNodeProperties(
   | "id"
   | "type"
   | "position"
+  | "parentNode"
   | "configValues"
   | "width"
   | "height"
@@ -70,6 +71,10 @@ function _createBaseStorageNodeProperties(
     type: nodeType,
     position: klona(vueNode.position),
   };
+
+  if (vueNode.parentNode) {
+    (baseProperties as any).parentNode = vueNode.parentNode;
+  }
 
   if (vueNode.data?.configValues && Object.keys(vueNode.data.configValues).length > 0) {
     baseProperties.configValues = klona(vueNode.data.configValues);
@@ -370,6 +375,7 @@ export async function transformStorageToVueFlow(
           },
           width: storageNode.width,
           height: storageNode.height,
+          parentNode: storageNode.parentNode,
         } as VueFlowNode;
       }
 
@@ -395,6 +401,7 @@ export async function transformStorageToVueFlow(
         id: storageNode.id, type: storageNode.type, position: storageNode.position,
         data: vueFlowData, width: storageNode.width, height: storageNode.height,
         label: vueFlowData.displayName,
+        parentNode: storageNode.parentNode,
       } as VueFlowNode;
     })
   );

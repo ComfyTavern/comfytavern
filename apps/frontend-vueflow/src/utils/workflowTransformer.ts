@@ -236,6 +236,7 @@ export function deserializeWorkflowFragment(
             label: vueFlowData.displayName,
             width: storageNode.width,
             height: storageNode.height,
+            parentNode: storageNode.parentNode, // +++ 确保在反序列化时也处理 parentNode
         } as VueFlowNodeType;
     });
 

@@ -2,6 +2,16 @@ import type { Node as VueFlowNode, Edge as VueFlowEdge, EdgeMarkerType } from '@
 import type { WorkflowObject, WorkflowViewport as SharedViewport, GroupInterfaceInfo } from '@comfytavern/types'; // 移除未使用的 GroupSlotInfo
 // 移除未使用的 SocketType 导入
 
+import type { XYPosition, NodeDragEvent } from '@vue-flow/core';
+
+// 为拖拽事件定义一个统一的、可扩展的载荷类型
+export interface NodeDragEventData extends NodeDragEvent {
+  parentChanged: boolean;
+  parentingInfo: {
+    updates: { nodeId: string; parentNodeId: string | null; position: XYPosition }[];
+    oldStates: { nodeId: string; parentNodeId: string | null; oldPosition: XYPosition }[];
+  } | null;
+}
 // 从 workflowStore.ts 移动
 export type Viewport = SharedViewport;
 

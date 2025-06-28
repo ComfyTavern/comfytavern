@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, type PropType, type Ref } from "vue"; // 导入 PropType
+import { ref, computed, onMounted, onUnmounted, type PropType, type Ref } from "vue";
 import { watch, nextTick } from "vue";
 import {
   VueFlow,
@@ -53,6 +53,8 @@ import {
   type NodeTypesObject,
   type EdgeTypesObject,
 } from "@vue-flow/core"; // 导入 NodeTypesObject 和 EdgeTypesObject
+import type { Node, Edge, Connection, XYPosition } from "@vue-flow/core";
+import type { NodeDragEventData } from "@/types/workflowTypes";
 import UnplugConnectionLine from "./edges/UnplugConnectionLine.vue";
 import { useNodeStore } from "../../stores/nodeStore";
 import { useWorkflowStore } from "../../stores/workflowStore"; // 导入 WorkflowStore
@@ -64,7 +66,6 @@ import { useContextMenuPositioning, getEventClientPosition } from "../../composa
 import { Background } from "@vue-flow/background";
 import { Controls } from "@vue-flow/controls";
 import { MiniMap } from "@vue-flow/minimap";
-import type { Node, Edge, Connection, XYPosition } from "@vue-flow/core";
 import ContextMenu from "./menus/ContextMenu.vue";
 import NodeContextMenu from "./menus/NodeContextMenu.vue";
 import SlotContextMenu from "./menus/SlotContextMenu.vue"; // 导入插槽右键菜单
@@ -90,10 +91,12 @@ const edgeTypes: EdgeTypesObject = {
 const emit = defineEmits<{
   "update:modelValue": [value: Array<Node | Edge>];
   "node-click": [node: Node];
-  "pane-ready": [instance: any]; // Revert to emitting the hook instance, use 'any' for now
+  "pane-ready": [instance: any];
   connect: [connection: Connection];
-  "request-add-node-to-workflow": [payload: { fullNodeType: string; flowPosition: XYPosition }]; // +++ 新的 emit
-  "open-node-search-panel": []; // 新增：向上层传递打开节点搜索面板的事件
+  "node-drag-stop": [event: NodeDragEventData];
+  "elements-remove": [elements: (Node | Edge)[]];
+  "request-add-node-to-workflow": [payload: { fullNodeType: string; flowPosition: XYPosition }];
+  "open-node-search-panel": [];
 }>();
 
 // 使用计算属性处理双向绑定
@@ -188,10 +191,13 @@ const {
   onNodeClick,
   onNodeContextMenu,
   onPaneReady,
+  onNodeDragStart,
+  onNodeDragStop, // 导入 onNodeDragStop
   // onConnect,
   onPaneContextMenu,
   project,
   getNodes,
+  getIntersectingNodes, // 导入 getIntersectingNodes
   addSelectedNodes, // 添加这个
   addSelectedEdges, // 添加这个
   removeEdges, // Keep this for direct VueFlow operations if needed, e.g., invalidNodeGroupEdgeIds
@@ -269,6 +275,13 @@ const slotContextMenuContext = ref<{
   handleType: "source" | "target";
 } | null>(null); // 插槽菜单上下文
 const copiedNodes = ref<Node[]>([]);
+// 定义拖拽开始时缓存的节点状态接口
+interface NodeDragStartState {
+  id: string;
+  position: XYPosition;
+  parentNode: string | undefined | null;
+}
+const nodesOnDragStart = ref<NodeDragStartState[]>([]); // 使用轻量级接口缓存节点状态
 
 // 计算属性
 const hasSelectedNodes = computed(() => {
@@ -787,9 +800,114 @@ defineExpose({
 onMounted(() => {
   // Keyboard listeners are now handled by useCanvasKeyboardShortcuts
 
-  // 注册 onNodeDragStop hook - REMOVED: Logic moved to EditorView
-  // onNodeDragStop(handleNodesDragStop);
-  // console.debug('[Canvas] onNodeDragStop hook registered.');
+  // 注册 onNodeDragStart hook
+  onNodeDragStart(({ nodes }) => {
+    // 优化性能：不再使用 klona 深拷贝整个节点对象
+    // 只缓存必要的、轻量级的信息
+    nodesOnDragStart.value = nodes.map(node => ({
+      id: node.id,
+      position: { ...node.position }, // 仅浅拷贝 position 对象
+      parentNode: node.parentNode,
+    }));
+  });
+
+
+  // 注册 onNodeDragStop hook
+  onNodeDragStop((dragEvent) => {
+    const { event, nodes: draggedNodesFromEvent } = dragEvent;
+    // 只处理用户拖拽（非程序性移动）和有缓存的拖拽前状态
+    if (!event || nodesOnDragStart.value.length === 0) {
+      nodesOnDragStart.value = []; // 清理以防万一
+      return;
+    }
+
+    const activeTab = activeTabId.value;
+    if (!activeTab) {
+      nodesOnDragStart.value = [];
+      return;
+    }
+
+    // 获取所有节点以供查找，这代表了拖拽【后】的状态
+    const allNodesAfterDrag = getNodes.value;
+    const frameNodes = allNodesAfterDrag.filter(node => node.type === 'ui:frame');
+
+    const updates: { nodeId: string; parentNodeId: string | null; position: XYPosition }[] = [];
+    const oldStates: { nodeId: string; parentNodeId: string | null; oldPosition: XYPosition }[] = [];
+
+    draggedNodesFromEvent.forEach(draggedNode => {
+      // 从缓存中获取拖拽前的状态
+      const nodeBeforeDrag = nodesOnDragStart.value.find(n => n.id === draggedNode.id);
+      // 如果找不到拖拽前的状态，则跳过
+      if (!nodeBeforeDrag || draggedNode.type === 'ui:frame') return;
+
+      const oldParentId = nodeBeforeDrag.parentNode || null;
+
+      // 确定新的父节点
+      const intersectingNodes = getIntersectingNodes(draggedNode);
+      const intersectingFrameNodes = intersectingNodes.filter(
+        (n) => frameNodes.some(fn => fn.id === n.id)
+      );
+
+      let bestFrame: Node | null = null;
+      if (intersectingFrameNodes.length > 0) {
+        bestFrame = intersectingFrameNodes.reduce((highest, current) => {
+          return (current.zIndex ?? 0) > (highest.zIndex ?? 0) ? current : highest;
+        });
+      }
+      const newParentId = bestFrame?.id || null;
+
+      // 当父节点发生变化时，才进行处理
+      if (oldParentId !== newParentId) {
+        const newParentNode = newParentId ? allNodesAfterDrag.find(n => n.id === newParentId) : null;
+
+        // draggedNode.position 是拖动后的【绝对】位置
+        let newPosition = { ...draggedNode.position };
+
+        // 如果有新的父节点 (拖入)，计算【相对】位置
+        if (newParentNode) {
+          newPosition.x -= newParentNode.position.x;
+          newPosition.y -= newParentNode.position.y;
+        }
+        // 如果是从父节点拖出，计算【绝对】位置
+        else if (oldParentId) {
+          const oldParentNode = allNodesAfterDrag.find(n => n.id === oldParentId);
+          if (oldParentNode) {
+            // 将Vue Flow给出的、相对于旧父级的坐标，转换为绝对坐标
+            newPosition.x += oldParentNode.position.x;
+            newPosition.y += oldParentNode.position.y;
+          }
+        }
+
+        updates.push({
+          nodeId: draggedNode.id,
+          parentNodeId: newParentId,
+          position: newPosition
+        });
+
+        oldStates.push({
+          nodeId: nodeBeforeDrag.id,
+          parentNodeId: oldParentId,
+          oldPosition: nodeBeforeDrag.position // 拖拽前的旧位置
+        });
+      }
+    });
+
+    if (updates.length > 0) {
+      // 父节点发生了变化，发出带有详细信息的事件
+      emit('node-drag-stop', {
+        ...dragEvent,
+        parentChanged: true,
+        parentingInfo: { updates, oldStates },
+      });
+    } else {
+      // 如果没有父节点变化，则发出普通事件，但保持结构一致
+      emit('node-drag-stop', { ...dragEvent, parentChanged: false, parentingInfo: null });
+    }
+
+    // 清理本次拖拽的缓存
+    nodesOnDragStart.value = [];
+  });
+
 
   // 监听视口移动结束事件并更新 Store
   onMoveEnd(({ flowTransform }) => {

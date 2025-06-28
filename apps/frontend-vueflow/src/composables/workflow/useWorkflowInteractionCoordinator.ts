@@ -8,7 +8,7 @@ import type { WorkflowStateSnapshot } from "@/types/workflowTypes";
 import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils";
 import type { GroupSlotInfo, HistoryEntry, InputDefinition, NodeDefinition } from "@comfytavern/types";
 import { DataFlowType } from "@comfytavern/types";
-import type { Edge, Node as VueFlowNode } from "@vue-flow/core";
+import type { Edge, Node as VueFlowNode, XYPosition } from "@vue-flow/core";
 import { klona } from "klona/full";
 import { computed, nextTick } from "vue";
 import { useWorkflowGrouping } from "../group/useWorkflowGrouping";
@@ -494,7 +494,7 @@ export function useWorkflowInteractionCoordinator() {
   async function updateNodePositionAndRecord(
     internalId: string,
     updates: { nodeId: string; position: { x: number; y: number } }[],
-    entry: HistoryEntry
+    entry?: HistoryEntry
   ) {
     if (!updates || updates.length === 0) {
       console.warn("[InteractionCoordinator:updateNodePositionAndRecord] 提供了无效参数。");
@@ -549,7 +549,9 @@ export function useWorkflowInteractionCoordinator() {
 
     // 记录历史
     // 传递 nextSnapshot 确保记录的是我们预期的、包含所有位置更新的状态
-    recordHistory(internalId, entry, nextSnapshot);
+    if (entry) {
+      recordHistory(internalId, entry, nextSnapshot);
+    }
   }
 
   /**
@@ -1364,6 +1366,68 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * 更新一个或多个节点的父节点，并记录历史。
+   * @param internalId - 标签页的内部 ID。
+   * @param updates - 一个包含 { nodeId, parentNodeId } 对象的数组，parentNodeId 为 null 表示移除父节点。
+   * @param entry - 描述此操作的历史记录条目。
+   */
+  async function updateNodeParentAndRecord(
+    internalId: string,
+    updates: { nodeId: string; parentNodeId: string | null; position: XYPosition }[],
+    entry?: HistoryEntry
+  ) {
+    if (!updates || updates.length === 0) {
+      console.warn("[InteractionCoordinator:updateNodeParentAndRecord] 无效参数。");
+      return;
+    }
+
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(
+      internalId,
+      "updateNodeParentAndRecord"
+    );
+    if (snapshotError || !currentSnapshot) {
+      console.error(
+        snapshotError ||
+          `[InteractionCoordinator:updateNodeParentAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
+      );
+      return;
+    }
+
+    const nextSnapshot = klona(currentSnapshot);
+    const nodeMap = new Map(
+      nextSnapshot.elements
+        .filter((el): el is VueFlowNode => !("source" in el))
+        .map((node) => [node.id, node])
+    );
+
+    let hasChanged = false;
+    for (const update of updates) {
+      const node = nodeMap.get(update.nodeId);
+      if (node) {
+        const oldParentNode = (node as any).parentNode || null;
+        const newParentNode = update.parentNodeId;
+        
+        if (oldParentNode !== newParentNode || node.position.x !== update.position.x || node.position.y !== update.position.y) {
+          (node as any).parentNode = newParentNode;
+          node.position = update.position; // 同时更新位置
+          hasChanged = true;
+        }
+      }
+    }
+
+    if (!hasChanged) {
+      console.debug("[InteractionCoordinator:updateNodeParentAndRecord] 节点的父节点未改变。跳过历史记录。");
+      return;
+    }
+
+    await workflowManager.setElements(internalId, nextSnapshot.elements);
+    if (entry) {
+      recordHistory(internalId, entry, nextSnapshot);
+    }
+  }
+
+
+  /**
    * 更新节点内部特定组件的状态（例如文本区域的高度或值）并记录历史。
    * 用于处理节点内部 UI 组件引起的状态变化。
    * @param internalId - 标签页的内部 ID。
@@ -2129,6 +2193,7 @@ changeNodeModeAndRecord, // 原子性地更改节点模式
     updateNodeLabelAndRecord,
     updateNodeDimensionsAndRecord, // 更新节点尺寸
     updateNodeComponentStateAndRecord, // 更新节点内部组件状态
+    updateNodeParentAndRecord, // 新增：更新节点的父节点
     removeEdgesByHandleAndRecord, // 按句柄删除边
     updateWorkflowNameAndRecord, // 更新工作流名称
     updateWorkflowDescriptionAndRecord, // 更新工作流描述

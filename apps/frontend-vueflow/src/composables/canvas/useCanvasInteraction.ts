@@ -1,5 +1,6 @@
 import { computed, nextTick, type Ref } from 'vue';
-import { useVueFlow, type Node, type Edge, type Connection, type NodeDragEvent, isNode } from '@vue-flow/core';
+import { useVueFlow, type Node, type Edge, type Connection, isNode } from '@vue-flow/core';
+import type { NodeDragEventData } from "@/types/workflowTypes";
 import { useNodeStore } from '@/stores/nodeStore';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import { useTabStore } from '@/stores/tabStore';
@@ -200,61 +201,86 @@ export function useCanvasInteraction(
   };
 
   // 处理节点拖拽停止事件
-  const handleNodesDragStop = (event: NodeDragEvent) => {
-    // // console.debug("[useCanvasInteraction] Nodes drag stop event received:", event);
+  const handleNodesDragStop = (event: NodeDragEventData) => {
     const currentTab = activeTabId.value;
-    if (currentTab && event.nodes.length > 0) {
+    if (!currentTab) {
+      console.warn("[useCanvasInteraction] handleNodesDragStop: No active tab ID found.");
+      return;
+    }
+
+    // 场景1：父节点发生了变化
+    if (event.parentChanged && event.parentingInfo) {
+      const { updates, oldStates } = event.parentingInfo;
+      // 从 workflowStore 获取最新的、完整的节点信息，而不是依赖 event.nodes
+      const allElements = workflowStore.getElements(currentTab);
+      const allNodesMap = new Map(allElements.filter(isNode).map((n: Node) => [n.id, n]));
+
+      const changedNodeNames = updates.map(u => {
+        const node = allNodesMap.get(u.nodeId);
+        // 优先使用用户自定义的 data.label，然后是节点本身的 label（通常来自 displayName），最后是 ID
+        return node?.data?.label || (node as Node | undefined)?.label || (node as Node | undefined)?.id || u.nodeId;
+      }).join(', ');
+      
+      const summary = `变更 ${changedNodeNames} 的父级`;
+      
+      const entry = createHistoryEntry(
+        'update',
+        'nodeParent',
+        summary,
+        {
+          updates: updates,
+          oldStates: oldStates
+        }
+      );
+      
+      workflowStore.updateNodeParentAndRecord(currentTab, updates, entry);
+
+    // 场景2：仅仅是节点移动，没有父节点变化
+    } else if (!event.parentChanged && event.nodes.length > 0) {
       nextTick(async () => {
         try {
-          const currentTabInTick = activeTabId.value;
-          if (currentTabInTick !== currentTab) {
-            console.warn(
-              `[useCanvasInteraction] handleNodesDragStop (nextTick): Tab changed from ${currentTab} to ${currentTabInTick} before processing.`
-            );
-            return;
-          }
-
           const nodeUpdates = event.nodes.map((node) => ({
             nodeId: node.id,
             position: { ...node.position },
           }));
 
           if (nodeUpdates.length === 0) {
-            // // console.debug("[useCanvasInteraction] handleNodesDragStop (nextTick): No node updates extracted from event.");
             return;
           }
 
-          // const nodeLabels = event.nodes.map((n) => n.label || n.id).join(", "); // Removed label creation
+          // 从 workflowStore 获取最新的、完整的节点信息
+          const allElements = workflowStore.getElements(currentTab);
+          const allNodesMap = new Map(allElements.filter(isNode).map((n: Node) => [n.id, n]));
+
           const movedNodeIds = event.nodes.map(n => n.id);
-          const summary = movedNodeIds.length > 1 ? `移动 ${movedNodeIds.length} 个节点` : `移动节点 ${event.nodes[0]?.label || event.nodes[0]?.id}`;
+          const firstMovedNodeId = movedNodeIds[0];
+          const firstMovedNode = firstMovedNodeId ? allNodesMap.get(firstMovedNodeId) : undefined;
+
+          const summary = movedNodeIds.length > 1
+            ? `移动 ${movedNodeIds.length} 个节点`
+            // 优先使用用户自定义的 data.label，然后是节点本身的 label（通常来自 displayName），最后是 ID
+            : `移动节点 ${firstMovedNode?.data?.label || (firstMovedNode as Node | undefined)?.label || firstMovedNode?.id || '未知节点'}`;
 
           const entry: HistoryEntry = createHistoryEntry(
-            'move', // actionType
-            'node', // objectType
-            summary, // summary
-            { // details
+            'move',
+            'node',
+            summary,
+            {
               movedNodes: event.nodes.map(node => ({
                 nodeId: node.id,
                 nodeName: node.data?.label || node.data?.defaultLabel || node.id,
                 nodeType: node.type,
-                newPosition: node.position, // The position in event.nodes should be the final position
+                // oldPosition and newPosition could be added here if needed
+                newPosition: node.position,
               })),
-              // Optionally, keep the old positions if needed for more detailed diffs,
-              // but for display, newPosition per node is likely sufficient.
             }
           );
-
-          // // console.debug(`[useCanvasInteraction] Calling updateNodePositionAndRecord for tab ${currentTabInTick}`);
-          await workflowStore.updateNodePositionAndRecord(currentTabInTick, nodeUpdates, entry); // Pass entry object
-          // // console.debug(`[useCanvasInteraction] updateNodePositionAndRecord finished for tab ${currentTabInTick}`);
+          
+          await workflowStore.updateNodePositionAndRecord(currentTab, nodeUpdates, entry);
         } catch (error) {
           console.error("[useCanvasInteraction] Error inside handleNodesDragStop nextTick:", error);
         }
       });
-    } else if (!currentTab) {
-      console.warn("[useCanvasInteraction] handleNodesDragStop: No active tab ID found.");
-    } else {
-      // // console.debug("[useCanvasInteraction] handleNodesDragStop: No nodes were dragged.");
     }
   };
 
