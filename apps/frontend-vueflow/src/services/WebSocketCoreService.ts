@@ -1,4 +1,5 @@
 import { ref, readonly } from 'vue';
+import { getWebSocketUrl } from '@/utils/urlUtils';
 
 type MessageHandler = (message: any) => void;
 
@@ -10,7 +11,7 @@ const messageHandlers = new Set<MessageHandler>();
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let explicitlyClosed = false;
 
-const WS_URL = `ws://localhost:3233/ws`; // TODO: 从配置中获取
+// WebSocket URL 会在 _connect() 内部动态获取
 
 // --- Private methods ---
 
@@ -26,8 +27,9 @@ const _connect = () => {
     return;
   }
   
-  console.log(`[WebSocketCore] Connecting to ${WS_URL}...`);
-  ws.value = new WebSocket(WS_URL);
+  const wsUrl = getWebSocketUrl();
+  console.log(`[WebSocketCore] Connecting to ${wsUrl}...`);
+  ws.value = new WebSocket(wsUrl);
 
   ws.value.onopen = () => {
     console.log("[WebSocketCore] Connected.");

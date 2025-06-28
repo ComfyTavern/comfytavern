@@ -10,6 +10,9 @@ import fs from 'node:fs';
 const configPath = fileURLToPath(new URL('../../config.json', import.meta.url));
 const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 const frontendPort = config.server.frontend.port;
+const backendPort = config.server.backend.port; // 从配置中读取后端端口
+const backendApiTarget = `http://localhost:${backendPort}`;
+const backendWsTarget = `ws://localhost:${backendPort}`;
 
 // 读取根目录的 package.json 文件以获取应用版本
 const rootPackageJsonPath = fileURLToPath(new URL('../../package.json', import.meta.url));
@@ -68,12 +71,12 @@ export default defineConfig({
     proxy: {
       // 配置 API 请求代理
       '/api': {
-        target: 'http://localhost:3233', // 后端 API 地址
+        target: backendApiTarget, // 后端 API 地址
         changeOrigin: true // 改变源，以支持跨域
       },
       // 配置 WebSocket 代理
       '/ws': {
-        target: 'ws://localhost:3233', // 后端 WebSocket 地址
+        target: backendWsTarget, // 后端 WebSocket 地址
         ws: true // 启用 WebSocket 代理
       }
     },
@@ -106,11 +109,11 @@ export default defineConfig({
     proxy: {
       // 确保预览服务器也有代理配置
       '/api': {
-        target: 'http://localhost:3233',
+        target: backendApiTarget,
         changeOrigin: true
       },
       '/ws': {
-        target: 'ws://localhost:3233',
+        target: backendWsTarget,
         ws: true
       }
     }
