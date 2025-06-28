@@ -8,7 +8,7 @@
 
 ## 2. 主题、颜色与样式
 
-UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind CSS 和 DaisyUI 深度集成，通过动态加载主题配置并应用 CSS 变量，提供了极大的灵活性和一致性。
+UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind CSS 深度集成，通过动态加载主题配置并应用 CSS 变量，提供了极大的灵活性和一致性。
 
 - **核心逻辑**: [`theme.ts`](../../apps/frontend-vueflow/src/stores/theme.ts) 中的 `useThemeStore` 负责管理所有主题功能。
 - **核心原则**: **始终通过预定义的 Tailwind 功能类或 CSS 变量来使用颜色，尽量不在样式或模板中硬编码颜色值。**
@@ -27,33 +27,22 @@ UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind 
 
 ## 3. 样式与组件使用策略
 
-### 3.1 样式层级：原子类 vs. 组件类
+### 3.1 样式策略：原子化优先
 
-我们同时使用 Tailwind CSS 的原子类和 DaisyUI 的组件类，它们有不同的适用场景：
+项目全面采用 **Tailwind CSS 原子类优先**的策略。这意味着所有样式都应直接通过组合 Tailwind 的功能类（Utility Classes）来构建，例如 `flex`, `p-4`, `rounded-lg`, `bg-primary`, `hover:bg-primary/90`。
 
-- **原子类 (Atomic Classes)**: 用于构建独特的、非标准化的或微调布局的场景。例如 `flex`, `p-4`, `rounded-lg`。
-- **组件类 (Component Classes)**: 用于构建标准的 UI 元素（按钮、输入框、卡片等）。例如 `btn`, `input`, `card`。
+- **核心原则**: **禁止引入或使用 DaisyUI。** 所有的 UI 元素，无论是按钮、卡片还是输入框，都必须由原子类直接构成。
+- **现有遗留组件**: 项目中已存在的 DaisyUI 组件被视为**遗留技术债**。它们不是“违规”代码，而是我们计划逐步替换的目标。
 
-**核心原则：优先使用 DaisyUI 组件的基础类（如 `btn`, `card`）来获取结构和行为，但在应用品牌颜色时，使用我们自定义的品牌组件类。**
+- **目的**:
+    - **完全控制**: 确保开发者对元素的最终样式拥有 100% 的直接控制权，避免了第三方库带来的样式覆盖、优先级冲突和黑盒行为。
+    - **一致性**: 所有样式定义都遵循统一的 Tailwind CSS 语法和设计理念。
+    - **可维护性**: 样式与模板紧密耦合，易于理解和修改，无需在多个文件（如全局 CSS、配置文件）之间跳转。
+    - **性能**: 避免加载未使用的 CSS，最终打包体积更小。
 
-### 3.2 DaisyUI 基础类与自定义品牌颜色
-
-#### 为什么要自定义？
-
-直接覆盖 DaisyUI 的主题颜色（如 `primary`）之所以困难，是因为 DaisyUI 会基于这个颜色**预先生成大量派生工具类**（如 `hover:bg-primary-focus`, `focus:ring-primary` 等）。我们的动态主题系统通过 CSS 变量在运行时改变颜色，很难在不引入大量复杂配置或覆盖所有派生类的情况下，可靠地影响 DaisyUI 的所有状态，因此我们选择解耦。
-
-#### 使用规范
-
-1.  **继承骨架**: 使用 DaisyUI 的基础类来获得组件的结构、尺寸、动画和行为。
-    - **示例**: `class="btn"`
-
-2.  **应用品牌颜色**: 使用我们自己在 [`main.css`](../../apps/frontend-vueflow/src/assets/main.css) 中通过 `@layer components` 定义的品牌颜色类来上色。
-    - **示例**: `class="btn-brand-primary"`
-
-3.  **最终组合与交互状态处理**:
-    - **正确做法 (静态)**: `<button class="btn btn-brand-primary">...</button>`
-    - **错误做法**: `<button class="btn btn-primary">...</button>` (禁止直接使用 DaisyUI 的颜色类)
-    - **手动组合用法 (Atomic Class Usage)**: `<div class="bg-primary text-primary-content p-2 rounded">...</div>` (在非组件元素上，可直接使用原子工具类手动组合样式)
+- **实践示例**:
+    - **按钮**: `<button class="px-4 py-2 bg-primary text-primary-content rounded-lg hover:bg-primary/90">Click Me</button>`
+    - **卡片**: `<div class="bg-background-surface rounded-lg shadow p-6">...</div>`
 
 ---
 
@@ -157,7 +146,7 @@ UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind 
 - **Store 驱动的 UI**: `UiStore` 如何管理全局模态框（如设置、编辑器）。
 - **数据驱动视图**: `SettingsPanel` 如何通过一个配置对象数组动态生成复杂的设置表单。
 - **组件复用**: `PanelContainer` 等领域组件的嵌入使用。
-- **样式指南**: 大量 `btn-brand-*` 自定义品牌按钮类、`alert-brand-*` 警告框以及其他 DaisyUI 组件的实际应用，完全遵循本指南的样式规范。
+- **样式指南**: 所有组件均直接使用 Tailwind CSS 原子类构建，遵循本指南的“原子化优先”原则。
 - **本地化**: 所有文本都通过 `$t()` 函数实现。
 
 我们强烈建议开发者在实现新功能或组件前，先查阅此文件，以确保与项目整体风格和最佳实践保持一致。
