@@ -349,6 +349,7 @@ export const definition: NodeDefinition = {
       required: true,
       matchCategories: ["ComboOption"],
       config: {
+        searchable: true,
         suggestions: [
           { value: 'add', label: '函数/相加' },
           { value: 'subtract', label: '函数/相减' },
