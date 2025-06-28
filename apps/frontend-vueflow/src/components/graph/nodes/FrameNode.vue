@@ -63,9 +63,9 @@ const nodeStyles = computed(() => {
   // 我们的自定义节点组件只需要撑满这个父级 div (width: 100%, height: 100%) 即可
   // 所以这里我们只应用 cosmetic (装饰性) 样式
   return {
-    backgroundColor: props.style?.backgroundColor || 'var(--ct-frame-bg, rgba(220, 220, 240, 0.4))',
-    border: props.style?.border || '2px dotted var(--ct-frame-border-color, #9CA3AF)',
-    borderRadius: props.style?.borderRadius || '12px',
+    backgroundColor: props.style?.backgroundColor || 'hsl(var(--ct-background-surface-hsl) / 0.4)',
+    border: props.style?.border || '3px dotted hsl(var(--ct-border-base-hsl))',
+    borderRadius: props.style?.borderRadius || '6px',
   };
 });
 
@@ -186,5 +186,67 @@ const handleResizeEnd = (event: { params: { width: number, height: number } }) =
 
 .title-input {
   @apply w-full bg-transparent border-none p-0 m-0 text-inherit font-bold outline-none;
+}
+
+/* --- NodeResizer 样式覆盖 --- */
+
+/* 确保所有 resizer 控件都在最上层，避免被遮挡 */
+:deep(.vue-flow__resize-control) {
+  z-index: 10;
+}
+
+/* 1. 角落手柄样式 (handle) */
+:deep(.vue-flow__resize-control.handle) {
+  width: 16px;
+  height: 16px;
+  border-radius: 30%; /* 圆形手柄 */
+  border: 0px solid hsl(var(--ct-primary-content-hsl));
+  background-color: hsl(var(--ct-border-base-hsl));
+  /* 关键：保留默认的居中位移 */
+  transform: translate(-50%, -50%);
+  transition: transform 0.2s ease;
+}
+
+:deep(.vue-flow__resize-control.handle:hover) {
+  /* 关键：组合 transform，先居中再放大 */
+  transform: translate(-50%, -50%) scale(1.5);
+}
+
+/* 精确定位角落手柄，让其中心点位于角落 */
+:deep(.vue-flow__resize-control.handle.top.left) { top: 0; left: 0; }
+:deep(.vue-flow__resize-control.handle.top.right) { top: 0; left: 100%; }
+:deep(.vue-flow__resize-control.handle.bottom.left) { top: 100%; left: 0; }
+:deep(.vue-flow__resize-control.handle.bottom.right) { top: 100%; left: 100%; }
+
+
+/* 2. 边缘手柄样式 (line) - 扩大交互区域 */
+:deep(.vue-flow__resize-control.line) {
+  border: 2px;
+  border-color: hsl(var(--ct-border-base-hsl));
+  /* 增加一个透明的伪元素作为热区 */
+  &::after {
+    content: '';
+    position: absolute;
+    background-color: transparent; /* 透明，仅用于交互 */
+    /* for debugging: background-color: rgba(255, 0, 0, 0.2); */
+  }
+}
+
+/* 垂直线 (左/右) 的热区 */
+:deep(.vue-flow__resize-control.line.left::after),
+:deep(.vue-flow__resize-control.line.right::after) {
+  top: 0;
+  left: -5px; /* 在1px的线两侧各扩展5px */
+  width: 11px; /* 总宽度11px */
+  height: 100%;
+}
+
+/* 水平线 (上/下) 的热区 */
+:deep(.vue-flow__resize-control.line.top::after),
+:deep(.vue-flow__resize-control.line.bottom::after) {
+  left: 0;
+  top: -5px; /* 在1px的线上下各扩展5px */
+  height: 11px; /* 总高度11px */
+  width: 100%;
 }
 </style>
