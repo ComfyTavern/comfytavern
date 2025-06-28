@@ -20,6 +20,7 @@ import { type Edge, type Node } from "@vue-flow/core";
 import { getEdgeStyleProps } from "../canvas/useEdgeStyles";
 import { useProjectStore } from "@/stores/projectStore";
 import { useWorkflowStore } from "@/stores/workflowStore";
+import { useWorkflowManager } from "./useWorkflowManager";
 import type { WorkflowData } from "@/types/workflowTypes";
 import {
   extractGroupInterface as extractGroupInterfaceUtil,
@@ -33,6 +34,7 @@ export function useWorkflowData() {
   const workflowStore = useWorkflowStore(); // 访问主 store (用于 ensureTabState 和类型)
   const projectStore = useProjectStore(); // 获取项目 store 实例
   const dialogService = useDialogService(); // 获取 DialogService 实例
+  const workflowManager = useWorkflowManager();
 
   // --- 类型转换函数已被移动到 utils/workflowTransformer.ts ---
 
@@ -108,8 +110,8 @@ export function useWorkflowData() {
       flowExport
     );
 
-    // **核心修正**: 使用 isPersisted 状态来判断是创建新工作流还是更新现有工作流
-    const isNewOrSaveAs = !state.isPersisted;
+    // 使用来自 workflowManager 的集中逻辑判断是创建新工作流还是更新现有工作流
+    const isNewOrSaveAs = workflowManager.isWorkflowNew(internalId);
     const currentData = state.workflowData; // 读取当前元数据
 
     if (isNewOrSaveAs) {

@@ -183,8 +183,8 @@ const handleSave = async () => {
     return;
   }
 
-  // **核心修正**: 使用 isPersisted 状态来判断
-  const isNew = !currentTabState.value?.isPersisted;
+  // 使用来自 workflowManager 的集中逻辑
+  const isNew = workflowManager.isCurrentWorkflowNew.value;
 
   if (isNew) {
     console.debug(

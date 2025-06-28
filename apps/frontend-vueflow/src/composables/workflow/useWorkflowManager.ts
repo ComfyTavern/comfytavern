@@ -76,6 +76,8 @@ function createWorkflowManager() {
     return state?.workflowData?.previewTarget ?? null;
   });
 
+  const isCurrentWorkflowNew = computed(() => !getActiveTabState()?.isPersisted);
+
   // 新增：用于请求组输出总览模式的状态
   const _showGroupOutputOverview = ref(false);
   const showGroupOutputOverview = computed(() => _showGroupOutputOverview.value);
@@ -638,6 +640,10 @@ function createWorkflowManager() {
 
   function isWorkflowDirty(internalId: string): boolean {
     return tabStates.get(internalId)?.isDirty ?? false;
+  }
+
+  function isWorkflowNew(internalId: string): boolean {
+    return !getTabState(internalId)?.isPersisted;
   }
 
   function getElements(internalId: string): Array<VueFlowNode | VueFlowEdge> {
@@ -1227,6 +1233,7 @@ function createWorkflowManager() {
     getCurrentSnapshot, // <-- 添加新方法
     getTabState, // <-- 导出
     activePreviewTarget, // <-- 添加新的计算属性
+    isCurrentWorkflowNew, // <-- 新增
     showGroupOutputOverview, // <-- 新增：用于组输出总览模式
     // 移除了 getHistoryState 和 historyActionCounter
 
@@ -1234,6 +1241,7 @@ function createWorkflowManager() {
     ensureTabState,
     setElements, // 元素更改的主要入口点
     markAsDirty,
+    isWorkflowNew, // <-- 新增
     removeWorkflowData,
     clearWorkflowStatesForProject,
     applyStateSnapshot, // <-- 已存在，确保实现正确

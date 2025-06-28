@@ -45,8 +45,8 @@ export function useKeyboardShortcuts(activeTabId: Ref<string | null>, containerR
       }
 
       if (state.isDirty) {
-        // 使用 isPersisted 状态来判断
-        const isNewWorkflow = !state.isPersisted;
+        // 使用来自 workflowManager 的集中逻辑
+        const isNewWorkflow = workflowManager.isWorkflowNew(currentTabId);
         if (isNewWorkflow) {
           // 调用 store action 来处理提示和保存
           // console.debug(`正在为选项卡 ${currentTabId} 触发 promptAndSaveWorkflow (isSaveAs=false)...`);
