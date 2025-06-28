@@ -38,7 +38,7 @@
             class="cursor-pointer hover:bg-primary-softest dark:hover:bg-primary-soft whitespace-nowrap"
             @mouseenter="highlightedIndex = index"
           >
-            {{ suggestion }}
+            {{ suggestion.label }}
           </li>
           <!-- 修改：当过滤后列表为空时显示 -->
           <li
@@ -74,8 +74,13 @@ import { useI18n } from "vue-i18n";
 import { useVueFlow } from "@vue-flow/core";
 // Removed OverlayScrollbars imports
 
+interface Option {
+  value: string | number;
+  label: string;
+}
+
 interface Props {
-  suggestions: (string | number)[];
+  suggestions: (string | number | Option)[];
   show: boolean;
   position: { x: number; y: number };
   targetElement?: HTMLElement | null; // 可选：触发下拉菜单的元素
@@ -97,7 +102,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{
-  select: [value: string | number];
+  select: [value: Option];
   close: []; // 触发 close 事件
 }>();
 
@@ -132,20 +137,33 @@ const dropdownSizeClasses = computed(() => {
 const { viewport } = useVueFlow();
 const currentZoom = computed(() => viewport.value.zoom);
 
-// 计算过滤后的建议列表
-const filteredSuggestions = computed(() => {
-  if (!props.searchable || !searchQuery.value) {
-    return props.suggestions;
-  }
-  const query = String(searchQuery.value).toLowerCase();
-  // 确保 suggestions 存在且是数组
+// 统一建议项格式
+const normalizedSuggestions = computed<Option[]>(() => {
   if (!Array.isArray(props.suggestions)) {
     return [];
   }
-  return props.suggestions.filter((suggestion) => String(suggestion).toLowerCase().includes(query));
+  return props.suggestions.map(s => {
+    if (typeof s === 'object' && s !== null && 'value' in s && 'label' in s) {
+      return s as Option;
+    }
+    return { value: s, label: String(s) };
+  });
 });
 
-const selectSuggestion = (suggestion: string | number) => {
+// 计算过滤后的建议列表
+const filteredSuggestions = computed(() => {
+  if (!props.searchable || !searchQuery.value) {
+    return normalizedSuggestions.value;
+  }
+  const query = String(searchQuery.value).toLowerCase();
+
+  return normalizedSuggestions.value.filter((suggestion) =>
+    suggestion.label.toLowerCase().includes(query) ||
+    String(suggestion.value).toLowerCase().includes(query)
+  );
+});
+
+const selectSuggestion = (suggestion: Option) => {
   emit("select", suggestion);
   searchQuery.value = ""; // 清空搜索
   emit("close"); // 选择后关闭

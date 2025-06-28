@@ -36,13 +36,14 @@
 
     <!-- Suggestion Dropdown -->
     <SuggestionDropdown
-      :suggestions="suggestionLabels"
+      :suggestions="normalizedSuggestions"
       :show="isDropdownVisible"
       :position="dropdownPosition"
       :target-element="rootRef"
       :trigger-width="dropdownWidth"
       :canvas-scale="currentCanvasScale"
       :size="props.size"
+      :searchable="props.searchable"
       @select="handleSuggestionSelect"
       @close="closeDropdown"
     />
@@ -64,7 +65,6 @@ interface Option {
   value: string | number
   label: string
 }
-
 interface Props {
   modelValue: string | number
   suggestions: (string | number | Option)[]
@@ -75,6 +75,7 @@ interface Props {
   readonly?: boolean
   size?: 'small' | 'large'
   applyCanvasScale?: boolean // 新增 prop，用于控制是否应用画布缩放
+  searchable?: boolean // 控制是否启用搜索
 }
 
 // 定义 Props 默认值
@@ -88,6 +89,7 @@ const props = withDefaults(defineProps<Props>(), {
   readonly: false,
   size: 'small',
   applyCanvasScale: true, // 默认应用画布缩放
+  searchable: false, // 默认不启用搜索
 })
 
 const sizeClasses = computed(() => {
@@ -150,8 +152,8 @@ const normalizedSuggestions = computed<Option[]>(() =>
   })
 );
 
-// 提取所有标签用于下拉菜单
-const suggestionLabels = computed(() => normalizedSuggestions.value.map(o => o.label))
+// 不再需要只提取标签，直接传递整个选项对象
+// const suggestionLabels = computed(() => normalizedSuggestions.value.map(o => o.label))
 
 // 当前选中值的标签
 const selectedOptionLabel = computed(() =>
@@ -187,15 +189,11 @@ const closeDropdown = () => {
   isDropdownVisible.value = false
 }
 
-const handleSuggestionSelect = (selectedLabel: string | number) => {
-  // 查找选中标签对应的选项
-  const selectedOption = normalizedSuggestions.value.find(o => o.label === selectedLabel)
-
-  // 只有当找到选项且值发生变化时才更新
+const handleSuggestionSelect = (selectedOption: Option) => {
+  // 只有当值发生变化时才更新
   if (selectedOption && selectedOption.value !== props.modelValue) {
     emit('update:modelValue', selectedOption.value)
   }
-
   closeDropdown()
 }
 </script>

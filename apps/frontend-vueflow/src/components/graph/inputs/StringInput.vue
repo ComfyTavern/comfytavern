@@ -130,9 +130,9 @@ const closeDropdown = () => {
   isDropdownVisible.value = false;
 };
 
-const handleSuggestionSelect = (selectedValue: string | number) => {
+const handleSuggestionSelect = (selectedValue: { value: string | number }) => {
   // Ensure the selected value is a string for StringInput
-  const newValue = String(selectedValue);
+  const newValue = String(selectedValue.value);
   if (newValue !== props.modelValue) {
     // 仅当值改变时才触发更新
     emit("update:modelValue", newValue);

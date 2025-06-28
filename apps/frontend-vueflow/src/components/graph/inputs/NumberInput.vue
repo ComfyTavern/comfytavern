@@ -231,8 +231,8 @@ const closeDropdown = () => {
   isDropdownVisible.value = false;
 };
 
-const handleSuggestionSelect = (selectedValue: string | number) => {
-  const numericValue = Number(selectedValue);
+const handleSuggestionSelect = (selectedValue: { value: string | number }) => {
+  const numericValue = Number(selectedValue.value);
   if (!isNaN(numericValue) && validateValue(numericValue)) {
     if (numericValue !== props.modelValue) {
       emit("update:modelValue", numericValue);
