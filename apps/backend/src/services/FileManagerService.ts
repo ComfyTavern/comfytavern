@@ -6,6 +6,7 @@ import {
   getLogDir,
   getLibraryBaseDir,
   getUserDataRoot,
+  getTemplatesDir,
   getDataDir,
   ensureDirExists, // 稍后可能会用到
 } from '../utils/fileUtils'; // 路径相对于 apps/backend/src/services/
@@ -95,6 +96,7 @@ export class FileManagerService implements FAMService {
   private publicDir: string;
   private logDir: string;
   private libraryBaseDir: string;
+  private templatesDir: string;
   private userDataRoot: string;
   private dataDir: string;
 
@@ -103,6 +105,7 @@ export class FileManagerService implements FAMService {
     this.publicDir = getPublicDir();
     this.logDir = getLogDir();
     this.libraryBaseDir = getLibraryBaseDir();
+    this.templatesDir = getTemplatesDir();
     this.userDataRoot = getUserDataRoot();
     this.dataDir = getDataDir();
 
@@ -110,6 +113,7 @@ export class FileManagerService implements FAMService {
     console.log(`  Project Root: ${this.projectRootDir}`);
     console.log(`  User Data Root: ${this.userDataRoot}`);
     console.log(`  Shared Library: ${this.libraryBaseDir}`);
+    console.log(`  Shared Templates: ${this.templatesDir}`);
     console.log(`  System Data: ${this.dataDir}`);
     console.log(`  System Public: ${this.publicDir}`);
     console.log(`  System Logs: ${this.logDir}`);
@@ -154,36 +158,35 @@ export class FileManagerService implements FAMService {
         // 例如: user://projects/myProject/file.txt -> /userDataRoot/userId1/projects/myProject/file.txt
         basePhysicalPath = path.join(this.userDataRoot, userId);
         break;
-      case 'shared':
-        // 共享路径的基础是 this.libraryBaseDir
-        // 例如: shared://library/workflows/template.json -> /libraryBaseDir/workflows/template.json
-        // 注意：设计文档中 shared://library/ -> 物理 /library/
-        // 所以如果 logicalPath 是 shared://library/workflows/abc.json, cleanRelativePath 会是 library/workflows/abc.json
-        // 我们需要移除 "library/" 前缀，如果它存在于 cleanRelativePath 的开头
-        if (cleanRelativePath.startsWith('library')) {
-          basePhysicalPath = this.libraryBaseDir;
-          // path.relative 会给出从 libraryBaseDir 到 cleanRelativePath 的相对路径
-          // 但这里更直接的是，如果 cleanRelativePath 是 'library/workflows/a.json'
-          // 而 basePhysicalPath 是 this.libraryBaseDir (它映射到 'ComfyTavern/library')
-          // 那么我们只需要 cleanRelativePath 中 'library/' 之后的部分
-          const sharedPathParts = cleanRelativePath.split(path.sep); // path.sep 兼容不同系统
-          if (sharedPathParts[0] === 'library') {
-            // 移除 'library' 部分
-            // path.join(...['workflows', 'abc.json'])
-            const finalSharedPath = path.join(...sharedPathParts.slice(1));
-            const resolvedPath = path.join(basePhysicalPath, finalSharedPath);
-            // 安全检查：确保解析后的路径仍在 basePhysicalPath 之下
-            if (!resolvedPath.startsWith(basePhysicalPath)) {
-              throw new Error(`Path traversal attempt detected in shared path: ${logicalPath}`);
-            }
-            return resolvedPath;
-          } else {
-            // 如果 shared:// 路径不以 library/ 开头，这可能是一个错误或未定义的行为
-            throw new Error(`Invalid shared path: ${logicalPath}. Must start with shared://library/`);
-          }
-        } else {
-           throw new Error(`Invalid shared path: ${logicalPath}. Must start with shared://library/`);
+      case 'shared': {
+        const sharedPathParts = cleanRelativePath.split(path.sep);
+        const sharedArea = sharedPathParts[0];
+        
+        // 检查 sharedArea 是否有效
+        if (!sharedArea) {
+            throw new Error(`Invalid shared path: ${logicalPath}. Path is empty after scheme.`);
         }
+
+        const sharedRelativePath = path.join(...sharedPathParts.slice(1));
+
+        switch (sharedArea) {
+          case 'library':
+            basePhysicalPath = this.libraryBaseDir;
+            break;
+          case 'templates':
+            basePhysicalPath = this.templatesDir;
+            break;
+          default:
+            throw new Error(`Invalid shared path: ${logicalPath}. Must start with shared://library/ or shared://templates/`);
+        }
+        
+        const resolvedSharedPath = path.join(basePhysicalPath, sharedRelativePath);
+        // 安全检查
+        if (!resolvedSharedPath.startsWith(basePhysicalPath)) {
+          throw new Error(`Path traversal attempt detected in shared path: ${logicalPath}`);
+        }
+        return resolvedSharedPath;
+      }
       case 'system':
         // 系统路径需要根据 cleanRelativePath 的第一部分来确定映射
         // system://public/... -> this.publicDir/...

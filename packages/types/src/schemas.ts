@@ -92,6 +92,7 @@ export const PanelDefinitionSchema = z.object({
   apiSpec: z.string().optional().describe("指向面板 API 规范文件的路径"),
   requiredWorkflows: z.array(z.string()).optional().describe("【旧版，待废弃】面板运行所需的 workflow ID 列表"),
   icon: z.string().optional(),
+  source: z.enum(['user', 'shared']).optional().describe("面板来源，由后端动态填充"),
   customMetadata: z.record(z.any()).optional(),
 });
 export type PanelDefinition = z.infer<typeof PanelDefinitionSchema>;

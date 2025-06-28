@@ -64,6 +64,14 @@ export function getLibraryBaseDir(): string {
 }
 
 /**
+ * 获取项目根目录下 templates 目录的路径。
+ * @returns templates 目录的绝对路径。
+ */
+export function getTemplatesDir(): string {
+  return path.join(getProjectRootDir(), 'templates');
+}
+
+/**
  * 获取项目根目录下 userData 目录的路径。
  * @returns userData 目录的绝对路径。
  */
