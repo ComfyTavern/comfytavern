@@ -259,7 +259,6 @@ export class MathOperationNodeImpl {
 
 // --- 定义 ---
 
-const commonOutputs = { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果' } };
 const singleInput = { value: { dataFlowType: DataFlowType.FLOAT, displayName: '数值', required: true } };
 const dualInput = {
   a: { dataFlowType: DataFlowType.FLOAT, displayName: '数值 A', required: true },
@@ -283,54 +282,54 @@ const clampInput = {
 
 const nodeModes: Record<string, NodeModeDefinition> = {
   // 函数
-  add: { id: 'add', displayName: '相加', description: '将两个数相加', inputs: {...dualInput, ...clampInput}, outputs: commonOutputs },
-  subtract: { id: 'subtract', displayName: '相减', description: '从第一个数中减去第二个数', inputs: {...dualInput, ...clampInput}, outputs: commonOutputs },
-  multiply: { id: 'multiply', displayName: '相乘', description: '将两个数相乘', inputs: {...dualInput, ...clampInput}, outputs: commonOutputs },
+  add: { id: 'add', displayName: '相加', description: '将两个数相加', inputs: {...dualInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'A + B 的计算结果' } } },
+  subtract: { id: 'subtract', displayName: '相减', description: '从第一个数中减去第二个数', inputs: {...dualInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'A - B 的计算结果' } } },
+  multiply: { id: 'multiply', displayName: '相乘', description: '将两个数相乘', inputs: {...dualInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'A * B 的计算结果' } } },
   multiply_add: {
     id: 'multiply_add',
     displayName: '乘后再加',
     description: '计算 (A * B) + C',
     inputs: {...multiplyAddInput, ...clampInput},
-    outputs: commonOutputs
+    outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: '(A * B) + C 的计算结果' } }
   },
-  divide: { id: 'divide', displayName: '相除', description: '用第一个数除以第二个数', inputs: {...dualInput, ...clampInput}, outputs: commonOutputs },
-  power: { id: 'power', displayName: '幂', description: '计算底数的指数次幂', inputs: { base: { ...singleInput.value, displayName: '底数' }, exponent: { ...singleInput.value, displayName: '指数', config: { default: 2 } }, ...clampInput }, outputs: commonOutputs },
-  logarithm: { id: 'logarithm', displayName: '对数', description: '计算一个数的对数', inputs: { value: { ...singleInput.value, config: { default: 1 } }, base: { ...singleInput.value, displayName: '底数', config: { default: Math.E } }, ...clampInput }, outputs: commonOutputs },
-  sqrt: { id: 'sqrt', displayName: '平方根', description: '计算数值的平方根', inputs: {...singleInput, ...clampInput}, outputs: commonOutputs },
-  inverse_sqrt: { id: 'inverse_sqrt', displayName: '平方根取倒', description: '计算平方根的倒数', inputs: {...singleInput, ...clampInput}, outputs: commonOutputs },
-  absolute: { id: 'absolute', displayName: '绝对值', description: '计算一个数的绝对值', inputs: {...singleInput, ...clampInput}, outputs: commonOutputs },
-  exp: { id: 'exp', displayName: '指数', description: '计算 e 的指数次幂', inputs: {...singleInput, ...clampInput}, outputs: commonOutputs },
-  
+  divide: { id: 'divide', displayName: '相除', description: '用第一个数除以第二个数', inputs: {...dualInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'A / B 的计算结果' } } },
+  power: { id: 'power', displayName: '幂', description: '计算底数的指数次幂', inputs: { base: { ...singleInput.value, displayName: '底数' }, exponent: { ...singleInput.value, displayName: '指数', config: { default: 2 } }, ...clampInput }, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'base 的 exponent 次幂的结果' } } },
+  logarithm: { id: 'logarithm', displayName: '对数', description: '计算一个数的对数', inputs: { value: { ...singleInput.value, config: { default: 1 } }, base: { ...singleInput.value, displayName: '底数', config: { default: Math.E } }, ...clampInput }, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value 以 base 为底的对数' } } },
+  sqrt: { id: 'sqrt', displayName: '平方根', description: '计算数值的平方根', inputs: {...singleInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value 的非负平方根' } } },
+  inverse_sqrt: { id: 'inverse_sqrt', displayName: '平方根取倒', description: '计算平方根的倒数', inputs: {...singleInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value 的平方根的倒数' } } },
+  absolute: { id: 'absolute', displayName: '绝对值', description: '计算一个数的绝对值', inputs: {...singleInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value 的绝对值' } } },
+  exp: { id: 'exp', displayName: '指数', description: '计算 e 的指数次幂', inputs: {...singleInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'e 的 value 次幂' } } },
+
   // 比较
-  min: { id: 'min', displayName: '最小值', description: '比较两个数并返回较小的值', inputs: {...dualInput, ...clampInput}, outputs: commonOutputs },
-  max: { id: 'max', displayName: '最大值', description: '比较两个数并返回较大的值', inputs: {...dualInput, ...clampInput}, outputs: commonOutputs },
-  lessThan: { id: 'lessThan', displayName: '小于', description: '如果 A 小于 B，则返回1，否则返回0', inputs: {...dualInput, ...clampInput}, outputs: commonOutputs },
-  greaterThan: { id: 'greaterThan', displayName: '大于', description: '如果 A 大于 B，则返回1，否则返回0', inputs: {...dualInput, ...clampInput}, outputs: commonOutputs },
-  sign: { id: 'sign', displayName: '符号', description: '提取数值的符号', inputs: {...singleInput, ...clampInput}, outputs: commonOutputs },
-  
+  min: { id: 'min', displayName: '最小值', description: '比较两个数并返回较小的值', inputs: {...dualInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'A 和 B 中的较小值' } } },
+  max: { id: 'max', displayName: '最大值', description: '比较两个数并返回较大的值', inputs: {...dualInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'A 和 B 中的较大值' } } },
+  lessThan: { id: 'lessThan', displayName: '小于', description: '如果 A 小于 B，则返回1，否则返回0', inputs: {...dualInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: '如果 A < B，则为 1，否则为 0' } } },
+  greaterThan: { id: 'greaterThan', displayName: '大于', description: '如果 A 大于 B，则返回1，否则返回0', inputs: {...dualInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: '如果 A > B，则为 1，否则为 0' } } },
+  sign: { id: 'sign', displayName: '符号', description: '提取数值的符号', inputs: {...singleInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: '返回 value 的符号 (-1, 0,或 1)' } } },
+
   // 舍入
-  round: { id: 'round', displayName: '四舍五入', description: '将数值四舍五入到最接近的整数', inputs: {...singleInput, ...clampInput}, outputs: commonOutputs },
-  floor: { id: 'floor', displayName: '向下取整', description: '返回小于或等于指定数值的最大整数', inputs: {...singleInput, ...clampInput}, outputs: commonOutputs },
-  ceil: { id: 'ceil', displayName: '向上取整', description: '返回大于或等于指定数值的最小整数', inputs: {...singleInput, ...clampInput}, outputs: commonOutputs },
-  truncate: { id: 'truncate', displayName: '截断', description: '移除数值的小数部分', inputs: {...singleInput, ...clampInput}, outputs: commonOutputs },
-  fraction: { id: 'fraction', displayName: '分数', description: '仅保留数值的小数部分', inputs: {...singleInput, ...clampInput}, outputs: commonOutputs },
-  modulo: { id: 'modulo', displayName: '模数', description: '返回两个数相除的余数', inputs: {...dualInput, ...clampInput}, outputs: commonOutputs },
+  round: { id: 'round', displayName: '四舍五入', description: '将数值四舍五入到最接近的整数', inputs: {...singleInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value 四舍五入到最接近的整数' } } },
+  floor: { id: 'floor', displayName: '向下取整', description: '返回小于或等于指定数值的最大整数', inputs: {...singleInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: '不大于 value 的最大整数' } } },
+  ceil: { id: 'ceil', displayName: '向上取整', description: '返回大于或等于指定数值的最小整数', inputs: {...singleInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: '不小于 value 的最小整数' } } },
+  truncate: { id: 'truncate', displayName: '截断', description: '移除数值的小数部分', inputs: {...singleInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value 去除小数部分后的整数' } } },
+  fraction: { id: 'fraction', displayName: '分数', description: '仅保留数值的小数部分', inputs: {...singleInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value 的小数部分' } } },
+  modulo: { id: 'modulo', displayName: '模数', description: '返回两个数相除的余数', inputs: {...dualInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'A 除以 B 的余数' } } },
 
   // 三角函数
-  sin: { id: 'sin', displayName: '正弦', description: '计算一个数的正弦值（输入为弧度）', inputs: { value: { ...singleInput.value, displayName: '数值 (弧度)' }, ...clampInput }, outputs: commonOutputs },
-  cos: { id: 'cos', displayName: '余弦', description: '计算一个数的余弦值（输入为弧度）', inputs: { value: { ...singleInput.value, displayName: '数值 (弧度)' }, ...clampInput }, outputs: commonOutputs },
-  tan: { id: 'tan', displayName: '正切', description: '计算一个数的正切值（输入为弧度）', inputs: { value: { ...singleInput.value, displayName: '数值 (弧度)' }, ...clampInput }, outputs: commonOutputs },
-  asin: { id: 'asin', displayName: '反正弦', description: '计算一个数的反正弦值（结果为弧度）', inputs: { value: { ...singleInput.value, displayName: '数值 (-1 to 1)' }, ...clampInput }, outputs: commonOutputs },
-  acos: { id: 'acos', displayName: '反余弦', description: '计算一个数的反余弦值（结果为弧度）', inputs: { value: { ...singleInput.value, displayName: '数值 (-1 to 1)' }, ...clampInput }, outputs: commonOutputs },
-  atan: { id: 'atan', displayName: '反正切', description: '计算一个数的反正切值（结果为弧度）', inputs: {...singleInput, ...clampInput}, outputs: commonOutputs },
-  atan2: { id: 'atan2', displayName: '反正切2', description: '返回点(x, y)到x轴正半轴的逆时针旋转角度（弧度）', inputs: { y: { ...singleInput.value, displayName: 'Y' }, x: { ...singleInput.value, displayName: 'X' }, ...clampInput }, outputs: commonOutputs },
-  sinh: { id: 'sinh', displayName: '双曲正弦', description: '计算一个数的双曲正弦值', inputs: {...singleInput, ...clampInput}, outputs: commonOutputs },
-  cosh: { id: 'cosh', displayName: '双曲余弦', description: '计算一个数的双曲余弦值', inputs: {...singleInput, ...clampInput}, outputs: commonOutputs },
-  tanh: { id: 'tanh', displayName: '双曲正切', description: '计算一个数的双曲正切值', inputs: {...singleInput, ...clampInput}, outputs: commonOutputs },
+  sin: { id: 'sin', displayName: '正弦', description: '计算一个数的正弦值（输入为弧度）', inputs: { value: { ...singleInput.value, displayName: '数值 (弧度)' }, ...clampInput }, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value (弧度) 的正弦值' } } },
+  cos: { id: 'cos', displayName: '余弦', description: '计算一个数的余弦值（输入为弧度）', inputs: { value: { ...singleInput.value, displayName: '数值 (弧度)' }, ...clampInput }, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value (弧度) 的余弦值' } } },
+  tan: { id: 'tan', displayName: '正切', description: '计算一个数的正切值（输入为弧度）', inputs: { value: { ...singleInput.value, displayName: '数值 (弧度)' }, ...clampInput }, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value (弧度) 的正切值' } } },
+  asin: { id: 'asin', displayName: '反正弦', description: '计算一个数的反正弦值（结果为弧度）', inputs: { value: { ...singleInput.value, displayName: '数值 (-1 to 1)' }, ...clampInput }, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value 的反正弦值 (弧度)' } } },
+  acos: { id: 'acos', displayName: '反余弦', description: '计算一个数的反余弦值（结果为弧度）', inputs: { value: { ...singleInput.value, displayName: '数值 (-1 to 1)' }, ...clampInput }, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value 的反余弦值 (弧度)' } } },
+  atan: { id: 'atan', displayName: '反正切', description: '计算一个数的反正切值（结果为弧度）', inputs: {...singleInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value 的反正切值 (弧度)' } } },
+  atan2: { id: 'atan2', displayName: '反正切2', description: '返回点(x, y)到x轴正半轴的逆时针旋转角度（弧度）', inputs: { y: { ...singleInput.value, displayName: 'Y' }, x: { ...singleInput.value, displayName: 'X' }, ...clampInput }, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: '点(x,y)与x轴正向的夹角 (弧度)' } } },
+  sinh: { id: 'sinh', displayName: '双曲正弦', description: '计算一个数的双曲正弦值', inputs: {...singleInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value 的双曲正弦值' } } },
+  cosh: { id: 'cosh', displayName: '双曲余弦', description: '计算一个数的双曲余弦值', inputs: {...singleInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value 的双曲余弦值' } } },
+  tanh: { id: 'tanh', displayName: '双曲正切', description: '计算一个数的双曲正切值', inputs: {...singleInput, ...clampInput}, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'value 的双曲正切值' } } },
   
   // 转换
-  to_radians: { id: 'to_radians', displayName: '到弧度', description: '将角度转换为弧度', inputs: { degrees: { ...singleInput.value, displayName: '角度' }, ...clampInput }, outputs: commonOutputs },
-  to_degrees: { id: 'to_degrees', displayName: '到角度', description: '将弧度转换为角度', inputs: { radians: { ...singleInput.value, displayName: '弧度' }, ...clampInput }, outputs: commonOutputs },
+  to_radians: { id: 'to_radians', displayName: '到弧度', description: '将角度转换为弧度', inputs: { degrees: { ...singleInput.value, displayName: '角度' }, ...clampInput }, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'degrees 转换为弧度的结果' } } },
+  to_degrees: { id: 'to_degrees', displayName: '到角度', description: '将弧度转换为角度', inputs: { radians: { ...singleInput.value, displayName: '弧度' }, ...clampInput }, outputs: { result: { dataFlowType: DataFlowType.FLOAT, displayName: '结果', description: 'radians 转换为角度的结果' } } },
 };
 
 export const definition: NodeDefinition = {
