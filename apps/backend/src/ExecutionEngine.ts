@@ -493,9 +493,27 @@ export class ExecutionEngine {
       return {};
     }
     const definition = nodeManager.getNode(node.fullType);
-    if (!definition || !definition.inputs) {
+    if (!definition) {
       return {};
     }
+
+    // --- 新增逻辑：确定当前有效的输入定义 ---
+    let effectiveInputDefinitions = definition.inputs;
+    const modeConfigKey = definition.modeConfigKey;
+    if (modeConfigKey && node.configValues && node.configValues[modeConfigKey]) {
+      const currentModeId = node.configValues[modeConfigKey] as string;
+      const modeDefinition = definition.modes?.[currentModeId];
+      // 如果模式存在且有自己的输入定义，则使用它
+      if (modeDefinition?.inputs) {
+        effectiveInputDefinitions = modeDefinition.inputs;
+      }
+    }
+    // 如果没有有效的输入定义集，则返回空
+    if (!effectiveInputDefinitions) {
+      return {};
+    }
+    // --- 结束新增逻辑 ---
+
 
     const multiInputBuffer: Record<string, Array<{ edgeId: string, value: any }>> = {};
 
@@ -535,7 +553,7 @@ export class ExecutionEngine {
               }
             }
             const { originalKey: actualInputKey } = parseSubHandleId(rawTargetInputKey);
-            const inputDef = definition.inputs[actualInputKey];
+            const inputDef = effectiveInputDefinitions[actualInputKey];
 
             if (inputDef?.multi) {
               if (!multiInputBuffer[actualInputKey]) {
@@ -548,7 +566,7 @@ export class ExecutionEngine {
           } else {
             console.warn(`[Engine-${this.promptId}] Source node ${sourceNodeId} for edge ${edge.id} (state: ${sourceNodeState}) did not complete successfully or its output '${sourceOutputKey}' is not yet available. Setting input ${rawTargetInputKey} to undefined.`);
             const { originalKey: actualInputKey } = parseSubHandleId(rawTargetInputKey);
-            const inputDef = definition.inputs[actualInputKey];
+            const inputDef = effectiveInputDefinitions[actualInputKey];
             if (inputDef?.multi) {
               if (!multiInputBuffer[actualInputKey]) {
                 multiInputBuffer[actualInputKey] = [];
@@ -569,7 +587,7 @@ export class ExecutionEngine {
     const currentInputConnectionOrders = (node as any).inputConnectionOrders as Record<string, string[]> | undefined;
     if (currentInputConnectionOrders) {
       for (const originalInputKey in currentInputConnectionOrders) {
-        const inputDef = definition.inputs[originalInputKey];
+        const inputDef = effectiveInputDefinitions[originalInputKey];
         if (inputDef?.multi && multiInputBuffer[originalInputKey]) {
           const orderedEdgeIds = currentInputConnectionOrders[originalInputKey] || [];
           const collectedValuesForSlot = multiInputBuffer[originalInputKey];
@@ -587,7 +605,7 @@ export class ExecutionEngine {
     if (node.inputs) {
       for (const inputKey in node.inputs) {
         if (inputs[inputKey] === undefined) {
-          const inputDef = definition.inputs[inputKey];
+          const inputDef = effectiveInputDefinitions[inputKey];
           if (inputDef?.multi) {
             if (Array.isArray(node.inputs[inputKey])) {
               inputs[inputKey] = node.inputs[inputKey];
@@ -604,9 +622,9 @@ export class ExecutionEngine {
     // console.log(`[Engine-${this.promptId}] After applying node preset inputs for ${nodeId}:`);
     // console.log(`  inputs: ${JSON.stringify(this.sanitizeObjectForLogging(inputs))}`);
 
-    for (const inputKey in definition.inputs) {
-      if (inputs[inputKey] === undefined && definition.inputs[inputKey].config?.default !== undefined) {
-        const inputDef = definition.inputs[inputKey];
+    for (const inputKey in effectiveInputDefinitions) {
+      if (inputs[inputKey] === undefined && effectiveInputDefinitions[inputKey].config?.default !== undefined) {
+        const inputDef = effectiveInputDefinitions[inputKey];
         const defaultValue = inputDef.config!.default;
         if (inputDef.multi && !Array.isArray(defaultValue)) {
           inputs[inputKey] = defaultValue;
@@ -616,8 +634,8 @@ export class ExecutionEngine {
       }
     }
 
-    for (const inputKey in definition.inputs) {
-      const inputDef = definition.inputs[inputKey];
+    for (const inputKey in effectiveInputDefinitions) {
+      const inputDef = effectiveInputDefinitions[inputKey];
       const isRequired = typeof inputDef.required === 'function'
         ? inputDef.required(node.configValues || {})
         : inputDef.required === true;
@@ -669,7 +687,8 @@ export class ExecutionEngine {
     }
     const definition = nodeManager.getNode(node.fullType);
 
-    if (!definition || !definition.execute) {
+    // 移除对 definition.execute 的早期检查，因为执行函数现在是动态的
+    if (!definition) {
       const errorMsg = `Node type ${node.fullType} not found or not executable.`;
       this.sendNodeError(nodeId, errorMsg);
       return { status: ExecutionStatus.ERROR, error: errorMsg };
@@ -689,30 +708,51 @@ export class ExecutionEngine {
         throw new Error('Execution interrupted by user.');
       }
 
+      // 1. 确定当前模式ID
+      const modeConfigKey = definition.modeConfigKey;
+      const currentModeId = (modeConfigKey && node.configValues) ? (node.configValues[modeConfigKey] as string) : undefined;
+      const modeDefinition = (currentModeId && definition.modes) ? definition.modes[currentModeId] : undefined;
+
+      // 2. 选择正确的执行函数和输出定义
+      const executeFn = modeDefinition?.execute || definition.execute;
+      const effectiveOutputDefinitions = modeDefinition?.outputs || definition.outputs || {};
+
+      // 3. 检查是否有可执行的函数
+      if (!executeFn) {
+        const errorMsg = `Node ${node.fullType} (${nodeId}) has no valid execute function for the current mode ('${currentModeId || 'default'}').`;
+        throw new Error(errorMsg);
+      }
+      
+      // 4. 准备执行上下文
       const context = {
         promptId: this.promptId,
-        nodeId: nodeId, // <--- 添加 nodeId 到 context
+        nodeId: nodeId,
         workflowInterfaceInputs: this.payload.interfaceInputs,
         workflowInterfaceOutputs: this.payload.interfaceOutputs,
-        services: this.services, // <--- 注入 services
+        services: this.services,
         userId: this.userId,
+        nodeData: {
+          currentModeId: currentModeId
+        }
       };
 
-
-      // 统一执行逻辑：所有节点都被视为可能产生流。
-      // normalizeToAsyncGenerator 会将 Promise<result> 转换为一个立即返回的 AsyncGenerator。
-      const hasStreamOutput = Object.values(definition.outputs || {}).some(output => output.isStream);
+      // 5. 统一执行逻辑
+      const hasStreamOutput = Object.values(effectiveOutputDefinitions).some(output => output.isStream);
+      const executionResult = executeFn(inputs, context);
+      const nodeGenerator = this.normalizeToAsyncGenerator(executionResult);
 
       if (!hasStreamOutput) {
         // --- 非流式节点的处理 ---
-        const result = await definition.execute(inputs, context) as Record<string, any>;
-        this.nodeResults[nodeId] = result;
+        const finalResult = (await nodeGenerator.next()).value as Record<string, any> | void;
+        const resultForEvent = finalResult || {};
+
+        this.nodeResults[nodeId] = resultForEvent;
         this.nodeStates[nodeId] = ExecutionStatus.COMPLETE;
         const durationMs = Date.now() - nodeStartTime;
-        loggingService.logNodeComplete(nodeId, node.fullType, result, durationMs)
+        loggingService.logNodeComplete(nodeId, node.fullType, resultForEvent, durationMs)
           .catch(err => console.error(`[Engine-${this.promptId}] Failed to log batch node complete for ${nodeId}:`, err));
-        this.sendNodeComplete(nodeId, result);
-        // Manually send YIELD message for compatibility, so the UI knows the node is 'finished' streaming
+        this.sendNodeComplete(nodeId, resultForEvent);
+        // 手动发送 YIELD 消息以兼容UI
         const finalPayloadContent: ChunkPayload = { type: 'finish_reason_chunk', content: 'Stream ended' };
         const finalPayload: NodeYieldPayload = {
           promptId: this.promptId,
@@ -724,41 +764,33 @@ export class ExecutionEngine {
         return { status: ExecutionStatus.COMPLETE };
       }
 
-      // --- 流式节点的处理 (保持原逻辑) ---
-      const executeFn = definition.execute;
-      const executionResult = executeFn(inputs, context);
-      const nodeGenerator = this.normalizeToAsyncGenerator(executionResult);
-
-      // console.log(`[Engine-${this.promptId}] Starting unified execution for node ${nodeId}.`);
+      // --- 流式节点的处理 ---
+      // 这里的 definition 参数是 NodeDefinition 类型，而 startStreamNodeExecution 也需要它
       const { streams, batchDataPromise } = this.startStreamNodeExecution(node, nodeGenerator, definition, context, nodeStartTime);
 
       const resultsForNode: Record<string, any> = { ...streams };
-      for (const outputKey in definition.outputs) {
-        // 如果输出不是流，其值将来自最终的批处理结果。
-        if (!definition.outputs[outputKey].isStream) {
+      // 使用之前计算好的 effectiveOutputDefinitions
+      for (const outputKey in effectiveOutputDefinitions) {
+        if (!effectiveOutputDefinitions[outputKey].isStream) {
           resultsForNode[outputKey] = batchDataPromise.then(batch => {
             if (batch && typeof batch === 'object' && outputKey in batch) {
               return (batch as Record<string, any>)[outputKey];
             }
-            // 如果批处理结果为 void 或不包含该键，则返回 undefined 是正常的。
             return undefined;
           }).catch(err => {
             console.error(`[Engine-${this.promptId}] Promise for ${nodeId}.${outputKey} (from batchDataPromise) rejected: ${err.message}`);
-            throw err; // 重新抛出错误，以便存储在 resultsForNode 中的 Promise 被拒绝
+            throw err;
           });
         }
       }
 
       this.nodeResults[nodeId] = resultsForNode;
-      // 节点总是被视为初始正在运行。
-      // startStreamNodeExecution 会在完成后将其标记为 COMPLETE。
       this.nodeStates[nodeId] = ExecutionStatus.RUNNING;
       return { status: ExecutionStatus.RUNNING };
 
     } catch (error: any) {
       const durationMs = Date.now() - nodeStartTime;
       const errorMessage = error.message || String(error);
-      // console.error(`[Engine-${this.promptId}] Error executing node ${nodeId} (${node.fullType}):`, errorMessage, error.stack);
       this.nodeStates[nodeId] = this.isInterrupted ? ExecutionStatus.INTERRUPTED : ExecutionStatus.ERROR;
       loggingService.logNodeError(nodeId, node.fullType, error, durationMs)
         .catch(err => console.error(`[Engine-${this.promptId}] Failed to log node error for ${nodeId}:`, err));

@@ -6,7 +6,7 @@ import { useTabStore } from "@/stores/tabStore";
 import type { EditorOpeningContext } from "@/types/editorTypes";
 import type { WorkflowStateSnapshot } from "@/types/workflowTypes";
 import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils";
-import type { GroupSlotInfo, HistoryEntry, InputDefinition } from "@comfytavern/types";
+import type { GroupSlotInfo, HistoryEntry, InputDefinition, NodeDefinition } from "@comfytavern/types";
 import { DataFlowType } from "@comfytavern/types";
 import type { Edge, Node as VueFlowNode } from "@vue-flow/core";
 import { klona } from "klona/full";
@@ -376,6 +376,112 @@ export function useWorkflowInteractionCoordinator() {
     if (isPreviewEnabled.value) {
       // 检查预览是否启用
       requestPreviewExecution(nodeId, { type: "config", key: configKey, value });
+    }
+  }
+
+  /**
+   * 原子性地更改节点的模式，更新其配置值，移除因插槽变化而失效的边，并记录单一历史条目。
+   * @param internalId - 标签页的内部 ID。
+   * @param nodeId - 目标节点的 ID。
+   * @param configKey - 模式选择器的配置键。
+   * @param newModeId - 新的模式 ID。
+   * @param entry - 描述此操作的历史记录条目。
+   */
+  async function changeNodeModeAndRecord(
+    internalId: string,
+    nodeId: string,
+    configKey: string,
+    newModeId: string,
+    entry: HistoryEntry
+  ) {
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(
+      internalId,
+      "changeNodeModeAndRecord"
+    );
+    if (snapshotError || !currentSnapshot) {
+      console.error(snapshotError || `[changeNodeModeAndRecord] 无法获取标签页 ${internalId} 的快照。`);
+      return;
+    }
+
+    const nextSnapshot = klona(currentSnapshot);
+    const nodeIndex = nextSnapshot.elements.findIndex(
+      (el) => el.id === nodeId && !("source" in el)
+    );
+    if (nodeIndex === -1) {
+      console.error(`[changeNodeModeAndRecord] 在标签页 ${internalId} 中未找到节点 ${nodeId}。`);
+      return;
+    }
+    const targetNode = nextSnapshot.elements[nodeIndex] as VueFlowNode;
+    const nodeDef = targetNode.data as NodeDefinition;
+
+    // 1. 更新配置值
+    targetNode.data = {
+      ...targetNode.data,
+      configValues: {
+        ...(targetNode.data.configValues || {}),
+        [configKey]: newModeId,
+      },
+    };
+
+    // 2. 确定因模式切换而移除的插槽
+    const oldModeId = entry.details?.oldValue as string | undefined;
+    const oldModeDef = oldModeId ? nodeDef.modes?.[oldModeId] : undefined;
+    const newModeDef = nodeDef.modes?.[newModeId];
+
+    const oldInputs = oldModeDef?.inputs || nodeDef.inputs || {};
+    const oldOutputs = oldModeDef?.outputs || nodeDef.outputs || {};
+    const newInputs = newModeDef?.inputs || nodeDef.inputs || {};
+    const newOutputs = newModeDef?.outputs || nodeDef.outputs || {};
+
+    const oldInputKeys = new Set(Object.keys(oldInputs));
+    const oldOutputKeys = new Set(Object.keys(oldOutputs));
+    const newInputKeys = new Set(Object.keys(newInputs));
+    const newOutputKeys = new Set(Object.keys(newOutputs));
+
+    const removedInputKeys = new Set([...oldInputKeys].filter((k) => !newInputKeys.has(k)));
+    const removedOutputKeys = new Set([...oldOutputKeys].filter((k) => !newOutputKeys.has(k)));
+
+    // 3. 从快照中过滤掉连接到已移除插槽的边
+    if (removedInputKeys.size > 0 || removedOutputKeys.size > 0) {
+      const edgesToRemove: Edge[] = [];
+      nextSnapshot.elements = nextSnapshot.elements.filter((el) => {
+        if (!("source" in el)) return true; // 保留节点
+        const edge = el as Edge;
+        let shouldRemove = false;
+
+        if (edge.source === nodeId && edge.sourceHandle && removedOutputKeys.has(parseSubHandleId(edge.sourceHandle).originalKey)) {
+          shouldRemove = true;
+        }
+        if (edge.target === nodeId && edge.targetHandle && removedInputKeys.has(parseSubHandleId(edge.targetHandle).originalKey)) {
+          shouldRemove = true;
+        }
+
+        if (shouldRemove) {
+          edgesToRemove.push(klona(edge));
+          return false;
+        }
+        return true;
+      });
+
+      if (entry.details) {
+        entry.details.removedEdges = edgesToRemove;
+      } else {
+        entry.details = { removedEdges: edgesToRemove };
+      }
+    }
+    
+    // 4. 应用状态更新
+    await workflowManager.setElements(internalId, nextSnapshot.elements);
+
+    // 5. 更新节点视图
+    await updateNodeInternals(internalId, [nodeId]);
+
+    // 6. 记录历史
+    recordHistory(internalId, entry, nextSnapshot);
+
+    // 7. 触发预览
+    if (isPreviewEnabled.value) {
+      requestPreviewExecution(nodeId, { type: "config", key: configKey, value: newModeId });
     }
   }
 
@@ -1935,6 +2041,7 @@ export function useWorkflowInteractionCoordinator() {
     removeElementsAndRecord, // 删除元素 (节点/边)
     updateNodeInputValueAndRecord, // 更新节点输入值 (含预览触发)
     updateNodeConfigValueAndRecord, // 更新节点配置值 (含预览触发和 NodeGroup 逻辑)
+changeNodeModeAndRecord, // 原子性地更改节点模式
     updateNodeDimensionsAndRecord, // 更新节点尺寸
     updateNodeComponentStateAndRecord, // 更新节点内部组件状态
     removeEdgesByHandleAndRecord, // 按句柄删除边

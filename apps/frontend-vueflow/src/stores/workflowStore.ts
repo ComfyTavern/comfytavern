@@ -735,6 +735,7 @@ export const useWorkflowStore = defineStore("workflow", () => {
     removeElementsAndRecord: workflowInteractionCoordinator.removeElementsAndRecord,
     updateNodeInputValueAndRecord: workflowInteractionCoordinator.updateNodeInputValueAndRecord,
     updateNodeConfigValueAndRecord: workflowInteractionCoordinator.updateNodeConfigValueAndRecord,
+    changeNodeModeAndRecord: workflowInteractionCoordinator.changeNodeModeAndRecord,
     removeEdgesByHandleAndRecord: workflowInteractionCoordinator.removeEdgesByHandleAndRecord,
     updateWorkflowNameAndRecord: workflowInteractionCoordinator.updateWorkflowNameAndRecord,
     updateWorkflowDescriptionAndRecord:

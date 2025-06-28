@@ -117,6 +117,8 @@ export interface InputDefinition extends SlotDefinitionBase {
   config?: Record<string, any>;
   multi?: boolean;
   actions?: NodeInputAction[];
+  allowMoreConnections?: boolean;
+  maxConnections?: number;
 }
 
 // 输出定义
@@ -125,11 +127,43 @@ export interface OutputDefinition extends SlotDefinitionBase {
 }
 
 /**
+ * 用于在前端显示插槽的聚合类型，确保 key 总是存在。
+ */
+export type DisplaySlotInfo = (InputDefinition | OutputDefinition) & { key: string };
+export type DisplayInputSlotInfo = InputDefinition & { key: string };
+export type DisplayOutputSlotInfo = OutputDefinition & { key: string };
+
+/**
  * 绕过行为定义
  */
 export interface BypassBehavior {
   passThrough?: Record<string, string>;
   defaults?: Record<string, any>;
+}
+
+/**
+ * 节点模式定义，用于支持多模式节点
+ */
+export interface NodeModeDefinition {
+  /** 模式的唯一标识符 */
+  id: string;
+  /** 模式的显示名称 */
+  displayName: string;
+  /** 模式的描述 */
+  description?: string;
+  /** 该模式下的输入插槽定义 */
+  inputs: Record<string, InputDefinition>;
+  /** 该模式下的输出插槽定义 */
+  outputs: Record<string, OutputDefinition>;
+  /** 该模式特有的配置模式 */
+  configSchema?: Record<string, InputDefinition>;
+  /** 该模式的执行函数，如果不提供则使用节点的主执行函数 */
+  execute?: (
+    inputs: Record<string, any>,
+    context?: any
+  ) =>
+    | Promise<Record<string, any>>
+    | AsyncGenerator<ChunkPayload, Record<string, any> | void, undefined>;
 }
 
 // 节点定义
@@ -163,6 +197,12 @@ export interface NodeDefinition {
   configValues?: Record<string, any>;
   isPreviewUnsafe?: boolean;
   bypassBehavior?: "mute" | BypassBehavior;
+  /** 节点的多模式定义，如果提供，则节点支持多种操作模式 */
+  modes?: Record<string, NodeModeDefinition>;
+  /** 默认的模式ID，如果节点支持多模式，则必须提供 */
+  defaultModeId?: string;
+  /** 如果节点支持多模式，此字段指定哪个 configSchema 键是模式选择器 */
+  modeConfigKey?: string;
 }
 
 // 节点执行上下文

@@ -101,35 +101,48 @@ export function useNodeState(props: Readonly<UseNodeStateProps>) {
 
   // 更新配置项值 (调用协调器)
   const updateConfigValue = (configKey: string, value: any) => {
-    // <-- 移除 async
     const activeId = tabStore.activeTabId;
     if (!activeId) {
       console.warn("[useNodeState:updateConfigValue] No active tab ID found.");
       return;
     }
- 
-    // 创建历史记录条目
+
+    const nodeDef = props.data as NodeDefinition;
+    const isModeChange = nodeDef.modeConfigKey === configKey;
     const nodeDisplayName = props.data.displayName || props.data.label || props.id;
-    const configDisplayName = props.data.configSchema?.[configKey]?.displayName || configKey;
-    const oldValue = getConfigValue(configKey); // <-- Uncomment: 获取旧值
- 
-    const entry: HistoryEntry = createHistoryEntry(
-      'modify', // actionType
-      'nodeConfig', // objectType
-      // 更详细的摘要，包含节点名、配置名和新值（截断）
-      `配置 ${nodeDisplayName} - ${configDisplayName}: "${String(value).length > 20 ? String(value).substring(0, 17) + '...' : String(value)}"`, // summary
-      { // details
-        nodeId: props.id,
-        nodeName: nodeDisplayName,
-        propertyName: configKey,
-        oldValue: oldValue, // <-- Uncomment: 添加旧值
-        newValue: value,
-      }
-    );
- 
-    // 调用协调器函数，传递 entry 对象
-    workflowStore.updateNodeConfigValueAndRecord(activeId, props.id, configKey, value, entry);
-    // 注意：NodeGroup 的 referencedWorkflowId 更新逻辑现在应该在协调器内部处理
+    const oldValue = getConfigValue(configKey);
+    let entry: HistoryEntry;
+
+    if (isModeChange) {
+      const newModeDisplayName = nodeDef.modes?.[value]?.displayName || value;
+      entry = createHistoryEntry(
+        'modify',
+        'nodeMode',
+        `切换节点 '${nodeDisplayName}' 模式为 '${newModeDisplayName}'`,
+        {
+          nodeId: props.id,
+          propertyName: configKey,
+          oldValue: oldValue,
+          newValue: value,
+        }
+      );
+      workflowStore.changeNodeModeAndRecord(activeId, props.id, configKey, value, entry);
+    } else {
+      const configDisplayName = nodeDef.configSchema?.[configKey]?.displayName || configKey;
+      entry = createHistoryEntry(
+        'modify',
+        'nodeConfig',
+        `配置 ${nodeDisplayName} - ${configDisplayName}: "${String(value).length > 20 ? String(value).substring(0, 17) + '...' : String(value)}"`,
+        {
+          nodeId: props.id,
+          nodeName: nodeDisplayName,
+          propertyName: configKey,
+          oldValue: oldValue,
+          newValue: value,
+        }
+      );
+      workflowStore.updateNodeConfigValueAndRecord(activeId, props.id, configKey, value, entry);
+    }
   };
 
   return {

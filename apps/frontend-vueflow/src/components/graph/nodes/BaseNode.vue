@@ -23,18 +23,20 @@ import {
   ExecutionStatus,
   type NodeInputAction, // + 导入 NodeInputAction
   type RegexRule, // +++ 导入 RegexRule 类型
+  type DisplayInputSlotInfo,
+  type DisplayOutputSlotInfo,
 } from "@comfytavern/types";
 import { createHistoryEntry } from "@comfytavern/utils";
 
 // 可组合函数
 import { useNodeResize } from "../../../composables/node/useNodeResize";
-import { useGroupIOSlots } from "../../../composables/group/useGroupIOSlots";
 import { useNodeState } from "../../../composables/node/useNodeState";
 import { useNodeProps as useNodePropsComposable } from "../../../composables/node/useNodeProps";
 import { useNodeActions } from "../../../composables/node/useNodeActions";
 import { useWorkflowInteractionCoordinator } from "../../../composables/workflow/useWorkflowInteractionCoordinator";
 import { useNodeClientScript } from "../../../composables/node/useNodeClientScript";
 import { useWorkflowManager } from "../../../composables/workflow/useWorkflowManager";
+import { useNodeModeSlots } from "../../../composables/node/useNodeModeSlots"; // 新增：导入 useNodeModeSlots
 
 import { useWorkflowPreview } from "../../../composables/workflow/useWorkflowPreview"; // 清理：保留一个导入，移除 type NodePreviewStatus
 
@@ -93,14 +95,13 @@ const {
 // 重命名导入的函数以避免与计算属性映射冲突
 const { getInputProps: calculateInputProps, getConfigProps: calculateConfigProps } =
   useNodePropsComposable(props);
-const { isNodeGroup } = useNodeActions(props); // 使用节点操作 Composable (移除了未使用的 editNodeGroup)
-// 使用重构后的 useGroupIOSlots，它现在接收完整 props 并返回 finalInputs/finalOutputs
-const { finalInputs, finalOutputs } = useGroupIOSlots(props);
-const { clientScriptError, handleButtonClick, executeClientHook } = useNodeClientScript({ // 使用客户端脚本 Composable
+const { isNodeGroup } = useNodeActions(props);
+const { finalInputs, finalOutputs, currentModeDefinition } = useNodeModeSlots(props);
+const { clientScriptError, handleButtonClick, executeClientHook } = useNodeClientScript({
   ...props,
   updateInputValue,
   getInputValue,
-}); // 添加 executeClientHook，并传入 props 和需要的函数
+});
 const { updateNodeInternals } = vueFlowInstance; // 从 useVueFlow 获取更新函数
 
 const { nodePreviewStates, isPreviewEnabled } = useWorkflowPreview(); // 清理：保留一个调用
@@ -172,8 +173,9 @@ const inputPropsMap = computed(() => {
 
 const configPropsMap = computed(() => {
   const map: Record<string, Record<string, any>> = {};
-  if (props.data.configSchema) {
-    for (const [key, configDef] of Object.entries(props.data.configSchema)) {
+  const configSchema = props.data.configSchema || currentModeDefinition.value?.configSchema;
+  if (configSchema) {
+    for (const [key, configDef] of Object.entries(configSchema)) {
       // 调用原始的计算逻辑
       map[key] = calculateConfigProps(configDef as InputDefinition, key);
     }
@@ -278,7 +280,7 @@ const getNodeLabelForSorter = (nodeId: string): string => {
   return node?.label || node?.data?.displayName || node?.type || nodeId;
 };
 
-const shouldShowSorter = (input: (typeof finalInputs.value)[0]): boolean => {
+const shouldShowSorter = (input: DisplayInputSlotInfo): boolean => {
   return !!input.multi && // 确保 input.multi 是 true
     !(input.dataFlowType === DataFlowType.WILDCARD &&
       input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER));
@@ -393,7 +395,7 @@ const getNumChildHandles = (inputKey: string): number => {
   return numConnections + 1;
 };
 
-const getDynamicParamHeaderStyle = (inputDef: (typeof finalInputs.value)[number]) => {
+const getDynamicParamHeaderStyle = (inputDef: DisplayInputSlotInfo) => {
   const styleObj: Record<string, string> = {};
   if (inputDef.multi) {
     const runwayContainerStyle = multiInputSlotContainerStyle.value[String(inputDef.key)];
@@ -460,7 +462,7 @@ const handleComponentResizeEnd = (inputKey: string, payload: { newHeight: number
   );
 };
 
-const handleOutputAltClick = (outputSlot: any, event: MouseEvent) => { // outputSlot 类型应为 DisplaySlotInfo
+const handleOutputAltClick = (outputSlot: DisplayOutputSlotInfo, event: MouseEvent) => {
   if (!event.altKey) return; // 只处理 Alt+Click
   event.preventDefault();
   event.stopPropagation(); // 阻止事件冒泡到 onNodeClick
@@ -726,80 +728,45 @@ const handleActionTriggered = (payload: {
       selected,
       'pointer-events-none': isResizing,
       'cursor-move': !isResizing,
-      'node-missing': isMissingNode, // 新增：缺失节点样式
-      // dark: isDark, // 暗色模式类 - 移除，由 Tailwind dark: 前缀自动处理
-      // 执行状态相关的类
+      'node-missing': isMissingNode,
       'node-running': nodeExecutionStatus === ExecutionStatus.RUNNING,
-      'node-completed': nodeExecutionStatus === ExecutionStatus.COMPLETE, // Use COMPLETE
+      'node-completed': nodeExecutionStatus === ExecutionStatus.COMPLETE,
       'node-error': nodeExecutionStatus === ExecutionStatus.ERROR,
-      'node-skipped': nodeExecutionStatus === ExecutionStatus.SKIPPED, // SKIPPED should be correct now
-      'has-client-script-error': !!clientScriptError, // 保留错误状态类
+      'node-skipped': nodeExecutionStatus === ExecutionStatus.SKIPPED,
+      'has-client-script-error': !!clientScriptError,
     },
-    previewStatusClass // 修复：直接将计算属性放入数组，Vue 会处理 null/undefined
+    previewStatusClass
   ]" :style="{ width: `${width}px` }">
-    <!-- 节点宽度拖拽调整区域 -->
-    <!-- 拖拽响应区域 (父元素，透明，宽度比手柄大) -->
+
+    <!-- Draggable Resize Handles -->
     <div class="resize-area resize-area-left" @mousedown="startResize">
-      <!-- 拖拽手柄视觉元素 (子元素，可见，固定宽度) -->
       <div class="resize-handle resize-handle-left" />
     </div>
     <div class="resize-area resize-area-right" @mousedown="startResize">
       <div class="resize-handle resize-handle-right" />
     </div>
-    <!-- 节点头部区域 -->
+
+    <!-- Node Header -->
     <div class="custom-node-header">
-      <!-- 头部左侧：节点 ID、错误图标、缺失图标和标题 -->
       <div class="flex items-center flex-grow min-w-0">
         <span v-if="nodeIdNumber" class="node-id-badge mr-0.5">{{ nodeIdNumber }}</span>
-        <!-- 节点 ID 徽章 -->
-        <!-- 客户端脚本错误图标 -->
-        <svg v-if="clientScriptError" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-          stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-error mr-1 flex-shrink-0"
-          v-comfy-tooltip="t('graph.nodes.baseNode.clientScriptErrorTitle', { error: clientScriptError })">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+        <svg v-if="clientScriptError" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-error mr-1 flex-shrink-0" v-comfy-tooltip="t('graph.nodes.baseNode.clientScriptErrorTitle', { error: clientScriptError })">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
         </svg>
-        <!-- 缺失节点图标 -->
-        <svg v-else-if="isMissingNode" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-          stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-warning mr-1 flex-shrink-0"
-          v-comfy-tooltip="tooltipContentForNodeTitle">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+        <svg v-else-if="isMissingNode" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-warning mr-1 flex-shrink-0" v-comfy-tooltip="tooltipContentForNodeTitle">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
         </svg>
-        <!-- 优先显示错误 Tooltip -->
-        <span v-if="nodeExecutionStatus === ExecutionStatus.ERROR && nodeExecutionError"
-          class="node-title truncate text-error"
-          v-comfy-tooltip="{
-            content: t('graph.nodes.baseNode.executionErrorTooltip', { error: nodeExecutionError }),
-            placement: 'top',
-            maxWidth: 400,
-            copyButton: true,
-            interactive: true
-          }">
+        <span v-if="nodeExecutionStatus === ExecutionStatus.ERROR && nodeExecutionError" class="node-title truncate text-error" v-comfy-tooltip="{ content: t('graph.nodes.baseNode.executionErrorTooltip', { error: nodeExecutionError }), placement: 'top', maxWidth: 400, copyButton: true, interactive: true }">
           {{ label || t('graph.nodes.baseNode.unnamedNode') }}
         </span>
-        <!-- 其次，如果需要显示 Tooltip (有描述 或 自定义标签与默认不同)，使用 v-comfy-tooltip -->
-        <span v-else-if="tooltipContentForNodeTitle" class="node-title truncate" v-comfy-tooltip="{
-          content: tooltipContentForNodeTitle,
-          placement: 'top',
-          maxWidth: 400,
-          delayShow: 300,
-          showCopyButton: true,
-          interactive: true
-        }">
+        <span v-else-if="tooltipContentForNodeTitle" class="node-title truncate" v-comfy-tooltip="{ content: tooltipContentForNodeTitle, placement: 'top', maxWidth: 400, delayShow: 300, showCopyButton: true, interactive: true }">
           {{ label || t('graph.nodes.baseNode.unnamedNode') }}
         </span>
-        <!-- 最后，如果不需要 Tooltip，直接显示普通标题 -->
         <span v-else class="node-title truncate">{{ label || t('graph.nodes.baseNode.unnamedNode') }}</span>
       </div>
-      <!-- 头部右侧：跳转按钮和分类 -->
       <div class="flex items-center gap-1 flex-shrink-0">
-        <!-- 跳转到引用的工作流按钮 -->
-        <button v-if="referencedWorkflowId" v-comfy-tooltip="{ content: t('graph.nodes.baseNode.jumpToReferencedWorkflowTooltip'), placement: 'top', maxWidth: 400 }"
-          @click.stop="openReferencedWorkflow"
-          class="p-0.5 rounded text-text-muted hover:bg-neutral-softest focus:outline-none focus:ring-1 focus:ring-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <button v-if="referencedWorkflowId" v-comfy-tooltip="{ content: t('graph.nodes.baseNode.jumpToReferencedWorkflowTooltip'), placement: 'top', maxWidth: 400 }" @click.stop="openReferencedWorkflow" class="p-0.5 rounded text-text-muted hover:bg-neutral-softest focus:outline-none focus:ring-1 focus:ring-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
             <polyline points="15 3 21 3 21 9"></polyline>
             <line x1="10" y1="14" x2="21" y2="3"></line>
@@ -809,305 +776,120 @@ const handleActionTriggered = (payload: {
       </div>
     </div>
 
-    <!-- 节点配置项区域 -->
-    <div v-if="data.configSchema && Object.keys(data.configSchema).length > 0 && !isMissingNode" class="node-configs">
-      <div v-for="configKeyName in Object.keys(data.configSchema)" :key="`config-${configKeyName}`"
-        class="node-config-item">
-        <div v-if="configPropsMap[String(configKeyName)]?.component" class="config-content" @mousedown.stop>
-          <!-- 阻止 mousedown 冒泡 -->
-          <component :is="configPropsMap[String(configKeyName)]?.component"
-            :model-value="getConfigValue(String(configKeyName))" v-bind="configPropsMap[String(configKeyName)]?.props"
-            @update:modelValue="updateConfigValue(String(configKeyName), $event)" />
+    <!-- Node Configuration Section -->
+    <div v-if="Object.keys(configPropsMap).length > 0 && !isMissingNode" class="node-configs">
+      <div v-for="([configKey, configProps]) in Object.entries(configPropsMap)" :key="`config-${configKey}`" class="node-config-item">
+        <div class="config-content" @mousedown.stop>
+          <component :is="configProps.component" :model-value="getConfigValue(configKey)" v-bind="configProps.props" @update:modelValue="updateConfigValue(configKey, $event)" />
         </div>
       </div>
     </div>
 
+    <!-- Node Body -->
     <div class="custom-node-body">
-      <!-- 节点描述现在通过标题的 Tooltip 显示 -->
       <div v-if="isMissingNode" class="node-missing-content p-2 text-center text-text-muted text-sm">
         <p>{{ t('graph.nodes.baseNode.missingNodeMessage', { type: props.type }) }}</p>
         <p class="text-xs mt-1">{{ t('graph.nodes.baseNode.missingNodeCheckConsole') }}</p>
       </div>
 
-      <!-- 节点输出区域 -->
-      <div v-if="!isMissingNode" class="node-outputs" :key="`outputs-${finalOutputs.map((o) => o.key).join(',')}`">
-        <!-- 直接迭代 finalOutputs -->
+      <!-- Outputs -->
+      <div v-if="!isMissingNode" class="node-outputs" :key="`outputs-${outputOrderKey}`">
         <div v-for="output in finalOutputs" :key="`output-${output.key}`" class="node-param">
-          <!-- 输出参数行 -->
           <div class="param-header">
             <div class="flex items-center justify-end gap-2 mr-2 flex-grow min-w-0">
-              <!-- 使用 formatDescription 处理 Tooltip 内容 -->
-              <div class="param-name truncate text-right" v-comfy-tooltip="{
-                content: formatDescription(output.description) || output.displayName || String(output.key),
-                placement: 'top',
-                maxWidth: 400,
-                delayShow: 300
-              }">
-                <!-- 显示时也优先显示格式化后的 description -->
-                {{
-                  output.displayName || // Use final description from output object
-                  formatDescription(output.description) ||
-                  String(output.key)
-                }}
+              <div class="param-name truncate text-right" v-comfy-tooltip="{ content: formatDescription(output.description) || output.displayName || String(output.key), placement: 'top', maxWidth: 400, delayShow: 300 }">
+                {{ output.displayName || formatDescription(output.description) || String(output.key) }}
               </div>
             </div>
-            <!-- 使用 Tooltip 包裹 Handle 以显示类型、输出值，并添加右键菜单事件 (Handle Tooltip 暂时保留旧组件) -->
-            <div class="relative flex-shrink-0 flex items-center"
-              @contextmenu.prevent.stop="emitSlotContextMenu($event, String(output.key), 'source')">
-              <!-- Handle 的容器 -->
+            <div class="relative flex-shrink-0 flex items-center" @contextmenu.prevent.stop="emitSlotContextMenu($event, String(output.key), 'source')">
               <Tooltip placement="right" :maxWidth="400" :showDelay="300">
                 <template #content>
                   <div>{{ t('graph.nodes.baseNode.tooltipType', { type: output.dataFlowType || t('graph.nodes.baseNode.unknownType') }) }}</div>
-                  <!-- 直接调用 store getter 获取当前缓存的输出 -->
-                  <div v-if="executionStore.getNodeOutput(activeTabId!, props.id, String(output.key)) !== undefined"
-                    class="mt-1">
-                    {{ t('graph.nodes.baseNode.tooltipCurrentCachedResult') }}
-                    {{
-                      formatOutputValueForTooltip(
-                        executionStore.getNodeOutput(activeTabId!, props.id, String(output.key))
-                      )
-                    }}
+                  <div v-if="executionStore.getNodeOutput(activeTabId!, props.id, String(output.key)) !== undefined" class="mt-1">
+                    {{ t('graph.nodes.baseNode.tooltipCurrentCachedResult') }} {{ formatOutputValueForTooltip(executionStore.getNodeOutput(activeTabId!, props.id, String(output.key))) }}
                   </div>
-                  <!-- 直接调用 store getter 获取预览输出 -->
-                  <div
-                    v-else-if="executionStore.getNodePreviewOutput(activeTabId!, props.id, String(output.key)) !== undefined"
-                    class="mt-1 text-warning">
-                    {{ t('graph.nodes.baseNode.tooltipPreview') }}
-                    {{
-                      formatOutputValueForTooltip(
-                        executionStore.getNodePreviewOutput(
-                          activeTabId!,
-                          props.id,
-                          String(output.key)
-                        )
-                      )
-                    }}
+                  <div v-else-if="executionStore.getNodePreviewOutput(activeTabId!, props.id, String(output.key)) !== undefined" class="mt-1 text-warning">
+                    {{ t('graph.nodes.baseNode.tooltipPreview') }} {{ formatOutputValueForTooltip(executionStore.getNodePreviewOutput(activeTabId!, props.id, String(output.key))) }}
                   </div>
                 </template>
-                <!-- Tooltip 的触发器是 Handle -->
-                <Handle v-if="output.hideHandle !== true" :id="String(output.key)" type="source"
-                  :position="Position.Right" :class="[
-                    styles.handle,
-                    styles.handleRight,
-                    getHandleTypeClass(output.dataFlowType),
-                    isAnyType(output.dataFlowType) && styles.handleAny, // 条件性添加类名
-                    (
-                      workflowManager.activePreviewTarget.value?.nodeId === props.id &&
-                      workflowManager.activePreviewTarget.value?.slotKey === String(output.key) &&
-                      output.dataFlowType !== DataFlowType.WILDCARD && // 新增条件：非 WILDCARD
-                      output.dataFlowType !== DataFlowType.CONVERTIBLE_ANY // 新增条件：非 CONVERTIBLE_ANY
-                    )
-                      ? styles.handleAsPreviewIcon // 应用眼睛图标样式
-                      : {}
-                  ]" @click="handleOutputAltClick(output, $event)" />
+                <Handle v-if="output.hideHandle !== true" :id="String(output.key)" type="source" :position="Position.Right" :class="[ styles.handle, styles.handleRight, getHandleTypeClass(output.dataFlowType), isAnyType(output.dataFlowType) && styles.handleAny, (workflowManager.activePreviewTarget.value?.nodeId === props.id && workflowManager.activePreviewTarget.value?.slotKey === String(output.key) && output.dataFlowType !== DataFlowType.WILDCARD && output.dataFlowType !== DataFlowType.CONVERTIBLE_ANY) ? styles.handleAsPreviewIcon : {} ]" @click="handleOutputAltClick(output, $event)" />
               </Tooltip>
             </div>
           </div>
         </div>
       </div>
 
+      <!-- Inputs -->
+      <div v-if="!isMissingNode" class="node-inputs" :key="`inputs-${inputOrderKey}`">
+        <div v-for="input in finalInputs" :key="`input-${input.key}`" class="node-param">
+          <div class="param-header" :style="getDynamicParamHeaderStyle(input)">
+            <div v-if="input.hideHandle !== true && !(input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER))" :class="['relative flex-shrink-0', input.multi ? styles.multiInputRunway : '']" :style="input.multi ? multiInputSlotContainerStyle[String(input.key)] : {}">
+              <template v-if="!input.multi">
+                <Handle :id="String(input.key)" type="target" :position="Position.Left" :class="[styles.handle, styles.handleLeft, getHandleTypeClass(input.dataFlowType), isAnyType(input.dataFlowType) && styles.handleAny,]" :style="getStandardHandleStyles(false)" @contextmenu.prevent.stop="emitSlotContextMenu($event, String(input.key), 'target')" v-comfy-tooltip="input.dataFlowType ? { content: input.dataFlowType, placement: 'left', maxWidth: 400 } : undefined" />
+              </template>
+              <template v-else>
+                <div v-for="index in getNumChildHandles(String(input.key))" :key="`${String(input.key)}__${index - 1}`" :class="[styles.runwaySlice, 'child-handle-item']" :style="{ height: `${HANDLE_LINE_HEIGHT + HANDLE_VERTICAL_PADDING}px`, display: 'flex', alignItems: 'center', position: 'relative', zIndex: 1 }" @contextmenu.prevent.stop="emitSlotContextMenu($event, `${String(input.key)}__${index - 1}`, 'target')">
+                  <Handle :id="`${String(input.key)}__${index - 1}`" type="target" :position="Position.Left" :class="[styles.handle, styles.handleLeft, styles.childHandle, getHandleTypeClass(input.dataFlowType), isAnyType(input.dataFlowType) && styles.handleAny,]" :style="getStandardHandleStyles(true)" v-comfy-tooltip="{ content: t('graph.nodes.baseNode.multiInputChildHandleTooltip', { type: input.dataFlowType, index }), placement: 'left', maxWidth: 400 }" />
+                </div>
+              </template>
+            </div>
+            <div class="grid grid-cols-5 gap-2 ml-2.5 w-full items-center">
+              <div v-if="!(input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)) && !(input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE))" class="col-span-2 text-left flex items-center h-4">
+                <div class="param-name truncate text-left" v-comfy-tooltip="{ content: formatDescription(input.description) || input.displayName || String(input.key), placement: 'top', maxWidth: 400 }">
+                  {{ input.displayName || formatDescription(input.description) || String(input.key) }}
+                </div>
+              </div>
+              <div v-else-if="input.dataFlowType === DataFlowType.STRING && input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)" class="col-span-2 text-left flex items-center h-4">
+                <div class="param-name truncate text-left" v-comfy-tooltip="{ content: formatDescription(input.description) || input.displayName || String(input.key), placement: 'top', maxWidth: 400 }">
+                  {{ input.displayName || formatDescription(input.description) || String(input.key) }}
+                </div>
+              </div>
+              <div v-if="props.type !== 'core:GroupInput' && props.type !== 'core:GroupOutput' && !(input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)) && (!isInputConnected(String(input.key)) || isMultiInput(input))" class="flex items-center h-full col-span-3 pr-2 justify-end" :class="{ 'h-auto py-0.5': !isSimpleInlineInput(input) }" @mousedown.stop>
+                <template v-if="isSimpleInlineInput(input) && getInputComponent(input.dataFlowType, input.config, input.matchCategories) && !shouldShowSorter(input)">
+                  <component :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)" :model-value="getInputValue(String(input.key))" v-bind="inputPropsMap[String(input.key)]?.props" :node-id="props.id" :input-key="String(input.key)" :input-definition="input" @update:modelValue="updateInputValue(String(input.key), $event)" @blur="($event: any) => handleComponentBlur(String(input.key), String($event))" :class="[isBooleanInput(input) ? '' : 'w-full max-w-full']" />
+                </template>
+                <template v-else-if="!isSimpleInlineInput(input) && !shouldShowSorter(input)">
+                  <NodeInputActionsBar :node-id="props.id" :input-key="String(input.key)" :input-definition="input" :input-value="getInputValue(String(input.key))" @action-triggered="handleActionTriggered" />
+                </template>
+                <div v-else class="h-4"></div>
+              </div>
+              <div v-else-if="input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)" class="col-span-5 w-full py-1 pr-2 flex justify-center items-center" @mousedown.stop>
+                <component :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)" :model-value="getInputValue(String(input.key))" v-bind="inputPropsMap[String(input.key)]?.props" :node-id="props.id" :input-key="String(input.key)" :input-definition="input" @click="() => handleButtonClick(String(input.key))" />
+              </div>
+            </div>
+          </div>
+          <div v-if="shouldShowSorter(input)" class="param-content !p-0 !bg-transparent">
+            <InlineConnectionSorter :node-id="props.id" :input-handle-key="String(input.key)" :current-ordered-edge-ids="props.data.inputConnectionOrders?.[String(input.key)] || []" :input-definition="input" :all-edges="vueFlowInstance.edges.value" :find-node="vueFlowInstance.findNode" :get-node-label="getNodeLabelForSorter" />
+          </div>
+          <div v-if="!shouldShowSorter(input) && props.type !== 'core:GroupInput' && props.type !== 'core:GroupOutput' && getInputComponent(input.dataFlowType, input.config, input.matchCategories) && (input.matchCategories?.includes(BuiltInSocketMatchCategory.UI_BLOCK) && ((input.dataFlowType === DataFlowType.STRING && input.config?.display_only) || !isInputConnected(String(input.key)) || (isInputConnected(String(input.key)) && input.config?.showReceivedValue)))" class="param-content" @mousedown.stop>
+            <component :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)" :model-value="getInputValue(String(input.key))" v-bind="inputPropsMap[String(input.key)]?.props" :node-id="props.id" :input-key="String(input.key)" :input-definition="input" :height="props.data.componentStates?.[String(input.key)]?.height" @blur="($event: any) => handleComponentBlur(String(input.key), String($event))" @resize-interaction-end="handleComponentResizeEnd(String(input.key), $event)" @open-docked-editor="openEditorForInput(input)" />
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- 节点组信息区域 (仅节点组显示) -->
+    <!-- Node Group Info -->
     <div v-if="isNodeGroup && nodeGroupInfo && !isMissingNode" class="node-group-info">
-      <!-- 添加 v-if="nodeGroupInfo" 来确保在访问属性前 nodeGroupInfo 不是 null -->
       <template v-if="nodeGroupInfo">
         <span class="info-item">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-            stroke="currentColor" class="w-3 h-3 inline-block mr-0.5">
-            <path stroke-linecap="round" stroke-linejoin="round"
-              d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125Z" />
-            </svg>
-            {{ t('graph.nodes.baseNode.nodeGroupInfoNodes', { count: nodeGroupInfo.nodeCount }) }}
-          </span>
-          <span class="info-item">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-              stroke="currentColor" class="w-3 h-3 inline-block mr-0.5 transform rotate-180">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5" />
-            </svg>
-            {{ t('graph.nodes.baseNode.nodeGroupInfoInputs', { count: nodeGroupInfo.inputCount }) }}
-          </span>
-          <span class="info-item">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-              stroke="currentColor" class="w-3 h-3 inline-block mr-0.5">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5" />
-            </svg>
-            {{ t('graph.nodes.baseNode.nodeGroupInfoOutputs', { count: nodeGroupInfo.outputCount }) }}
-          </span>
-        </template>
-      </div>
-
-    <!-- 节点输入区域 -->
-    <div v-if="!isMissingNode" class="node-inputs" :key="`inputs-${finalInputs.map((i) => i.key).join(',')}`">
-      <!-- 直接迭代 finalInputs -->
-      <div v-for="input in finalInputs" :key="`input-${input.key}`" class="node-param">
-        <!-- 输入参数行布局：连接点、名称、内联输入组件 -->
-        <div class="param-header" :style="getDynamicParamHeaderStyle(input)">
-          <!-- 输入连接点 Handle -->
-          <!-- 输入连接点 Handle，并添加右键菜单事件 -->
-          <!-- 条件：如果不是按钮类型，则显示 Handle -->
-          <div v-if="
-            input.hideHandle !== true && // 新增：如果 hideHandle 不为 true
-            !( // 且不是触发器类型
-              input.dataFlowType === DataFlowType.WILDCARD &&
-              input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)
-            )
-          " :class="['relative flex-shrink-0', input.multi ? styles.multiInputRunway : '']"
-            :style="input.multi ? multiInputSlotContainerStyle[String(input.key)] : {}">
-            <!-- 单输入 Handle -->
-            <template v-if="!input.multi">
-              <Handle :id="String(input.key)" type="target" :position="Position.Left" :class="[
-                styles.handle,
-                styles.handleLeft,
-                getHandleTypeClass(input.dataFlowType),
-                isAnyType(input.dataFlowType) && styles.handleAny,
-              ]" :style="getStandardHandleStyles(false)"
-                @contextmenu.prevent.stop="emitSlotContextMenu($event, String(input.key), 'target')"
-                v-comfy-tooltip="input.dataFlowType ? { content: input.dataFlowType, placement: 'left', maxWidth: 400 } : undefined" />
-            </template>
-            <!-- 多输入 - 渲染多个子 Handle 和一个主 Handle -->
-            <template v-else>
-              <!-- 父级 Handle 已被移除，以防止连接吸附问题 -->
-              <!-- 子 Handle (可见的连接点) -->
-              <div v-for="index in getNumChildHandles(String(input.key))" :key="`${String(input.key)}__${index - 1}`"
-                :class="[styles.runwaySlice, 'child-handle-item']" :style="{
-                  height: `${HANDLE_LINE_HEIGHT + HANDLE_VERTICAL_PADDING}px`, // e.g., 12px
-                  display: 'flex',
-                  alignItems: 'center',
-                  position: 'relative',
-                  zIndex: 1 // 确保子Handle在主Handle之上，以便交互
-                }"
-                @contextmenu.prevent.stop="emitSlotContextMenu($event, `${String(input.key)}__${index - 1}`, 'target')">
-                <Handle :id="`${String(input.key)}__${index - 1}`" type="target" :position="Position.Left" :class="[
-                  styles.handle,
-                  styles.handleLeft,
-                  styles.childHandle, // 这个类将在 CSS 中定义背景色等
-                  getHandleTypeClass(input.dataFlowType),
-                  isAnyType(input.dataFlowType) && styles.handleAny,
-                ]" :style="getStandardHandleStyles(true)"
-                  v-comfy-tooltip="{ content: t('graph.nodes.baseNode.multiInputChildHandleTooltip', { type: input.dataFlowType, index }), placement: 'left', maxWidth: 400 }" />
-              </div>
-            </template>
-          </div>
-
-          <!-- 参数名称和内联输入组件容器 (固定比例布局) -->
-          <div class="grid grid-cols-5 gap-2 ml-2.5 w-full items-center">
-            <!-- 参数名称容器 -->
-            <div v-if="
-              !(
-                input.dataFlowType === DataFlowType.WILDCARD &&
-                input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)
-              ) && // 非按钮类型
-              !(
-                input.dataFlowType === DataFlowType.STRING &&
-                input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)
-              ) // 非 CodeInput 类型
-            " class="col-span-2 text-left flex items-center h-4">
-              <div class="param-name truncate text-left" v-comfy-tooltip="{
-                content: formatDescription(input.description) || input.displayName || String((input as any).key),
-                placement: 'top',
-                maxWidth: 400
-              }">
-                {{
-                  input.displayName || formatDescription(input.description) || String((input as any).key)
-                }}
-              </div>
-            </div>
-            <!-- CodeInput 参数名称特殊处理，可能需要更多空间 -->
-            <div v-else-if="
-              input.dataFlowType === DataFlowType.STRING &&
-              input.matchCategories?.includes(BuiltInSocketMatchCategory.CODE)
-            " class="col-span-2 text-left flex items-center h-4">
-              <div class="param-name truncate text-left" v-comfy-tooltip="{
-                content: formatDescription(input.description) || input.displayName || String((input as any).key),
-                placement: 'top',
-                maxWidth: 400
-              }">
-                {{
-                  input.displayName || formatDescription(input.description) || String((input as any).key)
-                }}
-              </div>
-            </div>
-
-            <!-- 内联输入组件 或 动作按钮容器 -->
-            <div v-if="
-              props.type !== 'core:GroupInput' &&
-              props.type !== 'core:GroupOutput' &&
-              !(input.dataFlowType === DataFlowType.WILDCARD && input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)) && // 不是按钮类型
-              (!isInputConnected(String(input.key)) || isMultiInput(input)) // 未连接或允许多重连接
-            " class="flex items-center h-full col-span-3 pr-2 justify-end"
-              :class="{ 'h-auto py-0.5': !isSimpleInlineInput(input) }" @mousedown.stop>
-              <!-- 情况1: 简单内联输入 -->
-              <template
-                v-if="isSimpleInlineInput(input) && getInputComponent(input.dataFlowType, input.config, input.matchCategories) && !shouldShowSorter(input)">
-                <component :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
-                  :model-value="getInputValue(String((input as any).key))"
-                  v-bind="inputPropsMap[String((input as any).key)]?.props" :node-id="props.id"
-                  :input-key="String((input as any).key)" :input-definition="input"
-                  @update:modelValue="updateInputValue(String((input as any).key), $event)"
-                  @blur="($event: any) => handleComponentBlur(String((input as any).key), String($event))"
-                  :class="[isBooleanInput(input) ? '' : 'w-full max-w-full']" />
-              </template>
-              <!-- 情况2: 显示 NodeInputActionsBar (如果不是简单内联输入且不显示 Sorter) -->
-              <template v-else-if="!isSimpleInlineInput(input) && !shouldShowSorter(input)">
-                <NodeInputActionsBar :node-id="props.id" :input-key="String(input.key)" :input-definition="input"
-                  :input-value="getInputValue(String(input.key))" @action-triggered="handleActionTriggered" />
-              </template>
-              <!-- 其他情况，例如已连接且非多输入，则不显示控件 -->
-              <div v-else class="h-4"></div>
-            </div>
-            <!-- 按钮组件容器 (占满整行) -->
-            <div v-else-if="
-              input.dataFlowType === DataFlowType.WILDCARD &&
-              input.matchCategories?.includes(BuiltInSocketMatchCategory.TRIGGER)
-            " class="col-span-5 w-full py-1 pr-2 flex justify-center items-center" @mousedown.stop>
-              <component :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
-                :model-value="getInputValue(String((input as any).key))"
-                v-bind="inputPropsMap[String((input as any).key)]?.props" :node-id="props.id"
-                :input-key="String((input as any).key)" :input-definition="input"
-                @click="() => handleButtonClick(String((input as any).key))" />
-            </div>
-          </div>
-        </div>
-
-        <!-- 内联连接排序器 -->
-        <div v-if="shouldShowSorter(input)" class="param-content !p-0 !bg-transparent">
-          <!-- 使用 !p-0 和 !bg-transparent 移除默认的 param-content 样式，让 Sorter 自己控制 -->
-          <InlineConnectionSorter :node-id="props.id" :input-handle-key="String(input.key)"
-            :current-ordered-edge-ids="props.data.inputConnectionOrders?.[String(input.key)] || []"
-            :input-definition="input" :all-edges="vueFlowInstance.edges.value" :find-node="vueFlowInstance.findNode"
-            :get-node-label="getNodeLabelForSorter" />
-        </div>
-
-        <!-- 多行文本/JSON查看器等特殊输入组件 (根据条件显示) -->
-        <!-- 注意：CodeInput 不会在这里渲染，它只在 param-header 中显示按钮 -->
-        <div v-if="
-          !shouldShowSorter(input) &&
-          props.type !== 'core:GroupInput' &&
-          props.type !== 'core:GroupOutput' &&
-          getInputComponent(input.dataFlowType, input.config, input.matchCategories) && // 确保有组件可渲染
-          // 新的条件：检查 UI_BLOCK 分类，并保留原有的连接状态和显示策略判断
-          (
-            input.matchCategories?.includes(BuiltInSocketMatchCategory.UI_BLOCK) &&
-            ( // 保留的连接状态和显示策略判断
-              (input.dataFlowType === DataFlowType.STRING && input.config?.display_only) ||
-              !isInputConnected(String(input.key)) ||
-              (isInputConnected(String(input.key)) && input.config?.showReceivedValue)
-            )
-          )
-        " class="param-content" @mousedown.stop>
-          <component :is="getInputComponent(input.dataFlowType, input.config, input.matchCategories)"
-            :model-value="getInputValue(String((input as any).key))"
-            v-bind="inputPropsMap[String((input as any).key)]?.props" :node-id="props.id"
-            :input-key="String((input as any).key)" :input-definition="input"
-            :height="props.data.componentStates?.[String((input as any).key)]?.height"
-            @blur="($event: any) => handleComponentBlur(String((input as any).key), String($event))"
-            @resize-interaction-end="handleComponentResizeEnd(String((input as any).key), $event)"
-            @open-docked-editor="openEditorForInput(input)" />
-        </div>
-      </div>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3 inline-block mr-0.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125Z" />
+          </svg>
+          {{ t('graph.nodes.baseNode.nodeGroupInfoNodes', { count: nodeGroupInfo.nodeCount }) }}
+        </span>
+        <span class="info-item">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3 inline-block mr-0.5 transform rotate-180">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5" />
+          </svg>
+          {{ t('graph.nodes.baseNode.nodeGroupInfoInputs', { count: nodeGroupInfo.inputCount }) }}
+        </span>
+        <span class="info-item">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3 inline-block mr-0.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672 13.684 16.6m0 0-2.51 2.225.569-9.47 5.227 7.917-3.286-.672Zm-7.518-.267A8.25 8.25 0 1 1 20.25 10.5M8.288 14.212A5.25 5.25 0 1 1 17.25 10.5" />
+          </svg>
+          {{ t('graph.nodes.baseNode.nodeGroupInfoOutputs', { count: nodeGroupInfo.outputCount }) }}
+        </span>
+      </template>
     </div>
   </div>
 </template>
