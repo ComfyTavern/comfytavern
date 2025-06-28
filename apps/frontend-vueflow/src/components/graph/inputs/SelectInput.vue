@@ -127,7 +127,7 @@ const currentCanvasScale = computed(() => {
 const normalizedSuggestions = computed<Option[]>(() =>
   props.suggestions.map(suggestion => {
     let item = suggestion;
-    console.log(item);
+    console.debug(item);
     // 步骤1: 如果是字符串，尝试解析为JSON。
     if (typeof item === 'string') {
       try {
