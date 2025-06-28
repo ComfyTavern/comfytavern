@@ -81,6 +81,7 @@
         "@vue-flow/controls": "^1.1.2",
         "@vue-flow/core": "^1.42.4",
         "@vue-flow/minimap": "^1.5.2",
+        "@vue-flow/node-resizer": "^1.4.0",
         "@vueuse/core": "^13.0.0",
         "autoprefixer": "10",
         "axios": "^1.8.4",
@@ -574,6 +575,8 @@
     "@vue-flow/core": ["@vue-flow/core@1.45.0", "https://registry.npmmirror.com/@vue-flow/core/-/core-1.45.0.tgz", { "dependencies": { "@vueuse/core": "^10.5.0", "d3-drag": "^3.0.0", "d3-interpolate": "^3.0.1", "d3-selection": "^3.0.0", "d3-zoom": "^3.0.0" }, "peerDependencies": { "vue": "^3.3.0" } }, "sha512-+Qd4fTnCfrhfYQzlHyf5Jt7rNE4PlDnEJEJZH9v6hDZoTOeOy1RhS85cSxKYxdsJ31Ttj2v3yabhoVfBf+bmJA=="],
 
     "@vue-flow/minimap": ["@vue-flow/minimap@1.5.3", "https://registry.npmmirror.com/@vue-flow/minimap/-/minimap-1.5.3.tgz", { "dependencies": { "d3-selection": "^3.0.0", "d3-zoom": "^3.0.0" }, "peerDependencies": { "@vue-flow/core": "^1.23.0", "vue": "^3.3.0" } }, "sha512-w8VQc8orPdzfstIPI4/u6H7qlc/uVM1W6b5Upd5NQi0+S9seYl3CiUrzO9liW/f8Fuvr5oHVQg0X6nn2K083rA=="],
+
+    "@vue-flow/node-resizer": ["@vue-flow/node-resizer@1.4.0", "https://registry.npmmirror.com/@vue-flow/node-resizer/-/node-resizer-1.4.0.tgz", { "dependencies": { "d3-drag": "^3.0.0", "d3-selection": "^3.0.0" }, "peerDependencies": { "@vue-flow/core": "^1.23.0", "vue": "^3.3.0" } }, "sha512-S52MRcSpd6asza8Cl0bKM2sHGrbq7vBydKHDuPdoTD+cvjNX6XF4LSiPZOuzExePI6b+O6dg2EZ1378oOLGFpA=="],
 
     "@vue/babel-helper-vue-transform-on": ["@vue/babel-helper-vue-transform-on@1.4.0", "https://registry.npmmirror.com/@vue/babel-helper-vue-transform-on/-/babel-helper-vue-transform-on-1.4.0.tgz", {}, "sha512-mCokbouEQ/ocRce/FpKCRItGo+013tHg7tixg3DUNS+6bmIchPt66012kBMm476vyEIJPafrvOf4E5OYj3shSw=="],
 

@@ -109,6 +109,7 @@ import HierarchicalMenu from "../../components/common/HierarchicalMenu.vue";
 import type { MenuItem as HierarchicalMenuItem } from "../../components/common/HierarchicalMenu.vue";
 import type { FrontendNodeDefinition } from "../../stores/nodeStore"; // 确保导入
 import BaseNode from "../../components/graph/nodes/BaseNode.vue";
+import FrameNode from "../../components/graph/nodes/FrameNode.vue"; // 导入 FrameNode
 import SidebarManager from "../../components/graph/sidebar/SidebarManager.vue";
 import NodePreviewPanel from "../../components/graph/sidebar/NodePreviewPanel.vue";
 import RightPreviewPanel from "../../components/graph/sidebar/RightPreviewPanel.vue";
@@ -245,9 +246,12 @@ const activeTabId = computed(() => tabStore.activeTabId);
 const nodeTypes = computed(() => {
   const types: Record<string, any> = {
     default: markRaw(BaseNode),
+    'ui:frame': markRaw(FrameNode), // 直接、简单地注册 FrameNode
   };
   if (nodeDefinitions.value) {
     nodeDefinitions.value.forEach((def) => {
+      // 避免重复注册我们已手动定义的类型
+      if (def.namespace === 'ui' && def.type === 'frame') return;
       const fullType = `${def.namespace || "core"}:${def.type}`;
       types[fullType] = markRaw(BaseNode);
     });

@@ -4,6 +4,7 @@ import { useApi } from '../utils/api';
 // 导入共享类型并重命名
 import type { NodeDefinition as SharedNodeDefinition, NodesReloadedPayload } from '@comfytavern/types'; // 导入 NodesReloadedPayload
 import type { CSSProperties } from 'vue';
+import { FrameNodeDefinition } from '@/constants/frameNode';
 
 // 节点样式类型
 export type NodeStyle = CSSProperties;
@@ -16,6 +17,7 @@ export type FrontendNodeDefinition = Omit<
   // 添加 clientScriptUrl 字段
   clientScriptUrl?: string;
   // 可以根据需要添加前端特有的可选字段，例如 name 或 icon
+  isUiNode?: boolean; // 标识这是否是一个纯UI节点
   // name?: string;
   // icon?: string;
 };
@@ -67,10 +69,17 @@ export const useNodeStore = defineStore('node', () => {
     try {
       const data = await api.get<FrontendNodeDefinition[]>('/nodes');
       // console.log('[NodeStore] Data received from /api/nodes in fetchAllNodeDefinitions:', JSON.parse(JSON.stringify(data))); // 深入复制以避免代理问题
-      nodeDefinitions.value = data;
+      // 合并时，要确保 FrameNodeDefinition 不会重复添加
+      const existingDefs = new Set(data.map(d => `${d.namespace}:${d.type}`));
+      const frameFullType = `${FrameNodeDefinition.namespace}:${FrameNodeDefinition.type}`;
+      if (!existingDefs.has(frameFullType)) {
+        nodeDefinitions.value = [...data, FrameNodeDefinition];
+      } else {
+        nodeDefinitions.value = data;
+      }
       // console.log('[NodeStore] nodeDefinitions.value updated in fetchAllNodeDefinitions:', JSON.parse(JSON.stringify(nodeDefinitions.value))); // 深入复制
       definitionsLoaded.value = true; // 设置加载完成标志
-      return data;
+      return nodeDefinitions.value;
     } catch (err) {
       error.value = err instanceof Error ? err.message : '获取节点定义失败';
       console.error('获取节点定义失败:', err);

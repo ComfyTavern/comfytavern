@@ -195,6 +195,7 @@ export interface NodeDefinition {
   deprecated?: boolean;
   experimental?: boolean;
   width?: number;
+  isUiNode?: boolean; // 新增：标识这是否是一个纯UI节点，不参与后端执行
   isGroupInternal?: boolean;
   groupId?: string;
   groupConfig?: {

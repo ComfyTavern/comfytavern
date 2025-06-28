@@ -688,15 +688,26 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
-   * 将单个节点添加到指定标签页的状态并记录历史。
-   * @param internalId - 目标标签页的内部 ID。
-   * @param nodeToAdd - 要添加的 VueFlowNode 对象。
-   * @param entry - 描述此操作的历史记录条目。
-   */
-  async function addNodeAndRecord(internalId: string, nodeToAdd: VueFlowNode, entry: HistoryEntry) {
-    await addElementsAndRecord(internalId, [nodeToAdd], [], entry);
-  }
-
+   /**
+    * 将单个节点添加到指定标签页的状态并记录历史。
+    * @param internalId - 目标标签页的内部 ID。
+    * @param nodeToAdd - 要添加的 VueFlowNode 对象。
+    * @param entry - 描述此操作的历史记录条目。
+    */
+   async function addNodeAndRecord(internalId: string, nodeToAdd: VueFlowNode, entry: HistoryEntry) {
+     await addElementsAndRecord(internalId, [nodeToAdd], [], entry);
+   }
+ 
+   /**
+    * 添加一个分组框（Frame）节点到指定标签页并记录历史。
+    * @param internalId - 目标标签页的内部 ID。
+    * @param frameNode - 要添加的 Frame 节点对象。
+    * @param entry - 描述此操作的历史记录条目。
+    */
+   async function addFrameNodeAndRecord(internalId: string, frameNode: VueFlowNode, entry: HistoryEntry) {
+     // Frame 节点本质上也是一个节点，所以我们可以复用 addElementsAndRecord 逻辑
+     await addElementsAndRecord(internalId, [frameNode], [], entry);
+   }
   /**
    * 批量添加节点和边，并原子性地记录历史。
    * @param internalId - 目标标签页的内部 ID。
@@ -1195,6 +1206,78 @@ export function useWorkflowInteractionCoordinator() {
       handleType,
       removedEdges: removedEdgeDetails,
     };
+    recordHistory(internalId, entry, nextSnapshot);
+  }
+
+  /**
+   * 更新节点的尺寸（宽度和/或高度）并记录历史。
+   * @param internalId - 标签页的内部 ID。
+   * @param nodeId - 目标节点的 ID。
+   * @param dimensions - 包含 { width?: number, height?: number } 的对象，指定新的尺寸。
+   * @param entry - 描述此操作的历史记录条目。
+   */
+  /**
+   * 更新节点的标签（显示名称）并记录历史。
+   * @param internalId - 标签页的内部 ID。
+   * @param nodeId - 目标节点的 ID。
+   * @param newLabel - 新的标签文本。
+   * @param entry - 描述此操作的历史记录条目。
+   */
+  async function updateNodeLabelAndRecord(
+    internalId: string,
+    nodeId: string,
+    newLabel: string,
+    entry: HistoryEntry
+  ) {
+    if (!nodeId) {
+      console.warn("[InteractionCoordinator:updateNodeLabelAndRecord] 无效的 nodeId。");
+      return;
+    }
+
+    const { snapshot: currentSnapshot, error: snapshotError } = validateAndGetSnapshot(
+      internalId,
+      "updateNodeLabelAndRecord"
+    );
+    if (snapshotError || !currentSnapshot) {
+      console.error(
+        snapshotError ||
+          `[InteractionCoordinator:updateNodeLabelAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
+      );
+      return;
+    }
+
+    const nextSnapshot = klona(currentSnapshot);
+    const nodeIndex = nextSnapshot.elements.findIndex(
+      (el: VueFlowNode | Edge) => el.id === nodeId && !("source" in el)
+    );
+    if (nodeIndex === -1) {
+      console.error(
+        `[InteractionCoordinator:updateNodeLabelAndRecord] 在标签页 ${internalId} 中未找到节点 ${nodeId}。`
+      );
+      return;
+    }
+    const targetNode = nextSnapshot.elements[nodeIndex] as VueFlowNode;
+
+    // 如果标签未改变，则跳过
+    const oldLabel = targetNode.data.label || targetNode.label;
+    if (oldLabel === newLabel) {
+      console.debug(
+        `[InteractionCoordinator:updateNodeLabelAndRecord] Node ${nodeId} label has not changed. Skipping history record.`
+      );
+      return;
+    }
+
+    // 更新 data.label 和顶层 label
+    targetNode.data = {
+      ...targetNode.data,
+      label: newLabel,
+    };
+    targetNode.label = newLabel;
+
+    // 应用状态更新
+    await workflowManager.setElements(internalId, nextSnapshot.elements);
+
+    // 记录历史
     recordHistory(internalId, entry, nextSnapshot);
   }
 
@@ -2036,12 +2119,14 @@ export function useWorkflowInteractionCoordinator() {
     updateNodePositionAndRecord, // 更新节点位置
     handleConnectionWithInterfaceUpdate, // 处理带接口更新的连接
     addNodeAndRecord, // 添加节点
+    addFrameNodeAndRecord, // 添加分组框
     updateWorkflowInterfaceAndRecord, // 更新工作流接口
     addEdgeAndRecord, // 添加边
     removeElementsAndRecord, // 删除元素 (节点/边)
     updateNodeInputValueAndRecord, // 更新节点输入值 (含预览触发)
     updateNodeConfigValueAndRecord, // 更新节点配置值 (含预览触发和 NodeGroup 逻辑)
 changeNodeModeAndRecord, // 原子性地更改节点模式
+    updateNodeLabelAndRecord,
     updateNodeDimensionsAndRecord, // 更新节点尺寸
     updateNodeComponentStateAndRecord, // 更新节点内部组件状态
     removeEdgesByHandleAndRecord, // 按句柄删除边

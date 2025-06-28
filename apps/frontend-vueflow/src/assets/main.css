@@ -150,3 +150,8 @@ a {
     background-color: rgba(255, 255, 255, 0.5);
   }
 }
+
+/* 强制 FrameNode (分组框) 保持在背景层 */
+.vue-flow__node.vue-flow__node-ui\:frame {
+  z-index: -1 !important;
+}

@@ -81,8 +81,12 @@ export function transformVueFlowToCoreWorkflow(flow: FlowExportObject): {
   referencedWorkflows: string[];
 } {
   const nodeDefinitionsMap = getNodeDefinitionsMap();
+
+  // 根据用户反馈，UI节点（如分组框）也应该被持久化以保存画布布局。
+  // isUiNode 标志的目的是告诉执行器跳过它，而不是在保存时丢弃它。
+  // 因此，我们不再过滤掉 isUiNode 为 true 的节点。后端需要能够处理这些没有执行逻辑的节点类型。
   const { nodes, edges, referencedWorkflows } = transformVueFlowToStorage(
-    { nodes: flow.nodes, edges: flow.edges },
+    flow, // 直接传递完整的 flow 对象，包含所有节点
     nodeDefinitionsMap
   );
 

@@ -731,11 +731,14 @@ export const useWorkflowStore = defineStore("workflow", () => {
     applyElementChangesAndRecordHistory,
     updateNodePositionAndRecord: workflowInteractionCoordinator.updateNodePositionAndRecord,
     addNodeAndRecord: workflowInteractionCoordinator.addNodeAndRecord,
+    addFrameNodeAndRecord: workflowInteractionCoordinator.addFrameNodeAndRecord, // 添加分组框
     addEdgeAndRecord: workflowInteractionCoordinator.addEdgeAndRecord,
     removeElementsAndRecord: workflowInteractionCoordinator.removeElementsAndRecord,
     updateNodeInputValueAndRecord: workflowInteractionCoordinator.updateNodeInputValueAndRecord,
     updateNodeConfigValueAndRecord: workflowInteractionCoordinator.updateNodeConfigValueAndRecord,
     changeNodeModeAndRecord: workflowInteractionCoordinator.changeNodeModeAndRecord,
+    updateNodeLabelAndRecord: workflowInteractionCoordinator.updateNodeLabelAndRecord, // 新增
+    updateNodeDimensionsAndRecord: workflowInteractionCoordinator.updateNodeDimensionsAndRecord, // 新增，修复 FrameNode 尺寸调整
     removeEdgesByHandleAndRecord: workflowInteractionCoordinator.removeEdgesByHandleAndRecord,
     updateWorkflowNameAndRecord: workflowInteractionCoordinator.updateWorkflowNameAndRecord,
     updateWorkflowDescriptionAndRecord:

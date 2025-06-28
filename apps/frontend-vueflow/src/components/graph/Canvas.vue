@@ -318,28 +318,49 @@ const forwardRequestAddNode = (payload: { fullNodeType: string }) => { // screen
   closeAllContextMenus(); // 添加节点后关闭菜单
 };
 
-// 添加节点组
+// 添加节点组 (现在是创建分组框 Frame)
 const addGroup = () => {
-  // 使用原始交互位置来确定组节点的位置
+  const activeTab = activeTabId.value;
+  if (!activeTab) {
+    console.warn("[Canvas] addGroup: No active tab found.");
+    return;
+  }
+  // 使用原始交互位置来确定分组框的位置
   const position = project(rawInteractionPosition.value) as XYPosition;
 
-  // 创建一个组节点
-  const groupNode: Node = {
-    id: `group-${Date.now()}`,
-    type: "group",
+  // 创建一个 Frame 节点 (分组框)
+  const frameNode: Node = {
+    id: `frame-${Date.now()}`, // ID 使用 'frame' 以明确其类型
+    type: 'ui:frame', // 使用我们新定义的特定类型
     position,
     style: {
-      width: 300,
-      height: 200,
-      backgroundColor: "var(--ct-node-group-bg, rgba(240, 240, 240, 0.7))",
-      border: `1px dashed var(--ct-node-group-border-color, #ccc)`,
-      borderRadius: "8px",
-      padding: "10px",
+      width: 400, // 设置一个合适的默认宽度
+      height: 300, // 设置一个合适的默认高度
+      backgroundColor: 'var(--ct-frame-bg, rgba(220, 220, 240, 0.4))',
+      border: `2px dotted var(--ct-frame-border-color, #9CA3AF)`,
+      borderRadius: '12px',
     },
-    data: { label: "新节点组" },
+    data: { label: '分组框' }, // 标签也明确为'分组框'
+    selectable: true,
+    draggable: true,
+    zIndex: -1000, // 关键：将 zIndex 设置为负数，使其位于其他节点之后
   };
 
-  internalElements.value = [...internalElements.value, groupNode];
+  const entry = createHistoryEntry(
+    "add",
+    "node",
+    `添加分组框`,
+    {
+      addedNodes: [{
+        nodeId: frameNode.id,
+        nodeName: frameNode.data.label,
+        nodeType: frameNode.type,
+      }],
+    }
+  );
+
+  // 通过 workflowStore 调用协调器函数来添加节点并记录历史
+  workflowStore.addFrameNodeAndRecord(activeTab, frameNode, entry);
 };
 
 // 复制选中节点
