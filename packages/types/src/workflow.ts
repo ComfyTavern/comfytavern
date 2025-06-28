@@ -203,7 +203,7 @@ export type WorkflowObject = z.infer<typeof WorkflowObjectSchema>;
 /**
  * Schema 定义：用于创建新工作流 (POST 请求) 的数据结构。
  */
-export const CreateWorkflowObjectSchema = WorkflowObjectSchema.omit({ id: true, createdAt: true, updatedAt: true });
+export const CreateWorkflowObjectSchema = WorkflowObjectSchema.omit({ createdAt: true, updatedAt: true });
 export type CreateWorkflowObject = z.infer<typeof CreateWorkflowObjectSchema>;
 
 /**

@@ -20,6 +20,7 @@ export type ManagedVueFlowInstance = any; // 暂时使用 any 绕过类型问题
 export interface TabWorkflowState {
   workflowData: WorkflowData | null; // 存储工作流数据（可以表示工作流或组定义）
   isDirty: boolean;
+  isPersisted: boolean; // 新增：标记工作流是否已在后端持久化
   vueFlowInstance: ManagedVueFlowInstance;
   elements: Array<VueFlowNode | VueFlowEdge>;
   viewport: Viewport;

@@ -1,5 +1,6 @@
 import { onMounted, onUnmounted, type Ref } from "vue";
 import { useWorkflowStore } from "@/stores/workflowStore";
+import { useWorkflowManager } from "../workflow/useWorkflowManager"; // <-- 导入
 
 /**
  * 用于处理键盘快捷键的组合式函数，特别是用于保存的 Ctrl+S/Cmd+S。
@@ -8,6 +9,7 @@ import { useWorkflowStore } from "@/stores/workflowStore";
  */
 export function useKeyboardShortcuts(activeTabId: Ref<string | null>, containerRef: Ref<HTMLElement | null>) {
   const workflowStore = useWorkflowStore();
+  const workflowManager = useWorkflowManager(); // <-- 使用
 
   const handleKeyDown = async (event: KeyboardEvent) => {
     const activeElement = document.activeElement;
@@ -36,15 +38,15 @@ export function useKeyboardShortcuts(activeTabId: Ref<string | null>, containerR
       // console.debug(`检测到选项卡 ${activeTabId.value} 的保存快捷键。`);
 
       const currentTabId = activeTabId.value; // 捕获当前 ID
-      const isDirty = workflowStore.isWorkflowDirty(currentTabId);
-      const workflowData = workflowStore.getWorkflowData(currentTabId);
+      const state = workflowManager.getTabState(currentTabId);
+      if (!state) {
+        console.warn(`[useKeyboardShortcuts] Could not find state for tab ${currentTabId}. Aborting save.`);
+        return;
+      }
 
-      if (isDirty) {
-        // 判断是否为新工作流：ID 不存在或是临时的 ('temp-')
-        const isNewWorkflow = !workflowData?.id || workflowData.id.startsWith("temp-");
-        // console.debug(
-        //   `handleKeyDown: isDirty=${isDirty}, workflowData.id=${workflowData?.id}, isNewWorkflow=${isNewWorkflow}`
-        // );
+      if (state.isDirty) {
+        // 使用 isPersisted 状态来判断
+        const isNewWorkflow = !state.isPersisted;
         if (isNewWorkflow) {
           // 调用 store action 来处理提示和保存
           // console.debug(`正在为选项卡 ${currentTabId} 触发 promptAndSaveWorkflow (isSaveAs=false)...`);

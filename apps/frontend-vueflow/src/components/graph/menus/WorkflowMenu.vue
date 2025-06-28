@@ -102,6 +102,7 @@ import type { WorkflowData } from "@/types/workflowTypes";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useProjectStore } from "@/stores/projectStore"; // 咕咕：新增导入
+import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager"; // <-- 新增导入
 import { storeToRefs } from "pinia";
 import { ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
@@ -119,13 +120,14 @@ const sidebarRef = inject<{ setActiveTab: (tabId: string) => void }>('sidebarRef
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore();
 const projectStore = useProjectStore(); // 咕咕：实例化
+const workflowManager = useWorkflowManager(); // <-- 新增实例化
 const dialogService = useDialogService();
 const { activeTabId } = storeToRefs(tabStore);
 const { currentProjectId } = storeToRefs(projectStore); // 咕咕：获取项目ID
 const importInputRef = ref<HTMLInputElement | null>(null);
 
 const currentTabState = computed(() => {
-  return activeTabId.value ? workflowStore.getActiveTabState() : undefined;
+  return activeTabId.value ? workflowManager.getActiveTabState() : undefined;
 });
 
 const currentWorkflowData = computed(() => {
@@ -181,10 +183,10 @@ const handleSave = async () => {
     return;
   }
 
-  // 如果是新工作流 (没有 ID 或 ID 以 'temp-' 开头)，则调用 store action 获取名称并保存
-  const isNewOrTemp =
-    !currentWorkflowData.value?.id || currentWorkflowData.value.id.startsWith("temp-");
-  if (isNewOrTemp) {
+  // **核心修正**: 使用 isPersisted 状态来判断
+  const isNew = !currentTabState.value?.isPersisted;
+
+  if (isNew) {
     console.debug(
       "[WorkflowMenu handleSave] 检测到新工作流或临时工作流，触发 promptAndSaveWorkflow。"
     ); // 添加日志

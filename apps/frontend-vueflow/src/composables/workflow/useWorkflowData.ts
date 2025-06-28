@@ -9,6 +9,7 @@ import {
   WorkflowStorageObjectSchema,
 } from "@comfytavern/types";
 import type {
+  CreateWorkflowObject,
   GroupSlotInfo,
   WorkflowViewport as SharedViewport,
   WorkflowObject,
@@ -107,16 +108,17 @@ export function useWorkflowData() {
       flowExport
     );
 
-    // 判断是否为新工作流或另存为：ID 不存在，或者 ID 是临时的 (以 'temp-' 开头)
-    const isNewOrSaveAs = !state.workflowData?.id || state.workflowData.id.startsWith("temp-");
+    // **核心修正**: 使用 isPersisted 状态来判断是创建新工作流还是更新现有工作流
+    const isNewOrSaveAs = !state.isPersisted;
     const currentData = state.workflowData; // 读取当前元数据
 
     if (isNewOrSaveAs) {
       // 1. 使用新的转换函数获取核心数据
       const coreWorkflowData = transformVueFlowToCoreWorkflow(flowExport);
       // 2. 组合核心数据和元数据
-      const workflowToSave: Omit<WorkflowObject, "id"> = {
-        name: newName || state.workflowData?.name || "Untitled Workflow", // 确保有名称
+      const workflowToSave: CreateWorkflowObject = {
+        id: state.workflowData?.id, // 传递前端生成的 ID
+        name: newName || state.workflowData?.name || "无标题工作流", // 确保有名称
         description: state.workflowData?.description || "",
         nodes: coreWorkflowData.nodes,
         edges: coreWorkflowData.edges,

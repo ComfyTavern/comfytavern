@@ -21,6 +21,7 @@ import isEqual from "lodash/isEqual";
 import { z } from "zod"; // 导入 zod
 
 import { generateSafeWorkflowFilename, sanitizeProjectId } from "../utils/helpers";
+import crypto from "node:crypto";
 // import { getUserDataRoot as getGlobalUserDataRoot } from '../utils/fileUtils'; // 不再直接使用
 import { famService } from "./FileManagerService"; // + 导入 FAMService
 
@@ -678,80 +679,67 @@ interface ListedWorkflow {
  * @returns Promise<ListedWorkflow[]> 工作流列表。
  * @throws 如果发生无法处理的文件系统错误。
  */
-export async function listWorkflows(userId: string, projectId: string): Promise<ListedWorkflow[]> {
-  await ensureUserRootDirs(userId); // 确保用户根目录存在
-  console.log(
-    `[Service:listWorkflows] Listing workflows for project ID '${projectId}' for user '${userId}'`
-  );
-  const logicalProjectWorkflowsDir = `user://projects/${projectId}/workflows/`;
-
-  try {
-    const dirExists = await famService.exists(userId, logicalProjectWorkflowsDir);
-    if (!dirExists) {
-      // 如果目录不存在，可以尝试创建它（如果这是期望的行为），或者直接返回空列表
-      // 根据原逻辑，如果 ENOENT 则创建并返回 []
-      try {
-        await famService.createDir(userId, logicalProjectWorkflowsDir);
-        console.log(
-          `[Service:listWorkflows] Workflows directory not found for project ${projectId}, user ${userId}. Created: ${logicalProjectWorkflowsDir}. Returning empty list.`
-        );
-      } catch (createDirError: any) {
-        // 如果创建也失败，则抛出错误
-        console.error(
-          `[Service:listWorkflows] Failed to create workflows directory ${logicalProjectWorkflowsDir} for user ${userId}:`,
-          createDirError
-        );
-        throw new Error(
-          `Failed to ensure workflows directory exists for project ${projectId}, user ${userId}: ${createDirError.message}`
-        );
-      }
-      return [];
-    }
-
-    const dirItems: FAMItem[] = await famService.listDir(userId, logicalProjectWorkflowsDir);
-    const workflowFileItems = dirItems.filter(
-      (item: FAMItem) => item.itemType === "file" && extname(item.name).toLowerCase() === ".json" // Changed from item.type
-    );
-
-    const workflowsPromises = workflowFileItems.map(
-      async (item): Promise<ListedWorkflow | null> => {
-        const id = basename(item.name, ".json");
-        const logicalWorkflowPath = item.logicalPath; // item.path 是完整的逻辑路径 -> item.logicalPath
-        let name = id;
-        let description: string | undefined;
-        let creationMethod: string | undefined;
-        let referencedWorkflows: string[] | undefined;
-
-        try {
-          const fileContentBuffer = await famService.readFile(userId, logicalWorkflowPath, "utf-8");
-          if (typeof fileContentBuffer !== "string") {
-            console.error(
-              `[Service:listWorkflows] Failed to read workflow file ${logicalWorkflowPath} as string content for user ${userId}.`
-            );
-            return null; // 跳过此文件
-          }
-          const workflowData: Partial<WorkflowObject> = JSON.parse(fileContentBuffer);
-          name = workflowData.name || (workflowData as any).label || id;
-          description = workflowData.description;
-          creationMethod = workflowData.creationMethod;
-          referencedWorkflows = workflowData.referencedWorkflows;
-        } catch (readError: any) {
-          console.error(
-            `[Service:listWorkflows] Error reading/parsing workflow file ${logicalWorkflowPath} for listing in project ${projectId}, user ${userId}:`,
-            readError.message
-          );
-          return null; // 跳过此文件
-        }
-        return { id, name, description, creationMethod, referencedWorkflows };
-      }
-    );
-
-    const resolvedWorkflows = (await Promise.all(workflowsPromises)).filter(
-      (w): w is ListedWorkflow => w !== null
-    );
-    console.log(
-      `[Service:listWorkflows] Found ${resolvedWorkflows.length} workflows for project ID '${projectId}' for user '${userId}'.`
-    );
+ export async function listWorkflows(userId: string, projectId: string): Promise<ListedWorkflow[]> {
+   await ensureUserRootDirs(userId);
+   console.log(
+     `[Service:listWorkflows] Listing workflows for project ID '${projectId}' for user '${userId}'`
+   );
+   const logicalProjectWorkflowsDir = `user://projects/${projectId}/workflows/`;
+ 
+   try {
+     const dirExists = await famService.exists(userId, logicalProjectWorkflowsDir);
+     if (!dirExists) {
+       await famService.createDir(userId, logicalProjectWorkflowsDir);
+       return [];
+     }
+ 
+     const dirItems = await famService.listDir(userId, logicalProjectWorkflowsDir);
+     const workflowFileItems = dirItems.filter(
+       (item) => item.itemType === "file" && extname(item.name).toLowerCase() === ".json"
+     );
+ 
+     const workflowsPromises = workflowFileItems.map(
+       async (item): Promise<ListedWorkflow | null> => {
+         const logicalWorkflowPath = item.logicalPath;
+         try {
+           const fileContent = await famService.readFile(userId, logicalWorkflowPath, "utf-8");
+           if (typeof fileContent !== "string") {
+             console.error(`[Service:listWorkflows] Failed to read workflow file ${logicalWorkflowPath} as string for user ${userId}.`);
+             return null;
+           }
+           const workflowData: Partial<WorkflowObject> = JSON.parse(fileContent);
+           
+           // **核心**: ID 来自文件内容，而不是文件名
+           const id = workflowData.id;
+           const name = workflowData.name;
+ 
+           if (!id || !name) {
+             console.warn(`[Service:listWorkflows] Skipping file ${item.name} because it lacks a valid 'id' or 'name' property.`);
+             return null;
+           }
+ 
+           return {
+             id,
+             name,
+             description: workflowData.description,
+             creationMethod: workflowData.creationMethod,
+             referencedWorkflows: workflowData.referencedWorkflows,
+           };
+         } catch (readError: any) {
+           console.error(
+             `[Service:listWorkflows] Error reading/parsing workflow file ${logicalWorkflowPath} for listing:`,
+             readError.message
+           );
+           return null;
+         }
+       }
+     );
+ 
+     const resolvedWorkflows = (await Promise.all(workflowsPromises)).filter(
+       (w): w is ListedWorkflow => w !== null
+     );
+     console.log(`[Service:listWorkflows] Found ${resolvedWorkflows.length} valid workflows for project ID '${projectId}'.`);
+     return resolvedWorkflows;
     return resolvedWorkflows;
   } catch (error: any) {
     console.error(
@@ -799,15 +787,20 @@ export async function createWorkflow(
   workflowInputData: CreateWorkflowObject,
   appVersion: string
 ): Promise<WorkflowObject> {
-  const { name, nodes, edges, viewport, interfaceInputs, interfaceOutputs, referencedWorkflows } =
+  const { id: frontendId, name, nodes, edges, viewport, interfaceInputs, interfaceOutputs, referencedWorkflows } =
     workflowInputData;
-  const workflowId = generateSafeWorkflowFilename(name);
+  
+  // 优先使用前端传入的 ID，否则生成一个新的 UUID。这确保了 ID 的唯一性和持久性。
+  const workflowId = frontendId || crypto.randomUUID();
+  // 文件名仍然基于用户提供的名称，以保证可读性。
+  const workflowFilename = generateSafeWorkflowFilename(name);
 
   console.log(
-    `[Service:createWorkflow] Attempting to create workflow '${name}' (ID: ${workflowId}) in project '${projectId}' for user '${userId}'`
+    `[Service:createWorkflow] Attempting to create workflow '${name}' (ID: ${workflowId}, Filename: ${workflowFilename}) in project '${projectId}' for user '${userId}'`
   );
   const logicalProjectWorkflowsDir = `user://projects/${projectId}/workflows/`;
-  const logicalFilePath = `user://projects/${projectId}/workflows/${workflowId}.json`;
+  // 文件路径基于可读的文件名
+  const logicalFilePath = `user://projects/${projectId}/workflows/${workflowFilename}.json`;
 
   try {
     // 1. 确保工作流目录存在
@@ -836,7 +829,7 @@ export async function createWorkflow(
     });
 
     const dataToSave: WorkflowObject = {
-      id: workflowId, // id 在 WorkflowObject 中是必须的
+      id: workflowId, // **核心**: 内部 ID 使用持久化的 UUID
       ...storageData,
       name: name, // 显式使用来自 workflowInputData 的 name，确保类型为 string
       // workflowInputData.viewport 是 WorkflowViewport 类型 (来自 CreateWorkflowObjectSchema -> BaseWorkflowObjectSchema)
@@ -926,45 +919,92 @@ export class WorkflowLoadError extends Error {
  * @returns Promise<WorkflowObject> 工作流对象。
  * @throws 如果工作流文件不存在 (WorkflowNotFoundError)，或读取/解析/验证失败 (WorkflowLoadError)。
  */
+/**
+ * [NEW] 内部辅助函数：通过其持久化的 UUID 在项目中查找工作流文件。
+ * @param userId - 用户 ID。
+ * @param projectId - 项目 ID。
+ * @param workflowId - 要查找的工作流的持久化 UUID。
+ * @returns Promise<FAMItem> 找到的工作流文件的 FAMItem。
+ * @throws 如果找不到工作流 (WorkflowNotFoundError) 或发生文件系统错误。
+ */
+async function _findWorkflowFileById(
+  userId: string,
+  projectId: string,
+  workflowId: string
+): Promise<FAMItem> {
+  const logPrefix = `[Service:_findWorkflowFileById]`;
+  const logicalWorkflowsDir = `user://projects/${projectId}/workflows/`;
+
+  const dirExists = await famService.exists(userId, logicalWorkflowsDir);
+  if (!dirExists) {
+    throw new WorkflowNotFoundError(`Workflow directory for project '${projectId}' not found.`);
+  }
+
+  const dirItems = await famService.listDir(userId, logicalWorkflowsDir);
+  const workflowFiles = dirItems.filter(
+    (item) => item.itemType === "file" && extname(item.name).toLowerCase() === ".json"
+  );
+
+  for (const fileItem of workflowFiles) {
+    try {
+      const content = await famService.readFile(userId, fileItem.logicalPath, "utf-8");
+      if (typeof content === "string") {
+        const data = JSON.parse(content);
+        if (data.id === workflowId) {
+          console.log(`${logPrefix} Found workflow with ID '${workflowId}' in file '${fileItem.name}'.`);
+          return fileItem;
+        }
+      }
+    } catch (e) {
+      console.warn(
+        `${logPrefix} Skipping file '${fileItem.name}' in project '${projectId}' due to read/parse error:`,
+        e
+      );
+    }
+  }
+
+  throw new WorkflowNotFoundError(
+    `Workflow with ID '${workflowId}' not found in project '${projectId}'.`
+  );
+}
+
+
 export async function getWorkflow(
   userId: string,
   projectId: string,
   workflowId: string
 ): Promise<WorkflowObject> {
-  await ensureUserRootDirs(userId); // <--- 新增：确保用户根目录存在
+  await ensureUserRootDirs(userId);
   const logPrefix = `[Service:getWorkflow]`;
   console.log(
     `${logPrefix} Attempting to get workflow ID '${workflowId}' from project '${projectId}' for user '${userId}'`
   );
-  // const projectWorkflowsDir = getProjectWorkflowsDir(userId, projectId); // 用户特定路径
-  const logicalFilePath = `user://projects/${projectId}/workflows/${workflowId}.json`;
-
-  // ensureUserRootDirs 确保了 userData/userId/projects 存在。
-  // projectWorkflowsDir (userData/userId/projects/projectId/workflows) 的存在性依赖于项目创建。
-  // _readAndValidateJsonFile 会处理 filePath 的 ENOENT。
-  // 如果 projectWorkflowsDir 不存在，_readAndValidateJsonFile 尝试读取 filePath 时会因父目录不存在而失败。
-  // 所以对 projectWorkflowsDir 的显式 fs.access 检查可以移除。
+  
+  // 使用新的查找函数通过 UUID 找到文件
+  const workflowFileItem = await _findWorkflowFileById(userId, projectId, workflowId);
+  const logicalFilePath = workflowFileItem.logicalPath;
 
   const validatedData = await _readAndValidateJsonFile<WorkflowObject>({
     userId,
     logicalPath: logicalFilePath,
     schema: WorkflowObjectSchema,
-    notFoundErrorClass: WorkflowNotFoundError,
+    notFoundErrorClass: WorkflowNotFoundError, // 虽然 _findWorkflowFileById 已处理，但作为双重保险
     loadErrorClass: WorkflowLoadError,
     entityName: "workflow",
     entityId: `${userId}/${projectId}/${workflowId}`,
   });
 
+  // 确保返回的 ID 是持久化的 UUID，而不是可能与文件名不同的内部 ID。
   const workflowWithEnsuredId = { ...validatedData, id: workflowId };
 
   if (validatedData.id && validatedData.id !== workflowId) {
     console.warn(
-      `${logPrefix} Workflow ID in file ('${validatedData.id}') differs from filename-derived ID ('${workflowId}') for project '${projectId}', user '${userId}'. Using filename-derived ID.`
+      `${logPrefix} Workflow ID in file ('${validatedData.id}') differs from requested ID ('${workflowId}') for project '${projectId}', user '${userId}'. Using requested ID.`
     );
   }
 
   console.log(
-    `${logPrefix} Successfully retrieved and validated workflow '${workflowId}' from project '${projectId}' for user '${userId}'.`
+    `${logPrefix} Successfully retrieved and validated workflow '${workflowId}' from project '${projectId}'.`
   );
   return workflowWithEnsuredId;
 }
@@ -990,157 +1030,93 @@ export class WorkflowUpdateError extends Error {
  * @throws 如果工作流不存在 (WorkflowNotFoundError)，新名称冲突 (WorkflowConflictError)，或更新失败 (WorkflowUpdateError)。
  */
 export async function updateWorkflow(
-  userId: string, // 新增 userId 参数
+  userId: string,
   projectId: string,
-  workflowId: string,
+  workflowId: string, // 这是持久化的 UUID
   workflowUpdateData: UpdateWorkflowObject,
   appVersion: string
 ): Promise<WorkflowObject> {
-  await ensureUserRootDirs(userId); // <--- 新增：确保用户根目录存在
+  await ensureUserRootDirs(userId);
   console.log(
     `[Service:updateWorkflow] Attempting to update workflow ID '${workflowId}' in project '${projectId}' for user '${userId}'`
   );
-  const logicalProjectWorkflowsDir = `user://projects/${projectId}/workflows/`;
-  const logicalCurrentFilePath = `user://projects/${projectId}/workflows/${workflowId}.json`;
 
+  // 1. 通过持久化 ID 找到当前文件
+  const currentFileItem = await _findWorkflowFileById(userId, projectId, workflowId);
+  const logicalCurrentFilePath = currentFileItem.logicalPath;
+  const currentFilename = currentFileItem.name;
+
+  // 2. 准备新数据
   const newName = workflowUpdateData.name;
-  const newSafeWorkflowId = generateSafeWorkflowFilename(newName);
-  const logicalNewFilePath = `user://projects/${projectId}/workflows/${newSafeWorkflowId}.json`;
+  const newFilename = `${generateSafeWorkflowFilename(newName)}.json`;
+  const logicalNewFilePath = `user://projects/${projectId}/workflows/${newFilename}`;
+  const isRenaming = newFilename !== currentFilename;
 
   try {
-    const workflowsDirExists = await famService.exists(userId, logicalProjectWorkflowsDir);
-    if (!workflowsDirExists) {
-      const message = `Workflows directory not found for project '${projectId}', user '${userId}'. Cannot update workflow '${workflowId}'. Path: ${logicalProjectWorkflowsDir}`;
-      console.warn(`[Service:updateWorkflow] ${message}`);
-      throw new WorkflowNotFoundError(message);
-    }
-
-    const currentFileExists = await famService.exists(userId, logicalCurrentFilePath);
-    if (!currentFileExists) {
-      const message = `Workflow with ID '${workflowId}' not found in project '${projectId}' for user '${userId}' for update. Path: ${logicalCurrentFilePath}`;
-      console.warn(`[Service:updateWorkflow] ${message}`);
-      throw new WorkflowNotFoundError(message);
-    }
-
-    // 2. 如果文件名需要改变，检查新文件名是否冲突
-    if (newSafeWorkflowId !== workflowId) {
+    // 3. 如果需要重命名，检查新文件名是否冲突
+    if (isRenaming) {
       const newPathExists = await famService.exists(userId, logicalNewFilePath);
       if (newPathExists) {
         throw new WorkflowConflictError(
-          `Cannot rename workflow. A workflow with the name '${newName}' (filename: ${newSafeWorkflowId}.json) already exists in project '${projectId}' for user '${userId}'.`
+          `Cannot rename workflow. A workflow with the name '${newName}' (filename: ${newFilename}) already exists in project '${projectId}'.`
         );
       }
     }
 
-    // 3. 读取现有数据以保留 createdAt 等元数据
-    let existingData: Partial<WorkflowObject> = {};
-    try {
-      const oldContentBuffer = await famService.readFile(userId, logicalCurrentFilePath, "utf-8");
-      if (typeof oldContentBuffer === "string") {
-        existingData = JSON.parse(oldContentBuffer);
-      } else {
-        console.warn(
-          `[Service:updateWorkflow] Could not read existing workflow file ${logicalCurrentFilePath} as string for user '${userId}' during update. Proceeding with update but some metadata might be lost.`
-        );
-      }
-    } catch (readError: any) {
-      console.warn(
-        `[Service:updateWorkflow] Could not read existing workflow file ${logicalCurrentFilePath} for user '${userId}' during update: ${readError.message}. Proceeding with update.`
-      );
-    }
+    // 4. 读取现有数据以保留 createdAt 等元数据
+    const existingData: Partial<WorkflowObject> = JSON.parse(
+      await famService.readFile(userId, logicalCurrentFilePath, "utf-8") as string
+    );
 
-    // 4. 准备要保存的数据
+    // 5. 准备要保存的完整数据对象
     const now = new Date().toISOString();
-    const { id: idFromBody, ...updatePayload } = workflowUpdateData;
-
     const dataToSave: WorkflowObject = {
+      ...existingData, // 保留已有字段
+      ...workflowUpdateData, // 应用更新
+      id: workflowId, // **核心**: 确保 ID 始终是持久化的 UUID
       name: newName,
-      nodes: updatePayload.nodes || [],
-      edges: updatePayload.edges || [], // Zod schema 会处理 null/undefined handles
-      viewport: updatePayload.viewport || { x: 0, y: 0, zoom: 1 },
-      interfaceInputs: updatePayload.interfaceInputs || {},
-      interfaceOutputs: updatePayload.interfaceOutputs || {},
-      creationMethod: updatePayload.creationMethod ?? (existingData as any).creationMethod,
-      referencedWorkflows: updatePayload.referencedWorkflows || [],
-      previewTarget:
-        updatePayload.previewTarget === undefined
-          ? (existingData as any).previewTarget
-          : updatePayload.previewTarget,
-      id: newSafeWorkflowId,
-      createdAt: (existingData as any).createdAt || now,
       updatedAt: now,
       version: appVersion,
-      description:
-        updatePayload.description === undefined
-          ? (existingData as any).description
-          : updatePayload.description,
+      createdAt: existingData.createdAt || now, // 保留原始创建时间
     };
 
     const validationResult = WorkflowObjectSchema.safeParse(dataToSave);
     if (!validationResult.success) {
       const errorDetails = validationResult.error.flatten().fieldErrors;
-      const message = `Internal error: Updated workflow data for '${newName}' (ID: ${newSafeWorkflowId}) for user '${userId}', project '${projectId}' is invalid. Details: ${JSON.stringify(
-        errorDetails
-      )}`;
-      console.error(`[Service:updateWorkflow] ${message}`);
+      const message = `Internal error: Updated workflow data for '${newName}' (ID: ${workflowId}) is invalid. Details: ${JSON.stringify(errorDetails)}`;
       throw new WorkflowUpdateError(message);
     }
     const validatedDataToSave = validationResult.data;
 
-    // 使用 newSafeWorkflowId (即 validatedDataToSave.id) 来构造最终的逻辑路径
-    const logicalFinalFilePath = `user://projects/${projectId}/workflows/${validatedDataToSave.id}.json`;
+    // 6. 写入文件（如果是重命名，则写入新路径）
+    await famService.writeFile(
+      userId,
+      logicalNewFilePath, // 总是写入新路径（如果未重命名，则与旧路径相同）
+      JSON.stringify(validatedDataToSave, null, 2)
+    );
+    console.log(`[Service:updateWorkflow] Workflow file saved for user '${userId}': ${logicalNewFilePath}`);
 
-    try {
-      await famService.writeFile(
-        userId,
-        logicalFinalFilePath,
-        JSON.stringify(validatedDataToSave, null, 2)
-      );
-      console.log(
-        `[Service:updateWorkflow] Workflow file saved for user '${userId}': ${logicalFinalFilePath}`
-      );
-
-      if (newSafeWorkflowId !== workflowId && logicalCurrentFilePath !== logicalFinalFilePath) {
-        try {
-          await famService.delete(userId, logicalCurrentFilePath);
-          console.log(
-            `[Service:updateWorkflow] Old workflow file deleted for user '${userId}': ${logicalCurrentFilePath}`
-          );
-        } catch (deleteError: any) {
-          console.warn(
-            `[Service:updateWorkflow] Failed to delete old workflow file ${logicalCurrentFilePath} for user '${userId}' after rename: ${deleteError.message}. Continuing.`
-          );
-        }
-      }
-    } catch (writeError: any) {
-      const message = `Failed to write workflow file for '${newName}' (ID: ${newSafeWorkflowId}) for user '${userId}'. Error: ${writeError.message}`;
-      console.error(`[Service:updateWorkflow] ${message}`);
-      throw new WorkflowUpdateError(message);
+    // 7. 如果是重命名，删除旧文件
+    if (isRenaming) {
+      await famService.delete(userId, logicalCurrentFilePath);
+      console.log(`[Service:updateWorkflow] Old workflow file deleted for user '${userId}': ${logicalCurrentFilePath}`);
     }
 
+    // 8. 后续操作
     const newInterface: GroupInterfaceInfo = {
       inputs: validatedDataToSave.interfaceInputs || {},
       outputs: validatedDataToSave.interfaceOutputs || {},
     };
 
-    syncReferencingNodeGroups(userId, projectId, newSafeWorkflowId, newInterface).catch(
-      (syncError) => {
-        // Pass userId
-        console.error(
-          `[Service:updateWorkflow] Error during background NodeGroup sync for ${newSafeWorkflowId} in project ${projectId}, user ${userId}:`,
-          syncError
-        );
-      }
-    );
-
-    try {
-      await updateProjectMetadata(userId, projectId, {}); // Pass userId
-    } catch (metaError) {
-      console.warn(
-        `[Service:updateWorkflow] Failed to update project metadata for '${projectId}', user '${userId}' after workflow update:`,
-        metaError
+    // 注意：syncReferencingNodeGroups 应该使用持久化 ID
+    syncReferencingNodeGroups(userId, projectId, workflowId, newInterface).catch((syncError) => {
+      console.error(
+        `[Service:updateWorkflow] Error during background NodeGroup sync for ${workflowId} in project ${projectId}:`,
+        syncError
       );
-    }
+    });
+
+    await updateProjectMetadata(userId, projectId, {});
 
     return validatedDataToSave;
   } catch (error: any) {
@@ -1176,58 +1152,36 @@ export class WorkflowDeletionError extends Error {
  * @throws 如果工作流文件不存在 (WorkflowNotFoundError)，或移动操作失败 (WorkflowDeletionError)。
  */
 export async function deleteWorkflowToRecycleBin(
-  userId: string, // 新增 userId 参数
+  userId: string,
   projectId: string,
-  workflowId: string
+  workflowId: string // 这是持久化的 UUID
 ): Promise<void> {
-  // ensureUserRootDirs(userId) 可以确保 userData/userId 存在，为回收站的根提供基础
-  // 但回收站的具体子目录 (userData/userId/.recycle_bin/projectId/workflows) 由后续逻辑创建
-  // 所以在这里调用 ensureUserRootDirs 不是必须的，但无害。
-  // 为了保持一致性，可以添加，或者依赖现有逻辑。
-  // 暂时不加，因为现有逻辑会创建回收站的深层路径。
   console.log(
-    `[Service:deleteWorkflowToRecycleBin] Attempting to move workflow ID '${workflowId}' in project '${projectId}' for user '${userId}' to recycle bin.`
+    `[Service:deleteWorkflowToRecycleBin] Attempting to delete workflow ID '${workflowId}' in project '${projectId}' for user '${userId}'.`
   );
-  const logicalFilePath = `user://projects/${projectId}/workflows/${workflowId}.json`;
-
-  // 定义用户特定的回收站路径 (逻辑路径)
-  const logicalRecycleBinWorkflowsDir = `user://.recycle_bin/${projectId}/workflows/`;
-  const logicalRecycleBinPath = `user://.recycle_bin/${projectId}/workflows/${workflowId}_${Date.now()}.json`;
 
   try {
-    // 1. 检查原始文件是否存在
-    const fileExists = await famService.exists(userId, logicalFilePath);
-    if (!fileExists) {
-      const message = `Workflow file not found for ID '${workflowId}' in project '${projectId}' for user '${userId}' for deletion. Path: ${logicalFilePath}`;
-      console.warn(`[Service:deleteWorkflowToRecycleBin] ${message}`);
-      throw new WorkflowNotFoundError(message);
-    }
+    // 1. 通过持久化 ID 找到文件
+    const fileToDelete = await _findWorkflowFileById(userId, projectId, workflowId);
+    const logicalFilePath = fileToDelete.logicalPath;
+    const originalFilenameBase = basename(fileToDelete.name, ".json");
 
-    // 2. 确保回收站目录存在
-    // FAMService.createDir 会递归创建父目录，包括 .recycle_bin, projectId 等
+    // 2. 定义回收站路径
+    const logicalRecycleBinWorkflowsDir = `user://.recycle_bin/${projectId}/workflows/`;
+    // 使用原始文件名（不含扩展名）加上时间戳来创建回收站中的文件名，更具可读性
+    const logicalRecycleBinPath = `${logicalRecycleBinWorkflowsDir}${originalFilenameBase}_${Date.now()}.json`;
+
+    // 3. 确保回收站目录存在
     await famService.createDir(userId, logicalRecycleBinWorkflowsDir);
 
-    // 3. 将文件移动到回收站
-    try {
-      await famService.move(userId, logicalFilePath, logicalRecycleBinPath);
-      console.log(
-        `[Service:deleteWorkflowToRecycleBin] Workflow for user '${userId}' moved to recycle bin: ${logicalFilePath} -> ${logicalRecycleBinPath}`
-      );
+    // 4. 移动文件到回收站
+    await famService.move(userId, logicalFilePath, logicalRecycleBinPath);
+    console.log(
+      `[Service:deleteWorkflowToRecycleBin] Workflow for user '${userId}' moved to recycle bin: ${logicalFilePath} -> ${logicalRecycleBinPath}`
+    );
 
-      // 删除工作流成功后，更新项目的 updatedAt 元数据
-      try {
-        await updateProjectMetadata(userId, projectId, {}); // Pass userId
-      } catch (metaError) {
-        console.warn(
-          `[Service:deleteWorkflowToRecycleBin] Failed to update project metadata for '${projectId}', user '${userId}' after workflow deletion:`,
-          metaError
-        );
-      }
-    } catch (renameError: any) {
-      const message = `Failed to move workflow '${workflowId}' to recycle bin in project '${projectId}' for user '${userId}'. Error: ${renameError.message}`;
-      console.error(`[Service:deleteWorkflowToRecycleBin] ${message}`);
-      throw new WorkflowDeletionError(message);
-    }
+    // 5. 更新项目元数据
+    await updateProjectMetadata(userId, projectId, {});
   } catch (error: any) {
     if (error instanceof WorkflowNotFoundError || error instanceof WorkflowDeletionError) {
       throw error;

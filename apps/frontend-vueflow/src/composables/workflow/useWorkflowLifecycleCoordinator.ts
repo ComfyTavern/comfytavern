@@ -100,6 +100,11 @@ export function useWorkflowLifecycleCoordinator() {
       // 显式更新 WorkflowManager 内部的 elements，确保一致性
       await workflowManager.setElements(internalId, initialSnapshot.elements);
 
+      // 新增：更新持久化状态
+      const state = workflowManager.getTabState(internalId);
+      if (state) {
+        state.isPersisted = true;
+      }
 
       // 4. 清除旧历史记录并记录初始加载快照
       historyManager.clearHistory(internalId);
@@ -183,6 +188,7 @@ export function useWorkflowLifecycleCoordinator() {
       if (state) {
         state.workflowData = savedData; // 更新工作流元数据
         state.isDirty = false; // 清除脏标记
+        state.isPersisted = true; // **核心**: 标记为已持久化
         tabStore.updateTab(activeTabId, {
           label: savedData.name, // 更新标签页标题
           associatedId: savedData.id, // 关联工作流 ID

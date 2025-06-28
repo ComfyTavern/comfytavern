@@ -360,7 +360,7 @@ function createWorkflowManager() {
   ): Promise<WorkflowStateSnapshot | null> {
     const tabInfo = tabStore.tabs.find((t) => t.internalId === internalId);
     const projectId = tabInfo?.projectId || "default"; // 需要一个 projectId
-    const associatedId = tabInfo?.associatedId || `temp-${internalId}`;
+    const associatedId = tabInfo?.associatedId || crypto.randomUUID();
     const labelToUse =
       tabInfo?.label || defaultWorkflowTemplateUntyped.name || "*新工作流*";
 
@@ -552,6 +552,10 @@ function createWorkflowManager() {
     return id ? tabStates.get(id) : undefined;
   }
 
+  function getTabState(internalId: string): TabWorkflowState | undefined {
+    return tabStates.get(internalId);
+  }
+
   /**
    * 确保给定标签页的状态存在。
    * 如果状态是新创建的并且代表一个新的工作流（没有 associatedId 或 temp ID），
@@ -580,6 +584,7 @@ function createWorkflowManager() {
       // 重命名 targetState 为 state
       workflowData: initialWorkflowData,
       isDirty: false,
+      isPersisted: false, // 新工作流默认未持久化
       vueFlowInstance: null,
       elements: [],
       viewport: initialWorkflowData.viewport,
@@ -1220,6 +1225,7 @@ function createWorkflowManager() {
     isTabLoaded,
     getAllTabStates, // 指向响应式 Map 的计算属性引用
     getCurrentSnapshot, // <-- 添加新方法
+    getTabState, // <-- 导出
     activePreviewTarget, // <-- 添加新的计算属性
     showGroupOutputOverview, // <-- 新增：用于组输出总览模式
     // 移除了 getHistoryState 和 historyActionCounter
