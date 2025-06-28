@@ -18,7 +18,12 @@ export const definition: NodeDefinition = {
       description: "控制数字如何变化",
       matchCategories: ["ComboOption"],
       config: {
-        suggestions: ["固定", "增加", "减少", "随机"], 
+        suggestions: [
+          { value: '固定', label: '固定' },
+          { value: '增加', label: '增加' },
+          { value: '减少', label: '减少' },
+          { value: '随机', label: '随机' }
+        ],
         default: "固定",
       },
     } as InputDefinition,

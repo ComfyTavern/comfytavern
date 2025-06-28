@@ -128,7 +128,7 @@ inputs: {
     dataFlowType: DataFlowType.STRING,
     displayName: '下拉选择',
     matchCategories: [BuiltInSocketMatchCategory.COMBO_OPTION],
-    config: { default: '选项A', suggestions: ['选项A', '选项B'] }
+    config: { default: '选项A', suggestions: [{ value: '选项A', label: '选项A' }, { value: '选项B', label: '选项B' }] }
   },
   button_trigger: {
     dataFlowType: DataFlowType.WILDCARD, // 按钮通常不传输特定数据类型
@@ -188,7 +188,7 @@ configSchema: {
     displayName: '处理模式',
     config: {
       default: 'fast',
-      suggestions: ['fast', 'accurate']
+      suggestions: [{ value: 'fast', label: 'fast' }, { value: 'accurate', label: 'accurate' }]
     }
   },
   retryAttempts: {

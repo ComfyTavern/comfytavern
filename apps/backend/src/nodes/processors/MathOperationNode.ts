@@ -243,6 +243,7 @@ export const definition: NodeDefinition = {
       displayName: '运算模式',
       description: '选择要执行的数学运算类型',
       required: true,
+      matchCategories: ["ComboOption"],
       config: {
         suggestions: [
           { value: 'add', label: '加法' },

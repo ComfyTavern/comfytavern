@@ -124,26 +124,38 @@ const currentCanvasScale = computed(() => {
 // 统一处理建议选项
 const normalizedSuggestions = computed<Option[]>(() =>
   props.suggestions.map(suggestion => {
-    // 字符串或数字类型
-    if (typeof suggestion === 'string' || typeof suggestion === 'number') {
-      return { value: suggestion, label: String(suggestion) }
+    let item = suggestion;
+    console.log(item);
+    // 步骤1: 如果是字符串，尝试解析为JSON。
+    if (typeof item === 'string') {
+      try {
+        const parsed = JSON.parse(item);
+        // 解析成功，则用解析后的对象进行后续处理。
+        item = parsed;
+      } catch (e) {
+        // 不是JSON字符串，'item'保持为原始字符串。
+      }
     }
-    // 对象类型且符合 Option 接口
-    if (typeof suggestion === 'object' && suggestion !== null && 'value' in suggestion && 'label' in suggestion) {
-      return { value: suggestion.value, label: String(suggestion.label) }
+
+    // 步骤2: 检查'item'现在是否为有效的Option对象。
+    // 确保返回的value是string | number
+    if (typeof item === 'object' && item !== null && 'value' in item && 'label' in item) {
+      // 明确提取value和label，确保value的类型正确
+      return { value: (item as Option).value, label: String((item as Option).label) };
     }
-    // 不符合预期的格式，发出警告并尝试转换
-    console.warn(`[SelectInput] Unexpected suggestion format:`, suggestion)
-    return { value: String(suggestion), label: String(suggestion) }
+    
+    // 步骤3 (默认): 如果到这里仍不是有效Option对象，则将原始suggestion视为简单值。
+    // 确保返回的value是string | number
+    return { value: String(suggestion), label: String(suggestion) };
   })
-)
+);
 
 // 提取所有标签用于下拉菜单
 const suggestionLabels = computed(() => normalizedSuggestions.value.map(o => o.label))
 
 // 当前选中值的标签
 const selectedOptionLabel = computed(() =>
-  normalizedSuggestions.value.find(o => o.value === props.modelValue)?.label ?? null
+  normalizedSuggestions.value.find(o => o.value === props.modelValue)?.label ?? props.modelValue ?? null
 )
 
 const toggleDropdown = async () => {

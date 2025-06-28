@@ -36,6 +36,15 @@ export type GroupSlotInfo = z.infer<typeof GroupSlotInfoSchema>;
 
 // --- Input Options Schemas ---
 
+/**
+ * 定义了下拉建议选项的统一格式。
+ */
+export const SuggestionItemSchema = z.object({
+  value: z.union([z.string(), z.number()]),
+  label: z.string(),
+});
+export type SuggestionItem = z.infer<typeof SuggestionItemSchema>;
+
 // 基础输入选项
 export const zBaseInputOptions = z.object({
   tooltip: z.string().optional(),
@@ -49,7 +58,7 @@ export const zNumericInputOptions = zBaseInputOptions.extend({
   max: z.number().optional(),
   step: z.number().optional(),
   default: z.number().optional(),
-  suggestions: z.array(z.number()).optional(),
+  suggestions: z.array(SuggestionItemSchema).optional(),
 });
 
 // 字符串输入选项
@@ -58,7 +67,7 @@ export const zStringInputOptions = zBaseInputOptions.extend({
   multiline: z.boolean().optional(),
   placeholder: z.string().optional(),
   display_only: z.boolean().optional(),
-  suggestions: z.array(z.string()).optional(),
+  suggestions: z.array(SuggestionItemSchema).optional(),
 });
 
 // 布尔输入选项
@@ -68,7 +77,7 @@ export const zBooleanInputOptions = zBaseInputOptions.extend({
 
 // 组合框选项 (下拉选择)
 export const zComboInputOptions = zBaseInputOptions.extend({
-  suggestions: z.array(z.union([z.string(), z.number()])).optional(),
+  suggestions: z.array(SuggestionItemSchema).optional(),
   default: z.union([z.string(), z.number()]).optional(),
 });
 

@@ -128,7 +128,7 @@ inputs: {
     dataFlowType: DataFlowType.STRING,
     displayName: 'Dropdown Select',
     matchCategories: [BuiltInSocketMatchCategory.COMBO_OPTION],
-    config: { default: 'Option A', suggestions: ['Option A', 'Option B'] }
+    config: { default: 'Option A', suggestions: [{ value: 'Option A', label: 'Option A' }, { value: 'Option B', label: 'Option B' }] }
   },
   button_trigger: {
     dataFlowType: DataFlowType.WILDCARD, // Buttons usually don't transmit specific data types
@@ -188,7 +188,7 @@ configSchema: {
     displayName: 'Processing Mode',
     config: {
       default: 'fast',
-      suggestions: ['fast', 'accurate']
+      suggestions: [{ value: 'fast', label: 'fast' }, { value: 'accurate', label: 'accurate' }]
     }
   },
   retryAttempts: {

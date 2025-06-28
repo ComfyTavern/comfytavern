@@ -308,7 +308,11 @@ export const createMessageNodeDefinition: NodeDefinition = {
       matchCategories: ['ComboOption'],
       config: {
         default: 'user',
-        suggestions: ['system', 'user', 'assistant'],
+        suggestions: [
+          { value: 'system', label: 'system' },
+          { value: 'user', label: 'user' },
+          { value: 'assistant', label: 'assistant' }
+        ],
       },
     },
     content: {

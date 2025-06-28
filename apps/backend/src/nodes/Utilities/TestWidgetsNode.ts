@@ -109,7 +109,11 @@ export const definition: NodeDefinition = {
       matchCategories: ["ComboOption"],
       config: {
         default: "选项A",
-        suggestions: ["选项A", "选项B", "选项C"],
+        suggestions: [
+          { value: '选项A', label: '选项A' },
+          { value: '选项B', label: '选项B' },
+          { value: '选项C', label: '选项C' }
+        ],
       },
     },
     json_input: {
@@ -143,7 +147,11 @@ export const definition: NodeDefinition = {
       config: {
         default: "默认值",
         placeholder: "输入或选择建议",
-        suggestions: ["预设A", "预设B", "另一个预设"],
+        suggestions: [
+          { value: '预设A', label: '预设A' },
+          { value: '预设B', label: '预设B' },
+          { value: '另一个预设', label: '另一个预设' }
+        ],
       },
     },
     int_with_suggestions: {
@@ -156,7 +164,12 @@ export const definition: NodeDefinition = {
         min: 64,
         max: 4096,
         step: 64,
-        suggestions: [256, 512, 1024, 2048],
+        suggestions: [
+          { value: 256, label: '256' },
+          { value: 512, label: '512' },
+          { value: 1024, label: '1024' },
+          { value: 2048, label: '2048' }
+        ],
       },
     },
     float_with_suggestions: {
@@ -169,7 +182,13 @@ export const definition: NodeDefinition = {
         min: 0.0,
         max: 15.0,
         step: 0.5,
-        suggestions: [1.0, 5.0, 7.5, 10.0, 12.5],
+        suggestions: [
+          { value: 1.0, label: '1.0' },
+          { value: 5.0, label: '5.0' },
+          { value: 7.5, label: '7.5' },
+          { value: 10.0, label: '10.0' },
+          { value: 12.5, label: '12.5' }
+        ],
       },
     },
     button_trigger: {

@@ -114,8 +114,8 @@ For example:
 
 *   `dataFlowType: 'STRING'`, `config: { multiline: true }` -> Multi-line text input.
 *   `dataFlowType: 'STRING'`, `matchCategories: ['Code']`, `config: { languageHint: 'javascript' }` -> JavaScript code editor (in the bottom docked editor).
-*   `dataFlowType: 'INTEGER'`, `config: { suggestions: [1, 2, 3], default: 1 }` -> Integer input with suggestions (allows free-form entry while showing suggestions).
-*   `dataFlowType: 'STRING'`, `matchCategories: ['ComboOption']`, `config: { suggestions: ['OptionA', 'OptionB'], default: 'OptionA' }` -> Pure dropdown select.
+*   `dataFlowType: 'INTEGER'`, `config: { suggestions: [{value: 1, label: '1'}, {value: 2, label: '2'}, {value: 3, label: '3'}], default: 1 }` -> Integer input with suggestions (allows free-form entry while showing suggestions).
+*   `dataFlowType: 'STRING'`, `matchCategories: ['ComboOption']`, `config: { suggestions: [{value: 'OptionA', label: 'OptionA'}, {value: 'OptionB', label: 'OptionB'}], default: 'OptionA' }` -> Pure dropdown select.
 *   `dataFlowType: 'WILDCARD'`, `matchCategories: ['Trigger']`, `config: { label: 'Execute' }` -> A button displaying "Execute".
 
 ### 2.4. Input Action Buttons (`actions`)
@@ -174,7 +174,7 @@ inputs: {
     matchCategories: ['ComboOption'], // Marks as COMBO option source
     config: {
       default: 'OptionA',
-      suggestions: ['OptionA', 'OptionB', 'OptionC']
+      suggestions: [{value: 'OptionA', label: 'OptionA'}, {value: 'OptionB', label: 'OptionB'}, {value: 'OptionC', label: 'OptionC'}]
     }
   }
 }

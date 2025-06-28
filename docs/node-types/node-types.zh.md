@@ -114,8 +114,8 @@
 
 *   `dataFlowType: 'STRING'`, `config: { multiline: true }` -> 多行文本输入框。
 *   `dataFlowType: 'STRING'`, `matchCategories: ['Code']`, `config: { languageHint: 'javascript' }` -> JavaScript 代码编辑器 (在底部停靠编辑器中)。
-*   `dataFlowType: 'INTEGER'`, `config: { suggestions: [1, 2, 3], default: 1 }` -> 带建议的整数输入框 (允许自由输入，同时显示建议)。
-*   `dataFlowType: 'STRING'`, `matchCategories: ['ComboOption']`, `config: { suggestions: ['选项A', '选项B'], default: '选项A' }` -> 纯下拉选择框。
+*   `dataFlowType: 'INTEGER'`, `config: { suggestions: [{value: 1, label: '1'}, {value: 2, label: '2'}, {value: 3, label: '3'}], default: 1 }` -> 带建议的整数输入框 (允许自由输入，同时显示建议)。
+*   `dataFlowType: 'STRING'`, `matchCategories: ['ComboOption']`, `config: { suggestions: [{value: '选项A', label: '选项A'}, {value: '选项B', label: '选项B'}], default: '选项A' }` -> 纯下拉选择框。
 *   `dataFlowType: 'WILDCARD'`, `matchCategories: ['Trigger']`, `config: { label: '执行' }` -> 一个显示为 "执行" 的按钮。
 
 ### 2.4. 输入操作按钮 (`actions`)
@@ -174,7 +174,7 @@ inputs: {
     matchCategories: ['ComboOption'], // 标记为COMBO选项来源
     config: {
       default: '选项A',
-      suggestions: ['选项A', '选项B', '选项C']
+      suggestions: [{value: '选项A', label: '选项A'}, {value: '选项B', label: '选项B'}, {value: '选项C', label: '选项C'}]
     }
   }
 }

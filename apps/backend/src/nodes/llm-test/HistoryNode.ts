@@ -49,7 +49,11 @@ export const definition: NodeDefinition = {
       required: false,
       matchCategories: ['ComboOption'],
       config: {
-        suggestions: ['user', 'assistant', 'system'] 
+        suggestions: [
+          { value: 'user', label: 'user' },
+          { value: 'assistant', label: 'assistant' },
+          { value: 'system', label: 'system' }
+        ]
       }
     },
     content1: {
@@ -68,7 +72,11 @@ export const definition: NodeDefinition = {
       required: false,
       matchCategories: ['ComboOption'],
       config: {
-        suggestions: ['user', 'assistant', 'system'] 
+        suggestions: [
+          { value: 'user', label: 'user' },
+          { value: 'assistant', label: 'assistant' },
+          { value: 'system', label: 'system' }
+        ]
       }
     },
     content2: {
@@ -87,7 +95,11 @@ export const definition: NodeDefinition = {
       required: false,
       matchCategories: ['ComboOption'],
       config: {
-        suggestions: ['user', 'assistant', 'system'] 
+        suggestions: [
+          { value: 'user', label: 'user' },
+          { value: 'assistant', label: 'assistant' },
+          { value: 'system', label: 'system' }
+        ]
       }
     },
     content3: {
@@ -106,7 +118,11 @@ export const definition: NodeDefinition = {
       required: false,
       matchCategories: ['ComboOption'],
       config: {
-        suggestions: ['user', 'assistant', 'system'] 
+        suggestions: [
+          { value: 'user', label: 'user' },
+          { value: 'assistant', label: 'assistant' },
+          { value: 'system', label: 'system' }
+        ]
       }
     },
     content4: {

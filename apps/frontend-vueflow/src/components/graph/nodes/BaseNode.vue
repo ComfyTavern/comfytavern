@@ -37,6 +37,7 @@ import { useWorkflowInteractionCoordinator } from "../../../composables/workflow
 import { useNodeClientScript } from "../../../composables/node/useNodeClientScript";
 import { useWorkflowManager } from "../../../composables/workflow/useWorkflowManager";
 import { useNodeModeSlots } from "../../../composables/node/useNodeModeSlots"; // 新增：导入 useNodeModeSlots
+import { useGroupIOSlots } from "../../../composables/group/useGroupIOSlots";
 
 import { useWorkflowPreview } from "../../../composables/workflow/useWorkflowPreview"; // 清理：保留一个导入，移除 type NodePreviewStatus
 
@@ -96,7 +97,42 @@ const {
 const { getInputProps: calculateInputProps, getConfigProps: calculateConfigProps } =
   useNodePropsComposable(props);
 const { isNodeGroup } = useNodeActions(props);
-const { finalInputs, finalOutputs, currentModeDefinition } = useNodeModeSlots(props);
+
+// 为普通节点和多模式节点获取插槽
+const { finalInputs: modeInputs, finalOutputs: modeOutputs, currentModeDefinition } = useNodeModeSlots(props);
+// 为 GroupInput/GroupOutput 节点获取插槽
+const { finalInputs: groupInputs, finalOutputs: groupOutputs } = useGroupIOSlots(props);
+
+const isGroupInputNode = computed(() => props.type === 'core:GroupInput');
+const isGroupOutputNode = computed(() => props.type === 'core:GroupOutput');
+
+// 根据节点类型，决定最终使用哪组插槽
+const finalInputs = computed(() => {
+  if (isGroupOutputNode.value) {
+    // GroupOutput 节点的输入来自工作流的 interfaceOutputs
+    return groupInputs.value;
+  }
+  if (isGroupInputNode.value) {
+    // GroupInput 节点自身没有输入
+    return [];
+  }
+  // 其他所有节点使用 mode-aware 的插槽
+  return modeInputs.value;
+});
+
+const finalOutputs = computed(() => {
+  if (isGroupInputNode.value) {
+    // GroupInput 节点的输出是工作流的 interfaceInputs
+    return groupOutputs.value;
+  }
+  if (isGroupOutputNode.value) {
+    // GroupOutput 节点自身没有输出
+    return [];
+  }
+  // 其他所有节点使用 mode-aware 的插槽
+  return modeOutputs.value;
+});
+
 const { clientScriptError, handleButtonClick, executeClientHook } = useNodeClientScript({
   ...props,
   updateInputValue,

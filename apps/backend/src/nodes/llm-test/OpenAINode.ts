@@ -178,7 +178,12 @@ export const definition: NodeDefinition = {
       required: true,
       config: {
         default: "deepseek-chat",
-        suggestions: ["deepseek-chat", "chatgpt-4o-latest", "claude-sonnet-4-20250514", "gemini-2.5-flash-preview-05-20"],
+        suggestions: [
+          { value: "deepseek-chat", label: "deepseek-chat" },
+          { value: "chatgpt-4o-latest", label: "chatgpt-4o-latest" },
+          { value: "claude-sonnet-4-20250514", label: "claude-sonnet-4-20250514" },
+          { value: "gemini-2.5-flash-preview-05-20", label: "gemini-2.5-flash-preview-05-20" }
+        ],
         multiline: false,
         placeholder: "输入模型名称",
       },
