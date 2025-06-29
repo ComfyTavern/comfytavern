@@ -292,12 +292,31 @@ export function useWorkflowExecution() {
       return null;
     }
 
-    const finalInterfaceInputs = overrideInputs || workflowToExecute.interfaceInputs || {};
+    // 1. 从完整的接口定义中提取出默认输入值
+    const defaultInputs: Record<string, any> = {};
+    if (workflowToExecute.interfaceInputs) {
+      for (const key in workflowToExecute.interfaceInputs) {
+        const inputDef = workflowToExecute.interfaceInputs[key];
+        // 假设默认值在 config.default
+        if (inputDef && inputDef.config && "default" in inputDef.config) {
+          defaultInputs[key] = inputDef.config.default;
+        } else {
+          // 对于没有默认值的输入，可以根据需要设置为 null 或 undefined
+          defaultInputs[key] = null;
+        }
+      }
+    }
+
+    // 2. 用 overrideInputs 覆盖默认值，得到最终的输入键值对
+    const finalInterfaceInputs = {
+      ...defaultInputs,
+      ...overrideInputs,
+    };
 
     const payload = transformStorageToExecutionPayload({
       nodes: workflowToExecute.nodes,
       edges: workflowToExecute.edges,
-      interfaceInputs: finalInterfaceInputs,
+      interfaceInputs: finalInterfaceInputs, // 使用处理过的、干净的输入键值对
       interfaceOutputs: workflowToExecute.interfaceOutputs,
       outputInterfaceMappings, // 传递映射
     });
