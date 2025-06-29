@@ -30,27 +30,58 @@ export interface InvocationRequest {
   source: 'editor' | 'panel' | 'preview';
 }
 
+function buildOutputInterfaceMappings(
+  activeWorkflowData: any,
+  nodes: WorkflowStorageNode[],
+  edges: WorkflowStorageEdge[],
+  contextId: string
+): Record<string, { sourceNodeId: string; sourceSlotKey: string; }> {
+  const mappings: Record<string, { sourceNodeId: string; sourceSlotKey: string; }> = {};
+  if (activeWorkflowData && activeWorkflowData.interfaceOutputs && Object.keys(activeWorkflowData.interfaceOutputs).length > 0) {
+      const groupOutputNode = nodes.find((node) => node.type === "core:GroupOutput");
+
+      if (groupOutputNode) {
+          for (const interfaceKey in activeWorkflowData.interfaceOutputs) {
+              const edge = edges.find((e) => e.target === groupOutputNode.id && e.targetHandle === interfaceKey);
+              if (edge && edge.source && edge.sourceHandle) {
+                  mappings[interfaceKey] = {
+                      sourceNodeId: edge.source,
+                      sourceSlotKey: edge.sourceHandle,
+                  };
+              } else {
+                  const slotInfo = activeWorkflowData.interfaceOutputs[interfaceKey];
+                  if (slotInfo && slotInfo.dataFlowType !== DataFlowType.CONVERTIBLE_ANY) {
+                      console.debug(`[InvocationService] No valid edge found for interface output '${interfaceKey}' in ${contextId}.`);
+                  }
+              }
+          }
+      }
+  }
+  return mappings;
+}
+
 /**
- * 统一的工作流调用服务
+ * 统一的工作流调用服务 - Composable 版本
  * 职责:
  * 1. 作为所有工作流调用的唯一入口。
  * 2. 根据调用模式 (live/saved) 获取工作流定义。
  * 3. 处理从 VueFlow 状态到执行载荷的转换。
  * 4. 调用底层的执行核心。
  */
-class WorkflowInvocationService {
+export function useWorkflowInvocation() {
+  const dialogService = useDialogService();
+  const projectStore = useProjectStore();
+  const workflowDataHandler = useWorkflowData();
+  const { executeWorkflowCore } = useWorkflowExecution();
+
   /**
    * 统一的调用方法
    * @param request 调用请求对象
    */
-  public async invoke(
+  const invoke = async (
     request: InvocationRequest
-  ): Promise<{ promptId: string; executionId: string } | null> {
-    const dialogService = useDialogService();
-    const projectStore = useProjectStore();
-    const workflowDataHandler = useWorkflowData();
-    const { executeWorkflowCore } = useWorkflowExecution();
-
+  ): Promise<{ promptId: string; executionId: string } | null> => {
+    
     const projectId = projectStore.currentProjectId;
 
     if (!projectId) {
@@ -143,7 +174,7 @@ class WorkflowInvocationService {
         const coreWorkflowData = transformVueFlowToCoreWorkflow(tempFlowExport);
         const activeWorkflowData = workflowManager.getWorkflowData(tabId);
         
-        outputInterfaceMappings = this.buildOutputInterfaceMappings(activeWorkflowData, coreWorkflowData.nodes, coreWorkflowData.edges, tabId);
+        outputInterfaceMappings = buildOutputInterfaceMappings(activeWorkflowData, coreWorkflowData.nodes, coreWorkflowData.edges, tabId);
 
         workflowToExecute = {
             id: activeWorkflowData?.id,
@@ -191,38 +222,7 @@ class WorkflowInvocationService {
       request.inputs,
       outputInterfaceMappings
     );
-  }
+  };
 
-  private buildOutputInterfaceMappings(
-    activeWorkflowData: any,
-    nodes: WorkflowStorageNode[],
-    edges: WorkflowStorageEdge[],
-    contextId: string
-  ): Record<string, { sourceNodeId: string; sourceSlotKey: string; }> {
-    const mappings: Record<string, { sourceNodeId: string; sourceSlotKey: string; }> = {};
-    if (activeWorkflowData && activeWorkflowData.interfaceOutputs && Object.keys(activeWorkflowData.interfaceOutputs).length > 0) {
-        const groupOutputNode = nodes.find((node) => node.type === "core:GroupOutput");
-
-        if (groupOutputNode) {
-            for (const interfaceKey in activeWorkflowData.interfaceOutputs) {
-                const edge = edges.find((e) => e.target === groupOutputNode.id && e.targetHandle === interfaceKey);
-                if (edge && edge.source && edge.sourceHandle) {
-                    mappings[interfaceKey] = {
-                        sourceNodeId: edge.source,
-                        sourceSlotKey: edge.sourceHandle,
-                    };
-                } else {
-                    const slotInfo = activeWorkflowData.interfaceOutputs[interfaceKey];
-                    if (slotInfo && slotInfo.dataFlowType !== DataFlowType.CONVERTIBLE_ANY) {
-                        console.debug(`[InvocationService] No valid edge found for interface output '${interfaceKey}' in ${contextId}.`);
-                    }
-                }
-            }
-        }
-    }
-    return mappings;
-  }
+  return { invoke };
 }
-
-// 导出单例
-export const workflowInvocationService = new WorkflowInvocationService();

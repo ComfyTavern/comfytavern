@@ -1,4 +1,5 @@
-import { watchEffect, type Ref, watch, ref } from 'vue';
+import { watchEffect, type Ref, watch, ref, onMounted, onUnmounted } from 'vue';
+import { klona } from 'klona';
 import { useExecutionStore } from '@/stores/executionStore';
 import { useApiAdapterManager } from '@/services/ApiAdapterManager';
 import { ExecutionStatus, type InvocationRequest, type PanelDefinition } from '@comfytavern/types';
@@ -99,51 +100,66 @@ export function usePanelApiHost(
       }
 
       const unwatch = watch(
-        () => executionStore.tabExecutionStates.get(executionId),
-        (state, oldState) => {
-          if (!state) return;
+        // 1. 创建一个更精确的 getter，只依赖我们关心的状态
+        () => {
+          const state = executionStore.tabExecutionStates.get(executionId);
+          if (!state) return null;
+          
+          // 返回一个包含所有相关状态的扁平对象
+          return {
+            status: state.workflowStatus,
+            finalOutputs: state.nodeOutputs['__WORKFLOW_INTERFACE_OUTPUTS__'],
+            streamingOutputs: state.streamingInterfaceOutputs,
+            error: state.workflowError,
+          };
+        },
+        // 2. watch 回调现在处理这个新的、更简单的 state 对象
+        (newState, oldState) => {
+          if (!newState) return;
 
           // 检查流式接口输出
-          if (state.streamingInterfaceOutputs) {
-            for (const key in state.streamingInterfaceOutputs) {
-              const stream = state.streamingInterfaceOutputs[key];
-              const oldStream = oldState?.streamingInterfaceOutputs?.[key];
+          if (newState.streamingOutputs) {
+            const oldStreamingOutputs = oldState?.streamingOutputs || {};
+            for (const key in newState.streamingOutputs) {
+              const stream = newState.streamingOutputs[key];
+              const oldStream = oldStreamingOutputs[key];
+              // 仅当文本实际发生变化时才发送事件
               if (stream && (!oldStream || stream.accumulatedText !== oldStream.accumulatedText)) {
                 iframeRef.value?.contentWindow?.postMessage({
                   type: 'execution-event',
-                  event: 'onProgress', // 使用 onProgress 作为流式事件
+                  event: 'onProgress',
                   executionId,
-                  payload: { key, content: stream.accumulatedText, isComplete: !!stream.isComplete }
+                  payload: klona({ key, content: stream.accumulatedText, isComplete: !!stream.isComplete })
                 }, panelOrigin.value);
               }
             }
           }
 
           // 检查最终结果
-          if (state.workflowStatus === ExecutionStatus.COMPLETE && oldState?.workflowStatus !== ExecutionStatus.COMPLETE) {
+          if (newState.status === ExecutionStatus.COMPLETE && oldState?.status !== ExecutionStatus.COMPLETE) {
             iframeRef.value?.contentWindow?.postMessage({
               type: 'execution-event',
               event: 'onResult',
               executionId,
-              payload: { status: 'COMPLETE', outputs: state.nodeOutputs }
+              payload: klona({ status: 'COMPLETE', outputs: newState.finalOutputs || {} })
             }, panelOrigin.value);
-            unwatch(); // 完成后自动取消订阅
+            unwatch();
             activeSubscriptions.delete(executionId);
           }
 
           // 检查错误
-          if (state.workflowStatus === ExecutionStatus.ERROR && oldState?.workflowStatus !== ExecutionStatus.ERROR) {
+          if (newState.status === ExecutionStatus.ERROR && oldState?.status !== ExecutionStatus.ERROR) {
             iframeRef.value?.contentWindow?.postMessage({
               type: 'execution-event',
               event: 'onError',
               executionId,
-              payload: { error: state.workflowError }
+              payload: klona({ error: newState.error })
             }, panelOrigin.value);
-            unwatch(); // 出错后自动取消订阅
+            unwatch();
             activeSubscriptions.delete(executionId);
           }
         },
-        { deep: true }
+        { deep: true } // deep 仍然是必要的，因为我们监听对象内部的变化
       );
 
       activeSubscriptions.set(executionId, unwatch);
@@ -244,6 +260,7 @@ export function usePanelApiHost(
 
           // 处理执行事件
           if (data.type === 'execution-event') {
+              console.log('[Panel Script] Received execution-event from host:', data);
               window.dispatchEvent(new CustomEvent('comfy-execution-event', { detail: data }));
           }
         });
@@ -296,26 +313,29 @@ export function usePanelApiHost(
     iframe.contentWindow.postMessage(injectionPayload, panelOrigin.value || '*');
     console.log('[Host] API injection script sent to iframe via postMessage.');
   }
-  
-  watchEffect(async (onInvalidate) => {
-    if (!projectId.value || !panelId.value) return;
-
-    const currentProjectId = projectId.value;
-    const currentPanelId = panelId.value;
-
-    panelDef.value = await panelStore.fetchPanelDefinition(currentProjectId, currentPanelId);
-    if (!panelDef.value) {
-      console.error(`[Host] Failed to fetch panel definition for ${currentPanelId}. API calls may fail.`);
+  // 1. 只负责响应式地获取面板定义
+  watchEffect(async () => {
+    if (projectId.value && panelId.value) {
+      panelDef.value = await panelStore.fetchPanelDefinition(projectId.value, panelId.value);
+      if (!panelDef.value) {
+        console.error(`[Host] Failed to fetch panel definition for ${panelId.value}. API calls may fail.`);
+      }
+    } else {
+      panelDef.value = null;
     }
-    
+  });
+  
+  // 2. 将事件监听和清理与组件的生命周期绑定
+  onMounted(() => {
     window.addEventListener('message', handleMessage);
-    console.log(`[Host] Panel API host initialized for ${currentPanelId} and listening for messages.`);
-    
-    onInvalidate(() => {
-      window.removeEventListener('message', handleMessage);
-      activeSubscriptions.forEach(unwatch => unwatch());
-      activeSubscriptions.clear();
-      console.log(`[Host] Panel API host for ${currentPanelId} cleaned up.`);
-    });
+    console.log(`[Host] Panel API host initialized and listening for messages.`);
+  });
+
+  onUnmounted(() => {
+    window.removeEventListener('message', handleMessage);
+    // 清理所有遗留的订阅，以防万一
+    activeSubscriptions.forEach(unwatch => unwatch());
+    activeSubscriptions.clear();
+    console.log(`[Host] Panel API host cleaned up.`);
   });
 }
