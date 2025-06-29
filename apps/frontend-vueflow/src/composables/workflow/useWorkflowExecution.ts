@@ -292,26 +292,27 @@ export function useWorkflowExecution() {
       return null;
     }
 
-    // 1. 从完整的接口定义中提取出默认输入值
-    const defaultInputs: Record<string, any> = {};
-    if (workflowToExecute.interfaceInputs) {
-      for (const key in workflowToExecute.interfaceInputs) {
-        const inputDef = workflowToExecute.interfaceInputs[key];
-        // 假设默认值在 config.default
-        if (inputDef && inputDef.config && "default" in inputDef.config) {
-          defaultInputs[key] = inputDef.config.default;
+    // 1. 深拷贝工作流的接口定义，确保我们发送的是后端期望的完整 GroupSlotInfo 结构。
+    const finalInterfaceInputs = klona(workflowToExecute.interfaceInputs || {});
+
+    // 2. 如果存在来自外部调用（如面板）的覆盖输入，则更新对应 GroupSlotInfo 的 .config.default 值。
+    //    这是因为后端 GroupInputNode 会从这个 `default` 字段读取最终的输入值。
+    if (overrideInputs) {
+      for (const key in overrideInputs) {
+        if (finalInterfaceInputs[key]) {
+          // 确保 config 对象存在
+          if (!finalInterfaceInputs[key].config) {
+            finalInterfaceInputs[key].config = {};
+          }
+          finalInterfaceInputs[key].config.default = overrideInputs[key];
         } else {
-          // 对于没有默认值的输入，可以根据需要设置为 null 或 undefined
-          defaultInputs[key] = null;
+          // 如果提供了覆盖输入，但找不到对应的接口定义，记录一个警告。
+          console.warn(
+            `[WorkflowExecution:Core] Override input '${key}' was provided, but no matching interface input definition was found in the workflow.`
+          );
         }
       }
     }
-
-    // 2. 用 overrideInputs 覆盖默认值，得到最终的输入键值对
-    const finalInterfaceInputs = {
-      ...defaultInputs,
-      ...overrideInputs,
-    };
 
     const payload = transformStorageToExecutionPayload({
       nodes: workflowToExecute.nodes,
