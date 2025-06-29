@@ -37,9 +37,7 @@
 *   **`workflowBindings`**: `PanelWorkflowBinding[]`
     *   描述：定义此面板可绑定的工作流。
     *   结构 (`PanelWorkflowBinding`):
-        *   `workflowId`: `string` (关联的工作流 ID)
-        *   `displayName`: `string` (可选, 此工作流在面板内的别名)
-        *   `isDefault`: `boolean` (可选)
+        *   `workflowId`: `string` (绑定的工作流 ID。这是唯一的关联方式，面板通过 `panelApi` 直接使用此 ID 调用工作流。)
 *   **`resourceBundle`**: `object` (可选)
     *   `url`: `string` (指向面板静态资源包的 URL, e.g., a zip file or a manifest)
     *   `checksum`: `string` (可选, 用于校验资源完整性)
