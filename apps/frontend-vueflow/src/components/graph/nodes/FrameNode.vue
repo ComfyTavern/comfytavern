@@ -66,6 +66,7 @@ const nodeStyles = computed(() => {
     backgroundColor: props.style?.backgroundColor || 'hsl(var(--ct-background-surface-hsl) / 0.4)',
     border: props.style?.border || '3px dotted hsl(var(--ct-border-base-hsl))',
     borderRadius: props.style?.borderRadius || '6px',
+    boxShadow: '0 4px 12px 0 hsl(var(--ct-shadow-color-hsl, 0 0% 0%) / 0.1)',
   };
 });
 
