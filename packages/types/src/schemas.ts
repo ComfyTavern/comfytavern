@@ -74,10 +74,7 @@ export type PanelDeclaration = z.infer<typeof PanelDeclarationSchema>;
  * Schema 定义: 单个面板工作流绑定的具体配置
  */
 export const PanelWorkflowBindingSchema = z.object({
-  alias: z.string().describe("调用别名，面板通过此别名调用工作流"),
   workflowId: z.string().describe("绑定的工作流ID"),
-  description: z.string().optional().describe("此绑定的功能描述"),
-  notes: z.string().optional().describe("开发者的备注"),
 });
 export type PanelWorkflowBinding = z.infer<typeof PanelWorkflowBindingSchema>;
 

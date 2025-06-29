@@ -1,9 +1,13 @@
 <template>
-  <div class="p-8">
-    <h1 class="text-2xl font-bold mb-2 text-text-base">面板配置</h1>
-    <p class="text-text-secondary mb-6">正在配置面板: {{ panelId }}</p>
+  <div class="p-8 flex flex-col h-full">
+    <div class="flex items-baseline flex-wrap gap-x-4 flex-shrink-0 mb-6">
+      <h1 class="text-2xl font-bold text-text-base">面板配置</h1>
+      <p class="text-text-secondary">正在配置面板: {{ panelId }}</p>
+    </div>
 
-    <WorkflowBinder :project-id="projectId" :panel-id="panelId" />
+    <div class="flex-grow min-h-0">
+      <WorkflowBinder :project-id="projectId" :panel-id="panelId" class="h-full"/>
+    </div>
   </div>
 </template>
 
