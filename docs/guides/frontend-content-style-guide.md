@@ -35,14 +35,42 @@ UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind 
 - **历史与迁移**: 项目过去曾使用部分 DaisyUI 组件类，但正积极地将它们全部替换为原子类。任何新代码都严禁使用 DaisyUI。若发现存留的 DaisyUI 类（如 `.btn`, `.card`），应将其作为技术债进行替换。
 
 - **目的**:
-    - **完全控制**: 确保开发者对元素的最终样式拥有 100% 的直接控制权，避免了第三方库带来的样式覆盖、优先级冲突和黑盒行为。
-    - **一致性**: 所有样式定义都遵循统一的 Tailwind CSS 语法和设计理念。
-    - **可维护性**: 样式与模板紧密耦合，易于理解和修改，无需在多个文件（如全局 CSS、配置文件）之间跳转。
-    - **性能**: 避免加载未使用的 CSS，最终打包体积更小。
+
+  - **完全控制**: 确保开发者对元素的最终样式拥有 100% 的直接控制权，避免了第三方库带来的样式覆盖、优先级冲突和黑盒行为。
+  - **一致性**: 所有样式定义都遵循统一的 Tailwind CSS 语法和设计理念。
+  - **可维护性**: 样式与模板紧密耦合，易于理解和修改，无需在多个文件（如全局 CSS、配置文件）之间跳转。
+  - **性能**: 避免加载未使用的 CSS，最终打包体积更小。
 
 - **实践示例**:
-    - **按钮**: `<button class="px-4 py-2 bg-primary text-primary-content rounded-lg hover:bg-primary/90">Click Me</button>`
-    - **卡片**: `<div class="bg-background-surface rounded-lg shadow p-6">...</div>`
+  - **按钮**: `<button class="px-4 py-2 bg-primary text-primary-content rounded-lg hover:bg-primary/90">Click Me</button>`
+  - **卡片**: `<div class="bg-background-surface rounded-lg shadow p-6">...</div>`
+  ### 3.2 图标系统: Heroicons
+  为了保证整个应用图标风格的统一性、可维护性并优化性能，项目规定：
+  - **唯一图标来源**: **所有图标必须来自 [`@heroicons/vue`](https://github.com/tailwindlabs/heroicons) 库**。我们主要使用其 `24/outline` 样式集。
+  - **禁止本地图标**: **严禁**将独立的 SVG 文件封装为 `.vue` 组件并存放在本地（例如旧有的 `/components/icons` 目录）。此类图标已被全部移除和替换。
+
+  - **使用方法**:
+
+    ```vue
+    <script setup lang="ts">
+    // 在 <script setup> 中直接从库中导入所需的图标
+    import { Cog6ToothIcon, ArrowPathIcon } from "@heroicons/vue/24/outline";
+    </script>
+
+    <template>
+      <!-- 像使用普通组件一样使用图标，并通过 class 控制样式 -->
+      <Cog6ToothIcon class="w-5 h-5 text-text-secondary" />
+      <button>
+        <ArrowPathIcon class="w-4 h-4 animate-spin" />
+        刷新
+      </button>
+    </template>
+    ```
+
+  - **优势**:
+    - **一致性**: 确保所有图标共享统一的视觉语言。
+    - **可维护性**: 无需管理一个不断增长的本地图标文件夹。
+    - **性能**: 利用构建工具的 Tree-shaking，只有被实际导入的图标才会被打包进最终产物，减小体积。
 
 ---
 
@@ -84,12 +112,12 @@ UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind 
   - 它支持 `data-driven`（通过配置生成标准列表）和 `component`（直接嵌入自定义组件）两种模式，兼具效率与灵活性。
 - **开发原则**:
   - **定义优于编码**: 你的主要工作是定义 `SettingItemConfig` 对象，而不是编写 HTML。
-  - **逻辑分离**: 业务逻辑（如API调用）应封装在配置项的 `onSave` 回调中，保持 UI 组件纯粹。
+  - **逻辑分离**: 业务逻辑（如 API 调用）应封装在配置项的 `onSave` 回调中，保持 UI 组件纯粹。
 - **该模式的优势**:
   - **易于维护**: 增删改查设置项，只需修改作为“单一事实来源”的配置对象，无需触碰 Vue 模板。
   - **权限控制**: 可以轻易地根据用户角色动态过滤配置数组，从而实现视图级别的权限控制。
   - **一致性**: 保证所有设置项的外观和行为高度统一。
- 
+
 ---
 
 ## 5. 布局与移动端优化
@@ -128,9 +156,10 @@ UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind 
 - **Pinia**: 状态管理通过 Pinia Stores 进行。保持 Store 职责单一，合理使用 `actions` 和 `getters`。
 - **Composables**: 可复用的响应式相关逻辑应抽离到 `/composables` 目录的 `useCamelCase.ts` 函数中。
 - **命名**:
-    - **文件**: Vue 组件使用 `PascalCase.vue`，Composables 使用 `useCamelCase.ts`。
-    - **目录**: 使用 `kebab-case`。
+  - **文件**: Vue 组件使用 `PascalCase.vue`，Composables 使用 `useCamelCase.ts`。
+  - **目录**: 使用 `kebab-case`。
 - **自定义指令**: 对于需要直接、重复地操作 DOM 的通用功能，优先创建自定义指令，如 `vComfyTooltip`。
+
 ---
 
 ## 8. 实践范例：UI 组件测试面板

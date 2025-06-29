@@ -45,13 +45,13 @@
             :to="{ name: 'ProjectPanelSettings', params: { projectId: currentProjectId, panelId: panel.id } }"
             class="px-3 py-1 text-sm font-medium text-primary bg-primary-soft rounded-md hover:bg-primary-soft/80 whitespace-nowrap flex-shrink-0 mr-2 flex items-center"
             v-comfy-tooltip="'配置此面板的工作流绑定和接口'">
-            <IconSettings class="w-4 h-4" />
+            <Cog6ToothIcon class="w-4 h-4" />
             <span class="ml-1">配置</span>
           </router-link>
           <router-link :to="{ name: 'ProjectPanel', params: { projectId: currentProjectId, panelId: panel.id } }"
             class="px-3 py-1 text-sm font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 flex items-center"
             v-comfy-tooltip="'在新标签页中打开面板'">
-            <IconOpen class="w-4 h-4" />
+            <ArrowTopRightOnSquareIcon class="w-4 h-4" />
             <span class="ml-1">打开</span>
           </router-link>
         </div>
@@ -65,8 +65,7 @@ import { onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { usePanelStore } from '@/stores/panelStore';
 import { vComfyTooltip } from '@/directives/vComfyTooltip';
-import IconSettings from '@/components/icons/IconSettings.vue';
-import IconOpen from '@/components/icons/IconOpen.vue';
+import { Cog6ToothIcon, ArrowTopRightOnSquareIcon } from '@heroicons/vue/24/outline';
 
 const route = useRoute();
 const panelStore = usePanelStore();

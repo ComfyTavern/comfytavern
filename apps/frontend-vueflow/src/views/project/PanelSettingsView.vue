@@ -13,7 +13,7 @@
         </button>
         <button @click="saveChanges" :disabled="panelStore.isSavingDefinition || !isDirty"
           class="px-4 py-2 font-medium text-primary-content bg-primary rounded-md hover:bg-primary/70 disabled:opacity-50 disabled:cursor-not-allowed disabled:border flex items-center">
-          <IconSpinner v-if="panelStore.isSavingDefinition" class="w-5 h-5 animate-spin mr-2" />
+          <ArrowPathIcon v-if="panelStore.isSavingDefinition" class="w-5 h-5 animate-spin mr-2" />
           <span>保存更改</span>
         </button>
       </div>
@@ -62,7 +62,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { usePanelStore } from '@/stores/panelStore';
 import type { PanelDefinition, PanelWorkflowBinding } from '@comfytavern/types';
 import { klona } from 'klona';
-import IconSpinner from '@/components/icons/IconSpinner.vue';
+import { ArrowPathIcon } from '@heroicons/vue/24/outline';
 
 // 咕咕：为了简单起见，暂时在组件内定义。后续可以提取到单独的文件或i18n中。
 const tabs = ref([

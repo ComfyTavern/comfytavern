@@ -7,7 +7,7 @@
       <div class="text-sm font-medium text-text-base">
         <slot name="title">Section Title</slot>
       </div>
-      <IconChevronDown
+      <ChevronDownIcon
         class="w-4 h-4 text-text-muted transition-transform duration-200"
         :class="{ 'rotate-180': !isOpen }"
       />
@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import IconChevronDown from '@/components/icons/IconChevronDown.vue';
+import { ChevronDownIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   initiallyOpen: {

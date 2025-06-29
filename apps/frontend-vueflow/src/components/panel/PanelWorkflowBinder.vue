@@ -19,7 +19,7 @@
               <span class="truncate text-text-base" v-comfy-tooltip="wf.name">{{ wf.name }}</span>
               <button @click="addBinding(wf.id)" :disabled="isWorkflowBound(wf.id)"
                 class="flex items-center justify-center w-7 h-7 rounded-md transition-colors bg-primary-soft text-primary hover:bg-primary-soft/80 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-neutral-softest disabled:text-text-disabled">
-                <IconAdd class="w-4 h-4" />
+                <PlusIcon class="w-4 h-4" />
               </button>
             </div>
             <div v-if="!availableWorkflows.length" class="text-sm text-text-disabled text-center py-4">
@@ -44,7 +44,7 @@
                 </div>
                 <button @click="removeBinding(binding.workflowId)"
                   class="group flex items-center justify-center w-7 h-7 rounded-md transition-colors hover:bg-error-soft">
-                  <IconDelete class="w-4 h-4 text-text-muted transition-colors group-hover:text-error" />
+                  <TrashIcon class="w-4 h-4 text-text-muted transition-colors group-hover:text-error" />
                 </button>
               </div>
               <div class="space-y-3">
@@ -112,7 +112,7 @@
                             class="p-3 leading-relaxed"><code class="language-javascript">{{ generateCodeForBinding(binding) }}</code></pre>
                           <button @click="copyCode(generateCodeForBinding(binding))" v-comfy-tooltip="'复制代码'"
                             class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md bg-background-surface hover:bg-background-modifier-hover text-text-muted hover:text-text-base">
-                            <IconCopy class="w-4 h-4" />
+                            <ClipboardDocumentIcon class="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -135,8 +135,7 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import { DataFlowType, type DataFlowTypeName, type PanelDefinition, type PanelWorkflowBinding, type GroupSlotInfo, BuiltInSocketMatchCategory } from '@comfytavern/types';
 import styles from '@/components/graph/nodes/handleStyles.module.css';
-import IconAdd from '@/components/icons/IconAdd.vue';
-import IconDelete from '@/components/icons/IconDelete.vue';
+import { PlusIcon, TrashIcon, ClipboardDocumentIcon } from '@heroicons/vue/24/outline';
 import CollapsibleSection from '@/components/common/CollapsibleSection.vue';
 import { vComfyTooltip } from '@/directives/vComfyTooltip'; // 重新引入 vComfyTooltip
 
@@ -322,7 +321,6 @@ ${exampleOutputs || '    //   (此工作流无输出)'}
 
 // 复制功能保留，但需要重新引入 dialogService 和 IconCopy
 import { useDialogService } from '@/services/DialogService';
-import IconCopy from '@/components/icons/IconCopy.vue';
 const dialogService = useDialogService();
 const copyCode = async (code: string) => {
   try {
