@@ -19,7 +19,7 @@
                 type="text"
                 id="panel-display-name"
                 v-model="props.panelDefinition.displayName"
-                class="block w-full px-3 py-2 bg-background-input border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                class="block w-full px-3 py-2 bg-background-surface border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                 placeholder="例如：智能聊天助手"
               />
             </div>
@@ -36,7 +36,7 @@
                 id="panel-description"
                 v-model="props.panelDefinition.description"
                 rows="4"
-                class="block w-full px-3 py-2 bg-background-input border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                class="block w-full px-3 py-2 bg-background-surface border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                 placeholder="一个简洁明了的介绍。"
               ></textarea>
             </div>
@@ -63,7 +63,7 @@
                 type="text"
                 id="panel-version"
                 v-model="props.panelDefinition.version"
-                class="block w-full px-3 py-2 bg-background-input border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                class="block w-full px-3 py-2 bg-background-surface border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                 placeholder="例如：1.0.0"
               />
             </div>
@@ -81,7 +81,7 @@
                 type="text"
                 id="panel-ui-entry-point"
                 v-model="props.panelDefinition.uiEntryPoint"
-                class="block w-full px-3 py-2 bg-background-input border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                class="block w-full px-3 py-2 bg-background-surface border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                 placeholder="例如：index.html"
               />
             </div>
