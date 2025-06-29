@@ -50,5 +50,5 @@ config.json
 data/
 userData/
 # apps/backend/drizzle/migrations
-
+scripts/merged_locales
 public/avatars
