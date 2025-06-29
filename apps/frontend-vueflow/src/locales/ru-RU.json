@@ -499,6 +499,9 @@
       "indexTitle": "Индекс:",
       "noDetails": "Нет",
       "operationTitle": "Операция:",
+      "statusCurrent": "Текущее состояние",
+      "statusFuture": "Будущее состояние",
+      "statusPast": "Прошедшее состояние",
       "statusSaved": "(сохранено)",
       "statusTitle": "Статус:"
     },

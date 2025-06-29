@@ -499,6 +499,9 @@
       "indexTitle": "インデックス:",
       "noDetails": "なし",
       "operationTitle": "操作:",
+      "statusCurrent": "現在の状態",
+      "statusFuture": "未来の状態",
+      "statusPast": "過去の状態",
       "statusSaved": "(保存済み)",
       "statusTitle": "ステータス:"
     },

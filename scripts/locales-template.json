@@ -499,6 +499,9 @@
       "indexTitle": "[TODO]",
       "noDetails": "[TODO]",
       "operationTitle": "[TODO]",
+      "statusCurrent": "[TODO]",
+      "statusFuture": "[TODO]",
+      "statusPast": "[TODO]",
       "statusSaved": "[TODO]",
       "statusTitle": "[TODO]"
     },

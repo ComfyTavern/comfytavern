@@ -499,6 +499,9 @@
       "indexTitle": "Index:",
       "noDetails": "None",
       "operationTitle": "Operation:",
+      "statusCurrent": "Current State",
+      "statusFuture": "Future State",
+      "statusPast": "Past State",
       "statusSaved": "(Saved)",
       "statusTitle": "Status:"
     },

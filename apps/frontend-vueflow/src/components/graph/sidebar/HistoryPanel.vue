@@ -208,13 +208,12 @@ const generateTooltipContent = (item: HistoryItem & { originalIndex: number }): 
   const { entry, originalIndex } = item;
   const { currentIndex, savedIndex } = currentHistory.value;
 
-  const statusKey =
+  const status =
     originalIndex === currentIndex
-      ? "historyPanel.tooltip.statusCurrent"
+      ? t("historyPanel.tooltip.statusCurrent")
       : originalIndex < currentIndex
-        ? "historyPanel.tooltip.statusPast"
-        : "historyPanel.tooltip.statusFuture";
-  const status = t(statusKey);
+        ? t("historyPanel.tooltip.statusPast")
+        : t("historyPanel.tooltip.statusFuture");
   const savedStatus = originalIndex === savedIndex ? ` ${t('historyPanel.tooltip.statusSaved')}` : "";
 
   let detailsString = `\n\n**${t('historyPanel.tooltip.detailsTitle')}**`;

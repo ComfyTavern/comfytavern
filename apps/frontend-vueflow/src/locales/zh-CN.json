@@ -499,6 +499,9 @@
       "indexTitle": "索引:",
       "noDetails": "无",
       "operationTitle": "操作:",
+      "statusCurrent": "当前状态",
+      "statusFuture": "未来状态",
+      "statusPast": "过去状态",
       "statusSaved": "(已保存)",
       "statusTitle": "状态:"
     },
