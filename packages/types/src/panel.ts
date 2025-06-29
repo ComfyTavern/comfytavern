@@ -2,14 +2,12 @@ import { z } from 'zod';
 
 // 面板API的能力调用请求对象 (单一、灵活的模式)
 export const InvocationRequestSchema = z.object({
-  // 调用模式，如果提供了 alias，此字段可以省略，将默认为 'native'
-  mode: z.enum(['native', 'adapter']).optional(),
-  // 要执行的工作流ID，如果提供了 alias，此字段将被忽略
+  // 调用模式
+  mode: z.enum(['native', 'adapter']),
+  // 要执行的工作流ID (mode: 'native')
   workflowId: z.string().optional(),
-  // 要调用的适配器ID
+  // 要调用的适配器ID (mode: 'adapter')
   adapterId: z.string().optional(),
-  // 【推荐】调用别名，定义在面板的 workflowBindings 中
-  alias: z.string().optional(),
   // 工作流或适配器的输入参数
   inputs: z.record(z.any()),
 });

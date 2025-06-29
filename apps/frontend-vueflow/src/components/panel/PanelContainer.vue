@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { ref, watchEffect, computed } from 'vue';
-import { useClipboard } from '@vueuse/core';
-import { usePanelApiHost } from '@/composables/panel/usePanelApiHost';
-import { usePanelStore } from '@/stores/panelStore';
-import { useProjectStore } from '@/stores/projectStore';
-import type { PanelDefinition } from '@comfytavern/types';
+import { ref, watchEffect, computed, toRef } from "vue";
+import { useClipboard } from "@vueuse/core";
+import { usePanelApiHost } from "@/composables/panel/usePanelApiHost";
+import { usePanelStore } from "@/stores/panelStore";
+import { useProjectStore } from "@/stores/projectStore";
+import type { PanelDefinition } from "@comfytavern/types";
 
 const props = defineProps<{
   panelId: string;
 }>();
 const iframeRef = ref<HTMLIFrameElement | null>(null);
-const iframeSrc = ref('');
-const sandboxRules = ref(['allow-scripts']); // 默认最小权限
+const iframeSrc = ref("");
+const sandboxRules = ref(["allow-scripts"]); // 默认最小权限
 
 const panelStore = usePanelStore();
 const projectStore = useProjectStore();
@@ -22,25 +22,28 @@ const currentDefinition = ref<PanelDefinition | null>(null);
 const panelOrigin = computed(() => window.location.origin);
 const logs = ref<any[]>([]);
 const isLogPanelVisible = ref(false);
-// usePanelApiHost 将在 watchEffect 中当 projectId 和 panelId 可用时初始化
+
+// usePanelApiHost 在 setup 阶段被调用一次，并响应式地处理其生命周期。
+const currentProjectId = computed(() => projectStore.currentProjectId);
+usePanelApiHost(iframeRef, panelOrigin, currentProjectId, toRef(props, "panelId"), logs);
 
 const { copy, copied, isSupported } = useClipboard();
 
 const copyLogs = () => {
   const formattedLogs = logs.value
-    .map(log => `[${log.level.toUpperCase()}] ${log.message.map((item: any) => JSON.stringify(item)).join(' ')}`)
-    .join('\n');
+    .map(
+      (log) =>
+        `[${log.level.toUpperCase()}] ${log.message
+          .map((item: any) => JSON.stringify(item))
+          .join(" ")}`
+    )
+    .join("\n");
   copy(formattedLogs);
 };
-
 
 watchEffect(async () => {
   const projectId = projectStore.currentProjectId;
   if (props.panelId && projectId) {
-    // projectId 和 panelId 都已就绪，可以安全地初始化 API Host
-    const { initializeHost } = usePanelApiHost(iframeRef, panelOrigin, projectId, props.panelId, logs);
-    initializeHost();
-
     console.log(`[PanelContainer] 开始加载面板定义: ${props.panelId} for project: ${projectId}`);
 
     const panelDefinition = await panelStore.fetchPanelDefinition(projectId, props.panelId);
@@ -49,24 +52,29 @@ watchEffect(async () => {
     if (panelDefinition && panelDefinition.panelDirectory) {
       // 构造逻辑路径，这次使用后端提供的 panelDirectory
       const logicalPath = `user://projects/${projectId}/ui/${panelDefinition.panelDirectory}/${panelDefinition.uiEntryPoint}`;
-      
+
       // 构造最终的下载 URL，指向后端的文件服务代理
       iframeSrc.value = `/api/fam/download/${encodeURIComponent(logicalPath)}`;
-      
+
       console.log(`[PanelContainer] Set iframe src to: ${iframeSrc.value}`);
-      
+
       // TODO: 将来从 panelDefinition.uiRuntimeConfig.sandboxAttributes 获取
       // 目前暂时使用较宽松的权限
-      sandboxRules.value = ['allow-scripts', 'allow-forms', 'allow-modals', 'allow-same-origin', 'allow-downloads'];
-
+      sandboxRules.value = [
+        "allow-scripts",
+        "allow-forms",
+        "allow-modals",
+        "allow-same-origin",
+        "allow-downloads",
+      ];
     } else {
-      iframeSrc.value = '';
+      iframeSrc.value = "";
       console.error(`[PanelContainer] 未找到或加载失败: ID 为 "${props.panelId}" 的面板定义。`);
     }
   } else {
-    iframeSrc.value = '';
-    if (!props.panelId) console.log('[PanelContainer] No panelId provided.');
-    if (!projectId) console.log('[PanelContainer] No projectId available.');
+    iframeSrc.value = "";
+    if (!props.panelId) console.log("[PanelContainer] No panelId provided.");
+    if (!projectId) console.log("[PanelContainer] No projectId available.");
   }
 });
 </script>
@@ -84,21 +92,27 @@ watchEffect(async () => {
     <div v-else class="w-full h-full flex items-center justify-center">
       <p>无法加载面板: {{ panelId }}</p>
     </div>
-    
+
     <!-- Log Panel -->
     <div class="log-panel-container">
       <div class="log-panel-header">
         <button @click="isLogPanelVisible = !isLogPanelVisible" class="toggle-button">
-          {{ isLogPanelVisible ? '隐藏日志' : '显示日志' }} ({{ logs.length }})
+          {{ isLogPanelVisible ? "隐藏日志" : "显示日志" }} ({{ logs.length }})
         </button>
-        <button v-if="isLogPanelVisible && isSupported" @click="copyLogs" class="toggle-button copy-button">
-          {{ copied ? '已复制!' : '复制日志' }}
+        <button
+          v-if="isLogPanelVisible && isSupported"
+          @click="copyLogs"
+          class="toggle-button copy-button"
+        >
+          {{ copied ? "已复制!" : "复制日志" }}
         </button>
       </div>
       <div v-if="isLogPanelVisible" class="log-panel">
         <div v-for="(log, index) in logs" :key="index" :class="`log-entry log-${log.level}`">
           <span class="log-level">{{ log.level }}:</span>
-          <pre class="log-message">{{ log.message.map((item: any) => JSON.stringify(item, null, 2)).join(' ') }}</pre>
+          <pre class="log-message">{{
+            log.message.map((item: any) => JSON.stringify(item, null, 2)).join(" ")
+          }}</pre>
         </div>
       </div>
     </div>
@@ -163,11 +177,18 @@ watchEffect(async () => {
   text-transform: uppercase;
 }
 
-.log-entry.log-log .log-level { color: #cccccc; }
-.log-entry.log-warn .log-level { color: #ffcc00; }
-.log-entry.log-error .log-level { color: #ff4d4d; }
-.log-entry.log-debug .log-level { color: #88aaff; }
-
+.log-entry.log-log .log-level {
+  color: #cccccc;
+}
+.log-entry.log-warn .log-level {
+  color: #ffcc00;
+}
+.log-entry.log-error .log-level {
+  color: #ff4d4d;
+}
+.log-entry.log-debug .log-level {
+  color: #88aaff;
+}
 
 .log-message {
   white-space: pre-wrap;

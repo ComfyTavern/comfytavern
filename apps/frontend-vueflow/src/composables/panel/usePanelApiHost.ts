@@ -1,4 +1,4 @@
-import { onUnmounted, type Ref, watch, ref } from 'vue';
+import { watchEffect, type Ref, watch, ref } from 'vue';
 import { useExecutionStore } from '@/stores/executionStore';
 import { useApiAdapterManager } from '@/services/ApiAdapterManager';
 import { ExecutionStatus, type InvocationRequest, type PanelDefinition } from '@comfytavern/types';
@@ -32,8 +32,8 @@ interface ApiResponseMessage {
 export function usePanelApiHost(
   iframeRef: Ref<HTMLIFrameElement | null>,
   panelOrigin: Ref<string>,
-  projectId: string,
-  panelId: string,
+  projectId: Ref<string | null>,
+  panelId: Ref<string | null>,
   logs: Ref<any[]>
 ) {
   const executionStore = useExecutionStore();
@@ -51,6 +51,7 @@ export function usePanelApiHost(
      */
     executeWorkflow: async (request: { workflowId: string; inputs: Record<string, any> }) => {
       console.warn('[Host] executeWorkflow is deprecated. Please use the new invoke() method.');
+      // 旧版方法不处理别名，直接使用 workflowId
       return panelApiHost.invoke({
         mode: 'native',
         workflowId: request.workflowId,
@@ -70,38 +71,19 @@ export function usePanelApiHost(
         throw new Error("面板定义尚未加载，无法处理调用请求。");
       }
 
-      let finalRequest: InvocationRequest;
-
-      // 优先处理别名
-      if (request.alias) {
-        const binding = panelDef.value.workflowBindings?.find(b => b.alias === request.alias);
-        if (!binding) {
-          throw new Error(`未找到别名为 "${request.alias}" 的工作流绑定。`);
-        }
-        
-        finalRequest = {
-          mode: 'native', // 别名绑定总是解析为原生工作流调用
-          workflowId: binding.workflowId,
-          inputs: request.inputs,
-        };
-        console.log(`[Host] Alias "${request.alias}" resolved to workflowId "${binding.workflowId}".`);
-      } else {
-        finalRequest = request;
-      }
-
-      // 验证最终请求的有效性
-      if (finalRequest.mode === 'native' && !finalRequest.workflowId) {
+      // 验证请求的有效性
+      if (request.mode === 'native' && !request.workflowId) {
         throw new Error("原生模式调用缺少 'workflowId'。");
       }
-      if (finalRequest.mode === 'adapter' && !finalRequest.adapterId) {
+      if (request.mode === 'adapter' && !request.adapterId) {
         throw new Error("适配器模式调用缺少 'adapterId'。");
       }
-      if (!finalRequest.mode) {
+      if (!request.mode) {
         throw new Error("调用请求缺少 'mode'。");
       }
 
        // 将验证和转换后的请求转发给 ApiAdapterManager
-       return await apiAdapterManager.invoke(finalRequest);
+       return await apiAdapterManager.invoke(request);
     },
 
     /**
@@ -299,38 +281,41 @@ export function usePanelApiHost(
       console.error('[Host] Cannot inject script: iframe or contentWindow not available.');
       return;
     }
-    const script = getInjectionScript();
-    // 使用一种更可靠的方式注入脚本
-    iframe.contentWindow.postMessage({ type: 'inject-script', script: script }, panelOrigin.value || '*');
-    console.log('[Host] API injection script sent to iframe.');
+    const scriptContent = getInjectionScript();
+    
+    // 我们不能直接在 iframe 中执行脚本，但我们可以向它发送脚本内容。
+    // 这要求 iframe 内部有一个监听器来接收并执行此脚本。
+    // 这是我们在 usePanelApiHost 外部（例如在面板的 HTML 中）需要处理的事情。
+    // 出于这个原因，我们将修改 getInjectionScript 以包含自执行逻辑，并在这里发送它。
+    
+    const injectionPayload = {
+      type: 'inject-and-run-script', // 使用一个新的类型来表示这个特定操作
+      script: scriptContent,
+    };
+    
+    iframe.contentWindow.postMessage(injectionPayload, panelOrigin.value || '*');
+    console.log('[Host] API injection script sent to iframe via postMessage.');
   }
   
-  /**
-   * 初始化宿主环境，开始监听消息。
-   */
-  const initializeHost = async () => {
-    // 初始化时获取面板定义
-    panelDef.value = await panelStore.fetchPanelDefinition(projectId, panelId);
+  watchEffect(async (onInvalidate) => {
+    if (!projectId.value || !panelId.value) return;
+
+    const currentProjectId = projectId.value;
+    const currentPanelId = panelId.value;
+
+    panelDef.value = await panelStore.fetchPanelDefinition(currentProjectId, currentPanelId);
     if (!panelDef.value) {
-      console.error(`[Host] Failed to fetch panel definition for ${panelId}. API calls may fail.`);
+      console.error(`[Host] Failed to fetch panel definition for ${currentPanelId}. API calls may fail.`);
     }
-
+    
     window.addEventListener('message', handleMessage);
-    console.log('[Host] Panel API host initialized and listening for messages.');
-  };
-
-  /**
-   * 组件卸载时清理资源。
-   */
-  onUnmounted(() => {
-    window.removeEventListener('message', handleMessage);
-    // 取消所有仍在进行的订阅
-    activeSubscriptions.forEach(unwatch => unwatch());
-    activeSubscriptions.clear();
-    console.log('[Host] Panel API host cleaned up.');
+    console.log(`[Host] Panel API host initialized for ${currentPanelId} and listening for messages.`);
+    
+    onInvalidate(() => {
+      window.removeEventListener('message', handleMessage);
+      activeSubscriptions.forEach(unwatch => unwatch());
+      activeSubscriptions.clear();
+      console.log(`[Host] Panel API host for ${currentPanelId} cleaned up.`);
+    });
   });
-
-  return {
-    initializeHost,
-  };
 }
