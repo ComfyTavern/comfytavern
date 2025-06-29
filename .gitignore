@@ -50,5 +50,9 @@ config.json
 data/
 userData/
 # apps/backend/drizzle/migrations
-scripts/merged_locales
 public/avatars
+
+# i18n
+/scripts/merged_locales
+/locales-extensions/*
+!/locales-extensions/README.md
