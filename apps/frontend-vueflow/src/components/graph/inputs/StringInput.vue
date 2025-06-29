@@ -2,7 +2,7 @@
   <div ref="rootRef" class="string-input relative w-full flex items-center min-w-0">
     <input ref="inputRef" type="text" :value="props.modelValue" :placeholder="props.placeholder"
       v-comfy-tooltip="props.placeholder" :disabled="props.disabled" :readonly="props.readonly" @change="handleChange"
-      class="flex-1 rounded border transition-colors duration-200 min-w-0 bg-background-base dark:bg-background-surface border-border-base text-text-base placeholder-text-muted focus:ring-1 focus:ring-inset focus:ring-primary/50 focus:border-transparent hover:border-primary"
+      class="node-input flex-1 rounded border transition-colors duration-200 min-w-0 bg-background-base dark:bg-background-surface border-border-base text-text-base placeholder-text-muted focus:ring-1 focus:ring-inset focus:ring-primary/50 focus:border-transparent hover:border-primary"
       :class="[sizeClasses.input, // 修正：使用数组来合并 class
         {
           'border-error': props.hasError,
@@ -16,7 +16,7 @@
     <!-- Dropdown Trigger -->
     <button v-if="hasSuggestions" ref="triggerRef" type="button" @click.stop="toggleDropdown"
       :disabled="props.disabled || props.readonly"
-      class="flex-shrink-0 border border-l-0 rounded-r border-border-base bg-background-base hover:bg-background-hover focus:outline-none focus:ring-1 focus:ring-inset focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+      class="node-input flex-shrink-0 border border-l-0 rounded-r border-border-base bg-background-base hover:bg-background-hover focus:outline-none focus:ring-1 focus:ring-inset focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
       :class="sizeClasses.button" aria-haspopup="listbox" :aria-expanded="isDropdownVisible">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
         class="w-3 h-3 text-text-muted">

@@ -16,7 +16,7 @@
         @blur="endEdit"
         @keydown.enter="endEdit"
         @keydown.esc="cancelEdit"
-        class="w-full rounded border transition-colors duration-200 bg-background-base dark:bg-background-surface border-border-base text-text-base placeholder-text-muted focus:ring-1 focus:ring-primary/50 focus:border-transparent hover:border-primary text-left"
+        class="node-input w-full rounded border transition-colors duration-200 bg-background-base dark:bg-background-surface border-border-base text-text-base placeholder-text-muted focus:ring-1 focus:ring-primary/50 focus:border-transparent hover:border-primary text-left"
         :class="[
           sizeClasses.editingInput,
           {
@@ -45,7 +45,7 @@
       >
         <!-- 减少按钮 -->
         <button
-          class="flex items-center justify-center text-text-muted bg-background-base hover:bg-background-hover active:bg-primary/20 transition-colors duration-200 focus:outline-none border-r border-border-base"
+          class="node-input flex items-center justify-center text-text-muted bg-background-base hover:bg-background-hover active:bg-primary/20 transition-colors duration-200 focus:outline-none border-r border-border-base"
           :class="sizeClasses.stepperButton"
           @click.stop="stepValue(-1)"
           :disabled="props.disabled || props.readonly"
@@ -88,7 +88,7 @@
 
         <!-- 增加按钮 -->
         <button
-          class="flex items-center justify-center text-text-muted bg-background-base hover:bg-background-hover active:bg-primary/20 transition-colors duration-200 focus:outline-none border-l border-border-base"
+          class="node-input flex items-center justify-center text-text-muted bg-background-base hover:bg-background-hover active:bg-primary/20 transition-colors duration-200 focus:outline-none border-l border-border-base"
           :class="sizeClasses.stepperButton"
           @click.stop="stepValue(1)"
           :disabled="props.disabled || props.readonly"

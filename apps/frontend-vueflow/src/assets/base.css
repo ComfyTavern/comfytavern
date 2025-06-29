@@ -150,14 +150,14 @@ html.font-size-x-large {
 /* Provides a base style for native form elements to ensure they align with the application theme. */
 
 /* Text inputs, Textareas, Selects */
-input[type='text'],
-input[type='password'],
-input[type='email'],
-input[type='number'],
-input[type='url'],
-input[type='search'],
-textarea,
-select {
+input[type='text']:not(.node-input),
+input[type='password']:not(.node-input),
+input[type='email']:not(.node-input),
+input[type='number']:not(.node-input),
+input[type='url']:not(.node-input),
+input[type='search']:not(.node-input),
+textarea:not(.node-input),
+select:not(.node-input) {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
@@ -187,29 +187,29 @@ html.dark select {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
 }
 
-input[type='text']:focus,
-input[type='password']:focus,
-input[type='email']:focus,
-input[type='number']:focus,
-input[type='url']:focus,
-input[type='search']:focus,
-textarea:focus,
-select:focus {
+input[type='text']:not(.node-input):focus,
+input[type='password']:not(.node-input):focus,
+input[type='email']:not(.node-input):focus,
+input[type='number']:not(.node-input):focus,
+input[type='url']:not(.node-input):focus,
+input[type='search']:not(.node-input):focus,
+textarea:not(.node-input):focus,
+select:not(.node-input):focus {
   outline: none;
   border-color: hsl(var(--ct-primary-hsl));
   box-shadow: 0 0 0 2px hsl(var(--ct-primary-hsl) / var(--ct-focus-ring-opacity, 0.5));
 }
 
-input::placeholder,
-textarea::placeholder {
+input:not(.node-input)::placeholder,
+textarea:not(.node-input)::placeholder {
   color: hsl(var(--ct-text-muted-hsl));
   opacity: 1;
 }
 
-input:disabled,
-textarea:disabled,
-select:disabled,
-button:disabled {
+input:not(.node-input):disabled,
+textarea:not(.node-input):disabled,
+select:not(.node-input):disabled,
+button:not(.node-input):disabled {
   background-color: hsl(var(--ct-background-base-hsl));
   color: hsl(var(--ct-text-muted-hsl));
   cursor: not-allowed;

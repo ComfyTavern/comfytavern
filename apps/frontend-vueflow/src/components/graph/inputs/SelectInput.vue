@@ -5,7 +5,7 @@
       type="button"
       :disabled="props.disabled || props.readonly"
       @click.stop="toggleDropdown"
-      class="w-full rounded border transition-colors duration-200 flex items-center justify-between text-left
+      class="node-input w-full rounded border transition-colors duration-200 flex items-center justify-between text-left
              bg-background-base dark:bg-background-surface
              border-border-base
              text-text-base
