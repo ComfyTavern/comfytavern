@@ -1,11 +1,10 @@
 <template>
-  <div
-    class="workflow-binder-container h-full flex flex-col p-6 bg-background-surface rounded-lg shadow-sm border border-border-base/20">
+  <div class="workflow-binder-container h-full flex flex-col p-6">
     <div v-if="isLoading" class="text-center py-12">
       <p>正在加载配置...</p>
     </div>
 
-    <div v-else-if="!panelDef" class="text-center py-12 text-error">
+    <div v-else-if="!props.panelDefinition" class="text-center py-12 text-error">
       <p>无法加载面板定义。</p>
     </div>
 
@@ -33,13 +32,16 @@
         <div class="md:col-span-8 flex flex-col min-h-0">
           <h3 class="text-lg font-semibold mb-4 border-b border-border-base pb-2 text-text-base">已绑定工作流</h3>
           <div class="flex-grow overflow-y-auto space-y-3 pr-2">
-            <div v-if="!bindings.length" class="text-sm text-text-disabled text-center py-4">
+            <div v-if="!localBindings.length" class="text-sm text-text-disabled text-center py-4">
               尚未绑定任何工作流。
             </div>
-            <div v-for="(binding, index) in bindings" :key="binding.workflowId + index"
+            <div v-for="(binding, index) in localBindings" :key="binding.workflowId + index"
               class="p-4 bg-background-surface rounded-lg border border-border-base/40 hover:border-primary/30 transition-colors">
               <div class="flex items-center justify-between mb-3">
-                <p class="text-base font-medium text-primary">{{ getWorkflowName(binding.workflowId) }}</p>
+                <div class="flex items-baseline gap-2">
+                  <p class="text-base font-medium text-primary">{{ getWorkflowName(binding.workflowId) }}</p>
+                  <span class="text-xs text-text-disabled font-medium">ID : {{ binding.workflowId }}</span>
+                </div>
                 <button @click="removeBinding(binding.workflowId)"
                   class="group flex items-center justify-center w-7 h-7 rounded-md transition-colors hover:bg-error-soft">
                   <IconDelete class="w-4 h-4 text-text-muted transition-colors group-hover:text-error" />
@@ -50,7 +52,6 @@
                 <div class="text-sm">
                   <p class="text-text-muted line-clamp-2">{{ getWorkflowDescription(binding.workflowId) || '无可用描述。' }}
                   </p>
-                  <p class="text-xs text-text-disabled mt-1 font-mono">ID: {{ binding.workflowId }}</p>
                 </div>
 
                 <!-- Details sections -->
@@ -125,37 +126,19 @@
         </div>
       </div>
 
-      <!-- Footer with actions -->
-      <div class="mt-6 pt-4 border-t border-border-base flex justify-end gap-x-3">
-        <button @click="goBack"
-          class="px-4 py-2 font-medium border border-border-base/50 text-text-base bg-background-surface rounded-md hover:bg-background-modifier-hover transition-colors">
-          返回
-        </button>
-        <button @click="saveChanges" :disabled="panelStore.isSavingDefinition"
-          class="px-4 py-2 font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center">
-          <IconSpinner v-if="panelStore.isSavingDefinition" class="w-5 h-5 animate-spin" />
-          <span v-else>保存更改</span>
-        </button>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import { useDialogService } from '@/services/DialogService';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useWorkflowStore } from '@/stores/workflowStore';
-import { usePanelStore } from '@/stores/panelStore';
 import { DataFlowType, type DataFlowTypeName, type PanelDefinition, type PanelWorkflowBinding, type GroupSlotInfo, BuiltInSocketMatchCategory } from '@comfytavern/types';
-import { klona } from 'klona';
-import { vComfyTooltip } from '@/directives/vComfyTooltip';
 import styles from '@/components/graph/nodes/handleStyles.module.css';
 import IconAdd from '@/components/icons/IconAdd.vue';
 import IconDelete from '@/components/icons/IconDelete.vue';
-import IconCopy from '@/components/icons/IconCopy.vue';
-import IconSpinner from '@/components/icons/IconSpinner.vue';
 import CollapsibleSection from '@/components/common/CollapsibleSection.vue';
+import { vComfyTooltip } from '@/directives/vComfyTooltip'; // 重新引入 vComfyTooltip
 
 const props = defineProps({
   projectId: {
@@ -166,21 +149,29 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  // 接收父组件传递的 panelDef 和 bindings
+  panelDefinition: {
+    type: Object as () => PanelDefinition | null,
+    required: true,
+  },
+  initialBindings: {
+    type: Array as () => PanelWorkflowBinding[],
+    required: true,
+  },
 });
 
-const router = useRouter();
-const workflowStore = useWorkflowStore();
-const panelStore = usePanelStore();
-const dialogService = useDialogService();
+const emit = defineEmits(['update:bindings']);
 
-const panelDef = ref<PanelDefinition | null>(null);
-const bindings = ref<PanelWorkflowBinding[]>([]);
+const workflowStore = useWorkflowStore();
+
+// 内部状态，用于操作和显示
+const localBindings = ref<PanelWorkflowBinding[]>([]);
 const isLoading = ref(true);
 const boundWorkflowsDetails = ref<Record<string, { inputs: Record<string, GroupSlotInfo>, outputs: Record<string, GroupSlotInfo> }>>({});
 
 const availableWorkflows = computed(() => workflowStore.availableWorkflows);
 const isWorkflowBound = (workflowId: string) => {
-  return bindings.value.some(b => b.workflowId === workflowId);
+  return localBindings.value.some(b => b.workflowId === workflowId);
 };
 
 const getWorkflowName = (workflowId: string) => {
@@ -298,7 +289,7 @@ const generateCodeForBinding = (binding: PanelWorkflowBinding): string => {
  * @example
  * // 在 onResult 回调中，data.outputs 可能包含:
  * ${outputsDoc || ' *   (无明确输出)'}
- */
+ * */
 async function ${functionName}(inputs) {
   const { executionId } = await window.comfyTavern.panelApi.invoke({
     mode: 'native',
@@ -329,6 +320,10 @@ ${exampleOutputs || '    //   (此工作流无输出)'}
 */`;
 };
 
+// 复制功能保留，但需要重新引入 dialogService 和 IconCopy
+import { useDialogService } from '@/services/DialogService';
+import IconCopy from '@/components/icons/IconCopy.vue';
+const dialogService = useDialogService();
 const copyCode = async (code: string) => {
   try {
     await navigator.clipboard.writeText(code);
@@ -338,46 +333,35 @@ const copyCode = async (code: string) => {
     dialogService.showError('复制失败');
   }
 };
-const goBack = () => {
-  router.back();
-};
 
 const addBinding = (workflowId: string) => {
   if (isWorkflowBound(workflowId)) return;
 
-  bindings.value.push({
-    workflowId,
-  });
+  const newBindings = [...localBindings.value, { workflowId }];
+  localBindings.value = newBindings;
+  emit('update:bindings', newBindings); // 通知父组件更新
 
   fetchAndStoreWorkflowDetails(workflowId);
 };
 
 const removeBinding = (workflowId: string) => {
-  bindings.value = bindings.value.filter(b => b.workflowId !== workflowId);
+  const newBindings = localBindings.value.filter(b => b.workflowId !== workflowId);
+  localBindings.value = newBindings;
+  emit('update:bindings', newBindings); // 通知父组件更新
   delete boundWorkflowsDetails.value[workflowId];
 };
 
-const saveChanges = async () => {
-  if (!panelDef.value) return;
-
-  const updatedPanelDef = klona(panelDef.value);
-  updatedPanelDef.workflowBindings = bindings.value;
-
-  await panelStore.savePanelDefinition(props.projectId, updatedPanelDef);
-};
+// 监听 initialBindings 的变化，同步到 localBindings
+watch(() => props.initialBindings, (newBindings) => {
+  localBindings.value = newBindings;
+  // 当 initialBindings 变化时，重新获取工作流详情
+  newBindings.forEach(b => fetchAndStoreWorkflowDetails(b.workflowId));
+}, { immediate: true }); // 立即执行一次
 
 onMounted(async () => {
   isLoading.value = true;
-  await Promise.all([
-    workflowStore.fetchAvailableWorkflows(),
-    panelStore.fetchPanelDefinition(props.projectId, props.panelId).then(data => {
-      panelDef.value = data;
-      if (data?.workflowBindings) {
-        bindings.value = klona(data.workflowBindings);
-        bindings.value.forEach(b => fetchAndStoreWorkflowDetails(b.workflowId));
-      }
-    }),
-  ]);
+  await workflowStore.fetchAvailableWorkflows();
+  // initialBindings 会通过 watch 立即同步并触发详情获取
   isLoading.value = false;
 });
 </script>
