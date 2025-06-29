@@ -93,15 +93,8 @@ export const usePanelStore = defineStore('panel', () => {
     isSavingDefinition.value = true;
     try {
       // panel.json 的完整逻辑路径
-      // const panelPath = `user://projects/${projectId}/ui/${panelDef.panelDirectory}/panel.json`;
-      // 目标目录
-      const targetDir = `user://projects/${projectId}/ui/${panelDef.panelDirectory}/`;
-
-      const blob = new Blob([JSON.stringify(panelDef, null, 2)], { type: 'application/json' });
-      const formData = new FormData();
-      formData.append('files', blob, `panel.json`);
-
-      await fileManagerApiClient.writeFile(targetDir, formData);
+      const panelPath = `user://projects/${projectId}/ui/${panelDef.panelDirectory}/panel.json`;
+      await fileManagerApiClient.writeJsonFile(panelPath, panelDef);
 
       // 更新本地缓存
       panelsById.set(panelDef.id, panelDef);

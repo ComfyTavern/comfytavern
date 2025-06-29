@@ -184,6 +184,25 @@ export async function readFile(logicalPath: string): Promise<any> {
   }
 }
 
+/**
+ * 直接通过 JSON 内容写入一个文件。
+ * @param logicalPath 文件的完整逻辑路径 (e.g., "user://.../panel.json")
+ * @param content 要写入的 JSON 对象
+ * @returns Promise<void>
+ */
+export async function writeJsonFile(logicalPath: string, content: object): Promise<void> {
+  try {
+    await useApi().post<void>(`${API_PREFIX}/write-json`, {
+      logicalPath,
+      content,
+    });
+  } catch (err) {
+    console.error(`[fileManagerApi] Failed to write JSON file to "${logicalPath}":`, err);
+    throw err;
+  }
+}
+
+
 // 占位导出，确保文件在没有其他具体导出时仍被视为模块
 export const fileManagerApiClient = {
   listDir,
@@ -194,4 +213,5 @@ export const fileManagerApiClient = {
   deleteFilesOrDirs,
   getDownloadFileLink,
   readFile,
+  writeJsonFile, // 添加新的方法
 };

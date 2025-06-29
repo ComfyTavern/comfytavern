@@ -637,10 +637,47 @@ export const fileManagerRoutes = new Elysia({
       // 更稳妥的方式是让前端将所有文件放在一个名为 'files' 的数组中，或者分别命名。
       // 这里我们用 t.Any() 简化，然后在处理器中检查 body.files
       body: t.Object({
-        files: t.Any(), // 允许 File 或 File[]，具体由前端 FormData 构造决定
+        // 咕: 此接口的 multipart/form-data 解析在某些情况下可能不稳定。
+        // 对于写入 JSON 内容，请优先使用新增的 /write-json 接口。
+        files: t.Any(),
       }),
       detail: {
         summary: "Upload one or more files to a target directory.",
+        tags: ["File Manager"],
+      },
+    }
+  )
+  // POST /api/fam/write-json - 直接写入JSON内容
+  .post(
+    "/write-json",
+    async (ctx) => {
+      const { body, set, userContext } = ctx as FamRequestContext & { body: { logicalPath: string, content: any } };
+      const { logicalPath, content } = body;
+      const userId = getUserIdFromContext(userContext);
+
+      try {
+        console.log(`[FileManagerRoutes] Attempting to write JSON to '${logicalPath}' for userId: ${userId}`);
+        const jsonString = JSON.stringify(content, null, 2);
+        await famService.writeFile(userId, logicalPath, jsonString, { encoding: 'utf-8' });
+        set.status = 204; // No Content, 成功
+      } catch (error: any) {
+        console.error(`[FileManagerRoutes] Error writing JSON to '${logicalPath}' (userId: ${userId}):`, error);
+        if (error.message.includes("Invalid logical path") || error.message.includes("UserId is required")) {
+          set.status = 400;
+        } else {
+          set.status = 500;
+        }
+        return { error: error.message };
+      }
+    },
+    {
+      body: t.Object({
+        logicalPath: t.String({ minLength: 1 }),
+        content: t.Any(), // 接受任何可序列化为JSON的对象
+      }),
+      detail: {
+        summary: "Write content to a file as JSON.",
+        description: "Accepts a logical path and a JSON object, writes it to the specified location.",
         tags: ["File Manager"],
       },
     }
