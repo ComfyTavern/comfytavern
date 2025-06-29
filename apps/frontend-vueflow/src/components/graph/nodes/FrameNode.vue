@@ -190,6 +190,15 @@ const handleResizeEnd = (event: { params: { width: number, height: number } }) =
 
 /* --- NodeResizer 样式覆盖 --- */
 
+/* 隐藏不需要的控制点，只保留右、下和右下角 */
+:deep(.vue-flow__resize-control.handle.top.left),
+:deep(.vue-flow__resize-control.handle.top.right),
+:deep(.vue-flow__resize-control.handle.bottom.left),
+:deep(.vue-flow__resize-control.line.top),
+:deep(.vue-flow__resize-control.line.left) {
+  display: none;
+}
+
 /* 确保所有 resizer 控件都在最上层，避免被遮挡 */
 :deep(.vue-flow__resize-control) {
   z-index: 10;
