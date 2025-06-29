@@ -48,7 +48,8 @@
               <div class="space-y-3">
                 <!-- Workflow Info -->
                 <div class="text-sm">
-                  <p class="text-text-muted line-clamp-2">{{ getWorkflowDescription(binding.workflowId) || '无可用描述。' }}</p>
+                  <p class="text-text-muted line-clamp-2">{{ getWorkflowDescription(binding.workflowId) || '无可用描述。' }}
+                  </p>
                   <p class="text-xs text-text-disabled mt-1 font-mono">ID: {{ binding.workflowId }}</p>
                 </div>
 
@@ -62,10 +63,12 @@
                         <!-- Inputs -->
                         <div>
                           <h4 class="text-xs font-semibold uppercase text-text-secondary mb-2">输入</h4>
-                          <div v-if="Object.keys(boundWorkflowsDetails[binding.workflowId]!.inputs).length > 0" class="space-y-1.5">
+                          <div v-if="Object.keys(boundWorkflowsDetails[binding.workflowId]!.inputs).length > 0"
+                            class="space-y-1.5">
                             <div v-for="(input, key) in boundWorkflowsDetails[binding.workflowId]!.inputs" :key="key"
                               class="flex items-center justify-between text-xs text-text-base">
-                              <span class="truncate" v-comfy-tooltip="`${input.displayName || key}`">{{ input.displayName || key }}</span>
+                              <span class="truncate" v-comfy-tooltip="`${input.displayName || key}`">{{
+                                input.displayName || key }}</span>
                               <div class="flex items-center space-x-1.5 flex-shrink-0">
                                 <span class="text-text-muted">{{ input.dataFlowType }}</span>
                                 <span :class="getHandleClasses(input, true)"
@@ -78,10 +81,12 @@
                         <!-- Outputs -->
                         <div>
                           <h4 class="text-xs font-semibold uppercase text-text-secondary mb-2">输出</h4>
-                          <div v-if="Object.keys(boundWorkflowsDetails[binding.workflowId]!.outputs).length > 0" class="space-y-1.5">
+                          <div v-if="Object.keys(boundWorkflowsDetails[binding.workflowId]!.outputs).length > 0"
+                            class="space-y-1.5">
                             <div v-for="(output, key) in boundWorkflowsDetails[binding.workflowId]!.outputs" :key="key"
                               class="flex items-center justify-between text-xs text-text-base">
-                              <span class="truncate" v-comfy-tooltip="`${output.displayName || key}`">{{ output.displayName || key }}</span>
+                              <span class="truncate" v-comfy-tooltip="`${output.displayName || key}`">{{
+                                output.displayName || key }}</span>
                               <div class="flex items-center space-x-1.5 flex-shrink-0">
                                 <span class="text-text-muted">{{ output.dataFlowType }}</span>
                                 <span :class="getHandleClasses(output, false)"
@@ -100,15 +105,16 @@
                   <CollapsibleSection>
                     <template #title>API 调用示例</template>
                     <template #content>
-                     <div v-if="boundWorkflowsDetails[binding.workflowId]">
-                       <div class="bg-background-base rounded-md text-sm font-mono overflow-x-auto relative group">
-                          <pre class="p-3 leading-relaxed"><code class="language-javascript">{{ generateCodeForBinding(binding) }}</code></pre>
+                      <div v-if="boundWorkflowsDetails[binding.workflowId]">
+                        <div class="bg-background-base rounded-md text-sm font-mono overflow-x-auto relative group">
+                          <pre
+                            class="p-3 leading-relaxed"><code class="language-javascript">{{ generateCodeForBinding(binding) }}</code></pre>
                           <button @click="copyCode(generateCodeForBinding(binding))" v-comfy-tooltip="'复制代码'"
                             class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md bg-background-surface hover:bg-background-modifier-hover text-text-muted hover:text-text-base">
                             <IconCopy class="w-4 h-4" />
                           </button>
                         </div>
-                     </div>
+                      </div>
                       <div v-else class="text-xs text-text-disabled italic">等待接口详情加载完毕...</div>
                     </template>
                   </CollapsibleSection>
@@ -119,8 +125,12 @@
         </div>
       </div>
 
-      <!-- Footer with Save button -->
-      <div class="mt-6 pt-4 border-t border-border-base flex justify-end">
+      <!-- Footer with actions -->
+      <div class="mt-6 pt-4 border-t border-border-base flex justify-end gap-x-3">
+        <button @click="goBack"
+          class="px-4 py-2 font-medium border border-border-base/50 text-text-base bg-background-surface rounded-md hover:bg-background-modifier-hover transition-colors">
+          返回
+        </button>
         <button @click="saveChanges" :disabled="panelStore.isSavingDefinition"
           class="px-4 py-2 font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center">
           <IconSpinner v-if="panelStore.isSavingDefinition" class="w-5 h-5 animate-spin" />
@@ -133,6 +143,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useDialogService } from '@/services/DialogService';
 import { useWorkflowStore } from '@/stores/workflowStore';
 import { usePanelStore } from '@/stores/panelStore';
@@ -157,6 +168,7 @@ const props = defineProps({
   },
 });
 
+const router = useRouter();
 const workflowStore = useWorkflowStore();
 const panelStore = usePanelStore();
 const dialogService = useDialogService();
@@ -326,6 +338,10 @@ const copyCode = async (code: string) => {
     dialogService.showError('复制失败');
   }
 };
+const goBack = () => {
+  router.back();
+};
+
 const addBinding = (workflowId: string) => {
   if (isWorkflowBound(workflowId)) return;
 
