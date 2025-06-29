@@ -100,66 +100,47 @@ export function usePanelApiHost(
       }
 
       const unwatch = watch(
-        // 1. 创建一个更精确的 getter，只依赖我们关心的状态
-        () => {
-          const state = executionStore.tabExecutionStates.get(executionId);
-          if (!state) return null;
-          
-          // 返回一个包含所有相关状态的扁平对象
-          return {
-            status: state.workflowStatus,
-            finalOutputs: state.nodeOutputs['__WORKFLOW_INTERFACE_OUTPUTS__'],
-            streamingOutputs: state.streamingInterfaceOutputs,
-            error: state.workflowError,
-          };
-        },
-        // 2. watch 回调现在处理这个新的、更简单的 state 对象
-        (newState, oldState) => {
-          if (!newState) return;
+        // 只监听工作流的状态本身
+        () => executionStore.tabExecutionStates.get(executionId)?.workflowStatus,
+        (newStatus, oldStatus) => {
+          if (!newStatus) return;
 
-          // 检查流式接口输出
-          if (newState.streamingOutputs) {
-            const oldStreamingOutputs = oldState?.streamingOutputs || {};
-            for (const key in newState.streamingOutputs) {
-              const stream = newState.streamingOutputs[key];
-              const oldStream = oldStreamingOutputs[key];
-              // 仅当文本实际发生变化时才发送事件
-              if (stream && (!oldStream || stream.accumulatedText !== oldStream.accumulatedText)) {
-                iframeRef.value?.contentWindow?.postMessage({
-                  type: 'execution-event',
-                  event: 'onProgress',
-                  executionId,
-                  payload: klona({ key, content: stream.accumulatedText, isComplete: !!stream.isComplete })
-                }, panelOrigin.value);
-              }
-            }
-          }
+          // 当状态变为 COMPLETE 时，从 store 中获取最新的完整状态
+          if (newStatus === ExecutionStatus.COMPLETE && oldStatus !== ExecutionStatus.COMPLETE) {
+            const finalState = executionStore.tabExecutionStates.get(executionId);
+            if (!finalState) return;
+            
+            const finalOutputs = finalState.nodeOutputs['__WORKFLOW_INTERFACE_OUTPUTS__'] || {};
 
-          // 检查最终结果
-          if (newState.status === ExecutionStatus.COMPLETE && oldState?.status !== ExecutionStatus.COMPLETE) {
             iframeRef.value?.contentWindow?.postMessage({
               type: 'execution-event',
               event: 'onResult',
               executionId,
-              payload: klona({ status: 'COMPLETE', outputs: newState.finalOutputs || {} })
+              payload: klona({ status: 'COMPLETE', outputs: finalOutputs })
             }, panelOrigin.value);
             unwatch();
             activeSubscriptions.delete(executionId);
           }
 
-          // 检查错误
-          if (newState.status === ExecutionStatus.ERROR && oldState?.status !== ExecutionStatus.ERROR) {
+          // 当状态变为 ERROR 时，同样获取最新状态
+          if (newStatus === ExecutionStatus.ERROR && oldStatus !== ExecutionStatus.ERROR) {
+             const finalState = executionStore.tabExecutionStates.get(executionId);
+            if (!finalState) return;
+
             iframeRef.value?.contentWindow?.postMessage({
               type: 'execution-event',
               event: 'onError',
               executionId,
-              payload: klona({ error: newState.error })
+              payload: klona({ error: finalState.workflowError })
             }, panelOrigin.value);
             unwatch();
             activeSubscriptions.delete(executionId);
           }
-        },
-        { deep: true } // deep 仍然是必要的，因为我们监听对象内部的变化
+
+          // TODO: 未来可以单独处理流式输出
+          // 目前的逻辑假设流式输出不改变最终状态，这可能是个问题
+          // 但对于当前场景，我们优先保证最终结果的正确传递
+        }
       );
 
       activeSubscriptions.set(executionId, unwatch);

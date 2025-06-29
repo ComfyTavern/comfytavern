@@ -197,6 +197,15 @@ export function useWorkflowInvocation() {
             dialogService.showError('执行失败', `无法加载工作流: ${workflowId}`);
             return null;
         }
+        
+        // 关键修复：在 'saved' 模式下也构建 outputInterfaceMappings
+        outputInterfaceMappings = buildOutputInterfaceMappings(
+            loadedData,
+            loadedData.nodes,
+            loadedData.edges,
+            workflowId
+        );
+
         // For saved workflows, we assume no complex flattening or client scripts are needed at invocation time.
         // The structure is already in WorkflowStorageObject format.
         workflowToExecute = {
