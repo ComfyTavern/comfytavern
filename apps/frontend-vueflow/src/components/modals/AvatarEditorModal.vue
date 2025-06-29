@@ -4,14 +4,14 @@
       <div class="upload-section">
         <p class="section-title">上传本地图片</p>
         <input type="file" ref="fileInputRef" @change="handleFileChange" accept="image/*" style="display: none;" />
-        <button class="btn btn-primary" @click="triggerFileInput">选择文件</button>
+        <button class="px-4 py-2 text-sm font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50" @click="triggerFileInput">选择文件</button>
         <p v-if="fileName" class="file-name-display">已选择: {{ fileName }}</p>
       </div>
 
       <div class="url-section">
         <p class="section-title">使用网络链接</p>
         <input type="url" v-model="imageUrl" placeholder="粘贴图片 URL" class="input-field" />
-        <button class="btn btn-secondary btn-sm ml-2" @click="loadUrlForPreview" :disabled="!imageUrl">预览URL</button>
+        <button class="ml-2 px-3 py-1.5 text-xs font-medium text-primary bg-primary-soft rounded-md hover:bg-primary-soft/80" @click="loadUrlForPreview" :disabled="!imageUrl">预览URL</button>
       </div>
 
       <div v-if="previewSrc" class="preview-section">
@@ -22,8 +22,22 @@
     </div>
 
     <template #footer>
-      <button class="btn btn-secondary" @click="closeModal">取消</button>
-      <button class="btn btn-primary ml-2" @click="saveAvatar" :disabled="!selectedFile && !finalImageUrl">保存</button>
+      <div class="flex justify-end space-x-3 w-full">
+        <button
+          type="button"
+          @click="closeModal"
+          class="px-4 py-2 text-sm font-medium text-text-secondary bg-background-surface border border-border-base rounded-md hover:bg-neutral-softest transition-colors"
+        >
+          取消
+        </button>
+        <button
+          @click="saveAvatar"
+          :disabled="!selectedFile && !finalImageUrl"
+          class="px-4 py-2 text-sm font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          保存
+        </button>
+      </div>
     </template>
   </BaseModal>
 </template>
@@ -235,16 +249,5 @@ const saveAvatar = async () => {
   text-align: center;
 }
 
-/* 自定义 .btn, .btn-primary, .btn-secondary, .btn-sm 样式已移除，依赖全局 Tailwind/DaisyUI */
-/* .btn { ... } */
-/* .btn-primary { ... } */
-/* .btn-primary:hover { ... } */
-/* .btn-primary:disabled { ... } */
-/* .btn-secondary { ... } */
-/* .btn-secondary:hover { ... } */
-/* .btn-sm { ... } */
-
-.ml-2 {
-  margin-left: 8px;
-}
+/* 按钮样式现在完全依赖于模板中的 Tailwind CSS 类。 */
 </style>
