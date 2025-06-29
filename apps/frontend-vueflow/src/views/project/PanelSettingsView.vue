@@ -8,11 +8,11 @@
       <!-- 操作按钮区域 -->
       <div class="flex items-center gap-x-3">
         <button @click="goBack"
-          class="px-4 py-2 font-medium border border-border-base/50 text-text-base bg-background-surface rounded-md hover:bg-background-modifier-hover transition-colors">
+          class="px-4 py-2 font-medium border border-border-base/50 text-text-base bg-background-surface rounded-md hover:bg-primary/30 transition-colors">
           返回
         </button>
         <button @click="saveChanges" :disabled="panelStore.isSavingDefinition || !isDirty"
-          class="px-4 py-2 font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center">
+          class="px-4 py-2 font-medium text-primary-content bg-primary rounded-md hover:bg-primary/70 disabled:opacity-50 disabled:cursor-not-allowed disabled:border flex items-center">
           <IconSpinner v-if="panelStore.isSavingDefinition" class="w-5 h-5 animate-spin mr-2" />
           <span>保存更改</span>
         </button>
@@ -29,7 +29,7 @@
               'px-4 py-2 text-sm font-semibold rounded-full transition-colors focus:outline-none',
               activeTabId === tab.id
                 ? 'bg-primary text-primary-content'
-                : 'bg-background-surface text-text-secondary hover:bg-background-modifier-hover hover:text-text-base',
+                : 'bg-background-surface text-text-secondary hover:bg-primary/30 hover:text-text-base',
             ]"
           >
             {{ tab.label }}
@@ -39,7 +39,7 @@
     </nav>
 
     <!-- 主体内容区 -->
-    <div class="flex-grow min-h-0 bg-background-surface rounded-2xl border border-border-base/50 overflow-hidden">
+    <div class="flex-grow min-h-0 rounded-2xl border border-border-base/50 overflow-hidden">
       <div v-if="isLoading" class="p-6 text-center">正在加载...</div>
       <div v-else-if="!panelDef" class="p-6 text-center text-error">无法加载面板定义。</div>
       <component

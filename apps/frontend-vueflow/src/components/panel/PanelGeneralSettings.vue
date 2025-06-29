@@ -47,7 +47,7 @@
             <div class="md:w-1/3">
               <h4 class="font-medium text-text-base">版本</h4>
               <p class="text-sm text-text-secondary">
-                面板的版本号，建议遵循
+                应用面板的版本号，建议遵循
                 <a
                   href="https://semver.org/lang/zh-CN/"
                   target="_blank"
