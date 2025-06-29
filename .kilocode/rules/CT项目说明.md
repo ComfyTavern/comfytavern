@@ -589,10 +589,3 @@ ERROR: Diff block is malformed: marker '=======' found in your diff content at l
 
 1.  **首要检查 `REPLACE` 内部**：确保 `REPLACE` 块内绝对没有 `=======`。
 2.  **检查 `diff` 块完整性**：如果 `REPLACE` 内部无误，请仔细核对整个 `diff` 块的结构。确认所有的 `diff` 标记（如 `<<<<<<< HEAD`，`=======`，`>>>>>>> BRANCH_NAME`，或工具特定的 `START_BLOCK`/`END_BLOCK` 标记）都已正确、完整地闭合。不完整的 `diff` 块会导致解析器误判，即使 `REPLACE` 内部是干净的，也可能因为外部结构错误而报类似的错误。
-
-## 本地化 (i18n)
-
-- **核心规则**:
-  - **使用 `$t` 函数**: 所有面向用户的字符串必须通过 `vue-i18n` 的 `$t('key.path')` 函数包裹。
-  - **以中文为基准**: **所有新的 i18n key 必须首先在 [`zh-CN.json`](../../apps/frontend-vueflow/src/locales/zh-CN.json) 文件中定义**，再同步至其他语言。
-  - **Key 命名**: 采用点分隔的结构化命名，如 `common.buttons.confirm`。
