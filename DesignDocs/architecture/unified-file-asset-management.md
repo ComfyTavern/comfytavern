@@ -83,29 +83,35 @@ ComfyTavern/  (项目根目录, 由 getProjectRootDir() 确定)
 │   └── executions/
 ├── public/  (映射到 system://public/)
 │   └── avatars/
+├── templates/  (新增, 映射到 shared://templates/)
+│   └── project-templates/  (映射到 shared://templates/project-templates/)
+│       ├── {templateId1}/
+│       │   ├── project.json
+│       │   ├── workflows/
+│       │   └── ... (完整的项目结构)
+│       └── {templateId2}/
+│           └── ...
 ├── library/  (映射到 shared://library/)
 │   ├── workflows/  (示例: shared://library/workflows/)
-│   ├── SillyTavern/  (历史遗留, 可按需保留或移除)
+│   ├── SillyTavern/  (历史遗留, 可按需保留或移除，暂且保留作为资源解析测试)
 │   └── knowledgebases/  (映射到 shared://library/knowledgebases/)
 │       ├── {sharedKbId1}/
-│       │   └── ... (知识库文件)
+│       │   └── ...
 │       └── {sharedKbId2}/
 │           └── ...
-├── projects/  (历史遗留, 不再用于核心用户项目存储)
 ├── userData/  (用户数据根目录, 由 getGlobalUserDataRoot() 确定)
 │   ├── {userId1}/
 │   │   ├── projects/  (映射到 user://projects/ 前缀)
 │   │   │   └── {projectId1_1}/
 │   │   │       ├── project.json
 │   │   │       ├── workflows/
-│   │   │       │   └── {workflowId}.json
 │   │   │       ├── outputs/
 │   │   │       └── assets/
 │   │   ├── library/  (映射到 user://library/ 前缀)
 │   │   │   ├── ... (用户个人模板、脚本等)
 │   │   │   └── knowledgebases/  (映射到 user://library/knowledgebases/)
 │   │   │       ├── {userKbId1_1}/
-│   │   │       │   └── ... (知识库文件)
+│   │   │       │   └── ...
 │   │   │       └── {userKbId1_2}/
 │   │   │           └── ...
 │   │   └── .recycle_bin/  (项目和工作流的回收站)

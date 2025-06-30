@@ -75,9 +75,9 @@
 
   "associated_panels": [ // (可选) 声明与此场景关联的应用面板
     {
-      "panel_id": "string",
-      "instance_name": "string",
-      "default_bindings": {}
+      "panel_id": "string", // (必需) 引用在 project.json 中声明的面板的唯一 ID
+      "instance_name": "string", // (可选) 如果同一面板在此场景中有多个实例，用于区分
+      "default_bindings": {} // (可选) 为此面板实例提供特定的配置或与场景内元素（如Agent）的初始绑定关系
     }
   ],
 

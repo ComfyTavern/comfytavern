@@ -50,8 +50,8 @@ ComfyTavern 项目由多种资源类型和在工作流中使用的节点构成�
 - **场景/剧本 (`scene.json`)**: 定义互动叙事的结构、Agent 实例的配置及其宿主环境。
 - **工作流定义 (`workflow.json`)**: 定义可执行的逻辑流程，可用于场景编排、Agent 核心审议或 Agent 技能。
 - **知识库 (Knowledge Base)**: 项目可以包含本地知识库（目录和 CAIU 文件），并在 `project.json` 中引用它们或全局知识库。
-- **应用面板定义 (Application Panel Definition)**: 定义一个应用面板的元数据，包括其名称、绑定的工作流、以及指向其用户界面 (UI) 实现的路径。这通常是一个 `.json` 文件，存储在项目的 `ui/` 或 `panels/` 目录中。
-- **面板 UI 资产 (Panel UI Assets)**: 应用面板的用户界面实现，通常是 HTML, CSS, 和 JavaScript 文件。这些文件可以存储在项目目录内部（例如 `ui/my-panel/`），以便与项目一同打包和分发。
+- **应用面板定义 (`panel.json`)**: 定义一个应用面板的元数据，包括其名称、UI入口点 (`uiEntryPoint` 或 `componentId`)、运行时类型 (`runtimeType`) 等。这通常是一个 `.json` 文件，项目中的所有面板定义都需要在根 `project.json` 的 `panels` 数组中进行声明。
+- **面板 UI 资产 (Panel UI Assets)**: 应用面板的用户界面实现（如 `index.html`, CSS, JS 文件）。这些文件可以存储在项目目录内部（例如 `ui/my-panel/`），以便与项目一同打包和分发。
 - **脚本 (Script)**: 用户自定义的逻辑扩展，可能用于节点的客户端逻辑或其他自定义功能。
 - **媒体资源 (Assets)**: 项目中直接使用的、非知识库管理的媒体文件（如图片、音频、视频）。
 
@@ -142,9 +142,12 @@ ComfyTavern 项目由多种资源类型和在工作流中使用的节点构成�
   "version": "1.0.0", // 项目自身版本，遵循语义化版本规范
   "createdAt": "iso_timestamp", // 项目创建时间戳
   "updatedAt": "iso_timestamp", // 项目最后更新时间戳
-  "preferredView": "editor", // 用户打开项目时的默认视图, e.g., "editor", "custom_panel_id"
+  "preferredView": "editor", // 用户打开项目时的默认视图, e.g., "editor", "scene", "panel"
   "schemaVersion": "2.2", // project.json 文件本身的 Schema 版本号
-
+  
+  "default_scene_id": "market_square_scene", // (可选) 项目启动时默认加载的场景 ID。若指定，则优先于 default_panel_id。
+  "default_panel_id": "panel_main_chat_v1", // (可选) 项目启动时默认加载的应用面板 ID。在没有指定 default_scene_id 时生效，用于无场景的纯面板应用。
+  
   "agent_profiles": [ // (新增) 声明项目中定义的所有 Agent Profile
     {
       "id": "comfytavern_npc_herbalist_v1.2", // Agent Profile 的唯一 ID (必须与对应文件内的 id 一致)
@@ -182,8 +185,6 @@ ComfyTavern 项目由多种资源类型和在工作流中使用的节点构成�
     }
   ],
  
-  "default_scene_id": "market_square_scene", // (可选) 项目启动时默认加载的场景 ID
-
   "customMetadata": { // (可选) 开放的 JSON 对象，用于存储项目相关的其他自定义元数据
     "author": "ComfyTavern Team",
     "tags": ["rpg", "storytelling", "npc_interaction"],
@@ -195,32 +196,34 @@ ComfyTavern 项目由多种资源类型和在工作流中使用的节点构成�
 **关键字段解释**:
 
 - **`agent_profiles`**: 核心新增字段。这是一个对象数组，每个对象描述一个项目中定义的 Agent Profile，包括其唯一 `id` (用于在场景中被引用) 和指向其定义文件的 `path`。
-- **`panels`**: (新增) 声明项目包含的应用面板。每个对象描述一个面板，包括其唯一 `id` 和指向其定义文件的 `path`，使得平台能够发现和加载项目内的面板。
+- **`panels`**: (新增) 声明项目中定义的所有应用面板。每个对象描述一个面板，包括其唯一 `id` 和指向其定义文件 (`panel.json`) 的 `path`。这是平台发现和加载项目内面板的入口点。
 - **`knowledgeBaseReferences`**: 声明项目所依赖的知识库。每个条目通过 `source_id` 唯一标识一个知识库。对于项目本地的知识库，可以额外提供 `path`。
-- **`default_scene_id`**: (可选) 指定当项目启动时，默认应该加载并运行哪个场景。
+- **`default_scene_id`**: (可选) 指定项目启动时默认加载的场景 ID。若此字段存在，系统将优先加载场景，场景自身再根据其配置（`associated_panels`）加载所需面板。
+- **`default_panel_id`**: (可选) 在未指定 `default_scene_id` 时生效。它指定项目启动时直接加载的入口面板，用于支持不依赖场景的、更轻量级的纯面板应用。
 
 ## 4. 交互模板 (Interaction Template)
 
-交互模板为用户提供了一个快速启动特定类型项目的起点和脚手架，而非运行时的强制性限制。
+> **[注]** 此章节之前被称为“交互模板”，为了与 `unified-app-template-architecture.md` 保持术语一致性，现统一更名为 **项目模板 (Project Template)**。
 
-- **定位**：作为项目创建的预设配置和资源集合，帮助用户快速搭建具有特定功能或结构的应用原型。
+项目模板为用户提供了一个快速启动特定类型项目的起点和脚手架，而非运行时的强制性限制。
+
+- **定位**：作为项目创建时的预设蓝图，是一个包含完整资源配置的、只读的项目目录。它帮助用户快速搭建具有特定功能或结构的应用原型。
 - **目的**：
   - 允许用户基于预设场景快速启动一个项目，例如：“基础聊天机器人”、“带 RAG 的知识问答应用”、“角色扮演游戏框架”、“图像生成面板”等。
-  - 提供预设的项目目录结构、示例性的工作流（包括可能的 Agent 审议流和技能流）、默认的 Agent Profile 定义、以及必要的资源引用（如示例知识库、场景）。
+  - 提供预设的项目目录结构、示例性的工作流（包括可能的 Agent 审议流和技能流）、默认的 Agent Profile 定义、以及必要的资源引用（如示例知识库、场景和应用面板）。
   - 降低新用户的学习曲线，通过具体示例展示平台功能和最佳实践。
 - **核心特征**:
-  - **本质**: 一个遵循标准项目目录结构（如 3.1 节所述）的预打包文件集合。这可以是一个目录模板，或者是一个特定格式的压缩包（例如 `.cttemplate`）。
-  - **内容包含 (因 Agent 整合而扩展)**:
-    - 一个预配置的 `project.json` 文件，其中可能包含对示例 `agent_profiles` 和 `knowledgeBaseReferences` 的声明。
-    - 一个或多个示例性的 `agent_profiles/` 目录及内部的 `agent_profile.json` 文件（例如，一个通用的 NPC Agent Profile，一个简单的工具型 Agent Profile）。
+  - **本质**: 一个遵循标准项目目录结构（如 3.1 节所述）的预打包文件集合。这通常是一个存放在特定系统目录（如`templates/project-templates/`）下的目录模板。
+  - **内容包含 (Agent 整合版)**:
+    - 一个预配置的 `project.json` 文件，其中已包含对模板内 `agent_profiles`、`knowledgeBaseReferences`、`panels` 等核心资产的声明。
+    - 一个或多个示例性的 `agent_profiles/` 目录及内部的 `agent_profile.json` 文件。
     - 示例性的 `workflows/` 目录，其中可能包含 Agent 的核心审议工作流模板、一些基础技能工作流，以及可能的场景逻辑工作流。
     - (可选) 示例性的项目本地 `knowledgebases/` 目录及内容。
-    - (可选) 示例性的 `scenes/` 目录及内部的 `scene.json` 文件，这些场景可能已经预设了对模板中 Agent Profile 的实例化。
-    - (可选) 示例性的 `ui/` (应用面板定义) 或 `assets/`。
+    - (可选) 示例性的 `scenes/` 目录及内部的 `scene.json` 文件，这些场景可能已经预设了对模板中 Agent Profile 的实例化，并关联了模板中的应用面板。
+    - (可选) 示例性的 `ui/` 目录，存放应用面板的定义（`panel.json`）和 UI 资产（HTML/CSS/JS）。
     - (可选) 一个 `README.md` 文件，说明该模板的用途、包含的内容以及如何基于此模板进行后续开发。
-  - **使用流程**: 用户在创建新项目时，可以选择“从模板创建”，然后选择一个可用的交互模板。系统会将模板内容复制或解压到用户指定的新项目目录中。
+  - **使用流程**: 用户在创建新项目时，可以选择“从模板创建”，然后选择一个可用的项目模板。系统会将模板内容完整复制到用户指定的新项目目录中，形成一个独立的新项目。
   - **非约束性**: 一旦项目基于模板创建完成，它就成为一个完全独立的、用户可自由修改的项目。用户可以任意修改、删除、添加工作流、Agent Profile、场景和其他资源。模板仅影响项目的初始状态。
-  - **与项目的关系**: 模板是创建项目的“配方”或“蓝图副本”，项目是模板的一个具体实例化和后续发展的成果。
 
 ## 5. 节点接口模型 (Node Interface Model)
 
