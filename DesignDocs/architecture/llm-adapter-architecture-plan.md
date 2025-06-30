@@ -183,13 +183,26 @@ export interface ApiCredentialConfig {
   api_key?: string | string[]; // API Key 是可选的，例如本地模型可能不需要
 
   /**
-   * 当 api_key 是数组时，用于选择具体 Key 的策略。
-   * 'round-robin': 轮询。
-   * 'random': 随机选择。
-   * 'latency-based': (未来扩展) 基于延迟选择。
+   * 当 api_key 是数组时，用于选择具体 Key 的策略。这是实现负载均衡和高可用的核心。
+   * 'round-robin': 轮询 (默认)。简单公平。
+   * 'random': 随机选择。简单，长期均衡。
+   * 'least-used': 选择近期使用次数最少的 Key，实现更精确的负载均衡。
+   * 'lowest-latency': (未来扩展) 选择近期平均响应延迟最低的 Key，追求极致性能。
+   * 'scoring': (未来扩展) 终极策略，根据一个可配置的评分模型选择 Key。
    * @default 'round-robin'
    */
-  key_selection_strategy?: "round-robin" | "random" | "latency-based";
+  key_selection_strategy?: "round-robin" | "random" | "least-used" | "lowest-latency" | "scoring";
+
+  /**
+   * 可选，当 `key_selection_strategy` 为 'scoring' 时，定义评分权重。
+   * 这允许用户根据自己的偏好（成本、速度、配额）来定制 Key 的选择行为。
+   */
+  scoring_config?: {
+    usage_weight?: number;     // 使用频率权重 (越少越好)
+    latency_weight?: number;  // 延迟权重 (越低越好)
+    quota_weight?: number;    // 剩余配额权重 (越多越好)
+    // 未来可扩展其他成本或优先级相关的权重
+  };
 
   /**
    * 可选，关联的逻辑提供商 ID (例如 "openai", "anthropic", "google", "ollama")。
@@ -530,7 +543,7 @@ V5 架构的核心在于通过清晰的逻辑分层，实现从“模型意图�
         ii. `RetryHandler` 从 `ApiConfigService` 获取该渠道组的详细信息，特别是其**有序的渠道列表**。
         iii. `RetryHandler` 开始**遍历**这个有序列表：
             - 对于列表中的第一个渠道，它获取其凭证配置 (`ApiCredentialConfig`)。
-            - 如果该渠道有多个 API Key，它根据 `key_selection_strategy` 选择一个 Key。
+            - **选择 Key (策略化)**: 如果该渠道有多个 API Key，`RetryHandler` 会根据 `key_selection_strategy` 字段，实例化一个对应的 **Key 选择策略** (例如 `RoundRobinStrategy`, `LeastUsedStrategy` 等)。然后调用该策略的 `selectKey()` 方法来获取一个具体的 API Key。这一步将决策逻辑与执行完全解耦。
             - 它获取对应的 `LlmApiAdapter` 实例。
             - 它调用 `adapter.request()`，将所有必要信息（包括选定的模型、Key、URL等）传递给适配器，发起请求。
         iv. **结果处理**:
