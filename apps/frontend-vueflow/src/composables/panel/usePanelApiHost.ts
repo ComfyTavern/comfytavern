@@ -4,10 +4,11 @@ import { useExecutionStore } from '@/stores/executionStore';
 import { useApiAdapterManager } from '@/services/ApiAdapterManager';
 import { ExecutionStatus, type InvocationRequest, type PanelDefinition } from '@comfytavern/types';
 import { usePanelStore } from '@/stores/panelStore';
+import { useThemeStore } from '@/stores/theme'; // 引入主题 store
 
 // 定义消息协议接口
 interface ApiRequestMessage {
-  type: 'comfy-tavern-api-call' | 'panel-ready' | 'panel-log';
+  type: 'comfy-tavern-api-call' | 'panel-ready' | 'panel-log' | 'comfy-tavern-theme-update';
   id?: string;
   payload?: {
     method: string;
@@ -40,6 +41,7 @@ export function usePanelApiHost(
   const executionStore = useExecutionStore();
   const apiAdapterManager = useApiAdapterManager();
   const panelStore = usePanelStore();
+  const themeStore = useThemeStore(); // 实例化主题 store
 
   const panelDef = ref<PanelDefinition | null>(null);
   const activeSubscriptions = new Map<string, () => void>(); // 存储 executionId -> unwatch function
@@ -150,11 +152,16 @@ export function usePanelApiHost(
     },
 
     /**
-     * 获取宿主环境的设置。
+     * @deprecated 主题和语言现在通过 dedicated message types 推送
      */
     getSettings: () => {
-      console.log('[Host] Received getSettings call');
-      return Promise.resolve({ theme: 'dark', language: 'zh-CN' });
+      console.warn('[Host] getSettings is deprecated and will be removed.');
+      const theme = themeStore.currentThemePreset?.variants[themeStore.currentAppliedMode];
+      return Promise.resolve({ 
+        theme: themeStore.currentAppliedMode, 
+        language: 'zh-CN', // TODO: 替换为从 i18n store 获取
+        variables: theme?.variables || {}
+      });
     }
   };
 
@@ -171,8 +178,9 @@ export function usePanelApiHost(
     const data = event.data as ApiRequestMessage;
     
     if (data.type === 'panel-ready') {
-      console.log('[Host] Received panel-ready message. Injecting API script.');
+      console.log('[Host] Received panel-ready message. Injecting API script and sending initial theme.');
       sendInjectionScript();
+      sendThemeToPanel(); // 在面板就绪后立即发送主题
       return;
     }
     
@@ -294,6 +302,43 @@ export function usePanelApiHost(
     iframe.contentWindow.postMessage(injectionPayload, panelOrigin.value || '*');
     console.log('[Host] API injection script sent to iframe via postMessage.');
   }
+
+  /**
+   * 发送当前主题信息到 iframe。
+   */
+  function sendThemeToPanel() {
+    const iframe = iframeRef.value;
+    if (!iframe || !iframe.contentWindow) {
+      // console.warn('[Host] Cannot send theme: iframe or contentWindow not available.');
+      return;
+    }
+
+    const theme = themeStore.currentThemePreset;
+    const mode = themeStore.currentAppliedMode;
+
+    if (!theme) {
+      console.warn('[Host] Cannot send theme: No theme preset selected.');
+      return;
+    }
+    
+    const variant = theme.variants[mode];
+    if (!variant || !variant.variables) {
+       console.warn(`[Host] Cannot send theme: Variant "${mode}" for theme "${theme.id}" is invalid or has no variables.`);
+      return;
+    }
+
+    const themePayload = {
+      type: 'comfy-tavern-theme-update',
+      payload: {
+        mode: mode,
+        variables: klona(variant.variables), // 使用 klona 深度克隆，避免响应式对象问题
+      },
+    };
+    
+    iframe.contentWindow.postMessage(themePayload, panelOrigin.value || '*');
+    console.log(`[Host] Sent theme update to panel. Mode: ${mode}`);
+  }
+
   // 1. 只负责响应式地获取面板定义
   watchEffect(async () => {
     if (projectId.value && panelId.value) {
@@ -319,4 +364,14 @@ export function usePanelApiHost(
     activeSubscriptions.clear();
     console.log(`[Host] Panel API host cleaned up.`);
   });
+
+  // 监视主题变化，并将其同步到面板
+  watch(
+    () => [themeStore.selectedThemeId, themeStore.currentAppliedMode],
+    () => {
+      console.log('[Host] Theme changed, sending update to panel.');
+      sendThemeToPanel();
+    },
+    { deep: true }
+  );
 }
