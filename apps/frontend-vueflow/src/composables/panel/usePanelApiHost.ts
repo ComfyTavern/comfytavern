@@ -185,7 +185,10 @@ export function usePanelApiHost(
     }
     
     if (data.type === 'panel-log') {
-      logs.value.push(data.payload);
+      logs.value.push({
+        ...data.payload,
+        timestamp: new Date().toISOString(), // 咕咕：为日志条目添加时间戳
+      });
       return;
     }
 
