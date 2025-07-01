@@ -1,7 +1,7 @@
 # 玄思妙境 (初行版)
 
 [![Status](https://img.shields.io/badge/status-Beta-orange)](https://github.com/ComfyTavern/comfytavern)
-[![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](./LICENSE)
 [![Stars](https://img.shields.io/github/stars/ComfyTavern/comfytavern?style=social)](https://github.com/ComfyTavern/comfytavern)
 
 <p align="center">
@@ -273,6 +273,33 @@ bun run db:upgrade
 
 ---
 
-### 📜 盟约
+### 📜 盟约 (License)
 
-此项目以 [MIT 盟约](./LICENSE) 开源。
+此项目采**双轨之盟 (Dual-Licensing)**，旨在衡公享于社区与项目之长远。
+
+#### 一、开源之盟：GNU AGPLv3
+
+凡格致之士、非营之社、及一切非商用之途，玄思妙境皆依 **GNU Affero General Public License v3.0 (AGPLv3)** 盟约以授。
+
+**核心之要**：君若修玄思妙境之源码，或以之为后台，经由网络以服务于众，则须以同等之 AGPLv3 盟约，尽开君之项目源码。
+
+吾辈鼓励基于玄思妙境之学、之新、及非商用之布施。
+
+#### 二、商用之盟 (Commercial License)
+
+若有组织或个人，欲于商海之中运用玄思妙境，吾辈亦备有商用之盟。
+
+**以下情形，须购商用之盟：**
+
+*   将玄思妙境用于任何**不开源**之商用产品或服务中。
+*   于公司内部运用玄思妙境，以辅佐商业运营（譬如，作为内部工具链之一环）。
+*   向付费用户提供基于玄思妙境之托管服务 (SaaS)。
+*   任何不愿受 AGPLv3 开源义务约束之商业场景。
+
+商用之盟将免除君之 AGPLv3 开源之责，并依约提供相应之技术扶持与法律保障。
+
+---
+
+吾辈深信，此模式能使玄思妙境在服务社区之余，获得必要之资助，从而行得更远、更稳。
+
+**➡️ 若欲咨询或购置商用之盟，请联系吾辈：comfytavern@yeah.net**

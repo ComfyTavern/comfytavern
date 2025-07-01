@@ -1,7 +1,7 @@
 # ComfyTavern (Beta)
 
 [![Status](https://img.shields.io/badge/status-Beta-orange)](https://github.com/ComfyTavern/comfytavern)
-[![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](./LICENSE)
 [![Stars](https://img.shields.io/github/stars/ComfyTavern/comfytavern?style=social)](https://github.com/ComfyTavern/comfytavern)
 
 <p align="center">
@@ -273,6 +273,33 @@ The project is in its early Beta and rapid iteration phase, and functionalities 
 
 ---
 
-### 📜 License
+### 📜 License (License)
 
-This project is open-sourced under the [MIT License](./LICENSE).
+This project adopts a **Dual-Licensing** model, aiming to balance open sharing in the community with the project's sustainable development.
+
+#### 1. Open Source License: GNU AGPLv3
+
+For individual developers, academic research, non-profit organizations, and any non-commercial projects, ComfyTavern is available under the **GNU Affero General Public License v3.0 (AGPLv3)**.
+
+**Core Requirement**: If you modify ComfyTavern's source code, or provide it as a backend service to users over a network, you must release your complete project's source code under the same AGPLv3 license.
+
+We encourage learning, innovation, and non-commercial sharing based on ComfyTavern.
+
+#### 2. Commercial License
+
+For organizations and individuals who wish to use ComfyTavern in a commercial environment, we offer a commercial license.
+
+**A commercial license must be purchased for the following situations:**
+
+*   Using ComfyTavern in any **closed-source** commercial product or service.
+*   Using ComfyTavern internally within a company to support business operations (e.g., as part of an internal toolchain).
+*   Providing hosted services (SaaS) based on ComfyTavern to paying users.
+*   Any commercial scenario where you do not wish to be bound by the open-source obligations of AGPLv3.
+
+A commercial license will exempt you from the open-source requirements of AGPLv3 and provide corresponding technical support and legal protection according to the agreement.
+
+---
+
+We believe this model will allow ComfyTavern to serve the community while obtaining the necessary financial support to go further and more steadily.
+
+**➡️ For inquiries or to purchase a commercial license, please contact us: comfytavern@yeah.net**

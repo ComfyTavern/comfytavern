@@ -1,7 +1,7 @@
 # ComfyTavern (ベータ版)
 
 [![Status](https://img.shields.io/badge/status-Beta-orange)](https://github.com/ComfyTavern/comfytavern)
-[![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](./LICENSE)
 [![Stars](https://img.shields.io/github/stars/ComfyTavern/comfytavern?style=social)](https://github.com/ComfyTavern/comfytavern)
 
 <p align="center">
@@ -273,6 +273,33 @@ bun run db:upgrade
 
 ---
 
-### 📜 ライセンス
+### 📜 ライセンス (License)
 
-このプロジェクトは[MITライセンス](./LICENSE)の下でオープンソース化されています。
+本プロジェクトは、コミュニティにおけるオープンな共有とプロジェクトの持続可能な発展のバランスを取ることを目的として、**デュアルライセンス (Dual-Licensing)** モデルを採用しています。
+
+#### 1. オープンソースライセンス：GNU AGPLv3
+
+個人開発者、学術研究、非営利団体、およびその他すべての非商用プロジェクトに対し、ComfyTavernは **GNU Affero General Public License v3.0 (AGPLv3)** ライセンスの下で提供されます。
+
+**核心的な要件**：ComfyTavernのソースコードを改変した場合、またはそれをバックエンドとしてネットワーク経由でユーザーにサービスを提供する場合、あなたはあなたの完全なプロジェクトのソースコードを同じAGPLv3ライセンスで公開しなければなりません。
+
+私たちはComfyTavernを基盤とした学習、革新、非商業的な共有を奨励します。
+
+#### 2. 商用ライセンス (Commercial License)
+
+商用環境でComfyTavernの使用を希望する組織および個人向けに、商用ライセンスを提供しています。
+
+**以下の場合は商用ライセンスの購入が必須となります：**
+
+*   ComfyTavernを任意の**クローズドソース**の商用製品またはサービスで使用する場合。
+*   企業内で商用運営をサポートするためにComfyTavernを使用する場合（例：内部ツールチェーンの一部として）。
+*   有料ユーザーにComfyTavernを基盤としたホスティングサービス（SaaS）を提供する場合。
+*   AGPLv3のオープンソース義務に拘束されたくない、あらゆる商用シーン。
+
+商用ライセンスは、あなたをAGPLv3のオープンソース要件から免除し、契約に基づいた技術サポートと法的保護を提供します。
+
+---
+
+私たちは、このモデルがComfyTavernがコミュニティに貢献しつつ、必要な資金援助を得て、より遠く、より安定して進むことを可能にすると信じています。
+
+**➡️ 商用ライセンスに関するお問い合わせやご購入は、こちらまでご連絡ください：comfytavern@yeah.net**
