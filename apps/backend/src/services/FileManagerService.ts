@@ -83,11 +83,14 @@ export interface FAMService {
     options?: MoveOptions
   ): Promise<void>;
 
+  /**
+   * 获取单个文件或目录的元数据。
+   * @returns FAMItem 如果路径存在,否则返回 null。
+   */
+  stat(userId: string | null, logicalPath: string): Promise<FAMItem | null>;
+
   /** 复制文件/目录 (可选) */
   // copy(userId: string | null, sourceLogicalPath: string, destinationLogicalPath: string): Promise<void>;
-
-  /** 获取文件元数据 (可选) */
-  // getMetadata(userId: string | null, logicalPath: string): Promise<FileMetadata>;
 }
 
 // FileManagerService 类实现
@@ -601,6 +604,34 @@ export class FileManagerService implements FAMService {
       if (error.code === 'EXDEV') {
         throw new Error(`Cannot move across different file systems/devices: from ${sourceLogicalPath} to ${destinationLogicalPath}. This operation may require copy + delete.`);
       }
+      throw error;
+    }
+  }
+
+  async stat(userId: string | null, logicalPath: string): Promise<FAMItem | null> {
+    try {
+      const physicalPath = await this.resolvePath(userId, logicalPath);
+      const stats = await fs.stat(physicalPath);
+
+      const itemName = path.basename(physicalPath);
+      const itemType = stats.isDirectory() ? 'directory' : 'file';
+
+      return {
+        id: logicalPath,
+        name: itemName,
+        logicalPath: logicalPath,
+        itemType: itemType,
+        size: stats.isFile() ? stats.size : undefined,
+        lastModified: stats.mtime.getTime(),
+        isSymlink: stats.isSymbolicLink(),
+        isWritable: true, // 默认值
+      };
+    } catch (error: any) {
+      if (error.code === 'ENOENT') {
+        return null; // 文件或目录不存在是正常情况，返回 null
+      }
+      // 其他错误（如权限问题、路径解析错误）则向上抛出
+      console.error(`[FileManagerService] Error getting stats for ${logicalPath} (userId: ${userId}):`, error);
       throw error;
     }
   }

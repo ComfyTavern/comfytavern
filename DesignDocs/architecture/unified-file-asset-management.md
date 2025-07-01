@@ -51,6 +51,7 @@ FAM 系统将采用以下逻辑路径方案：
   - 工作流: `user://projects/{projectId}/workflows/{workflowId}.json`
   - 项目输出: `user://projects/{projectId}/outputs/{...filePath}`
   - 项目资产: `user://projects/{projectId}/assets/{...filePath}` (例如 CSV, TXT, 小型媒体文件)
+  - 面板数据: `user://projects/{projectId}/panel_data/{panelId}/{...filePath}` (面板运行时读写的数据)
   - 项目元数据: `user://projects/{projectId}/project.json` (包含项目信息及知识库引用)
 - **用户个人库**: `user://library/`
   - 个人模板/脚本等: `user://library/templates/{templateName}.json` (示例)
@@ -106,7 +107,10 @@ ComfyTavern/  (项目根目录, 由 getProjectRootDir() 确定)
 │   │   │       ├── project.json
 │   │   │       ├── workflows/
 │   │   │       ├── outputs/
-│   │   │       └── assets/
+│   │   │       ├── assets/
+│   │   │       └── panel_data/
+│   │   │           └── {panelId_1}/
+│   │   │               └── ... (面板运行时文件)
 │   │   ├── library/  (映射到 user://library/ 前缀)
 │   │   │   ├── ... (用户个人模板、脚本等)
 │   │   │   └── knowledgebases/  (映射到 user://library/knowledgebases/)

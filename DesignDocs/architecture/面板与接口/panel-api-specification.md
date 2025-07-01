@@ -98,6 +98,44 @@ export interface ComfyTavernPanelApi {
    * @returns 返回服务执行的结果。
    */
   requestHostService<T = any>(serviceName: string, args?: any): Promise<T>;
+
+  // == 文件系统 ==
+
+  /**
+   * 列出指定目录下的文件和子目录。
+   * 文件路径是相对于此面板专属的安全沙盒根目录。
+   * @param path 相对路径。如果为空或'/'，则列出根目录。
+   * @returns 返回一个文件/目录描述对象的数组。
+   */
+  listFiles(path: string): Promise<PanelFile[]>;
+
+  /**
+   * 读取文件的内容。
+   * @param path 相对于面板根目录的文件路径。
+   * @param encoding 'utf-8' (默认) 或 'binary'。
+   * @returns 如果是 utf-8，返回字符串；如果是 binary，返回 ArrayBuffer。
+   */
+  readFile(path: string, encoding?: 'utf-8' | 'binary'): Promise<string | ArrayBuffer>;
+
+  /**
+   * 将内容写入文件。如果文件或目录不存在，会自动创建。
+   * @param path 相对于面板根目录的文件路径。
+   * @param content 要写入的字符串或二进制数据 (Blob/File/ArrayBuffer)。
+   */
+  writeFile(path: string, content: string | Blob | ArrayBuffer): Promise<void>;
+
+  /**
+   * 删除文件或目录。
+   * @param path 相对于面板根目录的文件或目录路径。
+   * @param options 删除选项，例如 { recursive: true } 用于删除非空目录。
+   */
+  deleteFile(path: string, options?: { recursive?: boolean }): Promise<void>;
+  
+  /**
+   * 创建一个新目录。
+   * @param path 要创建的目录的相对路径。
+   */
+  createDirectory(path: string): Promise<void>;
 }
 
 // --- 辅助类型定义 ---
@@ -192,6 +230,22 @@ export interface PanelInteractionProvider {
   handleOptionSelectionRequest?: (request: OptionSelectionRequest) => Promise<string>;
 }
 
+/**
+ * 面板文件系统中的文件或目录描述。
+ */
+export interface PanelFile {
+  /** 文件或目录名 */
+  name: string;
+  /** 相对于面板根目录的路径 */
+  path: string;
+  /** 类型 */
+  type: 'file' | 'directory';
+  /** 文件大小（字节），目录则无此项 */
+  size?: number;
+  /** 最后修改时间的时间戳 (ms) */
+  lastModified?: number;
+}
+
 
 ## 5. 通信机制
 
@@ -239,7 +293,7 @@ window.addEventListener('message', (event) => {
 
 面板开发者可以通过以下方式使用 API：
 ```javascript
-// 方式一：通过适配器调用能力
+// 通过适配器调用能力
 const { executionId } = await window.comfyTavern.panelApi.invoke({
   mode: 'adapter',
   adapterId: 'story-generator-adapter',
@@ -261,3 +315,21 @@ await window.comfyTavern.panelApi.requestHostService('showNotification', {
   title: '故事生成完成',
   message: '点击查看完整故事'
 });
+
+// 使用文件系统API保存和读取聊天记录
+const chatHistory = [
+  { user: '咕咕', text: '你好！' },
+  { user: 'User', text: '你好，咕咕！' }
+];
+
+// 保存聊天记录到 'chat/session-1.json'
+await window.comfyTavern.panelApi.writeFile('chat/session-1.json', JSON.stringify(chatHistory, null, 2));
+
+// 列出 'chat' 目录下的所有文件
+const filesInChatDir = await window.comfyTavern.panelApi.listFiles('chat');
+console.log('Chat sessions:', filesInChatDir);
+
+// 读取保存的记录
+const savedHistoryRaw = await window.comfyTavern.panelApi.readFile('chat/session-1.json', 'utf-8');
+const savedHistory = JSON.parse(savedHistoryRaw as string);
+console.log('Loaded history:', savedHistory);

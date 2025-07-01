@@ -2,7 +2,9 @@ import { watchEffect, type Ref, watch, ref, onMounted, onUnmounted } from 'vue';
 import { klona } from 'klona';
 import { useExecutionStore } from '@/stores/executionStore';
 import { useApiAdapterManager } from '@/services/ApiAdapterManager';
-import { ExecutionStatus, type InvocationRequest, type PanelDefinition } from '@comfytavern/types';
+import { getApiBaseUrl } from '@/utils/urlUtils';
+import { ExecutionStatus } from '@comfytavern/types';
+import type { InvocationRequest, PanelDefinition, PanelFile, PanelApiHost } from '@comfytavern/types';
 import { usePanelStore } from '@/stores/panelStore';
 import { useThemeStore } from '@/stores/theme'; // 引入主题 store
 
@@ -46,8 +48,20 @@ export function usePanelApiHost(
   const panelDef = ref<PanelDefinition | null>(null);
   const activeSubscriptions = new Map<string, () => void>(); // 存储 executionId -> unwatch function
 
-  // --- 宿主端 API 实现 ---
-  const panelApiHost = {
+  const getAuthToken = () => localStorage.getItem('authToken');
+
+  // --- 辅助函数，用于构建面板文件系统 API 的基础 URL ---
+  const getPanelFsApiUrl = (filePath: string = ''): string => {
+    if (!projectId.value || !panelId.value) {
+      throw new Error('Project ID and Panel ID must be available to use file system API.');
+    }
+    // 路径的各个部分应该被编码，以处理特殊字符
+    const safeFilePath = filePath.split('/').map(encodeURIComponent).join('/');
+    const baseUrl = getApiBaseUrl();
+    return `${baseUrl}/projects/${encodeURIComponent(projectId.value)}/panels/${encodeURIComponent(panelId.value)}/fs/${safeFilePath}`;
+  };
+
+  const panelApiHost: PanelApiHost = {
     /**
      * @deprecated 将在未来版本移除，请使用 invoke 方法。
      * 为了向后兼容，此方法内部会调用 invoke({ mode: 'native', ... })
@@ -138,10 +152,6 @@ export function usePanelApiHost(
             unwatch();
             activeSubscriptions.delete(executionId);
           }
-
-          // TODO: 未来可以单独处理流式输出
-          // 目前的逻辑假设流式输出不改变最终状态，这可能是个问题
-          // 但对于当前场景，我们优先保证最终结果的正确传递
         }
       );
 
@@ -157,11 +167,78 @@ export function usePanelApiHost(
     getSettings: () => {
       console.warn('[Host] getSettings is deprecated and will be removed.');
       const theme = themeStore.currentThemePreset?.variants[themeStore.currentAppliedMode];
-      return Promise.resolve({ 
-        theme: themeStore.currentAppliedMode, 
+      return Promise.resolve({
+        theme: themeStore.currentAppliedMode,
         language: 'zh-CN', // TODO: 替换为从 i18n store 获取
         variables: theme?.variables || {}
       });
+    },
+
+    // --- 文件系统 API 实现 ---
+    async listFiles(path: string): Promise<PanelFile[]> {
+      const url = getPanelFsApiUrl(path);
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to list files at '${path}': ${response.statusText}`);
+      }
+      return response.json();
+    },
+
+    async readFile(path: string, encoding: 'utf-8' | 'binary' = 'utf-8'): Promise<string | ArrayBuffer> {
+      const url = getPanelFsApiUrl(path);
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to read file at '${path}': ${response.statusText}`);
+      }
+      if (encoding === 'binary') {
+        return response.arrayBuffer();
+      }
+      return response.text();
+    },
+
+    async writeFile(path: string, content: string | Blob): Promise<void> {
+      const url = getPanelFsApiUrl(path);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+        body: content
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to write file at '${path}': ${response.statusText}`);
+      }
+    },
+
+    async deleteFile(path: string, options?: { recursive?: boolean }): Promise<void> {
+      let url = getPanelFsApiUrl(path);
+      if (options?.recursive) {
+        url += '?recursive=true';
+      }
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to delete '${path}': ${response.statusText}`);
+      }
+    },
+
+    async createDirectory(path: string): Promise<void> {
+      const url = getPanelFsApiUrl(path);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'application/vnd.comfy.create-directory'
+        },
+        body: '' // body can't be null for post
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to create directory at '${path}': ${response.statusText}`);
+      }
     }
   };
 
@@ -292,11 +369,6 @@ export function usePanelApiHost(
     }
     const scriptContent = getInjectionScript();
     
-    // 我们不能直接在 iframe 中执行脚本，但我们可以向它发送脚本内容。
-    // 这要求 iframe 内部有一个监听器来接收并执行此脚本。
-    // 这是我们在 usePanelApiHost 外部（例如在面板的 HTML 中）需要处理的事情。
-    // 出于这个原因，我们将修改 getInjectionScript 以包含自执行逻辑，并在这里发送它。
-    
     const injectionPayload = {
       type: 'inject-and-run-script', // 使用一个新的类型来表示这个特定操作
       script: scriptContent,
@@ -312,7 +384,6 @@ export function usePanelApiHost(
   function sendThemeToPanel() {
     const iframe = iframeRef.value;
     if (!iframe || !iframe.contentWindow) {
-      // console.warn('[Host] Cannot send theme: iframe or contentWindow not available.');
       return;
     }
 
