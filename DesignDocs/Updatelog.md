@@ -1,5 +1,275 @@
 # 更新记录
 
+## 2025 年 7 月 10 日
+
+- docs: 添加集成创作环境设计草案
+  - 集成创作环境 (Integrated Creation Environment, ICE) 设计草案（BETA）详细描述了集成创作环境的愿景、核心目标、架构与界面布局、核心工作流程、创作助手 Agent 的能力与知识来源，以及技术实现细节。
+  - 愿景与核心目标：描述了 ICE 的核心愿景和目标，包括降低创作门槛、提升开发效率、统一开发流程、确保技术一致性、促进迭代优化。
+  - 交互范式：介绍了对话驱动开发 (Chat-Driven Development) 的概念及其在 ICE 中的应用。
+  - 三栏式布局：定义了 ICE 的三栏式布局，包括智能对话面板、文件与代码编辑区、实时预览面板的功能定位和核心特性。
+  - 核心工作流程：展示了从用户需求表达到功能完整的应用面板生成的全过程，并分析了关键交互点。
+  - 创作助手 Agent：详细描述了创作助手 Agent 的扩展能力和知识来源，包括意图识别、全栈代码生成、文件系统工具调用。
+  - 技术实现细节：描述了后端文件服务的设计、`iframe` 沙箱与通信机制、以及实时同步机制的具体实现。
+  - 结论与后续步骤：总结了 ICE 的核心价值，并提出了后续开发步骤和潜在挑战的解决思路。
+
+## 2025 年 7 月 1 日
+
+- feat(panel): 实现面板文件系统 API 及相关功能
+  - 在架构文档中添加面板数据存储路径规范
+  - 实现 FileManagerService 的 stat 方法用于获取文件元数据
+  - 定义 PanelFile 类型和 PanelApiHost 接口
+  - 实现前端面板 API 宿主文件系统相关方法
+  - 添加后端面板文件系统路由处理逻辑
+- docs: 将许可证从 MIT 更改为 AGPLv3 并添加双重授权说明
+  - 更新 README.md 和 LICENSE 文件，将项目许可证从 MIT 更改为 GNU AGPLv3。同时添加了双重授权模式的详细说明，包括开源 AGPLv3 许可证的适用范围和商业许可证的获取方式。
+- feat(panel): 增强日志面板功能并添加时间戳
+  - 为日志条目添加时间戳记录
+  - 改进日志面板 UI，添加清空日志和复制功能
+  - 实现日志自动滚动到底部
+  - 优化日志显示格式和时间戳格式化
+- feat(panel): 添加主题同步功能到面板 API 宿主
+  - 添加主题同步功能，当主题变化时自动更新面板。废弃旧的 getSettings 方法，改用专用消息类型推送主题和语言设置。引入 themeStore 来管理主题状态，并添加 sendThemeToPanel 函数处理主题更新逻辑。
+
+## 2025 年 6 月 30 日
+
+- docs(architecture): 更新架构文档并新增统一应用模板架构方案
+  - 完善场景架构文档中关联面板的字段注释
+  - 在统一文件资产管理文档中新增 templates 目录结构
+  - 更新项目架构文档中的面板定义和默认场景/面板字段
+  - 新增统一应用模板架构方案文档，详细说明项目模板系统设计
+- Merge branch 'main' of https://github.com/ComfyTavern/comfytavern
+- docs: 更新 llm-adapter-architecture-plan.md 以增强 key_selection_strategy 的描述
+  - 当 `api_key` 是数组时，详细说明了 `key_selection_strategy` 的各种策略及其用途，并添加了新的 `least-used` 和 `lowest-latency` 策略。
+  - `key_selection_strategy` 字段现在支持 `round-robin`、`random`、`least-used`、`lowest-latency` 和 `scoring` 策略。
+  - 添加了 `scoring_config` 字段以允许用户定义评分权重，从而根据自己的偏好定制 Key 的选择行为。
+  - 将 `RetryHandler` 中选择 Key 的逻辑描述为策略化，说明 `RetryHandler` 会根据 `key_selection_strategy` 字段实例化一个对应的 Key 选择策略，并调用该策略的 `selectKey()` 方法来获取具体的 API Key。这一步将决策逻辑与执行完全解耦。
+- style(components): 为输入组件统一添加 node-input 类名
+  - 为所有输入组件（SelectInput、TextAreaInput、StringInput、NumberInput）添加 node-input 类名，并更新基础样式以排除这些组件
+- fix(workflow): 修复工作流执行时输入值处理逻辑
+  - 确保正确处理外部覆盖输入并保持 GroupSlotInfo 结构完整。当提供覆盖输入时，更新对应接口定义的 config.default 值，而不是简单合并对象。同时添加对未匹配接口定义的警告日志。
+- fix(workflow): 修复工作流执行时输入参数默认值处理问题
+  - 从接口定义中提取默认输入值并用覆盖输入合并，确保执行时使用处理过的干净输入键值对
+- fix(workflow): 修复保存模式下 outputInterfaceMappings 未构建的问题
+  - 在 WorkflowInvocationService 中修复了保存模式下 outputInterfaceMappings 未构建的问题
+  - 重构 usePanelApiHost 中的状态监听，从监听多个状态改为仅监听 workflowStatus
+  - 当状态变为 COMPLETE 或 ERROR 时再从 store 获取最新完整状态
+- refactor(services): 将 WorkflowInvocationService 和 ApiAdapterManager 转换为 composable 函数
+  - 重构 WorkflowInvocationService 和 ApiAdapterManager 为 composable 函数，提升代码复用性和可维护性
+  - 优化 usePanelApiHost 中的状态监听逻辑，减少不必要的重复计算
+- refactor(panel): 重构面板 API 宿主逻辑和类型定义
+  - 移除 InvocationRequestSchema 中的 alias 字段，简化调用模式验证
+  - 将 usePanelApiHost 改为响应式实现，自动处理 projectId 和 panelId 变化
+  - 优化脚本注入方式，使用更可靠的消息传递机制
+  - 在 PanelContainer 中简化 API 宿主初始化逻辑
+
+## 2025 年 6 月 29 日
+
+- refactor(icons): 移除本地图标组件并迁移至 heroicons
+  - 删除所有本地图标组件文件，替换为从@heroicons/vue 导入的图标
+  - 更新相关组件中的图标引用以使用 heroicons
+  - 在文档中更新图标使用规范
+- refactor(frontend): 移除 DaisyUI 依赖并重构按钮样式为 Tailwind 原子类
+  - 更新文档说明禁止使用 DaisyUI 并解释原因
+  - 将 AvatarEditorModal 中的按钮样式从 DaisyUI 类替换为 Tailwind 原子类
+  - 重构 SettingItemRow 的 avatar 控件，添加编辑图标悬停效果
+  - 移除遗留的 DaisyUI 相关样式代码
+- feat(文件管理): 添加直接写入 JSON 文件的 API 接口
+  - 在文件管理 API 中添加 writeJsonFile 方法，简化 JSON 文件的写入操作
+  - 后端新增/write-json 接口处理 JSON 内容写入
+  - 前端面板存储改用新 API 写入 panel.json 文件
+- style(frontend): 调整面板设置页面的样式和文案
+  - 将"面板的版本号"修改为"应用面板的版本号"以更准确描述
+  - 统一按钮悬停效果为 primary/30 颜色
+  - 移除主体内容区多余的背景色
+  - 调整保存按钮的禁用状态样式
+- style(ui): 统一表单输入框背景色为背景表面色
+  - 修改 PanelGeneralSettings 组件中所有输入框的背景色，从 background-input 变为 background-surface 以保持 UI 一致性
+  - 同时在 base.css 中添加主题化表单控件样式，确保所有表单元素使用统一的设计规范
+- feat(面板设置): 新增面板设置视图及组件
+  - 实现面板设置的完整功能，包括：
+    1. 添加通用设置、工作流绑定和内容管理三个标签页
+    2. 创建 PanelGeneralSettings 组件处理面板基本信息配置
+    3. 开发 PanelWorkflowBinder 组件实现工作流绑定管理
+    4. 添加 PanelContentManager 组件占位内容管理功能
+    5. 完善保存和返回功能
+  - 重构面板设置视图结构，提升用户体验和可维护性
+- docs(CT 项目说明): 移除本地化(i18n)相关规则内容
+  - 本地化规则已迁移至专门文档，此处不再重复维护
+- feat(WorkflowBinder): 添加返回按钮并优化代码格式
+  - 在 WorkflowBinder 组件中添加返回按钮功能，允许用户返回上一页
+  - 同时调整代码格式以提高可读性，包括长属性换行和缩进优化
+- docs(架构): 简化面板工作流绑定规范说明
+  - 移除冗余的 displayName 和 isDefault 字段，明确 workflowId 作为唯一关联方式的说明
+- feat(workflow-binder): 重构工作流绑定界面并添加 API 代码生成功能
+  - 使用 CollapsibleSection 组件重构界面布局，提升用户体验
+  - 移除不必要的 alias 和 description 字段，简化绑定数据结构
+  - 添加 API 调用代码生成和复制功能
+  - 优化工作流 IO 详情展示为可折叠面板
+  - 新增 IconChevronDown 和 IconCopy 图标组件
+  - 调整 PanelSettingsView 布局以适应新设计
+- style(FrameNode): 为框架节点添加阴影效果以增强视觉层次
+- docs: 更新项目文档中的格式和本地化规范
+  - 统一文档中的引号格式为双引号
+  - 修复空格和标点符号的格式问题
+  - 明确 i18n 规范要求优先使用中文
+  - 更新本地化规则，强调必须使用$t 函数和中文基准
+- feat(i18n): 改进国际化扫描脚本并添加扩展语言支持
+  - 重构 i18n 扫描脚本，支持处理内置和扩展语言包
+  - 新增扩展语言目录(locales-extensions)用于用户自定义语言包
+  - 更新.gitignore 忽略扩展语言目录中的临时文件
+  - 添加 README.md 说明扩展语言包的使用方法
+  - 更新文档说明新的语言包处理流程
+- chore: 删除脚本产生的临时本地化文件
+  - 移除 scripts/merged_locales 目录下的本地化文件，这些文件不再需要通过 git 同步。同时更新 .gitignore 文件以忽略 scripts/merged_locales 目录。
+- feat(本地化): 为历史面板添加状态翻译键并优化状态显示逻辑
+  - 添加了状态相关的翻译键(statusCurrent/statusPast/statusFuture)到各语言文件
+  - 优化 HistoryPanel 组件中状态显示逻辑，直接获取翻译文本而非键名
+- style(FrameNode): 隐藏不需要的节点调整控制点以简化界面
+  - 只保留右、下和右下角的控制点，移除其他方向的调整控制点，使界面更加简洁
+- style(FrameNode): 更新节点样式和调整手柄交互区域
+  - 将背景色和边框颜色更新为使用 CSS 变量
+  - 调整边框圆角从 12px 减少到 6px
+  - 为节点调整手柄添加样式覆盖，包括角落手柄和边缘手柄
+  - 扩大边缘手柄的交互热区，提升用户体验
+- feat(节点分组): 实现节点分组功能并完善相关交互
+  - 添加节点分组功能，包括父节点字段支持、拖拽交互处理和状态管理
+  - 在类型定义和序列化逻辑中添加 parentNode 字段支持
+  - 实现节点拖拽时的父子关系变更检测和位置计算
+  - 新增 updateNodeParentAndRecord 方法处理分组变更
+  - 优化拖拽事件处理逻辑，区分普通移动和分组变更
+- feat(ui): 新增分组框节点支持并优化节点管理
+  - 在 NodeDefinition 接口中添加 isUiNode 标志以区分纯 UI 节点
+  - 实现 FrameNode 组件，支持调整大小和重命名
+  - 修改工作流转换逻辑以保留 UI 节点用于布局持久化
+  - 添加 @vue-flow/node-resizer 依赖支持节点调整
+  - 扩展工作流交互协调器以支持分组框操作
+  - 更新节点存储逻辑自动合并 FrameNode 定义
+  - 添加相关 CSS 样式确保分组框显示在背景层
+
+## 2025 年 6 月 28 日
+
+- refactor(workflow): 集中管理工作流状态判断逻辑
+  - 将分散在各处的 isPersisted 状态判断逻辑统一到 workflowManager 中
+  - 新增 isCurrentWorkflowNew 和 isWorkflowNew 方法供组件调用
+- feat(workflow): 实现工作流持久化状态管理和 ID 一致性
+  - 引入 isPersisted 状态标记工作流是否已保存至后端
+  - 使用持久化 UUID 作为工作流 ID 确保前后端一致性
+  - 重构工作流创建、更新和查找逻辑以支持新机制
+  - 优化 listWorkflows 和 getWorkflow 等后端服务接口
+- docs(architecture): 更新统一架构文档中的格式和内容细节
+  - 规范 markdown 列表格式，使用统一符号
+  - 细化共享空间目录结构，区分版本控制策略
+  - 为面板定义添加 source 字段说明
+  - 补充交互模板的详细说明和使用场景
+  - 优化文档结构和措辞，提升可读性
+- feat(数学运算节点): 为数学运算节点添加详细的结果描述
+  - 为每个数学运算模式的结果输出添加描述性文本，明确说明计算结果的含义，提升用户体验
+- feat(数学): 添加矩阵运算节点支持
+  - 新增 MatrixOperationNode 实现矩阵加减乘、转置、求逆和行列式计算功能
+  - 添加 mathjs 依赖并更新相关文档和类型定义
+- docs(node-types): 更新 ComboOption 的说明以明确其用途
+  - 明确 ComboOption 仅用于标记仅支持下拉选择而不支持自定义输入的值，与默认行为进行区分
+- refactor(MathOperationNode): 将实例方法改为静态方法以提升可维护性
+  - 修改执行映射中的方法引用，从实例方法改为静态方法，使代码更清晰且减少不必要的实例绑定
+- feat(节点处理器): 为数学运算节点添加可搜索配置选项
+- feat(数学运算节点): 添加多种数学运算功能并实现结果钳制
+  - 新增对数、三角函数、比较运算等 25 种数学运算模式
+  - 使用执行映射表优化分发逻辑
+  - 添加结果钳制功能可将输出限制在 0-1 范围
+  - 统一输入输出定义格式提升可维护性
+- fix(ui): 替换 console.log 为 console.debug
+  - 将 SelectInput.vue 文件中调试信息的输出方式从 `console.log` 更改为 `console.debug`，以符合更好的调试信息控制策略。
+- refactor(输入组件): 统一建议选择处理逻辑并支持搜索功能
+  - 修改输入组件处理建议选择的方式，从直接传递值改为传递选项对象
+  - 为下拉建议组件添加搜索功能并统一选项格式处理
+- feat(节点配置): 统一建议选项格式为对象并更新相关文档
+  - 将节点配置中的建议选项从字符串/数字数组统一改为{value, label}对象格式，增强可读性和灵活性
+  - 更新所有相关节点实现和文档示例，确保前后端类型定义一致
+  - 修复 SelectInput 组件对建议选项的解析逻辑，支持多种输入格式
+  - 优化 BaseNode 组件对 GroupInput/GroupOutput 节点的插槽处理
+- feat(节点): 实现多模式节点功能并添加数学运算节点
+  - 新增多模式节点支持，允许节点根据配置切换不同操作模式，每种模式可定义不同的输入/输出和执行逻辑。添加数学运算节点作为示例实现，支持加、减、乘、除、幂和平方根六种运算模式。
+  - 在类型定义中扩展节点接口，支持多模式配置
+  - 新增 useNodeModeSlots composable 处理模式切换逻辑
+  - 修改执行引擎以支持多模式节点的输入/输出动态切换
+  - 实现数学运算节点展示多模式功能
+  - 添加节点模式切换的历史记录支持
+- feat(面板): 添加共享模板面板支持并重构面板发现逻辑
+  - 新增模板目录支持，添加示例聊天面板模板
+  - 扩展文件管理器服务以支持模板路径解析
+  - 重构面板发现逻辑，支持同时扫描用户和共享模板目录
+  - 在面板定义中添加来源标识并在前端显示内置标记
+  - 更新类型定义以包含面板来源字段
+- fix: WebSocket URL 动态获取并更新代理配置
+  - WebSocket URL 现在会在 `_connect` 方法内部通过 `getWebSocketUrl()` 函数动态获取，不再硬编码。
+  - 更新了 `vite.config.ts` 文件中的代理配置，使其从配置文件中动态读取后端端口，并将 `/api` 和 `/ws` 的代理目标更新为从配置文件中获取的地址。
+- refactor(frontend): 替换 DaisyUI 按钮为原子类并更新样式指南
+  - 将 PanelListView 中的 DaisyUI 按钮组件替换为直接使用 Tailwind CSS 原子类
+  - 更新前端样式指南，明确采用原子类优先策略并移除 DaisyUI 相关内容
+
+## 2025 年 6 月 27 日
+
+- feat(国际化): 添加测试面板的 DaisyUI 组件展示及多语言支持
+  - 在测试面板视图中新增 DaisyUI 组件展示区，包含按钮、警告框、徽章和卡片组件
+  - 为所有 UI 组件添加多语言支持，更新中、英、日、俄及文言文翻译
+  - 在本地化模板和合并文件中添加新的翻译键
+  - 更新国际化扫描脚本，改进语言文件对比报告
+  - 在样式指南文档中添加测试面板实践范例说明
+- refactor(theme): 重构主题系统以简化 DaisyUI 集成
+  - 使用标准 light/dark 主题替代自定义主题名称
+  - 通过 CSS 变量覆盖实现 DaisyUI 主题动态化
+  - 添加品牌组件类(btn-brand-primary 等)统一 UI 样式
+  - 更新文档说明新的样式使用规范
+  - 在测试页面添加 DaisyUI 组件展示区
+- feat(theme): 添加 DaisyUI 派生颜色变量并完善主题配置
+- feat(WorkflowBinder): 添加工作流输入输出接口显示功能
+  - 在 WorkflowBinder 组件中新增工作流输入输出接口的展示区域，包括接口名称、数据类型和可视化标识。同时添加相关数据处理逻辑和样式，提升工作流绑定的可视化效果。
+- feat(icons): 添加常用图标组件并更新相关视图样式
+  - 新增 5 个常用 SVG 图标组件(Spinner, Add, Open, Delete, Settings)
+  - 更新 PanelListView 和 WorkflowBinder 组件样式，使用新图标
+  - 优化按钮和卡片交互样式，统一视觉风格
+- refactor(views): 将视图文件根据其功能和所属布局（全局、项目、设置）分别归类到 `views/home`、`views/project` 和 `views/settings` 目录中。
+  - 更新了 `router/index.ts` 中的所有视图组件导入路径，以匹配新的目录结构。
+- feat(面板): 添加面板工作流绑定配置功能
+  - 实现面板工作流绑定管理界面，支持通过别名调用工作流
+  - 重构面板 API 调用逻辑以支持别名模式
+  - 添加面板设置页面路由和组件
+  - 优化面板列表 UI 并添加配置入口
+  - 更新类型定义以支持工作流绑定配置
+
+## 2025 年 6 月 26 日
+
+- feat(适配器): 实现 API 适配器功能及管理界面
+  - 添加 API 适配器核心功能，包括：
+    1. 定义适配器类型及映射规则数据结构
+    2. 创建适配器管理界面和编辑器组件
+    3. 实现适配器存储和路由配置
+    4. 开发适配器调用逻辑和转换功能
+    5. 在项目仪表盘添加适配器入口
+  - 支持将工作流封装为标准 API 供外部调用，简化集成流程
+- docs(api): 更新前端 API 文档以反映 invoke 接口变更
+  - 将 executeWorkflow 重命名为 invoke 并更新相关类型定义
+  - 统一执行流程描述，明确 WorkflowInvocationService 的作用
+  - 更新 panel-api-specification 中的接口规范
+- refactor(workflow): 重构工作流调用逻辑并引入统一服务
+  - 将工作流调用逻辑从 workflowStore 解耦，创建新的 WorkflowInvocationService 作为统一入口
+  - 实现面板调用的实时预览功能，支持从编辑器或已保存工作流执行
+  - 更新 usePanelApiHost 以适配新服务并优化事件订阅机制
+  - 添加设计文档说明重构计划和架构设计
+- fix(workflow): 修复前端预览输出映射支持
+  - 添加 outputInterfaceMappings 参数以支持前端预览功能，移除不再使用的 groupPreviewData 计算属性
+- fix(websocket): 改进执行清理逻辑防止重复处理
+  - 添加延迟清理机制和待处理任务跟踪，防止执行 ID 被重复处理
+  - 取消已存在的清理任务当执行 ID 被重用
+  - 立即清理旧映射当设置新的发起执行
+- feat(workflow): 添加预览目标字段并优化执行逻辑
+  - 在 WorkflowStorageObjectSchema 中添加 previewTarget 可选字段
+  - 优化 transformStorageToExecutionPayload 以支持 interfaceInputs/Outputs
+  - 在 useWorkflowExecution 中正确处理接口输入输出
+  - 为 ExecutionEngine 添加非流式节点的处理逻辑
+  - 更新文档中的引号格式和架构概念说明
+  - 移除调试日志输出
+
 ## 2025 年 6 月 25 日
 
 - refactor(llm): 将单条消息输出改为消息数组格式以支持聊天历史
