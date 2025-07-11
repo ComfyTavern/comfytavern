@@ -1,4 +1,508 @@
 # 更新记录
+
+## 2025 年 6 月 25 日
+
+- refactor(llm): 将单条消息输出改为消息数组格式以支持聊天历史
+
+  - 修改 GenericLlmRequestNode 的消息输出格式，从单条消息对象改为包含单条消息的数组
+  - 更新 ExecutionEngine 的上游节点就绪条件检查，增加对 Promise 输出的支持
+
+- feat(i18n): 添加缺失节点相关翻译和 UI 控件显示配置
+
+  - docs: 更新自定义 UI 语言文档中的脚本命令
+  - refactor: 优化模型预设数据结构避免 i18n 扫描误判
+  - build: 添加语言文件拷贝脚本
+
+- feat(workflow): 添加缺失节点处理逻辑和 UI 显示
+
+  - 在 WorkflowNodeDataSchema 中添加 isMissing 和 originalNodeData 字段
+  - 实现缺失节点的转换逻辑，保留原始数据和连接信息
+  - 添加缺失节点的 UI 显示，包括警告图标和详细提示
+  - 添加中英文翻译支持
+  - 为缺失节点添加特殊样式
+
+- feat(workflow): 使用 Zod schema 验证工作流数据
+
+  - refactor(types): 将 WorkflowStorageObject 重构为 Zod schema
+  - refactor(utils): 使用 Zod 验证工作流转换逻辑
+  - refactor(frontend): 替换手动类型适配为 Zod 验证
+  - feat(backend): 新增 WorkflowManager 服务处理工作流加载和验证
+  - 确保工作流数据在存储、加载和转换过程中的类型安全，替换原有的手动类型适配和断言，统一使用 Zod schema 进行验证和解析
+
+- feat(websocket): 实现场景订阅机制和状态管理服务
+
+  - 新增 WorldStateService 提供场景状态原子性读写功能
+  - 在 WebSocketManager 中添加场景订阅管理逻辑，包括订阅/取消订阅和场景事件发布
+
+- docs: 添加 Agent 配置与运行时交互指南文档
+  - 新增 ComfyTavern 平台的 Agent 配置与运行时交互指南文档，详细说明 Agent 静态定义(agent_profile.json)和运行时实例化(scene.json)的配置方法，并阐述以 GM Agent 为核心的运行时交互模型
+
+## 2025 年 6 月 24 日
+
+- docs(architecture): 添加聊天历史树图编辑与分支管理设计文档
+
+  - 添加详细的设计文档，描述聊天历史树状结构的愿景、核心概念、用户工作流、关键操作和数据结构设计
+
+- docs(architecture): 更新架构文档以反映 Agent 与用户交互的新模型
+
+  - 将"交互式执行流"概念更新为"多轮次审议循环驱动"的交互模型
+  - 统一 PanelInteractionToolNode 为 RequestUserInteractionTool
+  - 修改前端交互协调流程，强调用户输入触发新一轮 Agent 审议
+  - 更新 Tauri 集成部分以对齐新的交互模型
+
+- docs(架构设计): 添加通过 Tauri 扩展实现原生能力集成的设计文档
+
+- docs(architecture): 在接口规范中添加描述字段
+
+  - 为 WorkflowInterface 和 SlotDefinition 接口添加可选描述字段，以提供更详细的文档说明
+
+- docs(架构): 新增面板 API 规范和阶段 0 实施方案文档
+  - 添加面板 API 规范文档，定义统一接口和通信机制
+  - 添加阶段 0 实施方案文档，包含 WorldStateService 和 WebSocketManager 扩展实现
+
+## 2025 年 6 月 23 日
+
+- fix(ui): 增加工作流删除确认对话
+
+  - 在处理工作流删除功能时，增加了确认对话框以防止误操作。具体实现如下：
+  - 在 `handleDelete` 函数中，首先查找要删除的工作流对象。如果未找到，则输出错误信息并显示错误对话框。
+  - 使用 `dialogService.showConfirm` 显示确认对话框，对话框内容从国际化文件中获取，包括标题、消息、确认按钮和取消按钮的文本。
+  - 如果用户确认删除，则调用 `workflowStore.deleteWorkflow` 执行删除操作。
+  - 更新了国际化文件 `en-US.json` 和 `zh-CN.json`，增加了删除确认对话框和未找到工作流的错误提示信息：
+  - 在 `workflowPanel` 中增加了 `confirmDelete` 对象，包含确认对话框的标题、消息、确认按钮和取消按钮的文本。
+  - 在 `errors` 中新增了 `deleteNotFound` 错误提示信息。
+
+- fix(文件工具): 处理 Windows 路径中的非 ASCII 字符解码问题
+
+  - 在 Windows 平台上，当路径包含非 ASCII 字符（如中文）时，URL.pathname 返回的路径需要进行解码。修改 getProjectRootDir 函数，对所有路径进行 decodeURIComponent 处理。
+  - fix(数据库检查): 增加对空数据库文件的检测和处理
+  - 当数据库文件存在但为空时，删除该文件并重新执行数据库设置流程，避免使用无效的数据库文件。
+
+- refactor(类型系统): 将流式特性从 DataFlowType 解耦为独立 isStream 字段
+
+  - 重构类型系统，移除 DataFlowType.STREAM 类型，改为使用独立的 isStream 布尔字段标记流式插槽。同时更新相关节点定义、文档和执行引擎逻辑以适配新设计。
+  - 主要变更包括：
+  - 移除 DataFlowType.STREAM 枚举值
+  - 在 SlotDefinitionBase 中新增 isStream 可选字段
+  - 更新所有使用 STREAM 类型的节点定义
+  - 修改执行引擎的流处理逻辑
+  - 更新相关文档说明流式特性的新实现方式
+
+- fix: 修正 useWorkflowManager 中的 mockLoadWorkflowFunc 参数
+
+  - 在 useWorkflowManager 中，mockLoadWorkflowFunc 函数的参数进行了调整，移除了 \_pId 参数，并将其位置与 wfId 参数进行了交换。这不会影响函数的功能，但需要确保调用该函数时传递的参数顺序正确。
+  - fix: 修正 bun.lock 中 postcss 版本不一致的问题
+  - 在 bun.lock 文件中，postcss 的版本号在不同依赖路径下存在不一致的情况。已经将所有引用的 postcss 版本统一为 8.5.6，以避免潜在的冲突和问题。
+  - refactor: 移除 workflow-preparer 中未使用的导入
+  - 在 workflow-preparer 文件中，移除了未使用的 InputDefinition 和 OutputDefinition 导入，使代码更加简洁和易读。
+  - feat: 添加 ensureProjectReady 中的配置检查和合并功能
+  - 在 ensureProjectReady 函数中，添加了对配置文件的检查和合并功能。通过引入 checkAndMergeConfigs 函数，确保在项目准备阶段能够正确处理配置文件的合并和一致性检查。
+
+- docs: 重构 README 以提升可读性和信息密度
+
+  - 精简项目描述，突出核心价值主张
+  - 重新组织核心特性章节，采用更清晰的三支柱结构
+  - 优化路线图表述，聚焦关键里程碑
+  - 简化安装和使用指南，移除冗余步骤
+  - 统一格式和排版，提升整体可读性
+
+- docs(架构): 添加统一应用面板与 Agent 实施计划文档
+
+  - 添加详细的技术实施计划文档，描述 ComfyTavern 平台统一应用面板与 Agent 的架构设计和分阶段实现方案
+
+- docs(architecture): 更新统一架构文档中的工作流准备说明
+
+  - 修改文档以更清晰地描述同构工作流准备的实现原则，强调共享包的作用和行为一致性
+
+- docs(architecture): 添加统一架构总览文档
+
+  - 添加 ComfyTavern 平台统一架构总览文档，阐明核心概念关系和设计原则
+
+- docs(architecture): 移动项目改造计划文档至旧目录并更新内容
+
+  - 将原架构目录下的项目改造计划文档移至 old 目录，并更新文档内容为最新版本 v3
+
+- feat(workflow): 实现工作流工具同构化重构
+  - 将工作流扁平化和转换逻辑从前端迁移至共享包，支持前后端复用
+  - 添加 waitForVueFlowInstance 函数处理异步实例获取
+  - 重构 workflowFlattener 作为适配层调用核心工具
+  - 更新相关组件以适配新的工具函数
+
+## 2025 年 6 月 22 日
+
+- fix(workflow): 修复另存为后标签页和工作流状态不同步问题
+
+  - 更新标签页和工作流存储状态以反映另存为操作后的新工作流数据，避免状态不一致
+
+- feat(project): 实现项目导航架构重构和状态持久化
+
+  - 重构项目导航架构，引入新的项目布局容器和仪表盘视图
+  - 添加 pinia-plugin-persistedstate 实现状态持久化
+  - 重构路由结构，将编辑器作为子路由
+  - 优化标签页与 URL 同步逻辑，新增工作流加载功能
+
+- docs(architecture): 添加项目改造实施计划文档
+
+  - 新增项目改造实施计划文档，详细说明重构项目入口、状态恢复与同步、会话持久化等核心目标及分阶段实施方案。包含路由改造、组件创建、状态管理增强等具体技术方案。
+
+- feat(llm): 为 LLM 适配器添加流式请求支持
+
+  - 实现 LLM 适配器的流式请求功能，包括：
+  - 1. 在 ILlmApiAdapter 接口中添加 executeStream 方法
+  - 2. 在 OpenAIAdapter 中实现流式请求处理
+  - 3. 修改 GenericLlmRequestNode 以支持流式输出
+  - 4. 添加相关类型定义和文档
+
+- docs(node-types): 更新多媒体数据类型命名和描述
+
+  - 将 ImageData/AudioData/VideoData 重命名为更简洁的 Image/Audio/Video
+  - 并明确说明这些类型可支持的数据格式和引用方式
+
+- docs(architecture): 更新前端 API 管理和 LLM 适配器架构文档
+
+  - refactor(architecture): 重构 LLM 适配器架构为分层路由策略
+  - 将渠道组改为支持嵌套路由策略
+  - 新增策略执行器组件处理复杂路由逻辑
+  - 简化 GenericLlmRequestNode 职责
+  - feat(architecture): 添加统一外部 API 网关设计方案
+  - 支持将工作流封装为标准 OpenAI API
+  - 通过 ApiAdapter 实现模型别名映射
+  - 提供无缝外部集成能力
+
+- feat:有点问题的工作流，但是因为这个工作流的文档都失踪了，随便弄的
+
+- fix:修正规则位置
+
+- docs: 添加 kilo 规则
+
+- refactor(llm): 重构 LLM 请求节点的参数结构以提升可读性
+
+  - 将请求参数从扁平结构重组为嵌套结构，分离模型配置和渠道配置，使代码更清晰易读
+
+- feat(调度器): 添加多用户模式支持并传递用户 ID 到执行引擎
+
+  - 在 ConcurrencyScheduler 中新增 multiUserMode 配置选项
+  - 在执行流程中传递 userId 参数至 ExecutionEngine
+  - 修改 WebSocket 处理器以获取并传递 userId
+  - 临时禁用 GenericLlmRequestNode 中的模型检查
+
+- refactor(调度器): 重构服务注入机制以支持依赖注入
+
+  - 将服务实例化提升到入口文件，并通过构造函数注入到调度器和执行引擎
+  - 添加服务类型定义并在 LLM 节点中添加服务验证逻辑
+
+- style(Dialog): 调整遮罩层背景透明度使用 CSS 变量
+
+  - 使用 CSS 变量(--ct-backdrop-opacity)控制遮罩层透明度，提高样式可维护性
+
+- style(llm): 调整合并消息节点的宽度为 200 像素
+
+- feat(llm): 添加创建消息和合并消息节点并修复文档格式
+
+  - 添加两个新的 LLM 节点：创建单条消息和合并多条消息功能，用于更灵活地构建对话流程。同时将文档中的`UI_BLOCK`格式修正为`UiBlock`以保持命名一致性。
+
+- style(ui): 调整背景透明度和主题样式
+
+  - 修改 BaseModal 和 LlmConfigManager 的背景透明度
+  - 统一所有主题的 backdrop-opacity 为 0.3
+  - 提升 UI 元素的视觉层次感
+
+- fix(键盘快捷键): 修复快捷键在非画布区域触发的问题
+
+  - 修改键盘快捷键逻辑，仅在编辑器或画布区域获得焦点时响应快捷键操作。为相关函数添加容器引用参数，确保快捷键只在正确的上下文中触发。
+
+- feat(settings): 添加紧凑模式响应式布局支持
+
+  - 在设置页面组件中实现紧凑模式，当容器宽度小于 768px 时自动启用。通过 ResizeObserver 监听容器尺寸变化，并使用 Vue 的 provide/inject 机制在组件间共享紧凑状态。
+  - 新增 injectionKeys.ts 定义紧凑模式注入键
+  - 修改 SettingGroup、SettingsLayout 和 SettingItemRow 组件支持紧凑模式
+  - 添加紧凑模式下的样式调整
+
+- feat(llm-config): 添加响应式布局支持并优化 UI 细节
+
+  - 为 API 渠道列表添加响应式布局，在小屏幕下显示卡片视图
+  - 优化表格视图的列宽和文本溢出处理
+  - 调整侧边栏宽度和主内容区的最小宽度
+  - 添加容器宽度监听实现自适应布局切换
+
+- style(components): 优化多个组件的响应式布局和样式
+
+  - 移除固定宽度限制，使控件更适应容器
+  - 添加响应式设计处理小屏幕布局
+  - 使用 CSS gap 替代手动间距
+  - 统一按钮组在不同屏幕尺寸下的表现
+
+- feat: 更新项目版本号
+  - 将各个包的版本号进行更新：
+  - 后端应用版本号从 0.1.2 更新到 0.1.3
+  - 前端应用版本号从 0.0.8 更新到 0.0.9
+  - 根项目版本号从 0.0.8 更新到 0.0.9
+  - 类型定义包版本号从 0.0.8 更新到 0.0.9
+
+## 2025 年 6 月 21 日
+
+- fix: 修正 Claude 模型 ID 格式错误
+
+  - 更新前后端中 Claude 模型 ID 的命名格式，从"claude-4-opus-20250522"改为正确的"claude-opus-4-20250522"格式，保持命名一致性
+
+- docs: 更新模型 ID 的描述信息
+
+  - 调整了 `activated_model_id` 字段的显示名称和描述信息，使其更加简洁明了。具体更改如下：
+  - 将 `displayName` 从 '激活的模型 ID' 修改为 '模型 ID'。
+  - 将 `description` 修改为 '要使用的已激活模型的 ID \n 比如`claude-4-opus-20250522`、`gemini-2.5-pro`、`deepseek-reasoner`等'，增加了具体的示例以帮助用户更好地理解。
+
+- feat(llm 节点): 添加 LLM 参数单独配置项并优化参数合并逻辑
+
+  - 添加 temperature、max_tokens、top_p 和 seed 等 LLM 参数配置项到节点 UI
+  - 实现节点 UI 参数与输入参数的合并逻辑，输入参数优先级更高
+  - 更新相关参数的描述信息，提供更详细的配置说明和示例
+
+- refactor(llm-adapter): 重构渠道引用为唯一 ID 并移除前端渠道选择
+
+  - 将渠道引用从用户定义的名称改为系统生成的唯一 ID，提高数据一致性和安全性
+  - 移除前端渠道选择逻辑，改为由后端自动路由
+  - 更新相关接口和文档以反映这些变更
+
+- feat(设置): 添加画布控件显示开关功能
+
+  - 在设置面板中添加显示画布控件的开关选项，并实现其功能。同时更新了多语言翻译文件以支持此功能。
+
+- docs(本地化): 更新小地图描述为显示在右下角
+
+- perf(theme): 批量应用 CSS 变量减少闪烁
+
+  - 优化主题变量应用方式，通过构建完整 CSS 文本一次性设置，避免逐个变量应用导致的页面闪烁。同时保留现有非主题相关样式。
+  - style(sidebar): 优化导航项过渡效果
+  - 将导航项中的 transition-all 替换为具体属性 transition-[opacity,max-width,margin-left]，避免不必要的性能消耗
+
+- style(ApiChannelList): 调整频道状态标签的样式间距和大小
+
+- fix: 修复 API 配置更新时的错误处理和请求体净化
+
+  - 在 ApiConfigService 中添加数据库更新操作的错误处理，捕获并记录错误后重新抛出
+  - 在 llmConfigApi 中净化请求体，移除 null 值和后端管理字段，确保与后端验证器兼容
+
+- feat(渠道管理): 在渠道列表中添加启用/禁用开关
+
+  - 在 ApiChannelList 中添加 BooleanToggle 组件用于切换渠道状态
+  - 调整 BooleanToggle 和 BaseNode 的样式以适配新功能
+  - 移除操作列的文字居中样式，改为 flex 布局
+  - 新增 toggleChannelStatus 方法处理渠道状态切换
+
+- refactor(ui): 优化布尔切换组件样式并替换复选框为统一组件
+
+  - 更新 BooleanToggle 组件的样式类，使用更一致的配色方案
+  - 在 ApiChannelForm 中用 BooleanToggle 替换原生复选框，提升 UI 一致性
+  - 将 disabled 字段改为必填项以增强类型安全
+
+- refactor(llm-config): 优化表单组件样式和功能
+
+  - 使用 SelectInput 替换原生 select 提升用户体验
+  - 更新模型预设列表并添加更多选项
+  - 调整表单输入样式和自动完成属性
+  - 移除 LlmConfigManager 侧边栏标题
+  - 修复 SuggestionDropdown 边框样式
+
+- refactor(auth): 简化用户系统设计，统一单用户与多用户模式
+
+  - 将原有的三种用户模式（LocalNoPassword、LocalWithPassword、MultiUserShared）简化为两种（SingleUser、MultiUser）
+  - 引入统一的 UserIdentity 模型，取代原有的 DefaultUserIdentity 和 AuthenticatedMultiUserIdentity
+  - 重构相关代码，包括路由、服务、中间件和前端组件
+  - 更新设计文档，反映 v4 版本的简化设计
+  - 调整数据库迁移和类型定义，确保与新模式兼容
+
+- style(SideBar): 调整用户头像和用户名的样式以适应侧边栏折叠状态
+
+  - 修改头像和用户名的样式类，使其在不同侧边栏状态下有更好的过渡效果和视觉表现
+
+- docs(frontend-vueflow): 添加默认头像图片资源
+
+- feat(llm): 实现 LLM 配置管理功能 MVP
+
+  - 新增 LLM 配置路由和服务，支持 API 渠道和激活模型管理
+  - 重构数据库 schema，移除 refName 字段，使用 id 作为主键
+  - 添加前端 LLM 配置管理界面，包括渠道列表和表单
+  - 实现模型发现和激活流程
+  - 更新相关文档和架构设计
+
+- feat: 实现 LLM 配置管理及请求功能
+
+  - 新增 LLM 配置路由及 API 端点
+  - 实现 API 渠道配置和激活模型的服务层
+  - 添加 OpenAI 适配器的模型列表功能
+  - 重构 GenericLlmRequestNode 以支持 MVP 版本
+  - 在 schema 中添加 createdAt 字段
+
+- feat(llm): 实现 LLM 适配器架构及数据库迁移
+
+  - 新增 LLM API 适配器注册表服务，OpenAI 适配器实现及相关服务
+  - 添加 activated_models 和 api_channels 数据库表结构
+  - 移除不再使用的 CustomMessage 和 StandardResponse 类型
+
+- docs(架构): 更新 LLM 适配器实施方案和本地用户系统设计文档
+  - 新增 LLM 适配器 MVP 实施方案文档，包含核心目标、架构图和详细实施步骤
+  - 重构 LLM 适配器架构文档，拆分模型管理服务职责并更新核心流程
+  - 修改本地用户系统设计文档，调整外部凭证存储策略为可选加密模式
+
+## 2025 年 6 月 20 日
+
+- style(主题): 更新主题颜色和按钮样式
+
+  - 调整暖色日落和紫色梦境主题的成功色值
+  - 统一测试面板中的按钮样式，使用语义化类名
+  - 移除重复的黄色按钮样式定义
+
+- feat(i18n): 重构国际化扫描器
+
+  - 重构国际化扫描器脚本，改进语言文件合并逻辑并支持多语言文件处理
+  - 优化扫描器输出目录结构，生成合并后的语言文件到独立目录
+
+- refactor(i18n-scanner): 重构合并翻译逻辑以保留现有翻译
+
+  - 重构 mergeTranslations 函数，改为基于最终模板结构进行合并，自动保留现有翻译字符串。新增 getValueByPath 辅助函数用于安全获取嵌套对象值，并确保 \_meta 区块被正确保留。
+
+- refactor(i18n): 将\_meta 字段移至模板文件顶部
+
+  - 修改 i18n 扫描脚本，确保生成的本地化模板文件中\_meta 字段出现在最前面，提高可读性和一致性
+
+- refactor(workflow): 重构默认工作流应用逻辑并使用转换工具
+
+  - feat(node): 添加节点定义调试日志注释
+  - style(ui): 移除 uiStore 中的冗余调试日志
+
+- style(HierarchicalMenu): 调整菜单项的样式和间距
+
+  - 优化菜单标题和分类的样式，使用圆角和背景色增强视觉效果，并通过调整间距简化布局
+
+- fix(上下文菜单): 修复上下文菜单定位问题
+
+  - 将上下文菜单的定位方式从 fixed 改为 absolute，并更新定位计算逻辑以相对于容器而非视口。同时为画布容器添加 relative 定位以支持新的菜单定位方式。
+
+- feat(i18n): 为上下文菜单添加国际化支持
+
+  - 将 NodeContextMenu、ContextMenu、SlotContextMenu 和 WorkflowMenu 组件中的硬编码文本替换为国际化键
+
+- fix(workflow): 实现批量添加元素并修复粘贴功能
+
+  - 添加 addElementsAndRecord 方法以支持批量添加节点和边，并确保原子性操作
+  - 重构 useCanvasClipboard 以使用新的协调器方法，优化粘贴流程和历史记录
+
+- feat(i18n): 为文件管理器组件和弹窗添加国际化支持
+
+  - 为 HierarchicalMenu、FileGridItem、FileListItem 等组件及 MoveModal、FilterModal、UploadManagerModal、ViewSettingsModal 等弹窗添加国际化支持，使用 vue-i18n 管理多语言文本。同时更新 zh-CN 语言文件，补充文件管理器相关内容。
+  - 重构部分硬编码文本为国际化键值，优化类型显示逻辑，确保所有用户界面文本可通过语言文件配置。移除组件中的硬编码中文文本，改为从语言文件中获取。
+
+- feat(i18n): 为多个组件添加国际化支持并更新到中文语言文件
+  - 添加 vue-i18n 到多个组件中，将硬编码的中文字符串替换为国际化键值
+  - 更新 zh-CN.json 文件，添加新的内容字段
+
+## 2025 年 6 月 19 日
+
+- feat(i18n): 为多个组件添加国际化支持
+
+  - 为 NodePanel、WorkflowPanel、HistoryPanel 等组件添加 i18n 支持
+  - 更新 zh-CN.json 文件，添加相应的翻译内容
+  - 移除组件中的硬编码文本，改为使用翻译键
+
+- feat(i18n): 添加国际化支持框架和基础翻译文件
+
+  - 集成 vue-i18n 库，实现多语言支持
+  - 添加英文(en-US)和中文(zh-CN)基础翻译文件
+  - 创建语言切换功能和相关组件
+  - 实现语言包自动扫描和合并工具
+
+- feat(i18n): 实现国际化扫描器工具
+
+  - 添加扫描器脚本，自动提取代码中的国际化键
+  - 实现语言文件的合并和更新功能
+  - 支持多语言文件的处理和维护
+
+- docs(i18n): 添加国际化实施计划文档
+
+  - 详细说明国际化实施策略和技术方案
+  - 定义翻译键命名规范和组织结构
+  - 提供组件国际化改造指南和示例
+
+- feat(节点组): 实现节点组接口同步和连接验证
+  - 添加节点组接口同步机制，确保引用工作流变更时自动更新节点组接口
+  - 实现节点组连接验证逻辑，支持类型兼容性检查
+  - 优化节点组创建和编辑流程，提升用户体验
+
+## 2025 年 6 月 18 日
+
+- feat(工作流): 实现工作流历史记录功能
+
+  - 添加工作流操作历史记录，支持撤销和重做功能
+  - 实现历史记录面板，显示操作列表和时间戳
+  - 优化历史记录存储结构，减少内存占用
+
+- feat(节点): 添加节点预览功能
+
+  - 实现节点输出预览功能，支持实时查看节点执行结果
+  - 添加预览面板组件，显示选中节点的输出数据
+  - 优化预览数据的格式化和展示方式
+
+- feat(ui): 优化节点面板和侧边栏交互
+
+  - 改进节点面板的折叠和展开动画
+  - 优化侧边栏的响应式布局和交互体验
+  - 添加节点搜索和过滤功能，提升使用效率
+
+- fix(工作流): 修复工作流保存和加载问题
+  - 修复工作流保存时可能丢失节点连接的问题
+  - 解决加载大型工作流时的性能瓶颈
+  - 优化工作流数据结构，提高存储效率
+
+## 2025 年 6 月 17 日
+
+- feat(节点): 实现节点组功能
+
+  - 添加节点组创建和编辑功能，支持将多个节点封装为一个组
+  - 实现节点组接口定义，支持输入输出参数配置
+  - 添加节点组引用功能，支持在不同工作流中复用节点组
+
+- feat(编辑器): 添加标签页系统
+
+  - 实现多标签页编辑功能，支持同时打开多个工作流
+  - 添加标签页管理组件，支持创建、切换、关闭标签页
+  - 优化标签页状态管理，确保数据隔离和一致性
+
+- feat(ui): 添加主题切换功能
+
+  - 实现亮色和暗色主题切换功能
+  - 优化组件样式，确保在不同主题下的一致性
+  - 添加主题配置选项，支持自定义主题颜色
+
+- refactor(状态管理): 重构工作流状态管理逻辑
+  - 将工作流状态管理拆分为多个专门的组合式函数
+  - 优化状态更新逻辑，提高响应性能
+  - 改进数据流转方式，减少不必要的组件重渲染
+
+## 2025 年 6 月 16 日
+
+- feat(节点): 添加多输入插槽功能
+
+  - 实现多输入插槽的连接管理，支持多个连接到同一输入
+  - 添加连接顺序管理功能，确保多输入数据的正确顺序
+  - 优化多输入插槽的视觉呈现和交互体验
+
+- feat(编辑器): 实现可停靠编辑器面板
+
+  - 添加可停靠的代码编辑器面板，支持多标签页编辑
+  - 实现编辑器状态管理，保持编辑内容的一致性
+  - 优化编辑器与节点输入的交互，提升用户体验
+
+- feat(ui): 添加右侧预览面板
+
+  - 实现右侧专用预览面板，用于显示节点输出和工作流状态
+  - 添加面板展开/收起和宽度调整功能
+  - 优化预览数据的格式化和展示方式
+
+- refactor(类型系统): 重构节点插槽类型系统
+  - 将 SocketType 替换为 DataFlowType，统一类型命名
+  - 添加 matchCategories 用于连接验证，提高类型检查准确性
+  - 更新所有节点定义和组件以适配新的类型系统
+
 ## 2025 年 6 月 15 日
 
 - refactor(ui): 将侧边栏状态管理迁移到 uiStore
@@ -15,20 +519,20 @@
   - 添加扩展名排序选项并实现排序逻辑
   - 重构排序下拉菜单，增加网格尺寸调整输入框和反向排序开关
   - 优化排序下拉菜单的样式和交互
-- refactor(file-manager): 移除重复样式并迁移到tailwind配置
-  - 将组件中重复定义的CSS样式移除，统一在tailwind.config.js中配置
-  - 使用DaisyUI提供的组件样式替代自定义样式
-- refactor(file-manager): 重构详情面板状态管理至uiStore
-  - 将文件管理器的详情面板可见性状态从fileManagerStore迁移至uiStore统一管理
+- refactor(file-manager): 移除重复样式并迁移到 tailwind 配置
+  - 将组件中重复定义的 CSS 样式移除，统一在 tailwind.config.js 中配置
+  - 使用 DaisyUI 提供的组件样式替代自定义样式
+- refactor(file-manager): 重构详情面板状态管理至 uiStore
+  - 将文件管理器的详情面板可见性状态从 fileManagerStore 迁移至 uiStore 统一管理
   - 添加详情面板宽度调整功能及持久化支持
   - 优化点击事件处理逻辑避免与双击冲突
 - style(文件管理器): 调整文件管理器的样式和颜色配置
   - 优化文件管理器中搜索框、面包屑导航和文件列表的样式，统一亮色和暗色模式下的颜色配置
-- refactor(file-manager): 统一使用FAMItem类型替换本地ListItem定义
-  - 重构文件管理系统相关组件和服务，使用@comfytavern/types中的FAMItem类型替换原有的本地ListItem接口定义。主要变更包括：
-  - 在types包中新增FAMItem类型定义和验证schema
+- refactor(file-manager): 统一使用 FAMItem 类型替换本地 ListItem 定义
+  - 重构文件管理系统相关组件和服务，使用@comfytavern/types 中的 FAMItem 类型替换原有的本地 ListItem 接口定义。主要变更包括：
+  - 在 types 包中新增 FAMItem 类型定义和验证 schema
   - 更新前端组件和后端服务使用统一类型
-  - 修改相关API接口和store逻辑适配新类型
+  - 修改相关 API 接口和 store 逻辑适配新类型
 - fix(FileManagerService): 添加受保护路径的重命名检查
   - 在文件重命名操作中添加对系统路径、固定路径和项目结构目录的保护检查，防止这些关键路径被意外修改。包括对 system://、user://projects、user://library 等路径的特殊处理，当尝试重命名这些路径时会抛出错误。
 - feat(文件管理): 添加文件管理路由模块
@@ -45,7 +549,7 @@
   - 添加文件管理器页面路由和基础布局
   - 实现文件列表、网格视图和面包屑导航组件
   - 添加文件操作工具栏和上下文菜单
-  - 实现文件上传、移动、重命名等API接口
+  - 实现文件上传、移动、重命名等 API 接口
   - 添加视图设置和移动文件模态框
 - docs(frontend): 新增前端文件管理器设计文档
   - 添加 FAM 系统前端文件管理器的详细设计文档，包含组件结构、状态管理、API 设计和用户流程。文档基于项目现有组件和实践进行设计，确保与现有代码风格一致。
@@ -55,24 +559,24 @@
 - fix(frontend-vueflow): 修复 Tooltip 组件 placement 类型问题
   - 将 Tooltip 组件的 placement 属性类型从 Placement 改为 string，并在使用时断言回 Placement 类型
   - 更新多个包的版本号及依赖
-- refactor: 重构文件系统操作以使用统一的FileManagerService
-  - 移除直接的文件系统操作，统一通过FileManagerService处理
-  - 重构config.ts，移除不再使用的全局路径配置
-  - 更新所有loader节点和路由以使用逻辑路径和FAMService
-  - 为FileManagerService添加append模式支持
-  - 重构日志服务和用户头像上传以使用FAMService
-  - 确保所有系统目录通过FAMService创建
+- refactor: 重构文件系统操作以使用统一的 FileManagerService
+  - 移除直接的文件系统操作，统一通过 FileManagerService 处理
+  - 重构 config.ts，移除不再使用的全局路径配置
+  - 更新所有 loader 节点和路由以使用逻辑路径和 FAMService
+  - 为 FileManagerService 添加 append 模式支持
+  - 重构日志服务和用户头像上传以使用 FAMService
+  - 确保所有系统目录通过 FAMService 创建
 - feat(文件管理): 实现文件管理服务核心功能
   - 添加 FileManagerService 实现，支持解析逻辑路径和基本文件操作
   - 包含路径解析、文件读写、目录操作等功能
   - 实现安全检查和错误处理机制
 - docs(architecture): 添加统一文件与资产管理系统的设计文档草案
-  - 添加统一文件与资产管理系统的设计文档草案，包含系统架构、核心概念、API设计和实施计划。文档详细描述了文件组织结构、逻辑路径方案以及与现有系统的集成方案。
+  - 添加统一文件与资产管理系统的设计文档草案，包含系统架构、核心概念、API 设计和实施计划。文档详细描述了文件组织结构、逻辑路径方案以及与现有系统的集成方案。
 - docs: 添加 Mermaid 图表代码块标记
-- docs(DesignDocs): 添加项目架构图及mermaid源码
-  - 添加项目架构的mermaid流程图定义及生成的PNG图片，用于文档说明系统各组件关系
-- docs:移动已实施的到old文件夹
-- chore: 更新所有包的版本号至0.0.8或0.1.2
+- docs(DesignDocs): 添加项目架构图及 mermaid 源码
+  - 添加项目架构的 mermaid 流程图定义及生成的 PNG 图片，用于文档说明系统各组件关系
+- docs:移动已实施的到 old 文件夹
+- chore: 更新所有包的版本号至 0.0.8 或 0.1.2
 - docs(DesignDocs): 更新项目结构脑图文档以反映最新技术架构
   - 重构项目结构脑图文档，详细描述前后端技术栈、核心模块和开发规范。新增项目概述、核心架构、开发流程和未来展望章节，保持文档与代码实现同步。
 - docs(project): 全面新建和完善项目技术文档体系
@@ -90,47 +594,47 @@
 - docs:清理过时文档
 - docs(rules): 添加对话框与通知服务规范文档
   - 添加 DialogService 的详细使用规范，包括对话框类型、参数说明和示例代码。涵盖消息框、确认框、输入框和通知 toast 的使用方法，以及相关组件和注意事项。
-- refactor: 移除冗余代码和阻塞UI的alert提示
-  - 清理了TODO注释和已实现的占位逻辑
-  - 移除了开发调试用的alert弹窗和冗余的console日志
+- refactor: 移除冗余代码和阻塞 UI 的 alert 提示
+  - 清理了 TODO 注释和已实现的占位逻辑
+  - 移除了开发调试用的 alert 弹窗和冗余的 console 日志
   - 简化了工作流数据处理逻辑，移除不必要的检查
 - refactor(SettingItemRow): 调整头像编辑按钮位置至头像预览前
   - 将头像编辑按钮从头像预览后移动到预览前，提升用户操作体验
 - feat(用户头像): 实现用户头像上传与展示功能
   - 新增头像上传组件和模态框
-  - 扩展用户身份接口以支持头像URL
+  - 扩展用户身份接口以支持头像 URL
   - 修改设置控件以支持头像类型
-  - 实现头像上传API和后端处理逻辑
+  - 实现头像上传 API 和后端处理逻辑
   - 在侧边栏和设置页面展示用户头像
   - 添加默认头像和错误处理机制
 - feat(backend): 实现用户隔离的角色卡存储和访问
-  - refactor(frontend): 使用统一的API工具和URL处理
-  - docs(types): 添加PNG处理库的类型定义
-  - 后端现在根据用户ID存储角色卡到各自目录，确保数据隔离
-  - 前端改用统一的useApi工具和URL处理函数
-  - 添加了png-chunks-extract和png-chunk-text的类型定义
+  - refactor(frontend): 使用统一的 API 工具和 URL 处理
+  - docs(types): 添加 PNG 处理库的类型定义
+  - 后端现在根据用户 ID 存储角色卡到各自目录，确保数据隔离
+  - 前端改用统一的 useApi 工具和 URL 处理函数
+  - 添加了 png-chunks-extract 和 png-chunk-text 的类型定义
   - 改进错误处理和日志记录
-- refactor(file): 集中文件路径管理到fileUtils模块
-  - 将分散在各处的文件路径计算和目录创建逻辑统一到fileUtils模块
-  - 添加ensureDirExists函数确保目录存在
+- refactor(file): 集中文件路径管理到 fileUtils 模块
+  - 将分散在各处的文件路径计算和目录创建逻辑统一到 fileUtils 模块
+  - 添加 ensureDirExists 函数确保目录存在
   - 重构各服务使用新的路径获取方法
   - 在应用启动时统一创建必要目录
 
 ## 2025 年 6 月 13 日
 
 - feat(projectRoutes): 添加用户认证支持并更新.gitignore
-  - 在项目路由中添加用户认证支持，包括从上下文中提取用户ID并验证
-  - 更新.gitignore以忽略userData目录
+  - 在项目路由中添加用户认证支持，包括从上下文中提取用户 ID 并验证
+  - 更新.gitignore 以忽略 userData 目录
 - fix(vComfyTooltip): 检查空内容时不显示工具提示
   - 修复工具提示在内容为空时仍会显示的问题，同时修正 StringInput 组件中 class 的合并方式
 - feat(用户设置): 添加初始用户名设置功能并改进相关组件
-  - 在uiStore中添加初始用户名设置模态框状态和方法
-  - 创建InitialUsernameSetupModal组件用于用户名设置
-  - 扩展BaseModal组件支持无样式模式和自定义类
-  - 为TextAreaInput组件添加尺寸控制功能
-  - 在TestPanelView中添加测试用例和设置面板
+  - 在 uiStore 中添加初始用户名设置模态框状态和方法
+  - 创建 InitialUsernameSetupModal 组件用于用户名设置
+  - 扩展 BaseModal 组件支持无样式模式和自定义类
+  - 为 TextAreaInput 组件添加尺寸控制功能
+  - 在 TestPanelView 中添加测试用例和设置面板
 - refactor(auth): 重构认证中间件为函数式插件并改进错误处理
-  - 将认证中间件从Elysia实例重构为函数式插件，确保derive方法正确执行
+  - 将认证中间件从 Elysia 实例重构为函数式插件，确保 derive 方法正确执行
   - 改进错误处理逻辑，统一错误对象结构
   - 添加调试日志以跟踪认证流程
   - 更新相关路由和主应用以使用新的中间件形式
@@ -141,45 +645,45 @@
   - 删除冗余的 cleanup_and_generate.ps1 脚本
   - 在启动流程中增加环境准备检查
 - refactor: 优化项目配置并添加数据库迁移支持
-  - 添加drizzle.config.ts配置文件用于数据库迁移
-  - 更新.gitignore忽略本地生成的数据文件
-  - 在package.json中添加数据库相关脚本
-  - 创建cleanup_and_generate.ps1脚本用于清理和生成操作
-  - 更新README.md添加镜像源安装说明
+  - 添加 drizzle.config.ts 配置文件用于数据库迁移
+  - 更新.gitignore 忽略本地生成的数据文件
+  - 在 package.json 中添加数据库相关脚本
+  - 创建 cleanup_and_generate.ps1 脚本用于清理和生成操作
+  - 更新 README.md 添加镜像源安装说明
   - 调整前端组件属性命名以保持一致性
 - feat(用户资料): 添加用户名修改功能及相关组件
   - 实现用户资料管理功能，包括：
   - 1. 后端添加用户资料路由和用户名更新接口
-  - 2. 前端新增用户资料API和store操作
+  - 2. 前端新增用户资料 API 和 store 操作
   - 3. 创建初始用户名设置模态框
   - 4. 扩展设置组件支持自定义保存逻辑
-  - 5. 数据库schema添加updatedAt字段
+  - 5. 数据库 schema 添加 updatedAt 字段
   - 这些改动使得本地模式用户可以修改默认用户名，并在首次使用时强制设置昵称
 - feat(auth): 实现用户认证和密钥凭证管理功能
-  - 添加用户认证相关API和状态管理，包括：
-  - - 用户上下文获取API
-  - - 服务API密钥和外部凭证的CRUD操作API
-  - - Pinia store管理认证状态和密钥凭证
-  - - 在App初始化时自动获取用户上下文
+  - 添加用户认证相关 API 和状态管理，包括：
+  - - 用户上下文获取 API
+  - - 服务 API 密钥和外部凭证的 CRUD 操作 API
+  - - Pinia store 管理认证状态和密钥凭证
+  - - 在 App 初始化时自动获取用户上下文
 - feat(backend): 实现用户认证与密钥管理功能
   - - 新增用户认证中间件及路由
   - - 添加数据库服务与用户管理配置
-  - - 实现服务API密钥和外部凭证管理
+  - - 实现服务 API 密钥和外部凭证管理
   - - 引入加密服务处理敏感数据
   - - 重构项目路由为插件形式
   - - 更新依赖以支持新功能
-- docs(用户系统): 本地用户系统设计方案已更新至v3。 该方案详细阐述了三种用户操作模式、两种核心密钥（服务 API 密钥和外部服务凭
+- docs(用户系统): 本地用户系统设计方案已更新至 v3。 该方案详细阐述了三种用户操作模式、两种核心密钥（服务 API 密钥和外部服务凭
   - ）的管理机制、基于 SQLite 的数据存储模型、具体的后端 API 设计、前端实现要点、安全性考量以及分阶段的实施路线图。
   - 此设计旨在提供一个安全、灵活且可扩展的用户系统，为 ComfyTavern 项目的后续开发提供了清晰的架构指导。
 
 ## 2025 年 6 月 12 日
 
-- docs(architecture): 更新知识库架构文档，废弃placement字段并新增depth_offset
-  - - 废弃usage_metadata中的placement字段，其功能由tags结合组装器模板替代
-  - - 新增depth_offset字段支持深度偏移插入方式
-  - - 完善SillyTavern导入策略文档，详细说明ST字段到CAIU的映射关系
+- docs(architecture): 更新知识库架构文档，废弃 placement 字段并新增 depth_offset
+  - - 废弃 usage_metadata 中的 placement 字段，其功能由 tags 结合组装器模板替代
+  - - 新增 depth_offset 字段支持深度偏移插入方式
+  - - 完善 SillyTavern 导入策略文档，详细说明 ST 字段到 CAIU 的映射关系
   - - 明确核心上下文组装器对原生字段的处理规则
-- docs(knowledgebase-architecture): 更新知识库架构文档以支持ST资产导入
+- docs(knowledgebase-architecture): 更新知识库架构文档以支持 ST 资产导入
   - - 在 `usage_metadata` 部分增加了 `role` 字段，用于指定内容注入时扮演的角色，包括 "null", "system", "user", "assistant", 未来可能支持 "
   - ool"。未设置时默认为 "null"，根据上下文自动确定。
   - - 修改了 `source` 字段的描述，增加了 "imported_from:sillytavern:v1.x" 作为来源选项，用于标记从 SillyTavern 导入的内容。
@@ -189,19 +693,19 @@
   - - 添加了对 ST 特有行为逻辑参数的存储说明，这些参数可以存储在 CAIU 的 `extensions` 字段内，供专门的工作流节点使用。
   - - 提供了详细的兼容性策略文档链接，以便进一步了解资产导入与转换的具体策略和设计。
 - docs(兼容性):将 SillyTavern 资产导入与 ComfyTavern 兼容性策略的初步内容撰写完成。
-- docs(架构): 添加Agent工具调用协议设计文档
-  - 添加Agent工具调用协议的设计文档，定义LLM输出工具调用指令的XML格式规范，包括`<ACTION>`标签的使用、参数传递方式、错误处理机制等。文档详
-  - 说明了协议的设计目标、解析流程、Prompt工程指南及示例，为Agent与工具/技能的交互提供标准化方案。
-- docs(架构): 更新应用面板与Agent集成的设计文档
-  - 补充应用面板与Agent交互的设计细节，包括安全考量、执行流程和知识库架构
-  - 更新Agent助手功能规划以对齐v3架构，完善LLM适配器文档中对Agent支持的描述
-- docs(architecture): 更新架构文档以整合Agent系统
-  - 更新项目架构、场景架构和工作流概念文档，全面整合Agent系统设计。主要变更包括：
-  - 1. 在项目架构中新增Agent Profile定义管理，更新project.json schema
-  - 2. 在场景架构中强化Agent实例托管功能，定义scene.json schema
-  - 3. 在工作流概念中扩展Agent核心逻辑承载机制
+- docs(架构): 添加 Agent 工具调用协议设计文档
+  - 添加 Agent 工具调用协议的设计文档，定义 LLM 输出工具调用指令的 XML 格式规范，包括`<ACTION>`标签的使用、参数传递方式、错误处理机制等。文档详
+  - 说明了协议的设计目标、解析流程、Prompt 工程指南及示例，为 Agent 与工具/技能的交互提供标准化方案。
+- docs(架构): 更新应用面板与 Agent 集成的设计文档
+  - 补充应用面板与 Agent 交互的设计细节，包括安全考量、执行流程和知识库架构
+  - 更新 Agent 助手功能规划以对齐 v3 架构，完善 LLM 适配器文档中对 Agent 支持的描述
+- docs(architecture): 更新架构文档以整合 Agent 系统
+  - 更新项目架构、场景架构和工作流概念文档，全面整合 Agent 系统设计。主要变更包括：
+  - 1. 在项目架构中新增 Agent Profile 定义管理，更新 project.json schema
+  - 2. 在场景架构中强化 Agent 实例托管功能，定义 scene.json schema
+  - 3. 在工作流概念中扩展 Agent 核心逻辑承载机制
   - 4. 统一目录结构和文档格式，保持一致性
-  - 这些变更为实现自主Agent系统提供完整的文档基础和架构支持。
+  - 这些变更为实现自主 Agent 系统提供完整的文档基础和架构支持。
 - docs(architecture): 更新 Agent 架构文档以包含知识库质量管理与遗忘机制
   - - 为确保知识库的质量，防止低效或错误的“经验”污染共享知识，引入“管理员/策展人”角色或机制，定期审核、整合与校验 Agent 贡献的知识。
   - - 描述“遗忘”机制实现方式，强调其作为个体特性而非直接物理删除知识库条目的方法。
@@ -231,8 +735,8 @@
   - - 模板化赋能，为复杂的多 Agent 协作场景提供官方应用模板。
   - 报告还对现有设计文档进行了修订建议，以确保平台知识体系的一致性，并展望了未来的发展方向，包括多 Agent 协作的实现模式、学习与反思机制、A
   - ent 安全与权限控制等。
-- docs(architecture): 新增动态世界模拟引擎架构文档v2并更新原文档
-  - 新增 agent-architecture-plan-v2.md 详细描述多Agent协同的动态世界模拟引擎设计
+- docs(architecture): 新增动态世界模拟引擎架构文档 v2 并更新原文档
+  - 新增 agent-architecture-plan-v2.md 详细描述多 Agent 协同的动态世界模拟引擎设计
   - 更新 agent-architecture-plan.md 扩展核心机制与工程实现细节
 
 ## 2025 年 6 月 11 日
@@ -242,7 +746,7 @@
 - docs(guides): 添加工作流历史记录与状态管理指南文档
 - feat(拖拽): 改进拖拽节点的视觉反馈和暗色模式支持
   - - 调整拖拽图标样式，支持暗色模式适配
-  - - 优化拖拽提示的SVG图标和布局
+  - - 优化拖拽提示的 SVG 图标和布局
   - - 统一拖拽元素的样式与上下文菜单保持一致
   - - 改进日志输出的格式和可读性
 - feat(canvas): 支持从画布添加节点时指定位置
@@ -260,20 +764,20 @@
 - refactor(nodes): 清理节点定义文件中的注释和格式
   - 移除多个节点定义文件中的冗余注释和临时标记
   - 统一代码格式和引号使用
-  - 更新OpenAINode的模型配置和描述
-  - 优化TestWidgetsNode的输入输出定义
-- fix(输入组件): 根据matchCategories区分纯下拉选择和带建议输入框
-  - 当插槽的matchCategories包含ComboOption时，渲染为纯下拉选择框，否则对于STRING/INTEGER/FLOAT类型渲染为允许自由输入并提供建议的输入框。同
+  - 更新 OpenAINode 的模型配置和描述
+  - 优化 TestWidgetsNode 的输入输出定义
+- fix(输入组件): 根据 matchCategories 区分纯下拉选择和带建议输入框
+  - 当插槽的 matchCategories 包含 ComboOption 时，渲染为纯下拉选择框，否则对于 STRING/INTEGER/FLOAT 类型渲染为允许自由输入并提供建议的输入框。同
   - 时更新相关文档说明。
 - feat(输入组件): 优化输入组件选择逻辑
-  - 重构getInputComponent函数，使用更清晰的类型检查和条件分支结构。改进组件匹配逻辑。
+  - 重构 getInputComponent 函数，使用更清晰的类型检查和条件分支结构。改进组件匹配逻辑。
 - fix(版本管理): 修复版本号获取和使用不一致的问题
-  - 将package.json中的版本号字段从'Version'改为'version'以匹配标准命名
-  - 使用import.meta.env.VITE_APP_VERSION作为工作流版本号来源
-- feat(workflowStore): 替换prompt为dialogService实现工作流保存命名
-  - 使用dialogService.showInput替换原生prompt，提供更好的用户体验和界面一致性。处理取消操作时返回null的情况。
+  - 将 package.json 中的版本号字段从'Version'改为'version'以匹配标准命名
+  - 使用 import.meta.env.VITE_APP_VERSION 作为工作流版本号来源
+- feat(workflowStore): 替换 prompt 为 dialogService 实现工作流保存命名
+  - 使用 dialogService.showInput 替换原生 prompt，提供更好的用户体验和界面一致性。处理取消操作时返回 null 的情况。
 - feat(侧边栏): 使用本地存储保存预览面板模式状态
-  - 将预览面板模式从ref改为useLocalStorage，以持久化用户选择的显示模式
+  - 将预览面板模式从 ref 改为 useLocalStorage，以持久化用户选择的显示模式
 - feat(tooltip): 实现全局 Tooltip 服务并替换多处独立组件
   - 新增全局 Tooltip 服务，包含 Pinia 状态管理、指令和渲染器组件
   - 移除多处独立 Tooltip 组件，改用 v-comfy-tooltip 指令
@@ -286,9 +790,9 @@
 ## 2025 年 6 月 10 日
 
 - docs(架构): 拆分项目架构和知识库架构设计文档
-- refactor(架构设计): 重构API服务与集成接口文档为前端API适配管理器设计
-  - 将原有API服务与集成接口文档拆分为更清晰的前端API适配管理器设计文档，重点实现纯前端的数据转换层。新增ApiAdapterManager核心服务概念，明
-  - 适配器转换规则与面板API交互方式，同时保留后端HTTP API的简洁设计。文档结构调整为更合理的章节划分，包含核心概念、面板API、适配器规则、前
+- refactor(架构设计): 重构 API 服务与集成接口文档为前端 API 适配管理器设计
+  - 将原有 API 服务与集成接口文档拆分为更清晰的前端 API 适配管理器设计文档，重点实现纯前端的数据转换层。新增 ApiAdapterManager 核心服务概念，明
+  - 适配器转换规则与面板 API 交互方式，同时保留后端 HTTP API 的简洁设计。文档结构调整为更合理的章节划分，包含核心概念、面板 API、适配器规则、前
   - 后端交互等完整设计。
 - fix(llm-test): 智能处理 base_url 的版本路径
   - 根据用户建议改进 base_url 处理逻辑：
@@ -304,11 +808,11 @@
   - - 完善快速开始指南和开发环境配置说明
   - - 新增工作流创建教程和临时 API 配置方法
   - - 更新技术栈和路线图信息
-- feat(PerformancePanel): 改进性能统计面板的UI和功能
-  - - 使用SVG图标替换文本箭头，提升视觉一致性
+- feat(PerformancePanel): 改进性能统计面板的 UI 和功能
+  - - 使用 SVG 图标替换文本箭头，提升视觉一致性
   - - 优化树形结构缩进和间距，提高可读性
   - - 添加节点原始类型显示功能
-  - - 清理复制的JSON数据，移除不必要字段
+  - - 清理复制的 JSON 数据，移除不必要字段
   - - 改进组件统计逻辑，更准确计算渲染组件
 - feat(性能统计): 重构组件使用统计逻辑并移除无用代码
   - - 在 PerformancePanel 中实现组件使用统计功能，通过分析节点配置和输入定义收集实际渲染的组件信息
@@ -317,12 +821,12 @@
   - - 清理输入类型定义中无用的 HISTORY 类型
 - fix(PerformancePanel): 修正组件实例统计标签描述更准确
 - feat(性能统计): 添加组件实例统计功能
-  - 在性能面板中新增组件实例统计功能，跟踪不同组件类型的实例数量。修改BaseNode组件在挂载和卸载时更新计数，并在PerformanceStatsStore中添加
+  - 在性能面板中新增组件实例统计功能，跟踪不同组件类型的实例数量。修改 BaseNode 组件在挂载和卸载时更新计数，并在 PerformanceStatsStore 中添加
   - 关状态和方法管理组件计数数据。
 - feat(性能统计): 添加性能统计面板及相关功能
   - - 新增性能统计面板组件，用于展示节点和槽位统计数据
-  - - 创建性能统计store管理各标签页的统计数据
-  - - 在tabStore中集成性能统计清理功能
+  - - 创建性能统计 store 管理各标签页的统计数据
+  - - 在 tabStore 中集成性能统计清理功能
   - - 实现数据收集、展示和复制到剪贴板功能
 
 ## 2025 年 6 月 9 日
@@ -1361,7 +1865,7 @@ ct-summary.md`，以简化日志管理。
 - 提交
 - 重构文档分类
 - 清理内容
-- 初始提交到GitHub
+- 初始提交到 GitHub
 
 ------ 旧记录，顺序时间排序，提交记录在旧分支，懒得考据时间了 ------
 
