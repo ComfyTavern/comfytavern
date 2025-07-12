@@ -37,7 +37,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // 加载持久化数据 (e.g., from localStorage)
   function loadSettings() {
-    console.log("咕: 从存储加载设置...");
+    console.log("从存储加载设置...");
     try {
       const saved = localStorage.getItem('app_settings');
       if (saved) {
@@ -52,10 +52,10 @@ export const useSettingsStore = defineStore('settings', () => {
       } else {
         // 如果没有保存的设置，可以考虑初始化一些默认值
         // (或者让 SettingControl 在 getSetting 时处理默认值)
-        console.log("咕: 未找到已保存的设置，将使用默认值。");
+        console.log("未找到已保存的设置，将使用默认值。");
       }
     } catch (error) {
-      console.error("咕: 加载设置失败!", error);
+      console.error("加载设置失败!", error);
       // 加载失败，清空或使用默认
       settings.value = {};
     }
@@ -63,7 +63,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // 保存数据 (需要做 debounce 防抖处理，避免频繁写入)
   const saveSettings = debounce(() => {
-    console.log("咕: 保存设置到存储...");
+    console.log("保存设置到存储...");
     try {
       const allSettings = {
         ...settings.value,
@@ -71,7 +71,7 @@ export const useSettingsStore = defineStore('settings', () => {
       };
       localStorage.setItem('app_settings', JSON.stringify(allSettings));
     } catch (error) {
-      console.error("咕: 保存设置失败!", error);
+      console.error("保存设置失败!", error);
     }
   }, 500); // 500ms 防抖
 
@@ -123,7 +123,7 @@ export const useSettingsStore = defineStore('settings', () => {
       }
     });
     if (changed) {
-      console.log("咕: 部分设置已初始化为默认值。");
+      console.log("部分设置已初始化为默认值。");
       // saveSettings(); // 立即保存或让 watch 处理
     }
   }

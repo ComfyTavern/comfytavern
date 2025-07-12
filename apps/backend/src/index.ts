@@ -22,6 +22,7 @@ import {
   MULTI_USER_MODE,
   ACCESS_PASSWORD_HASH,
   CORS_ALLOWED_ORIGINS, // + 导入 CORS 白名单
+  PANEL_DEV_ORIGINS, // + 导入面板开发源
 } from './config';
 import { characterApiRoutes } from './routes/characterRoutes';
 import { executionApiRoutes } from './routes/executionRoutes';
@@ -168,6 +169,19 @@ app.use(
         }
       });
     }
+    
+    // 在开发模式下，动态添加在 config.json 中配置的面板开发服务器地址
+    if (process.env.NODE_ENV === 'development') {
+      if (PANEL_DEV_ORIGINS.length > 0) {
+        console.log('[ComfyTavern Backend] Development mode: Adding panel dev server origins to CORS allowlist:', PANEL_DEV_ORIGINS);
+        PANEL_DEV_ORIGINS.forEach(origin => {
+          if (origin && typeof origin === 'string' && origin.trim() !== '') {
+            uniqueOrigins.add(origin);
+          }
+        });
+      }
+    }
+    
     const effectiveAllowedOrigins = Array.from(uniqueOrigins);
 
     console.log('[ComfyTavern Backend] Effective CORS Allowed Origins:', effectiveAllowedOrigins);

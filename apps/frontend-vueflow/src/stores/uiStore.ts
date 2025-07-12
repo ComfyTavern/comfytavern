@@ -35,6 +35,9 @@ interface UiStoreState {
   isMainSidebarCollapsed: boolean;
   // 新增：是否为移动端视图
   isMobileView: boolean;
+
+  // 新增：面板日志高度
+  panelLogHeight: number;
 }
 
 const defaultSettingsModalProps = {
@@ -51,10 +54,14 @@ const DEFAULT_FM_SIDEBAR_WIDTH = 256; // 默认文件管理器侧边栏宽度 (w
 const MIN_FM_SIDEBAR_WIDTH = 160;    // 最小文件管理器侧边栏宽度 (w-40)
 const MAX_FM_SIDEBAR_WIDTH = 512;    // 最大文件管理器侧边栏宽度 (w-128)
 
+const DEFAULT_PANEL_LOG_HEIGHT = 250; // 新增：默认面板日志高度
+const MIN_PANEL_LOG_HEIGHT = 80;      // 新增：最小面板日志高度
+
 const FM_SIDEBAR_COLLAPSED = 'fm_sidebar_collapsed'; // 已存在的 key
 const FM_DETAIL_PANEL_OPEN = 'fm_detail_panel_open'; // 新增 key
 const FM_SIDEBAR_WIDTH_KEY = 'fm_sidebar_width'; // 新增：localStorage key for sidebar width
 const MAIN_SIDEBAR_COLLAPSED = 'main_sidebar_collapsed'; // 新增：主侧边栏 localStorage key
+const PANEL_LOG_HEIGHT_KEY = 'panel_log_height'; // 新增：面板日志高度 localStorage key
 
 export const useUiStore = defineStore('ui', {
   state: (): UiStoreState => {
@@ -165,6 +172,25 @@ export const useUiStore = defineStore('ui', {
     }
     // console.log(`[uiStore]('[uiStore] Final initialFileManagerSidebarWidth state being set:', initialFileManagerSidebarWidth);
 
+    // 初始化面板日志高度
+    let initialPanelLogHeight = DEFAULT_PANEL_LOG_HEIGHT;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const storedHeight = localStorage.getItem(PANEL_LOG_HEIGHT_KEY);
+      if (storedHeight !== null) {
+        try {
+          const parsedHeight = parseInt(storedHeight, 10);
+          if (!isNaN(parsedHeight) && parsedHeight >= MIN_PANEL_LOG_HEIGHT) {
+            initialPanelLogHeight = parsedHeight;
+          } else {
+            // 如果值无效，则移除
+            localStorage.removeItem(PANEL_LOG_HEIGHT_KEY);
+          }
+        } catch (error) {
+          console.error('[uiStore] Error parsing stored panel log height:', error);
+          localStorage.removeItem(PANEL_LOG_HEIGHT_KEY);
+        }
+      }
+    }
 
     return {
       isRegexEditorModalVisible: false,
@@ -181,6 +207,7 @@ export const useUiStore = defineStore('ui', {
       fileManagerSidebarWidth: initialFileManagerSidebarWidth, // 新增
       isMainSidebarCollapsed: initialMainSidebarCollapsed, // 使用从 localStorage 读取的值
       isMobileView: initialIsMobileView, // 使用初始化的值
+      panelLogHeight: initialPanelLogHeight, // 新增
     };
   },
   actions: {
@@ -378,6 +405,33 @@ export const useUiStore = defineStore('ui', {
         this.isMainSidebarCollapsed = collapsed;
         this._saveMainSidebarState(this.isMainSidebarCollapsed);
         // // console.log(`[uiStore] Main sidebar collapsed set. New state: ${this.isMainSidebarCollapsed}`); // 移除
+      }
+    },
+
+    // 面板日志高度 Actions
+    _savePanelLogHeight(height: number) {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          localStorage.setItem(PANEL_LOG_HEIGHT_KEY, height.toString());
+        } catch (error) {
+          console.error('[uiStore] Error saving panel log height to localStorage:', error);
+        }
+      }
+    },
+    setPanelLogHeight(height: number) {
+      // 限制最小和最大高度，与 PanelContainer.vue 中的逻辑保持一致
+      const newHeight = Math.max(MIN_PANEL_LOG_HEIGHT, Math.min(height, window.innerHeight * 0.9));
+      if (this.panelLogHeight !== newHeight) {
+        this.panelLogHeight = newHeight;
+      }
+    },
+    persistPanelLogHeight() {
+      this._savePanelLogHeight(this.panelLogHeight);
+    },
+    resetPanelLogHeight() {
+      if (this.panelLogHeight !== DEFAULT_PANEL_LOG_HEIGHT) {
+        this.panelLogHeight = DEFAULT_PANEL_LOG_HEIGHT;
+        this._savePanelLogHeight(DEFAULT_PANEL_LOG_HEIGHT);
       }
     },
   },

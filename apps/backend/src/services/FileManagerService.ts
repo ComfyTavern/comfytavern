@@ -89,6 +89,9 @@ export interface FAMService {
    */
   stat(userId: string | null, logicalPath: string): Promise<FAMItem | null>;
 
+  /** 获取面板SDK脚本内容 */
+  getPanelSdkScript(): Promise<string | Buffer>;
+
   /** 复制文件/目录 (可选) */
   // copy(userId: string | null, sourceLogicalPath: string, destinationLogicalPath: string): Promise<void>;
 }
@@ -655,6 +658,22 @@ export class FileManagerService implements FAMService {
   //     throw new Error(`Security Error: Path ${logicalPath} resolved to ${resolvedPhysicalPath} which is outside of expected base ${expectedBase}`);
   //   }
   // }
+
+  // --- SDK 服务方法 ---
+  async getPanelSdkScript(): Promise<string | Buffer> {
+    // 硬编码SDK的逻辑路径，提供一个稳定的内部引用
+    const sdkLogicalPath = 'system://sdk/packages/panel-sdk/dist/index.mjs';
+    try {
+      // 使用现有的 readFile 方法来获取文件内容
+      // 明确指定 utf-8 编码，因为这是一个JS文件
+      const scriptContent = await this.readFile(null, sdkLogicalPath, 'utf-8');
+      return scriptContent;
+    } catch (error) {
+      console.error(`[FileManagerService] Critical error: Failed to get panel SDK script from '${sdkLogicalPath}'.`, error);
+      // 重新抛出错误，让调用方（路由处理器）来处理HTTP响应
+      throw new Error(`Failed to retrieve Panel SDK script.`);
+    }
+  }
 }
 
 // 可以考虑导出一个单例实例

@@ -21,6 +21,9 @@
   "security": {
     "enableCredentialEncryption": false,
     "masterEncryptionKeyValue": "",
-    "corsAllowedOrigins": []
+    "corsAllowedOrigins": [],
+    "panelDevOrigins": [
+      "http://localhost:5678"
+    ]
   }
 }

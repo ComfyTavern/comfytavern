@@ -67,10 +67,6 @@ export const PanelDeclarationSchema = z.object({
 export type PanelDeclaration = z.infer<typeof PanelDeclarationSchema>;
 
 /**
- /**
-  * Schema 定义：完整的面板定义。
-  */
-/**
  * Schema 定义: 单个面板工作流绑定的具体配置
  */
 export const PanelWorkflowBindingSchema = z.object({
@@ -78,12 +74,18 @@ export const PanelWorkflowBindingSchema = z.object({
 });
 export type PanelWorkflowBinding = z.infer<typeof PanelWorkflowBindingSchema>;
 
+export const PanelDevOptionsSchema = z.object({
+  devServerUrl: z.string().url({ message: "必须是有效的 URL" }).describe("开发服务器的 URL (例如 http://localhost:5174)"),
+});
+export type PanelDevOptions = z.infer<typeof PanelDevOptionsSchema>;
+
 export const PanelDefinitionSchema = z.object({
   id: z.string(),
   displayName: z.string(),
   description: z.string().optional(),
   version: z.string(),
-  uiEntryPoint: z.string().describe("面板 UI 的入口文件 (例如: index.html)"),
+  uiEntryPoint: z.string().describe("【生产环境】面板 UI 的入口文件 (例如: index.html)"),
+  devOptions: PanelDevOptionsSchema.optional().describe("【开发环境】专用的配置选项"),
   workflowBindings: z.array(PanelWorkflowBindingSchema).optional().describe("面板与其可调用的工作流之间的绑定关系"),
   panelDirectory: z.string().optional().describe("面板所在的目录名，由后端动态填充"),
   apiSpec: z.string().optional().describe("指向面板 API 规范文件的路径"),

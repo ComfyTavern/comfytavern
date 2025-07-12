@@ -49,6 +49,9 @@ export const MASTER_ENCRYPTION_KEY: string | undefined = securityConfig.masterEn
 // 新增：读取 CORS 允许的源白名单，默认为空数组
 export const CORS_ALLOWED_ORIGINS: string[] = Array.isArray(securityConfig.corsAllowedOrigins) ? securityConfig.corsAllowedOrigins : [];
 
+// 新增：读取面板开发模式下允许的源，仅用于开发环境，默认为空数组
+export const PANEL_DEV_ORIGINS: string[] = Array.isArray(securityConfig.panelDevOrigins) ? securityConfig.panelDevOrigins : [];
+
 
 // 使用 fileUtils 获取标准目录路径
 export const LIBRARY_BASE_DIR = getLibraryBaseDir(); // 全局库根目录

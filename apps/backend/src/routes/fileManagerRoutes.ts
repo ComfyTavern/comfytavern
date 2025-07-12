@@ -31,6 +31,31 @@ export const fileManagerRoutes = new Elysia({
   name: "file-manager-routes",
   seed: "comfy.fam.routes",
 })
+  // + 咕咕：为面板SDK添加专用端点
+  .get(
+    "/sdk/panel.js",
+    async ({ set }) => {
+      try {
+        const sdkScript = await famService.getPanelSdkScript();
+        set.headers['Content-Type'] = 'application/javascript; charset=utf-8';
+        set.status = 200;
+        return sdkScript;
+      } catch (error: any) {
+        console.error(`[FileManagerRoutes] Error serving panel SDK script:`, error);
+        set.status = 500;
+        // 在响应中返回一个有效的、可执行的JS错误，以便在浏览器控制台中清晰地显示
+        set.headers['Content-Type'] = 'application/javascript; charset=utf-8';
+        return `console.error("ComfyTavern Panel SDK could not be loaded. Please check server logs.");`;
+      }
+    },
+    {
+      detail: {
+        summary: "Get the Panel SDK script.",
+        description: "Provides a stable, clean endpoint to download the panel SDK for development purposes.",
+        tags: ["File Manager", "SDK"],
+      },
+    }
+  )
   .get(
     "/list/*",
     async (ctx) => {

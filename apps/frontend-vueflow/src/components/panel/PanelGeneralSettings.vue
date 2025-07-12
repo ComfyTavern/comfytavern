@@ -15,13 +15,9 @@
               <p class="text-sm text-text-secondary">在应用列表中显示的名称。</p>
             </div>
             <div class="flex-1">
-              <input
-                type="text"
-                id="panel-display-name"
-                v-model="props.panelDefinition.displayName"
+              <input type="text" id="panel-display-name" v-model="props.panelDefinition.displayName"
                 class="block w-full px-3 py-2 bg-background-surface border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                placeholder="例如：智能聊天助手"
-              />
+                placeholder="例如：智能聊天助手" />
             </div>
           </div>
 
@@ -32,13 +28,9 @@
               <p class="text-sm text-text-secondary">向用户介绍这个面板的功能和用途。</p>
             </div>
             <div class="flex-1">
-              <textarea
-                id="panel-description"
-                v-model="props.panelDefinition.description"
-                rows="4"
+              <textarea id="panel-description" v-model="props.panelDefinition.description" rows="4"
                 class="block w-full px-3 py-2 bg-background-surface border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                placeholder="一个简洁明了的介绍。"
-              ></textarea>
+                placeholder="一个简洁明了的介绍。"></textarea>
             </div>
           </div>
 
@@ -48,24 +40,15 @@
               <h4 class="font-medium text-text-base">版本</h4>
               <p class="text-sm text-text-secondary">
                 应用面板的版本号，建议遵循
-                <a
-                  href="https://semver.org/lang/zh-CN/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-primary hover:underline"
-                  >SemVer</a
-                >
+                <a href="https://semver.org/lang/zh-CN/" target="_blank" rel="noopener noreferrer"
+                  class="text-primary hover:underline">SemVer</a>
                 规范。
               </p>
             </div>
             <div class="flex-1">
-              <input
-                type="text"
-                id="panel-version"
-                v-model="props.panelDefinition.version"
+              <input type="text" id="panel-version" v-model="props.panelDefinition.version"
                 class="block w-full px-3 py-2 bg-background-surface border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                placeholder="例如：1.0.0"
-              />
+                placeholder="例如：1.0.0" />
             </div>
           </div>
           <!-- UI 入口文件 -->
@@ -77,15 +60,31 @@
               </p>
             </div>
             <div class="flex-1">
-              <input
-                type="text"
-                id="panel-ui-entry-point"
-                v-model="props.panelDefinition.uiEntryPoint"
+              <input type="text" id="panel-ui-entry-point" v-model="props.panelDefinition.uiEntryPoint"
                 class="block w-full px-3 py-2 bg-background-surface border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                placeholder="例如：index.html"
-              />
+                placeholder="例如：index.html" />
             </div>
           </div>
+
+          <!-- 开发选项 -->
+          <div v-if="props.panelDefinition.devOptions"
+            class="py-5 flex flex-col md:flex-row md:items-start gap-4 md:gap-8">
+            <div class="md:w-1/3">
+              <h4 class="font-medium text-text-base">开发选项</h4>
+              <p class="text-sm text-text-secondary">
+                仅在开发模式下生效。用于对接本地开发服务器以实现热更新 (HMR)。
+              </p>
+            </div>
+            <div class="flex-1 space-y-4">
+              <div>
+                <label for="dev-server-url" class="block text-sm font-medium text-text-secondary mb-1">开发服务器 URL</label>
+                <input type="text" id="dev-server-url" v-model="props.panelDefinition.devOptions.devServerUrl"
+                  class="block w-full px-3 py-2 bg-background-surface border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  placeholder="例如：http://localhost:5174" />
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -94,10 +93,19 @@
 
 <script setup lang="ts">
 import type { PanelDefinition } from "@comfytavern/types";
+import { watch } from "vue";
 
 const props = defineProps<{
   panelDefinition: PanelDefinition | null;
 }>();
+
+// 咕咕：确保在需要时 devOptions 对象存在，以便 v-model 可以安全地绑定。
+watch(() => props.panelDefinition, (newPanel) => {
+  if (newPanel && typeof newPanel.devOptions === 'undefined') {
+    //  为 devOptions 赋一个初始对象，这样 v-model 就可以安全地绑定到其属性上。
+    newPanel.devOptions = { devServerUrl: '' };
+  }
+}, { immediate: true, deep: true });
 
 // 由于父组件期望直接修改 prop 对象的属性来触发 isDirty 计算，
 // 这里我们直接在模板中使用 v-model="props.panelDefinition.fieldName"。
