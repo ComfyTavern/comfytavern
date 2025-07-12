@@ -24,13 +24,6 @@
       <div v-for="panel in panelStore.panelList" :key="panel.id"
         class="relative flex flex-col bg-background-surface rounded-lg shadow-md transition-all duration-200 border border-border-base/20 hover:shadow-lg hover:border-primary/40">
 
-        <!-- 内置面板角标 -->
-        <div v-if="panel.source === 'shared'"
-          class="absolute top-0 right-0 px-2 py-0.5 text-xs font-semibold text-accent-content bg-accent rounded-bl-lg rounded-tr-lg"
-          v-comfy-tooltip="'这是一个内置的模板面板，可用于快速创建您自己的应用。'">
-          内置
-        </div>
-
         <div class="p-4 flex-grow">
           <h2 class="text-lg font-semibold text-text-base mb-2 truncate">{{ panel.displayName }}</h2>
           <p class="text-sm text-text-secondary flex-grow min-h-[40px]">{{ panel.description }}</p>
@@ -42,7 +35,7 @@
         </div>
         <div
           class="flex items-center justify-end p-3 bg-background-surface/50 border-t border-border-base rounded-b-lg">
-          <router-link v-if="panel.source !== 'shared'"
+          <router-link
             :to="{ name: 'ProjectPanelSettings', params: { projectId: currentProjectId, panelId: panel.id } }"
             class="px-3 py-1 text-sm font-medium text-primary bg-primary-soft rounded-md hover:bg-primary-soft/80 whitespace-nowrap flex-shrink-0 mr-2 flex items-center"
             v-comfy-tooltip="'配置此面板的工作流绑定和接口'">
