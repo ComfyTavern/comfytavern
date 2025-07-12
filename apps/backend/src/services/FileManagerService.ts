@@ -209,6 +209,11 @@ export class FileManagerService implements FAMService {
           case 'logs':
             basePhysicalPath = this.logDir;
             break;
+          case 'sdk':
+            // system://sdk/... 路径映射到项目根目录
+            // 这允许面板通过一个稳定的 URL 加载与后端版本匹配的 SDK
+            basePhysicalPath = this.projectRootDir;
+            break;
           default:
             throw new Error(`Unknown system area in logical path: ${logicalPath}`);
         }

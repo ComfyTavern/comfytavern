@@ -10,7 +10,7 @@ import { useThemeStore } from '@/stores/theme'; // 引入主题 store
 
 // 定义消息协议接口
 interface ApiRequestMessage {
-  type: 'comfy-tavern-api-call' | 'panel-ready' | 'panel-log' | 'comfy-tavern-theme-update';
+  type: 'comfy-tavern-api-call' | 'panel-sdk-ready' | 'panel-log' | 'comfy-tavern-theme-update';
   id?: string;
   payload?: {
     method: string;
@@ -254,17 +254,16 @@ export function usePanelApiHost(
 
     const data = event.data as ApiRequestMessage;
     
-    if (data.type === 'panel-ready') {
-      console.log('[Host] Received panel-ready message. Injecting API script and sending initial theme.');
-      sendInjectionScript();
-      sendThemeToPanel(); // 在面板就绪后立即发送主题
+    if (data.type === 'panel-sdk-ready') {
+      console.log('[Host] Received panel-sdk-ready message. Sending initial theme.');
+      sendThemeToPanel(); // 在 SDK 就绪后立即发送主题
       return;
     }
     
-    if (data.type === 'panel-log') {
+    if (data.type === 'panel-log' && data.payload) {
       logs.value.push({
         ...data.payload,
-        timestamp: new Date().toISOString(), // 咕咕：为日志条目添加时间戳
+        timestamp: new Date().toISOString(),
       });
       return;
     }
@@ -299,85 +298,6 @@ export function usePanelApiHost(
   };
 
   /**
-   * 注入到 iframe 的脚本，用于创建 window.comfyTavern.panelApi 代理。
-   */
-  const getInjectionScript = () => {
-    return `
-      (() => {
-        if (window.comfyTavern && window.comfyTavern.panelApi) {
-          console.log('[Panel] panelApi already exists.');
-          return;
-        }
-        window.comfyTavern = window.comfyTavern || {};
-        const pendingRequests = new Map();
-        
-        // 监听来自宿主的回应或事件
-        window.addEventListener('message', (event) => {
-          const data = event.data;
-          
-          // 处理 API 响应
-          if (data.type === 'comfy-tavern-api-response' && pendingRequests.has(data.id)) {
-            const { resolve, reject } = pendingRequests.get(data.id);
-            if (data.error) {
-              reject(new Error(data.error.message));
-            } else {
-              resolve(data.payload);
-            }
-            pendingRequests.delete(data.id);
-            return;
-          }
-
-          // 处理执行事件
-          if (data.type === 'execution-event') {
-              console.log('[Panel Script] Received execution-event from host:', data);
-              window.dispatchEvent(new CustomEvent('comfy-execution-event', { detail: data }));
-          }
-        });
-
-        // 创建 API 代理
-        window.comfyTavern.panelApi = new Proxy({}, {
-          get(target, prop, receiver) {
-            return function(...args) {
-              return new Promise((resolve, reject) => {
-                const id = \`\${String(prop)}-\${Date.now()}-\${Math.random().toString(36).substring(2, 9)}\`;
-                pendingRequests.set(id, { resolve, reject });
-                
-                const requestMessage = {
-                  type: 'comfy-tavern-api-call',
-                  id: id,
-                  payload: { method: prop, args: args }
-                };
-                
-                window.parent.postMessage(requestMessage, '*'); // 目标源由宿主验证
-              });
-            }
-          }
-        });
-        console.log('[Panel] window.comfyTavern.panelApi proxy created.');
-      })();
-    `;
-  };
-
-  /**
-   * 发送注入脚本到 iframe。
-   */
-  function sendInjectionScript() {
-    const iframe = iframeRef.value;
-    if (!iframe || !iframe.contentWindow) {
-      console.error('[Host] Cannot inject script: iframe or contentWindow not available.');
-      return;
-    }
-    const scriptContent = getInjectionScript();
-    
-    const injectionPayload = {
-      type: 'inject-and-run-script', // 使用一个新的类型来表示这个特定操作
-      script: scriptContent,
-    };
-    
-    iframe.contentWindow.postMessage(injectionPayload, panelOrigin.value || '*');
-    console.log('[Host] API injection script sent to iframe via postMessage.');
-  }
-
   /**
    * 发送当前主题信息到 iframe。
    */

@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    // Environment and module settings
+    "lib": ["esnext", "dom"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "types": [], // Explicitly override types to avoid inheriting from root tsconfig
+
+    // Output
+    "outDir": "./dist",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    // Best practices
+    "strict": true,
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    // Path mapping (to resolve other workspace packages)
+    "baseUrl": ".",
+    "paths": {
+      "@comfytavern/types": ["../types/src/index.ts"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
