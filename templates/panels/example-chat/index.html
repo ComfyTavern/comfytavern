@@ -1,36 +1,359 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>示例聊天面板</title>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>示例面板：SDK 功能展示</title>
+    <!-- SDK 将在下面的模块脚本中动态加载 -->
     <style>
-        body {
-            font-family: sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-            color: #333;
-        }
-        .container {
-            text-align: center;
-            padding: 2rem;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            color: #1a1a1a;
-        }
+      /* :root 变量由 JS 动态注入 */
+      html {
+        color-scheme: light dark;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+          sans-serif;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 1rem;
+        box-sizing: border-box;
+        margin: 0;
+        background-color: hsl(var(--ct-background-base-hsl, 240 10% 3.9%));
+        color: hsl(var(--ct-text-base-hsl, 240 5% 95%));
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 700px;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .header {
+        text-align: center;
+      }
+
+      .header h1 {
+        margin-bottom: 0.5rem;
+      }
+
+      .header #api-status {
+        font-size: 0.85rem;
+        color: hsl(var(--ct-text-muted-hsl, 240 5% 65%));
+      }
+
+      /* FS Test Container Styles */
+      .fs-test-container {
+        background: hsl(var(--ct-background-surface-hsl, 240 10% 7%));
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        border: 1px solid hsl(var(--ct-border-base-hsl, 240 4% 16%));
+        padding: 1.5rem;
+        box-sizing: border-box;
+      }
+      .fs-test-container h2 {
+        margin-top: 0;
+        font-size: 1.2rem;
+        border-bottom: 1px solid hsl(var(--ct-border-base-hsl, 240 4% 16%));
+        padding-bottom: 0.75rem;
+        margin-bottom: 1.25rem;
+      }
+      #fs-controls {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+      #fs-controls input {
+        grid-column: 1 / -1;
+        padding: 0.75rem;
+        border-radius: 6px;
+        background-color: hsl(var(--ct-background-base-hsl, 240 10% 3.9%));
+        color: hsl(var(--ct-text-base-hsl, 240 5% 95%));
+        border: 1px solid hsl(var(--ct-border-base-hsl, 240 4% 16%));
+        font-size: 0.9rem;
+      }
+      .fs-buttons {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .fs-buttons button {
+        padding: 0.6rem 1.2rem;
+        border: none;
+        background-color: hsl(var(--ct-primary-hsl, 260 80% 60%) / 0.8);
+        color: hsl(var(--ct-primary-content-hsl, 255 100% 98%));
+        cursor: pointer;
+        border-radius: 6px;
+        transition: background-color 0.2s ease;
+        font-size: 0.9rem;
+      }
+      .fs-buttons button:hover:not(:disabled) {
+        background-color: hsl(var(--ct-primary-hsl, 260 80% 60%));
+      }
+      .fs-buttons button:disabled {
+        background-color: hsl(var(--ct-text-muted-hsl, 240 5% 65%));
+        opacity: var(--ct-disabled-opacity, 0.5);
+        cursor: not-allowed;
+      }
+      #fs-output {
+        margin-top: 1rem;
+        background-color: hsl(var(--ct-background-base-hsl, 240 10% 3.9%));
+        padding: 1rem;
+        border-radius: 6px;
+        min-height: 100px;
+        max-height: 300px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+        font-size: 0.875rem;
+        border: 1px solid hsl(var(--ct-border-muted-hsl, 240 4% 20%));
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>欢迎使用示例聊天面板！</h1>
-        <p>这是一个内置的应用面板模板。</p>
+      <div class="header">
+        <h1>示例应用面板</h1>
+        <p id="api-status">正在连接到 ComfyTavern...</p>
+      </div>
+
+      <div class="fs-test-container">
+        <h2>面板文件系统 (Panel FS) API 测试</h2>
+        <div id="fs-controls">
+          <input
+            type="text"
+            id="fs-path-input"
+            placeholder="输入文件或目录路径，例如 'my-folder/my-file.txt'"
+          />
+          <div class="fs-buttons">
+            <button id="fs-list-btn" disabled>列出 (List)</button>
+            <button id="fs-read-btn" disabled>读取 (Read)</button>
+            <button id="fs-write-btn" disabled>写入 (Write)</button>
+            <button id="fs-mkdir-btn" disabled>创建目录 (MkDir)</button>
+            <button id="fs-delete-btn" disabled>删除 (Delete)</button>
+          </div>
+        </div>
+        <pre id="fs-output">FS API 的输出将显示在这里。</pre>
+      </div>
     </div>
-</body>
+
+    <script type="module">
+      // 全局变量，用于存储从 SDK 加载的 panelApi
+      let panelApi = null;
+
+      // --- 动态加载并初始化 SDK ---
+      async function loadAndInitSdk() {
+        try {
+          // __BACKEND_URL__ 是一个特殊的占位符，
+          // 在面板通过 ComfyTavern 加载时，它会被替换为实际的后端地址。
+          const sdkUrl = `${__BACKEND_URL__}/api/fam/sdk/panel.js`;
+          console.log(`[Panel] 正在尝试从以下地址加载 SDK: ${sdkUrl}`);
+
+          const sdkModule = await import(sdkUrl);
+
+          if (sdkModule && sdkModule.panelApi) {
+            panelApi = sdkModule.panelApi;
+            // 将 API 挂载到全局，以便调试
+            window.comfyTavern = { panelApi };
+            console.log("[Panel] SDK 加载成功，panelApi 已可用。");
+            initializePanel();
+          } else {
+            throw new Error("SDK 模块已加载，但未找到 panelApi。");
+          }
+        } catch (error) {
+          console.error("[Panel] 严重错误：无法加载面板 SDK。", error);
+          const apiStatus = document.getElementById("api-status");
+          if (apiStatus) {
+            apiStatus.textContent = "❌ SDK 加载失败，请检查控制台。";
+            apiStatus.style.color = "#dc3545";
+          }
+        }
+      }
+
+      // --- DOM 元素获取 ---
+      const apiStatus = document.getElementById("api-status");
+      const fsPathInput = document.getElementById("fs-path-input");
+      const fsListBtn = document.getElementById("fs-list-btn");
+      const fsReadBtn = document.getElementById("fs-read-btn");
+      const fsWriteBtn = document.getElementById("fs-write-btn");
+      const fsDeleteBtn = document.getElementById("fs-delete-btn");
+      const fsMkdirBtn = document.getElementById("fs-mkdir-btn");
+      const fsOutput = document.getElementById("fs-output");
+
+      // --- 日志转发 ---
+      // 将面板的 console 日志转发到主应用的控制台，方便统一调试
+      const originalConsole = {
+        log: console.log.bind(console),
+        warn: console.warn.bind(console),
+        error: console.error.bind(console),
+      };
+      console.log = (...args) => {
+        originalConsole.log(...args);
+        if (panelApi) panelApi.log("log", ...args);
+      };
+      console.warn = (...args) => {
+        originalConsole.warn(...args);
+        if (panelApi) panelApi.log("warn", ...args);
+      };
+      console.error = (...args) => {
+        originalConsole.error(...args);
+        if (panelApi) panelApi.log("error", ...args);
+      };
+
+      // --- 核心逻辑 ---
+      function initializePanel() {
+        apiStatus.textContent = "✅ 连接成功！";
+        apiStatus.style.color = "#28a745";
+        console.log("[Panel] API 已连接，面板准备就绪。");
+
+        // 启用 FS 测试按钮
+        fsListBtn.disabled = false;
+        fsReadBtn.disabled = false;
+        fsWriteBtn.disabled = false;
+        fsDeleteBtn.disabled = false;
+        fsMkdirBtn.disabled = false;
+        fsOutput.textContent = "FS API 已就绪。尝试将路径留空并点击“列出”来查看项目根目录。";
+      }
+
+      // --- FS API 测试函数 ---
+      async function handleFsList() {
+        if (!panelApi) return;
+        const path = fsPathInput.value.trim();
+        fsOutput.textContent = "正在列出...";
+        try {
+          const files = await panelApi.listFiles(path);
+          fsOutput.textContent = JSON.stringify(files, null, 2);
+        } catch (e) {
+          fsOutput.textContent = `错误: ${e.message}`;
+          console.error("[FS Test] 列出错误:", e);
+        }
+      }
+
+      async function handleFsRead() {
+        if (!panelApi) return;
+        const path = fsPathInput.value.trim();
+        if (!path) {
+          fsOutput.textContent = "错误: 读取操作需要提供路径。";
+          return;
+        }
+        fsOutput.textContent = "正在读取...";
+        try {
+          const content = await panelApi.readFile(path);
+          if (typeof content === "string") {
+            fsOutput.textContent = content;
+          } else {
+            // ArrayBuffer
+            fsOutput.textContent = `[二进制数据]\n类型: ArrayBuffer\n大小: ${content.byteLength} 字节`;
+          }
+        } catch (e) {
+          fsOutput.textContent = `错误: ${e.message}`;
+          console.error("[FS Test] 读取错误:", e);
+        }
+      }
+
+      async function handleFsWrite() {
+        if (!panelApi) return;
+        const path = fsPathInput.value.trim();
+        if (!path) {
+          fsOutput.textContent = "错误: 写入操作需要提供路径。";
+          return;
+        }
+        fsOutput.textContent = "正在写入...";
+        try {
+          const content = `你好，来自 ComfyTavern！\n该文件由示例面板在 ${new Date().toISOString()} 写入。\n\n随机数: ${Math.random()}`;
+          await panelApi.writeFile(path, content);
+          fsOutput.textContent = `成功写入到 ${path}`;
+          await handleFsList(); // 刷新列表视图
+        } catch (e) {
+          fsOutput.textContent = `错误: ${e.message}`;
+          console.error("[FS Test] 写入错误:", e);
+        }
+      }
+
+      async function handleFsDelete() {
+        if (!panelApi) return;
+        const path = fsPathInput.value.trim();
+        if (!path) {
+          fsOutput.textContent = "错误: 删除操作需要提供路径。";
+          return;
+        }
+        fsOutput.textContent = "正在删除...";
+        try {
+          await panelApi.deleteFile(path, { recursive: true });
+          fsOutput.textContent = `成功删除 ${path}`;
+          await handleFsList(); // 刷新列表视图
+        } catch (e) {
+          fsOutput.textContent = `错误: ${e.message}`;
+          console.error("[FS Test] 删除错误:", e);
+        }
+      }
+
+      async function handleFsMkdir() {
+        if (!panelApi) return;
+        const path = fsPathInput.value.trim();
+        if (!path) {
+          fsOutput.textContent = "错误: 创建目录需要提供路径。";
+          return;
+        }
+        fsOutput.textContent = "正在创建目录...";
+        try {
+          await panelApi.createDirectory(path);
+          fsOutput.textContent = `成功创建目录 ${path}`;
+          await handleFsList(); // 刷新列表视图
+        } catch (e) {
+          fsOutput.textContent = `错误: ${e.message}`;
+          console.error("[FS Test] 创建目录错误:", e);
+        }
+      }
+
+      // --- 主题同步 ---
+      window.addEventListener("message", (event) => {
+        const data = event.data;
+        if (data.type === "comfy-tavern-theme-update") {
+          console.log("[Panel] 接收到来自主应用的的主题更新。");
+          if (data.payload) {
+            applyTheme(data.payload);
+          }
+        }
+      });
+
+      function applyTheme({ mode, variables }) {
+        const root = document.documentElement;
+        if (mode === "dark") {
+          root.classList.add("dark");
+        } else {
+          root.classList.remove("dark");
+        }
+        if (variables && typeof variables === "object") {
+          Object.entries(variables).forEach(([key, value]) => {
+            root.style.setProperty(key, value);
+          });
+          console.log(
+            `[Panel] 为 ${mode} 模式应用了 ${Object.keys(variables).length} 个 CSS 变量。`
+          );
+        }
+      }
+
+      // --- 事件监听 ---
+      fsListBtn.addEventListener("click", handleFsList);
+      fsReadBtn.addEventListener("click", handleFsRead);
+      fsWriteBtn.addEventListener("click", handleFsWrite);
+      fsDeleteBtn.addEventListener("click", handleFsDelete);
+      fsMkdirBtn.addEventListener("click", handleFsMkdir);
+
+      // --- 启动 ---
+      loadAndInitSdk();
+    </script>
+  </body>
 </html>

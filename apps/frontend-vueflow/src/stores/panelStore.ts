@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, reactive } from 'vue';
 import type { PanelDefinition } from '@comfytavern/types';
-import { getPanels, getPanelDefinition } from '@/utils/api';
+import { api, getPanels, getPanelDefinition } from '@/utils/api';
 import { useDialogService } from '@/services/DialogService';
 import { fileManagerApiClient } from '@/api/fileManagerApi';
 
@@ -114,6 +114,40 @@ export const usePanelStore = defineStore('panel', () => {
     }
   }
 
+  /**
+   * 获取所有可用的面板模板。
+   */
+  async function fetchPanelTemplates(): Promise<PanelDefinition[]> {
+    try {
+      const templates = await api.get<PanelDefinition[]>('/panels/templates');
+      return templates.data;
+    } catch (error) {
+      console.error('[panelStore] 获取面板模板失败:', error);
+      throw new Error('获取面板模板失败。');
+    }
+  }
+
+  /**
+   * 创建新面板（从模板或全新）。
+   * @param projectId - 项目的唯一标识符。
+   * @param data - 创建所需的数据。
+   */
+  async function createPanel(
+    projectId: string,
+    data: { templateId?: string | null; panelId: string; displayName: string }
+  ): Promise<PanelDefinition> {
+    try {
+      const newPanel = await api.post<PanelDefinition>(`/projects/${projectId}/panels`, data);
+      // 创建成功后，刷新列表
+      await fetchPanelList(projectId);
+      return newPanel.data;
+    } catch (error: any) {
+      console.error('[panelStore] 创建面板失败:', error);
+      const errorMessage = error.response?.data?.error || '创建失败，请检查 ID 是否唯一。';
+      throw new Error(errorMessage);
+    }
+  }
+
   return {
     // State
     panelsById,
@@ -126,5 +160,7 @@ export const usePanelStore = defineStore('panel', () => {
     fetchPanelList,
     fetchPanelDefinition,
     savePanelDefinition,
+    fetchPanelTemplates,
+    createPanel,
   };
 });

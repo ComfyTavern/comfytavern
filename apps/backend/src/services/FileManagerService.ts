@@ -92,8 +92,8 @@ export interface FAMService {
   /** 获取面板SDK脚本内容 */
   getPanelSdkScript(): Promise<string | Buffer>;
 
-  /** 复制文件/目录 (可选) */
-  // copy(userId: string | null, sourceLogicalPath: string, destinationLogicalPath: string): Promise<void>;
+  /** 复制文件/目录 */
+  copy(userId: string | null, sourceLogicalPath: string, destinationLogicalPath: string): Promise<void>;
 }
 
 // FileManagerService 类实现
@@ -673,6 +673,17 @@ export class FileManagerService implements FAMService {
       // 重新抛出错误，让调用方（路由处理器）来处理HTTP响应
       throw new Error(`Failed to retrieve Panel SDK script.`);
     }
+  }
+
+  async copy(userId: string | null, sourceLogicalPath: string, destinationLogicalPath: string): Promise<void> {
+    const sourcePhysicalPath = await this.resolvePath(userId, sourceLogicalPath);
+    const destinationPhysicalPath = await this.resolvePath(userId, destinationLogicalPath);
+
+    if (!await this.exists(userId, sourceLogicalPath)) {
+      throw new Error(`Source path does not exist: ${sourceLogicalPath}`);
+    }
+
+    await fs.cp(sourcePhysicalPath, destinationPhysicalPath, { recursive: true });
   }
 }
 

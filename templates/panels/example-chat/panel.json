@@ -1,7 +1,7 @@
 {
   "id": "example-chat-panel",
-  "displayName": "示例聊天面板",
-  "description": "一个基础的、可作为模板的聊天应用面板。",
+  "displayName": "示例面板",
+  "description": "一个基础的面板。",
   "version": "1.0.0",
   "uiEntryPoint": "index.html",
   "icon": "chat-bubble"

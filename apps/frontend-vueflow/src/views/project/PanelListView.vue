@@ -1,12 +1,16 @@
 <template>
   <div class="p-4 sm:p-6 lg:p-8">
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-text-base">应用面板</h1>
-      <button
+      <h1 class="text-2xl font-bold text-text-base">面板总览</h1>
+      <button @click="openCreateModal"
         class="px-4 py-2 font-semibold text-primary-content bg-primary rounded-lg hover:bg-primary/90 transition-colors">
         新建面板
       </button>
     </div>
+
+    <!-- 创建面板模态框 -->
+    <CreatePanelModal :visible="isCreateModalVisible" :project-id="currentProjectId" @update:visible="isCreateModalVisible = $event"
+      @created="handlePanelCreated" />
 
     <!-- 加载状态 -->
     <div v-if="panelStore.isLoadingList" class="text-center py-10">
@@ -21,58 +25,81 @@
 
     <!-- 面板网格 -->
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-      <div v-for="panel in panelStore.panelList" :key="panel.id"
-        class="relative flex flex-col bg-background-surface rounded-lg shadow-md transition-all duration-200 border border-border-base/20 hover:shadow-lg hover:border-primary/40">
-
-        <div class="p-4 flex-grow">
-          <h2 class="text-lg font-semibold text-text-base mb-2 truncate">{{ panel.displayName }}</h2>
-          <p class="text-sm text-text-secondary flex-grow min-h-[40px]">{{ panel.description }}</p>
-          <div class="text-xs text-text-disabled mt-4">
-            <span>ID: {{ panel.id }}</span>
-            <span class="mx-2">|</span>
-            <span>v{{ panel.version }}</span>
+      <PanelCard
+        v-for="panel in panelStore.panelList"
+        :key="panel.id"
+        :item="panel"
+        @select="handlePanelSelect(panel)"
+      >
+        <template #actions>
+          <div class="flex items-center justify-end w-full">
+            <router-link
+              :to="{ name: 'ProjectPanelSettings', params: { projectId: currentProjectId, panelId: panel.id } }"
+              class="px-3 py-1 text-sm font-medium text-primary bg-primary-soft rounded-md hover:bg-primary-soft/80 whitespace-nowrap flex-shrink-0 mr-2 flex items-center"
+              v-comfy-tooltip="'配置此面板的工作流绑定和接口'"
+              @click.stop
+            >
+              <Cog6ToothIcon class="w-4 h-4" />
+              <span class="ml-1">配置</span>
+            </router-link>
+            <router-link
+              :to="{ name: 'ProjectPanel', params: { projectId: currentProjectId, panelId: panel.id } }"
+              class="px-3 py-1 text-sm font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 flex items-center"
+              v-comfy-tooltip="'在新标签页中打开面板'"
+              @click.stop
+            >
+              <ArrowTopRightOnSquareIcon class="w-4 h-4" />
+              <span class="ml-1">打开</span>
+            </router-link>
+            <router-link
+              v-if="panel.devOptions?.devServerUrl"
+              :to="{ name: 'ProjectPanel', params: { projectId: currentProjectId, panelId: panel.id }, query: { dev: 'true' } }"
+              class="px-3 py-1 text-sm font-medium text-accent-content bg-accent rounded-md hover:bg-accent/90 flex items-center ml-2"
+              v-comfy-tooltip="'以开发模式打开 (支持热更新)'"
+              @click.stop
+            >
+              <BeakerIcon class="w-4 h-4" />
+              <span class="ml-1">开发</span>
+            </router-link>
           </div>
-        </div>
-        <div
-          class="flex items-center justify-end p-3 bg-background-surface/50 border-t border-border-base rounded-b-lg">
-          <router-link
-            :to="{ name: 'ProjectPanelSettings', params: { projectId: currentProjectId, panelId: panel.id } }"
-            class="px-3 py-1 text-sm font-medium text-primary bg-primary-soft rounded-md hover:bg-primary-soft/80 whitespace-nowrap flex-shrink-0 mr-2 flex items-center"
-            v-comfy-tooltip="'配置此面板的工作流绑定和接口'">
-            <Cog6ToothIcon class="w-4 h-4" />
-            <span class="ml-1">配置</span>
-          </router-link>
-          <router-link :to="{ name: 'ProjectPanel', params: { projectId: currentProjectId, panelId: panel.id } }"
-            class="px-3 py-1 text-sm font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 flex items-center"
-            v-comfy-tooltip="'在新标签页中打开面板'">
-            <ArrowTopRightOnSquareIcon class="w-4 h-4" />
-            <span class="ml-1">打开</span>
-          </router-link>
-          <router-link v-if="panel.devOptions?.devServerUrl"
-            :to="{ name: 'ProjectPanel', params: { projectId: currentProjectId, panelId: panel.id }, query: { dev: 'true' } }"
-            class="px-3 py-1 text-sm font-medium text-accent-content bg-accent rounded-md hover:bg-accent/90 flex items-center ml-2"
-            v-comfy-tooltip="'以开发模式打开 (支持热更新)'">
-            <BeakerIcon class="w-4 h-4" />
-            <span class="ml-1">开发</span>
-          </router-link>
-        </div>
-      </div>
+        </template>
+      </PanelCard>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { onMounted, computed, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { usePanelStore } from '@/stores/panelStore';
 import { vComfyTooltip } from '@/directives/vComfyTooltip';
 import { Cog6ToothIcon, ArrowTopRightOnSquareIcon, BeakerIcon } from '@heroicons/vue/24/outline';
+import CreatePanelModal from '@/components/panel/CreatePanelModal.vue';
+import PanelCard from '@/components/panel/PanelCard.vue';
+import type { PanelDefinition } from '@comfytavern/types';
 
 const route = useRoute();
+const router = useRouter();
 const panelStore = usePanelStore();
+
+const isCreateModalVisible = ref(false);
 
 // 从路由参数中获取当前项目 ID
 const currentProjectId = computed(() => route.params.projectId as string);
+
+const openCreateModal = () => {
+  isCreateModalVisible.value = true;
+};
+
+const handlePanelCreated = () => {
+  isCreateModalVisible.value = false;
+  // 列表已在 store action 中刷新，这里无需额外操作
+  // 如果需要，可以在这里添加其他逻辑
+};
+
+const handlePanelSelect = (panel: PanelDefinition) => {
+  router.push({ name: 'ProjectPanel', params: { projectId: currentProjectId.value, panelId: panel.id } });
+};
 
 onMounted(() => {
   if (currentProjectId.value) {

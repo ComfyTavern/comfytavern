@@ -137,3 +137,20 @@ export function stripMarkdown(markdownText: string): string {
 
   return text;
 }
+
+/**
+ * Converts a string to a URL-friendly slug.
+ * Replaces spaces with hyphens, converts to lowercase, and removes non-alphanumeric characters.
+ * @param text The string to convert.
+ * @returns The slugified string.
+ */
+export function toSlug(text: string): string {
+  if (!text) return '';
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-') // Replace spaces with -
+    .replace(/[^\w\-]+/g, '') // Remove all non-word chars
+    .replace(/\-\-+/g, '-'); // Replace multiple - with single -
+}

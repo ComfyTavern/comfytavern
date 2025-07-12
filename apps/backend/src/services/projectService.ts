@@ -71,7 +71,8 @@ export async function ensureUserRootDirs(userId: string): Promise<void> {
     // console.log(`${logPrefix} Ensured root directories for user ${userId} using FAMService.`);
   } catch (error) {
     console.error(
-      `${logPrefix} Failed to ensure root directories for user ${userId} using FAMService. Error: ${error instanceof Error ? error.message : String(error)
+      `${logPrefix} Failed to ensure root directories for user ${userId} using FAMService. Error: ${
+        error instanceof Error ? error.message : String(error)
       }`
     );
     // FAMService 的 createDir 应该会抛出可识别的错误，或者我们可以包装它
@@ -367,8 +368,9 @@ export async function updateProjectMetadata(
     if (error instanceof ProjectNotFoundError || error instanceof ProjectMetadataError) {
       throw error;
     }
-    const message = `Unexpected error updating project metadata for ID '${projectId}' for user '${userId}'. Error: ${error instanceof Error ? error.message : String(error)
-      }`;
+    const message = `Unexpected error updating project metadata for ID '${projectId}' for user '${userId}'. Error: ${
+      error instanceof Error ? error.message : String(error)
+    }`;
     console.error(`[Service:updateProjectMetadata] ${message}`);
     throw new ProjectMetadataError(message);
   }
@@ -503,6 +505,20 @@ export class PanelLoadError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "PanelLoadError";
+  }
+}
+
+export class PanelConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PanelConflictError";
+  }
+}
+
+export class PanelCreationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PanelCreationError";
   }
 }
 
@@ -679,67 +695,73 @@ interface ListedWorkflow {
  * @returns Promise<ListedWorkflow[]> 工作流列表。
  * @throws 如果发生无法处理的文件系统错误。
  */
- export async function listWorkflows(userId: string, projectId: string): Promise<ListedWorkflow[]> {
-   await ensureUserRootDirs(userId);
-   console.log(
-     `[Service:listWorkflows] Listing workflows for project ID '${projectId}' for user '${userId}'`
-   );
-   const logicalProjectWorkflowsDir = `user://projects/${projectId}/workflows/`;
- 
-   try {
-     const dirExists = await famService.exists(userId, logicalProjectWorkflowsDir);
-     if (!dirExists) {
-       await famService.createDir(userId, logicalProjectWorkflowsDir);
-       return [];
-     }
- 
-     const dirItems = await famService.listDir(userId, logicalProjectWorkflowsDir);
-     const workflowFileItems = dirItems.filter(
-       (item) => item.itemType === "file" && extname(item.name).toLowerCase() === ".json"
-     );
- 
-     const workflowsPromises = workflowFileItems.map(
-       async (item): Promise<ListedWorkflow | null> => {
-         const logicalWorkflowPath = item.logicalPath;
-         try {
-           const fileContent = await famService.readFile(userId, logicalWorkflowPath, "utf-8");
-           if (typeof fileContent !== "string") {
-             console.error(`[Service:listWorkflows] Failed to read workflow file ${logicalWorkflowPath} as string for user ${userId}.`);
-             return null;
-           }
-           const workflowData: Partial<WorkflowObject> = JSON.parse(fileContent);
-           
-           // **核心**: ID 来自文件内容，而不是文件名
-           const id = workflowData.id;
-           const name = workflowData.name;
- 
-           if (!id || !name) {
-             console.warn(`[Service:listWorkflows] Skipping file ${item.name} because it lacks a valid 'id' or 'name' property.`);
-             return null;
-           }
- 
-           return {
-             id,
-             name,
-             description: workflowData.description,
-             creationMethod: workflowData.creationMethod,
-             referencedWorkflows: workflowData.referencedWorkflows,
-           };
-         } catch (readError: any) {
-           console.error(
-             `[Service:listWorkflows] Error reading/parsing workflow file ${logicalWorkflowPath} for listing:`,
-             readError.message
-           );
-           return null;
-         }
-       }
-     );
- 
-     const resolvedWorkflows = (await Promise.all(workflowsPromises)).filter(
-       (w): w is ListedWorkflow => w !== null
-     );
-     console.log(`[Service:listWorkflows] Found ${resolvedWorkflows.length} valid workflows for project ID '${projectId}'.`);
-     return resolvedWorkflows;
+export async function listWorkflows(userId: string, projectId: string): Promise<ListedWorkflow[]> {
+  await ensureUserRootDirs(userId);
+  console.log(
+    `[Service:listWorkflows] Listing workflows for project ID '${projectId}' for user '${userId}'`
+  );
+  const logicalProjectWorkflowsDir = `user://projects/${projectId}/workflows/`;
+
+  try {
+    const dirExists = await famService.exists(userId, logicalProjectWorkflowsDir);
+    if (!dirExists) {
+      await famService.createDir(userId, logicalProjectWorkflowsDir);
+      return [];
+    }
+
+    const dirItems = await famService.listDir(userId, logicalProjectWorkflowsDir);
+    const workflowFileItems = dirItems.filter(
+      (item) => item.itemType === "file" && extname(item.name).toLowerCase() === ".json"
+    );
+
+    const workflowsPromises = workflowFileItems.map(
+      async (item): Promise<ListedWorkflow | null> => {
+        const logicalWorkflowPath = item.logicalPath;
+        try {
+          const fileContent = await famService.readFile(userId, logicalWorkflowPath, "utf-8");
+          if (typeof fileContent !== "string") {
+            console.error(
+              `[Service:listWorkflows] Failed to read workflow file ${logicalWorkflowPath} as string for user ${userId}.`
+            );
+            return null;
+          }
+          const workflowData: Partial<WorkflowObject> = JSON.parse(fileContent);
+
+          // **核心**: ID 来自文件内容，而不是文件名
+          const id = workflowData.id;
+          const name = workflowData.name;
+
+          if (!id || !name) {
+            console.warn(
+              `[Service:listWorkflows] Skipping file ${item.name} because it lacks a valid 'id' or 'name' property.`
+            );
+            return null;
+          }
+
+          return {
+            id,
+            name,
+            description: workflowData.description,
+            creationMethod: workflowData.creationMethod,
+            referencedWorkflows: workflowData.referencedWorkflows,
+          };
+        } catch (readError: any) {
+          console.error(
+            `[Service:listWorkflows] Error reading/parsing workflow file ${logicalWorkflowPath} for listing:`,
+            readError.message
+          );
+          return null;
+        }
+      }
+    );
+
+    const resolvedWorkflows = (await Promise.all(workflowsPromises)).filter(
+      (w): w is ListedWorkflow => w !== null
+    );
+    console.log(
+      `[Service:listWorkflows] Found ${resolvedWorkflows.length} valid workflows for project ID '${projectId}'.`
+    );
+    return resolvedWorkflows;
     return resolvedWorkflows;
   } catch (error: any) {
     console.error(
@@ -787,9 +809,17 @@ export async function createWorkflow(
   workflowInputData: CreateWorkflowObject,
   appVersion: string
 ): Promise<WorkflowObject> {
-  const { id: frontendId, name, nodes, edges, viewport, interfaceInputs, interfaceOutputs, referencedWorkflows } =
-    workflowInputData;
-  
+  const {
+    id: frontendId,
+    name,
+    nodes,
+    edges,
+    viewport,
+    interfaceInputs,
+    interfaceOutputs,
+    referencedWorkflows,
+  } = workflowInputData;
+
   // 优先使用前端传入的 ID，否则生成一个新的 UUID。这确保了 ID 的唯一性和持久性。
   const workflowId = frontendId || crypto.randomUUID();
   // 文件名仍然基于用户提供的名称，以保证可读性。
@@ -951,7 +981,9 @@ async function _findWorkflowFileById(
       if (typeof content === "string") {
         const data = JSON.parse(content);
         if (data.id === workflowId) {
-          console.log(`${logPrefix} Found workflow with ID '${workflowId}' in file '${fileItem.name}'.`);
+          console.log(
+            `${logPrefix} Found workflow with ID '${workflowId}' in file '${fileItem.name}'.`
+          );
           return fileItem;
         }
       }
@@ -968,7 +1000,6 @@ async function _findWorkflowFileById(
   );
 }
 
-
 export async function getWorkflow(
   userId: string,
   projectId: string,
@@ -979,7 +1010,7 @@ export async function getWorkflow(
   console.log(
     `${logPrefix} Attempting to get workflow ID '${workflowId}' from project '${projectId}' for user '${userId}'`
   );
-  
+
   // 使用新的查找函数通过 UUID 找到文件
   const workflowFileItem = await _findWorkflowFileById(userId, projectId, workflowId);
   const logicalFilePath = workflowFileItem.logicalPath;
@@ -1065,7 +1096,7 @@ export async function updateWorkflow(
 
     // 4. 读取现有数据以保留 createdAt 等元数据
     const existingData: Partial<WorkflowObject> = JSON.parse(
-      await famService.readFile(userId, logicalCurrentFilePath, "utf-8") as string
+      (await famService.readFile(userId, logicalCurrentFilePath, "utf-8")) as string
     );
 
     // 5. 准备要保存的完整数据对象
@@ -1083,7 +1114,9 @@ export async function updateWorkflow(
     const validationResult = WorkflowObjectSchema.safeParse(dataToSave);
     if (!validationResult.success) {
       const errorDetails = validationResult.error.flatten().fieldErrors;
-      const message = `Internal error: Updated workflow data for '${newName}' (ID: ${workflowId}) is invalid. Details: ${JSON.stringify(errorDetails)}`;
+      const message = `Internal error: Updated workflow data for '${newName}' (ID: ${workflowId}) is invalid. Details: ${JSON.stringify(
+        errorDetails
+      )}`;
       throw new WorkflowUpdateError(message);
     }
     const validatedDataToSave = validationResult.data;
@@ -1094,12 +1127,16 @@ export async function updateWorkflow(
       logicalNewFilePath, // 总是写入新路径（如果未重命名，则与旧路径相同）
       JSON.stringify(validatedDataToSave, null, 2)
     );
-    console.log(`[Service:updateWorkflow] Workflow file saved for user '${userId}': ${logicalNewFilePath}`);
+    console.log(
+      `[Service:updateWorkflow] Workflow file saved for user '${userId}': ${logicalNewFilePath}`
+    );
 
     // 7. 如果是重命名，删除旧文件
     if (isRenaming) {
       await famService.delete(userId, logicalCurrentFilePath);
-      console.log(`[Service:updateWorkflow] Old workflow file deleted for user '${userId}': ${logicalCurrentFilePath}`);
+      console.log(
+        `[Service:updateWorkflow] Old workflow file deleted for user '${userId}': ${logicalCurrentFilePath}`
+      );
     }
 
     // 8. 后续操作
@@ -1201,99 +1238,98 @@ export async function deleteWorkflowToRecycleBin(
   * @param context - 用于日志记录的上下文信息。
   * @returns Promise<PanelDefinition[]> 发现的面板定义对象数组。
   */
- async function _discoverPanelsInPath(
-   userId: string | null,
-   discoveryPath: string,
-   context: { projectId?: string; type: 'user' | 'shared' }
- ): Promise<PanelDefinition[]> {
-   const logPrefix = `[Service:_discoverPanelsInPath]`;
-   const contextId = context.projectId ? `project '${context.projectId}'` : 'shared templates';
-   console.log(`${logPrefix} Discovering ${context.type} panels in '${discoveryPath}' for ${contextId}.`);
- 
-   try {
-     const dirExists = await famService.exists(userId, discoveryPath);
-     if (!dirExists) {
-       console.log(`${logPrefix} Directory not found at '${discoveryPath}'. No panels to discover.`);
-       return [];
-     }
- 
-     const dirItems = await famService.listDir(userId, discoveryPath);
-     const panelDirs = dirItems.filter(item => item.itemType === "directory");
- 
-     const panelPromises = panelDirs.map(async (panelDir): Promise<PanelDefinition | null> => {
-       const panelJsonLogicalPath = `${panelDir.logicalPath.endsWith('/') ? panelDir.logicalPath : panelDir.logicalPath + '/'}panel.json`;
-       try {
-         const panelDef = await _readAndValidateJsonFile<PanelDefinition>({
-           userId,
-           logicalPath: panelJsonLogicalPath,
-           schema: PanelDefinitionSchema,
-           notFoundErrorClass: Error,
-           loadErrorClass: Error,
-           entityName: `panel definition for '${panelDir.name}'`,
-           entityId: userId ? `${userId}/${context.projectId}` : 'shared',
-         });
-         
-         panelDef.panelDirectory = panelDir.name;
-         // 区分面板来源
-         panelDef.source = context.type;
-         
-         return panelDef;
-       } catch (error) {
-         console.warn(`${logPrefix} Skipping panel in directory '${panelDir.name}' due to error: ${error instanceof Error ? error.message : String(error)}`);
-         return null;
-       }
-     });
- 
-     const results = await Promise.all(panelPromises);
-     return results.filter((p): p is PanelDefinition => p !== null);
- 
-   } catch (error) {
-     console.error(`${logPrefix} Failed to discover panels in '${discoveryPath}' for ${contextId}:`, error);
-     // 在这个辅助函数中不向上抛出致命错误，而是返回空数组，让调用方决定如何处理
-     return [];
-   }
- }
- 
- /**
-  * 获取项目和系统内置的所有可用应用面板。
-  * @param userId - 用户 ID。
-  * @param projectId - 清理后的项目 ID。
-  * @returns Promise<PanelDefinition[]> 发现的面板定义对象数组。
-  */
- export async function getPanels(
-   userId: string,
-   projectId: string
- ): Promise<PanelDefinition[]> {
-   const logPrefix = `[Service:getPanels]`;
-   
-   const userPanelsPath = `user://projects/${projectId}/ui/`;
-   const sharedPanelsPath = `shared://templates/panels/`;
- 
-   try {
-     const userPanelsPromise = _discoverPanelsInPath(userId, userPanelsPath, { projectId, type: 'user' });
-     const sharedPanelsPromise = _discoverPanelsInPath(null, sharedPanelsPath, { type: 'shared' });
- 
-     const [userPanels, sharedPanels] = await Promise.all([userPanelsPromise, sharedPanelsPromise]);
- 
-     // 合并结果。可以考虑去重策略，例如用户面板覆盖同名共享面板
-     const allPanels = [...sharedPanels, ...userPanels]; // 用户面板在后，可以覆盖
-     
-     // 使用 Map 去重，保留后出现的（即用户定义的）
-     const panelMap = new Map<string, PanelDefinition>();
-     for (const panel of allPanels) {
-       panelMap.set(panel.id, panel);
-     }
- 
-     const uniquePanels = Array.from(panelMap.values());
- 
-     console.log(`${logPrefix} Found ${uniquePanels.length} total unique panels for project '${projectId}'.`);
-     return uniquePanels;
- 
-   } catch (error) {
-     console.error(`${logPrefix} Unexpected error while listing panels for project '${projectId}':`, error);
-     throw new PanelLoadError(`Failed to discover panels for project '${projectId}'.`);
-   }
- }
+async function _discoverPanelsInPath(
+  userId: string | null,
+  discoveryPath: string,
+  context: { projectId?: string; type: "user" | "shared" }
+): Promise<PanelDefinition[]> {
+  const logPrefix = `[Service:_discoverPanelsInPath]`;
+  const contextId = context.projectId ? `project '${context.projectId}'` : "shared templates";
+  console.log(
+    `${logPrefix} Discovering ${context.type} panels in '${discoveryPath}' for ${contextId}.`
+  );
+
+  try {
+    const dirExists = await famService.exists(userId, discoveryPath);
+    if (!dirExists) {
+      console.log(`${logPrefix} Directory not found at '${discoveryPath}'. No panels to discover.`);
+      return [];
+    }
+
+    const dirItems = await famService.listDir(userId, discoveryPath);
+    const panelDirs = dirItems.filter((item) => item.itemType === "directory");
+
+    const panelPromises = panelDirs.map(async (panelDir): Promise<PanelDefinition | null> => {
+      const panelJsonLogicalPath = `${
+        panelDir.logicalPath.endsWith("/") ? panelDir.logicalPath : panelDir.logicalPath + "/"
+      }panel.json`;
+      try {
+        const panelDef = await _readAndValidateJsonFile<PanelDefinition>({
+          userId,
+          logicalPath: panelJsonLogicalPath,
+          schema: PanelDefinitionSchema,
+          notFoundErrorClass: Error,
+          loadErrorClass: Error,
+          entityName: `panel definition for '${panelDir.name}'`,
+          entityId: userId ? `${userId}/${context.projectId}` : "shared",
+        });
+
+        panelDef.panelDirectory = panelDir.name;
+        // 区分面板来源
+        panelDef.source = context.type;
+
+        return panelDef;
+      } catch (error) {
+        console.warn(
+          `${logPrefix} Skipping panel in directory '${panelDir.name}' due to error: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+        return null;
+      }
+    });
+
+    const results = await Promise.all(panelPromises);
+    return results.filter((p): p is PanelDefinition => p !== null);
+  } catch (error) {
+    console.error(
+      `${logPrefix} Failed to discover panels in '${discoveryPath}' for ${contextId}:`,
+      error
+    );
+    // 在这个辅助函数中不向上抛出致命错误，而是返回空数组，让调用方决定如何处理
+    return [];
+  }
+}
+
+/**
+ * 获取项目和系统内置的所有可用应用面板。
+ * @param userId - 用户 ID。
+ * @param projectId - 清理后的项目 ID。
+ * @returns Promise<PanelDefinition[]> 发现的面板定义对象数组。
+ */
+export async function getPanels(userId: string, projectId: string): Promise<PanelDefinition[]> {
+  const logPrefix = `[Service:getPanels]`;
+
+  const userPanelsPath = `user://projects/${projectId}/ui/`;
+
+  try {
+    // 只发现和返回用户项目下的面板
+    const userPanels = await _discoverPanelsInPath(userId, userPanelsPath, {
+      projectId,
+      type: "user",
+    });
+
+    console.log(`${logPrefix} Found ${userPanels.length} user panels for project '${projectId}'.`);
+    return userPanels;
+  } catch (error) {
+    console.error(
+      `${logPrefix} Unexpected error while listing panels for project '${projectId}':`,
+      error
+    );
+    throw new PanelLoadError(`Failed to discover panels for project '${projectId}'.`);
+  }
+}
+
 /**
  * 根据 ID 获取特定面板的完整定义（通过自动发现）。
  * @param userId - 用户 ID。
@@ -1308,7 +1344,9 @@ export async function getPanelById(
   panelId: string
 ): Promise<PanelDefinition> {
   const logPrefix = `[Service:getPanelById]`;
-  console.log(`${logPrefix} Getting panel '${panelId}' for project '${projectId}', user '${userId}'.`);
+  console.log(
+    `${logPrefix} Getting panel '${panelId}' for project '${projectId}', user '${userId}'.`
+  );
 
   try {
     // 1. 获取所有面板（包括用户和共享的）
@@ -1316,13 +1354,17 @@ export async function getPanelById(
     const allPanels = await getPanels(userId, projectId);
 
     // 2. 在合并后的列表中查找匹配的面板
-    const panelDefinition = allPanels.find(p => p.id === panelId);
+    const panelDefinition = allPanels.find((p) => p.id === panelId);
 
     if (!panelDefinition) {
-      throw new PanelNotFoundError(`Panel with ID '${panelId}' not found in project '${projectId}' or in shared templates.`);
+      throw new PanelNotFoundError(
+        `Panel with ID '${panelId}' not found in project '${projectId}' or in shared templates.`
+      );
     }
 
-    console.log(`${logPrefix} Successfully found panel definition for '${panelId}'. Source: ${panelDefinition.source}`);
+    console.log(
+      `${logPrefix} Successfully found panel definition for '${panelId}'. Source: ${panelDefinition.source}`
+    );
     return panelDefinition;
   } catch (error) {
     // 如果是已知的错误类型，直接重新抛出
@@ -1331,6 +1373,141 @@ export async function getPanelById(
     }
     // 对于其他未知错误，包装成 PanelLoadError
     console.error(`${logPrefix} Unexpected error getting panel '${panelId}':`, error);
-    throw new PanelLoadError(`An unexpected error occurred while trying to get panel '${panelId}'.`);
+    throw new PanelLoadError(
+      `An unexpected error occurred while trying to get panel '${panelId}'.`
+    );
   }
 }
+
+/**
+ * 获取所有可用的面板模板。
+ * @returns Promise<PanelDefinition[]> 发现的模板定义对象数组。
+ */
+export async function getPanelTemplates(): Promise<PanelDefinition[]> {
+  const logPrefix = `[Service:getPanelTemplates]`;
+  const sharedPanelsPath = `shared://templates/panels/`;
+
+  try {
+    const templates = await _discoverPanelsInPath(null, sharedPanelsPath, { type: "shared" });
+    console.log(`${logPrefix} Found ${templates.length} panel templates.`);
+    return templates;
+  } catch (error) {
+    console.error(`${logPrefix} Unexpected error while fetching panel templates:`, error);
+    throw new PanelLoadError(`Failed to discover panel templates.`);
+  }
+}
+
+/**
+ /**
+  * 创建新的应用面板，可以从模板创建或全新创建。
+  * @param userId - 用户 ID。
+  * @param projectId - 项目 ID。
+  * @param options - 创建选项。
+  * @returns Promise<PanelDefinition> 新创建的面板定义。
+  */
+ export async function createPanel(
+   userId: string,
+   projectId: string,
+   options: { templateId?: string | null; panelId: string; displayName: string }
+ ): Promise<PanelDefinition> {
+   const { templateId, panelId, displayName } = options;
+   const logPrefix = `[Service:createPanel]`;
+ 
+   // 1. 验证新面板 ID
+   const safePanelId = sanitizeProjectId(panelId);
+   if (!safePanelId || safePanelId !== panelId) {
+     throw new PanelCreationError(
+       `Invalid panel ID '${panelId}'. Only alphanumeric characters and hyphens are allowed.`
+     );
+   }
+ 
+   // 2. 检查目标路径是否已存在
+   const targetPanelDirPath = `user://projects/${projectId}/ui/${safePanelId}/`;
+   const exists = await famService.exists(userId, targetPanelDirPath);
+   if (exists) {
+     throw new PanelConflictError(
+       `Panel with ID '${safePanelId}' already exists in project '${projectId}'.`
+     );
+   }
+ 
+   // 确保项目 UI 目录存在
+   await famService.createDir(userId, `user://projects/${projectId}/ui/`);
+ 
+   let newPanelDef: PanelDefinition;
+ 
+   if (templateId) {
+     // --- 从模板创建 ---
+     console.log(`${logPrefix} Creating panel from template '${templateId}'.`);
+     const templates = await getPanelTemplates();
+     const template = templates.find((t) => t.id === templateId);
+     if (!template || !template.panelDirectory) {
+       throw new PanelNotFoundError(`Template with ID '${templateId}' not found.`);
+     }
+ 
+     const sourcePath = `shared://templates/panels/${template.panelDirectory}/`;
+     await famService.copy(userId, sourcePath, targetPanelDirPath);
+ 
+     const newPanelJsonPath = `${targetPanelDirPath}panel.json`;
+     const panelData = await _readAndValidateJsonFile<PanelDefinition>({
+       userId,
+       logicalPath: newPanelJsonPath,
+       schema: PanelDefinitionSchema,
+       notFoundErrorClass: PanelCreationError,
+       loadErrorClass: PanelCreationError,
+     });
+ 
+     panelData.id = safePanelId;
+     panelData.displayName = displayName;
+     panelData.source = "user";
+ 
+     await famService.writeFile(userId, newPanelJsonPath, JSON.stringify(panelData, null, 2));
+     newPanelDef = panelData;
+   } else {
+     // --- 全新创建 ---
+     console.log(`${logPrefix} Creating new blank panel.`);
+     await famService.createDir(userId, targetPanelDirPath);
+ 
+     // 创建 panel.json
+     const panelJsonContent: PanelDefinition = {
+       id: safePanelId,
+       displayName: displayName,
+       version: "1.0.0",
+       description: "A new panel created from scratch.",
+       uiEntryPoint: "index.html",
+       source: "user",
+     };
+     const panelJsonPath = `${targetPanelDirPath}panel.json`;
+     await famService.writeFile(userId, panelJsonPath, JSON.stringify(panelJsonContent, null, 2));
+ 
+     // 创建 index.html
+     const indexPath = `${targetPanelDirPath}index.html`;
+     const indexHtmlContent = `<!DOCTYPE html>
+ <html lang="en">
+ <head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>${displayName}</title>
+   <style>
+     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #1a1a1a; color: #e0e0e0; text-align: center; }
+     .container { max-width: 600px; padding: 2rem; }
+     h1 { font-weight: 300; font-size: 2.5rem; margin-bottom: 0.5rem; }
+     p { color: #9e9e9e; font-size: 1.1rem; }
+   </style>
+ </head>
+ <body>
+   <div class="container">
+     <h1>Welcome to '${displayName}'!</h1>
+     <p>Edit this index.html file to get started.</p>
+   </div>
+ </body>
+ </html>`;
+     await famService.writeFile(userId, indexPath, indexHtmlContent);
+ 
+     newPanelDef = panelJsonContent;
+   }
+ 
+   console.log(
+     `${logPrefix} Successfully created panel '${safePanelId}' in project '${projectId}'.`
+   );
+   return newPanelDef;
+ }

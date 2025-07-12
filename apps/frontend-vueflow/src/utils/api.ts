@@ -5,7 +5,7 @@ import type { PanelDefinition, WorkflowStorageObject } from '@comfytavern/types'
 // 使用工具函数获取 API 基础 URL
 const API_BASE_URL = getApiBaseUrl();
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 5000,
   headers: {

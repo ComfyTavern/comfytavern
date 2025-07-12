@@ -272,6 +272,9 @@ src/
 - **代码检查**: `bunx vue-tsc --build apps/frontend-vueflow/tsconfig.json`,`bun tsc -p apps/backend/tsconfig.json --noEmit`
 - **通用类型导入**：`@comfytavern/types`是通用类型的导入路径，通过`index.ts`统一注册了所有通用类型定义。
 - **工作流数据转换**：我们以画布数据为单一事实来源的，这个`workflowTransformer.ts`转换仅保存/加载和创建执行负载才会用。
+- **API 调用路径规范**: 前端 API 请求的 URL **不应**包含 `/api` 前缀。`axios` 实例已将 `/api` 设置为 `baseURL`，所有请求路径都应相对于此基地址。
+  - **错误**: `api.get('/api/users')`
+  - **正确**: `api.get('/users')`
 
 ### 10. Tooltip 使用规范 (v-comfy-tooltip)
 
