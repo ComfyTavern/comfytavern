@@ -26,9 +26,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineAsyncComponent, watch, nextTick } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { onClickOutside, useElementBounding, useWindowSize } from '@vueuse/core';
+import {
+  FolderOpenIcon,
+  ArrowDownTrayIcon,
+  PencilIcon,
+  ArrowsRightLeftIcon,
+  ClipboardDocumentIcon,
+  StarIcon,
+  TrashIcon,
+  ArrowPathIcon,
+  FolderPlusIcon,
+  DocumentDuplicateIcon,
+  ScissorsIcon
+} from '@heroicons/vue/24/outline';
 
 // 定义菜单项的类型
 export interface ContextMenuItemAction {
@@ -123,26 +136,24 @@ const handleAction = (menuItem: ContextMenuItemAction) => {
 };
 
 
-// 动态图标加载 (与 SidebarNav.vue 类似，可以提取到公共工具函数)
+// Statically loaded icons
 const iconComponents: Record<string, any> = {
-  FolderOpenIcon: defineAsyncComponent(() => import('@heroicons/vue/24/outline/FolderOpenIcon')),
-  ArrowDownTrayIcon: defineAsyncComponent(() => import('@heroicons/vue/24/outline/ArrowDownTrayIcon')),
-  PencilIcon: defineAsyncComponent(() => import('@heroicons/vue/24/outline/PencilIcon')),
-  ArrowsRightLeftIcon: defineAsyncComponent(() => import('@heroicons/vue/24/outline/ArrowsRightLeftIcon')),
-  ClipboardDocumentIcon: defineAsyncComponent(() => import('@heroicons/vue/24/outline/ClipboardDocumentIcon')),
-  StarIcon: defineAsyncComponent(() => import('@heroicons/vue/24/outline/StarIcon')),
-  // StarSlashIcon: defineAsyncComponent(() => import('@heroicons/vue/24/outline/StarSlashIcon')), // This icon might not exist
-  TrashIcon: defineAsyncComponent(() => import('@heroicons/vue/24/outline/TrashIcon')),
-  ArrowPathIcon: defineAsyncComponent(() => import('@heroicons/vue/24/outline/ArrowPathIcon')),
-  FolderPlusIcon: defineAsyncComponent(() => import('@heroicons/vue/24/outline/FolderPlusIcon')),
-  DocumentDuplicateIcon: defineAsyncComponent(() => import('@heroicons/vue/24/outline/DocumentDuplicateIcon')), // For Copy
-  ScissorsIcon: defineAsyncComponent(() => import('@heroicons/vue/24/outline/ScissorsIcon')), // For Cut
-  // 添加更多图标...
+  FolderOpenIcon,
+  ArrowDownTrayIcon,
+  PencilIcon,
+  ArrowsRightLeftIcon,
+  ClipboardDocumentIcon,
+  StarIcon,
+  TrashIcon,
+  ArrowPathIcon,
+  FolderPlusIcon,
+  DocumentDuplicateIcon,
+  ScissorsIcon,
 };
 
 const getIconComponent = (iconName?: string) => {
   if (!iconName) return null;
-  return iconComponents[iconName] || null; // 如果找不到图标，则不渲染
+  return iconComponents[iconName] || null;
 };
 
 </script>

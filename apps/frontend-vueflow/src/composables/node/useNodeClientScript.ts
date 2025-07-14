@@ -4,6 +4,7 @@ import { useNodeStore, type FrontendNodeDefinition } from '@/stores/nodeStore';
 import { useWebSocket } from '@/composables/useWebSocket'; // 导入 WebSocket composable
 import { WebSocketMessageType, type ButtonClickPayload } from '@comfytavern/types'; // 导入类型
 import { getApiBaseUrl } from '@/utils/urlUtils'; // <--- 改为 getApiBaseUrl
+import { useTabStore } from '@/stores/tabStore'; // 静态导入 tabStore
 import type { UseNodeStateProps } from './useNodeState'; // 导入节点状态 Props 类型
 
 // 定义传递给 Composable 的参数类型
@@ -19,15 +20,14 @@ export function useNodeClientScript(props: UseNodeClientScriptProps) { // Remove
   const { updateInputValue, getInputValue } = props; // 从 props 解构
 
   // For workflowId
-  // const { useTabStore } = await import('@/stores/tabStore'); // Dynamic import for tabStore
-  // const tabStore = useTabStore();
-  // const { activeTab } = storeToRefs(tabStore);
+  const tabStore = useTabStore();
+  const { activeTab } = storeToRefs(tabStore);
 
   const clientScriptLoaded = ref(false);
   const clientScriptError = ref<string | null>(null);
   const clientScriptApi = ref<any>(null); // 用于存储 setupClientNode 返回的接口
   const hasClientScriptDefinition = ref(false); // 新增：标记节点定义中是否有 clientScriptUrl
- 
+
   // 加载并执行客户端脚本
   const loadClientScript = async () => {
     let fullScriptUrl = ''; // 在 try 块外部声明
@@ -155,11 +155,6 @@ export function useNodeClientScript(props: UseNodeClientScriptProps) { // Remove
   const handleButtonClick = async (inputKey: string) => { // Made async to allow await for tabStore
     console.log(`[${props.id}] Button clicked: ${inputKey}`);
 
-    // Dynamically import and use tabStore here
-    const { useTabStore } = await import('@/stores/tabStore');
-    const tabStore = useTabStore();
-    const { activeTab } = storeToRefs(tabStore);
-
 
     // 1. 调用客户端脚本 (如果存在)
     if (clientScriptApi.value && typeof clientScriptApi.value.onButtonClick === 'function') {
@@ -188,7 +183,7 @@ export function useNodeClientScript(props: UseNodeClientScriptProps) { // Remove
       const currentDef = nodeDefinitions.value.find(def => def.type === nodeType && def.namespace === props.data.namespace);
       nodeDisplayName = currentDef?.displayName;
     }
-    
+
     // 如果仍然没有，则回退到节点类型本身
     if (!nodeDisplayName) {
       nodeDisplayName = nodeType;
