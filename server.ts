@@ -146,7 +146,7 @@ class ComfyTavernServer {
       );
       console.log(`\n${this.GRAY}----------------------------------------${this.RESET}`);
       console.log(`\n${this.BOLD}按 Ctrl+C 停止所有服务${this.RESET}\n`);
-    }, 500); // 延迟500毫秒
+    }, 800); // 延迟500毫秒
   }
 }
 

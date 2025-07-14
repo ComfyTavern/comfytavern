@@ -173,26 +173,22 @@ suggestionTriggerWidth.value = rootRef.value.offsetWidth; // Match the width of 
     }
 };
 
+interface Option {
+  value: string | number;
+  label: string;
+}
+
 // Handle selection from SuggestionDropdown
-const handleSuggestionSelect = (selectedValueString: string | number) => {
-  // Ensure selectedValueString is treated as a string for matching
-  const selectedString = String(selectedValueString);
-  console.log(`ResourceSelector (${props.nodeId}): Suggestion selected: ${selectedString}`);
-  // Extract the ID from the suggestion string "Name (id)"
-  const match = selectedString.match(/\(([^)]+)\)$/);
-  if (match && match[1]) {
-    const selectedId = match[1];
-    internalValue.value = selectedId; // Update the internal value (which emits update:modelValue)
+const handleSuggestionSelect = (selectedOption: Option) => {
+  const selectedValue = selectedOption.value;
+  console.log(`ResourceSelector (${props.nodeId}): Suggestion selected with value: ${selectedValue}`);
+  
+  internalValue.value = selectedValue; // Update the internal value (which emits update:modelValue)
 
-    // updateNodeGroupWorkflowReference is no longer called here.
-    // It will be triggered by a watcher in BaseNode watching the config value change.
-    console.log(`ResourceSelector (${props.nodeId}): Emitting update:modelValue with ${selectedId}`);
+  // updateNodeGroupWorkflowReference is no longer called here.
+  // It will be triggered by a watcher in BaseNode watching the config value change.
+  console.log(`ResourceSelector (${props.nodeId}): Emitting update:modelValue with ${selectedValue}`);
 
-  } else {
-    // Fallback or handle cases where format might differ (e.g., simple string suggestions)
-    console.warn(`ResourceSelector (${props.nodeId}): Could not extract ID from suggestion: ${selectedString}. Using raw value.`);
-    internalValue.value = selectedString; // Use the original selected string if ID extraction fails
-  }
   showSuggestions.value = false; // Close dropdown
 };
 

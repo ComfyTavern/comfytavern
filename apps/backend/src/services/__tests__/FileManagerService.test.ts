@@ -647,16 +647,16 @@ describe("FileManagerService", () => {
 
         const file1 = items.find((item) => item.name === "file1.txt");
         expect(file1).toBeDefined();
-        expect(file1?.type).toBe("file");
-        expect(file1?.path).toBe("user://list-test-dir/file1.txt");
+        expect(file1?.itemType).toBe("file");
+        expect(file1?.logicalPath).toBe("user://list-test-dir/file1.txt");
         const file1Stats = await fsPromises.stat(file1Path); // Get actual stats for comparison
         expect(file1?.size).toBe(file1Stats.size);
-        expect(file1?.lastModified?.getTime()).toBeCloseTo(file1Stats.mtime.getTime(), -2); // Compare time, allow slight diff
+        expect(file1?.lastModified).toBeCloseTo(file1Stats.mtime.getTime(), -2); // Compare time, allow slight diff
 
         const subdir1 = items.find((item) => item.name === "subdir1");
         expect(subdir1).toBeDefined();
-        expect(subdir1?.type).toBe("directory");
-        expect(subdir1?.path).toBe("user://list-test-dir/subdir1");
+        expect(subdir1?.itemType).toBe("directory");
+        expect(subdir1?.logicalPath).toBe("user://list-test-dir/subdir1");
         // For directories, size and lastModified might be undefined or platform-dependent from our ListItem perspective
       });
 

@@ -1,6 +1,83 @@
 import { z } from "zod";
-import type { NodeInputAction } from "./schemas";
-import { DataFlowType, type DataFlowTypeName, BuiltInSocketMatchCategory, type ChunkPayload, type ExecutionStatus } from "./common";
+import type { ChunkPayload, ExecutionStatus } from "./execution";
+
+// --- Data Flow & Socket Matching ---
+
+/**
+ * 数据流类型的常量定义。
+ */
+export const DataFlowType = {
+  STRING: "STRING",
+  INTEGER: "INTEGER",
+  FLOAT: "FLOAT",
+  BOOLEAN: "BOOLEAN",
+  OBJECT: "OBJECT",
+  ARRAY: "ARRAY",
+  BINARY: "BINARY",
+  WILDCARD: "WILDCARD",
+  CONVERTIBLE_ANY: "CONVERTIBLE_ANY",
+} as const;
+
+export type DataFlowTypeName = (typeof DataFlowType)[keyof typeof DataFlowType];
+
+/**
+ * 内置的插槽匹配类别。
+ * 用于类型检查、连接建议和 UI 渲染提示。
+ */
+export const BuiltInSocketMatchCategory = {
+  // 语义化/内容特征标签
+  CODE: "Code",
+  JSON: "Json",
+  MARKDOWN: "Markdown",
+  URL: "Url",
+  FILE_PATH: "FilePath",
+  PROMPT: "Prompt",
+  CHAT_MESSAGE: "ChatMessage",
+  CHAT_HISTORY: "ChatHistory",
+  LLM_CONFIG: "LlmConfig",
+  LLM_OUTPUT: "LlmOutput",
+  VECTOR_EMBEDDING: "VectorEmbedding",
+  CHARACTER_PROFILE: "CharacterProfile",
+  IMAGE_DATA: "ImageData",
+  AUDIO_DATA: "AudioData",
+  VIDEO_DATA: "VideoData",
+  RESOURCE_ID: "ResourceId",
+  TRIGGER: "Trigger",
+  STREAM_CHUNK: "StreamChunk",
+  COMBO_OPTION: "ComboOption",
+  REGEX_RULE_ARRAY: "RegexRuleArray",
+  
+  // UI 渲染提示
+  /** 标记此输入组件应作为“大块”或“块级”元素渲染 */
+  UI_BLOCK: "UiBlock",
+  /** 标记此输入支持标准的内联预览操作按钮 */
+  CanPreview: "CanPreview",
+  /** 标记此输入不应显示其类型的默认编辑操作按钮 */
+  NoDefaultEdit: "NoDefaultEdit",
+
+  // 行为标签
+  BEHAVIOR_WILDCARD: "BehaviorWildcard",
+  BEHAVIOR_CONVERTIBLE: "BehaviorConvertible",
+} as const;
+
+export type BuiltInSocketMatchCategoryName = (typeof BuiltInSocketMatchCategory)[keyof typeof BuiltInSocketMatchCategory];
+
+
+// --- Node & Action Schemas ---
+
+/**
+ * Schema 定义：节点输入操作按钮的配置
+ */
+export const NodeInputActionSchema = z.object({
+  id: z.string(),
+  icon: z.string().optional(),
+  label: z.string().optional(),
+  tooltip: z.string().optional(),
+  handlerType: z.enum(['builtin_preview', 'builtin_editor', 'emit_event', 'client_script_hook', 'open_panel']),
+  handlerArgs: z.record(z.any()).optional(),
+});
+export type NodeInputAction = z.infer<typeof NodeInputActionSchema>;
+
 
 // --- Group Slot and Interface Schemas ---
 
@@ -32,6 +109,15 @@ export const GroupSlotInfoSchema = z.object({
 }));
 /** 类型推断：节点组插槽的详细信息 */
 export type GroupSlotInfo = z.infer<typeof GroupSlotInfoSchema>;
+
+/**
+ * Schema 定义：节点组的接口信息，包含输入和输出插槽。
+ */
+export const GroupInterfaceInfoSchema = z.object({
+  inputs: z.record(z.lazy(() => GroupSlotInfoSchema)).optional(),
+  outputs: z.record(z.lazy(() => GroupSlotInfoSchema)).optional()
+});
+export type GroupInterfaceInfo = z.infer<typeof GroupInterfaceInfoSchema>;
 
 
 // --- Input Options Schemas ---

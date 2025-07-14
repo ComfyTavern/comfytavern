@@ -1,10 +1,95 @@
-/**
- * @fileoverview 定义工作流执行、WebSocket 通信相关的共享 TypeScript 类型。
- */
-import type { ExecutionNode, ExecutionEdge } from './schemas';
-import type { GroupSlotInfo } from './node';
-import { ExecutionStatus, type NanoId, type ChunkPayload } from './common';
+import { z } from 'zod';
+import { GroupSlotInfoSchema } from './node';
 import type { NodeExecutionResult } from './node';
+import type { NanoId } from './common';
+
+// --- Execution Status & Chunks ---
+
+/**
+ * 工作流执行状态的枚举。
+ * 注意：统一前端和后端使用的状态值。
+ */
+export enum ExecutionStatus {
+  QUEUED = 'queued',         // 工作流在队列中等待执行
+  RUNNING = 'running',       // 工作流或节点正在执行
+  COMPLETE = 'complete',     // 工作流或节点成功完成
+  ERROR = 'error',           // 工作流或节点执行出错
+  INTERRUPTED = 'interrupted', // 工作流被中断
+  IDLE = 'idle',             // 节点或工作流处于空闲/未执行状态 (前端常用)
+  SKIPPED = 'skipped',       // 节点被跳过执行 (前端常用)
+}
+
+/**
+ * 定义流式数据块的内容。
+ */
+export const ChunkPayloadSchema = z.object({
+  type: z.enum([
+    "text_chunk",
+    "tool_call_chunk",
+    "finish_reason_chunk",
+    "usage_chunk",
+    "error_chunk",
+    "custom"
+  ]),
+  content: z.any(),
+}).passthrough(); // 允许附加元数据
+
+export type ChunkPayload = z.infer<typeof ChunkPayloadSchema>;
+
+/**
+ * 表示一个接口输出的实际值或占位符。
+ * 特别用于当输出是一个流时，在初始的接口输出聚合消息中可能发送一个占位符。
+ * 实际的流数据将通过 WORKFLOW_INTERFACE_YIELD 消息单独发送。
+ */
+export type InterfaceOutputValue =
+  | any // 代表实际的非流数据，或流对象的引用（尽管通常不直接发送流对象）
+  | { type: 'stream_placeholder'; message: string; interfaceOutputKey: string }; // 流的占位符
+
+
+// --- Execution Schemas ---
+
+/**
+ * Schema 定义：用于执行引擎的简化节点结构。
+ */
+export const ExecutionNodeSchema = z.object({
+  id: z.string(),
+  fullType: z.string(),
+  inputs: z.record(z.any()).optional(),
+  configValues: z.record(z.any()).optional(),
+  bypassed: z.boolean().optional(),
+  inputConnectionOrders: z.record(z.array(z.string())).optional(),
+});
+export type ExecutionNode = z.infer<typeof ExecutionNodeSchema>;
+
+/**
+ * Schema 定义：用于执行引擎的简化边结构。
+ */
+export const ExecutionEdgeSchema = z.object({
+  id: z.string().optional(),
+  sourceNodeId: z.string(),
+  sourceHandle: z.string(),
+  targetNodeId: z.string(),
+  targetHandle: z.string(),
+});
+export type ExecutionEdge = z.infer<typeof ExecutionEdgeSchema>;
+
+/**
+ * Schema 定义：发送到后端以启动工作流执行的有效负载 (payload)。
+ */
+export const WorkflowExecutionPayloadSchema = z.object({
+  workflowId: z.string().optional(),
+  nodes: z.array(ExecutionNodeSchema),
+  edges: z.array(ExecutionEdgeSchema),
+  interfaceInputs: z.record(GroupSlotInfoSchema).optional(),
+  interfaceOutputs: z.record(GroupSlotInfoSchema).optional(),
+  outputInterfaceMappings: z.record(z.object({ sourceNodeId: z.string(), sourceSlotKey: z.string() })).optional(),
+});
+// 实际的 WorkflowExecutionPayload 类型定义在下面，以包含 clientId 等运行时属性
+export type WorkflowExecutionPayload = z.infer<typeof WorkflowExecutionPayloadSchema> & {
+  clientId?: string;
+  metadata?: Record<string, any>;
+};
+
 
 // --- Core Execution Status ---
 
@@ -60,19 +145,6 @@ export interface WebSocketMessage<T = any> {
 
 
 // --- WebSocket Payload Interfaces ---
-
-/**
- * 提交工作流执行的载荷。
- */
-export interface WorkflowExecutionPayload {
-  nodes: ExecutionNode[];
-  edges: ExecutionEdge[];
-  clientId?: string;
-  metadata?: Record<string, any>;
-  outputInterfaceMappings?: Record<string, { sourceNodeId: NanoId, sourceSlotKey: string }>;
-  interfaceInputs?: Record<string, GroupSlotInfo>;
-  interfaceOutputs?: Record<string, GroupSlotInfo>;
-}
 
 /**
  * 确认收到执行请求的响应载荷。

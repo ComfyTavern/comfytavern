@@ -33,11 +33,7 @@ class RegexRuleLoaderNodeImpl {
     const userContext = context?.userContext as UserContext | undefined;
     let userId: string | null = null;
     if (userContext?.currentUser) {
-      if ('id' in userContext.currentUser) {
-        userId = userContext.currentUser.id;
-      } else if ('uid' in userContext.currentUser) {
-        userId = userContext.currentUser.uid;
-      }
+      userId = userContext.currentUser.uid;
     }
     
     if (ruleResourcePath.startsWith('user://') && !userId) {

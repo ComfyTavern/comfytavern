@@ -122,8 +122,25 @@ ComfyTavern 的核心价值主张体现在以下两个层面：
   - 不支持 `&&` 连接命令，请使用分号 `;` 或分多次执行。
   - 启动 `.bat` 文件需要添加 `.\` 前缀，例如 `.\start.bat`。
 - **后端入口**: `apps/backend/src/index.ts` (已重构，具体路由见 `apps/backend/src/routes/`)
-- **核心类型定义**: `packages/types/src/schemas.ts` (使用 Zod 定义和验证)
 - **节点或插槽的显示**：优先使用`displayName`,其次再是 id。
+
+#### 项目公共类型定义
+packages\types\src\adapter.ts
+packages\types\src\auth.ts
+packages\types\src\common.ts
+packages\types\src\execution.ts
+packages\types\src\history.ts
+packages\types\src\index.ts
+packages\types\src\llm.ts
+packages\types\src\node.ts
+packages\types\src\panel.ts
+packages\types\src\png-chunk-text.d.ts
+packages\types\src\png-chunks-extract.d.ts
+packages\types\src\project.ts
+packages\types\src\SillyTavern.ts
+packages\types\src\theme.ts
+packages\types\src\workflow.ts
+
 
 - 关于微型应用面板的文件路径：ComfyTavern 所在\userData\{用户 UID}\projects\{项目名称}\ui\{一个目录名字}\index.html(或其他什么的反正是个入口) 是类似这种结构的
 
