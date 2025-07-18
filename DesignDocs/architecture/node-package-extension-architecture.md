@@ -7,7 +7,7 @@
 **设计原则:**
 
 - **清晰解耦**: 明确区分核心节点 (`apps/backend/src/nodes/`) 与社区插件 (`plugins/`)。插件的管理和加载由独立的 `PluginLoader` 服务负责，`NodeLoader` 负责其单一职责：从指定路径加载节点。
-- **结构化**: 插件必须拥有 `plugin.yaml` 清单文件，作为其身份和能力的唯一声明，该格式对开发者友好且支持注释。
+- **结构化**: 插件必须拥有 `plugin.yaml` 清单文件，作为其身份和能力的唯一声明。我们选用 YAML 格式，因为它对开发者友好且支持注释。
 - **兼容性**: 方案与现有系统无缝集成。`PluginLoader` 将复用 `NodeLoader` 来加载插件中的节点，而不是重复造轮子。
 - **安全性**: 前端扩展代码在受控环境中运行，并通过权限模型约束其行为。
 - **易用性**: 开发者只需遵循简单的目录结构和 YAML 清单规范，即可创建功能强大的插件。
@@ -44,7 +44,7 @@ ComfyTavern/
 
 ## 3. 插件清单 (`plugin.yaml`)
 
-每个插件目录中**必须包含**一个 `plugin.yaml` 文件，它使用对人类更友好的 YAML 格式，并支持注释。
+每个插件目录中**必须包含**一个 `plugin.yaml` 文件，它选用对人类更友好的 YAML 格式，并支持注释。
 
 ```yaml
 # 插件的唯一标识符，应使用 kebab-case 命名法
@@ -72,20 +72,20 @@ frontend:
     styles:
       - dist/style.css
 
-# (可选) 声明插件需要的权限。插件必须明确声明其所需，以便用户审查。
+# (可选) 声明插件需要的权限。插件必须明确声明其所需权限，以便用户审查。
 permissions:
   # 申请使用哪些钩子
   hooks:
-    - "backend:nodemanager:before-register" # 例如：在节点注册前修改其定义
-    - "frontend:workflow:before-execute" # 例如：在执行前修改输入
-    - "frontend:node:execution:finish" # 例如：监听节点完成事件以更新UI
+    - "hook:server:nodemanager:before-register" # 例如：在节点注册前修改其定义
+    - "hook:client:workflow:before-execute" # 例如：在执行前修改输入
+    - "hook:client:node:execution:finish" # 例如：监听节点完成事件以更新UI
   # 申请包裹或注入哪些 UI 组件
-  front:
+  ui:
     # 包裹核心组件
    wrap:
-     - "front:BaseNode" # 包裹基础节点组件，通过检查 props.type 实现对特定节点的定制
-     - "front:Sidebar"
-   # 注入到 UI 插座
+     - "ui:BaseNode" # 包裹基础节点组件，从而通过检查 props.type 实现对特定节点的定制
+     - "ui:Sidebar"
+   # 注入 UI 到指定插座
    inject:
      - "node:header:right" # 例如：在节点头部加个快速操作图标
     # 替换核心组件 (高风险)
@@ -100,7 +100,7 @@ permissions:
 
 ### 4.1. 创建 `PluginLoader` 服务
 
-我们将创建一个新的服务 `apps/backend/src/services/PluginLoader.ts`，它将作为插件系统的核心。`NodeLoader` 将保持不变，继续作为通用的节点加载工具。
+我们将创建一个新的服务 `apps/backend/src/services/PluginLoader.ts`，它将是插件系统的核心。`NodeLoader` 将保持不变，继续作为通用的节点加载工具。
 
 - **`PluginLoader` 的职责**:
 
@@ -171,7 +171,7 @@ const builtInNodesPath = join(__dirname, "nodes");
 await NodeLoader.loadNodes(builtInNodesPath);
 
 // 2. 加载自定义节点路径 (从 config.json 读取)
-// ... (现有逻辑保持不变)
+// ... (此为兼容旧版自定义节点目录的逻辑，保持不变)
 
 // 3. 加载插件
 console.log(`[ComfyTavern Backend] Loading plugins...`);
@@ -388,7 +388,7 @@ sequenceDiagram
 - **核心能力**: 在不替换核心代码的情况下，通过钩子和装饰器模式，修改其行为。
 - **API 示例**:
   - `api.hooks.on(hookName: string, callback: Function)`: 强大的钩子系统，类似 WordPress。我们可以在 `workflow:before-execute` 时修改输入，在 `node:render:after` 时添加额外信息，在 `settings:save:before` 时进行验证等。钩子应遍布应用关键流程。
-  - `api.ui.wrapComponent(componentId: string, wrapper: (original: VueComponent) => VueComponent)`: **(关键)** “装饰器模式”的体现。它不直接替换，而是给插件一个“原始组件”的定义，让插件返回一个“包装后”的新组件。这比直接替换要灵活和安全得多。
+  - `api.ui.wrapComponent(componentId: string, wrapper: (original: VueComponent) => VueComponent)`: **(关键)** “装饰器模式”的体现。它并非直接替换，而是向插件提供“原始组件”的定义，并允许插件返回一个“包装后”的新组件。这比直接替换要灵活和安全得多。
 
 ### 8.3. 第三层：完全“替换” (The Override Layer)
 
@@ -418,7 +418,7 @@ sequenceDiagram
 
 3.  **沙箱化 (Sandboxing)**:
 
-    - **君子协定 (当前)**: 当前方案信任插件代码是善意的。
+    - **君子协定 (现阶段)**: 当前方案信任插件代码是善意的。
     - **未来增强**: 对于安全性要求极高的场景，可考虑将插件的前端代码运行在 **Web Worker** 或 **沙箱化 `iframe`** 中。与主应用的通信通过 `postMessage` 进行，这是 Web 环境下实现第三方代码安全隔离的黄金标准。
 
 4.  **生命周期与监控**:
@@ -434,57 +434,51 @@ sequenceDiagram
 UI 注入主要通过两种方式实现：**包裹 (Wrapping)** 和 **插座 (Outlets)**。
 
 - **包裹 (Wrapping)**: 使用 `api.ui.wrapComponent(componentId, wrapper)`。它允许插件用自己的逻辑“包裹”一个核心组件，非常适合在现有组件前后添加功能或修改 props。
-- **插座 (Outlets)**: 使用 `api.ui.registerOutletComponent(outletName, component)`。核心应用在关键位置预留了命名的 `<PluginOutlet>` 组件，插件可以直接向这些“插座”中添加独立的 UI 单元。
+- **插座 (Outlets)**: 使用 `api.ui.registerOutletComponent(outletName, component)`。核心应用在关键位置预留了命名的 `<PluginOutlet>` 组件，插件可以直接向这些“插座”中添加独立的 UI 单元。例如，插件可以向 `node:header:right` 插座注入一个按钮，或向 `editor:statusbar:left` 注入一个状态指示器。
 
 **核心组件 ID (可用于 `wrap`)**:
 
-为了与节点的 `core` 命名空间区分，所有核心 UI 组件的 ID 都使用 `front:` 前缀。
+为了与节点的 `core` 命名空间区分，所有核心 UI 组件的 ID 都使用 `ui:` 前缀。这允许插件通过 `api.ui.wrapComponent` 对核心 UI 进行装饰。
 
-| ID                    | 组件/区域        | 描述                                                                                                                                                                                               |
-| --------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `front:BaseNode`      | **基础节点组件** | 包裹所有节点的基础渲染组件 (`BaseNode.vue`)。插件的包裹组件会接收到节点的 `props`，因此可以通过检查 `props.type` (如 `'core:Text'`) 来实现对特定类型节点的逻辑定制。这是实现节点级 UI 扩展的核心。 |
-| `front:GraphEditor`   | 主画布编辑器     | 包裹整个画布区域，可用于添加全局覆盖、监听画布事件等。                                                                                                                                             |
-| `front:Sidebar`       | 侧边栏           | 包裹整个侧边栏，可用于添加全局状态或工具。                                                                                                                                                         |
-| `front:SettingsPanel` | 设置面板         | 包裹整个设置面板，可用于添加顶层警告或说明。                                                                                                                                                       |
-| `front:MainMenu`      | 主菜单           | 包裹主菜单组件，可在菜单渲染前后添加逻辑。                                                                                                                                                         |
+**示例 (非完整列表)**:
 
-**核心 UI 插座名称 (可用于 `registerOutletComponent`)**:
+| ID                      | 组件/区域          | 描述                                                                                                                                                                                                     |
+| ----------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ui:BaseNode`           | **基础节点组件**   | 包裹所有节点的基础渲染组件 (`BaseNode.vue`)。插件的包裹组件会接收到节点的 `props`，因此，插件可以通过检查 `props.type` (如 `'core:Text'`) 来实现对特定类型节点的逻辑定制。这是实现节点级 UI 扩展的核心。 |
+| `ui:GraphEditor`        | 主画布编辑器       | 包裹整个画布区域，可用于添加全局覆盖、监听画布事件等。                                                                                                                                                   |
+| `ui:SidebarManager`     | 编辑器侧边栏管理器 | 包裹整个编辑器侧边栏 (`SidebarManager.vue`)。                                                                                                                                                            |
+| `ui:HomeSidebar`        | 主页侧边栏         | 包裹主页的侧边栏 (`views/home/SideBar.vue`)。                                                                                                                                                            |
+| `ui:StatusBar`          | 编辑器状态栏       | 包裹底部的状态栏 (`StatusBar.vue`)。                                                                                                                                                                     |
+| `ui:RightPreviewPanel`  | 右侧预览面板       | 包裹右侧的浮动预览面板 (`RightPreviewPanel.vue`)。                                                                                                                                                       |
+| `ui:SettingsPanel`      | 设置面板           | 包裹整个设置面板，可用于添加顶层警告或说明。                                                                                                                                                             |
+| `ui:MainMenu`           | 主菜单             | 包裹主菜单组件，可在菜单渲染前后添加逻辑。                                                                                                                                                               |
 
-| 插座名称                                 | 位置             | 描述                                                                                                         |
-| ---------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------ |
-| `node:header:right`                      | 节点标题栏右侧   | 在节点标题上添加自定义图标、按钮或状态指示器。(`BaseNode.vue` 中 `custom-node-header` 内)                    |
-| `node:body:before`                       | 节点主体内容之前 | 在节点控件区域前插入自定义 UI。(`BaseNode.vue` 中 `custom-node-body` 内，所有 `inputs` 之前)                 |
-| `node:body:after`                        | 节点主体内容之后 | 在节点控件区域后插入自定义 UI，如预览、图表等。(`BaseNode.vue` 中 `custom-node-body` 内，所有 `inputs` 之后) |
-| `sidebar:top`                            | 侧边栏顶部       | 在侧边栏顶部添加全局工具或信息面板。                                                                         |
-| `sidebar:bottom`                         | 侧边栏底部       | 在侧边栏底部添加版权信息、状态监控等。                                                                       |
-| `settings:section:before[${sectionKey}]` | 特定设置分区之前 | 在某个设置分区的开始处添加说明或组件。                                                                       |
-| `settings:section:after[${sectionKey}]`  | 特定设置分区之后 | 在某个设置分区的末尾处添加补充信息或操作。                                                                   |
 
 #### 8.5.2. 流程钩子 (Process Hooks)
 
-钩子是插件介入应用核心逻辑、响应事件、修改数据的关键。为了清晰，钩子名称应包含 `frontend:` 或 `backend:` 前缀。
+钩子是插件介入应用核心逻辑、响应事件、修改数据的关键。为了清晰，钩子名称应使用 `hook:` 前缀，并用 `server` (后端) 或 `client` (前端) 区分其运行环境。
 
-**后端钩子 (Backend Hooks)**:
+**后端钩子 (Server Hooks)**:
 
-| 钩子名称                              | 触发时机                           | 回调参数 `(context)` & 是否可修改                |
-| ------------------------------------- | ---------------------------------- | ------------------------------------------------ |
-| `backend:nodeloader:before-load`      | `NodeLoader` 加载一个目录之前      | `{ dirPath }`                                    |
-| `backend:nodemanager:before-register` | `NodeManager` 注册一个节点定义之前 | `{ definition, filePath }` (可修改 `definition`) |
-| `backend:execution:before-run`        | 整个工作流执行开始前               | `{ workflow, inputs }` (可修改)                  |
-| `backend:node:before-execute`         | 单个节点执行前                     | `{ nodeId, inputs }` (可修改)                    |
+| 钩子名称                                    | 触发时机                           | 回调参数 `(context)` & 是否可修改                |
+| ------------------------------------------- | ---------------------------------- | ------------------------------------------------ |
+| `hook:server:nodeloader:before-load`        | `NodeLoader` 加载一个目录之前      | `{ dirPath }`                                    |
+| `hook:server:nodemanager:before-register`   | `NodeManager` 注册一个节点定义之前 | `{ definition, filePath }` (可修改 `definition`) |
+| `hook:server:execution:before-run`          | 整个工作流执行开始前               | `{ workflow, inputs }` (可修改)                  |
+| `hook:server:node:before-execute`           | 单个节点执行前                     | `{ nodeId, inputs }` (可修改)                    |
 
-**前端钩子 (Frontend Hooks)**:
+**前端钩子 (Client Hooks)**:
 
-| 钩子名称                           | 触发时机                                     | 回调参数 `(context)` & 是否可修改 |
-| ---------------------------------- | -------------------------------------------- | --------------------------------- |
-| `frontend:app:before-init`         | 主应用 `createApp` 之后，挂载 (`mount`) 之前 | `{ app }`                         |
-| `frontend:app:after-init`          | 主应用挂载后                                 | `{ app }`                         |
-| `frontend:workflow:before-load`    | 从数据加载工作流到 VueFlow 之前              | `{ data }` (可修改)               |
-| `frontend:workflow:after-load`     | 工作流加载到 VueFlow 之后                    | `{ workflow }`                    |
-| `frontend:workflow:before-execute` | 点击“执行”按钮，后端请求发送前               | `{ executionPayload }` (可修改)   |
-| `frontend:node:before-add`         | 节点被添加到画布前                           | `{ nodeData }` (可修改)           |
-| `frontend:node:after-add`          | 节点被添加到画布后                           | `{ node }`                        |
-| `frontend:node:execution:finish`   | 后端通知单个节点执行完毕                     | `{ nodeId, outputs }`             |
+| 钩子名称                             | 触发时机                                     | 回调参数 `(context)` & 是否可修改 |
+| ------------------------------------ | -------------------------------------------- | --------------------------------- |
+| `hook:client:app:before-init`        | 主应用 `createApp` 之后，挂载 (`mount`) 之前 | `{ app }`                         |
+| `hook:client:app:after-init`         | 主应用挂载后                                 | `{ app }`                         |
+| `hook:client:workflow:before-load`   | 从数据加载工作流到 VueFlow 之前              | `{ data }` (可修改)               |
+| `hook:client:workflow:after-load`    | 工作流加载到 VueFlow 之后                    | `{ workflow }`                    |
+| `hook:client:workflow:before-execute`| 点击“执行”按钮，后端请求发送前               | `{ executionPayload }` (可修改)   |
+| `hook:client:node:before-add`        | 节点被添加到画布前                           | `{ nodeData }` (可修改)           |
+| `hook:client:node:after-add`         | 节点被添加到画布后                           | `{ node }`                        |
+| `hook:client:node:execution:finish`  | 后端通知单个节点执行完毕                     | `{ nodeId, outputs }`             |
 
 #### 8.5.3. `plugin.yaml` 权限声明演进
 
@@ -495,18 +489,19 @@ UI 注入主要通过两种方式实现：**包裹 (Wrapping)** 和 **插座 (Ou
 permissions:
   # 申请使用哪些钩子
   hooks:
-    - "backend:nodemanager:before-register" # 在节点注册前修改其定义
-    - "frontend:workflow:before-execute" # 修改执行前的数据
-    - "frontend:node:execution:finish" # 监听节点完成事件
+    - "hook:server:nodemanager:before-register" # 在节点注册前修改其定义
+    - "hook:client:workflow:before-execute" # 修改执行前的数据
+    - "hook:client:node:execution:finish" # 监听节点完成事件
   # 申请包裹或注入哪些 UI 组件
-  front:
+  ui:
     # 包裹核心组件
     wrap:
-      - "front:BaseNode" # 包裹基础节点组件，实现对特定节点的UI定制
-      - "front:Sidebar"
+      - "ui:BaseNode" # 包裹基础节点组件，实现对特定节点的UI定制
+      - "ui:Sidebar"
     # 注入到 UI 插座
     inject:
       - "node:header:right" # 在节点头部加个图标
+      - "editor:statusbar:left" # 在状态栏左侧添加一个状态指示器
     # 替换核心组件 (高风险)
     override: []
   # 申请替换哪些核心服务 (最高风险)
@@ -604,7 +599,7 @@ configOptions:
 }
 ```
 
-这个 `openModalWithContent` action 会更新 `uiStore` 的状态，而一个全局的 `<BaseModal>` 组件会监听这些状态，并将 `ExtensionConfigPanel` 作为其 `_contentDefinition` 的一部分来渲染。这套机制完全复用了现有的、强大的 `BaseModal.vue` 组件。
+这个 `openModalWithContent` action 会更新 `uiStore` 的状态，而一个全局的 `<BaseModal>` 组件会监听这些状态，并将 `ExtensionConfigPanel` 作为其 `_contentDefinition` 的一部分来渲染。这套机制完全复用了现有强大的 `BaseModal.vue` 组件。
 
 3.  **状态管理集成**:
     - 所有扩展的配置值都将由现有的 `settingsStore` 管理。
@@ -710,36 +705,33 @@ class ExtensionApiService {
 
 ## 11. 附录 A：模块化布局与 UI 插座 (Outlet) 规划
 
-为了支撑一个健壮的插件生态，主应用的前端布局也应进行相应的模块化重构，并在关键位置预留“插座”（Plugin Outlets），允许插件无缝地注入 UI 元素。
+为了支撑一个健壮的插件生态，我们必须定义一套稳定、清晰、可预测的核心注入点。这是连接插件与主应用的桥梁，也是本附录的核心内容。
 
-### 11.1. 编辑器视图模块化概念
+### 11.1. UI 注入机制：包裹 (Wrapping) 与插座 (Outlets)
 
-`EditorView.vue` 作为核心界面，其布局可以被概念性地划分为以下几个主要区域。插件系统将围绕这些区域提供注入点。
+UI 注入主要通过两种方式实现：
 
-```mermaid
-graph TD
-    subgraph EditorView (整个编辑器视图)
-        A[Header / Toolbar]
-        subgraph MainContent
-            direction LR
-            B[Sidebar]
-            C[Canvas Container]
-        end
-        D[Status Bar]
-    end
+- **包裹 (Wrapping)**: 使用 `api.ui.wrapComponent(componentId, wrapper)`。它允许插件用自己的逻辑“包裹”一个核心组件，非常适合在现有组件前后添加功能或修改 props。
+- **插座 (Outlets)**: 使用 `api.ui.registerOutletComponent(outletName, component)`。核心应用在关键位置预留了命名的 `<PluginOutlet>` 组件，插件可以直接向这些“插座”中添加独立的 UI 单元。
 
-    A --> MainContent
-    MainContent --> D
-```
+### 11.2. 核心组件 ID 列表 (用于 `wrapComponent`)
 
-- **Header / Toolbar**: 顶部的操作区域，用于放置全局操作按钮、菜单等。
-- **Sidebar**: 左侧的侧边栏，用于展示节点列表、设置等。
-- **Canvas Container**: 中心画布区域，是节点编辑的主要场所。
-- **Status Bar**: 底部状态栏，用于显示应用状态、通知、缩放控件等。
+为了与节点的 `core` 命名空间区分，所有核心 UI 组件的 ID 都使用 `ui:` 前缀。
 
-### 11.2. UI 插座 (Plugin Outlet) 完整列表
+| ID                      | 组件/区域          | 描述                                                                                                                                                                                                     |
+| ----------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ui:BaseNode`           | **基础节点组件**   | 包裹所有节点的基础渲染组件 (`BaseNode.vue`)。插件的包裹组件会接收到节点的 `props`，因此，插件可以通过检查 `props.type` (如 `'core:Text'`) 来实现对特定类型节点的逻辑定制。这是实现节点级 UI 扩展的核心。 |
+| `ui:GraphEditor`        | 主画布编辑器       | 包裹整个画布区域，可用于添加全局覆盖、监听画布事件等。                                                                                                                                                   |
+| `ui:SidebarManager`     | 编辑器侧边栏管理器 | 包裹整个编辑器侧边栏 (`SidebarManager.vue`)。                                                                                                                                                            |
+| `ui:HomeSidebar`        | 主页侧边栏         | 包裹主页的侧边栏 (`views/home/SideBar.vue`)。                                                                                                                                                            |
+| `ui:StatusBar`          | 编辑器状态栏       | 包裹底部的状态栏 (`StatusBar.vue`)。                                                                                                                                                                     |
+| `ui:RightPreviewPanel`  | 右侧预览面板       | 包裹右侧的浮动预览面板 (`RightPreviewPanel.vue`)。                                                                                                                                                       |
+| `ui:SettingsPanel`      | 设置面板           | 包裹整个设置面板，可用于添加顶层警告或说明。                                                                                                                                                             |
+| `ui:MainMenu`           | 主菜单             | 包裹主菜单组件，可在菜单渲染前后添加逻辑。                                                                                                                                                               |
 
-`PluginOutlet` 是一个特殊的 Vue 组件，它允许插件将自己的组件渲染到预定义的位置。插件通过 `api.ui.registerOutletComponent(outletName, component)` 来使用它们。
+### 11.3. UI 插座 (Plugin Outlet) 完整列表 (用于 `registerOutletComponent`)
+
+`PluginOutlet` 是一个特殊的 Vue 组件，它允许插件将自己的组件渲染到预定义的位置。以下是所有可用的 UI 插座及其位置和用途。
 
 #### 全局布局插座 (`ProjectLayout.vue`)
 
@@ -750,6 +742,8 @@ graph TD
 | `layout:header:right`       | 顶部导航栏最右侧       | 用于添加全局图标或按钮，如“帮助”、“通知中心”等。 |
 
 #### 编辑器布局插座 (`EditorView.vue`)
+
+**注意**: `editor:toolbar:*` 系列插座的实现，依赖于在 `EditorView.vue` 中创建一个明确的 `<Toolbar>` 组件来承载这些插座。
 
 | 插座名称                 | 位置                 | 描述                                                       |
 | ------------------------ | -------------------- | ---------------------------------------------------------- |
@@ -762,18 +756,140 @@ graph TD
 
 #### 侧边栏插座 (`SidebarManager.vue`)
 
-| 插座名称                           | 位置                   | 描述                                           |
-| ---------------------------------- | ---------------------- | ---------------------------------------------- |
-| `sidebar:header`                   | 侧边栏顶部，标签页之上 | 添加全局搜索框或常用工具。                     |
-| `sidebar:panel:header[${panelId}]` | 特定面板内部，内容之前 | 在节点列表或设置面板的顶部添加警告或快捷操作。 |
-| `sidebar:panel:footer[${panelId}]` | 特定面板内部，内容之后 | 在特定面板底部添加补充信息或按钮。             |
+`SidebarManager.vue` 采用两段式布局：一个固定的垂直图标栏和一个动态滑出的内容面板。因此，插座主要围绕图标栏和动态加载的面板内容进行设计。
+
+| 插座名称                          | 位置                                   | 描述                                                                                   |
+| --------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------- |
+| `sidebar:icon-bar:tabs:before`    | 图标栏，核心标签页按钮组之前           | 在“节点”、“工作流”等核心标签页的上方添加插件自己的图标按钮，用于打开自定义侧边栏面板。 |
+| `sidebar:icon-bar:tabs:after`     | 图标栏，核心标签页按钮组之后           | 在核心标签页的下方添加插件自己的图标按钮。                                             |
+| `sidebar:icon-bar:bottom:before`  | 图标栏，底部控制按钮（主题、设置）之前 | 在底部控制区域的上方添加自定义图标按钮。                                               |
+| `sidebar:panel:header[{panelId}]` | 特定面板内部，内容之前                 | 在节点列表 (`nodes`) 或工作流列表 (`workflows`) 等面板的顶部添加警告或快捷操作。       |
+| `sidebar:panel:footer[{panelId}]` | 特定面板内部，内容之后                 | 在特定面板底部添加补充信息或按钮。                                                     |
+
+**注**: 方括号 `[]` 中的 `panelId` 是一个占位符，实际的钩子名称会包含具体的面板 ID，例如 `sidebar:panel:header[nodes]`。
+
+#### 主页侧边栏插座 (`views/home/SideBar.vue`)
+
+| 插座名称                  | 位置                     | 描述                                                 |
+| ------------------------- | ------------------------ | ---------------------------------------------------- |
+| `home:sidebar:header`     | 侧边栏顶部，Logo 之后    | 添加全局导航或信息展示，如“最新动态”。               |
+| `home:sidebar:nav:before` | 主导航项之前             | 在“项目”、“模板”等核心导航项上方添加自定义导航入口。 |
+| `home:sidebar:nav:after`  | 主导航项之后             | 在核心导航项下方添加自定义导航入口，如“插件市场”。   |
+| `home:sidebar:footer`     | 侧边栏底部，用户区域上方 | 添加全局工具或状态显示，如“帮助与反馈”。             |
 
 #### 节点插座 (`BaseNode.vue`)
 
-这部分已在 `8.5.1` 节中定义，此处仅作重申。
+| 插座名称             | 位置             | 描述                                                                                                                                                                                                                                                          |
+| -------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node:header:right`  | 节点标题栏右侧   | 在节点标题上添加自定义图标、按钮或状态指示器。位于 `custom-node-header` 内部，标题文本的右侧。                                                                                                                                                                |
+| `node:body:before`   | 节点主体内容之前 | 在节点控件区域前插入自定义 UI。位于 `custom-node-body` 内部，`node-configs` 区域之前。                                                                                                                                                                        |
+| `node:body:after`    | 节点主体内容之后 | 在节点控件区域后插入自定义 UI，如预览、图表等。位于 `custom-node-body` 内部，`node-inputs` 区域之后。                                                                                                                                                         |
+| `node:input:actions` | 节点输入项右侧   | **高级**: 这不是一个标准的 `<PluginOutlet>`。相反，它代表了通过节点定义中的 `actions` 数组，向 `NodeInputActionsBar.vue` 组件动态注入自定义按钮的能力。这种模式已在核心节点中用于实现如“转换为输入”等功能，为插件提供了一种内置的、上下文相关的操作扩展方式。 |
 
-| 插座名称            | 位置             | 描述                                            |
-| ------------------- | ---------------- | ----------------------------------------------- |
-| `node:header:right` | 节点标题栏右侧   | 在节点标题上添加自定义图标、按钮或状态指示器。  |
-| `node:body:before`  | 节点主体内容之前 | 在节点控件区域前插入自定义 UI。                 |
-| `node:body:after`   | 节点主体内容之后 | 在节点控件区域后插入自定义 UI，如预览、图表等。 |
+#### 设置页面插座 (`SettingsLayout.vue` 或类似组件)
+
+| 插座名称                                 | 位置             | 描述                                       |
+| ---------------------------------------- | ---------------- | ------------------------------------------ |
+| `settings:section:before[${sectionKey}]` | 特定设置分区之前 | 在某个设置分区的开始处添加说明或组件。     |
+| `settings:section:after[${sectionKey}]`  | 特定设置分区之后 | 在某个设置分区的末尾处添加补充信息或操作。 |
+
+#### 右侧预览面板插座 (`RightPreviewPanel.vue`)
+
+| 插座名称                       | 位置             | 描述                                                         |
+| ------------------------------ | ---------------- | ------------------------------------------------------------ |
+| `preview:panel:header`         | 面板头部，标题后 | 在面板标题和模式切换按钮之间添加额外的控制或信息。           |
+| `preview:panel:content:before` | 内容区域顶部     | 在预览内容（无论是单一预览还是组总览）的上方添加自定义组件。 |
+| `preview:panel:content:after`  | 内容区域底部     | 在预览内容的下方添加自定义组件，例如操作按钮或统计信息。     |
+
+## 12. 依赖管理与追踪架构
+
+为了确保项目的可移植性、实现可靠的环境检查（例如，提示用户缺少了哪些插件），并为未来的资产市场打下基础，我们必须建立一套健壮且统一的依赖管理与追踪机制。此架构的核心原则是“**注册即声明**”，确保任何资产（无论是节点还是面板）对其所使用的插件资源的依赖关系都是明确且可追踪的。
+
+### 12.1. 统一依赖引用格式
+
+所有对插件资源的引用，无论是静态配置还是动态 API 调用，都必须遵循 `plugin-id:resource-name` 的统一格式。`plugin-id` 通常是插件清单 `plugin.yaml` 中定义的 `name`。
+
+- **节点类型**: `my-awesome-plugin:AddNode`
+- **面板主题**: `my-theme-plugin:cyberpunk`
+- **面板 API 能力**: `my-component-plugin:ModelViewer`
+
+### 12.2. 节点依赖管理：命名空间即依赖
+
+节点的依赖管理与现有的命名空间机制无缝集成。
+
+- **唯一事实来源**: 节点的 `type` 字段（格式为 `namespace:type`）是其依赖关系的唯一和最终事实来源。`namespace` 部分直接对应其来源插件的 ID。
+- **加载时注入**: `NodeLoader` 在加载插件节点时，会强制将插件的 ID 设置为这些节点的 `namespace`，并可以在内存中的 `NodeDefinition` 对象上附加更详细的 `source` 信息（如插件版本）。
+- **可移植性**: 由于 `type` 字段自包含了来源信息，节点的复制、粘贴和分享天然具有可移植性。
+
+### 12.3. 面板依赖管理：Panel API 插槽化架构
+
+对于面板这类非节点资产，其依赖关系更为动态。我们通过将其 API 改造为一个“插槽式”注册系统来解决此问题。
+
+- **`PanelApiManager` 与能力插槽**:
+
+  - 系统提供一个全局的 `PanelApiManager` 服务，它定义了一系列可供插件扩展的“**能力插槽**”，例如 `components`, `services`, `themes` 等。
+  - 插件在初始化时，必须将其希望提供给面板的能力，**连同其来源信息（插件 ID、版本等）**，一起注册到 `PanelApiManager` 的指定插槽中。
+  - **示例**: `panelApiManager.register('component', { id: 'my-plugin:ModelViewer', source: { pluginId: 'my-plugin', ... }, component: ... });`
+
+- **`Panel API Host` 的代理角色**:
+  - 面板沙盒的接口 (`Panel API Host`) 作为 `PanelApiManager` 的代理。
+  - 当面板调用 `panelApi.getComponent('my-plugin:ModelViewer')` 时，`Panel API Host` 会向 `PanelApiManager` 查询对应的注册项。
+  - 因为注册项中已绑定了 `source` 信息，`Panel API Host` 可以**确定性地、无歧义地**识别出该能力的依赖来源是 `my-plugin`。
+
+### 12.4. 依赖的持久化与开发者体验
+
+- **自动依赖持久化**:
+
+  - 当面板在运行时，通过 `Panel API` 首次使用来自某个插件（如 `my-plugin`）的能力时，`Panel API Host` 会确定性地追踪到此依赖。
+  - 系统会立即自动将这个新的依赖 ID (`my-plugin`) 更新到该面板的配置中。这通常通过一个后台 API 调用完成，该调用会读取对应的 `panel.json` 文件，将新的依赖项添加到 `meta.requiredPlugins` 数组中，然后保存文件。
+  - 对开发者而言，这个过程是透明的。他们只需专注于功能实现，依赖列表会自动保持最新。
+
+- **静态声明作为最终事实**:
+
+  - `panel.json` 文件中 `meta.requiredPlugins` 数组是该面板依赖关系的**最终事实来源 (source of truth)**。它由系统自动维护，保证了面板资产的完整性和可移植性。
+
+- **降级与辅助工具 (容错机制)**:
+  - 在自动持久化失败（如文件写入错误）或依赖关系出现不一致（如开发者手动误删）的罕见情况下，开发者辅助工具将作为降级方案启动。
+  - 系统可以在开发者工具中提供可靠的警告（例如：“检测到对 'my-plugin' 的运行时依赖，但它不存在于 `panel.json` 的声明中，自动添加失败。请检查文件权限或手动同步。”），并提供“一键同步/修复”工具来修正这些差异。
+
+### 12.5. 项目级依赖聚合
+
+当加载一个项目时，系统会通过以下方式构建完整的依赖列表，用于环境检查：
+
+1.  **扫描工作流**: 遍历所有工作流中的所有节点，解析其 `type` 字段的 `namespace` 部分。
+2.  **扫描面板配置**: 遍历所有面板的 `panel.json` 文件，解析其 `meta.requiredPlugins` 数组以及配置中其他遵循 `plugin-id:resource-name` 格式的依赖项。
+3.  **聚合去重**: 将所有收集到的 `plugin-id` 聚合去重，形成项目最终的依赖清单。
+
+## 13. 附录 B: 命名空间实施蓝图
+
+为确保本文档中定义的命名空间方案（`core:`, `ui:`, `hook:*`）能够顺利实施，本节将概述在未来开发中需要进行适配的核心代码区域。这为未来的具体实施提供了清晰的指引。
+
+### 13.1. 核心适配点
+
+#### 1. 前端节点类型注册
+
+- **位置**: `apps/frontend-vueflow/src/views/project/EditorView.vue`
+- **关注点**: `nodeTypes` 计算属性。
+- **适配说明**: 当前，纯前端的 `FrameNode` 被硬编码注册为 `ui:frame`。根据新方案，所有核心内置资产（无论前后端）都应归属于 `core:` 命名空间。因此，在实施时，需要将其注册类型从 `'ui:frame'` 变更为 `'core:frame'`，以保证命名的一致性。
+
+  ```typescript
+  // 实施时的目标状态
+  const nodeTypes = computed(() => {
+    const types: Record<string, any> = {
+      default: markRaw(BaseNode),
+      'core:frame': markRaw(FrameNode), // 将 'ui:frame' 调整为 'core:frame'
+      // ... a
+    };
+    // ...
+  });
+  ```
+
+#### 2. 插件 API 定义与实现
+
+- **位置**: 未来的前端 `ExtensionApiService` 和后端 `PluginManager` 等服务中。
+- **关注点**: 所有与插件交互的 API 方法。
+- **适配说明**: 在设计和实现插件系统的 API 时，必须严格遵循本文档定义的命名约定：
+    - **UI 操作**: 所有用于包裹（wrap）或注入（inject）核心 UI 组件的 API，其目标组件 ID 必须使用 `ui:` 前缀 (例如 `api.ui.wrapComponent('ui:BaseNode', ...)`).
+    - **钩子系统**: 所有事件钩子的名称必须使用 `hook:` 前缀，并用 `client` 或 `server` 指明其运行环境 (例如 `api.hooks.on('hook:client:workflow:before-execute', ...)`).
+
+此蓝图明确了为实现统一命名空间所需关注的关键区域，确保了在未来开发过程中，相关改动能够有据可依，从而保证架构的自洽与演进的平稳。
