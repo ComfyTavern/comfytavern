@@ -8,6 +8,7 @@ import {
   getUserDataRoot,
   getTemplatesDir,
   getDataDir,
+  getConfigDir, // + 咕咕：导入新的函数
   ensureDirExists, // 稍后可能会用到
 } from '../utils/fileUtils'; // 路径相对于 apps/backend/src/services/
 
@@ -105,6 +106,7 @@ export class FileManagerService implements FAMService {
   private templatesDir: string;
   private userDataRoot: string;
   private dataDir: string;
+  private configDir: string; // + 咕咕：添加 configDir 属性
 
   constructor() {
     this.projectRootDir = getProjectRootDir();
@@ -114,6 +116,7 @@ export class FileManagerService implements FAMService {
     this.templatesDir = getTemplatesDir();
     this.userDataRoot = getUserDataRoot();
     this.dataDir = getDataDir();
+    this.configDir = getConfigDir(); // + 咕咕：初始化 configDir
 
     console.log('[FileManagerService] Initialized with paths:');
     console.log(`  Project Root: ${this.projectRootDir}`);
@@ -121,6 +124,7 @@ export class FileManagerService implements FAMService {
     console.log(`  Shared Library: ${this.libraryBaseDir}`);
     console.log(`  Shared Templates: ${this.templatesDir}`);
     console.log(`  System Data: ${this.dataDir}`);
+    console.log(`  System Config: ${this.configDir}`); // + 咕咕：添加日志
     console.log(`  System Public: ${this.publicDir}`);
     console.log(`  System Logs: ${this.logDir}`);
   }
@@ -211,6 +215,9 @@ export class FileManagerService implements FAMService {
             break;
           case 'logs':
             basePhysicalPath = this.logDir;
+            break;
+          case 'config': // + 咕咕：添加对 config 区域的支持
+            basePhysicalPath = this.configDir;
             break;
           case 'sdk':
             // system://sdk/... 路径映射到项目根目录

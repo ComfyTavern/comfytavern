@@ -687,12 +687,27 @@
       "custom_module_wip": "这里将来是一个自定义的复杂配置模块，目前正在施工中... 咕~",
       "no_content": "咕？这里似乎没有内容... 可能是正在施工中。"
     },
+    "plugins": {
+      "title": "插件管理",
+      "description": "启用或禁用已安装的插件。更改后需要重载插件才能生效。",
+      "reloadButton": "重载插件",
+      "reloadSuccess": "插件已成功重载",
+      "reloadError": "重载插件失败: {error}",
+      "pluginName": "插件",
+      "pluginVersion": "版本",
+      "pluginAuthor": "作者",
+      "pluginEnabled": "启用",
+      "enableTooltip": "点击启用",
+      "disableTooltip": "点击禁用",
+      "pendingChanges": "插件设置已更改。点击“重载插件”以应用更改并刷新页面。"
+    },
     "sections": {
       "about": "关于",
       "display": "显示",
       "keybindings": "快捷键",
       "llm": "模型配置",
       "mcp": "MCP",
+      "plugins": "插件管理",
       "test_panel": "测试面板",
       "user": "用户"
     },

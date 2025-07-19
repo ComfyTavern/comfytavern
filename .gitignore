@@ -46,6 +46,7 @@ projects/*
 .obsidian
 # 实际配置文件 (不应提交)
 config.json
+config/
 # 本地生成的数据 (例如用户数据)
 data/
 userData/

@@ -6,6 +6,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { NodeLoader } from './NodeLoader';
 import { nodeManager } from './NodeManager';
+import { pluginConfigService } from './PluginConfigService'; // + 咕咕：导入插件配置服务
 import type { PluginManifest, ExtensionInfo, FrontendInfo } from '@comfytavern/types';
 
 export class PluginLoader {
@@ -13,6 +14,50 @@ export class PluginLoader {
   private static appInstance: Elysia | null = null;
   private static pluginPaths: string[] = [];
   private static projectRootDir: string = '';
+
+  /**
+   * 发现所有插件并返回它们的清单信息及启用状态。
+   * 这个方法不加载插件，只用于信息展示。
+   */
+  public static async discoverAllPlugins(): Promise<ExtensionInfo[]> {
+    const allDiscoveredPlugins: ExtensionInfo[] = [];
+
+    for (const pluginsDir of this.pluginPaths) {
+      try {
+        const pluginDirs = await fs.readdir(pluginsDir, { withFileTypes: true });
+
+        for (const dirent of pluginDirs) {
+          if (!dirent.isDirectory()) continue;
+
+          const pluginName = dirent.name;
+          const pluginPath = path.join(pluginsDir, pluginName);
+          const manifestPath = path.join(pluginPath, 'plugin.yaml');
+
+          try {
+            const manifestContent = await fs.readFile(manifestPath, 'utf-8');
+            const manifest = yaml.load(manifestContent) as PluginManifest;
+            const isEnabled = await pluginConfigService.isPluginEnabled(pluginName);
+
+            allDiscoveredPlugins.push({
+              name: manifest.name,
+              displayName: manifest.displayName,
+              version: manifest.version,
+              description: manifest.description,
+              configOptions: manifest.configOptions,
+              isEnabled: isEnabled,
+            });
+          } catch (error) {
+            console.error(`[PluginLoader] Failed to read manifest for plugin '${pluginName}':`, error);
+          }
+        }
+      } catch (error: any) {
+        if (error.code !== 'ENOENT') {
+          console.error(`[PluginLoader] Error reading plugins directory ${pluginsDir}:`, error);
+        }
+      }
+    }
+    return allDiscoveredPlugins;
+  }
 
   public static async loadPlugins(app: Elysia, pluginBasePaths: string[], projectRootDir: string): Promise<void> {
     this.appInstance = app;
@@ -27,6 +72,14 @@ export class PluginLoader {
           if (!dirent.isDirectory()) continue;
 
           const pluginName = dirent.name;
+
+          // + 咕咕：检查插件是否启用
+          const isEnabled = await pluginConfigService.isPluginEnabled(pluginName);
+          if (!isEnabled) {
+            console.log(`[PluginLoader] Plugin '${pluginName}' is disabled, skipping.`);
+            continue;
+          }
+
           const pluginPath = path.join(pluginsDir, pluginName);
           const manifestPath = path.join(pluginPath, 'plugin.yaml');
 
@@ -40,6 +93,7 @@ export class PluginLoader {
               version: manifest.version,
               description: manifest.description,
               configOptions: manifest.configOptions,
+              isEnabled: true, // + 咕咕：既然加载了，那它就是启用的
             };
 
             if (manifest.frontend) {

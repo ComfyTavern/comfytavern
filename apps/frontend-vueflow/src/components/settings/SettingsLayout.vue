@@ -400,6 +400,13 @@ const sections = computed<SettingsSection[]>(() => [
     component: markRaw(defineAsyncComponent(() => import("@/components/llm-config/LlmConfigManager.vue"))),
   },
   {
+    id: "plugins",
+    label: t("settings.sections.plugins"),
+    icon: "extension",
+    type: "component",
+    component: markRaw(defineAsyncComponent(() => import("@/components/settings/PluginManager.vue"))),
+  },
+  {
     id: "mcp",
     label: t("settings.sections.mcp"),
     icon: "protocol",

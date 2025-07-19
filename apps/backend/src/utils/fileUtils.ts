@@ -86,3 +86,11 @@ export function getUserDataRoot(): string {
 export function getDataDir(): string {
   return path.join(getProjectRootDir(), 'data');
 }
+
+/**
+ * 获取项目根目录下 config 目录的路径 (用于存放全局配置文件)。
+ * @returns config 目录的绝对路径。
+ */
+export function getConfigDir(): string {
+  return path.join(getProjectRootDir(), 'config');
+}

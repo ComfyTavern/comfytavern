@@ -51,4 +51,5 @@ export interface ExtensionInfo {
   description?: string;
   frontend?: FrontendInfo;
   configOptions?: SettingItemConfig[];
+  isEnabled?: boolean; // 插件是否启用
 }
