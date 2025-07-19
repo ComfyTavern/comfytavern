@@ -1124,74 +1124,54 @@ UI 注入主要通过两种方式实现：
 
 ## 实施进度
 
-总的来说，目前的开发进度与实施计划高度一致，核心的插件化改造已经基本完成，为后续的功能扩展打下了坚实的基础。
+本节对项目当前的实施状态进行评估，重点关注设计文档中定义的各项功能，特别是高级扩展机制（如钩子和 UI 插座）的落地情况。
 
-### 实施进度详细对比
+### 实施进度详细评估
 
-我将按照文档的章节和实施计划的任务项，逐一为你梳理进度：
+#### 1. 核心框架 (P0 & P1) - ✅ 已基本完成
 
-#### 1. 核心后端框架 (P0 优先级)
+插件系统的基础骨架，包括后端加载、API 暴露、前端消费和动态加载，已经搭建完毕。
 
-这部分的目标是搭建起插件系统的后端基础。从变更来看，**P0 任务已全部完成**。
+*   **后端 (`PluginLoader`, 路由, 启动集成)**: **已完成**。核心服务和 API 均已就位。
+*   **前端 (`PluginLoaderService`, `main.ts` 集成)**: **已完成**。前端具备了加载插件资源的能力。
+*   **基础 API (`ExtensionApiService`)**: **已完成**。插件与主应用通信的桥梁 (`window.ComfyTavern.extensionApi`) 已经建立。
+*   **测试插件**: **已完成**。存在 `hello-world-plugin` 用于基础验证。
 
-*   **任务 1: 实现 `PluginLoader.ts` 服务**
-    *   **状态**: ✅ 已完成
-    *   **证据**: 新增了文件 [`apps/backend/src/services/PluginLoader.ts`](apps/backend/src/services/PluginLoader.ts:1)，这是插件系统的核心，负责扫描、解析和加载插件。
+#### 2. 高级扩展机制 (P2) - 🟡 部分完成，正在进行中
 
-*   **任务 2: 创建 `/api/plugins` 路由**
-    *   **状态**: ✅ 已完成
-    *   **证据**: 新增了路由文件 [`apps/backend/src/routes/pluginRoutes.ts`](apps/backend/src/routes/pluginRoutes.ts:1)，用于向前端提供已加载插件的信息。
+此部分是实现“近 PR”体验的核心，其完成度是衡量插件架构成熟度的关键。
 
-*   **任务 3: 集成 `PluginLoader` 到应用启动流程**
-    *   **状态**: ✅ 已完成
-    *   **证据**: [`apps/backend/src/index.ts`](apps/backend/src/index.ts:1) 文件已被修改，引入了 `PluginLoader` 并在应用启动时调用 `loadPlugins`，同时挂载了 `pluginRoutes`。
+*   **前端钩子系统 (Hook System)**:
+    *   **状态**: 📝 **待开始**
+    *   **评估**: `ExtensionApiService` 已经存在，但专门用于管理和触发钩子 (`api.hooks.on(...)`) 的 `HookService` 或类似机制尚未建立。同时，核心应用（如工作流、节点）中也还没有在关键位置（如 `workflow:before-execute`）植入触发这些钩子的代码。
 
-#### 2. 核心前端加载 (P1 优先级)
+*   **前端 UI 插座系统 (Outlet System)**:
+    *   **状态**: 📝 **待开始**
+    *   **评估**: 尚未创建 `<PluginOutlet>` Vue 组件，也未在 `ExtensionApiService` 中实现 `registerOutletComponent` 的逻辑。因此，在核心 UI 中（如 `BaseNode.vue`、`EditorView.vue`）也还没有部署这些插座。
 
-这部分的目标是让前端能够消费后端提供的插件信息，并动态加载插件资源。**P1 任务也已基本完成**。
+*   **前端 UI 包裹系统 (Wrapping System)**:
+    *   **状态**: 📝 **待开始**
+    *   **评估**: 这是最具挑战性的部分，相关的 `api.ui.wrapComponent` 机制尚未开始设计或实现。
 
-*   **任务 4: 实现前端 `PluginLoaderService.ts`**
-    *   **状态**: ✅ 已完成
-    *   **证据**:
-        *   新增了 [`apps/frontend-vueflow/src/services/PluginLoaderService.ts`](apps/frontend-vueflow/src/services/PluginLoaderService.ts:1)，负责从后端获取插件列表并动态加载其 JS 和 CSS 资源。
-        *   [`apps/frontend-vueflow/src/main.ts`](apps/frontend-vueflow/src/main.ts:1) 在应用初始化时调用了 `loadPlugins`，确保插件在应用挂载前被加载。
+*   **扩展配置系统**:
+    *   **状态**: 📝 **待开始**
+    *   **评估**: `plugin.yaml` 中已规划 `configOptions`，但前端设置页面中用于展示和管理这些配置的“扩展”分区、`ExtensionConfigPanel.vue` 组件以及 `uiStore` 的模态框服务等都还未实现。
 
-*   **任务 5: 创建一个简单的“hello world”插件用于测试**
-    *   **状态**: ✅ 已完成 (根据您打开的标签页推断)
-    *   **证据**: 虽然 `git diff` 中没有直接体现，但从您打开的标签页中可以看到 `plugins/hello-world-plugin/` 相关的文件，这表明用于测试的基础插件已经就位。
+#### 3. 开发者体验与文档 (P2 & P3) - 🟡 部分完成
 
-#### 3. 开发者体验与高级功能 (P2 优先级)
+*   **Vite HMR 集成**:
+    *   **状态**: 🟡 **进行中**
+    *   **评估**: `vite.config.ts` 已为插件资源路径设置了代理，这是关键的第一步。但更完善的、能实现插件代码热更新的动态入口注入方案仍在进行中。
 
-这部分是关于提升插件开发体验和提供高级扩展能力的，目前**部分完成，正在进行中**。
+*   **插件开发指南**:
+    *   **状态**: 📝 **待开始**
+    *   **评估**: 文档工作，尚未开始。
 
-*   **任务 6: 实现前端 `ExtensionApi` 的基础框架**
-    *   **状态**: ✅ 已完成
-    *   **证据**:
-        *   新增了 [`apps/frontend-vueflow/src/services/ExtensionApiService.ts`](apps/frontend-vueflow/src/services/ExtensionApiService.ts:1)，定义了插件与主应用交互的 API。
-        *   [`apps/frontend-vueflow/src/main.ts`](apps/frontend-vueflow/src/main.ts:1) 中调用了 `initializeExtensionApi`，将此 API 暴露到 `window.ComfyTavern.extensionApi` 上。
+#### 总结
 
-*   **任务 7: 实现开发模式下的 Vite HMR 集成**
-    *   **状态**: 🟡 进行中
-    *   **证据**: [`apps/frontend-vueflow/vite.config.ts`](apps/frontend-vueflow/vite.config.ts:1) 文件有大量修改 (`MM` 状态)。从 `diff` 中可以看到，已经为 `/plugins` 路径添加了代理，这是支持插件资源加载的关键一步。计划中更复杂的动态入口注入（HMR）部分可能正在实现中。
+当前状态是：**插件系统的“高速公路”已经铺好（核心加载与通信），但“立交桥”和“出口匝道”（钩子、插座、包裹等高级扩展点）尚未开始建设。**
 
-*   **任务 8: 撰写初始版插件开发指南**
-    *   **状态**: 📝 待开始
-    *   **证据**: 这是文档工作，在代码变更中无法体现。
-
-#### 4. 其他相关变更
-
-除了上述主要任务，还有一些重要的辅助性变更也已完成，它们共同支撑了整个插件架构：
-
-*   **类型定义**:
-    *   完全按照计划，创建了 [`packages/types/src/plugin.ts`](packages/types/src/plugin.ts:1) 来定义 `PluginManifest` 和 `ExtensionInfo` 等核心类型。
-    *   并在 [`packages/types/src/index.ts`](packages/types/src/index.ts:1) 中导出了这些类型，供前后端共享。
-
-*   **目录结构重构**:
-    *   `plugins/` 目录已按计划重构，旧的 `plugins/nodes` 被移除，并添加了新的 [`plugins/README.md`](plugins/README.md:1) 和 [`plugins/.gitignore`](plugins/.gitignore:1) 文件，明确了其作为第三方插件存放区的定位。
-
-*   **配置更新**:
-    *   [`config.template.json`](config.template.json:1) 和 [`apps/backend/src/config.ts`](apps/backend/src/config.ts:1) 中的 `customNodePaths` 已被移除，替换为新的插件系统路径，这与计划一致。
-
-*   **后端服务演进**:
-    *   [`apps/backend/src/services/NodeLoader.ts`](apps/backend/src/services/NodeLoader.ts:1) 进行了修改，增加了 `reloadNodes` 等方法，可能是为了支持未来的插件热重载功能，这是对计划的积极演进。
-    *   新增了 [`apps/backend/src/routes/pluginAssetRoutes.ts`](apps/backend/src/routes/pluginAssetRoutes.ts:1)，虽然未在计划中明确列出，但这是实现插件静态资源（如图片）服务的必要补充，使得架构更加完整。
+接下来的开发重点应完全转向**阶段二 (P1)** 和**阶段三 (P2)** 的实施计划，即：
+1.  **实现钩子、插座、包裹三大核心扩展机制。**
+2.  **将这些扩展点全面部署到应用的关键位置。**
+3.  **构建插件的配置管理界面。**
