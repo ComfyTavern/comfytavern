@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ComfyTavern Backend Status</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #1a1a1a; color: #e0e0e0; margin: 0; }
+    .container { max-width: 1400px; margin: 0 auto; background-color: #2a2a2a; padding: 2rem 3rem; box-shadow: 0 4px 16px rgba(0,0,0,0.3); min-height: 100%; }
+    h1 { color: #ff9800; border-bottom: 2px solid #ff9800; padding-bottom: 1rem; font-size: 2.5rem; margin-bottom: 2rem; }
+    .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin-top: 2.5rem; }
+    .status-card { background-color: #333; padding: 2rem; border-radius: 8px; box-shadow: 0 6px 12px rgba(0,0,0,0.15); transition: transform 0.3s, box-shadow 0.3s; }
+    .status-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+    .status-card h2 { margin-top: 0; color: #4caf50; font-size: 1.5rem; margin-bottom: 1rem; border-bottom: 1px solid #4a4a4a; padding-bottom: 0.5rem; }
+    .status-card p { margin: 0.8rem 0; font-size: 1.1rem; }
+    .status-card strong { color: #81d4fa; font-weight: 600; }
+    #loading { text-align: center; font-size: 1.5rem; padding: 3rem; }
+    .footer { text-align: center; margin-top: 3rem; color: #777; font-size: 1.1rem; padding: 1rem; border-top: 1px solid #3a3a3a; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>ComfyTavern 后端状态面板</h1>
+    <div id="loading">正在加载状态信息...</div>
+    <div id="status-content" class="status-grid" style="display: none;"></div>
+    <div class="footer">
+      <p>页面每 5 秒自动刷新</p>
+    </div>
+  </div>
+  <script>
+    const loadingEl = document.getElementById('loading');
+    const contentEl = document.getElementById('status-content');
+
+    function renderStatus(data) {
+      contentEl.innerHTML = `
+        <div class="status-card">
+          <h2>系统信息</h2>
+          <p><strong>版本:</strong> ${data.version}</p>
+          <p><strong>服务运行时间:</strong> ${data.uptime}</p>
+          <p><strong>平台:</strong> ${data.platform}</p>
+          <p><strong>架构:</strong> ${data.arch}</p>
+        </div>
+        <div class="status-card">
+          <h2>CPU 信息</h2>
+          <p><strong>型号:</strong> ${data.cpu.model}</p>
+          <p><strong>核心数:</strong> ${data.cpu.cores}</p>
+          <p><strong>当前负载:</strong> ${data.cpu.load}</p>
+        </div>
+        <div class="status-card">
+          <h2>内存信息</h2>
+          <p><strong>总内存:</strong> ${data.memory.total}</p>
+          <p><strong>空闲内存:</strong> ${data.memory.free}</p>
+          <p><strong>已用内存 (进程):</strong> ${data.memory.processUsage}</p>
+        </div>
+      `;
+    }
+
+    async function fetchStatus() {
+      try {
+        // 这个 URL 是相对于页面根路径的，所以是 /api/status
+        const response = await fetch('/api/status');
+        if (!response.ok) {
+          throw new Error('获取状态失败: ' + response.statusText);
+        }
+        const data = await response.json();
+        renderStatus(data);
+        loadingEl.style.display = 'none';
+        contentEl.style.display = 'grid';
+      } catch (error) {
+        loadingEl.textContent = '错误: ' + error.message;
+        console.error(error);
+      }
+    }
+
+    fetchStatus();
+    setInterval(fetchStatus, 5000);
+  </script>
+</body>
+</html>

@@ -1,53 +1,47 @@
-import { Elysia } from 'elysia'; // 移除未使用的 t
-import { promises as fs } from 'node:fs';
-import path, { dirname, join } from 'node:path'; // 移除未使用的 basename, extname
-import { fileURLToPath } from 'node:url';
-import { staticPlugin } from '@elysiajs/static';
+import { Elysia } from "elysia"; // 移除未使用的 t
+import { promises as fs } from "node:fs";
+import path, { dirname, join } from "node:path"; // 移除未使用的 basename, extname
+import { fileURLToPath } from "node:url";
+import { staticPlugin } from "@elysiajs/static";
 
-import { cors } from '@elysiajs/cors';
-// ensureDirExists, getLogDir, getUserDataRoot, getDataDir will be replaced by famService for directory creation
-// getPublicDir is still needed for staticPlugin
-// getProjectRootDir is needed for package.json path
-import { getPublicDir, getProjectRootDir } from './utils/fileUtils';
-import { famService } from './services/FileManagerService'; // + Import famService
+import { cors } from "@elysiajs/cors";
+import { getPublicDir, getProjectRootDir } from "./utils/fileUtils";
+import { famService } from "./services/FileManagerService"; // Import famService
 
 // 从 config.ts 导入的 WORKFLOWS_DIR, PROJECTS_BASE_DIR 等已经是绝对路径了
 import {
   CUSTOM_PLUGINS_PATHS,
   FRONTEND_URL,
   PORT,
-  // WORKFLOWS_DIR, // 移除导入
-  // PROJECTS_BASE_DIR, // 移除导入
-  LOG_DIR as APP_LOG_DIR, // 从 config.ts 导入，可能已被覆盖
   MULTI_USER_MODE,
-  ACCESS_PASSWORD_HASH,
-  CORS_ALLOWED_ORIGINS, // + 导入 CORS 白名单
-  PANEL_DEV_ORIGINS, // + 导入面板开发源
-} from './config';
-import { characterApiRoutes } from './routes/characterRoutes';
-import { executionApiRoutes } from './routes/executionRoutes';
-import { clientScriptRoutes, nodeApiRoutes } from './routes/nodeRoutes';
-import { projectRoutesPlugin } from './routes/projectRoutes'; // 修改导入名称
-import { panelRoutes } from './routes/panelRoutes'; // 导入面板路由
-import { DatabaseService } from './services/DatabaseService';
-import { applyAuthMiddleware } from './middleware/authMiddleware'; // Changed to import the function
-import { authRoutes } from './routes/authRoutes';
-import { userKeysRoutes } from './routes/userKeysRoutes'; // 导入 userKeysRoutes
-import { userProfileRoutes } from './routes/userProfileRoutes'; // + 导入 userProfileRoutes
-import { fileManagerRoutes } from './routes/fileManagerRoutes'; // ++ 导入文件管理路由
-import { globalWorkflowRoutes } from './routes/workflowRoutes';
-import { llmConfigRoutes } from './routes/llmConfigRoutes'; // + 导入 LLM 配置路由
-import { pluginRoutes } from './routes/pluginRoutes'; // +++ 导入插件路由
-import { pluginAssetRoutes } from './routes/pluginAssetRoutes'; // +++ 导入插件静态资源路由
-import { ApiConfigService } from './services/ApiConfigService'; // +
-import { ActivatedModelService } from './services/ActivatedModelService'; // +
-import { LlmApiAdapterRegistry } from './services/LlmApiAdapterRegistry'; // +
-import { ConcurrencyScheduler } from './services/ConcurrencyScheduler';
-import { NodeLoader } from './services/NodeLoader';
-import { PluginLoader } from './services/PluginLoader'; // +++ 导入插件加载器
-import { nodeManager } from './services/NodeManager'; // + 导入 NodeManager
-import { createWebsocketHandler, websocketSchema } from './websocket/handler';
-import { WebSocketManager } from './websocket/WebSocketManager';
+  CORS_ALLOWED_ORIGINS, // 导入 CORS 白名单
+  PANEL_DEV_ORIGINS, // 导入面板开发源
+} from "./config";
+import { characterApiRoutes } from "./routes/characterRoutes";
+import { executionApiRoutes } from "./routes/executionRoutes";
+import { clientScriptRoutes, nodeApiRoutes } from "./routes/nodeRoutes";
+import { projectRoutesPlugin } from "./routes/projectRoutes"; // 修改导入名称
+import { panelRoutes } from "./routes/panelRoutes"; // 导入面板路由
+import { indexRoutes } from "./routes/indexRoutes"; // 导入主页路由
+import { DatabaseService } from "./services/DatabaseService";
+import { applyAuthMiddleware } from "./middleware/authMiddleware"; // Changed to import the function
+import { authRoutes } from "./routes/authRoutes";
+import { userKeysRoutes } from "./routes/userKeysRoutes"; // 导入 userKeysRoutes
+import { userProfileRoutes } from "./routes/userProfileRoutes"; // 导入 userProfileRoutes
+import { fileManagerRoutes } from "./routes/fileManagerRoutes"; // 导入文件管理路由
+import { globalWorkflowRoutes } from "./routes/workflowRoutes";
+import { llmConfigRoutes } from "./routes/llmConfigRoutes"; // 导入 LLM 配置路由
+import { pluginRoutes } from "./routes/pluginRoutes"; // 导入插件路由
+import { pluginAssetRoutes } from "./routes/pluginAssetRoutes"; // 导入插件静态资源路由
+import { ApiConfigService } from "./services/ApiConfigService";
+import { ActivatedModelService } from "./services/ActivatedModelService";
+import { LlmApiAdapterRegistry } from "./services/LlmApiAdapterRegistry";
+import { ConcurrencyScheduler } from "./services/ConcurrencyScheduler";
+import { NodeLoader } from "./services/NodeLoader";
+import { PluginLoader } from "./services/PluginLoader"; // 导入插件加载器
+import { nodeManager } from "./services/NodeManager"; // 导入 NodeManager
+import { createWebsocketHandler, websocketSchema } from "./websocket/handler";
+import { WebSocketManager } from "./websocket/WebSocketManager";
 
 // 加载节点
 // 获取当前文件的目录 (ES Module)
@@ -80,22 +74,21 @@ try {
 }
 
 // --- 确定用户操作模式 (v4 简化) ---
-const currentUserMode = MULTI_USER_MODE ? 'MultiUser' : 'SingleUser';
+const currentUserMode = MULTI_USER_MODE ? "MultiUser" : "SingleUser";
 console.log(`[ComfyTavern Backend] Determined user operation mode: ${currentUserMode}`);
 // SINGLE_USER_PATH 已移除，相关日志也移除
 
 // --- 初始化数据库服务 ---
 try {
   await DatabaseService.initialize(currentUserMode);
-  console.log('[ComfyTavern Backend] DatabaseService initialized successfully.');
+  console.log("[ComfyTavern Backend] DatabaseService initialized successfully.");
 } catch (error) {
-  console.error('[ComfyTavern Backend] Failed to initialize DatabaseService:', error);
+  console.error("[ComfyTavern Backend] Failed to initialize DatabaseService:", error);
   process.exit(1); // 如果数据库初始化失败，则退出应用
 }
 
 // AuthService 会在其静态块中自行初始化，无需显式调用
 // console.log('[ComfyTavern Backend] AuthService is self-initializing via static block.');
-
 
 // 移除旧的 Elysia t 定义的 Schema
 // const WorkflowDataSchema = t.Object({ ... })
@@ -107,11 +100,11 @@ try {
 // 在启动 Elysia 应用前确保所有必要的应用目录存在
 // 旧的 essentialDirs 物理路径检查将被替换为 FAMService 逻辑路径创建
 const logicalDirsToEnsure = [
-  { name: "System Public", logicalPath: 'system://public/' },
+  { name: "System Public", logicalPath: "system://public/" },
   // FileManagerService maps system://logs/ to the physical logs/executions directory
-  { name: "System Logs", logicalPath: 'system://logs/' },
-  { name: "System Data", logicalPath: 'system://data/' },
-  { name: "Shared Library Workflows", logicalPath: 'shared://library/workflows/' },
+  { name: "System Logs", logicalPath: "system://logs/" },
+  { name: "System Data", logicalPath: "system://data/" },
+  { name: "Shared Library Workflows", logicalPath: "shared://library/workflows/" },
   // User-specific directories (like user://projects/) are created on-demand by famService
   // when accessed with a userId. The root userData directory's existence is handled by famService's setup.
 ];
@@ -119,9 +112,14 @@ const logicalDirsToEnsure = [
 for (const dir of logicalDirsToEnsure) {
   try {
     await famService.createDir(null, dir.logicalPath); // userId is null for system/shared paths
-    console.log(`[ComfyTavern Backend] ${dir.name} directory ensured via FAMService: ${dir.logicalPath}`);
+    console.log(
+      `[ComfyTavern Backend] ${dir.name} directory ensured via FAMService: ${dir.logicalPath}`
+    );
   } catch (error) {
-    console.error(`[ComfyTavern Backend] Failed to ensure ${dir.name} directory ${dir.logicalPath} via FAMService:`, error);
+    console.error(
+      `[ComfyTavern Backend] Failed to ensure ${dir.name} directory ${dir.logicalPath} via FAMService:`,
+      error
+    );
     process.exit(1); // 如果无法创建关键目录，则退出
   }
 }
@@ -132,10 +130,10 @@ const app = new Elysia();
 // 必须在实例化 app 之后，挂载路由之前调用，以便插件可以注册自己的静态资源
 console.log(`[ComfyTavern Backend] Loading plugins...`);
 const projectRootDir = getProjectRootDir();
-const defaultPluginsPath = path.join(projectRootDir, 'plugins');
+const defaultPluginsPath = path.join(projectRootDir, "plugins");
 const allPluginPaths = [
   defaultPluginsPath,
-  ...CUSTOM_PLUGINS_PATHS.map(p => path.resolve(projectRootDir, p))
+  ...CUSTOM_PLUGINS_PATHS.map((p) => path.resolve(projectRootDir, p)),
 ];
 await PluginLoader.loadPlugins(app, allPluginPaths, projectRootDir); // 将 app 实例、所有插件路径和项目根目录传入
 
@@ -143,89 +141,101 @@ await PluginLoader.loadPlugins(app, allPluginPaths, projectRootDir); // 将 app 
 const definitions = nodeManager.getDefinitions();
 const groupedNodes: Record<string, string[]> = {};
 for (const node of definitions) {
-  const namespace = node.namespace || '_unknown'; // 如果 namespace 未定义，则使用 _core
+  const namespace = node.namespace || "_unknown"; // 如果 namespace 未定义，则使用 _core
   if (!groupedNodes[namespace]) {
     groupedNodes[namespace] = [];
   }
   groupedNodes[namespace].push(node.type);
 }
 console.log(
-  '[ComfyTavern Backend] All nodes loaded. Registered nodes (grouped by namespace):',
+  "[ComfyTavern Backend] All nodes loaded. Registered nodes (grouped by namespace):",
   groupedNodes
 );
 
-app.use(
-  cors((() => {
-    // 构建实际的白名单
-    // 确保 FRONTEND_URL 存在且有效才加入，并对整个列表去重和过滤无效条目
-    const uniqueOrigins = new Set<string>();
-    if (FRONTEND_URL && typeof FRONTEND_URL === 'string' && FRONTEND_URL.trim() !== '') {
-      uniqueOrigins.add(FRONTEND_URL);
-    }
-    if (Array.isArray(CORS_ALLOWED_ORIGINS)) {
-      CORS_ALLOWED_ORIGINS.forEach(origin => {
-        if (origin && typeof origin === 'string' && origin.trim() !== '') {
-          uniqueOrigins.add(origin);
+app
+  .use(
+    cors(
+      (() => {
+        // 构建实际的白名单
+        // 确保 FRONTEND_URL 存在且有效才加入，并对整个列表去重和过滤无效条目
+        const uniqueOrigins = new Set<string>();
+        if (FRONTEND_URL && typeof FRONTEND_URL === "string" && FRONTEND_URL.trim() !== "") {
+          uniqueOrigins.add(FRONTEND_URL);
         }
-      });
-    }
-    
-    // 在开发模式下，动态添加在 config.json 中配置的面板开发服务器地址
-    if (process.env.NODE_ENV === 'development') {
-      if (PANEL_DEV_ORIGINS.length > 0) {
-        console.log('[ComfyTavern Backend] Development mode: Adding panel dev server origins to CORS allowlist:', PANEL_DEV_ORIGINS);
-        PANEL_DEV_ORIGINS.forEach(origin => {
-          if (origin && typeof origin === 'string' && origin.trim() !== '') {
-            uniqueOrigins.add(origin);
+        if (Array.isArray(CORS_ALLOWED_ORIGINS)) {
+          CORS_ALLOWED_ORIGINS.forEach((origin) => {
+            if (origin && typeof origin === "string" && origin.trim() !== "") {
+              uniqueOrigins.add(origin);
+            }
+          });
+        }
+
+        // 在开发模式下，动态添加在 config.json 中配置的面板开发服务器地址
+        if (process.env.NODE_ENV === "development") {
+          if (PANEL_DEV_ORIGINS.length > 0) {
+            console.log(
+              "[ComfyTavern Backend] Development mode: Adding panel dev server origins to CORS allowlist:",
+              PANEL_DEV_ORIGINS
+            );
+            PANEL_DEV_ORIGINS.forEach((origin) => {
+              if (origin && typeof origin === "string" && origin.trim() !== "") {
+                uniqueOrigins.add(origin);
+              }
+            });
           }
-        });
-      }
-    }
-    
-    const effectiveAllowedOrigins = Array.from(uniqueOrigins);
+        }
 
-    console.log('[ComfyTavern Backend] Effective CORS Allowed Origins:', effectiveAllowedOrigins);
+        const effectiveAllowedOrigins = Array.from(uniqueOrigins);
 
-    return {
-      origin: effectiveAllowedOrigins.length > 0 ? effectiveAllowedOrigins : false, // 如果列表为空，则明确禁止所有跨域
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
-      credentials: true,
-      preflight: true,
-    };
-  })())
-)
-  .use(staticPlugin({
-    assets: getPublicDir(), // 使用确保存在的 publicDir
-    prefix: '', // URL 直接从 public 目录的根开始，例如 /avatars/file.png
-    alwaysStatic: false, // 仅当找不到API路由时才提供静态文件
-    // noCache: process.env.NODE_ENV === 'development', // 开发模式下可以考虑禁用缓存
-  }))
+        console.log(
+          "[ComfyTavern Backend] Effective CORS Allowed Origins:",
+          effectiveAllowedOrigins
+        );
+
+        return {
+          origin: effectiveAllowedOrigins.length > 0 ? effectiveAllowedOrigins : false, // 如果列表为空，则明确禁止所有跨域
+          methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+          allowedHeaders: ["Content-Type", "Authorization"],
+          credentials: true,
+          preflight: true,
+        };
+      })()
+    )
+  )
+  .use(
+    staticPlugin({
+      assets: getPublicDir(), // 使用确保存在的 publicDir
+      prefix: "", // URL 直接从 public 目录的根开始，例如 /avatars/file.png
+      alwaysStatic: false, // 仅当找不到API路由时才提供静态文件
+      // noCache: process.env.NODE_ENV === 'development', // 开发模式下可以考虑禁用缓存
+    })
+  )
+  .use(indexRoutes({ appVersion })) // 挂载主页路由
   .use(applyAuthMiddleware) // Apply the middleware functionally via .use()
   .use(authRoutes) // 挂载认证路由
   .use(userKeysRoutes) // 挂载用户密钥管理路由
-  .use(pluginRoutes) // +++ 挂载插件路由
-  .use(pluginAssetRoutes) // +++ 挂载插件静态资源路由
-  .use(userProfileRoutes) // + 挂载用户配置路由
-  .use(fileManagerRoutes) // ++ 挂载文件管理路由
+  .use(pluginRoutes) // 挂载插件路由
+  .use(pluginAssetRoutes) // 挂载插件静态资源路由
+  .use(userProfileRoutes) // 挂载用户配置路由
+  .use(fileManagerRoutes) // 挂载文件管理路由
   .use(nodeApiRoutes) // 挂载节点 API 路由
   .use(clientScriptRoutes) // 挂载客户端脚本路由
   .use(globalWorkflowRoutes) // 挂载全局工作流路由
   .use(executionApiRoutes) // 新增: 挂载执行 API 路由
   .use(characterApiRoutes) // 挂载角色卡 API 路由
-  .use(llmConfigRoutes(
-    new ApiConfigService(),
-    new ActivatedModelService(),
-    new LlmApiAdapterRegistry()
-  )) // 挂载 LLM 配置路由
+  .use(
+    llmConfigRoutes(
+      new ApiConfigService(),
+      new ActivatedModelService(),
+      new LlmApiAdapterRegistry()
+    )
+  ) // 挂载 LLM 配置路由
 
   // --- 项目 API 路由已移至 projectRoutes.ts ---
 
-  // --- 结束 项目 API ---
-  // --- 结束 API 路由定义 ---
-
   // 新增：重启服务器的 API 端点
-  .post("/api/server/restart", async (context: import('elysia').Context) => { // 为 context 添加类型
+  .post("/api/server/restart", async (context: import("elysia").Context) => {
+    // 为 context 添加类型
     const { set } = context; // 从 context 解构 set
     console.log("Received request to restart server...");
     try {
@@ -250,11 +260,6 @@ app.use(
 
 // --- WebSocket 路由已移至 websocket/handler.ts ---
 // --- 挂载项目路由 ---
-// 注意：这需要在 app 实例创建之后，并且在 .listen() 之前
-// addProjectRoutes(app, { // 旧的调用方式
-//   appVersion,
-// });
-// 使用新的插件方式
 app.use(projectRoutesPlugin({ appVersion }));
 app.use(panelRoutes); // 挂载面板路由
 
@@ -292,15 +297,17 @@ app.listen(PORT, (server) => {
     // 移除对 attachServer 的调用，因为 Elysia 通过 app.ws 处理 WebSocket
     // wsManager.attachServer(server); // <--- 移除此行
     // 检查是否以集成模式启动 (通过命令行参数)
-    const isIntegratedLaunch = process.argv.includes('--integrated-launch');
+    const isIntegratedLaunch = process.argv.includes("--integrated-launch");
     if (!isIntegratedLaunch) {
-      console.log(`\n\x1b[93m🦊[ComfyTavern Backend] Elysia is running at http://${server.hostname}:${server.port}\x1b[0m`);
-      console.log(`\n\x1b[96m🦊[ComfyTavern 后端] 服务器已于端口 ${PORT} 启动，访问地址为 http://localhost:${PORT}\x1b[0m\n`);
+      console.log(
+        `\n\x1b[93m🦊[ComfyTavern Backend] Elysia is running at http://${server.hostname}:${server.port}\x1b[0m`
+      );
+      console.log(
+        `\n\x1b[96m🦊[ComfyTavern 后端] 服务器已于端口 ${PORT} 启动，访问地址为 http://localhost:${PORT}\x1b[0m\n`
+      );
     }
   } else {
     console.error("Failed to start server.");
     process.exit(1); // 启动失败则退出
   }
 });
-
-// 移除旧的 console.log
