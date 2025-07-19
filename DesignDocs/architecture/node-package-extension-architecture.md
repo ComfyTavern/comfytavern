@@ -1,4 +1,6 @@
-# 插件与扩展架构设计草案 (Plugin & Extension Architecture Draft)
+# 插件与扩展架构实施计划 (Plugin & Extension Architecture Implementation Plan)
+
+**文档状态**: `已批准，待实施`
 
 ## 1. 目标与原则
 
@@ -98,172 +100,377 @@ permissions:
 
 ## 4. 后端改造方案
 
-### 4.1. 创建 `PluginLoader` 服务
+### 4.1. 类型定义 (`packages/types/src/plugin.ts`)
 
-我们将创建一个新的服务 `apps/backend/src/services/PluginLoader.ts`，它将是插件系统的核心。`NodeLoader` 将保持不变，继续作为通用的节点加载工具。
+**行动项**: 在 `code` 模式下，创建以下文件。
 
-- **`PluginLoader` 的职责**:
+- **文件路径**: `packages/types/src/plugin.ts`
+- **文件内容**:
+  ```typescript
+  /**
+   * @fileoverview 定义插件系统的核心类型，如插件清单 (Manifest) 和扩展信息 (ExtensionInfo)。
+   */
+  
+  // 暂时使用 any，后续应从 './settings' 导入 SettingItemConfig
+  type SettingItemConfig = any;
+  
+  /**
+   * 定义了 `plugin.yaml` 清单文件的结构。
+   */
+  export interface PluginManifest {
+    name: string;
+    displayName: string;
+    version: string;
+    description?: string;
+    nodes?: {
+      entry: string;
+    };
+    frontend?: {
+      type?: 'vite' | 'vanilla';
+      dev?: {
+        entry: string;
+      };
+      build?: {
+        entry: string;
+        styles?: string[];
+        outputDir: string;
+      };
+      vanilla?: {
+        entry: string;
+        styles?: string[];
+        rootDir?: string;
+      }
+    };
+    configOptions?: SettingItemConfig[];
+  }
+  
+  /**
+   * 定义了通过 API 向前端暴露的插件信息结构。
+   */
+  export interface ExtensionInfo {
+    name: string;
+    displayName: string;
+    version: string;
+    description?: string;
+    frontend?: {
+      entryUrl: string;
+      styleUrls: string[];
+    };
+    configOptions?: SettingItemConfig[];
+  }
+  ```
+- **后续行动**: 修改 `packages/types/src/index.ts`，添加 `export * from './plugin';`。
 
-  - 发现所有插件。
-  - 解析插件的 `plugin.yaml` 清单。
-  - 协调前端资源的静态服务注册。
-  - 调用 `NodeLoader` 来加载插件中定义的节点。
+### 4.2. 创建 `PluginLoader` 服务
 
-- **`PluginLoader.ts` 核心实现**:
+**行动项**: 在 `code` 模式下，创建 `apps/backend/src/services/PluginLoader.ts`。
+
+- **`PluginLoader.ts` 完整实现**:
 
   ```typescript
   // apps/backend/src/services/PluginLoader.ts
   import { Elysia } from 'elysia';
   import { staticPlugin } from '@elysiajs/static';
   import yaml from 'js-yaml';
+  import { promises as fs } from 'node:fs';
+  import path from 'node:path';
+  import { getProjectRootDir } from '../utils/fileUtils';
   import { NodeLoader } from './NodeLoader';
-  // ... 其他导入 ...
+  import type { PluginManifest, ExtensionInfo } from '@comfytavern/types'; // +++ 从公共包导入类型
 
   export class PluginLoader {
     public static extensions: ExtensionInfo[] = [];
 
     public static async loadPlugins(app: Elysia): Promise<void> {
       const pluginsDir = path.join(getProjectRootDir(), 'plugins');
-      // ... 扫描 pluginsDir ...
-      for (const pluginName of pluginDirs) {
-        const pluginPath = path.join(pluginsDir, pluginName);
-        const manifestPath = path.join(pluginPath, 'plugin.yaml');
+      try {
+        const pluginDirs = await fs.readdir(pluginsDir, { withFileTypes: true });
 
-        try {
-          const manifestContent = await fs.readFile(manifestPath, 'utf-8');
-          const manifest = yaml.load(manifestContent) as PluginManifest;
+        for (const dirent of pluginDirs) {
+          if (!dirent.isDirectory()) continue;
 
-          // 1. 处理前端资源
-          if (manifest.frontend) {
-            const webPath = path.join(pluginPath, 'web');
-            const publicPath = `/plugins/${manifest.name}`;
-            app.use(staticPlugin({ assets: webPath, prefix: publicPath }));
+          const pluginName = dirent.name;
+          const pluginPath = path.join(pluginsDir, pluginName);
+          const manifestPath = path.join(pluginPath, 'plugin.yaml');
 
-            // 构造并存储 ExtensionInfo
-            this.extensions.push({ ... });
+          try {
+            const manifestContent = await fs.readFile(manifestPath, 'utf-8');
+            const manifest = yaml.load(manifestContent) as PluginManifest;
+
+            // 1. 处理前端资源
+            const extensionInfo: ExtensionInfo = {
+              name: manifest.name,
+              displayName: manifest.displayName,
+              version: manifest.version,
+              description: manifest.description,
+              configOptions: manifest.configOptions,
+            };
+
+            if (manifest.frontend) {
+              const publicPath = `/plugins/${manifest.name}`;
+              let assetPath: string;
+              let entryFile: string;
+              let styleFiles: string[] = [];
+
+              if (manifest.frontend.type === 'vanilla' && manifest.frontend.vanilla) {
+                assetPath = path.join(pluginPath, manifest.frontend.vanilla.rootDir || 'web');
+                entryFile = manifest.frontend.vanilla.entry;
+                styleFiles = manifest.frontend.vanilla.styles || [];
+              } else if (manifest.frontend.build) { // 默认为 vite 类型
+                assetPath = path.join(pluginPath, manifest.frontend.build.outputDir);
+                entryFile = manifest.frontend.build.entry;
+                styleFiles = manifest.frontend.build.styles || [];
+              } else {
+                 console.warn(`[PluginLoader] Plugin '${pluginName}' has a frontend section but is missing 'build' or 'vanilla' configuration. Skipping frontend part.`);
+                 continue;
+              }
+
+              app.use(staticPlugin({ assets: assetPath, prefix: publicPath, alwaysStatic: true }));
+              
+              extensionInfo.frontend = {
+                entryUrl: `${publicPath}/${entryFile.replace(/^\.\//, '')}`,
+                styleUrls: styleFiles.map(s => `${publicPath}/${s.replace(/^\.\//, '')}`),
+              };
+            }
+            
+            this.extensions.push(extensionInfo);
+
+            // 2. 处理后端节点 (复用 NodeLoader)
+            if (manifest.nodes) {
+              const nodesPath = path.join(pluginPath, manifest.nodes.entry);
+              await NodeLoader.loadNodes(nodesPath);
+            }
+            console.log(`[PluginLoader] Successfully loaded plugin: ${manifest.displayName} (v${manifest.version})`);
+
+          } catch (error) {
+            console.error(`[PluginLoader] Failed to load plugin '${pluginName}':`, error);
           }
-
-          // 2. 处理后端节点 (复用 NodeLoader)
-          if (manifest.nodes) {
-            const nodesPath = path.join(pluginPath, manifest.nodes.entry);
-            await NodeLoader.loadNodes(nodesPath);
-          }
-        } catch (error) {
-          console.error(`Failed to load plugin ${pluginName}:`, error);
+        }
+      } catch (error: any) {
+        if (error.code === 'ENOENT') {
+          console.log('[PluginLoader] "plugins" directory not found. Skipping plugin loading.');
+        } else {
+          console.error('[PluginLoader] Error reading plugins directory:', error);
         }
       }
     }
   }
   ```
 
-### 4.2. 修改应用启动流程 (`index.ts`)
+### 4.3. 修改应用启动流程 (`index.ts`)
 
-在 `apps/backend/src/index.ts` 中，我们需要在加载完核心节点后，调用 `PluginLoader`。
+**行动项**: 在 `code` 模式下，修改 `apps/backend/src/index.ts`。
+
+在加载完核心和自定义节点后，调用 `PluginLoader`。
 
 ```typescript
 // apps/backend/src/index.ts
 
-// ... (导入 PluginLoader)
+// ... (导入)
+import { NodeLoader } from './services/NodeLoader';
+import { PluginLoader } from './services/PluginLoader'; // +++ 导入 PluginLoader
+import { nodeManager } from './services/NodeManager';
+// ...
 
 // 1. 加载内置节点
-// 注意：这里的 "nodes" 是相对于 index.ts 的路径，它位于 apps/backend/src/
 const builtInNodesPath = join(__dirname, "nodes");
+console.log(`[ComfyTavern Backend] Loading built-in nodes from: ${builtInNodesPath}`);
 await NodeLoader.loadNodes(builtInNodesPath);
 
 // 2. 加载自定义节点路径 (从 config.json 读取)
-// ... (此为兼容旧版自定义节点目录的逻辑，保持不变)
+// 注意：此为兼容旧版自定义节点目录的逻辑，未来可能会被插件系统取代。
+if (CUSTOM_NODE_PATHS && CUSTOM_NODE_PATHS.length > 0) {
+  // ... (原有逻辑保持不变)
+}
 
 // 3. 加载插件
 console.log(`[ComfyTavern Backend] Loading plugins...`);
-await PluginLoader.loadPlugins(app); // 将 app 实例传入
+await PluginLoader.loadPlugins(app); // +++ 将 app 实例传入
 
-// ... (后续启动流程)
+// 在所有节点和插件加载完成后，统一打印注册节点列表
+// ... (原有打印逻辑保持不变)
 ```
 
-### 4.3. API 端点
+### 4.4. API 端点
 
-创建一个新的路由文件 `apps/backend/src/routes/pluginRoutes.ts`，并由 `index.ts` 挂载。
+**行动项**: 在 `code` 模式下，创建 `apps/backend/src/routes/pluginRoutes.ts` 并挂载。
 
-- **Endpoint**: `GET /api/plugins`
-- **处理函数**: 直接返回 `PluginLoader.extensions` 的内容。
-- **响应体**: 一个 `ExtensionInfo` 对象数组，例如：
-  ```json
-  [
-    {
-      "name": "my-awesome-plugin",
-      "displayName": "我的超棒插件",
-      "version": "1.0.0",
-      "description": "...",
-      "frontend": {
-        "entryUrl": "/plugins/my-awesome-plugin/index.js",
-        "styleUrls": ["/plugins/my-awesome-plugin/style.css"]
-      }
-    }
-  ]
+- **`pluginRoutes.ts` 完整实现**:
+
+  ```typescript
+  // apps/backend/src/routes/pluginRoutes.ts
+  import { Elysia } from 'elysia';
+  import { PluginLoader } from '../services/PluginLoader';
+
+  export const pluginRoutes = (app: Elysia) =>
+    app.group('/api/plugins', (group) =>
+      group.get('/', () => {
+        // 直接返回已加载并格式化好的插件信息
+        return PluginLoader.extensions;
+      })
+    );
+  ```
+- **在 `index.ts` 中挂载**:
+  ```typescript
+  // apps/backend/src/index.ts
+  // ...
+  import { pluginRoutes } from './routes/pluginRoutes';
+  // ...
+  const app = new Elysia();
+  // ...
+  app.use(pluginRoutes); // +++ 挂载路由
+  // ...
   ```
 
 ## 5. 前端改造方案
 
 ### 5.1. 插件加载器 (`PluginLoader`)
 
-在应用初始化阶段（例如 `apps/frontend-vueflow/src/main.ts`），添加 `PluginLoader` 服务。
+在 `apps/frontend-vueflow/src/services/` 目录下创建 `PluginLoaderService.ts`。
 
-- **流程**:
-  1. 调用 `GET /api/plugins` 获取已启用插件的列表。
-  2. 遍历列表，动态创建 `<script>` 和 `<link>` 标签，加载其前端资源。
+- **`PluginLoaderService.ts` 实现**:
+  ```typescript
+  // apps/frontend-vueflow/src/services/PluginLoaderService.ts
+  import { api } from '@/utils/api';
+
+  interface ExtensionInfo {
+    name: string;
+    displayName: string;
+    version: string;
+    description?: string;
+    frontend?: {
+      entryUrl: string;
+      styleUrls: string[];
+    };
+  }
+
+  export async function loadPlugins() {
+    try {
+      const extensions = await api.get<ExtensionInfo[]>('/api/plugins');
+      
+      for (const ext of extensions.data) {
+        if (ext.frontend) {
+          // 加载 CSS
+          ext.frontend.styleUrls.forEach(url => {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = url;
+            document.head.appendChild(link);
+          });
+
+          // 加载 JS
+          const script = document.createElement('script');
+          script.type = 'module';
+          script.src = ext.frontend.entryUrl;
+          document.body.appendChild(script);
+          
+          console.log(`[PluginLoader] Loaded plugin: ${ext.displayName}`);
+        }
+      }
+    } catch (error) {
+      console.error('[PluginLoader] Failed to load plugins:', error);
+    }
+  }
+  ```
+- **在 `main.ts` 中调用**:
+  ```typescript
+  // apps/frontend-vueflow/src/main.ts
+  import { createApp } from 'vue';
+  import { loadPlugins } from './services/PluginLoaderService';
+  // ...
+  
+  async function initializeApp() {
+    const app = createApp(App);
+    // ... (其他 app.use)
+    
+    // 在挂载应用前加载插件
+    await loadPlugins();
+    
+    app.mount('#app');
+  }
+  
+  initializeApp();
+  ```
 
 ### 5.2. 前端扩展 API
 
-提供全局 API `window.ComfyTavern.extensionApi`，供扩展 JS 使用 (与之前方案一致)。
+在 `apps/frontend-vueflow/src/` 的某个合适位置（如 `services` 或新目录 `api`）定义和暴露全局 API。
 
 ```typescript
-interface ExtensionApi {
-  registerNodeUI(nodeType: string, component: VueComponent): void;
-  addMenuItem(targetMenu: string, item: MenuItem): void;
-  on(event: string, callback: Function): void;
-  // ...
+// apps/frontend-vueflow/src/services/ExtensionApiService.ts
+
+// 这是一个简化的示例，实际实现会更复杂，涉及权限检查等
+class ExtensionApi {
+  registerNodeUI(nodeType: string, component: any) {
+    console.log(`Extension wants to register UI for ${nodeType}`);
+    // ... 实现注册逻辑，例如通过一个 store
+  }
+  // ... 其他 API 方法
 }
+
+// 在应用初始化时，将 API 实例暴露到 window 对象
+function initializeExtensionApi() {
+  if (!window.ComfyTavern) {
+    window.ComfyTavern = {};
+  }
+  window.ComfyTavern.extensionApi = new ExtensionApi();
+}
+
+// 在 main.ts 中调用 initializeExtensionApi()
 ```
 
 ### 5.3. 开发模式与生产模式
 
-为了提供一流的开发者体验 (DX)，我们必须明确区分并支持两种运行模式。
-
 #### 开发模式 (Development Mode)
 
-**目标**: 实现插件前端代码的热模块替换 (HMR)，让开发者像开发核心功能一样无缝开发插件。
+**方案**: 修改 `apps/frontend-vueflow/vite.config.ts` 以支持插件 HMR。
 
-**方案**:
+```typescript
+// apps/frontend-vueflow/vite.config.ts
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import path from 'path';
+import fs from 'fs';
+import yaml from 'js-yaml';
 
-1.  **统一 Vite 服务**: 主前端应用 (`apps/frontend-vueflow`) 的 Vite 开发服务器将成为所有插件开发的**唯一入口**。
-2.  **动态入口注入**:
-    - 主应用的 `vite.config.ts` 将被修改，增加一个逻辑：在服务器启动时，扫描 `plugins/` 目录下所有插件的 `plugin.yaml` 文件。
-    - 如果一个插件声明了 `frontend.dev.entry` (例如 `web/index.ts`)，Vite 会将这个入口动态地添加到 `build.rollupOptions.input` 数组中。
-    - 这样，Vite 的 HMR 引擎就能自动监听插件源文件的变化，并实时更新浏览器中的应用。
-3.  **前端加载逻辑**:
-    - 在开发模式下，前端的 `PluginLoader` 不会去加载构建产物 URL (`/plugins/.../dist/index.js`)。
-    - 相反，它会通过特殊的 Vite 客户端 API 或约定的模块路径 (`/@fs/path/to/plugins/my-awesome-plugin/web/index.ts`) 来加载插件的源入口文件，从而接入 HMR。
+// 动态扫描插件并返回它们的开发入口
+function getPluginDevEntries() {
+  const entries = {};
+  const pluginsDir = path.resolve(__dirname, '../../plugins');
+  if (!fs.existsSync(pluginsDir)) return entries;
 
-**优势**:
+  const pluginDirs = fs.readdirSync(pluginsDir);
+  for (const dir of pluginDirs) {
+    const manifestPath = path.join(pluginsDir, dir, 'plugin.yaml');
+    if (fs.existsSync(manifestPath)) {
+      const manifest = yaml.load(fs.readFileSync(manifestPath, 'utf8'));
+      if (manifest.frontend?.dev?.entry) {
+        // 重要：这里的 key 需要一个特殊的格式，但为了简单起见，我们先用插件名
+        // 实际应用中可能需要更复杂的处理来避免冲突
+        entries[manifest.name] = path.resolve(pluginsDir, dir, manifest.frontend.dev.entry);
+      }
+    }
+  }
+  return entries;
+}
 
-- **无缝体验**: 插件开发者只需运行主项目的 `dev` 命令，即可开始开发，无需额外配置。
-- **完全 HMR**: 对插件 `.vue`, `.ts`, `.css` 文件的任何修改都会立即反映在浏览器中。
-- **无跨域问题**: 所有资源都由同一个 Vite 服务器提供。
-- **共享依赖**: 插件可以轻松地从主应用 `import` 共享的库（Vue, Pinia, etc.），减小打包体积。
+export default defineConfig({
+  // ...
+  build: {
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        ...getPluginDevEntries(),
+      },
+    },
+  },
+});
+```
+**注意**: 前端在开发模式下加载插件的逻辑需要调整，不能再通过 `loadPlugins` 加载构建产物，而是直接 `import` 由 Vite 处理的入口。这部分逻辑较为复杂，需要进一步设计。
 
 #### 生产模式 (Production Mode)
 
-**目标**: 在生产环境中，加载构建和优化后的静态资源。
-
-**方案**:
-
-1.  **插件自构建**:
-    - 每个需要前端资源的插件，其 `package.json` 中应包含一个 `build` 脚本。
-    - 该脚本负责使用 Vite 或其他工具，将其 `web/` 目录下的源码构建到 `dist/` 目录中。
-2.  **后端静态服务**:
-    - 后端的 `PluginLoader` 逻辑保持不变，它会为每个插件的**构建产物目录**（例如 `dist/`）注册一个静态文件服务，映射到 `/plugins/{pluginName}`。
-3.  **前端加载逻辑**:
-    - 在生产模式下，前端 `PluginLoader` 的行为也保持不变，它会请求 `/api/plugins`，然后加载返回的 `entryUrl` 和 `styleUrls`，这些 URL 指向构建后的静态资源。
+生产模式的行为与 5.1 节描述的一致，加载由后端伺服的、插件自构建的静态资源。
 
 ### 5.4. 插件清单 (`plugin.yaml`) 演进
 
@@ -308,14 +515,7 @@ frontend:
 
 ### 5.5. 对后端 `PluginLoader` 的影响
 
-`PluginLoader` 在解析 `plugin.yaml` 时需要根据 `frontend.type` 进行差异化处理：
-
-- **如果 `type` 是 `vite` (或未指定)**:
-  - `app.use(staticPlugin({ ... }))` 的 `assets` 路径应读取 `frontend.build.outputDir`。
-  - 返回给前端的 `ExtensionInfo` 中的 `entryUrl` 和 `styleUrls` 应基于 `frontend.build` 下的路径来构造。
-- **如果 `type` 是 `vanilla`**:
-  - `app.use(staticPlugin({ ... }))` 的 `assets` 路径应读取 `frontend.rootDir` (若未提供，则默认为 `web`)。
-  - 返回给前端的 `ExtensionInfo` 中的 `entryUrl` 和 `styleUrls` 应直接基于 `frontend.entry` 和 `frontend.styles` 的路径来构造。
+`PluginLoader` 在解析 `plugin.yaml` 时需要根据 `frontend.type` 进行差异化处理，这已在 4.1 节的 `PluginLoader.ts` 完整实现中体现。
 
 ## 6. 工作流程图 (Mermaid)
 
@@ -357,13 +557,39 @@ sequenceDiagram
     F->>F: 集成扩展功能
 ```
 
-## 7. 下一步
+## 7. 实施计划 (Implementation Plan)
 
-- [ ] **审批**: 确认此插件架构设计方案。
-- [ ] **实现**:
-  - [ ] 后端: 创建 `PluginLoader.ts`，在 `index.ts` 中调用它，并添加 `/api/plugins` 端点。
-  - [ ] 前端: 实现 `PluginLoader` 和 `extensionApi`。
-- [ ] **文档**: 撰写新的插件开发指南。
+此计划取代原有的“下一步”部分，作为具体的执行路线图。
+
+**优先级 P0: 核心后端框架**
+- [ ] **任务 1**: 实现 `PluginLoader.ts` 服务。
+  - **负责人**: 咕咕
+  - **说明**: 创建文件，并实现 4.1 节中定义的 `PluginLoader` 类，包括类型定义、扫描逻辑和解析逻辑。
+- [ ] **任务 2**: 创建 `/api/plugins` 路由。
+  - **负责人**: 咕咕
+  - **说明**: 创建 `pluginRoutes.ts` 文件，并实现 4.3 节中定义的路由。
+- [ ] **任务 3**: 集成 `PluginLoader` 到应用启动流程。
+  - **负责人**: 咕咕
+  - **说明**: 修改 `apps/backend/src/index.ts`，按 4.2 节和 4.3 节的说明，导入并调用 `PluginLoader.loadPlugins(app)` 和 `app.use(pluginRoutes)`。
+
+**优先级 P1: 核心前端加载**
+- [ ] **任务 4**: 实现前端 `PluginLoaderService.ts`。
+  - **负责人**: 咕咕
+  - **说明**: 创建文件并实现 5.1 节中定义的 `loadPlugins` 函数，并在 `main.ts` 中调用它。
+- [ ] **任务 5**: 创建一个简单的“hello world”插件用于测试。
+  - **负责人**: 咕咕
+  - **说明**: 在 `plugins/` 目录下创建一个 `test-plugin`，包含 `plugin.yaml` 和一个简单的 `web/index.js` (例如 `console.log('Hello from test plugin!')`)，用于验证 P0 和 P1 的成果。
+
+**优先级 P2: 开发者体验与高级功能**
+- [ ] **任务 6**: 实现前端 `ExtensionApi` 的基础框架。
+  - **负责人**: 咕咕
+  - **说明**: 按 5.2 节的方案，创建服务并将其暴露到 `window` 对象。
+- [ ] **任务 7**: 实现开发模式下的 Vite HMR 集成。
+  - **负责人**: 咕咕
+  - **说明**: 修改 `vite.config.ts`，实现 5.3 节中的动态入口注入逻辑。
+- [ ] **任务 8**: 撰写初始版插件开发指南。
+  - **负责人**: 咕咕
+  - **说明**: 基于此实施计划，创建一份面向开发者的 `plugin-development-guide.md` 文档。
 
 ## 8. 实现'近 PR' 效果的分层 API 策略
 
@@ -893,3 +1119,79 @@ UI 注入主要通过两种方式实现：
     - **钩子系统**: 所有事件钩子的名称必须使用 `hook:` 前缀，并用 `client` 或 `server` 指明其运行环境 (例如 `api.hooks.on('hook:client:workflow:before-execute', ...)`).
 
 此蓝图明确了为实现统一命名空间所需关注的关键区域，确保了在未来开发过程中，相关改动能够有据可依，从而保证架构的自洽与演进的平稳。
+
+
+
+## 实施进度
+
+总的来说，目前的开发进度与实施计划高度一致，核心的插件化改造已经基本完成，为后续的功能扩展打下了坚实的基础。
+
+### 实施进度详细对比
+
+我将按照文档的章节和实施计划的任务项，逐一为你梳理进度：
+
+#### 1. 核心后端框架 (P0 优先级)
+
+这部分的目标是搭建起插件系统的后端基础。从变更来看，**P0 任务已全部完成**。
+
+*   **任务 1: 实现 `PluginLoader.ts` 服务**
+    *   **状态**: ✅ 已完成
+    *   **证据**: 新增了文件 [`apps/backend/src/services/PluginLoader.ts`](apps/backend/src/services/PluginLoader.ts:1)，这是插件系统的核心，负责扫描、解析和加载插件。
+
+*   **任务 2: 创建 `/api/plugins` 路由**
+    *   **状态**: ✅ 已完成
+    *   **证据**: 新增了路由文件 [`apps/backend/src/routes/pluginRoutes.ts`](apps/backend/src/routes/pluginRoutes.ts:1)，用于向前端提供已加载插件的信息。
+
+*   **任务 3: 集成 `PluginLoader` 到应用启动流程**
+    *   **状态**: ✅ 已完成
+    *   **证据**: [`apps/backend/src/index.ts`](apps/backend/src/index.ts:1) 文件已被修改，引入了 `PluginLoader` 并在应用启动时调用 `loadPlugins`，同时挂载了 `pluginRoutes`。
+
+#### 2. 核心前端加载 (P1 优先级)
+
+这部分的目标是让前端能够消费后端提供的插件信息，并动态加载插件资源。**P1 任务也已基本完成**。
+
+*   **任务 4: 实现前端 `PluginLoaderService.ts`**
+    *   **状态**: ✅ 已完成
+    *   **证据**:
+        *   新增了 [`apps/frontend-vueflow/src/services/PluginLoaderService.ts`](apps/frontend-vueflow/src/services/PluginLoaderService.ts:1)，负责从后端获取插件列表并动态加载其 JS 和 CSS 资源。
+        *   [`apps/frontend-vueflow/src/main.ts`](apps/frontend-vueflow/src/main.ts:1) 在应用初始化时调用了 `loadPlugins`，确保插件在应用挂载前被加载。
+
+*   **任务 5: 创建一个简单的“hello world”插件用于测试**
+    *   **状态**: ✅ 已完成 (根据您打开的标签页推断)
+    *   **证据**: 虽然 `git diff` 中没有直接体现，但从您打开的标签页中可以看到 `plugins/hello-world-plugin/` 相关的文件，这表明用于测试的基础插件已经就位。
+
+#### 3. 开发者体验与高级功能 (P2 优先级)
+
+这部分是关于提升插件开发体验和提供高级扩展能力的，目前**部分完成，正在进行中**。
+
+*   **任务 6: 实现前端 `ExtensionApi` 的基础框架**
+    *   **状态**: ✅ 已完成
+    *   **证据**:
+        *   新增了 [`apps/frontend-vueflow/src/services/ExtensionApiService.ts`](apps/frontend-vueflow/src/services/ExtensionApiService.ts:1)，定义了插件与主应用交互的 API。
+        *   [`apps/frontend-vueflow/src/main.ts`](apps/frontend-vueflow/src/main.ts:1) 中调用了 `initializeExtensionApi`，将此 API 暴露到 `window.ComfyTavern.extensionApi` 上。
+
+*   **任务 7: 实现开发模式下的 Vite HMR 集成**
+    *   **状态**: 🟡 进行中
+    *   **证据**: [`apps/frontend-vueflow/vite.config.ts`](apps/frontend-vueflow/vite.config.ts:1) 文件有大量修改 (`MM` 状态)。从 `diff` 中可以看到，已经为 `/plugins` 路径添加了代理，这是支持插件资源加载的关键一步。计划中更复杂的动态入口注入（HMR）部分可能正在实现中。
+
+*   **任务 8: 撰写初始版插件开发指南**
+    *   **状态**: 📝 待开始
+    *   **证据**: 这是文档工作，在代码变更中无法体现。
+
+#### 4. 其他相关变更
+
+除了上述主要任务，还有一些重要的辅助性变更也已完成，它们共同支撑了整个插件架构：
+
+*   **类型定义**:
+    *   完全按照计划，创建了 [`packages/types/src/plugin.ts`](packages/types/src/plugin.ts:1) 来定义 `PluginManifest` 和 `ExtensionInfo` 等核心类型。
+    *   并在 [`packages/types/src/index.ts`](packages/types/src/index.ts:1) 中导出了这些类型，供前后端共享。
+
+*   **目录结构重构**:
+    *   `plugins/` 目录已按计划重构，旧的 `plugins/nodes` 被移除，并添加了新的 [`plugins/README.md`](plugins/README.md:1) 和 [`plugins/.gitignore`](plugins/.gitignore:1) 文件，明确了其作为第三方插件存放区的定位。
+
+*   **配置更新**:
+    *   [`config.template.json`](config.template.json:1) 和 [`apps/backend/src/config.ts`](apps/backend/src/config.ts:1) 中的 `customNodePaths` 已被移除，替换为新的插件系统路径，这与计划一致。
+
+*   **后端服务演进**:
+    *   [`apps/backend/src/services/NodeLoader.ts`](apps/backend/src/services/NodeLoader.ts:1) 进行了修改，增加了 `reloadNodes` 等方法，可能是为了支持未来的插件热重载功能，这是对计划的积极演进。
+    *   新增了 [`apps/backend/src/routes/pluginAssetRoutes.ts`](apps/backend/src/routes/pluginAssetRoutes.ts:1)，虽然未在计划中明确列出，但这是实现插件静态资源（如图片）服务的必要补充，使得架构更加完整。

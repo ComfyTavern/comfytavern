@@ -30,9 +30,9 @@ export const FRONTEND_URL = process.env.FRONTEND_URL ||
 
 export const MAX_CONCURRENT_WORKFLOWS = executionConfig.max_concurrent_workflows ?? 5; // 从配置读取，提供默认值
 
-// 从 config.json 读取自定义节点路径，如果不存在则默认为空数组
+// 从 config.json 读取自定义插件路径，如果不存在则默认为空数组
 // 这些路径应该是相对于项目根目录的
-export const CUSTOM_NODE_PATHS: string[] = (config as any).customNodePaths || [];
+export const CUSTOM_PLUGINS_PATHS: string[] = (config as any).customPluginsPaths || [];
 
 // 新增用户管理配置
 // 确保在访问嵌套属性前检查 userManagement 是否存在

@@ -14,12 +14,14 @@
     "@types/crypto-js": "^4.2.2",
     "crypto-js": "^4.2.0",
     "elysia": "^1.2.25",
+    "js-yaml": "^4.1.0",
     "mathjs": "^14.5.2",
     "nanoid": "^5.1.5",
     "openai": "^4.87.3"
   },
   "devDependencies": {
     "@types/bun": "^1.2.5",
+    "@types/js-yaml": "^4.0.9",
     "bun-types": "latest"
   },
   "module": "src/index.ts"

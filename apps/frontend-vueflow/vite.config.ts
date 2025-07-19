@@ -78,6 +78,11 @@ export default defineConfig({
       '/ws': {
         target: backendWsTarget, // 后端 WebSocket 地址
         ws: true // 启用 WebSocket 代理
+      },
+      // 配置 plugins 代理
+      '/plugins': {
+        target: backendApiTarget, // 同样指向后端服务
+        changeOrigin: true,
       }
     },
     fs: {
@@ -115,6 +120,11 @@ export default defineConfig({
       '/ws': {
         target: backendWsTarget,
         ws: true
+      },
+      // 为插件静态资源配置代理
+      '/plugins': {
+        target: backendApiTarget,
+        changeOrigin: true,
       }
     }
   },

@@ -13,7 +13,7 @@ import { famService } from './services/FileManagerService'; // + Import famServi
 
 // 从 config.ts 导入的 WORKFLOWS_DIR, PROJECTS_BASE_DIR 等已经是绝对路径了
 import {
-  CUSTOM_NODE_PATHS,
+  CUSTOM_PLUGINS_PATHS,
   FRONTEND_URL,
   PORT,
   // WORKFLOWS_DIR, // 移除导入
@@ -37,11 +37,14 @@ import { userProfileRoutes } from './routes/userProfileRoutes'; // + 导入 user
 import { fileManagerRoutes } from './routes/fileManagerRoutes'; // ++ 导入文件管理路由
 import { globalWorkflowRoutes } from './routes/workflowRoutes';
 import { llmConfigRoutes } from './routes/llmConfigRoutes'; // + 导入 LLM 配置路由
+import { pluginRoutes } from './routes/pluginRoutes'; // +++ 导入插件路由
+import { pluginAssetRoutes } from './routes/pluginAssetRoutes'; // +++ 导入插件静态资源路由
 import { ApiConfigService } from './services/ApiConfigService'; // +
 import { ActivatedModelService } from './services/ActivatedModelService'; // +
 import { LlmApiAdapterRegistry } from './services/LlmApiAdapterRegistry'; // +
 import { ConcurrencyScheduler } from './services/ConcurrencyScheduler';
 import { NodeLoader } from './services/NodeLoader';
+import { PluginLoader } from './services/PluginLoader'; // +++ 导入插件加载器
 import { nodeManager } from './services/NodeManager'; // + 导入 NodeManager
 import { createWebsocketHandler, websocketSchema } from './websocket/handler';
 import { WebSocketManager } from './websocket/WebSocketManager';
@@ -60,38 +63,8 @@ const builtInNodesPath = join(__dirname, "nodes");
 console.log(`[ComfyTavern Backend] Loading built-in nodes from: ${builtInNodesPath}`);
 await NodeLoader.loadNodes(builtInNodesPath);
 
-// 2. 加载自定义节点路径 (从 config.json 读取)
-if (CUSTOM_NODE_PATHS && CUSTOM_NODE_PATHS.length > 0) {
-  console.log(`[ComfyTavern Backend] Loading custom nodes from paths specified in config.json: ${CUSTOM_NODE_PATHS.join(', ')}`);
-  const projectRootDir = join(__dirname, "..", "..", ".."); // 项目根目录 (从 apps/backend/src 返回到 comfytavern)
-  for (const customPath of CUSTOM_NODE_PATHS) {
-    // NodeLoader.loadNodes 期望的路径是相对于项目根目录的字符串，
-    // 或者可以由 path.resolve 正确解析的路径。
-    // CUSTOM_NODE_PATHS 中的路径 (如 "plugins/nodes") 已经是相对于项目根目录的。
-    // 此处将其解析为绝对路径
-    const absoluteCustomPath = join(projectRootDir, customPath);
-    console.log(`[ComfyTavern Backend] Attempting to load nodes from custom path: ${absoluteCustomPath}`);
-    await NodeLoader.loadNodes(absoluteCustomPath);
-  }
-} else {
-  console.log("[ComfyTavern Backend] No custom node paths configured in config.json.");
-}
-
-// 在所有节点加载完成后，统一打印注册节点列表
-const definitions = nodeManager.getDefinitions();
-const groupedNodes: Record<string, string[]> = {};
-for (const node of definitions) {
-  const namespace = node.namespace || '_unknown'; // 如果 namespace 未定义，则使用 _core
-  if (!groupedNodes[namespace]) {
-    groupedNodes[namespace] = [];
-  }
-  groupedNodes[namespace].push(node.type);
-}
-console.log(
-  '[ComfyTavern Backend] All nodes loaded. Registered nodes (grouped by namespace):',
-  groupedNodes
-);
-
+// 2. 加载自定义节点路径的逻辑已移至插件加载部分
+// 这里不再需要单独处理 CUSTOM_PLUGINS_PATHS
 
 // 读取根目录的 package.json 获取应用版本
 let appVersion = "unknown";
@@ -153,7 +126,34 @@ for (const dir of logicalDirsToEnsure) {
   }
 }
 
-const app = new Elysia()
+const app = new Elysia();
+
+// 3. 加载插件
+// 必须在实例化 app 之后，挂载路由之前调用，以便插件可以注册自己的静态资源
+console.log(`[ComfyTavern Backend] Loading plugins...`);
+const projectRootDir = getProjectRootDir();
+const defaultPluginsPath = path.join(projectRootDir, 'plugins');
+const allPluginPaths = [
+  defaultPluginsPath,
+  ...CUSTOM_PLUGINS_PATHS.map(p => path.resolve(projectRootDir, p))
+];
+await PluginLoader.loadPlugins(app, allPluginPaths, projectRootDir); // 将 app 实例、所有插件路径和项目根目录传入
+
+// 在所有节点加载完成后，统一打印注册节点列表
+const definitions = nodeManager.getDefinitions();
+const groupedNodes: Record<string, string[]> = {};
+for (const node of definitions) {
+  const namespace = node.namespace || '_unknown'; // 如果 namespace 未定义，则使用 _core
+  if (!groupedNodes[namespace]) {
+    groupedNodes[namespace] = [];
+  }
+  groupedNodes[namespace].push(node.type);
+}
+console.log(
+  '[ComfyTavern Backend] All nodes loaded. Registered nodes (grouped by namespace):',
+  groupedNodes
+);
+
 app.use(
   cors((() => {
     // 构建实际的白名单
@@ -204,6 +204,8 @@ app.use(
   .use(applyAuthMiddleware) // Apply the middleware functionally via .use()
   .use(authRoutes) // 挂载认证路由
   .use(userKeysRoutes) // 挂载用户密钥管理路由
+  .use(pluginRoutes) // +++ 挂载插件路由
+  .use(pluginAssetRoutes) // +++ 挂载插件静态资源路由
   .use(userProfileRoutes) // + 挂载用户配置路由
   .use(fileManagerRoutes) // ++ 挂载文件管理路由
   .use(nodeApiRoutes) // 挂载节点 API 路由

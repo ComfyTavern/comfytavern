@@ -15,18 +15,30 @@ import App from './App.vue'
 import router from './router'
 import { vComfyTooltip } from './directives/vComfyTooltip';
 import { connect as connectWebSocket } from './services/WebSocketCoreService';
+import { loadPlugins } from './services/PluginLoaderService';
+import { initializeExtensionApi } from './services/ExtensionApiService';
 
-const app = createApp(App)
+async function initializeApp() {
+  // 必须在创建 app 之前初始化，以确保插件脚本可以立即访问到 API
+  initializeExtensionApi();
 
-// 启动 WebSocket 连接
-connectWebSocket();
+  const app = createApp(App)
 
-const pinia = createPinia()
-pinia.use(piniaPluginPersistedstate)
+  // 启动 WebSocket 连接
+  connectWebSocket();
 
-app.use(pinia)
-app.use(router)
-app.use(i18n); // 注册 i18n 插件
-app.directive('comfy-tooltip', vComfyTooltip);
+  const pinia = createPinia()
+  pinia.use(piniaPluginPersistedstate)
 
-app.mount('#app')
+  app.use(pinia)
+  app.use(router)
+  app.use(i18n); // 注册 i18n 插件
+  app.directive('comfy-tooltip', vComfyTooltip);
+
+  // 在挂载应用前加载插件
+  await loadPlugins();
+
+  app.mount('#app')
+}
+
+initializeApp();

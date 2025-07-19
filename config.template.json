@@ -11,9 +11,7 @@
     "max_concurrent_workflows": 5,
     "logDir": "logs/executions"
   },
-  "customNodePaths": [
-    "plugins/nodes"
-  ],
+  "customPluginsPaths": [],
   "userManagement": {
     "multiUserMode": false,
     "accessPasswordHash": null

@@ -1,0 +1,8 @@
+# 忽略此目录下的所有内容
+*
+
+# 但不忽略 README.md 文件
+!README.md
+
+# 也不忽略 .gitignore 文件本身
+!.gitignore

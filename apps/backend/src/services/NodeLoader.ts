@@ -14,9 +14,17 @@ export class NodeLoader {
    * - 对于独立的 .ts 文件，导入并查找导出的 'definition' 或 'definitions'。
    * @param dirPath 节点目录路径 (相对于项目根目录)
    */
-  static async loadNodes(dirPath: string): Promise<void> {
+  static async loadNodes(dirPath: string, namespace?: string): Promise<void> {
     const absoluteDirPath = resolve(dirPath); // 获取绝对路径
     console.log(`Starting node loading from: ${absoluteDirPath}`);
+
+    const register = (def: NodeDefinition, filePath: string) => {
+      if (namespace) {
+        def.namespace = namespace;
+      }
+      nodeManager.registerNode(def, filePath);
+    };
+
     try {
       const entries = await readdir(absoluteDirPath, { withFileTypes: true });
 
@@ -36,7 +44,7 @@ export class NodeLoader {
               for (const def of module.definitions) {
                 if (def && typeof def === 'object') {
                   // 确保 def 是 NodeDefinition 类型，或进行适当的类型检查/转换
-                  nodeManager.registerNode(def as NodeDefinition, indexPath);
+                  register(def as NodeDefinition, indexPath);
                   registeredCountFromIndex++;
                 } else {
                   console.warn(`Invalid item found in exported 'definitions' array from ${indexPath}`);
@@ -78,7 +86,7 @@ export class NodeLoader {
             // 检查导出的 'definition' (单个)
             if (module.definition && typeof module.definition === 'object') {
               // TODO: 更严格的类型检查 NodeDefinition
-              nodeManager.registerNode(module.definition as NodeDefinition, fullPath);
+              register(module.definition as NodeDefinition, fullPath);
               registeredCount++;
             }
 
@@ -87,7 +95,7 @@ export class NodeLoader {
               for (const def of module.definitions) {
                 if (def && typeof def === 'object') {
                   // TODO: 更严格的类型检查 NodeDefinition
-                  nodeManager.registerNode(def as NodeDefinition, fullPath);
+                  register(def as NodeDefinition, fullPath);
                   registeredCount++;
                 } else {
                   console.warn(`Invalid item found in exported 'definitions' array from ${fullPath}`);

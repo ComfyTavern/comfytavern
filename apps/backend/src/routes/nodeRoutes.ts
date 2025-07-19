@@ -5,9 +5,8 @@ import { fileURLToPath } from 'node:url';
 
 import { NodesReloadedPayload, WebSocketMessageType } from '@comfytavern/types'; // 导入 WebSocket 类型
 
-import { CUSTOM_NODE_PATHS } from '../config'; // <--- 咕咕：导入自定义节点路径配置
 import { wsManager } from '../index'; // 导入 wsManager
-import { NodeLoader } from '../services/NodeLoader'; // 导入 NodeLoader
+import { PluginLoader } from '../services/PluginLoader'; // ++ 导入 PluginLoader
 import { nodeManager } from '../services/NodeManager';
 
 // 获取当前文件所在目录的上级目录 (即 src 目录)
@@ -21,70 +20,46 @@ export const nodeApiRoutes = new Elysia({ prefix: '/api' })
   // GET /api/nodes - 获取所有可用节点定义
   .get('/nodes', () => nodeManager.getDefinitions())
   // POST /api/nodes/reload - 重载所有节点定义
+  // POST /api/nodes/reload - 重载所有节点定义 (已废弃，转发到 /api/plugins/reload)
   .post('/nodes/reload', async ({ set }) => {
-    console.log('[API] Received request to reload nodes...');
+    console.log('[API /nodes/reload] Received request. Forwarding to PluginLoader.reloadPlugins...');
     try {
-      // 1. 清空现有节点
-      nodeManager.clearNodes();
-      console.log('[API] Cleared existing nodes.');
-
-      // 2. 重新加载节点
-      // 2.1 加载内置节点
-      console.log(`[API] Reloading built-in nodes from: ${builtInNodesPath}`);
-      await NodeLoader.loadNodes(builtInNodesPath);
-
-      // 2.2 加载自定义节点
-      if (CUSTOM_NODE_PATHS && CUSTOM_NODE_PATHS.length > 0) {
-        console.log(`[API] Reloading custom nodes from paths: ${CUSTOM_NODE_PATHS.join(', ')}`);
-        for (const customPath of CUSTOM_NODE_PATHS) {
-          const absoluteCustomPath = join(projectRootDir, customPath);
-          console.log(`[API] Attempting to reload nodes from custom path: ${absoluteCustomPath}`);
-          await NodeLoader.loadNodes(absoluteCustomPath);
-        }
-      } else {
-        console.log("[API] No custom node paths configured for reload.");
-      }
-      console.log('[API] Finished reloading all nodes from disk.');
-
-      const reloadedNodeCount = nodeManager.getDefinitions().length;
-      console.log(`[API] ${reloadedNodeCount} nodes reloaded.`);
-
-      // 3. 通过 WebSocket 通知所有客户端
+      const result = await PluginLoader.reloadPlugins();
+      
+      // 重新加载后，需要通知客户端节点列表已更新
       const payload: NodesReloadedPayload = {
-        success: true,
-        message: `Successfully reloaded ${reloadedNodeCount} nodes.`,
-        count: reloadedNodeCount,
+        success: result.success,
+        message: result.message,
+        count: nodeManager.getDefinitions().length,
       };
-      console.log('[API] Preparing to broadcast NODES_RELOADED. Payload:', payload, 'Number of clients in wsManager:', wsManager.getAllClientIds().length); // 新增日志
       wsManager.broadcast(WebSocketMessageType.NODES_RELOADED, payload);
-      console.log('[API] Broadcasted NODES_RELOADED notification to clients.');
+      console.log('[API /nodes/reload] Broadcasted NODES_RELOADED notification.');
 
       set.status = 200;
       return {
-        success: true,
-        message: `Successfully reloaded ${reloadedNodeCount} nodes.`,
-        count: reloadedNodeCount,
+        success: result.success,
+        message: result.message,
+        count: result.count, // 返回插件数量
       };
     } catch (error) {
-      console.error('[API] Error reloading nodes:', error);
+      console.error('[API /nodes/reload] Error during plugin reload:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error during node reload';
       
       // 尝试通知客户端错误
       try {
         const errorPayload: NodesReloadedPayload = {
           success: false,
-          message: `Failed to reload nodes: ${errorMessage}`,
+          message: `Failed to reload nodes/plugins: ${errorMessage}`,
         };
         wsManager.broadcast(WebSocketMessageType.NODES_RELOADED, errorPayload);
       } catch (wsError) {
-        console.error('[API] Failed to broadcast NODES_RELOADED error notification:', wsError);
+        console.error('[API /nodes/reload] Failed to broadcast error notification:', wsError);
       }
 
       set.status = 500;
-      return { success: false, message: 'Failed to reload nodes.', error: errorMessage };
+      return { success: false, message: 'Failed to reload nodes/plugins.', error: errorMessage };
     }
   });
-
 // 路由组：处理客户端脚本，相对于节点定义文件
 // 例如: GET /api/nodes/core/RandomNumber/client-script/client-scripts/RandomNumberNode.js
 export const clientScriptRoutes = new Elysia({ prefix: '/api/nodes' })
