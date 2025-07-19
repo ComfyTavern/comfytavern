@@ -6,10 +6,10 @@ import type { FrontendNodeDefinition } from '@/stores/nodeStore';
  * It's added to the node definitions on the frontend in the nodeStore.
  */
 export const FrameNodeDefinition: FrontendNodeDefinition = {
-  namespace: 'ui',
+  namespace: 'core',
   type: 'frame',
   displayName: '分组框',
-  category: 'Utilities',
+  category: 'layout',
   description: '一个用于在画布上组织节点的视觉分组框。',
   inputs: {},
   outputs: {},

@@ -246,12 +246,12 @@ const activeTabId = computed(() => tabStore.activeTabId);
 const nodeTypes = computed(() => {
   const types: Record<string, any> = {
     default: markRaw(BaseNode),
-    'ui:frame': markRaw(FrameNode), // 直接、简单地注册 FrameNode
+    'core:frame': markRaw(FrameNode), // 直接、简单地注册 FrameNode
   };
   if (nodeDefinitions.value) {
     nodeDefinitions.value.forEach((def) => {
       // 避免重复注册我们已手动定义的类型
-      if (def.namespace === 'ui' && def.type === 'frame') return;
+      if (def.namespace === 'core' && def.type === 'frame') return;
       const fullType = `${def.namespace || "core"}:${def.type}`;
       types[fullType] = markRaw(BaseNode);
     });

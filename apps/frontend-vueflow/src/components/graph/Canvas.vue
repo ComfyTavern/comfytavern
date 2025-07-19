@@ -344,7 +344,7 @@ const addGroup = () => {
   // 创建一个 Frame 节点 (分组框)
   const frameNode: Node = {
     id: `frame-${Date.now()}`, // ID 使用 'frame' 以明确其类型
-    type: 'ui:frame', // 使用我们新定义的特定类型
+    type: 'core:frame', // 使用我们新定义的特定类型
     position,
     style: {
       width: 400, // 设置一个合适的默认宽度
@@ -829,7 +829,7 @@ onMounted(() => {
 
     // 获取所有节点以供查找，这代表了拖拽【后】的状态
     const allNodesAfterDrag = getNodes.value;
-    const frameNodes = allNodesAfterDrag.filter(node => node.type === 'ui:frame');
+    const frameNodes = allNodesAfterDrag.filter(node => node.type === 'core:frame');
 
     const updates: { nodeId: string; parentNodeId: string | null; position: XYPosition }[] = [];
     const oldStates: { nodeId: string; parentNodeId: string | null; oldPosition: XYPosition }[] = [];
@@ -838,7 +838,7 @@ onMounted(() => {
       // 从缓存中获取拖拽前的状态
       const nodeBeforeDrag = nodesOnDragStart.value.find(n => n.id === draggedNode.id);
       // 如果找不到拖拽前的状态，则跳过
-      if (!nodeBeforeDrag || draggedNode.type === 'ui:frame') return;
+      if (!nodeBeforeDrag || draggedNode.type === 'core:frame') return;
 
       const oldParentId = nodeBeforeDrag.parentNode || null;
 

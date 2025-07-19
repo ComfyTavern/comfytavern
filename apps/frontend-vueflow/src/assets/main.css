@@ -152,6 +152,6 @@ a {
 }
 
 /* 强制 FrameNode (分组框) 保持在背景层 */
-.vue-flow__node.vue-flow__node-ui\:frame {
+.vue-flow__node.vue-flow__node-core\:frame {
   z-index: -1 !important;
 }
