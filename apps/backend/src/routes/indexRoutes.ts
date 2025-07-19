@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import os from 'node:os';
+import si from 'systeminformation';
 import { formatBytes, formatUptime } from '../utils/formatters';
 
 // 缓存 HTML 内容
@@ -36,27 +37,55 @@ export const indexRoutes = (options: { appVersion: string }) => new Elysia({ nam
     return await getIndexHtml();
   })
   // API 路由，提供状态数据
-  .get("/api/status", () => {
+  .get("/api/status", async () => {
     const memoryUsage = process.memoryUsage();
     const cpus = os.cpus();
     const totalmem = os.totalmem();
     const freemem = os.freemem();
+    
+    // 并行获取所有异步数据
+    const [currentLoad, fsSize, osInfo, networkInterfaces] = await Promise.all([
+      si.currentLoad(),
+      si.fsSize(),
+      si.osInfo(),
+      si.networkInterfaces(),
+    ]);
 
     return {
       version: options.appVersion,
       uptime: formatUptime(process.uptime()),
-      platform: os.platform(),
-      arch: os.arch(),
+      os: {
+        platform: osInfo.platform,
+        distro: osInfo.distro,
+        release: osInfo.release,
+        kernel: osInfo.kernel,
+        arch: osInfo.arch,
+      },
       cpu: {
         model: cpus[0].model,
         cores: cpus.length,
-        load: os.loadavg().map(l => l.toFixed(2)).join(', '),
+        load: currentLoad.currentLoad.toFixed(2) + '%',
       },
       memory: {
         total: formatBytes(totalmem),
         free: formatBytes(freemem),
         processUsage: formatBytes(memoryUsage.rss), // Resident Set Size
       },
+      disks: fsSize.map(d => ({
+        fs: d.fs,
+        size: formatBytes(d.size),
+        used: formatBytes(d.used),
+        use: d.use.toFixed(2) + '%',
+        mount: d.mount,
+      })),
+      network: networkInterfaces
+        .filter(iface => iface.ip4)
+        .map(iface => ({
+          iface: iface.iface,
+          ip4: iface.ip4,
+          mac: iface.mac,
+          speed: iface.speed ? `${iface.speed} Mbps` : 'N/A',
+        })),
       timestamp: new Date().toISOString(),
     };
   });
