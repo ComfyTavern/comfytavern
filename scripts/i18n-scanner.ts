@@ -511,6 +511,7 @@ async function main() {
   console.log(`\n处理完成。请分别检查以下目录中的合并产物:`);
   console.log(`- 内置语言: ${path.resolve(MERGED_OUTPUT_DIR)}`);
   console.log(`- 扩展语言: ${path.resolve(MERGED_EXTENSIONS_OUTPUT_DIR)}`);
+  console.log("\n注意：新增的翻译条目会以 '[TODO]' 作为默认值，请在合并后的文件中手动进行翻译，或者让 AI、LLM 来自动处理。");
   console.log("\n请在确认无误后，运行`scripts/copy_locales.bat`，将内置产物覆盖到 'apps/frontend-vueflow/src/locales' 目录。");
 }
 
