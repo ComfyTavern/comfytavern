@@ -105,6 +105,7 @@ const ProjectMetadataUpdateSchema = ProjectMetadataSchema.partial().omit({
 // 定义创建项目的请求体 Zod Schema
 const CreateProjectBodySchema = z.object({
   name: z.string().min(1, { message: "Project name cannot be empty." }),
+  description: z.string().optional(),
 });
 
 // 辅助函数：从 UserContext 中安全地提取 userId
@@ -170,7 +171,7 @@ export const projectRoutesPlugin = (
             return { error: "无效的项目创建数据", details: errors };
           }
 
-          const { name: projectName } = validationResult.data; // data 来自 Zod 的 safeParse
+          const { name: projectName, description } = validationResult.data; // data 来自 Zod 的 safeParse
           const projectId = sanitizeProjectId(projectName); // 使用 projectName 生成 ID
           if (!projectId) {
             set.status = 400;
@@ -185,7 +186,7 @@ export const projectRoutesPlugin = (
 
           try {
             // 调用服务层函数来创建项目
-            const newProjectMetadata = await createProject(userId, projectId, projectName, appVersion);
+            const newProjectMetadata = await createProject(userId, projectId, projectName, appVersion, description);
 
             set.status = 201; // 已创建
             console.log(

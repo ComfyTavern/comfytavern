@@ -80,6 +80,31 @@
               @keydown.enter="handleInputEnter"
             />
           </div>
+          <!-- Form Type -->
+          <div v-if="props.type === 'form'" class="mt-2 space-y-4">
+            <div v-for="field in props.fields" :key="field.key">
+              <label :for="`dialog-form-field-${field.key}`" class="block text-sm font-medium text-text-secondary mb-1">
+                {{ field.label }}
+                <span v-if="field.required" class="text-error">*</span>
+              </label>
+              <textarea
+                v-if="field.type === 'textarea'"
+                :id="`dialog-form-field-${field.key}`"
+                v-model="formValues[field.key]"
+                :placeholder="field.placeholder"
+                :rows="field.rows || 3"
+                class="w-full px-3 py-2 border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background-surface text-text-base placeholder:text-text-muted dark:focus:ring-offset-background-surface"
+              ></textarea>
+              <input
+                v-else
+                :id="`dialog-form-field-${field.key}`"
+                v-model="formValues[field.key]"
+                type="text"
+                :placeholder="field.placeholder"
+                class="w-full px-3 py-2 border border-border-base rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-background-surface text-text-base placeholder:text-text-muted dark:focus:ring-offset-background-surface"
+              />
+            </div>
+          </div>
         </div>
 
         <!-- 按钮区域 -->
@@ -112,7 +137,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue';
+import { ref, watch, onMounted, onBeforeUnmount, computed, reactive } from 'vue';
+import type { FormField } from '@/services/DialogService';
 import { useUiStore } from '@/stores/uiStore';
 import { useThemeStore } from '@/stores/theme'; // 导入主题 store
 import MarkdownRenderer from './MarkdownRenderer.vue'; // 导入 MarkdownRenderer
@@ -123,7 +149,8 @@ const props = withDefaults(defineProps<{
   visible: boolean;
   title?: string;
   message?: string; // 作为 slot 的后备内容
-  type?: 'message' | 'confirm' | 'input';
+  type?: 'message' | 'confirm' | 'input' | 'form';
+  fields?: FormField[];
   confirmText?: string;
   cancelText?: string;
   showCancelButton?: boolean; // 明确控制取消按钮的显示
@@ -159,7 +186,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void;
-  (e: 'confirm', value?: string): void; // Input 类型时，value 为输入值
+  (e: 'confirm', value?: string | Record<string, string>): void; // Input/Form 类型时，value 为输入值
   (e: 'cancel'): void;
   (e: 'close'): void; // 由关闭图标或ESC触发
   (e: 'update:inputValue', value: string): void; // 用于 input 类型的 v-model
@@ -167,6 +194,7 @@ const emit = defineEmits<{
 
 const showContent = ref(false);
 const internalInputValue = ref(props.inputValue || props.initialValue);
+const formValues = reactive<Record<string, string>>({});
 let autoCloseTimer: number | null = null;
 
 const uiStore = useUiStore();
@@ -213,6 +241,11 @@ watch(() => props.visible, (newValue) => {
     dynamicZIndex.value = uiStore.getNextZIndex();
     if (props.type === 'input') {
       internalInputValue.value = props.inputValue !== undefined ? props.inputValue : props.initialValue;
+    } else if (props.type === 'form' && props.fields) {
+      // 初始化表单值
+      for (const field of props.fields) {
+        formValues[field.key] = field.initialValue || '';
+      }
     }
     setTimeout(() => {
       showContent.value = true;
@@ -265,6 +298,8 @@ function closeDialog(isCancelOrClose: boolean) {
 function handleConfirm() {
   if (props.type === 'input') {
     emit('confirm', internalInputValue.value);
+  } else if (props.type === 'form') {
+    emit('confirm', formValues);
   } else {
     emit('confirm');
   }

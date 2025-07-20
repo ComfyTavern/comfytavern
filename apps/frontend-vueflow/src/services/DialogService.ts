@@ -4,13 +4,24 @@ import i18n from '@/locales';
 import { debugLog } from '@/utils/debugLog';
 
 // 对话框类型 (DialogInstance 内部使用)
-type DialogInstanceType = 'message' | 'confirm' | 'input';
+type DialogInstanceType = 'message' | 'confirm' | 'input' | 'form';
 
 // 通知类型
 type ToastType = 'info' | 'success' | 'warning' | 'error';
 
 // 通知位置
 export type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
+
+// 定义表单字段
+export interface FormField {
+  key: string;
+  label: string;
+  type: 'text' | 'textarea';
+  initialValue?: string;
+  placeholder?: string;
+  rows?: number;
+  required?: boolean;
+}
 
 // 通用对话框配置接口 (对应 Dialog.vue 的 props)
 interface UniversalDialogOptions {
@@ -20,7 +31,7 @@ interface UniversalDialogOptions {
 
   confirmText?: string;
   cancelText?: string;
-  showCancelButton?: boolean; 
+  showCancelButton?: boolean;
   showCloseIcon?: boolean; // 对应 Dialog.vue 的 showCloseIcon
   closeOnBackdrop?: boolean;
   autoClose?: number;
@@ -32,6 +43,9 @@ interface UniversalDialogOptions {
   inputType?: 'text' | 'password' | 'number' | 'textarea';
   inputRows?: number;
   width?: string;
+
+  // Form-specific props
+  fields?: FormField[];
 }
 
 // 通知配置
@@ -49,7 +63,7 @@ interface DialogInstance {
   type: DialogInstanceType; // 服务内部类型，用于区分 Promise 等
   component: Component; // 总是 Dialog.vue
   props: Record<string, any>; // 传递给 Dialog.vue 的 props
-  resolve: (value: boolean | string | void | null) => void; // 调整以适应不同 Promise 返回值
+  resolve: (value: boolean | string | Record<string, string> | void | null) => void; // 调整以适应不同 Promise 返回值
   reject: (reason?: any) => void;
 }
 
@@ -227,9 +241,9 @@ export const useDialogService = defineStore('dialogService', () => {
           inputPlaceholder: options.inputPlaceholder || t('dialog.input.placeholder'),
           inputType: options.inputType || 'text',
           inputRows: options.inputRows || 3,
-          onConfirm: (inputValue?: string) => { 
+          onConfirm: (inputValue?: string) => {
             closeDialog(dialogId);
-            resolve(inputValue !== undefined ? inputValue : ''); 
+            resolve(inputValue !== undefined ? inputValue : '');
           },
           onCancel: () => {
             closeDialog(dialogId);
@@ -250,6 +264,49 @@ export const useDialogService = defineStore('dialogService', () => {
           component: markRaw(module.default),
           props: dialogProps,
           resolve: (val) => resolve(val as string | null), // 明确 resolve 类型
+          reject
+        };
+        addDialog(dialog);
+      }).catch(reject);
+    });
+  }
+
+  // 显示表单对话框
+  function showForm(options: UniversalDialogOptions): Promise<Record<string, string> | null> {
+    debugLog('Showing form dialog', options);
+    return new Promise((resolve, reject) => {
+      import('../components/common/Dialog.vue').then((module) => {
+        const dialogId = generateId();
+        const dialogProps = {
+          ...options,
+          visible: true,
+          type: 'form' as const,
+          title: options.title || t('dialog.form.title'),
+          confirmText: options.confirmText || t('common.confirm'),
+          cancelText: options.cancelText || t('common.cancel'),
+          onConfirm: (formValues: Record<string, string>) => {
+            closeDialog(dialogId);
+            resolve(formValues);
+          },
+          onCancel: () => {
+            closeDialog(dialogId);
+            resolve(null);
+          },
+          'onUpdate:visible': (value: boolean) => {
+            if (!value) {
+              if (activeDialog.value && activeDialog.value.id === dialogId) {
+                closeDialog(dialogId);
+                resolve(null);
+              }
+            }
+          }
+        };
+        const dialog: DialogInstance = {
+          id: dialogId,
+          type: 'form',
+          component: markRaw(module.default),
+          props: dialogProps,
+          resolve: (val) => resolve(val as Record<string, string> | null),
           reject
         };
         addDialog(dialog);
@@ -329,6 +386,7 @@ export const useDialogService = defineStore('dialogService', () => {
     showMessage,
     showConfirm,
     showInput,
+    showForm,
     showToast,
     showSuccess,
     showError,

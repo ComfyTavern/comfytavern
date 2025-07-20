@@ -569,7 +569,8 @@ export async function createProject(
   userId: string, // 新增 userId 参数
   projectId: string,
   projectName: string,
-  appVersion: string
+  appVersion: string,
+  description?: string // 新增 description 参数
 ): Promise<ProjectMetadata> {
   console.log(
     `[Service:createProject] Attempting to create project '${projectName}' (ID: '${projectId}') for user '${userId}'`
@@ -602,7 +603,7 @@ export async function createProject(
       createdAt: now,
       updatedAt: now,
       version: appVersion,
-      description: `Project created on ${now}`,
+      description: description || `Project created on ${now}`, // 使用传入的 description
       preferredView: "editor",
       schemaVersion: appVersion, // schemaVersion 通常在创建时固定
     };

@@ -60,20 +60,35 @@ const openProject = (project: ProjectMetadata) => {
 };
 
 const promptAndCreateProject = async () => {
-  const projectName = await dialogService.showInput({
+  const result = await dialogService.showForm({
     title: t('projects.createDialog.title'),
-    message: t('projects.createDialog.message'),
-    inputPlaceholder: t('projects.createDialog.placeholder'),
+    fields: [
+      {
+        key: 'name',
+        label: t('common.name'),
+        type: 'text',
+        placeholder: t('projects.createDialog.placeholder'),
+        required: true,
+      },
+      {
+        key: 'description',
+        label: t('common.description'),
+        type: 'textarea',
+        placeholder: t('projects.createDialog.descriptionPlaceholder'),
+        rows: 4,
+      },
+    ],
   });
 
-  if (projectName === null) return;
+  if (!result) return; // 用户取消
 
-  const trimmedProjectName = projectName.trim();
+  const trimmedProjectName = result.name?.trim();
   if (trimmedProjectName) {
     try {
-      // 使用正确的参数调用 createProject
-      await projectStore.createProject({ name: trimmedProjectName });
-      // 刷新列表
+      await projectStore.createProject({
+        name: trimmedProjectName,
+        description: result.description?.trim(),
+      });
       dataListViewRef.value?.refresh();
       dialogService.showSuccess(t('projects.createSuccess'));
     } catch (error: any) {

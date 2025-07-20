@@ -80,7 +80,7 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   // 新增：创建新项目
-  async function createProject(projectData: { name: string }): Promise<ProjectMetadata | null> {
+  async function createProject(projectData: { name: string; description?: string }): Promise<ProjectMetadata | null> {
     isLoading.value = true;
     error.value = null;
     try {
