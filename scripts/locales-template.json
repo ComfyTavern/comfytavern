@@ -59,6 +59,19 @@
     "warning": "[TODO]",
     "yes": "[TODO]"
   },
+  "dataList": {
+    "toolbar": {
+      "ascending": "[TODO]",
+      "descending": "[TODO]",
+      "sortBy": "[TODO]",
+      "switchToGrid": "[TODO]",
+      "switchToList": "[TODO]"
+    },
+    "view": {
+      "empty": "[TODO]",
+      "error": "[TODO]"
+    }
+  },
   "dialog": {
     "input": {
       "placeholder": "[TODO]",
@@ -581,8 +594,9 @@
       "title": "[TODO]"
     },
     "createNew": "[TODO]",
-    "creating": "[TODO]",
+    "createSuccess": "[TODO]",
     "errors": {
+      "createFailed": "[TODO]",
       "nameRequired": "[TODO]"
     },
     "lastUpdated": "[TODO]",
@@ -590,6 +604,10 @@
     "loading": "[TODO]",
     "noDescription": "[TODO]",
     "noProjects": "[TODO]",
+    "sort": {
+      "byDate": "[TODO]",
+      "byName": "[TODO]"
+    },
     "title": "[TODO]"
   },
   "rightPreviewPanel": {

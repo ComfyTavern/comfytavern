@@ -59,6 +59,19 @@
     "warning": "警告",
     "yes": "是"
   },
+  "dataList": {
+    "toolbar": {
+      "ascending": "升序",
+      "descending": "降序",
+      "sortBy": "排序",
+      "switchToGrid": "网格视图",
+      "switchToList": "列表视图"
+    },
+    "view": {
+      "empty": "这里什么都没有。",
+      "error": "加载数据时出错。"
+    }
+  },
   "dialog": {
     "input": {
       "placeholder": "请输入内容...",
@@ -581,8 +594,9 @@
       "title": "创建新项目"
     },
     "createNew": "创建新项目",
-    "creating": "创建中...",
+    "createSuccess": "项目创建成功",
     "errors": {
+      "createFailed": "项目创建失败",
       "nameRequired": "项目名称不能为空！"
     },
     "lastUpdated": "最后更新",
@@ -590,6 +604,10 @@
     "loading": "正在加载项目...",
     "noDescription": "暂无描述",
     "noProjects": "还没有项目，点击右上角按钮创建一个吧！",
+    "sort": {
+      "byDate": "按日期",
+      "byName": "按名称"
+    },
     "title": "我的项目"
   },
   "rightPreviewPanel": {

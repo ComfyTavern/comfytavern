@@ -18,6 +18,7 @@ export * from './adapter';
 export * from './auth';
 export * from './llm';
 export * from './plugin';
+export * from './view';
 
 // 其他
 export * from './history';

@@ -59,6 +59,19 @@
     "warning": "警告",
     "yes": "はい"
   },
+  "dataList": {
+    "toolbar": {
+      "ascending": "昇順",
+      "descending": "降順",
+      "sortBy": "並べ替え",
+      "switchToGrid": "グリッド表示",
+      "switchToList": "リスト表示"
+    },
+    "view": {
+      "empty": "ここには何もありません。",
+      "error": "データの読み込み中にエラーが発生しました。"
+    }
+  },
   "dialog": {
     "input": {
       "placeholder": "内容を入力してください...",
@@ -581,8 +594,9 @@
       "title": "新規プロジェクトを作成"
     },
     "createNew": "新規プロジェクトを作成",
-    "creating": "作成中...",
+    "createSuccess": "プロジェクトが正常に作成されました",
     "errors": {
+      "createFailed": "プロジェクトの作成に失敗しました",
       "nameRequired": "プロジェクト名は空にできません！"
     },
     "lastUpdated": "最終更新",
@@ -590,6 +604,10 @@
     "loading": "プロジェクトを読み込み中...",
     "noDescription": "説明がありません",
     "noProjects": "まだプロジェクトがありません。右上のボタンをクリックして作成してください！",
+    "sort": {
+      "byDate": "日付順",
+      "byName": "名前順"
+    },
     "title": "マイプロジェクト"
   },
   "rightPreviewPanel": {

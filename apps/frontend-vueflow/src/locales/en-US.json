@@ -59,6 +59,19 @@
     "warning": "Warning",
     "yes": "Yes"
   },
+  "dataList": {
+    "toolbar": {
+      "ascending": "Ascending",
+      "descending": "Descending",
+      "sortBy": "Sort by",
+      "switchToGrid": "Grid View",
+      "switchToList": "List View"
+    },
+    "view": {
+      "empty": "There's nothing here.",
+      "error": "Error loading data."
+    }
+  },
   "dialog": {
     "input": {
       "placeholder": "Please enter content...",
@@ -581,8 +594,9 @@
       "title": "Create New Project"
     },
     "createNew": "Create New Project",
-    "creating": "Creating...",
+    "createSuccess": "Project created successfully",
     "errors": {
+      "createFailed": "Failed to create project",
       "nameRequired": "Project name cannot be empty!"
     },
     "lastUpdated": "Last Updated",
@@ -590,6 +604,10 @@
     "loading": "Loading projects...",
     "noDescription": "No description available",
     "noProjects": "No projects yet. Click the button in the top right to create one!",
+    "sort": {
+      "byDate": "By Date",
+      "byName": "By Name"
+    },
     "title": "My Projects"
   },
   "rightPreviewPanel": {

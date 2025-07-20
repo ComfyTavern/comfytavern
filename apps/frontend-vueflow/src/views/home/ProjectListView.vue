@@ -1,91 +1,139 @@
 <script setup lang="ts">
-// import SideBar from './SideBar.vue'; // 侧边栏由 HomeLayout 提供
-import { useProjectManagement } from '../../composables/editor/useProjectManagement';
-import { useThemeStore } from '../../stores/theme'; // 导入 theme store
-import { computed } from 'vue';
-import { useDialogService } from '../../services/DialogService'; // 导入 DialogService
-import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
-import "overlayscrollbars/overlayscrollbars.css";
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { useDialogService } from '@/services/DialogService';
+import { useProjectStore } from '@/stores/projectStore';
+import type { ProjectMetadata, SortConfig, ColumnDefinition } from '@comfytavern/types';
+import DataListView from '@/components/data-list/DataListView.vue';
 
-// 使用 Composable 获取项目数据和方法
-const { projects, isLoading, error, createNewProject, openProject } = useProjectManagement();
-const themeStore = useThemeStore(); // 获取 theme store 实例
-const dialogService = useDialogService(); // 获取 DialogService 实例
+const router = useRouter();
 const { t } = useI18n();
-const isDark = computed(() => themeStore.currentAppliedMode === 'dark');
+const dialogService = useDialogService();
+const projectStore = useProjectStore();
+
+// 使用更稳健的 ref 类型定义
+const dataListViewRef = ref<{ refresh: () => void } | null>(null);
+
+// 1. 定义 fetcher 函数
+const projectFetcher = async (params: { sort?: SortConfig<ProjectMetadata> }) => {
+  // 调用正确的 store action
+  await projectStore.fetchAvailableProjects();
+  // 从正确的 store state 获取数据
+  const projects = [...projectStore.availableProjects];
+
+  // 客户端排序
+  if (params.sort) {
+    const { field, direction } = params.sort;
+    projects.sort((a, b) => {
+      const valA = a[field as keyof ProjectMetadata];
+      const valB = b[field as keyof ProjectMetadata];
+
+      // 处理 null/undefined 值，将它们排在最后
+      if (valA == null && valB == null) return 0;
+      if (valA == null) return 1;
+      if (valB == null) return -1;
+
+      const comparison = valA < valB ? -1 : valA > valB ? 1 : 0;
+      return direction === 'asc' ? comparison : -comparison;
+    });
+  }
+  return projects;
+};
+
+// 2. 定义排序选项
+const sortOptions = [
+  { label: t('projects.sort.byName'), field: 'name' },
+  { label: t('projects.sort.byDate'), field: 'updatedAt' },
+];
+
+// 2.5. 定义列表视图的列
+const columns: ColumnDefinition<ProjectMetadata>[] = [
+  { key: 'name', label: t('common.name'), sortable: true, width: '30%' },
+  { key: 'description', label: t('common.description'), sortable: false, width: '45%' },
+  { key: 'updatedAt', label: t('projects.lastUpdated'), sortable: true, width: '25%' },
+];
+
+// 3. 定义操作方法
+const openProject = (project: ProjectMetadata) => {
+  router.push({ name: 'ProjectDashboard', params: { projectId: project.id } });
+};
 
 const promptAndCreateProject = async () => {
   const projectName = await dialogService.showInput({
     title: t('projects.createDialog.title'),
     message: t('projects.createDialog.message'),
-    inputPlaceholder: t('projects.createDialog.placeholder')
+    inputPlaceholder: t('projects.createDialog.placeholder'),
   });
 
-  // 用户点击了取消或关闭对话框
-  if (projectName === null) {
-    return;
-  }
+  if (projectName === null) return;
 
   const trimmedProjectName = projectName.trim();
-  if (trimmedProjectName !== '') {
-    await createNewProject(trimmedProjectName);
+  if (trimmedProjectName) {
+    try {
+      // 使用正确的参数调用 createProject
+      await projectStore.createProject({ name: trimmedProjectName });
+      // 刷新列表
+      dataListViewRef.value?.refresh();
+      dialogService.showSuccess(t('projects.createSuccess'));
+    } catch (error: any) {
+      dialogService.showError(error.message || t('projects.errors.createFailed'));
+    }
   } else {
-    // 用户点击了确定但输入为空或只包含空格
     dialogService.showError(t('projects.errors.nameRequired'));
   }
 };
 </script>
-
 <template>
-  <div class="min-h-screen bg-background-base">
-    <!-- 左侧边栏 由 HomeLayout 提供 -->
-    <!-- <SideBar /> -->
+  <div class="h-full flex flex-col bg-background-base">
+    <div class="flex-1 overflow-auto px-6">
+      <DataListView ref="dataListViewRef" :fetcher="projectFetcher" :sort-options="sortOptions" :columns="columns"
+        :initial-sort="{ field: 'updatedAt', direction: 'desc' }" item-key="id" @item-dblclick="openProject"
+        grid-class="grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
+        :loading-message="t('projects.loading')" :empty-message="t('projects.noProjects')"
+        :error-message="t('projects.loadError')">
+        <template #header>
+          <div class="pt-4 pb-2 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-text-base">{{ t('projects.title') }}</h1>
+            <button @click="promptAndCreateProject"
+              class="px-4 py-2 bg-primary text-primary-content rounded-md font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ t('projects.createNew') }}
+            </button>
+          </div>
+          <div class="border-t border-border-base opacity-60"></div>
+        </template>
 
-    <!-- 主要内容区域, HomeLayout 会处理 padding-left -->
-    <div class="p-4 lg:p-6 max-w-screen-2xl mx-auto transition-all duration-300 ease-in-out">
-      <!-- :class="themeStore.collapsed ? 'ml-16' : 'ml-64'" REMOVED -->
-      <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-text-base">{{ t('projects.title') }}</h1>
-        <button @click="promptAndCreateProject" :disabled="isLoading"
-          class="px-4 py-2 bg-primary text-primary-content rounded hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-          {{ isLoading ? t('projects.creating') : t('projects.createNew') }}
-        </button>
-      </div>
+        <template #toolbar-actions>
+          <!-- 这里可以留空，或者放一些其他的操作按钮 -->
+        </template>
 
-      <!-- 加载状态 -->
-      <div v-if="isLoading && projects.length === 0" class="text-center text-text-muted mt-10">
-        {{ t('projects.loading') }}
-      </div>
-
-      <!-- 错误提示 -->
-      <div v-if="error" class="bg-error-softest border border-error-soft text-error px-4 py-3 rounded relative mb-6"
-        role="alert">
-        <strong class="font-bold">{{ t('projects.loadError') }}</strong>
-        <span class="block sm:inline"> {{ error }}</span>
-      </div>
-
-      <!-- 项目列表 -->
-      <OverlayScrollbarsComponent :options="{
-        scrollbars: { autoHide: 'scroll', theme: isDark ? 'os-theme-light' : 'os-theme-dark' },
-      }" class="h-[90vh]" defer>
-        <div v-if="!isLoading || projects.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div v-for="project in projects" :key="project.id" @click="openProject(project.id)"
-            class="bg-background-surface rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-shadow">
-            <h2 class="text-lg font-semibold text-text-base mb-2">{{ project.name }}</h2>
-            <p class="text-sm text-text-secondary mb-3">{{ project.description || t('projects.noDescription') }}</p>
-            <div class="text-xs text-text-muted">
-              {{ t('projects.lastUpdated') }}: {{ new Date(project.updatedAt).toLocaleString() }}
+        <template #grid-item="{ item }">
+          <div class="bg-background-surface rounded-lg shadow p-4 h-full flex flex-col cursor-pointer">
+            <h2 class="text-lg font-semibold text-text-base mb-2 truncate">{{ item.name }}</h2>
+            <p class="text-sm text-text-secondary mb-3 flex-grow">{{ item.description || t('projects.noDescription') }}
+            </p>
+            <div class="text-xs text-text-muted mt-auto">
+              {{ t('projects.lastUpdated') }}: {{ new Date(item.updatedAt).toLocaleString() }}
             </div>
           </div>
-        </div>
-        <div v-if="!isLoading && projects.length === 0 && !error"
-          class="text-center text-text-muted mt-10">
-          {{ t('projects.noProjects') }}
-        </div>
-      </OverlayScrollbarsComponent>
+        </template>
+
+        <template #list-item="{ item }">
+          <td class="px-3 py-2.5 text-text-base font-medium whitespace-nowrap cursor-pointer">
+            {{ item.name }}
+          </td>
+          <td class="px-3 py-2.5 text-text-secondary truncate max-w-sm cursor-pointer">
+            {{ item.description || t('projects.noDescription') }}
+          </td>
+          <td class="px-3 py-2.5 text-text-muted whitespace-nowrap cursor-pointer">
+            {{ new Date(item.updatedAt).toLocaleString() }}
+          </td>
+        </template>
+      </DataListView>
     </div>
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+/* 样式可以保持为空，因为我们已经在模板中处理了所有样式 */
+</style>

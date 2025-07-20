@@ -59,6 +59,19 @@
     "warning": "噫，慎之",
     "yes": "然"
   },
+  "dataList": {
+    "toolbar": {
+      "ascending": "升序",
+      "descending": "降序",
+      "sortBy": "排序",
+      "switchToGrid": "网格视图",
+      "switchToList": "列表视图"
+    },
+    "view": {
+      "empty": "此处空无一物。",
+      "error": "载入数据时出错。"
+    }
+  },
   "dialog": {
     "input": {
       "placeholder": "请书",
@@ -581,8 +594,9 @@
       "title": "新辟锦囊"
     },
     "createNew": "新辟锦囊",
-    "creating": "营造中",
+    "createSuccess": "锦囊创建成功",
     "errors": {
+      "createFailed": "锦囊创建失败",
       "nameRequired": "锦囊之名岂可空乎。"
     },
     "lastUpdated": "末次修缮",
@@ -590,6 +604,10 @@
     "loading": "锦囊正载",
     "noDescription": "暂无批注",
     "noProjects": "尚无锦囊，点右上之钮新辟一囊乎。",
+    "sort": {
+      "byDate": "按日期",
+      "byName": "按名称"
+    },
     "title": "吾之锦囊"
   },
   "rightPreviewPanel": {
