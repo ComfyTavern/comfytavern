@@ -316,7 +316,7 @@ export function useWebSocket() {
   const initialize = () => {
     if (isRouterInitialized) return;
     ensureStoresInitialized();
-    unsubscribeFromCore = wsCore.subscribe(handleRawMessage);
+    unsubscribeFromCore = wsCore.subscribe('execution-router', handleRawMessage);
     console.log('[WebSocketRouter] Initialized and subscribed to core service.');
     isRouterInitialized = true;
   };

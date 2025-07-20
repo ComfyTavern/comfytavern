@@ -7,7 +7,8 @@ import path from 'node:path';
 import { NodeLoader } from './NodeLoader';
 import { nodeManager } from './NodeManager';
 import { pluginConfigService } from './PluginConfigService';
-import { webSocketManager } from '../websocket/WebSocketManager';
+import type { WebSocketManager } from '../websocket/WebSocketManager';
+import { webSocketManager } from '../websocket/WebSocketManager'; // 恢复导入，但我们会优先使用注入的
 import type { PluginManifest, ExtensionInfo, FrontendInfo } from '@comfytavern/types';
 
 export class PluginLoader {
@@ -15,11 +16,16 @@ export class PluginLoader {
   private static appInstance: Elysia | null = null;
   private static pluginPaths: string[] = [];
   private static projectRootDir: string = '';
+  private static wsManager: WebSocketManager | null = null;
 
   /**
    * 发现所有插件并返回它们的清单信息及启用状态。
    * 这个方法不加载插件，只用于信息展示。
    */
+  public static setWebSocketManager(manager: WebSocketManager) {
+    this.wsManager = manager;
+  }
+
   public static async discoverAllPlugins(): Promise<ExtensionInfo[]> {
     const allDiscoveredPlugins: ExtensionInfo[] = [];
 
@@ -114,7 +120,8 @@ export class PluginLoader {
     const message = `Successfully reloaded ${reloadedPluginCount} plugins and a total of ${reloadedNodeCount} nodes.`;
     console.log(`[PluginLoader] ${message}`);
 
-    webSocketManager.broadcast('plugins-reloaded', {
+    const manager = this.wsManager || webSocketManager;
+    manager.broadcast('plugins-reloaded', {
       message,
       reloadedPluginCount,
     });
@@ -139,7 +146,8 @@ export class PluginLoader {
         await fs.access(path.join(pluginPath, 'plugin.yaml'));
         const extensionInfo = await this._loadPluginByPath(pluginPath);
         if (extensionInfo) {
-          webSocketManager.broadcast('plugin-enabled', { plugin: extensionInfo });
+          const manager = this.wsManager || webSocketManager;
+          manager.broadcast('plugin-enabled', { plugin: extensionInfo });
           return extensionInfo;
         }
       } catch (error) {
@@ -167,7 +175,8 @@ export class PluginLoader {
     console.log(`[PluginLoader] Disabled plugin: ${disabledPlugin.displayName}`);
 
     // 3. Notify frontend
-    webSocketManager.broadcast('plugin-disabled', { pluginName });
+    const manager = this.wsManager || webSocketManager;
+    manager.broadcast('plugin-disabled', { pluginName });
 
     return true;
   }

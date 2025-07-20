@@ -7,7 +7,7 @@ type MessageHandler = (message: any) => void;
 let ws = ref<WebSocket | null>(null);
 let isConnected = ref(false);
 let error = ref<Event | null>(null);
-const messageHandlers = new Set<MessageHandler>();
+const messageHandlers = new Map<string, MessageHandler>();
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let explicitlyClosed = false;
 
@@ -57,6 +57,7 @@ const _connect = () => {
   ws.value.onmessage = (event) => {
     try {
       const message = JSON.parse(event.data);
+      // 咕咕：遍历 Map 的 values
       messageHandlers.forEach(handler => handler(message));
     } catch (e) {
       console.error("[WebSocketCore] Failed to parse message:", e);
@@ -101,14 +102,18 @@ export function sendMessage(message: any) {
 }
 
 /**
- * Subscribes a handler function to incoming messages.
+ * Subscribes a handler function to incoming messages with a unique key.
+ * @param key A unique key for this subscription.
  * @param handler The function to call with new messages.
  * @returns An unsubscribe function.
  */
-export function subscribe(handler: MessageHandler): () => void {
-  messageHandlers.add(handler);
+export function subscribe(key: string, handler: MessageHandler): () => void {
+  if (messageHandlers.has(key)) {
+    console.warn(`[WebSocketCore] Handler with key '${key}' is already subscribed. Overwriting.`);
+  }
+  messageHandlers.set(key, handler);
   return () => {
-    messageHandlers.delete(handler);
+    messageHandlers.delete(key);
   };
 }
 

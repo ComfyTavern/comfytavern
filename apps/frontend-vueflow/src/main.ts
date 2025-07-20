@@ -14,7 +14,7 @@ import i18n from './locales'; // 直接导入 i18n 实例
 import App from './App.vue'
 import router from './router'
 import { vComfyTooltip } from './directives/vComfyTooltip';
-import { connect as connectWebSocket } from './services/WebSocketCoreService';
+// import { connect as connectWebSocket } from './services/WebSocketCoreService'; // 咕咕：移除，连接将在 App.vue 中通过 useWebSocket 统一管理
 import { loadAllPlugins } from './services/PluginLoaderService';
 import { initializeExtensionApi } from './services/ExtensionApiService';
 
@@ -24,8 +24,8 @@ async function initializeApp() {
 
   const app = createApp(App)
 
-  // 启动 WebSocket 连接
-  connectWebSocket();
+  // 咕咕：WebSocket 连接已移至 App.vue 的 useWebSocket() 中进行初始化，确保单例
+  // connectWebSocket();
 
   const pinia = createPinia()
   pinia.use(piniaPluginPersistedstate)
