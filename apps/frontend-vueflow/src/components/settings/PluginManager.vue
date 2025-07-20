@@ -2,6 +2,7 @@
   <div class="plugin-manager h-full flex flex-col bg-background-base">
     <div class="flex-1 overflow-auto px-4">
       <DataListView
+        view-id="plugin-manager"
         :fetcher="pluginFetcher"
         :sort-options="sortOptions"
         :columns="columns"

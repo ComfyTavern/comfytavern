@@ -36,17 +36,25 @@
       </div>
 
       <!-- 列表视图 -->
-      <table v-else-if="displayMode === 'list'" class="min-w-full divide-y divide-border-base text-sm">
+      <table v-else-if="displayMode === 'list'" class="min-w-full text-base border-separate border-spacing-0 fixed-layout-table">
         <thead class="bg-background-surface sticky top-0 z-[5]">
           <tr>
-            <th v-if="selectable" scope="col" class="px-3 py-2.5">
+            <th v-if="selectable" scope="col"
+              class="px-3 py-2.5 border-b border-border-base rounded-tl-lg" :style="{ width: '40px' }">
               <input type="checkbox" :checked="isAllSelected" :indeterminate="isIndeterminate" @change="toggleSelectAll"
                 class="h-4 w-4 rounded border-border-base text-primary focus:ring-primary" />
             </th>
-            <th v-for="column in columns" :key="column.key.toString()" scope="col"
+            <th v-for="(column, index) in finalColumns" :key="column.key.toString()" scope="col"
               @click="column.sortable && changeSort(column.key)"
-              class="px-3 py-2.5 text-left font-semibold text-text-base"
-              :class="{ 'cursor-pointer hover:bg-background-base': column.sortable }" :style="{ width: column.width }">
+              class="px-3 py-2.5 text-left font-semibold text-text-base relative border-b border-border-base"
+              :class="{
+                'cursor-pointer hover:bg-background-base': column.sortable,
+                'rounded-tl-lg': !selectable && index === 0,
+                'rounded-tr-lg': index === finalColumns.length - 1
+              }"
+              :style="{ width: column.width }"
+              :data-column-key="column.key.toString()"
+            >
               <div class="flex items-center">
                 {{ column.label }}
                 <span v-if="sort.field === column.key" class="ml-1">
@@ -54,6 +62,11 @@
                   <ArrowDownIcon v-else class="h-3 w-3" />
                 </span>
               </div>
+              <div
+                v-if="index < finalColumns.length - 1"
+                class="resizer absolute top-0 right-0 h-full w-1 cursor-col-resize bg-border-base opacity-0 hover:opacity-100 transition-opacity"
+                @mousedown.stop="startResize($event, column.key.toString())"
+              ></div>
             </th>
           </tr>
         </thead>
@@ -64,14 +77,14 @@
               isSelected(item) ? 'bg-primary/20' : 'hover:bg-primary/10',
               rowClass ? (typeof rowClass === 'function' ? rowClass(item) : rowClass) : ''
             ]">
-            <td v-if="selectable" class="px-3 py-2.5" @click.stop>
+            <td v-if="selectable" class="px-3 py-2.5" @click.stop :style="{ width: '40px' }">
               <input type="checkbox" :checked="isSelected(item)" @change="toggleItemSelection(item)"
                 class="h-4 w-4 rounded border-border-base text-primary focus:ring-primary" />
             </td>
             <slot v-if="slots['list-item']" name="list-item" :item="item" :is-selected="isSelected(item)"></slot>
             <template v-else>
               <!-- Fallback list item rendering -->
-              <td v-for="column in columns" :key="column.key.toString()" class="px-3 py-2.5 whitespace-nowrap">
+              <td v-for="column in finalColumns" :key="column.key.toString()" class="px-3 py-2.5 whitespace-nowrap" :style="{ width: column.width }">
                 {{ getProperty(item, column.key) }}
               </td>
             </template>
@@ -101,11 +114,12 @@
 </template>
 
 <script setup lang="ts" generic="T extends { [key: string]: any }">
-import { ref, type PropType, watch, useSlots, computed } from 'vue';
+import { ref, type PropType, watch, useSlots, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import DataToolbar from './DataToolbar.vue';
 import type { ColumnDefinition, DisplayMode, SortConfig } from '@comfytavern/types';
 import { useDataList, type UseDataListOptions } from '@/composables/useDataList';
+import { useUiStore } from '@/stores/uiStore';
 import {
   ArrowPathIcon,
   InformationCircleIcon,
@@ -115,6 +129,12 @@ import {
 } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
+  // --- View Identifier ---
+  viewId: {
+    type: String,
+    required: true,
+  },
+
   // --- Data ---
   fetcher: {
     type: Function as PropType<UseDataListOptions<T>['fetcher']>,
@@ -170,6 +190,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const slots = useSlots();
+const uiStore = useUiStore();
 
 const displayMode = ref<DisplayMode>(props.initialDisplayMode);
 
@@ -189,6 +210,108 @@ const {
   initialSort: props.initialSort,
   serverSide: props.serverSide,
 });
+// --- Column Resizing Logic ---
+const columnWidths = ref<{ [key: string]: string }>({});
+const resizingState = ref<{
+  currentKey: string;
+  nextKey: string;
+  startX: number;
+  currentWidth: number;
+  nextWidth: number;
+} | null>(null);
+
+const finalColumns = computed(() => {
+  return props.columns.map(col => ({
+    ...col,
+    width: columnWidths.value[col.key.toString()] || col.width || 'auto',
+  }));
+});
+
+onMounted(() => {
+  const storedWidths = uiStore.getListViewColumnWidths(props.viewId);
+  const initialWidths: { [key: string]: string } = {};
+  for (const col of props.columns) {
+    const key = col.key.toString();
+    const stored = storedWidths[key];
+    if (stored) {
+      initialWidths[key] = `${stored}px`;
+    } else if (col.width) {
+      initialWidths[key] = col.width;
+    }
+  }
+  columnWidths.value = initialWidths;
+});
+
+const startResize = (event: MouseEvent, columnKey: string) => {
+  const th = (event.target as HTMLElement).closest('th');
+  if (!th) return;
+
+  const currentIndex = finalColumns.value.findIndex(c => c.key.toString() === columnKey);
+  if (currentIndex === -1 || currentIndex >= finalColumns.value.length - 1) {
+    return; // Cannot resize the last column's right edge
+  }
+
+  const nextTh = th.nextElementSibling as HTMLElement;
+  if (!nextTh) return;
+
+  const nextColumnKey = nextTh.dataset.columnKey;
+  if (!nextColumnKey) return;
+
+  resizingState.value = {
+    currentKey: columnKey,
+    nextKey: nextColumnKey,
+    startX: event.clientX,
+    currentWidth: th.offsetWidth,
+    nextWidth: nextTh.offsetWidth,
+  };
+
+  document.addEventListener('mousemove', doResize);
+  document.addEventListener('mouseup', stopResize);
+};
+
+const doResize = (event: MouseEvent) => {
+  if (!resizingState.value) return;
+  event.preventDefault();
+
+  const diffX = event.clientX - resizingState.value.startX;
+  const minWidth = 50; // 最小列宽
+
+  const newCurrentWidth = resizingState.value.currentWidth + diffX;
+  const newNextWidth = resizingState.value.nextWidth - diffX;
+
+  if (newCurrentWidth < minWidth || newNextWidth < minWidth) {
+    return; // Don't resize if it makes any column too small
+  }
+
+  columnWidths.value[resizingState.value.currentKey] = `${newCurrentWidth}px`;
+  columnWidths.value[resizingState.value.nextKey] = `${newNextWidth}px`;
+};
+
+const stopResize = () => {
+  if (!resizingState.value) return;
+
+  const { currentKey, nextKey } = resizingState.value;
+  const currentWidthPx = columnWidths.value[currentKey];
+  const nextWidthPx = columnWidths.value[nextKey];
+
+  if (currentWidthPx) {
+    const widthNum = parseInt(currentWidthPx, 10);
+    if (!isNaN(widthNum)) {
+      uiStore.setListViewColumnWidth(props.viewId, currentKey, widthNum);
+    }
+  }
+  if (nextWidthPx) {
+    const widthNum = parseInt(nextWidthPx, 10);
+    if (!isNaN(widthNum)) {
+      uiStore.setListViewColumnWidth(props.viewId, nextKey, widthNum);
+    }
+  }
+
+  resizingState.value = null;
+  document.removeEventListener('mousemove', doResize);
+  document.removeEventListener('mouseup', stopResize);
+};
+
 
 const getItemKey = (item: T, index: number): string | number => {
   if (typeof props.itemKey === 'function') {
@@ -298,5 +421,7 @@ defineExpose({
 </script>
 
 <style scoped>
-/* Scoped styles here */
+.fixed-layout-table {
+  table-layout: fixed;
+}
 </style>

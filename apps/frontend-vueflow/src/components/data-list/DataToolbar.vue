@@ -2,6 +2,15 @@
   <div class="data-toolbar flex flex-wrap items-center justify-between gap-2 py-2">
     <!-- 左侧区域: 操作插槽 + 搜索框 -->
     <div class="flex items-center gap-2 flex-wrap">
+      <!-- 搜索框 -->
+      <div class="flex-grow min-w-[200px] sm:flex-grow-0 sm:w-64">
+        <div class="relative">
+          <input type="text" :value="searchTerm" :placeholder="t('common.searchEllipsis')" @input="onSearchInput"
+            class="w-full h-8 px-2 pr-10 text-sm rounded-md bg-background-base border border-border-base text-text-base placeholder-text-muted focus:ring-2 focus:ring-primary focus:outline-none" />
+          <MagnifyingGlassIcon class="h-4 w-4 absolute top-1/2 right-3 transform -translate-y-1/2 text-text-muted" />
+        </div>
+      </div>
+
       <transition name="fade">
         <div v-if="selectedCount > 0" class="flex items-center gap-4">
           <p class="text-sm font-medium text-text-base px-3 py-1.5 bg-primary/10 rounded-md">
@@ -9,17 +18,6 @@
           </p>
           <div class="h-6 w-px bg-border-base"></div>
           <slot name="actions"></slot>
-        </div>
-      </transition>
-
-      <!-- 搜索框 -->
-      <transition name="fade">
-        <div v-if="selectedCount === 0" class="flex-grow min-w-[200px] sm:flex-grow-0 sm:w-64">
-          <div class="relative">
-            <input type="text" :value="searchTerm" :placeholder="t('common.searchEllipsis')" @input="onSearchInput"
-              class="w-full h-8 px-2 pr-10 text-sm rounded-md bg-background-base border border-border-base text-text-base placeholder-text-muted focus:ring-2 focus:ring-primary focus:outline-none" />
-            <MagnifyingGlassIcon class="h-4 w-4 absolute top-1/2 right-3 transform -translate-y-1/2 text-text-muted" />
-          </div>
         </div>
       </transition>
     </div>

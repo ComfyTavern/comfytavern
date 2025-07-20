@@ -38,6 +38,9 @@ interface UiStoreState {
 
   // 新增：面板日志高度
   panelLogHeight: number;
+
+  // 新增：列表视图列宽
+  listViewColumnWidths: { [viewId: string]: { [columnId: string]: number } };
 }
 
 const defaultSettingsModalProps = {
@@ -62,6 +65,7 @@ const FM_DETAIL_PANEL_OPEN = 'fm_detail_panel_open'; // 新增 key
 const FM_SIDEBAR_WIDTH_KEY = 'fm_sidebar_width'; // 新增：localStorage key for sidebar width
 const MAIN_SIDEBAR_COLLAPSED = 'main_sidebar_collapsed'; // 新增：主侧边栏 localStorage key
 const PANEL_LOG_HEIGHT_KEY = 'panel_log_height'; // 新增：面板日志高度 localStorage key
+const LIST_VIEW_COLUMN_WIDTHS_KEY = 'list_view_column_widths'; // 新增：列表视图列宽 localStorage key
 
 export const useUiStore = defineStore('ui', {
   state: (): UiStoreState => {
@@ -192,6 +196,20 @@ export const useUiStore = defineStore('ui', {
       }
     }
 
+    // + 初始化列表视图列宽
+    let initialListViewColumnWidths = {};
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const storedWidths = localStorage.getItem(LIST_VIEW_COLUMN_WIDTHS_KEY);
+      if (storedWidths) {
+        try {
+          initialListViewColumnWidths = JSON.parse(storedWidths);
+        } catch (e) {
+          console.error('[uiStore] Error parsing stored list view column widths:', e);
+          initialListViewColumnWidths = {};
+        }
+      }
+    }
+
     return {
       isRegexEditorModalVisible: false,
       regexEditorModalData: null as RegexEditorModalData | null,
@@ -208,6 +226,7 @@ export const useUiStore = defineStore('ui', {
       isMainSidebarCollapsed: initialMainSidebarCollapsed, // 使用从 localStorage 读取的值
       isMobileView: initialIsMobileView, // 使用初始化的值
       panelLogHeight: initialPanelLogHeight, // 新增
+      listViewColumnWidths: initialListViewColumnWidths, // 新增
     };
   },
   actions: {
@@ -433,6 +452,28 @@ export const useUiStore = defineStore('ui', {
         this.panelLogHeight = DEFAULT_PANEL_LOG_HEIGHT;
         this._savePanelLogHeight(DEFAULT_PANEL_LOG_HEIGHT);
       }
+    },
+
+    // 新增：列表视图列宽 Actions
+    _saveListViewColumnWidths() {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          localStorage.setItem(LIST_VIEW_COLUMN_WIDTHS_KEY, JSON.stringify(this.listViewColumnWidths));
+        } catch (error) {
+          console.error('[uiStore] Error saving list view column widths to localStorage:', error);
+        }
+      }
+    },
+    setListViewColumnWidth(viewId: string, columnId: string, width: number) {
+      if (!this.listViewColumnWidths[viewId]) {
+        this.listViewColumnWidths[viewId] = {};
+      }
+      this.listViewColumnWidths[viewId][columnId] = width;
+      // 每次变更都直接保存，如果性能敏感可以改为节流或手动触发
+      this._saveListViewColumnWidths();
+    },
+    getListViewColumnWidths(viewId: string): { [columnId: string]: number } {
+      return this.listViewColumnWidths[viewId] || {};
     },
   },
 });

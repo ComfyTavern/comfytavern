@@ -87,8 +87,9 @@ const promptAndCreateProject = async () => {
 <template>
   <div class="h-full flex flex-col bg-background-base">
     <div class="flex-1 overflow-auto px-6">
-      <DataListView ref="dataListViewRef" :fetcher="projectFetcher" :sort-options="sortOptions" :columns="columns"
-        :initial-sort="{ field: 'updatedAt', direction: 'desc' }" item-key="id" @item-dblclick="openProject"
+      <DataListView ref="dataListViewRef" view-id="project-list" :fetcher="projectFetcher" :sort-options="sortOptions"
+        :columns="columns" :initial-sort="{ field: 'updatedAt', direction: 'desc' }" item-key="id"
+        @item-dblclick="openProject"
         grid-class="grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
         :loading-message="t('projects.loading')" :empty-message="t('projects.noProjects')"
         :error-message="t('projects.loadError')">
