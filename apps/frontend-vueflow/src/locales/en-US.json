@@ -42,12 +42,14 @@
     "confirm": "Confirm",
     "delete": "Delete",
     "description": "Description",
+    "enabled": "Enabled",
     "error": "Error",
     "file": "File",
     "folder": "Folder",
     "loading": "Loading...",
     "name": "Name",
     "no": "No",
+    "noDescription": "No description available",
     "noMatchingResults": "No matching results",
     "noResults": "No results found",
     "noSuggestions": "No suggestions",
@@ -56,6 +58,7 @@
     "searchEllipsis": "Search...",
     "success": "Success",
     "type": "Type",
+    "version": "Version",
     "warning": "Warning",
     "yes": "Yes"
   },
@@ -63,6 +66,7 @@
     "toolbar": {
       "ascending": "Ascending",
       "descending": "Descending",
+      "selected": "{count} selected",
       "sortBy": "Sort by",
       "switchToGrid": "Grid View",
       "switchToList": "List View"
@@ -699,9 +703,12 @@
       "no_content": "Goo? There seems to be no content here... Maybe it's under construction."
     },
     "plugins": {
-      "description": "Enable or disable installed plugins. Changes require a plugin reload to take effect.",
+      "description": "Enable or disable installed plugins. The status change takes effect immediately.",
       "disableTooltip": "Click to disable",
       "enableTooltip": "Click to enable",
+      "loadError": "Failed to load plugin list",
+      "reload": "Reload Plugins",
+      "reloading": "Reloading...",
       "title": "Plugin Management"
     },
     "sections": {

@@ -42,12 +42,14 @@
     "confirm": "[TODO]",
     "delete": "[TODO]",
     "description": "[TODO]",
+    "enabled": "[TODO]",
     "error": "[TODO]",
     "file": "[TODO]",
     "folder": "[TODO]",
     "loading": "[TODO]",
     "name": "[TODO]",
     "no": "[TODO]",
+    "noDescription": "[TODO]",
     "noMatchingResults": "[TODO]",
     "noResults": "[TODO]",
     "noSuggestions": "[TODO]",
@@ -56,6 +58,7 @@
     "searchEllipsis": "[TODO]",
     "success": "[TODO]",
     "type": "[TODO]",
+    "version": "[TODO]",
     "warning": "[TODO]",
     "yes": "[TODO]"
   },
@@ -63,6 +66,7 @@
     "toolbar": {
       "ascending": "[TODO]",
       "descending": "[TODO]",
+      "selected": "[TODO]",
       "sortBy": "[TODO]",
       "switchToGrid": "[TODO]",
       "switchToList": "[TODO]"
@@ -702,6 +706,9 @@
       "description": "[TODO]",
       "disableTooltip": "[TODO]",
       "enableTooltip": "[TODO]",
+      "loadError": "[TODO]",
+      "reload": "[TODO]",
+      "reloading": "[TODO]",
       "title": "[TODO]"
     },
     "sections": {

@@ -57,7 +57,10 @@ export const usePluginStore = defineStore('plugin', () => {
   };
 
   /**
-   * 设置插件的启用状态。
+   * 设置插件的启用/禁用状态。
+   * 这个操作是即时生效的。它会向后端发送请求，
+   * 后端处理后通过 WebSocket 将更新后的状态推送给所有客户端。
+   * 客户端收到消息后会动态加载或卸载插件资源。
    * @param {string} pluginName - 插件的名称。
    * @param {boolean} enabled - true 表示启用, false 表示禁用。
    */
@@ -108,6 +111,9 @@ export const usePluginStore = defineStore('plugin', () => {
 
   /**
    * 请求后端重新加载所有插件。
+   * 这主要用于发现新安装（或删除）的插件文件，
+   * 而不是应用上面 setPluginEnabled 的状态变更。
+   * 状态变更是即时生效的。
    */
   const reloadPlugins = async () => {
     dialogService.showToast({

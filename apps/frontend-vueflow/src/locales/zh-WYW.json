@@ -42,12 +42,14 @@
     "confirm": "可也",
     "delete": "删之",
     "description": "注疏",
+    "enabled": "启禁",
     "error": "谬矣",
     "file": "文书",
     "folder": "秘阁",
     "loading": "正载",
     "name": "名讳",
     "no": "否",
+    "noDescription": "无注疏",
     "noMatchingResults": "无合辙之物",
     "noResults": "未有所得",
     "noSuggestions": "无以为策",
@@ -56,6 +58,7 @@
     "searchEllipsis": "寻觅",
     "success": "功成",
     "type": "类属",
+    "version": "版",
     "warning": "噫，慎之",
     "yes": "然"
   },
@@ -63,6 +66,7 @@
     "toolbar": {
       "ascending": "升序",
       "descending": "降序",
+      "selected": "已择 {count} 项",
       "sortBy": "排序",
       "switchToGrid": "网格视图",
       "switchToList": "列表视图"
@@ -699,9 +703,12 @@
       "no_content": "此间空空如也，或尚在营造。"
     },
     "plugins": {
-      "description": "启或禁已装之插件。欲使更易生效，需重载插件。",
+      "description": "启或禁已装之插件。更易即刻生效。",
       "disableTooltip": "点此以禁",
       "enableTooltip": "点此以启",
+      "loadError": "插件列表加载失败",
+      "reload": "重载插件",
+      "reloading": "重载中...",
       "title": "插件司"
     },
     "sections": {

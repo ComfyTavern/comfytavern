@@ -42,12 +42,14 @@
     "confirm": "確認",
     "delete": "削除",
     "description": "説明",
+    "enabled": "有効",
     "error": "エラー",
     "file": "ファイル",
     "folder": "フォルダー",
     "loading": "読み込み中...",
     "name": "名前",
     "no": "いいえ",
+    "noDescription": "説明なし",
     "noMatchingResults": "一致する結果がありません",
     "noResults": "結果が見つかりません",
     "noSuggestions": "提案がありません",
@@ -56,6 +58,7 @@
     "searchEllipsis": "検索...",
     "success": "成功",
     "type": "タイプ",
+    "version": "バージョン",
     "warning": "警告",
     "yes": "はい"
   },
@@ -63,6 +66,7 @@
     "toolbar": {
       "ascending": "昇順",
       "descending": "降順",
+      "selected": "{count} 件選択済み",
       "sortBy": "並べ替え",
       "switchToGrid": "グリッド表示",
       "switchToList": "リスト表示"
@@ -699,9 +703,12 @@
       "no_content": "ぐぅ？ここには何もないようです... 工事中かもしれません。"
     },
     "plugins": {
-      "description": "インストール済みのプラグインを有効または無効にします。変更を有効にするにはプラグインの再読み込みが必要です。",
+      "description": "インストール済みのプラグインを有効または無効にします。状態の変更はすぐに有効になります。",
       "disableTooltip": "クリックして無効化",
       "enableTooltip": "クリックして有効化",
+      "loadError": "プラグインリストの読み込みに失敗しました",
+      "reload": "プラグインを再読み込み",
+      "reloading": "再読み込み中...",
       "title": "プラグイン管理"
     },
     "sections": {

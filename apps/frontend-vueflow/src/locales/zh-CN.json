@@ -42,12 +42,14 @@
     "confirm": "确认",
     "delete": "删除",
     "description": "描述",
+    "enabled": "状态",
     "error": "错误",
     "file": "文件",
     "folder": "文件夹",
     "loading": "加载中...",
     "name": "名称",
     "no": "否",
+    "noDescription": "暂无描述",
     "noMatchingResults": "无匹配结果",
     "noResults": "没有找到匹配项",
     "noSuggestions": "无建议",
@@ -56,6 +58,7 @@
     "searchEllipsis": "搜索...",
     "success": "成功",
     "type": "类型",
+    "version": "版本",
     "warning": "警告",
     "yes": "是"
   },
@@ -63,6 +66,7 @@
     "toolbar": {
       "ascending": "升序",
       "descending": "降序",
+      "selected": "已选择 {count} 项",
       "sortBy": "排序",
       "switchToGrid": "网格视图",
       "switchToList": "列表视图"
@@ -699,9 +703,12 @@
       "no_content": "咕？这里似乎没有内容... 可能是正在施工中。"
     },
     "plugins": {
-      "description": "启用或禁用已安装的插件。更改后需要重载插件才能生效。",
+      "description": "启用或禁用已安装的插件。状态变更会立即生效。",
       "disableTooltip": "点击禁用",
       "enableTooltip": "点击启用",
+      "loadError": "加载插件列表失败",
+      "reload": "重新加载插件",
+      "reloading": "正在重新加载...",
       "title": "插件管理"
     },
     "sections": {

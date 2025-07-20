@@ -3,13 +3,13 @@
     <slot name="header"></slot>
     <DataToolbar :search-term="filter.searchTerm" @update:search-term="setSearchTerm" :sort-config="sort"
       @update:sort-config="setSort" :display-mode="displayMode" @update:display-mode="newMode => displayMode = newMode"
-      :sort-options="sortOptions">
+      :sort-options="sortOptions" :selected-count="selectedItems.length">
       <template #actions>
-        <slot name="toolbar-actions"></slot>
+        <slot name="toolbar-actions" :selected-items="selectedItems"></slot>
       </template>
     </DataToolbar>
 
-    <div class="flex-1 overflow-auto relative">
+    <div class="flex-1 overflow-auto relative px-2">
       <div v-if="isLoading"
         class="loading-overlay absolute inset-0 flex items-center justify-center bg-background-base/75 z-10">
         <slot name="loading">
@@ -39,6 +39,10 @@
       <table v-else-if="displayMode === 'list'" class="min-w-full divide-y divide-border-base text-sm">
         <thead class="bg-background-surface sticky top-0 z-[5]">
           <tr>
+            <th v-if="selectable" scope="col" class="px-3 py-2.5">
+              <input type="checkbox" :checked="isAllSelected" :indeterminate="isIndeterminate" @change="toggleSelectAll"
+                class="h-4 w-4 rounded border-border-base text-primary focus:ring-primary" />
+            </th>
             <th v-for="column in columns" :key="column.key.toString()" scope="col"
               @click="column.sortable && changeSort(column.key)"
               class="px-3 py-2.5 text-left font-semibold text-text-base"
@@ -60,6 +64,10 @@
               isSelected(item) ? 'bg-primary/20' : 'hover:bg-primary/10',
               rowClass ? (typeof rowClass === 'function' ? rowClass(item) : rowClass) : ''
             ]">
+            <td v-if="selectable" class="px-3 py-2.5" @click.stop>
+              <input type="checkbox" :checked="isSelected(item)" @change="toggleItemSelection(item)"
+                class="h-4 w-4 rounded border-border-base text-primary focus:ring-primary" />
+            </td>
             <slot v-if="slots['list-item']" name="list-item" :item="item" :is-selected="isSelected(item)"></slot>
             <template v-else>
               <!-- Fallback list item rendering -->
@@ -75,8 +83,11 @@
       <div v-else-if="displayMode === 'grid'" class="grid gap-4 pt-4" :class="gridClass">
         <div v-for="(item, index) in items" :key="getItemKey(item, index)" @click="handleItemClick($event, item, index)"
           @dblclick="$emit('item-dblclick', item)"
-          class="rounded-lg border border-border-base hover:border-primary transition-colors cursor-pointer"
+          class="relative rounded-lg border border-border-base hover:border-primary transition-colors cursor-pointer"
           :class="{ 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background-base': isSelected(item) }">
+          <input v-if="selectable" type="checkbox" :checked="isSelected(item)" @change="toggleItemSelection(item)"
+            @click.stop
+            class="absolute top-3 right-3 h-4 w-4 rounded border-border-base text-primary focus:ring-primary z-10" />
           <slot v-if="slots['grid-item']" name="grid-item" :item="item" :is-selected="isSelected(item)"></slot>
           <!-- Fallback grid item rendering -->
           <div v-else class="p-4 bg-background-surface rounded-lg h-full">
@@ -89,8 +100,8 @@
   </div>
 </template>
 
-<script setup lang="ts" generic="T extends { id?: any, logicalPath?: any }">
-import { ref, type PropType, watch, useSlots } from 'vue';
+<script setup lang="ts" generic="T extends { [key: string]: any }">
+import { ref, type PropType, watch, useSlots, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import DataToolbar from './DataToolbar.vue';
 import type { ColumnDefinition, DisplayMode, SortConfig } from '@comfytavern/types';
@@ -128,6 +139,12 @@ const props = defineProps({
     default: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
   },
   rowClass: [String, Function] as PropType<string | ((item: T) => string)>,
+
+  // --- Selection ---
+  selectable: {
+    type: Boolean,
+    default: false,
+  },
 
   // --- Custom Messages ---
   loadingMessage: String,
@@ -188,22 +205,58 @@ const isSelected = (item: T) => {
 
 const lastSelectedIndex = ref<number | null>(null);
 
+const isAllSelected = computed(() => {
+  if (!items.value.length) return false;
+  return selectedItems.value.length === items.value.length;
+});
+
+const isIndeterminate = computed(() => {
+  return selectedItems.value.length > 0 && !isAllSelected.value;
+});
+
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    setSelection([]);
+  } else {
+    setSelection([...items.value]);
+  }
+};
+
+const toggleItemSelection = (item: T) => {
+  const newSelection = [...selectedItems.value];
+  const key = getItemKey(item, -1);
+  const existingIndex = newSelection.findIndex(i => getItemKey(i, -1) === key);
+
+  if (existingIndex > -1) {
+    newSelection.splice(existingIndex, 1);
+  } else {
+    newSelection.push(item);
+  }
+  setSelection(newSelection);
+};
+
 const handleItemClick = (event: MouseEvent, item: T, index: number) => {
+  // 如果未开启 selectable，普通单击选中单个
+  if (!props.selectable) {
+    setSelection([item]);
+    lastSelectedIndex.value = index;
+    return;
+  }
+
+  // --- Selectable 模式下的逻辑 ---
+  // 如果是 Checkbox 触发的，我们已经在 @change 处理过了，这里可以忽略
+  // 但为了行点击也能触发，我们保留这里的逻辑，并确保它正确
   if (event.ctrlKey || event.metaKey) {
-    const newSelection = [...selectedItems.value];
-    const existingIndex = newSelection.findIndex(i => getItemKey(i, -1) === getItemKey(item, -1));
-    if (existingIndex > -1) {
-      newSelection.splice(existingIndex, 1);
-    } else {
-      newSelection.push(item);
-    }
-    setSelection(newSelection);
+    // Ctrl/Meta + Click: 切换单个选中
+    toggleItemSelection(item);
   } else if (event.shiftKey && lastSelectedIndex.value !== null) {
+    // Shift + Click: 范围选择
     const start = Math.min(lastSelectedIndex.value, index);
     const end = Math.max(lastSelectedIndex.value, index);
     const rangeSelection = items.value.slice(start, end + 1);
     setSelection(Array.from(new Set([...selectedItems.value, ...rangeSelection])));
   } else {
+    // 普通单击: 仅选中当前项
     setSelection([item]);
   }
   lastSelectedIndex.value = index;
