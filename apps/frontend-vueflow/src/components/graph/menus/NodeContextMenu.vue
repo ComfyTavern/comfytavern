@@ -121,6 +121,7 @@ const onDeleteSelection = () => {
   /* Base styles are now applied directly via class="context-menu-base" */
   min-width: 180px;
   /* 保持最小宽度 */
+  z-index: 1000;
   /* z-index is handled by context-menu-base if needed, or can be added here if specific stacking is required */
 }
 
