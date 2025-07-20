@@ -5,40 +5,40 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
       <!-- 编辑器入口 -->
-      <div class="bg-background-surface p-6 rounded-lg shadow hover:shadow-lg transition-shadow flex flex-col">
+      <router-link
+        :to="{ name: 'ProjectEditor', params: { projectId: projectStore.currentProjectId } }"
+        class="group bg-background-surface p-6 rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col items-center justify-center text-center"
+      >
+        <div class="bg-primary-softest rounded-full p-4 mb-4 transition-transform group-hover:scale-110">
+          <RectangleGroupIcon class="w-10 h-10 text-primary" />
+        </div>
         <h2 class="text-xl font-semibold mb-2 text-text-base">工作流编辑器</h2>
-        <p class="text-text-secondary mb-4 flex-grow">创建和管理您的 AI 工作流。</p>
-        <router-link
-          :to="{ name: 'ProjectEditor', params: { projectId: projectStore.currentProjectId } }"
-          class="font-semibold text-primary hover:underline"
-        >
-          进入编辑器 &rarr;
-        </router-link>
-      </div>
+        <p class="text-text-secondary min-h-12">创建和管理您的 AI 工作流。</p>
+      </router-link>
 
       <!-- 应用面板入口 -->
-      <div class="bg-background-surface p-6 rounded-lg shadow hover:shadow-lg transition-shadow flex flex-col">
+      <router-link
+        :to="{ name: 'ProjectPanels', params: { projectId: projectStore.currentProjectId } }"
+        class="group bg-background-surface p-6 rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col items-center justify-center text-center"
+      >
+        <div class="bg-accent-softest rounded-full p-4 mb-4 transition-transform group-hover:scale-110">
+          <Squares2X2Icon class="w-10 h-10 text-accent" />
+        </div>
         <h2 class="text-xl font-semibold mb-2 text-text-base">应用面板</h2>
-        <p class="text-text-secondary mb-4 flex-grow">运行和管理封装为应用的交互式工作流。</p>
-        <router-link
-          :to="{ name: 'ProjectPanels', params: { projectId: projectStore.currentProjectId } }"
-          class="font-semibold text-primary hover:underline"
-        >
-          管理面板 &rarr;
-        </router-link>
-      </div>
+        <p class="text-text-secondary min-h-12">运行和管理交互式应用面板，通过API与工作流灵活对接。</p>
+      </router-link>
 
       <!-- API 适配器 -->
-      <div class="bg-background-surface p-6 rounded-lg shadow hover:shadow-lg transition-shadow flex flex-col">
+      <router-link
+        :to="{ name: 'ProjectApiAdapters', params: { projectId: projectStore.currentProjectId } }"
+        class="group bg-background-surface p-6 rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col items-center justify-center text-center"
+      >
+        <div class="bg-success-softest rounded-full p-4 mb-4 transition-transform group-hover:scale-110">
+          <BoltIcon class="w-10 h-10 text-success" />
+        </div>
         <h2 class="text-xl font-semibold mb-2 text-text-base">API 适配器</h2>
-        <p class="text-text-secondary mb-4 flex-grow">将工作流封装为标准API，供应用面板或外部服务调用。</p>
-        <router-link
-          :to="{ name: 'ProjectApiAdapters', params: { projectId: projectStore.currentProjectId } }"
-          class="font-semibold text-primary hover:underline"
-        >
-          管理适配器 &rarr;
-        </router-link>
-      </div>
+        <p class="text-text-secondary min-h-12">将工作流封装为标准API，供应用面板或外部服务调用。</p>
+      </router-link>
     </div>
 
     <!-- 最近工作流 -->
@@ -81,6 +81,7 @@ import { onMounted, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import { useI18n } from 'vue-i18n';
+import { RectangleGroupIcon, Squares2X2Icon, BoltIcon } from '@heroicons/vue/24/outline';
 
 const projectStore = useProjectStore();
 const workflowStore = useWorkflowStore();
