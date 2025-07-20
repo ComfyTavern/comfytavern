@@ -77,6 +77,9 @@
     }
   },
   "dialog": {
+    "form": {
+      "title": "[TODO]"
+    },
     "input": {
       "placeholder": "[TODO]",
       "title": "[TODO]"
@@ -592,15 +595,22 @@
     "warnNoTabId": "[TODO]"
   },
   "projects": {
-    "createDialog": {
+    "bulkDeleteDialog": {
       "message": "[TODO]",
+      "title": "[TODO]"
+    },
+    "createDialog": {
+      "descriptionPlaceholder": "[TODO]",
       "placeholder": "[TODO]",
       "title": "[TODO]"
     },
     "createNew": "[TODO]",
     "createSuccess": "[TODO]",
+    "deleteSelected": "[TODO]",
+    "deleteSuccess": "[TODO]",
     "errors": {
       "createFailed": "[TODO]",
+      "deleteFailed": "[TODO]",
       "nameRequired": "[TODO]"
     },
     "lastUpdated": "[TODO]",

@@ -77,6 +77,9 @@
     }
   },
   "dialog": {
+    "form": {
+      "title": "表单"
+    },
     "input": {
       "placeholder": "请输入内容...",
       "title": "请输入"
@@ -592,15 +595,22 @@
     "warnNoTabId": "PerformancePanel:无法收集统计信息，当前标签页 ID 无效。"
   },
   "projects": {
+    "bulkDeleteDialog": {
+      "message": "您确定要删除 {count} 个项目吗？此操作不可撤销。",
+      "title": "批量删除项目"
+    },
     "createDialog": {
-      "message": "请输入新项目的名称：",
+      "descriptionPlaceholder": "为您的项目添加一个描述...",
       "placeholder": "项目名称",
       "title": "创建新项目"
     },
     "createNew": "创建新项目",
     "createSuccess": "项目创建成功",
+    "deleteSelected": "删除所选 ({count})",
+    "deleteSuccess": "项目已成功删除。",
     "errors": {
       "createFailed": "项目创建失败",
+      "deleteFailed": "删除项目失败。",
       "nameRequired": "项目名称不能为空！"
     },
     "lastUpdated": "最后更新",

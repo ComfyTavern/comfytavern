@@ -10,7 +10,7 @@ export const useProjectStore = defineStore('project', () => {
   const isLoading = ref(false);
   const error = ref<string | null>(null);
   const availableProjects = ref<ProjectMetadata[]>([]); // 新增：存储项目列表
-  const { get, post, put } = useApi(); // 获取封装的 get, post 和 put 方法
+  const { get, post, put, del } = useApi(); // 获取封装的 get, post, put 和 del 方法
 
   async function loadProject(projectId: string): Promise<boolean> { // Return a promise indicating success/failure
     if (!projectId) {
@@ -147,6 +147,28 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
+  // 新增：删除项目
+  async function deleteProject(projectId: string): Promise<boolean> {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      await del(`/projects/${encodeURIComponent(projectId)}`);
+      console.info(`Project ${projectId} deleted successfully.`);
+      // 从列表中移除
+      const index = availableProjects.value.findIndex(p => p.id === projectId);
+      if (index !== -1) {
+        availableProjects.value.splice(index, 1);
+      }
+      return true;
+    } catch (err: any) {
+      console.error('Failed to delete project:', err.response?.data || err.message || err);
+      error.value = err.response?.data?.error || err.message || 'An unknown error occurred while deleting the project.';
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
 
   // 暴露状态和 action
   return {
@@ -159,5 +181,6 @@ export const useProjectStore = defineStore('project', () => {
     fetchAvailableProjects, // 暴露获取列表 action
     createProject, // 暴露创建项目 action
     updateProject, // 暴露更新项目 action
+    deleteProject, // 暴露删除项目 action
   };
 });

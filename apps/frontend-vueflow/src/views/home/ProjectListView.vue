@@ -59,8 +59,36 @@ const openProject = (project: ProjectMetadata) => {
   router.push({ name: 'ProjectDashboard', params: { projectId: project.id } });
 };
 
+const selectedProjects = ref<ProjectMetadata[]>([]);
+
+const handleSelectionChange = (items: ProjectMetadata[]) => {
+  selectedProjects.value = items;
+};
+
+const bulkDeleteProjects = async () => {
+  if (selectedProjects.value.length === 0) return;
+
+  const confirmed = await dialogService.showConfirm({
+    title: t('projects.bulkDeleteDialog.title'),
+    message: t('projects.bulkDeleteDialog.message', { count: selectedProjects.value.length }),
+    dangerConfirm: true,
+    confirmText: t('common.delete'),
+  });
+
+  if (confirmed) {
+    try {
+      await Promise.all(selectedProjects.value.map(p => projectStore.deleteProject(p.id)));
+      dialogService.showSuccess(t('projects.deleteSuccess'));
+      dataListViewRef.value?.refresh();
+      selectedProjects.value = []; // 清空选项
+    } catch (error: any) {
+      dialogService.showError(error.message || t('projects.errors.deleteFailed'));
+    }
+  }
+};
+
 const promptAndCreateProject = async () => {
-  const result = await dialogService.showForm({
+  const formValues = await dialogService.showForm({
     title: t('projects.createDialog.title'),
     fields: [
       {
@@ -75,19 +103,19 @@ const promptAndCreateProject = async () => {
         label: t('common.description'),
         type: 'textarea',
         placeholder: t('projects.createDialog.descriptionPlaceholder'),
-        rows: 4,
+        rows: 3,
       },
     ],
   });
 
-  if (!result) return; // 用户取消
+  if (!formValues) return; // 用户取消
 
-  const trimmedProjectName = result.name?.trim();
+  const trimmedProjectName = formValues.name?.trim();
   if (trimmedProjectName) {
     try {
       await projectStore.createProject({
         name: trimmedProjectName,
-        description: result.description?.trim(),
+        description: formValues.description?.trim() || '',
       });
       dataListViewRef.value?.refresh();
       dialogService.showSuccess(t('projects.createSuccess'));
@@ -107,7 +135,10 @@ const promptAndCreateProject = async () => {
         @item-dblclick="openProject"
         grid-class="grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
         :loading-message="t('projects.loading')" :empty-message="t('projects.noProjects')"
-        :error-message="t('projects.loadError')">
+        :error-message="t('projects.loadError')"
+        :selectable="true"
+        @selection-change="handleSelectionChange"
+      >
         <template #header>
           <div class="pt-4 pb-2 flex justify-between items-center">
             <h1 class="text-2xl font-bold text-text-base">{{ t('projects.title') }}</h1>
@@ -119,12 +150,18 @@ const promptAndCreateProject = async () => {
           <div class="border-t border-border-base opacity-60"></div>
         </template>
 
-        <template #toolbar-actions>
-          <!-- 这里可以留空，或者放一些其他的操作按钮 -->
+        <template #toolbar-actions="{ selectedItems }">
+          <button
+            v-if="selectedItems.length > 0"
+            @click="bulkDeleteProjects"
+            class="px-3 py-1.5 bg-error text-white rounded-md text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {{ t('projects.deleteSelected', { count: selectedItems.length }) }}
+          </button>
         </template>
 
-        <template #grid-item="{ item }">
-          <div class="bg-background-surface rounded-lg shadow p-4 h-full flex flex-col cursor-pointer">
+        <template #grid-item="{ item, isSelected }">
+          <div class="bg-background-surface rounded-lg shadow p-4 h-full flex flex-col cursor-pointer" :class="{'ring-2 ring-primary': isSelected}">
             <h2 class="text-lg font-semibold text-text-base mb-2 truncate">{{ item.name }}</h2>
             <p class="text-sm text-text-secondary mb-3 flex-grow">{{ item.description || t('projects.noDescription') }}
             </p>

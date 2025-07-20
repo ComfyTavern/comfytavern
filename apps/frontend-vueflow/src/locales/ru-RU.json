@@ -77,6 +77,9 @@
     }
   },
   "dialog": {
+    "form": {
+      "title": "Форма"
+    },
     "input": {
       "placeholder": "Введите текст...",
       "title": "Ввод"
@@ -592,15 +595,22 @@
     "warnNoTabId": "PerformancePanel: Невозможно собрать статистику, ID текущей вкладки недействителен."
   },
   "projects": {
+    "bulkDeleteDialog": {
+      "message": "Вы уверены, что хотите удалить {count} проект(ов)? Это действие необратимо.",
+      "title": "Массовое удаление проектов"
+    },
     "createDialog": {
-      "message": "Введите имя нового проекта:",
+      "descriptionPlaceholder": "Добавьте описание для вашего проекта...",
       "placeholder": "Имя проекта",
       "title": "Создать новый проект"
     },
     "createNew": "Создать новый проект",
     "createSuccess": "Проект успешно создан",
+    "deleteSelected": "Удалить выбранные ({count})",
+    "deleteSuccess": "Проект(ы) успешно удалены.",
     "errors": {
       "createFailed": "Не удалось создать проект",
+      "deleteFailed": "Не удалось удалить проект(ы).",
       "nameRequired": "Имя проекта не может быть пустым!"
     },
     "lastUpdated": "Последнее обновление",

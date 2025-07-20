@@ -7,6 +7,7 @@ import { z } from 'zod'; // 导入 z 以使用 Zod
 import {
   createProject,
   createWorkflow,
+  deleteProjectToRecycleBin,
   deleteWorkflowToRecycleBin,
   getProjectMetadata,
   // getProjectWorkflowsDir, // 不再需要，路径由服务层管理
@@ -15,6 +16,7 @@ import {
   listWorkflows,
   ProjectConflictError,
   ProjectCreationError,
+  ProjectDeletionError,
   ProjectMetadataError,
   ProjectNotFoundError,
   syncReferencingNodeGroups,
@@ -688,5 +690,44 @@ export const projectRoutesPlugin = (
             params: t.Object({ projectId: t.String(), workflowId: t.String() }),
           }
         ) // End of DELETE /:projectId/workflows/:workflowId
+        
+        // DELETE /api/projects/:projectId - 删除项目
+        .delete(
+          "/:projectId",
+          async (ctx) => {
+            const { params: { projectId: rawProjectId }, set, userContext } = ctx as AuthenticatedContext & { params: { projectId: string } };
+            const userId = getUserIdFromContext(userContext);
+            if (!userId) {
+              set.status = 401;
+              return { error: "Unauthorized: Cannot determine userId." };
+            }
+            const operationName = `DELETE /${rawProjectId}`;
+            const safeIdResult = getSafeProjectIdOrErrorResponse(rawProjectId, set, operationName);
+            if (typeof safeIdResult !== "string") {
+              return safeIdResult;
+            }
+            const safeProjectId = safeIdResult;
+
+            try {
+              await deleteProjectToRecycleBin(userId, safeProjectId);
+              set.status = 204;
+              return;
+            } catch (error: any) {
+              if (error instanceof ProjectNotFoundError) {
+                set.status = 404;
+                return { error: error.message };
+              } else if (error instanceof ProjectDeletionError) {
+                set.status = 500;
+                return { error: `Failed to delete project: ${error.message}` };
+              } else {
+                set.status = 500;
+                return { error: "An unexpected error occurred while deleting the project." };
+              }
+            }
+          },
+          {
+            params: t.Object({ projectId: t.String() }),
+          }
+        ) // End of DELETE /:projectId
+
   ); // End of group
-// }; // 不再是函数直接返回 app

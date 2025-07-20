@@ -77,6 +77,9 @@
     }
   },
   "dialog": {
+    "form": {
+      "title": "表策"
+    },
     "input": {
       "placeholder": "请书",
       "title": "请书"
@@ -592,15 +595,22 @@
     "warnNoTabId": "PerformancePanel:无法计数，当前标签页ID无效。"
   },
   "projects": {
+    "bulkDeleteDialog": {
+      "message": "确欲尽毁此 {count} 锦囊乎？此举如覆水难收。",
+      "title": "批量焚毁锦囊"
+    },
     "createDialog": {
-      "message": "请赐锦囊之名：",
+      "descriptionPlaceholder": "为君之锦囊添一注疏...",
       "placeholder": "锦囊妙计之名",
       "title": "新辟锦囊"
     },
     "createNew": "新辟锦囊",
     "createSuccess": "锦囊创建成功",
+    "deleteSelected": "毁所择 ({count})",
+    "deleteSuccess": "锦囊已毁。",
     "errors": {
       "createFailed": "锦囊创建失败",
+      "deleteFailed": "毁囊未竟。",
       "nameRequired": "锦囊之名岂可空乎。"
     },
     "lastUpdated": "末次修缮",

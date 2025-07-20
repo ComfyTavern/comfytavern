@@ -71,8 +71,7 @@ export async function ensureUserRootDirs(userId: string): Promise<void> {
     // console.log(`${logPrefix} Ensured root directories for user ${userId} using FAMService.`);
   } catch (error) {
     console.error(
-      `${logPrefix} Failed to ensure root directories for user ${userId} using FAMService. Error: ${
-        error instanceof Error ? error.message : String(error)
+      `${logPrefix} Failed to ensure root directories for user ${userId} using FAMService. Error: ${error instanceof Error ? error.message : String(error)
       }`
     );
     // FAMService 的 createDir 应该会抛出可识别的错误，或者我们可以包装它
@@ -368,9 +367,8 @@ export async function updateProjectMetadata(
     if (error instanceof ProjectNotFoundError || error instanceof ProjectMetadataError) {
       throw error;
     }
-    const message = `Unexpected error updating project metadata for ID '${projectId}' for user '${userId}'. Error: ${
-      error instanceof Error ? error.message : String(error)
-    }`;
+    const message = `Unexpected error updating project metadata for ID '${projectId}' for user '${userId}'. Error: ${error instanceof Error ? error.message : String(error)
+      }`;
     console.error(`[Service:updateProjectMetadata] ${message}`);
     throw new ProjectMetadataError(message);
   }
@@ -471,6 +469,13 @@ export class ProjectCreationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ProjectCreationError";
+  }
+}
+
+export class ProjectDeletionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ProjectDeletionError";
   }
 }
 
@@ -1262,9 +1267,8 @@ async function _discoverPanelsInPath(
     const panelDirs = dirItems.filter((item) => item.itemType === "directory");
 
     const panelPromises = panelDirs.map(async (panelDir): Promise<PanelDefinition | null> => {
-      const panelJsonLogicalPath = `${
-        panelDir.logicalPath.endsWith("/") ? panelDir.logicalPath : panelDir.logicalPath + "/"
-      }panel.json`;
+      const panelJsonLogicalPath = `${panelDir.logicalPath.endsWith("/") ? panelDir.logicalPath : panelDir.logicalPath + "/"
+        }panel.json`;
       try {
         const panelDef = await _readAndValidateJsonFile<PanelDefinition>({
           userId,
@@ -1283,8 +1287,7 @@ async function _discoverPanelsInPath(
         return panelDef;
       } catch (error) {
         console.warn(
-          `${logPrefix} Skipping panel in directory '${panelDir.name}' due to error: ${
-            error instanceof Error ? error.message : String(error)
+          `${logPrefix} Skipping panel in directory '${panelDir.name}' due to error: ${error instanceof Error ? error.message : String(error)
           }`
         );
         return null;
@@ -1407,83 +1410,83 @@ export async function getPanelTemplates(): Promise<PanelDefinition[]> {
   * @param options - 创建选项。
   * @returns Promise<PanelDefinition> 新创建的面板定义。
   */
- export async function createPanel(
-   userId: string,
-   projectId: string,
-   options: { templateId?: string | null; panelId: string; displayName: string }
- ): Promise<PanelDefinition> {
-   const { templateId, panelId, displayName } = options;
-   const logPrefix = `[Service:createPanel]`;
- 
-   // 1. 验证新面板 ID
-   const safePanelId = sanitizeProjectId(panelId);
-   if (!safePanelId || safePanelId !== panelId) {
-     throw new PanelCreationError(
-       `Invalid panel ID '${panelId}'. Only alphanumeric characters and hyphens are allowed.`
-     );
-   }
- 
-   // 2. 检查目标路径是否已存在
-   const targetPanelDirPath = `user://projects/${projectId}/ui/${safePanelId}/`;
-   const exists = await famService.exists(userId, targetPanelDirPath);
-   if (exists) {
-     throw new PanelConflictError(
-       `Panel with ID '${safePanelId}' already exists in project '${projectId}'.`
-     );
-   }
- 
-   // 确保项目 UI 目录存在
-   await famService.createDir(userId, `user://projects/${projectId}/ui/`);
- 
-   let newPanelDef: PanelDefinition;
- 
-   if (templateId) {
-     // --- 从模板创建 ---
-     console.log(`${logPrefix} Creating panel from template '${templateId}'.`);
-     const templates = await getPanelTemplates();
-     const template = templates.find((t) => t.id === templateId);
-     if (!template || !template.panelDirectory) {
-       throw new PanelNotFoundError(`Template with ID '${templateId}' not found.`);
-     }
- 
-     const sourcePath = `shared://templates/panels/${template.panelDirectory}/`;
-     await famService.copy(userId, sourcePath, targetPanelDirPath);
- 
-     const newPanelJsonPath = `${targetPanelDirPath}panel.json`;
-     const panelData = await _readAndValidateJsonFile<PanelDefinition>({
-       userId,
-       logicalPath: newPanelJsonPath,
-       schema: PanelDefinitionSchema,
-       notFoundErrorClass: PanelCreationError,
-       loadErrorClass: PanelCreationError,
-     });
- 
-     panelData.id = safePanelId;
-     panelData.displayName = displayName;
-     panelData.source = "user";
- 
-     await famService.writeFile(userId, newPanelJsonPath, JSON.stringify(panelData, null, 2));
-     newPanelDef = panelData;
-   } else {
-     // --- 全新创建 ---
-     console.log(`${logPrefix} Creating new blank panel.`);
-     await famService.createDir(userId, targetPanelDirPath);
- 
-     // 创建 panel.json
-     const panelJsonContent: PanelDefinition = {
-       id: safePanelId,
-       displayName: displayName,
-       version: "1.0.0",
-       description: "A new panel created from scratch.",
-       uiEntryPoint: "index.html",
-       source: "user",
-     };
-     const panelJsonPath = `${targetPanelDirPath}panel.json`;
-     await famService.writeFile(userId, panelJsonPath, JSON.stringify(panelJsonContent, null, 2));
- 
-     // 创建 index.html
-     const indexPath = `${targetPanelDirPath}index.html`;
-     const indexHtmlContent = `<!DOCTYPE html>
+export async function createPanel(
+  userId: string,
+  projectId: string,
+  options: { templateId?: string | null; panelId: string; displayName: string }
+): Promise<PanelDefinition> {
+  const { templateId, panelId, displayName } = options;
+  const logPrefix = `[Service:createPanel]`;
+
+  // 1. 验证新面板 ID
+  const safePanelId = sanitizeProjectId(panelId);
+  if (!safePanelId || safePanelId !== panelId) {
+    throw new PanelCreationError(
+      `Invalid panel ID '${panelId}'. Only alphanumeric characters and hyphens are allowed.`
+    );
+  }
+
+  // 2. 检查目标路径是否已存在
+  const targetPanelDirPath = `user://projects/${projectId}/ui/${safePanelId}/`;
+  const exists = await famService.exists(userId, targetPanelDirPath);
+  if (exists) {
+    throw new PanelConflictError(
+      `Panel with ID '${safePanelId}' already exists in project '${projectId}'.`
+    );
+  }
+
+  // 确保项目 UI 目录存在
+  await famService.createDir(userId, `user://projects/${projectId}/ui/`);
+
+  let newPanelDef: PanelDefinition;
+
+  if (templateId) {
+    // --- 从模板创建 ---
+    console.log(`${logPrefix} Creating panel from template '${templateId}'.`);
+    const templates = await getPanelTemplates();
+    const template = templates.find((t) => t.id === templateId);
+    if (!template || !template.panelDirectory) {
+      throw new PanelNotFoundError(`Template with ID '${templateId}' not found.`);
+    }
+
+    const sourcePath = `shared://templates/panels/${template.panelDirectory}/`;
+    await famService.copy(userId, sourcePath, targetPanelDirPath);
+
+    const newPanelJsonPath = `${targetPanelDirPath}panel.json`;
+    const panelData = await _readAndValidateJsonFile<PanelDefinition>({
+      userId,
+      logicalPath: newPanelJsonPath,
+      schema: PanelDefinitionSchema,
+      notFoundErrorClass: PanelCreationError,
+      loadErrorClass: PanelCreationError,
+    });
+
+    panelData.id = safePanelId;
+    panelData.displayName = displayName;
+    panelData.source = "user";
+
+    await famService.writeFile(userId, newPanelJsonPath, JSON.stringify(panelData, null, 2));
+    newPanelDef = panelData;
+  } else {
+    // --- 全新创建 ---
+    console.log(`${logPrefix} Creating new blank panel.`);
+    await famService.createDir(userId, targetPanelDirPath);
+
+    // 创建 panel.json
+    const panelJsonContent: PanelDefinition = {
+      id: safePanelId,
+      displayName: displayName,
+      version: "1.0.0",
+      description: "A new panel created from scratch.",
+      uiEntryPoint: "index.html",
+      source: "user",
+    };
+    const panelJsonPath = `${targetPanelDirPath}panel.json`;
+    await famService.writeFile(userId, panelJsonPath, JSON.stringify(panelJsonContent, null, 2));
+
+    // 创建 index.html
+    const indexPath = `${targetPanelDirPath}index.html`;
+    const indexHtmlContent = `<!DOCTYPE html>
  <html lang="en">
  <head>
    <meta charset="UTF-8">
@@ -1503,13 +1506,54 @@ export async function getPanelTemplates(): Promise<PanelDefinition[]> {
    </div>
  </body>
  </html>`;
-     await famService.writeFile(userId, indexPath, indexHtmlContent);
- 
-     newPanelDef = panelJsonContent;
-   }
- 
-   console.log(
-     `${logPrefix} Successfully created panel '${safePanelId}' in project '${projectId}'.`
-   );
-   return newPanelDef;
- }
+    await famService.writeFile(userId, indexPath, indexHtmlContent);
+
+    newPanelDef = panelJsonContent;
+  }
+
+  console.log(
+    `${logPrefix} Successfully created panel '${safePanelId}' in project '${projectId}'.`
+  );
+  return newPanelDef;
+}
+
+/**
+ * 将指定用户项目移动到回收站。
+ * @param userId - 用户 ID。
+ * @param projectId 清理后的项目 ID。
+ * @returns Promise<void> 操作成功则无返回。
+ * @throws 如果项目文件不存在 (ProjectNotFoundError)，或移动操作失败 (ProjectDeletionError)。
+ */
+export async function deleteProjectToRecycleBin(
+  userId: string,
+  projectId: string
+): Promise<void> {
+  console.log(
+    `[Service:deleteProjectToRecycleBin] Attempting to delete project ID '${projectId}' for user '${userId}'.`
+  );
+
+  try {
+    const logicalProjectPath = `user://projects/${projectId}/`;
+    const projectExists = await famService.exists(userId, logicalProjectPath);
+    if (!projectExists) {
+      throw new ProjectNotFoundError(`Project with ID '${projectId}' not found.`);
+    }
+
+    const logicalRecycleBinDir = `user://.recycle_bin/`;
+    const logicalRecycleBinProjectPath = `${logicalRecycleBinDir}${projectId}_${Date.now()}`;
+
+    await famService.createDir(userId, logicalRecycleBinDir);
+    await famService.move(userId, logicalProjectPath, logicalRecycleBinProjectPath);
+
+    console.log(
+      `[Service:deleteProjectToRecycleBin] Project for user '${userId}' moved to recycle bin: ${logicalProjectPath} -> ${logicalRecycleBinProjectPath}`
+    );
+  } catch (error: any) {
+    if (error instanceof ProjectNotFoundError || error instanceof ProjectDeletionError) {
+      throw error;
+    }
+    const message = `Unexpected error deleting project '${projectId}' for user '${userId}'. Error: ${error.message}`;
+    console.error(`[Service:deleteProjectToRecycleBin] ${message}`);
+    throw new ProjectDeletionError(message);
+  }
+}

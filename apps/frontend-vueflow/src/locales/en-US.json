@@ -77,6 +77,9 @@
     }
   },
   "dialog": {
+    "form": {
+      "title": "Form"
+    },
     "input": {
       "placeholder": "Please enter content...",
       "title": "Please Enter"
@@ -592,15 +595,22 @@
     "warnNoTabId": "PerformancePanel: Unable to collect stats, current tab ID is invalid."
   },
   "projects": {
+    "bulkDeleteDialog": {
+      "message": "Are you sure you want to delete {count} project(s)? This action cannot be undone.",
+      "title": "Bulk Delete Projects"
+    },
     "createDialog": {
-      "message": "Please enter the name for the new project:",
+      "descriptionPlaceholder": "Add a description for your project...",
       "placeholder": "Project Name",
       "title": "Create New Project"
     },
     "createNew": "Create New Project",
     "createSuccess": "Project created successfully",
+    "deleteSelected": "Delete Selected ({count})",
+    "deleteSuccess": "Project(s) deleted successfully.",
     "errors": {
       "createFailed": "Failed to create project",
+      "deleteFailed": "Failed to delete project(s).",
       "nameRequired": "Project name cannot be empty!"
     },
     "lastUpdated": "Last Updated",

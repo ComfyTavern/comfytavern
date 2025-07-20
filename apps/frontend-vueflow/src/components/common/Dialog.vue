@@ -56,7 +56,7 @@
             <div ref="contentToCopyRef">
               <slot>
                 <MarkdownRenderer v-if="props.message" :markdown-content="props.message" />
-                <p v-else-if="!$slots.default && !props.message" class="text-sm text-text-muted">没有内容可显示。</p>
+                <p v-else-if="!$slots.default && !props.message && props.type !== 'form'" class="text-sm text-text-muted">没有内容可显示。</p>
               </slot>
             </div>
           </OverlayScrollbarsComponent>
