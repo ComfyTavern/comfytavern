@@ -1,6 +1,7 @@
 import { ref, shallowRef, markRaw, type Component } from 'vue';
 import { defineStore } from 'pinia';
 import i18n from '@/locales';
+import { debugLog } from '@/utils/debugLog';
 
 // 对话框类型 (DialogInstance 内部使用)
 type DialogInstanceType = 'message' | 'confirm' | 'input';
@@ -113,6 +114,7 @@ export const useDialogService = defineStore('dialogService', () => {
   
   // 显示消息对话框
   function showMessage(options: UniversalDialogOptions): Promise<void> {
+    debugLog('Showing message dialog', options);
     return new Promise((resolve, reject) => {
       import('../components/common/Dialog.vue').then((module) => {
         const dialogId = generateId();
@@ -159,6 +161,7 @@ export const useDialogService = defineStore('dialogService', () => {
   
   // 显示确认对话框
   function showConfirm(options: UniversalDialogOptions): Promise<boolean> {
+    debugLog('Showing confirm dialog', options);
     return new Promise((resolve, reject) => {
       import('../components/common/Dialog.vue').then((module) => {
         const dialogId = generateId();
@@ -205,6 +208,7 @@ export const useDialogService = defineStore('dialogService', () => {
 
   // 显示输入对话框
   function showInput(options: UniversalDialogOptions): Promise<string | null> {
+    debugLog('Showing input dialog', options);
     return new Promise((resolve, reject) => {
       import('../components/common/Dialog.vue').then((module) => {
         const dialogId = generateId();
@@ -262,6 +266,7 @@ export const useDialogService = defineStore('dialogService', () => {
 
   // 显示通知
   function showToast(options: ToastOptions): string {
+    debugLog('Showing toast', options);
     const id = generateId(); // ToastNotification 不在此动态导入，假设已全局或按需加载
     
     const toast: ToastInstance = {
