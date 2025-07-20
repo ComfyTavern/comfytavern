@@ -42,7 +42,8 @@
       <!-- 节点预览面板 -->
       <template v-if="sidebarManagerRef">
         <NodePreviewPanel :selected-node="selectedNodeForPreview"
-          :is-sidebar-visible="sidebarManagerRef.isSidebarVisible" @close="selectedNodeForPreview = null"
+          :is-sidebar-visible="sidebarManagerRef.isSidebarVisible"
+          :sidebar-width="sidebarManagerRef?.sidebarContentWidth ?? 0" @close="selectedNodeForPreview = null"
           @add-node="handleAddNodeFromPanel" />
       </template>
     </div>
@@ -93,6 +94,7 @@ type WorkflowSidebarInstance = InstanceType<typeof WorkflowSidebar> & {
   setActiveTab: (tabId: string) => void;
   isSidebarVisible: boolean;
   activeTab: string | null;
+  sidebarContentWidth: number;
 };
 
 const { t } = useI18n();

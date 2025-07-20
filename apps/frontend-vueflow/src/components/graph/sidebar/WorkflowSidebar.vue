@@ -39,14 +39,14 @@
     </div>
 
     <!-- 侧边栏内容区域 -->
-    <div class="sidebar-content bg-background-surface" :style="{ width: activeTab ? '300px' : '0px' }">
+    <div ref="sidebarContentRef" class="sidebar-content bg-background-surface" :style="{ width: activeTab ? '300px' : '0px' }">
       <component v-if="activeTab" :is="getTabComponent" @node-selected="nodeSelected" @add-node="addNodeToCanvas" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, markRaw } from 'vue';
+import { ref, computed, markRaw, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { RouterLink } from 'vue-router'; // 确保导入
@@ -178,10 +178,36 @@ const addNodeToCanvas = (nodeType: string, position?: { x: number, y: number }) 
 const isSidebarVisible = computed(() => activeTab.value !== null);
 
 // 暴露状态和方法给父组件
+const sidebarContentRef = ref<HTMLElement | null>(null);
+const sidebarContentWidth = ref(0);
+let resizeObserver: ResizeObserver | null = null;
+
+onMounted(() => {
+  if (sidebarContentRef.value) {
+    // 初始测量
+    sidebarContentWidth.value = sidebarContentRef.value.offsetWidth;
+
+    resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        sidebarContentWidth.value = entry.contentRect.width;
+      }
+    });
+    resizeObserver.observe(sidebarContentRef.value);
+  }
+});
+
+onUnmounted(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+  }
+});
+
+// 暴露状态和方法给父组件
 defineExpose({
   isSidebarVisible,
   activeTab,
-  setActiveTab // 暴露 setActiveTab 方法给父组件
+  setActiveTab, // 暴露 setActiveTab 方法给父组件
+  sidebarContentWidth,
 });
 </script>
 

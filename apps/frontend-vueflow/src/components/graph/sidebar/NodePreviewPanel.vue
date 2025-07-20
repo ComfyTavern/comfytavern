@@ -114,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import type { FrontendNodeDefinition } from "../../../stores/nodeStore"; // 确保路径正确
 // import type { InputDefinition } from "@comfytavern/types"; // InputDefinition 未在此处直接使用，移除以避免警告
@@ -124,9 +124,10 @@ import MarkdownRenderer from "../../common/MarkdownRenderer.vue"; // 导入 Mark
 import { OverlayScrollbarsComponent } from "overlayscrollbars-vue";
 import 'overlayscrollbars/overlayscrollbars.css';
 
-defineProps<{
+const props = defineProps<{
   selectedNode: FrontendNodeDefinition | null;
   isSidebarVisible: boolean; // 添加 prop 来控制可见性
+  sidebarWidth: number;
 }>();
 
 const emit = defineEmits<{
@@ -138,68 +139,16 @@ const themeStore = useThemeStore();
 const isDark = computed(() => themeStore.currentAppliedMode === 'dark');
 
 const panelRef = ref<HTMLElement | null>(null); // 引用面板元素
-const panelLeft = ref<number | null>(null); // 存储计算出的 left 值
-let resizeObserver: ResizeObserver | null = null; // 存储 ResizeObserver 实例
+
+// 定义侧边栏图标栏的固定宽度 (w-16 -> 4rem -> 64px)
+const ICON_BAR_WIDTH = 64;
+const MARGIN = 16; // 1rem
 
 // 计算内联样式
 const panelStyle = computed(() => {
-  if (panelLeft.value !== null) {
-    return { left: `${panelLeft.value}px` };
-  }
-  return {}; // 默认或回退样式
-});
-
-// 计算面板位置的函数
-const calculatePosition = () => {
-  const sidebarManagerElement = document.querySelector(".sidebar-manager") as HTMLElement; // 查找侧边栏管理器
-  if (sidebarManagerElement) {
-    const sidebarWidth = sidebarManagerElement.offsetWidth;
-    const margin = 16; // 1rem 间距 (对应 Tailwind space-4)
-    panelLeft.value = sidebarWidth + margin;
-  } else {
-    // 如果找不到侧边栏管理器，尝试找节点库面板
-    const nodePanelElement = document.querySelector(".node-panel") as HTMLElement;
-    if (nodePanelElement) {
-      const nodePanelWidth = nodePanelElement.offsetWidth;
-      panelLeft.value = nodePanelWidth + 16;
-    } else {
-      // 如果都找不到，这不应该发生，因为组件现在只在侧边栏就绪后挂载
-      // 记录一个更严重的错误
-      console.error(
-        "NodePreviewPanel: calculatePosition called but SidebarManager or NodePanel not found. This should not happen."
-      );
-      panelLeft.value = 16; // 保留一个回退值以防万一
-    }
-  }
-};
-
-onMounted(() => {
-  // 现在组件只在侧边栏就绪后挂载，可以直接计算位置和设置监听器
-  calculatePosition(); // 初始计算位置
-
-  // 查找参考元素用于 ResizeObserver
-  const sidebarManagerElement = document.querySelector(".sidebar-manager");
-  const nodePanelElement = document.querySelector(".node-panel");
-  const elementToObserve = sidebarManagerElement || nodePanelElement; // 优先使用 SidebarManager
-
-  if (elementToObserve) {
-    resizeObserver = new ResizeObserver(() => {
-      calculatePosition(); // 尺寸变化时重新计算
-    });
-    resizeObserver.observe(elementToObserve);
-  } else {
-    // 这仍然不应该发生，但保留一个警告
-    console.error(
-      "NodePreviewPanel: Failed to find .sidebar-manager or .node-panel for ResizeObserver even after delayed mount."
-    );
-  }
-});
-
-onUnmounted(() => {
-  // 组件卸载时停止监听
-  if (resizeObserver) {
-    resizeObserver.disconnect();
-  }
+  // left 的位置 = 图标栏宽度 + 侧边栏内容面板宽度 + 间距
+  const left = ICON_BAR_WIDTH + props.sidebarWidth + MARGIN;
+  return { left: `${left}px` };
 });
 
 const closePanel = () => {
