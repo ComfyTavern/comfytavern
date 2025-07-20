@@ -1,9 +1,5 @@
 <template>
-  <div
-    ref="editorContainerRef"
-    class="editor-container flex flex-col bg-background-base"
-    tabindex="-1"
-  >
+  <div ref="editorContainerRef" class="editor-container flex flex-col bg-background-base" tabindex="-1">
     <!-- 主要内容区域 -->
     <div class="editor-main flex-1 relative overflow-hidden">
       <div v-if="loading" class="loading-overlay">
@@ -14,108 +10,71 @@
       <!-- 主要内容布局 - 仅在节点定义加载后渲染 -->
       <div v-if="nodeDefinitionsLoaded" class="editor-content flex h-full">
         <!-- 侧边栏管理器 -->
-        <WorkflowSidebar
-          ref="sidebarManagerRef"
-          @add-node="handleAddNodeFromPanel"
-          @node-selected="handleNodeSelected"
-        />
+        <WorkflowSidebar ref="sidebarManagerRef" @add-node="handleAddNodeFromPanel"
+          @node-selected="handleNodeSelected" />
 
         <!-- 右侧主内容区域 (画布和可停靠编辑器) -->
         <div class="right-pane flex flex-col flex-1 overflow-hidden">
           <!-- 画布容器 -->
           <div class="canvas-container flex-1 relative">
-            <!-- 添加相对定位，用于可能的绝对定位子元素 -->
-            <!-- 根据活动标签页类型条件渲染 Canvas 或 GroupEditor -->
-            <Canvas
-              ref="canvasRef"
-              :model-value="currentElements"
-              @update:model-value="updateElements"
-              @node-click="handleNodeClick"
-              @pane-ready="handlePaneReady"
-              @connect="handleConnect"
-              @node-drag-stop="handleNodesDragStop"
-              @elements-remove="handleElementsRemove"
-              @request-add-node-to-workflow="handleRequestAddNodeFromCanvas"
-              :node-types="nodeTypes"
-              @open-node-search-panel="handleOpenNodeSearchPanel"
-            />
-            <!-- 传递 nodeTypes, 添加 key 绑定, 添加 nodes-drag-stop 和 elements-remove 监听 -->
+            <Canvas ref="canvasRef" :model-value="currentElements" @update:model-value="updateElements"
+              @node-click="handleNodeClick" @pane-ready="handlePaneReady" @connect="handleConnect"
+              @node-drag-stop="handleNodesDragStop" @elements-remove="handleElementsRemove"
+              @request-add-node-to-workflow="handleRequestAddNodeFromCanvas" :node-types="nodeTypes"
+              @open-node-search-panel="handleOpenNodeSearchPanel" />
 
-            <!-- 节点搜索面板 - 放置在 canvas-container 内部以实现相对定位 -->
-            <div
-              v-if="showNodeSearchPanel"
-              class="modal-overlay-canvas"
-              @click="showNodeSearchPanel = false"
-            ></div>
-            <HierarchicalMenu
-              v-if="showNodeSearchPanel"
-              :sections="hierarchicalNodeMenuSections"
-              :loading="loading"
-              @select="handleHierarchicalNodeSelect"
-              class="node-search-panel-canvas"
+            <!-- 节点搜索面板 -->
+            <div v-if="showNodeSearchPanel" class="modal-overlay-canvas" @click="showNodeSearchPanel = false"></div>
+            <HierarchicalMenu v-if="showNodeSearchPanel" :sections="hierarchicalNodeMenuSections" :loading="loading"
+              @select="handleHierarchicalNodeSelect" class="node-search-panel-canvas"
               :search-placeholder="t('workflowEditor.searchNodes')"
-              :no-results-text="t('workflowEditor.noNodesFound')"
-            />
+              :no-results-text="t('workflowEditor.noNodesFound')" />
           </div>
           <!-- 可停靠编辑器 -->
-          <DockedEditorWrapper
-            v-if="isDockedEditorVisible"
-            ref="dockedEditorWrapperRef"
-            class="docked-editor-wrapper"
-          />
+          <DockedEditorWrapper v-if="isDockedEditorVisible" ref="dockedEditorWrapperRef"
+            class="docked-editor-wrapper" />
         </div>
       </div>
       <div v-else class="flex items-center justify-center h-full text-text-muted">
         {{ t("workflowEditor.loadingDefinitions") }}
       </div>
 
-      <!-- 节点预览面板 - 仅在侧边栏准备好后渲染 -->
-      <!-- 调试信息显示面板已帮助定位问题 (isSidebarReady)，现将其移除。 -->
-
-      <!-- 修改 v-if 条件，直接判断 sidebarManagerRef 是否已挂载并可用 -->
+      <!-- 节点预览面板 -->
       <template v-if="sidebarManagerRef">
-        <NodePreviewPanel
-          :selected-node="selectedNodeForPreview"
-          :is-sidebar-visible="sidebarManagerRef.isSidebarVisible"
-          @close="selectedNodeForPreview = null"
-          @add-node="handleAddNodeFromPanel"
-        />
+        <NodePreviewPanel :selected-node="selectedNodeForPreview"
+          :is-sidebar-visible="sidebarManagerRef.isSidebarVisible" @close="selectedNodeForPreview = null"
+          @add-node="handleAddNodeFromPanel" />
       </template>
     </div>
 
     <!-- 底部状态栏 -->
     <StatusBar class="editor-statusbar" />
-    <!-- 右侧专用预览面板 - 移动到 editor-container 的直接子节点，以确保正确的悬浮行为 -->
+    <!-- 右侧专用预览面板 -->
     <RightPreviewPanel />
 
     <!-- 正则表达式规则编辑器模态框 -->
-    <RegexEditorModal
-      v-if="isRegexEditorModalVisible"
-      :visible="isRegexEditorModalVisible"
-      :model-value="regexEditorModalData?.rules || []"
-      :node-id="regexEditorModalData?.nodeId"
-      :input-key="regexEditorModalData?.inputKey"
-      @update:visible="handleModalVisibleUpdate"
-      @save="handleModalSave"
-    />
+    <RegexEditorModal v-if="isRegexEditorModalVisible" :visible="isRegexEditorModalVisible"
+      :model-value="regexEditorModalData?.rules || []" :node-id="regexEditorModalData?.nodeId"
+      :input-key="regexEditorModalData?.inputKey" @update:visible="handleModalVisibleUpdate" @save="handleModalSave" />
   </div>
 </template>
+
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, markRaw, watch, nextTick, provide } from "vue"; // watch 已经存在，无需重复导入, 移除 ComputedRef
+import { ref, onMounted, onUnmounted, computed, markRaw, watch, nextTick, provide } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import Canvas from "../../components/graph/Canvas.vue";
 import HierarchicalMenu from "../../components/common/HierarchicalMenu.vue";
 import type { MenuItem as HierarchicalMenuItem } from "../../components/common/HierarchicalMenu.vue";
-import type { FrontendNodeDefinition } from "../../stores/nodeStore"; // 确保导入
+import type { FrontendNodeDefinition } from "../../stores/nodeStore";
 import BaseNode from "../../components/graph/nodes/BaseNode.vue";
-import FrameNode from "../../components/graph/nodes/FrameNode.vue"; // 导入 FrameNode
+import FrameNode from "../../components/graph/nodes/FrameNode.vue";
 import WorkflowSidebar from "../../components/graph/sidebar/WorkflowSidebar.vue";
 import NodePreviewPanel from "../../components/graph/sidebar/NodePreviewPanel.vue";
 import RightPreviewPanel from "../../components/graph/sidebar/RightPreviewPanel.vue";
 import DockedEditorWrapper from "../../components/graph/editor/DockedEditorWrapper.vue";
 import StatusBar from "../../components/graph/StatusBar.vue";
-import { type Node, type Edge, type XYPosition } from "@vue-flow/core"; // +++ 导入 XYPosition
+import { type Node, type Edge, type XYPosition } from "@vue-flow/core";
 import { useNodeStore } from "../../stores/nodeStore";
 import { useWorkflowStore } from "../../stores/workflowStore";
 import { useTabStore } from "../../stores/tabStore";
@@ -125,11 +84,11 @@ import { useTabManagement } from "../../composables/editor/useTabManagement";
 import { useInterfaceWatcher } from "../../composables/editor/useInterfaceWatcher";
 import { useKeyboardShortcuts } from "../../composables/editor/useKeyboardShortcuts";
 import { useEditorState } from "../../composables/editor/useEditorState";
-import RegexEditorModal from "../../components/modals/RegexEditorModal.vue"; // ++ 导入模态框
-import { useUiStore } from "../../stores/uiStore"; // ++ 导入 UI store
+import { useWorkflowLifecycleCoordinator } from "../../composables/workflow/useWorkflowLifecycleCoordinator";
+import RegexEditorModal from "../../components/modals/RegexEditorModal.vue";
+import { useUiStore } from "../../stores/uiStore";
 
 // 组件实例引用
-// 定义 WorkflowSidebar 的类型
 type WorkflowSidebarInstance = InstanceType<typeof WorkflowSidebar> & {
   setActiveTab: (tabId: string) => void;
   isSidebarVisible: boolean;
@@ -141,14 +100,15 @@ const editorContainerRef = ref<HTMLElement | null>(null);
 const canvasRef = ref<InstanceType<typeof Canvas> | null>(null);
 const dockedEditorWrapperRef = ref<InstanceType<typeof DockedEditorWrapper> | null>(null);
 const sidebarManagerRef = ref<WorkflowSidebarInstance | null>(null);
+const lifecycleCoordinator = useWorkflowLifecycleCoordinator();
 
 // 存储实例
 const nodeStore = useNodeStore();
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore();
-const uiStore = useUiStore(); // ++ 获取 UI store 实例
+const uiStore = useUiStore();
 const { nodeDefinitions } = storeToRefs(nodeStore);
-const { isRegexEditorModalVisible, regexEditorModalData } = storeToRefs(uiStore); // ++ 解构 UI store state
+const { isRegexEditorModalVisible, regexEditorModalData } = storeToRefs(uiStore);
 const nodeDefinitionsLoaded = computed(
   () => !!nodeDefinitions.value && nodeDefinitions.value.length > 0
 );
@@ -157,7 +117,6 @@ const router = useRouter();
 const {
   loading,
   selectedNodeForPreview,
-  // isSidebarReady, // 此变量已不再直接使用，移除以解决 TS 警告
   isDockedEditorVisible,
   requestedContextToOpen,
   clearRequestedContext,
@@ -196,7 +155,7 @@ const hierarchicalNodeMenuSections = computed(() => {
       sections[namespace].categories[category].items.push({
         id: `${namespace}:${node.type}`,
         label: node.displayName || node.type,
-        // icon: '🔌', // 可以根据节点类型设置不同图标，但是当前还没设计节点的图标，暂时用不上
+        // TODO: 可根据节点类型设置不同图标
         description: node.description,
         category: category, // 用于搜索结果中的分类显示
         data: node,
@@ -211,13 +170,10 @@ const handleOpenNodeSearchPanel = () => {
 
 const handleHierarchicalNodeSelect = async (item: HierarchicalMenuItem) => {
   if (item.id) {
-    // item.id 已经是 fullNodeType
-    await handleAddNodeFromPanel(item.id); // handleAddNodeFromPanel 来自 useCanvasInteraction
+    await handleAddNodeFromPanel(item.id);
   }
   showNodeSearchPanel.value = false;
 };
-
-// 之前的 selectedNodeForPreview watch 已帮助定位问题 (isSidebarReady)，现将其移除。
 
 watch(
   requestedContextToOpen,
@@ -237,7 +193,7 @@ watch(
     }
   },
   { deep: true }
-); // deep: true 以监视对象内部变化
+);
 
 // 活动标签页
 const activeTabId = computed(() => tabStore.activeTabId);
@@ -246,12 +202,11 @@ const activeTabId = computed(() => tabStore.activeTabId);
 const nodeTypes = computed(() => {
   const types: Record<string, any> = {
     default: markRaw(BaseNode),
-    'core:frame': markRaw(FrameNode), // 直接、简单地注册 FrameNode
+    "core:frame": markRaw(FrameNode),
   };
   if (nodeDefinitions.value) {
     nodeDefinitions.value.forEach((def) => {
-      // 避免重复注册我们已手动定义的类型
-      if (def.namespace === 'core' && def.type === 'frame') return;
+      if (def.namespace === "core" && def.type === "frame") return;
       const fullType = `${def.namespace || "core"}:${def.type}`;
       types[fullType] = markRaw(BaseNode);
     });
@@ -268,19 +223,17 @@ const currentElements = computed(() => {
 // 当前VueFlow实例
 const currentInstance = ref<any | null>(null);
 const { handleAddNodeFromPanel, handleConnect, handleNodesDragStop, handleElementsRemove } =
-  useCanvasInteraction(canvasRef); // 移除 currentInstance 参数
+  useCanvasInteraction(canvasRef);
 
 useTabManagement(activeTabId, currentInstance, selectedNodeForPreview);
-
 useInterfaceWatcher(activeTabId, currentElements);
-
 useKeyboardShortcuts(activeTabId, editorContainerRef);
 
 // 更新元素函数
 function updateElements(_newElements: Array<Node | Edge>) {
   const currentTab = activeTabId.value;
   if (currentTab) {
-    // 由handleNodesDragStop管理拖拽后的更新
+    // 由 handleNodesDragStop 管理拖拽后的更新
   } else {
     console.warn("[EditorView] updateElements called but no active tab ID.");
   }
@@ -288,7 +241,7 @@ function updateElements(_newElements: Array<Node | Edge>) {
 
 // 节点点击事件处理
 // @ts-expect-error
-const handleNodeClick = (node: Node) => {};
+const handleNodeClick = (node: Node) => { };
 
 // 画布准备完成事件处理
 const handlePaneReady = async (instance: any) => {
@@ -312,13 +265,8 @@ const handleRequestAddNodeFromCanvas = async (payload: {
     console.error("[EditorView] Invalid payload for request-add-node-to-workflow:", payload);
     return;
   }
-  // 现在将 flowPosition 传递给 handleAddNodeFromPanel
   await handleAddNodeFromPanel(payload.fullNodeType, payload.flowPosition);
 };
-
-// 在 Canvas 组件上监听 open-node-search-panel 事件
-// (注意：这应该在 <Canvas ... @open-node-search-panel="handleOpenNodeSearchPanel" /> 模板中完成)
-// 此处仅为逻辑占位，实际绑定在 template 中。
 
 // 提供 sidebarRef 给子组件
 provide("sidebarRef", {
@@ -329,174 +277,188 @@ provide("sidebarRef", {
   },
 });
 
-// 组件挂载
 onMounted(async () => {
   // 监听拖放事件
-  document.addEventListener("dragstart", () => {}, { passive: true });
-  document.addEventListener("dragend", () => {}, { passive: true });
+  document.addEventListener("dragstart", () => { }, { passive: true });
+  document.addEventListener("dragend", () => { }, { passive: true });
 
-  // 获取节点定义
-  if (!nodeDefinitions.value || nodeDefinitions.value.length === 0) {
-    loading.value = true;
-    try {
-      await nodeStore.fetchAllNodeDefinitions();
-    } catch (error) {
+  // --- 统一初始化与清理逻辑 ---
+  const initializeEditor = async () => {
+    // 0. 增加路由守卫：仅当当前路由是编辑器时才执行初始化
+    if (route.name !== "ProjectEditor") {
+      console.debug("[EditorView] Not on ProjectEditor route, skipping initialization.");
+      return;
+    }
+
+    const projectId = route.params.projectId as string;
+
+    // 检查当前项目的标签页状态
+    const projectTabs = tabStore.tabs.filter((t) => t.projectId === projectId);
+    // 判断是否为 App.vue 刚刚创建的初始状态：只有一个标签页，且该标签页是全新的
+    const isInitialDefaultTab =
+      projectTabs.length === 1 &&
+      projectTabs[0] &&
+      workflowStore.isWorkflowNew(projectTabs[0].internalId);
+
+    // 4. 加载节点定义 (可以提前并行开始)
+    const fetchDefsPromise = nodeStore.fetchAllNodeDefinitions().catch((error) => {
       console.error("EditorView: Failed to fetch node definitions:", error);
       handleError(error, "获取节点定义");
-    } finally {
-      loading.value = false;
+    });
+
+    if (isInitialDefaultTab && projectTabs[0]) {
+      // **场景A：全新会话，由 App.vue 创建了默认标签页**
+      console.info("[EditorView] Initial default tab found. Skipping recovery logic.");
+      // 确保这个标签页的状态被正确初始化（应用默认模板）
+      await workflowStore.ensureTabState(projectTabs[0].internalId);
+    } else {
+      // **场景B：恢复会话或无标签页**
+      if (projectTabs.length > 0) {
+        console.info("[EditorView] Restored tabs found. Proceeding with recovery and cleanup logic.");
+        // 1. 获取有效工作流列表
+        const availableWorkflows = await lifecycleCoordinator.fetchAvailableWorkflows();
+        if (!availableWorkflows) {
+          console.error("[EditorView] Failed to fetch available workflows. Initialization aborted.");
+          return;
+        }
+        const availableWorkflowIds = new Set(availableWorkflows.map((wf) => wf.id));
+
+        // 2. 清理无效的持久化标签页
+        const tabsToRemove: string[] = [];
+        for (const tab of projectTabs) {
+          if (tab.associatedId && (tab.type === "workflow" || tab.type === "groupEditor")) {
+            if (!availableWorkflowIds.has(tab.associatedId)) {
+              tabsToRemove.push(tab.internalId);
+            }
+          }
+        }
+        if (tabsToRemove.length > 0) {
+          console.info(
+            `[EditorView] Cleaning up ${tabsToRemove.length} invalid tabs from localStorage.`,
+            tabsToRemove
+          );
+          tabStore.removeTabs(tabsToRemove);
+        }
+      }
+
+      // 3. 清理并确定初始加载的工作流 ID
+      let workflowIdToLoad = route.params.workflowId as string | undefined;
+      const availableWorkflows = await lifecycleCoordinator.fetchAvailableWorkflows(); // 重新获取或使用缓存
+      if (workflowIdToLoad && !availableWorkflows?.some((wf) => wf.id === workflowIdToLoad)) {
+        console.warn(
+          `[EditorView] Workflow ID '${workflowIdToLoad}' from URL is invalid. Clearing from URL.`
+        );
+        workflowIdToLoad = undefined;
+        const newParams = { ...route.params };
+        delete newParams.workflowId;
+        router.replace({ params: newParams });
+      }
+
+      // 5. 根据清理后的状态决定加载哪个工作流
+      if (workflowIdToLoad) {
+        await tabStore.loadAndOpenWorkflowById(projectId, workflowIdToLoad);
+      } else if (
+        tabStore.activeTabId &&
+        tabStore.tabs.some((t) => t.internalId === tabStore.activeTabId)
+      ) {
+        // 确保活动标签页的状态被加载
+        await workflowStore.ensureTabState(tabStore.activeTabId);
+      } else {
+        // 如果经过清理后仍然没有活动的标签页，或活动标签页无效，则初始化一个
+        tabStore.initializeDefaultTab();
+      }
     }
-  }
 
-  // 确保活动标签页状态
-  if (activeTabId.value) {
-    workflowStore.ensureTabState(activeTabId.value);
-  }
+    // 统一等待节点定义加载并设置监听器
+    loading.value = true;
+    await fetchDefsPromise;
+    loading.value = false;
 
-  // --- 状态恢复与 URL 同步 ---
+    setupWatchers();
 
-  // 1. 监听 activeTabId 的变化，更新 URL
-  watch(
-    activeTabId,
-    (newTabId, oldTabId) => {
+    // 初始 NodeGroup 同步检查
+    if (tabStore.activeTabId) {
+      performNodeGroupSyncCheck(tabStore.activeTabId);
+    }
+  };
+
+  const setupWatchers = () => {
+    // 监听 activeTabId 的变化，更新 URL
+    watch(activeTabId, (newTabId, oldTabId) => {
       if (newTabId && newTabId !== oldTabId) {
         const tab = tabStore.tabs.find((t) => t.internalId === newTabId);
         const workflowId = tab?.associatedId;
         const currentWorkflowId = route.params.workflowId;
-
-        // 仅当 URL 需要更新时才操作
         if (workflowId && workflowId !== currentWorkflowId) {
           router.replace({ params: { ...route.params, workflowId } });
         } else if (!workflowId && currentWorkflowId) {
-          // 如果新标签页没有关联工作流，但 URL 中有，则移除它
           const newParams = { ...route.params };
           delete newParams.workflowId;
           router.replace({ params: newParams });
         }
       }
-    },
-    { immediate: false }
-  ); // 初始加载时不触发
+    });
 
-  // 2. 监听 URL 中 workflowId 的变化，切换标签页
-  watch(
-    () => route.params.workflowId,
-    (newWorkflowId, oldWorkflowId) => {
-      if (newWorkflowId && newWorkflowId !== oldWorkflowId) {
-        const projectId = route.params.projectId as string;
-        if (projectId) {
-          // 检查是否已经因为切换 tab 导致 URL 变化，避免循环
-          const activeTab = tabStore.activeTab;
-          if (activeTab?.associatedId !== newWorkflowId) {
+    // 监听 URL 中 workflowId 的变化，切换标签页
+    watch(
+      () => route.params.workflowId,
+      (newWorkflowId, oldWorkflowId) => {
+        if (newWorkflowId && newWorkflowId !== oldWorkflowId) {
+          const projectId = route.params.projectId as string;
+          if (projectId && tabStore.activeTab?.associatedId !== newWorkflowId) {
             tabStore.loadAndOpenWorkflowById(projectId, newWorkflowId as string);
           }
         }
       }
-    },
-    { immediate: false }
-  ); // 初始加载时由 onMounted 处理
+    );
 
-  // 3. onMounted 中的初始加载逻辑
-  const projectId = route.params.projectId as string;
-  const initialWorkflowId = route.params.workflowId as string | undefined;
+    // 监听活动标签页变化以进行 NodeGroup 同步
+    watch(activeTabId, (newTabId, oldTabId) => {
+      if (newTabId && newTabId !== oldTabId) {
+        performNodeGroupSyncCheck(newTabId);
+      }
+    });
+  };
 
-  if (initialWorkflowId) {
-    // 如果 URL 指定了工作流，则优先加载
-    await tabStore.loadAndOpenWorkflowById(projectId, initialWorkflowId);
-  } else if (activeTabId.value) {
-    // 如果 tabStore 从 localStorage 恢复了 activeTabId，确保其状态被加载
-    await workflowStore.ensureTabState(activeTabId.value);
-  } else {
-    // 如果两者都没有，则初始化一个默认标签页
-    tabStore.initializeDefaultTab();
-  }
-
-  // --- NodeGroup 同步逻辑 ---
-  const performNodeGroupSyncCheck = async (tabId: string | null | undefined) => {
-    if (!tabId) return;
-
-    // 等待 tab 加载完成
-    // isTabLoaded 是一个函数，其响应性依赖于其内部使用的 store 状态 (getAllTabStates)
-    // 我们需要确保在 isTabLoaded 变为 true 后执行
+  const performNodeGroupSyncCheck = async (tabId: string) => {
     if (!workflowStore.isTabLoaded(tabId)) {
-      // console.debug(`[EditorView] Tab ${tabId} not loaded for NodeGroup sync. Waiting...`);
-      // 使用一个临时的 watcher 来等待加载完成
       const unwatch = watch(
         () => workflowStore.isTabLoaded(tabId),
         (isLoaded) => {
           if (isLoaded) {
-            // console.debug(`[EditorView] Tab ${tabId} is NOW loaded. Proceeding with NodeGroup sync.`);
-            unwatch(); // 加载后停止监听
+            unwatch();
             executeSyncLogic(tabId);
           }
         }
       );
-      return; // 等待 watcher 触发
+      return;
     }
-
-    // 如果已加载，直接执行
     executeSyncLogic(tabId);
   };
 
   const executeSyncLogic = async (tabId: string) => {
     const elements = workflowStore.getElements(tabId);
-    if (!elements || elements.length === 0) {
-      // console.debug(`[EditorView] No elements in tab ${tabId} for NodeGroup sync.`);
-      return;
-    }
-
-    const changedTemplates = workflowStore.changedTemplateWorkflowIds; // 移除显式类型注解，让 TS 推断
-    if (changedTemplates.size === 0) {
-      // 直接访问 .size
-      // console.debug("[EditorView] No templates marked as changed. Skipping NodeGroup sync.");
-      return;
-    }
-
-    console.debug(
-      `[EditorView] Performing NodeGroup sync check for tab ${tabId}. Changed templates:`,
-      Array.from(changedTemplates)
-    ); // 直接使用 changedTemplates
-
+    if (!elements || elements.length === 0) return;
+    const changedTemplates = workflowStore.changedTemplateWorkflowIds;
+    if (changedTemplates.size === 0) return;
     for (const el of elements) {
       if (el.type === "core:NodeGroup" && el.data?.configValues?.referencedWorkflowId) {
-        const nodeGroup = el as Node; // VueFlowNode
+        const nodeGroup = el as Node;
         const referencedWorkflowId = nodeGroup.data.configValues.referencedWorkflowId as string;
-
         if (changedTemplates.has(referencedWorkflowId)) {
-          // 直接调用 .has()
-          console.info(
-            `[EditorView] NodeGroup ${nodeGroup.id} in tab ${tabId} references changed template ${referencedWorkflowId}. Triggering sync.`
+          await workflowStore.synchronizeGroupNodeInterfaceAndValues(
+            tabId,
+            nodeGroup.id,
+            referencedWorkflowId
           );
-          try {
-            // 确保在调用异步操作前，tabId 和 nodeId 仍然有效且相关
-            // （虽然在这个上下文中它们应该是稳定的）
-            await workflowStore.synchronizeGroupNodeInterfaceAndValues(
-              tabId,
-              nodeGroup.id,
-              referencedWorkflowId
-            );
-            console.info(`[EditorView] Sync completed for NodeGroup ${nodeGroup.id}.`);
-          } catch (error) {
-            console.error(`[EditorView] Error synchronizing NodeGroup ${nodeGroup.id}:`, error);
-          }
         }
       }
     }
   };
 
-  // 初始加载时检查
-  if (activeTabId.value) {
-    performNodeGroupSyncCheck(activeTabId.value);
-  }
-
-  // 监听活动标签页变化
-  watch(activeTabId, (newTabId, oldTabId) => {
-    if (newTabId && newTabId !== oldTabId) {
-      performNodeGroupSyncCheck(newTabId);
-    }
-  });
-  // --- NodeGroup 同步逻辑结束 ---
+  await initializeEditor();
 });
+
 // 组件卸载
 onUnmounted(() => {
   if (activeTabId.value) {
@@ -504,7 +466,7 @@ onUnmounted(() => {
   }
 });
 
-// ++ 处理模态框事件
+// 处理模态框事件
 const handleModalVisibleUpdate = (isVisible: boolean) => {
   if (!isVisible) {
     uiStore.closeRegexEditorModal();
@@ -562,7 +524,6 @@ const handleModalSave = (updatedRules: any /* RegexRule[] */) => {
 
 .dark .docked-editor-wrapper {
   border-top-color: theme("colors.gray.600");
-  /* background-color: theme('colors.gray.800'); */
 }
 
 /* 状态栏样式 */
@@ -622,8 +583,7 @@ const handleModalSave = (updatedRules: any /* RegexRule[] */) => {
 
   100% {
     transform: rotate(360deg);
-  }
-}
+  }}
 
 .modal-overlay-canvas {
   position: absolute;

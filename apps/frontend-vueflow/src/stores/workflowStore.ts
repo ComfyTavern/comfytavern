@@ -655,6 +655,7 @@ export const useWorkflowStore = defineStore("workflow", () => {
     getActiveTabState: workflowManager.getActiveTabState,
     getWorkflowData: workflowManager.getWorkflowData,
     isWorkflowDirty: workflowManager.isWorkflowDirty,
+    isWorkflowNew: workflowManager.isWorkflowNew,
     getElements: workflowManager.getElements,
     isTabLoaded: workflowManager.isTabLoaded,
     getAllTabStates: workflowManager.getAllTabStates,

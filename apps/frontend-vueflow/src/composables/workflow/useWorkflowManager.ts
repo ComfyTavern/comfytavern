@@ -5,11 +5,16 @@ import {
   type OutputDefinition,
   type WorkflowEdge as StorageEdge,
   type WorkflowNode as StorageNode,
+  WorkflowStorageObjectSchema,
+  type WorkflowStorageObject,
 } from "@comfytavern/types";
-import { getEffectiveDefaultValue } from "@comfytavern/utils"; // <-- 导入默认值工具
+import { getEffectiveDefaultValue } from "@comfytavern/utils";
 import type { Edge as VueFlowEdge, Node as VueFlowNode } from "@vue-flow/core";
 import { klona } from "klona";
-import { computed, reactive, ref, watch } from "vue"; // Added ref
+import { computed, reactive, ref, watch } from "vue";
+import defaultWorkflowTemplateUntyped from "@/data/DefaultWorkflow.json";
+import { useDialogService } from "../../services/DialogService";
+import { useNodeStore } from "../../stores/nodeStore";
 import { useTabStore } from "../../stores/tabStore";
 import { useThemeStore } from "../../stores/theme";
 import type {
@@ -18,16 +23,17 @@ import type {
   WorkflowData,
   WorkflowStateSnapshot,
 } from "../../types/workflowTypes";
+import { transformWorkflowToVueFlow } from "@/utils/workflowTransformer";
 import { useEdgeStyles } from "../canvas/useEdgeStyles";
-import defaultWorkflowTemplateUntyped from "@/data/DefaultWorkflow.json"; // <-- 导入默认模板
-import { useDialogService } from "../../services/DialogService"; // 导入 DialogService
-import { useNodeStore } from "../../stores/nodeStore";
-import {
-  transformWorkflowToVueFlow,
-} from "@/utils/workflowTransformer";
-import { WorkflowStorageObjectSchema, type WorkflowStorageObject } from "@comfytavern/types";
 
-// --- 辅助函数 (来自 useWorkflowCoreLogic) ---
+// #region --- 内部辅助函数 ---
+
+/**
+ * 在给定的插槽记录中，为指定的前缀（'input' 或 'output'）找到下一个可用的索引。
+ * @param slots - 一个记录 GroupSlotInfo 的对象。
+ * @param prefix - 要查找的前缀，'input' 或 'output'。
+ * @returns 下一个可用的数字索引。
+ */
 function findNextSlotIndex(
   slots: Record<string, GroupSlotInfo>,
   prefix: "input" | "output"
@@ -49,56 +55,65 @@ function findNextSlotIndex(
   return maxIndex + 1;
 }
 
-// --- 单例实现 ---
+// #endregion
+
+// #region --- 单例实现 ---
+
 let instance: ReturnType<typeof createWorkflowManager> | null = null;
 
+/**
+ * 创建工作流管理器的核心逻辑。
+ * 这是一个私有函数，由 useWorkflowManager 包装以实现单例模式。
+ */
 function createWorkflowManager() {
   // --- 依赖项 ---
   const tabStore = useTabStore();
   const themeStore = useThemeStore();
-  const isDark = computed(() => themeStore.currentAppliedMode === 'dark'); // 使用 themeStore
+  const nodeStore = useNodeStore();
+  const dialogService = useDialogService();
   const { getEdgeStyleProps } = useEdgeStyles();
-  // const workflowDataHandler = useWorkflowData(); // 不再需要
-  const nodeStore = useNodeStore(); // 获取 NodeStore 实例
-  const dialogService = useDialogService(); // 获取 DialogService 实例
+  const isDark = computed(() => themeStore.currentAppliedMode === "dark");
 
-  // --- 内部状态标志 ---
   // --- 核心状态 ---
+  /**
+   * 存储所有标签页的工作流状态。
+   * Key 是标签页的 internalId，Value 是该标签页的状态对象。
+   */
   const tabStates = reactive<Map<string, TabWorkflowState>>(new Map());
 
-  // --- 计算属性状态 ---
+  // --- 计算属性 ---
   const activeTabId = computed(() => tabStore.activeTabId);
   const getAllTabStates = computed(() => tabStates);
 
+  /**
+   * 获取当前活动标签页的预览目标。
+   */
   const activePreviewTarget = computed(() => {
     const state = getActiveTabState();
-    // Make sure to access previewTarget from workflowData
     return state?.workflowData?.previewTarget ?? null;
   });
 
+  /**
+   * 判断当前工作流是否为新创建（还未持久化）。
+   */
   const isCurrentWorkflowNew = computed(() => !getActiveTabState()?.isPersisted);
 
-  // 新增：用于请求组输出总览模式的状态
+  /**
+   * 用于请求组输出总览模式的状态。
+   */
   const _showGroupOutputOverview = ref(false);
   const showGroupOutputOverview = computed(() => _showGroupOutputOverview.value);
 
-  function switchToGroupOutputPreviewMode() {
-    _showGroupOutputOverview.value = true;
-  }
-
-  function clearGroupOutputOverviewRequest() {
-    _showGroupOutputOverview.value = false;
-  }
-
-  // 监视活动标签页的 elements 变化
+  /**
+   * 监视活动标签页的 `elements` 数组的变化。
+   * 为了高效地检测数组内容（节点/边）的增删，我们观察一个由数组长度和ID列表字符串组成的元组。
+   * 这样可以避免深度观察整个 `elements` 数组带来的性能开销。
+   */
   watch(
     () => {
       const id = activeTabId.value;
       if (id) {
         const state = tabStates.get(id);
-        // 我们关心 elements 数组本身或其内容的任何变化
-        // 返回一个包含长度和ID字符串的元组，以便 watch 能检测到内容变化
-        // 确保在 state 或 state.elements 不存在时不尝试访问 map 或 stringify
         if (!state || !state.elements) return undefined;
         try {
           return [
@@ -106,162 +121,136 @@ function createWorkflowManager() {
             JSON.stringify(state.elements.map((e: VueFlowNode | VueFlowEdge) => e.id)),
           ];
         } catch (error) {
-          // console.error('[DEBUG Watch activeTab.elements] Error stringifying elements:', error, state.elements);
-          return undefined; // 发生错误时返回 undefined
+          return undefined;
         }
       }
       return undefined;
     },
-    (newVal, oldVal) => {
-      const currentTabId = activeTabId.value;
-      if (currentTabId && newVal && oldVal) {
-        // newVal 和 oldVal 现在是 [length, idString]
-        const [_newLength, newIdString] = newVal;
-        const [_oldLength, oldIdString] = oldVal;
-
-        if (newIdString !== oldIdString) {
-          // 只有当元素ID列表实际改变时才记录
-          // console.log(`[DEBUG Watch activeTab.elements] Elements changed for tab ${currentTabId}.`);
-          // console.log(`  Old: count=${oldLength}, ids=${oldIdString}`);
-          // console.log(`  New: count=${newLength}, ids=${newIdString}`);
-          // console.trace('[DEBUG Watch activeTab.elements] Call stack for change:');
-        }
-      } else if (currentTabId && newVal && !oldVal) {
-        // const [newLength, newIdString] = newVal;
-        // console.log(`[DEBUG Watch activeTab.elements] Elements initialized for tab ${currentTabId}. New: count=${newLength}, ids=${newIdString}`);
-      }
+    () => {
+      // 此处的回调函数主要用于调试，当前版本中无实际逻辑。
     },
     { deep: false }
-  ); // deep: false 因为我们观察的是元组 [length, idString] 的变化，这个元组的引用或内容变化就会触发
+  );
 
-  // --- 内部转换辅助函数 ---
+  // #region --- 内部转换函数 ---
+
   /**
-   * 将存储格式的节点转换为 VueFlow 节点格式。
-   * @param storageNode 存储格式的节点对象。
+   * 将存储格式的节点（StorageNode）转换为 VueFlow 节点格式。
+   * @param storageNode - 存储格式的节点对象。
    * @returns VueFlow 节点对象。
    */
   function _storageNodeToVueFlowNode(storageNode: StorageNode): VueFlowNode {
-    // 使用 nodeStore 获取节点定义
     const nodeDef = nodeStore.getNodeDefinitionByFullType(storageNode.type);
     const vueNode: VueFlowNode = {
       id: storageNode.id,
-      type: storageNode.type, // 保留完整类型
+      type: storageNode.type,
       position: storageNode.position,
-      label: storageNode.displayName || nodeDef?.displayName || storageNode.type, // 优先使用 storageNode.displayName
-      data: {}, // 将在下面填充
+      label: storageNode.displayName || nodeDef?.displayName || storageNode.type,
+      data: {},
       width: storageNode.width,
       height: storageNode.height,
       style: {
-        // 根据存储的宽高设置样式
         ...(storageNode.width && { width: `${storageNode.width}px` }),
         ...(storageNode.height && { height: `${storageNode.height}px` }),
       },
-      // 其他 VueFlowNode 可能需要的属性...
     };
 
-    // --- 正确构建 vueNode.data ---
     const vueFlowData: Record<string, any> = {
-      ...(nodeDef || {}), // 浅拷贝定义，并处理 nodeDef 可能为 undefined 的情况
-      // 覆盖或添加存储的/计算的属性
+      ...(nodeDef || {}),
       configValues: klona(storageNode.configValues || {}),
       defaultDescription: nodeDef?.description || "",
       description: storageNode.customDescription || nodeDef?.description || "",
-      inputs: {}, // 显式设置为空，由下面填充
-      outputs: {},// 显式设置为空，由下面填充
+      inputs: {},
+      outputs: {},
     };
 
     if (nodeDef?.inputs) {
       Object.entries(nodeDef.inputs).forEach(([inputName, inputDefUntyped]) => {
-        const inputDef = inputDefUntyped as InputDefinition; // 类型断言
+        const inputDef = inputDefUntyped as InputDefinition;
         const effectiveDefault = getEffectiveDefaultValue(inputDef);
         const storedValue = storageNode.inputValues?.[inputName];
         const finalValue = storedValue !== undefined ? storedValue : effectiveDefault;
         const defaultSlotDesc = inputDef.description || "";
         const customSlotDesc = storageNode.customSlotDescriptions?.inputs?.[inputName];
-        const displaySlotDesc = customSlotDesc || defaultSlotDesc;
 
         vueFlowData.inputs[inputName] = {
-          value: klona(finalValue), // 深拷贝 finalValue
-          description: displaySlotDesc,
+          value: klona(finalValue),
+          description: customSlotDesc || defaultSlotDesc,
           defaultDescription: defaultSlotDesc,
-          ...klona(inputDef), // 深拷贝 inputDef
+          ...klona(inputDef),
         };
       });
     }
 
     if (nodeDef?.outputs) {
       Object.entries(nodeDef.outputs).forEach(([outputName, outputDefUntyped]) => {
-        const outputDef = outputDefUntyped as OutputDefinition; // 类型断言
+        const outputDef = outputDefUntyped as OutputDefinition;
         const defaultSlotDesc = outputDef.description || "";
         const customSlotDesc = storageNode.customSlotDescriptions?.outputs?.[outputName];
-        const displaySlotDesc = customSlotDesc || defaultSlotDesc;
+
         vueFlowData.outputs[outputName] = {
-          description: displaySlotDesc,
+          description: customSlotDesc || defaultSlotDesc,
           defaultDescription: defaultSlotDesc,
-          ...klona(outputDef), // 深拷贝 outputDef
+          ...klona(outputDef),
         };
       });
     }
 
-    // 处理 displayName (已在 vueNode.label 中初步处理，这里确保 data 中也有一致的 displayName)
     const nodeDefaultLabel = nodeDef?.displayName || storageNode.type;
-    vueFlowData.defaultLabel = nodeDefaultLabel; // 保留原始默认标签
-    vueFlowData.displayName = storageNode.displayName || nodeDefaultLabel; // 最终显示名称
+    vueFlowData.defaultLabel = nodeDefaultLabel;
+    vueFlowData.displayName = storageNode.displayName || nodeDefaultLabel;
 
-    // 处理 inputConnectionOrders
     if (storageNode.inputConnectionOrders) {
       vueFlowData.inputConnectionOrders = klona(storageNode.inputConnectionOrders);
     }
 
-    // 将构建好的 vueFlowData 赋值给 vueNode.data
     vueNode.data = vueFlowData;
-
     return vueNode;
   }
 
   /**
-   * 将存储格式的边转换为 VueFlow 边格式 (不含样式)。
-   * @param storageEdge 存储格式的边对象。
+   * 将存储格式的边（StorageEdge）转换为 VueFlow 边格式（不含样式）。
+   * @param storageEdge - 存储格式的边对象。
    * @returns VueFlow 边对象。
    */
   function _storageEdgeToVueFlowEdge(storageEdge: StorageEdge): VueFlowEdge {
-    const vueEdge: VueFlowEdge = {
+    return {
       id: storageEdge.id,
       source: storageEdge.source,
       target: storageEdge.target,
       sourceHandle: storageEdge.sourceHandle,
       targetHandle: storageEdge.targetHandle,
-      data: storageEdge.data || {}, // 确保 data 存在
-      // 不包含样式属性 (markerStart, markerEnd, style, animated)
+      data: storageEdge.data || {},
     };
-    return vueEdge;
   }
 
-  // --- 核心逻辑函数 (改编自 useWorkflowCoreLogic) ---
+  // #endregion
 
+  // #region --- 核心状态应用逻辑 ---
+
+  /**
+   * 将一个完整的工作流数据应用到指定的标签页状态中。
+   * @param internalId - 目标标签页的内部 ID。
+   * @param workflow - 要应用的工作流数据对象。
+   * @param elements - VueFlow 格式的节点和边数组。
+   * @param viewport - 视口信息。
+   * @returns 应用后的状态快照，如果失败则返回 null。
+   */
   async function _applyWorkflowToTab(
     internalId: string,
     workflow: WorkflowData,
     elements: Array<VueFlowNode | VueFlowEdge>,
     viewport: Viewport
   ): Promise<WorkflowStateSnapshot | null> {
-    // 添加返回类型
-    // 确保状态存在（但此处不应用默认值，此函数应用 *加载的* 数据）
-    const state = await ensureTabState(internalId, false); // 添加 await
+    const state = await ensureTabState(internalId, false);
     if (!state) {
       console.error(`[_applyWorkflowToTab] 无法找到标签页 ${internalId} 的状态。`);
-      return null; // 返回 null
+      return null;
     }
-    const tabInfo = tabStore.tabs.find((t) => t.internalId === internalId);
 
-    // console.info(`[_applyWorkflowToTab] 开始为标签页 ${internalId} 应用工作流:`, workflow.id);
+    state.workflowData = klona(workflow);
 
-    // 1. 更新 workflowData (深拷贝以确保安全)
-    state.workflowData = JSON.parse(JSON.stringify(workflow));
-
-    // 确保动态插槽存在
     if (state.workflowData) {
-      // 输入
       if (!state.workflowData.interfaceInputs) state.workflowData.interfaceInputs = {};
       const inputSlots = state.workflowData.interfaceInputs;
       if (!Object.values(inputSlots).some((slot) => slot.allowDynamicType === true)) {
@@ -275,9 +264,7 @@ function createWorkflowManager() {
             "这是一个**可转换**的动态输入接口，初始类型为 `CONVERTIBLE_ANY`。\n\n- 连接后，其类型和名称将根据连接自动更新。\n- 会生成一个新的**空心插槽**。\n- 可在**侧边栏**编辑接口属性。",
           allowDynamicType: true,
         };
-        // 此处不标记为脏，因为我们正在应用一个加载的状态，它将成为基线
       }
-      // 输出
       if (!state.workflowData.interfaceOutputs) state.workflowData.interfaceOutputs = {};
       const outputSlots = state.workflowData.interfaceOutputs;
       if (!Object.values(outputSlots).some((slot) => slot.allowDynamicType === true)) {
@@ -291,14 +278,11 @@ function createWorkflowManager() {
             "这是一个**可转换**的动态输出接口，初始类型为 `CONVERTIBLE_ANY`。\n\n- 连接后，其类型和名称将根据连接自动更新。\n- 会生成一个新的**空心插槽**。\n- 可在**侧边栏**编辑接口属性。",
           allowDynamicType: true,
         };
-        // 此处不标记为脏
       }
     }
 
-    // 2. 更新 viewport
-    state.viewport = JSON.parse(JSON.stringify(viewport));
+    state.viewport = klona(viewport);
 
-    // 3. 计算并应用边的样式
     const nodes = elements.filter((el): el is VueFlowNode => !("source" in el));
     const originalEdges = elements.filter((el): el is VueFlowEdge => "source" in el);
     const styledEdges = originalEdges.map((edge) => {
@@ -307,44 +291,25 @@ function createWorkflowManager() {
       const styleProps = getEdgeStyleProps(sourceType, targetType, isDark.value);
       return { ...edge, ...styleProps };
     });
-    // console.debug(
-    //   `[_applyWorkflowToTab] 为 ${internalId} 计算了 ${styledEdges.length} 条边的样式。`
-    // );
 
-    // 4. 更新元素 (再次深拷贝以确保安全，尽管 styledEdges 是新的)
-    state.elements = JSON.parse(JSON.stringify([...nodes, ...styledEdges]));
+    state.elements = klona([...nodes, ...styledEdges]);
 
-    // 5. 处理节点组接口信息
+    const tabInfo = tabStore.tabs.find((t) => t.internalId === internalId);
     if (tabInfo?.type === "groupEditor" && state.workflowData) {
-      // state.groupInterfaceInfo = workflowDataHandler.extractGroupInterface(state.workflowData); // 暂时移除，如果需要再加回来
-      // console.debug(
-      //   `[_applyWorkflowToTab] 已为节点组编辑器 ${internalId} 提取并设置接口信息:`,
-      //   state.groupInterfaceInfo
-      // );
+      state.groupInterfaceInfo = null; // 暂时禁用
     } else {
       state.groupInterfaceInfo = null;
     }
 
-    // 6. 标记为干净和已加载
     state.isDirty = false;
     state.isLoaded = true;
 
-    // 7. 历史记录逻辑已移除
-    // console.debug(`[_applyWorkflowToTab] 已为 ${internalId} 标记为已加载。`); // 保留日志点，但更新内容
-
-    // 8. 更新 TabStore
     tabStore.updateTab(internalId, {
       label: workflow.name,
       associatedId: workflow.id,
       isDirty: false,
     });
-    // console.debug(`[_applyWorkflowToTab] 已更新标签页 ${internalId} 的标签信息。`);
 
-    // console.info(
-    //   `[_applyWorkflowToTab] 成功为标签页 ${internalId} 应用工作流状态 ${workflow.id}。`
-    // );
-
-    // 返回应用的快照
     try {
       return klona({
         elements: state.elements,
@@ -357,21 +322,24 @@ function createWorkflowManager() {
     }
   }
 
+  /**
+   * 将默认工作流模板应用到指定的标签页。
+   * @param internalId - 目标标签页的内部 ID。
+   * @returns 应用后的状态快照，如果失败则返回 null。
+   */
   async function applyDefaultWorkflowToTab(
     internalId: string
   ): Promise<WorkflowStateSnapshot | null> {
     const tabInfo = tabStore.tabs.find((t) => t.internalId === internalId);
-    const projectId = tabInfo?.projectId || "default"; // 需要一个 projectId
+    const projectId = tabInfo?.projectId || "default";
     const associatedId = tabInfo?.associatedId || crypto.randomUUID();
-    const labelToUse =
-      tabInfo?.label || defaultWorkflowTemplateUntyped.name || "*新工作流*";
+    const labelToUse = tabInfo?.label || defaultWorkflowTemplateUntyped.name || "*新工作流*";
 
     try {
       await nodeStore.ensureDefinitionsLoaded();
 
-      // 1. 构造一个基础对象，然后用 Zod 解析以确保类型安全
       const rawTemplateObject = {
-        ...(klona(defaultWorkflowTemplateUntyped)),
+        ...klona(defaultWorkflowTemplateUntyped),
         id: associatedId,
         name: labelToUse,
         projectId: projectId,
@@ -379,7 +347,7 @@ function createWorkflowManager() {
         updatedAt: new Date().toISOString(),
         referencedWorkflows: [],
       };
-      
+
       const validationResult = WorkflowStorageObjectSchema.safeParse(rawTemplateObject);
       if (!validationResult.success) {
         console.error("默认工作流模板数据验证失败:", validationResult.error);
@@ -388,14 +356,8 @@ function createWorkflowManager() {
       }
       const templateStorageObject = validationResult.data;
 
-      // 2. 使用 transformWorkflowToVueFlow 进行转换
-      // 对于默认模板，它不引用其他工作流，所以 loadWorkflowByIdFunc 可以是空的
-      const mockLoadWorkflowFunc = async (
-        wfId: string
-      ): Promise<WorkflowStorageObject | null> => {
-        console.warn(
-          `[applyDefaultWorkflowToTab] mockLoadWorkflowFunc called for ${wfId}, but default template should not have references.`
-        );
+      const mockLoadWorkflowFunc = async (wfId: string): Promise<WorkflowStorageObject | null> => {
+        console.warn(`[applyDefaultWorkflowToTab] mockLoadWorkflowFunc called for ${wfId}`);
         return null;
       };
 
@@ -405,169 +367,70 @@ function createWorkflowManager() {
         getEdgeStyleProps
       );
 
-      // 3. 准备最终的 WorkflowData (现在基于 templateStorageObject)
       const finalWorkflowData: WorkflowData = {
         ...templateStorageObject,
-        id: associatedId, // 显式地传递 id 以满足类型要求
-        name: labelToUse, // 显式地传递 name 以满足类型要求
-        // 确保 viewport 和其他核心数据与 flowData 一致
+        id: associatedId,
+        name: labelToUse,
         viewport: viewport,
       };
 
-      // 4. 使用 _applyWorkflowToTab 应用状态
-      const snapshot = await _applyWorkflowToTab(
+      return await _applyWorkflowToTab(
         internalId,
         finalWorkflowData,
-        [...flowData.nodes, ...flowData.edges], // 传递转换后的 VueFlow elements
+        [...flowData.nodes, ...flowData.edges],
         viewport
       );
-
-      if (snapshot) {
-        // console.info(`[useWorkflowManager/applyDefaultWorkflowToTab] 已成功将默认模板状态应用于 ${internalId}。`);
-      } else {
-        console.error(
-          `[useWorkflowManager/applyDefaultWorkflowToTab] _applyWorkflowToTab 未能返回快照 for ${internalId}。`
-        );
-      }
-      return snapshot;
     } catch (error) {
-      console.error(
-        `[useWorkflowManager/applyDefaultWorkflowToTab] 应用默认模板失败 for ${internalId}:`,
-        error
-      );
+      console.error(`[applyDefaultWorkflowToTab] 应用默认模板失败 for ${internalId}:`, error);
       dialogService.showError(
-        `创建新工作流时应用默认模板失败: ${
-          error instanceof Error ? error.message : String(error)
-        }`
+        `创建新工作流时应用默认模板失败: ${error instanceof Error ? error.message : String(error)}`
       );
       return null;
     }
   }
 
-  // --- 新增：直接更新节点位置 ---
+  // #endregion
+
+  // #region --- 公共状态管理函数 ---
+
   /**
-   * 直接更新指定标签页中一个或多个节点的位置。
-   * 这个方法会标记标签页为脏状态，但不会自动记录历史。
-   * @param internalId 目标标签页的内部 ID。
-   * @param updates 一个包含 { nodeId, position } 对象的数组。
+   * 切换到组输出预览模式。
    */
-  async function updateNodePositions(
-    internalId: string,
-    updates: { nodeId: string; position: { x: number; y: number } }[]
-  ) {
-    const state = await ensureTabState(internalId, false); // 确保状态存在
-    if (!state) {
-      console.warn(`[updateNodePositions] 无法更新位置，未找到标签页 ${internalId} 的状态`);
-      return;
-    }
-
-    let changed = false;
-    updates.forEach((update) => {
-      const nodeIndex = state.elements.findIndex(
-        (el) => el.id === update.nodeId && !("source" in el)
-      ); // 确保是节点
-      if (nodeIndex !== -1) {
-        const node = state.elements[nodeIndex] as VueFlowNode; // 类型断言
-        // 比较位置是否真的改变，避免不必要的更新和标记
-        if (node.position.x !== update.position.x || node.position.y !== update.position.y) {
-          // console.debug(`[updateNodePositions] 正在更新标签页 ${internalId} 中节点 ${update.nodeId} 的位置，从 ${JSON.stringify(node.position)} 到 ${JSON.stringify(update.position)}`);
-          node.position = { ...update.position }; // 更新位置 (使用扩展运算符创建新对象)
-          changed = true;
-        }
-      } else {
-        console.warn(
-          `[updateNodePositions] 未在标签页 ${internalId} 中找到要更新位置的节点: ${update.nodeId}`
-        );
-      }
-    });
-
-    if (changed) {
-      markAsDirty(internalId); // 如果有任何位置改变，标记为脏
-    }
+  function switchToGroupOutputPreviewMode() {
+    _showGroupOutputOverview.value = true;
   }
 
-  // --- 公共状态管理函数 (改编自 useWorkflowState) ---
-
-  // --- 新增：直接添加节点 ---
   /**
-   * 直接将单个节点添加到指定标签页的状态中。
-   * 这个方法会标记标签页为脏状态，但不会自动记录历史。
-   * @param internalId 目标标签页的内部 ID。
-   * @param nodeToAdd 要添加的 VueFlowNode 对象。
+   * 清除组输出总览模式的请求。
    */
-  async function addNode(internalId: string, nodeToAdd: VueFlowNode) {
-    const state = await ensureTabState(internalId, false); // 确保状态存在
-    if (!state) {
-      console.warn(`[addNode] 无法添加节点，未找到标签页 ${internalId} 的状态`);
-      return;
-    }
-
-    // 检查节点是否已存在
-    if (state.elements.some((el) => el.id === nodeToAdd.id)) {
-      console.warn(
-        `[addNode] ID 为 ${nodeToAdd.id} 的节点已存在于标签页 ${internalId} 中。跳过添加。`
-      );
-      return;
-    }
-
-    // 深拷贝节点
-    const newNode = klona(nodeToAdd);
-
-    // 如果是 NodeGroup 并且没有 groupInterface，则初始化一个空的
-    if (
-      newNode.type === "core:NodeGroup" &&
-      newNode.data &&
-      newNode.data.groupInterface === undefined
-    ) {
-      newNode.data.groupInterface = { inputs: {}, outputs: {} };
-      console.debug(`[addNode] Initialized empty groupInterface for new NodeGroup ${newNode.id}`);
-    }
-
-    // 添加到 elements 数组
-    state.elements.push(newNode);
-    // console.debug(`[addNode] 已将节点 ${newNode.id} 添加到标签页 ${internalId} 的状态中`);
-
-    // --- 日志添加开始 ---
-    if (state.workflowData) {
-      console.log(`[WorkflowManager addNode - ${internalId}] After adding to elements:`);
-      console.log(
-        `  state.elements node IDs:`,
-        JSON.stringify(state.elements.filter((el) => !("source" in el)).map((n) => n.id))
-      );
-      console.log(
-        `  state.workflowData.nodes IDs:`,
-        JSON.stringify(state.workflowData.nodes.map((n) => n.id))
-      );
-    } else {
-      console.log(
-        `[WorkflowManager addNode - ${internalId}] state.workflowData is null after adding to elements.`
-      );
-    }
-    // --- 日志添加结束 ---
-
-    // 标记为脏
-    markAsDirty(internalId);
+  function clearGroupOutputOverviewRequest() {
+    _showGroupOutputOverview.value = false;
   }
 
+  /**
+   * 获取当前活动标签页的状态对象。
+   * @returns 当前活动标签页的状态，如果无活动标签页则返回 undefined。
+   */
   function getActiveTabState(): TabWorkflowState | undefined {
     const id = activeTabId.value;
     return id ? tabStates.get(id) : undefined;
   }
 
+  /**
+   * 获取指定ID的标签页状态对象。
+   * @param internalId - 标签页的内部 ID。
+   * @returns 对应标签页的状态，如果不存在则返回 undefined。
+   */
   function getTabState(internalId: string): TabWorkflowState | undefined {
     return tabStates.get(internalId);
   }
 
   /**
-   * 确保给定标签页的状态存在。
-   * 如果状态是新创建的并且代表一个新的工作流（没有 associatedId 或 temp ID），
-   * 它将应用默认的工作流状态。
-   * @param internalId 标签页的内部 ID。
-   * @param applyDefaultIfNeeded 如果为 true (默认)，则在状态是新的且标签页用于新工作流时应用默认工作流。
-   * @returns 确保存在的 TabWorkflowState。
+   * 创建一个新的、初始化的标签页工作流状态对象。
+   * @param internalId - 标签页的内部 ID。
+   * @param tabInfo - 标签页的信息。
+   * @returns 一个新的 TabWorkflowState 对象。
    */
-
-  // 辅助函数，用于创建 TabWorkflowState (移除了 Proxy)
   function createTabWorkflowState(
     internalId: string,
     tabInfo?: ReturnType<typeof useTabStore>["tabs"][number]
@@ -582,170 +445,129 @@ function createWorkflowManager() {
       interfaceInputs: {},
       interfaceOutputs: {},
     };
-    const state: TabWorkflowState = {
-      // 重命名 targetState 为 state
+    return {
       workflowData: initialWorkflowData,
       isDirty: false,
-      isPersisted: false, // 新工作流默认未持久化
+      isPersisted: false,
       vueFlowInstance: null,
       elements: [],
       viewport: initialWorkflowData.viewport,
       groupInterfaceInfo: null,
       isLoaded: false,
     };
-    return state; // 直接返回 state 对象，不再使用 Proxy
   }
 
+  /**
+   * 确保给定标签页的状态存在。如果不存在，则会创建一个新的状态。
+   * 如果状态是新创建的且代表一个新工作流，它将应用默认的工作流模板。
+   * @param internalId - 标签页的内部 ID。
+   * @param applyDefaultIfNeeded - 如果为 true (默认)，则在状态是新的且标签页用于新工作流时应用默认工作流。
+   * @returns 确保存在的 TabWorkflowState。
+   */
   async function ensureTabState(
     internalId: string,
     applyDefaultIfNeeded = true
   ): Promise<TabWorkflowState> {
-    // 添加 async 和 Promise 返回类型
-    const stateExists = tabStates.has(internalId);
-    let state = stateExists ? tabStates.get(internalId)! : null;
-
-    if (!stateExists) {
-      // console.debug(`[useWorkflowManager/ensureTabState] 初始化标签页 ${internalId} 的状态`);
+    if (!tabStates.has(internalId)) {
       const tabInfo = tabStore.tabs.find((t) => t.internalId === internalId);
       const associatedId = tabInfo?.associatedId;
       const isNewWorkflow = !associatedId || associatedId.startsWith("temp-");
 
-      // 创建 initialState (移除了 Proxy)
-      const initialState = createTabWorkflowState(internalId, tabInfo); // 更新函数调用
+      const initialState = createTabWorkflowState(internalId, tabInfo);
       tabStates.set(internalId, initialState);
-      state = initialState;
-      // 移除了 ensureHistoryState 调用
 
-      // *仅*当它是新的工作流标签页且被请求时才应用默认工作流
       if (isNewWorkflow && applyDefaultIfNeeded) {
-        // console.info(
-        //   `[useWorkflowManager/ensureTabState] 新工作流标签页 ${internalId}。正在应用默认状态。`
-        // );
-        await applyDefaultWorkflowToTab(internalId); // 添加 await
-      } else {
-        // console.info(
-        //   `[useWorkflowManager/ensureTabState] 已为 ${internalId} 创建初始状态。等待加载数据或显式应用默认值。`
-        // );
-        // 为正在加载的现有工作流记录空历史
-        // 移除了 recordHistory 调用
+        await applyDefaultWorkflowToTab(internalId);
       }
     }
-    return state!;
+    return tabStates.get(internalId)!;
   }
 
+  /**
+   * 获取指定标签页的工作流核心数据。
+   * @param internalId - 标签页的内部 ID。
+   * @returns 工作流数据对象，如果不存在则返回 null。
+   */
   function getWorkflowData(internalId: string): WorkflowData | null {
-    // 返回深拷贝？对于只读访问可能不是必需的。暂时返回直接引用。
     return tabStates.get(internalId)?.workflowData ?? null;
   }
 
+  /**
+   * 检查指定标签页的工作流是否有未保存的更改。
+   * @param internalId - 标签页的内部 ID。
+   * @returns 如果有未保存的更改则返回 true，否则返回 false。
+   */
   function isWorkflowDirty(internalId: string): boolean {
     return tabStates.get(internalId)?.isDirty ?? false;
   }
 
+  /**
+   * 检查指定标签页的工作流是否为新创建（未持久化）。
+   * @param internalId - 标签页的内部 ID。
+   * @returns 如果是新工作流则返回 true，否则返回 false。
+   */
   function isWorkflowNew(internalId: string): boolean {
     return !getTabState(internalId)?.isPersisted;
   }
 
+  /**
+   * 获取指定标签页的画布元素（节点和边）的深拷贝。
+   * @param internalId - 标签页的内部 ID。
+   * @returns 包含 VueFlow 节点和边的数组。
+   */
   function getElements(internalId: string): Array<VueFlowNode | VueFlowEdge> {
-    // 返回深拷贝以防止在 setter 之外意外修改
     const state = tabStates.get(internalId);
-    return state ? JSON.parse(JSON.stringify(state.elements)) : [];
+    return state ? klona(state.elements) : [];
   }
 
+  /**
+   * 设置指定标签页的画布元素，并标记为“脏”。
+   * @param internalId - 标签页的内部 ID。
+   * @param elements - 新的元素数组。
+   */
   async function setElements(internalId: string, elements: Array<VueFlowNode | VueFlowEdge>) {
-    // 添加 async
-    // 移除了 isApplyingInitialDefault 和 isApplyingSnapshot 检查
-
-    const state = await ensureTabState(internalId, false); // 添加 await
+    const state = await ensureTabState(internalId, false);
     if (!state) return;
 
-    // 深拷贝元素
     const newElements = klona(elements);
-
-    // 在标记为脏和记录历史之前检查元素是否实际更改 (原始逻辑)
     if (JSON.stringify(state.elements) !== JSON.stringify(newElements)) {
-      // console.debug(`[useWorkflowManager/setElements] 标签页 ${internalId} 的元素已更改。`);
       state.elements = newElements;
-
-      // --- 日志添加开始 ---
-      if (state.elements) {
-        // 检查 state.elements 是否存在
-        console.log(
-          `[WorkflowManager setElements - ${internalId}] After 'state.elements = newElements;'`
-        );
-        const ngInState = state.elements.find((el) => el.type === "core:NodeGroup") as
-          | VueFlowNode
-          | undefined;
-        if (ngInState) {
-          console.log(
-            `  NodeGroup (${ngInState.id}) in state.elements - data.inputValues:`,
-            JSON.stringify(ngInState.data?.inputValues)
-          );
-        } else {
-          console.log(`  No NodeGroup found in state.elements after update.`);
-        }
-      } else {
-        console.log(
-          `[WorkflowManager setElements - ${internalId}] state.elements is null/undefined after 'state.elements = newElements;'`
-        );
-      }
-      // --- 日志添加结束 ---
-
-      markAsDirty(internalId); // 标记为脏
-      // 移除了 recordHistory 调用
-    } else {
-      // console.debug(`[useWorkflowManager/setElements] 标签页 ${internalId} 的元素未更改。跳过标记为脏。`);
+      markAsDirty(internalId);
     }
   }
 
+  /**
+   * 将指定标签页标记为“脏”（有未保存的更改）。
+   * @param internalId - 标签页的内部 ID。
+   */
   function markAsDirty(internalId: string) {
     const state = tabStates.get(internalId);
     if (state && !state.isDirty) {
       state.isDirty = true;
-
-      // 诊断 - 在调用 tabStore.updateTab 之前检查 elements
-      // const elementsBeforeUpdateTab = tabStates.get(internalId)?.elements;
-      // if (elementsBeforeUpdateTab) {
-      //   console.log(`[DEBUG Manager - markAsDirty] BEFORE tabStore.updateTab. Elements count: ${elementsBeforeUpdateTab.length}`, elementsBeforeUpdateTab.map((e: VueFlowNode | VueFlowEdge) => e.id));
-      // }
-
-      tabStore.updateTab(internalId, { isDirty: true }); // 与 tabStore 同步
-
-      // 诊断 - 在调用 tabStore.updateTab 之后检查 elements
-      // const elementsAfterUpdateTab = tabStates.get(internalId)?.elements;
-      // if (elementsAfterUpdateTab) {
-      //   console.log(`[DEBUG Manager - markAsDirty] AFTER tabStore.updateTab. Elements count: ${elementsAfterUpdateTab.length}`, elementsAfterUpdateTab.map((e: VueFlowNode | VueFlowEdge) => e.id));
-      //   if (elementsBeforeUpdateTab && JSON.stringify(elementsBeforeUpdateTab.map(e => e.id)) !== JSON.stringify(elementsAfterUpdateTab.map(e => e.id))) {
-      //     console.error(`[DEBUG Manager - markAsDirty] Elements CHANGED after tabStore.updateTab!`);
-      //   }
-      // }
-      // console.debug(`[useWorkflowManager/markAsDirty] 标签页 ${internalId} 已标记为脏。`);
+      tabStore.updateTab(internalId, { isDirty: true });
     } else if (!state) {
-      console.warn(
-        `[useWorkflowManager/markAsDirty] 尝试将不存在的标签页 ${internalId} 标记为脏。`
-      );
+      console.warn(`[markAsDirty] 尝试将不存在的标签页 ${internalId} 标记为脏。`);
     }
   }
 
+  /**
+   * 移除指定标签页的工作流状态数据。
+   * @param internalId - 标签页的内部 ID。
+   */
   function removeWorkflowData(internalId: string) {
     if (tabStates.has(internalId)) {
       tabStates.delete(internalId);
-      // 移除了 removeHistory 调用
-      // console.debug(
-      //   `[useWorkflowManager/removeWorkflowData] 已移除标签页 ${internalId} 的状态`
-      // );
     }
   }
 
+  /**
+   * 清除属于特定项目的所有工作流状态。
+   * @param projectIdToClear - 要清除状态的项目 ID。
+   */
   function clearWorkflowStatesForProject(projectIdToClear: string) {
     if (!projectIdToClear) return;
 
-    // console.info(
-    //   `[useWorkflowManager/clearWorkflowStatesForProject] 正在清除项目 ${projectIdToClear} 的工作流状态...`
-    // );
-    let clearedCount = 0;
     const tabsToRemove: string[] = [];
-
     for (const tab of tabStore.tabs) {
       if (tab.projectId === projectIdToClear) {
         tabsToRemove.push(tab.internalId);
@@ -755,70 +577,60 @@ function createWorkflowManager() {
     for (const internalId of tabsToRemove) {
       if (tabStates.has(internalId)) {
         tabStates.delete(internalId);
-        // 移除了 removeHistory 调用
-        clearedCount++;
-        // console.debug(
-        //   `[useWorkflowManager/clearWorkflowStatesForProject] 已移除标签页 ${internalId} 的状态 (项目: ${projectIdToClear})`
-        // );
       }
     }
-    // console.info(
-    //   `[useWorkflowManager/clearWorkflowStatesForProject] 已清除项目 ${projectIdToClear} 的 ${clearedCount} 个工作流状态。`
-    // );
   }
 
+  /**
+   * 检查指定标签页的状态是否已加载。
+   * @param internalId - 标签页的内部 ID。
+   * @returns 如果已加载则返回 true，否则返回 false。
+   */
   function isTabLoaded(internalId: string): boolean {
     return tabStates.get(internalId)?.isLoaded ?? false;
   }
 
   /**
-   * 原子性地更新元素和工作流接口定义，并记录历史。
-   * 用于处理 CONVERTIBLE_ANY 连接等需要同时更新两者的情况。
+   * 原子性地更新画布元素和工作流接口定义。
+   * 用于处理如 CONVERTIBLE_ANY 连接等需要同时更新两者的情况。
+   * @param internalId - 标签页的内部 ID。
+   * @param elements - 新的元素数组。
+   * @param inputs - 新的输入接口定义。
+   * @param outputs - 新的输出接口定义。
    */
-  async function setElementsAndInterface( // 添加 async
+  async function setElementsAndInterface(
     internalId: string,
     elements: Array<VueFlowNode | VueFlowEdge>,
     inputs: Record<string, GroupSlotInfo>,
     outputs: Record<string, GroupSlotInfo>
   ) {
-    const state = await ensureTabState(internalId, false); // 添加 await
+    const state = await ensureTabState(internalId, false);
     if (!state || !state.workflowData) {
-      console.error(
-        `[setElementsAndInterface] 无法更新，未找到标签页 ${internalId} 的状态或 workflowData`
-      );
+      console.error(`[setElementsAndInterface] 无法更新，未找到标签页 ${internalId} 的状态或 workflowData`);
       return;
     }
 
-    // 深拷贝传入的数据以确保隔离
     const newElements = klona(elements);
     const newInputs = klona(inputs);
     const newOutputs = klona(outputs);
 
-    // 检查状态是否真的发生了变化
     const elementsChanged = JSON.stringify(state.elements) !== JSON.stringify(newElements);
-    const inputsChanged =
-      JSON.stringify(state.workflowData.interfaceInputs) !== JSON.stringify(newInputs);
-    const outputsChanged =
-      JSON.stringify(state.workflowData.interfaceOutputs) !== JSON.stringify(newOutputs);
+    const inputsChanged = JSON.stringify(state.workflowData.interfaceInputs) !== JSON.stringify(newInputs);
+    const outputsChanged = JSON.stringify(state.workflowData.interfaceOutputs) !== JSON.stringify(newOutputs);
 
     if (elementsChanged || inputsChanged || outputsChanged) {
-      // 应用更新
-      state.elements = newElements; // VueFlow elements (包含节点和边) 被更新
+      state.elements = newElements;
 
-      // 从 newElements (即 state.elements) 中提取边，并更新 state.workflowData.edges
-      // 这是为了确保 workflowManager 内部的 workflowData.edges 与其管理的 elements 列表中的边保持同步。
       if (state.workflowData) {
-        // 确保 workflowData 存在
         const edgesFromElements = state.elements.filter((el) => "source" in el) as VueFlowEdge[];
-        // 将 VueFlowEdge 转换为存储格式的 StorageEdge (即 WorkflowEdge from @comfytavern/types)
         state.workflowData.edges = edgesFromElements.map((vueEdge) => ({
           id: vueEdge.id,
           source: vueEdge.source,
           target: vueEdge.target,
           sourceHandle: vueEdge.sourceHandle ?? null,
           targetHandle: vueEdge.targetHandle ?? null,
-          type: vueEdge.type, // VueFlowEdge 也有 type 字段，通常是自定义边的类型
-          data: vueEdge.data ? klona(vueEdge.data) : {}, // 深拷贝 data，确保 data 总是对象
+          type: vueEdge.type,
+          data: vueEdge.data ? klona(vueEdge.data) : {},
         }));
       }
 
@@ -826,17 +638,16 @@ function createWorkflowManager() {
       state.workflowData.interfaceOutputs = newOutputs;
 
       markAsDirty(internalId);
-      // 移除了 recordHistory 调用
-    } else {
-      // console.debug(`[setElementsAndInterface] 标签页 ${internalId} 的状态未更改。跳过更新。`);
     }
   }
 
-  // --- 新增：状态快照获取与应用 ---
+  // #endregion
+
+  // #region --- 状态快照与历史记录 ---
 
   /**
    * 获取指定标签页当前状态的深拷贝快照。
-   * @param internalId 目标标签页的内部 ID。
+   * @param internalId - 目标标签页的内部 ID。
    * @returns 包含 elements, viewport, workflowData 的快照对象，如果状态不存在则返回 undefined。
    */
   function getCurrentSnapshot(internalId: string): WorkflowStateSnapshot | undefined {
@@ -846,33 +657,11 @@ function createWorkflowManager() {
       return undefined;
     }
     try {
-      // 在克隆前记录 NodeGroup 的 inputValues
-      const nodeGroupInData = state.elements.find((el) => el.type === "core:NodeGroup");
-      if (nodeGroupInData) {
-        // console.log(`[DEBUG getCurrentSnapshot - ${internalId}] BEFORE klona. NodeGroup (${nodeGroupInData.id}) data.inputValues:`, JSON.stringify((nodeGroupInData as VueFlowNode).data?.inputValues));
-      } else {
-        // console.log(
-        //   `[DEBUG getCurrentSnapshot - ${internalId}] BEFORE klona. No NodeGroup found in state.elements.`
-        // );
-      }
-
-      // 返回状态的深拷贝
-      const snapshot = klona({
+      return klona({
         elements: state.elements,
         viewport: state.viewport,
         workflowData: state.workflowData,
-        // 可以根据需要添加其他需要记录的状态属性
       });
-
-      const nodeGroupInSnapshot = snapshot.elements.find((el) => el.type === "core:NodeGroup");
-      if (nodeGroupInSnapshot) {
-        // console.log(`[DEBUG getCurrentSnapshot - ${internalId}] AFTER klona. NodeGroup (${nodeGroupInSnapshot.id}) data.inputValues in snapshot:`, JSON.stringify((nodeGroupInSnapshot as VueFlowNode).data?.inputValues));
-      } else {
-        // console.log(
-        //   `[DEBUG getCurrentSnapshot - ${internalId}] AFTER klona. No NodeGroup found in snapshot.elements.`
-        // );
-      }
-      return snapshot;
     } catch (error) {
       console.error(`[getCurrentSnapshot] 获取标签页 ${internalId} 快照时出错:`, error);
       return undefined;
@@ -881,10 +670,10 @@ function createWorkflowManager() {
 
   /**
    * 应用一个工作流状态快照到指定的标签页。
-   * 这个操作不会被记录到历史记录中，也不会将标签页标记为“脏”。
-   * 主要用于外部历史记录管理系统（如 useWorkflowHistory）来恢复状态。
-   * @param internalId 目标标签页的内部 ID。
-   * @param snapshot 要应用的状态快照。
+   * 此操作主要用于历史记录恢复，仅更新核心数据，不直接修改画布。
+   * @param internalId - 目标标签页的内部 ID。
+   * @param snapshot - 要应用的状态快照。
+   * @returns 如果应用成功则返回 true，否则返回 false。
    */
   function applyStateSnapshot(internalId: string, snapshot: WorkflowStateSnapshot): boolean {
     const state = tabStates.get(internalId);
@@ -892,21 +681,11 @@ function createWorkflowManager() {
       console.error(`[applyStateSnapshot] 无法应用快照，未找到标签页 ${internalId} 的状态`);
       return false;
     }
-    // console.debug(`[applyStateSnapshot] 正在将外部快照应用于标签页 ${internalId}`);
     try {
-      // 根据最新计划，此函数只应用非画布元素/视图的核心数据状态
-      // 画布元素和视图将由 workflowStore 的 undo/redo 使用命令式 API 更新
-
-      // 1. 应用 workflowData (如果存在)
       if (snapshot.workflowData) {
-        // 深拷贝以确保安全
         state.workflowData = klona(snapshot.workflowData);
-        // console.debug(`[applyStateSnapshot] 已应用标签页 ${internalId} 的 workflowData`);
 
-        // 2. 确保应用快照后，动态插槽仍然存在 (逻辑从 _applyWorkflowToTab 借鉴)
-        // 这部分逻辑依赖于 workflowData，所以放在这里是合适的
         if (state.workflowData) {
-          // 输入
           if (!state.workflowData.interfaceInputs) state.workflowData.interfaceInputs = {};
           const inputSlots = state.workflowData.interfaceInputs;
           if (!Object.values(inputSlots).some((slot) => slot.allowDynamicType === true)) {
@@ -920,7 +699,6 @@ function createWorkflowManager() {
               allowDynamicType: true,
             };
           }
-          // 输出
           if (!state.workflowData.interfaceOutputs) state.workflowData.interfaceOutputs = {};
           const outputSlots = state.workflowData.interfaceOutputs;
           if (!Object.values(outputSlots).some((slot) => slot.allowDynamicType === true)) {
@@ -934,24 +712,12 @@ function createWorkflowManager() {
               allowDynamicType: true,
             };
           }
-          // console.debug(`[applyStateSnapshot] 已确保标签页 ${internalId} 的动态插槽`);
         }
       } else {
         console.warn(`[applyStateSnapshot] 标签页 ${internalId} 的快照不包含 workflowData。`);
-        // 根据需要决定是否要清空 state.workflowData
-        // state.workflowData = null;
       }
 
-      // 3. 应用其他非画布/视图状态 (如果未来添加到 WorkflowStateSnapshot)
-      // 例如: state.someOtherMetadata = klona(snapshot.someOtherMetadata);
-
-      // 4. 标记为已加载，因为应用快照意味着状态是完整的
       state.isLoaded = true;
-
-      // 5. 不更新 state.elements 或 state.viewport
-      // 6. 不标记为脏或记录历史
-
-      // console.debug(`[applyStateSnapshot] 核心数据快照已成功应用于标签页 ${internalId}。元素/视口更新推迟给调用者。`);
       return true;
     } catch (error) {
       console.error(`[applyStateSnapshot] 应用核心数据快照到标签页 ${internalId} 时出错:`, error);
@@ -959,20 +725,17 @@ function createWorkflowManager() {
     }
   }
 
-  // --- 其他公共函数 ---
+  // #endregion
+
+  // #region --- 节点与工作流操作 ---
 
   /**
-   * 在指定标签页中创建一个新的、空的（默认）工作流。
-   * 处理脏检查并重置标签页状态。
-   * @param internalId 标签页的内部 ID。
+   * 在指定标签页中创建一个新的、空的工作流。
+   * @param internalId - 标签页的内部 ID。
+   * @returns 创建成功则返回状态快照，否则返回 null。
    */
   async function createNewWorkflow(internalId: string): Promise<WorkflowStateSnapshot | null> {
-    // 已是 async
-    // 添加返回类型
-    // 注意：ensureTabState 和 applyDefaultWorkflowToTab 现在直接调用
-    // 因为它们在此 composable 的作用域内定义。
-    // tabStore 也可直接使用。
-    const state = await ensureTabState(internalId); // 添加 await
+    const state = await ensureTabState(internalId, false);
     const tabLabel = tabStore.tabs.find((t) => t.internalId === internalId)?.label || internalId;
 
     if (
@@ -981,212 +744,128 @@ function createWorkflowManager() {
         title: "创建新工作流确认",
         message: `标签页 "${tabLabel}" 有未保存的更改。确定要创建新工作流吗？这将丢失未保存的更改。`,
         confirmText: "创建新工作流",
-        cancelText: "取消",
         dangerConfirm: true,
       }))
     ) {
-      return null; // 返回 null
+      return null;
     }
-
-    console.log(`[useWorkflowManager/createNewWorkflow] 开始为标签页 ${internalId} 创建新工作流。`);
 
     try {
-      // 委托应用默认工作流的核心逻辑
-      const snapshot = await applyDefaultWorkflowToTab(internalId); // 获取快照
-      if (snapshot) {
-        console.log(
-          `[useWorkflowManager/createNewWorkflow] 已成功为标签页 ${internalId} 应用默认工作流。`
-        );
-      } else {
-        console.error(
-          `[useWorkflowManager/createNewWorkflow] applyDefaultWorkflowToTab未能返回快照 for ${internalId}。`
-        );
-      }
-      return snapshot; // 返回快照或 null
-      // 成功创建后更新标签页元数据（保留现有标签）
-      // _applyWorkflowToTab（由 applyDefaultWorkflowToTab 调用）已处理标签页更新
-      // tabStore.updateTab(internalId, { isDirty: false, associatedId: null }); // 此处不再需要
+      return await applyDefaultWorkflowToTab(internalId);
     } catch (error) {
-      console.error(
-        `[useWorkflowManager/createNewWorkflow] 为标签页 ${internalId} 应用默认工作流失败:`,
-        error
-      );
-      // TODO: 添加用户反馈（例如，toast 通知）
-      return null; // 在 catch 块中也返回 null
-    }
-  }
-
-  // --- 新增：更新工作流元数据 ---
-  /**
-   * 更新指定标签页工作流的名称。
-   * @param internalId 目标标签页的内部 ID。
-   * @param newName 新的工作流名称。
-   */
-  async function updateWorkflowName(internalId: string, newName: string) {
-    const state = await ensureTabState(internalId, false); // 确保状态存在
-    if (!state || !state.workflowData) {
-      console.warn(
-        `[updateWorkflowName] 无法更新名称，未找到标签页 ${internalId} 的状态或 workflowData`
-      );
-      return;
-    }
-    if (state.workflowData.name !== newName) {
-      // console.debug(`[updateWorkflowName] 正在更新标签页 ${internalId} 的工作流名称从 "${state.workflowData.name}" 到 "${newName}"`);
-      state.workflowData.name = newName;
-      markAsDirty(internalId);
-      tabStore.updateTab(internalId, { label: newName }); // 更新标签页标签
-      // 可以在这里添加历史记录点，如果需要的话
+      console.error(`[createNewWorkflow] 为标签页 ${internalId} 应用默认工作流失败:`, error);
+      return null;
     }
   }
 
   /**
-   * 更新指定标签页工作流的描述。
-   * @param internalId 目标标签页的内部 ID。
-   * @param newDescription 新的工作流描述。
+   * 直接将单个节点添加到指定标签页的状态中。
+   * @param internalId - 目标标签页的内部 ID。
+   * @param nodeToAdd - 要添加的 VueFlowNode 对象。
    */
-  async function updateWorkflowDescription(internalId: string, newDescription: string) {
-    const state = await ensureTabState(internalId, false); // 确保状态存在
-    if (!state || !state.workflowData) {
-      console.warn(
-        `[updateWorkflowDescription] 无法更新描述，未找到标签页 ${internalId} 的状态或 workflowData`
-      );
+  async function addNode(internalId: string, nodeToAdd: VueFlowNode) {
+    const state = await ensureTabState(internalId, false);
+    if (!state) return;
+
+    if (state.elements.some((el) => el.id === nodeToAdd.id)) {
+      console.warn(`[addNode] ID 为 ${nodeToAdd.id} 的节点已存在于标签页 ${internalId} 中。`);
       return;
     }
-    // 假设 WorkflowData 类型有 description 字段
-    if (state.workflowData.description !== newDescription) {
-      // console.debug(`[updateWorkflowDescription] 正在更新标签页 ${internalId} 的工作流描述`);
-      state.workflowData.description = newDescription; // 类型已更新，移除断言
+
+    const newNode = klona(nodeToAdd);
+    if (newNode.type === "core:NodeGroup" && newNode.data && newNode.data.groupInterface === undefined) {
+      newNode.data.groupInterface = { inputs: {}, outputs: {} };
+    }
+
+    state.elements.push(newNode);
+    markAsDirty(internalId);
+  }
+
+  /**
+   * 直接更新指定标签页中一个或多个节点的位置。
+   * @param internalId - 目标标签页的内部 ID。
+   * @param updates - 一个包含 { nodeId, position } 对象的数组。
+   */
+  async function updateNodePositions(
+    internalId: string,
+    updates: { nodeId: string; position: { x: number; y: number } }[]
+  ) {
+    const state = await ensureTabState(internalId, false);
+    if (!state) return;
+
+    let changed = false;
+    updates.forEach((update) => {
+      const node = state.elements.find(
+        (el) => el.id === update.nodeId && !("source" in el)
+      ) as VueFlowNode | undefined;
+      if (node) {
+        if (node.position.x !== update.position.x || node.position.y !== update.position.y) {
+          node.position = { ...update.position };
+          changed = true;
+        }
+      }
+    });
+
+    if (changed) {
       markAsDirty(internalId);
-      // 可以在这里添加历史记录点，如果需要的话
     }
   }
 
-  // --- 新增：直接更新节点尺寸 ---
   /**
    * 直接更新指定标签页中单个节点的尺寸和样式。
-   * 这个方法会标记标签页为脏状态，但不会自动记录历史。
-   * @param internalId 目标标签页的内部 ID。
-   * @param nodeId 节点 ID。
-   * @param dimensions 包含 { width?: number, height?: number } 的对象。
+   * @param internalId - 目标标签页的内部 ID。
+   * @param nodeId - 节点 ID。
+   * @param dimensions - 包含 { width?: number, height?: number } 的对象。
    */
   async function updateNodeDimensions(
     internalId: string,
     nodeId: string,
     dimensions: { width?: number; height?: number }
   ) {
-    const state = await ensureTabState(internalId, false); // 确保状态存在
-    if (!state) {
-      console.warn(`[updateNodeDimensions] 无法更新尺寸，未找到标签页 ${internalId} 的状态`);
-      return;
-    }
+    const state = await ensureTabState(internalId, false);
+    if (!state) return;
 
-    const nodeIndex = state.elements.findIndex((el) => el.id === nodeId && !("source" in el)); // 确保是节点
+    const node = state.elements.find((el) => el.id === nodeId && !("source" in el)) as
+      | VueFlowNode
+      | undefined;
 
-    if (nodeIndex !== -1) {
-      const node = state.elements[nodeIndex] as VueFlowNode; // 类型断言
+    if (node) {
       let changed = false;
-
-      // 更新宽度
       if (dimensions.width !== undefined && node.width !== dimensions.width) {
         node.width = dimensions.width;
         node.style = { ...(node.style || {}), width: `${dimensions.width}px` };
         changed = true;
       }
-
-      // 更新高度
       if (dimensions.height !== undefined && node.height !== dimensions.height) {
         node.height = dimensions.height;
         node.style = { ...(node.style || {}), height: `${dimensions.height}px` };
         changed = true;
       }
-
       if (changed) {
-        // console.debug(`[updateNodeDimensions] 正在更新标签页 ${internalId} 中节点 ${nodeId} 的尺寸/样式`);
-        markAsDirty(internalId); // 如果有任何尺寸改变，标记为脏
+        markAsDirty(internalId);
       }
-    } else {
-      console.warn(
-        `[updateNodeDimensions] 未在标签页 ${internalId} 中找到要更新尺寸的节点: ${nodeId}`
-      );
-    }
-  }
-  // --- 结束新增 ---
-
-  // --- 新增：管理预览目标 ---
-  /**
-   * 设置或清除当前活动工作流的预览目标。
-   * @param internalId 目标标签页的内部 ID。
-   * @param target 预览目标对象 { nodeId: string, slotKey: string } 或 null 来清除。
-   */
-  async function setPreviewTarget(
-    internalId: string,
-    target: { nodeId: string; slotKey: string } | null
-  ) {
-    const state = await ensureTabState(internalId, false); // 确保状态存在
-    if (!state || !state.workflowData) {
-      console.warn(
-        `[setPreviewTarget] 无法设置预览目标，未找到标签页 ${internalId} 的状态或 workflowData`
-      );
-      return;
-    }
-
-    // 比较新旧值，只有在发生变化时才更新并标记为脏
-    const oldTargetJson = JSON.stringify(state.workflowData.previewTarget ?? null);
-    const newTargetJson = JSON.stringify(target ?? null);
-
-    if (oldTargetJson !== newTargetJson) {
-      // console.debug(
-      //   `[setPreviewTarget] 正在更新标签页 ${internalId} 的预览目标从 ${oldTargetJson} 到 ${newTargetJson}`
-      // );
-      state.workflowData.previewTarget = target ? klona(target) : null; // 深拷贝或设为 null
-      markAsDirty(internalId);
-      // 注意：历史记录应由调用此函数的协调器或交互处理器来管理
-    } else {
-      // console.debug(
-      //   `[setPreviewTarget] 标签页 ${internalId} 的预览目标未更改 (${newTargetJson})。跳过更新。`
-      // );
     }
   }
 
-  /**
-   * 清除当前活动工作流的预览目标。
-   * @param internalId 目标标签页的内部 ID。
-   */
-  async function clearPreviewTarget(internalId: string) {
-    // console.debug(`[clearPreviewTarget] 正在清除标签页 ${internalId} 的预览目标。`);
-    await setPreviewTarget(internalId, null);
-  }
-  // --- 结束新增预览目标管理 ---
-
-  // --- 新增：更新节点内部数据 ---
   /**
    * 更新指定标签页中单个节点的内部 data 对象中的特定属性。
-   * 这个方法会标记标签页为脏状态，但不会自动记录历史。
-   * @param internalId 目标标签页的内部 ID。
-   * @param nodeId 节点 ID。
-   * @param dataPayload 一个包含要更新的 data 属性的局部对象。
+   * @param internalId - 目标标签页的内部 ID。
+   * @param nodeId - 节点 ID。
+   * @param dataPayload - 一个包含要更新的 data 属性的局部对象。
    */
   async function updateNodeInternalData(
     internalId: string,
     nodeId: string,
-    dataPayload: Partial<VueFlowNode["data"]> // 允许部分更新 data
+    dataPayload: Partial<VueFlowNode["data"]>
   ) {
-    const state = await ensureTabState(internalId, false); // 确保状态存在
-    if (!state) {
-      console.warn(`[updateNodeInternalData] 无法更新数据，未找到标签页 ${internalId} 的状态`);
-      return;
-    }
+    const state = await ensureTabState(internalId, false);
+    if (!state) return;
 
-    const nodeIndex = state.elements.findIndex(
-      (el) => el.id === nodeId && !("source" in el) // 确保是节点
-    );
+    const nodeIndex = state.elements.findIndex((el) => el.id === nodeId && !("source" in el));
 
     if (nodeIndex !== -1) {
-      const currentNode = state.elements[nodeIndex] as VueFlowNode; // 类型断言
-      const currentData = currentNode.data || {}; // 确保 data 对象存在
-
-      // 创建新的 data 对象，合并旧数据和新数据
-      // 使用 klona 深拷贝 dataPayload 中的对象值，以避免意外的引用共享
+      const currentNode = state.elements[nodeIndex] as VueFlowNode;
+      const currentData = currentNode.data || {};
       const newData = {
         ...currentData,
         ...Object.fromEntries(
@@ -1197,28 +876,74 @@ function createWorkflowManager() {
         ),
       };
 
-      // 只有当 data 实际改变时才更新并标记为脏
       if (JSON.stringify(currentData) !== JSON.stringify(newData)) {
-        // console.debug(
-        //   `[updateNodeInternalData] 正在更新标签页 ${internalId} 中节点 ${nodeId} 的内部数据。`
-        // );
-        state.elements[nodeIndex] = {
-          ...currentNode,
-          data: newData,
-        };
+        state.elements[nodeIndex] = { ...currentNode, data: newData };
         markAsDirty(internalId);
-      } else {
-        // console.debug(
-        //   `[updateNodeInternalData] 标签页 ${internalId} 中节点 ${nodeId} 的内部数据未更改。跳过更新。`
-        // );
       }
-    } else {
-      console.warn(
-        `[updateNodeInternalData] 未在标签页 ${internalId} 中找到要更新数据的节点: ${nodeId}`
-      );
     }
   }
-  // --- 结束新增 ---
+
+  /**
+   * 更新指定标签页工作流的名称。
+   * @param internalId - 目标标签页的内部 ID。
+   * @param newName - 新的工作流名称。
+   */
+  async function updateWorkflowName(internalId: string, newName: string) {
+    const state = await ensureTabState(internalId, false);
+    if (!state || !state.workflowData) return;
+
+    if (state.workflowData.name !== newName) {
+      state.workflowData.name = newName;
+      markAsDirty(internalId);
+      tabStore.updateTab(internalId, { label: newName });
+    }
+  }
+
+  /**
+   * 更新指定标签页工作流的描述。
+   * @param internalId - 目标标签页的内部 ID。
+   * @param newDescription - 新的工作流描述。
+   */
+  async function updateWorkflowDescription(internalId: string, newDescription: string) {
+    const state = await ensureTabState(internalId, false);
+    if (!state || !state.workflowData) return;
+
+    if (state.workflowData.description !== newDescription) {
+      state.workflowData.description = newDescription;
+      markAsDirty(internalId);
+    }
+  }
+
+  /**
+   * 设置或清除当前活动工作流的预览目标。
+   * @param internalId - 目标标签页的内部 ID。
+   * @param target - 预览目标对象 { nodeId: string, slotKey: string } 或 null 来清除。
+   */
+  async function setPreviewTarget(
+    internalId: string,
+    target: { nodeId: string; slotKey: string } | null
+  ) {
+    const state = await ensureTabState(internalId, false);
+    if (!state || !state.workflowData) return;
+
+    const oldTargetJson = JSON.stringify(state.workflowData.previewTarget ?? null);
+    const newTargetJson = JSON.stringify(target ?? null);
+
+    if (oldTargetJson !== newTargetJson) {
+      state.workflowData.previewTarget = target ? klona(target) : null;
+      markAsDirty(internalId);
+    }
+  }
+
+  /**
+   * 清除当前活动工作流的预览目标。
+   * @param internalId - 目标标签页的内部 ID。
+   */
+  async function clearPreviewTarget(internalId: string) {
+    await setPreviewTarget(internalId, null);
+  }
+
+  // #endregion
 
   // --- 返回公共 API ---
   return {
@@ -1227,48 +952,49 @@ function createWorkflowManager() {
     getActiveTabState,
     getWorkflowData,
     isWorkflowDirty,
-    getElements, // 返回深拷贝
+    getElements,
     isTabLoaded,
-    getAllTabStates, // 指向响应式 Map 的计算属性引用
-    getCurrentSnapshot, // <-- 添加新方法
-    getTabState, // <-- 导出
-    activePreviewTarget, // <-- 添加新的计算属性
-    isCurrentWorkflowNew, // <-- 新增
-    showGroupOutputOverview, // <-- 新增：用于组输出总览模式
-    // 移除了 getHistoryState 和 historyActionCounter
+    getAllTabStates,
+    getCurrentSnapshot,
+    getTabState,
+    activePreviewTarget,
+    isCurrentWorkflowNew,
+    showGroupOutputOverview,
 
     // 状态操作
     ensureTabState,
-    setElements, // 元素更改的主要入口点
+    setElements,
     markAsDirty,
-    isWorkflowNew, // <-- 新增
+    isWorkflowNew,
     removeWorkflowData,
     clearWorkflowStatesForProject,
-    applyStateSnapshot, // <-- 已存在，确保实现正确
+    applyStateSnapshot,
     setElementsAndInterface,
     createNewWorkflow,
-    applyDefaultWorkflowToTab, // <-- 导出此函数
-    updateNodePositions, // <-- 导出新方法
+    applyDefaultWorkflowToTab,
+    updateNodePositions,
     addNode,
     updateWorkflowName,
     updateWorkflowDescription,
-    updateNodeDimensions, // <-- 导出新方法
-    setPreviewTarget, // <-- 导出新方法
-    clearPreviewTarget, // <-- 导出新方法
-    updateNodeInternalData, // <-- 导出新方法
-    switchToGroupOutputPreviewMode, // <-- 新增
-    clearGroupOutputOverviewRequest, // <-- 新增
+    updateNodeDimensions,
+    setPreviewTarget,
+    clearPreviewTarget,
+    updateNodeInternalData,
+    switchToGroupOutputPreviewMode,
+    clearGroupOutputOverviewRequest,
 
-    // 移除了 undo 和 redo
-
-    // 核心逻辑 (workflowStore 可能需要用于协调)
-
-    // 导出转换函数
+    // 转换函数
     storageNodeToVueFlowNode: _storageNodeToVueFlowNode,
     storageEdgeToVueFlowEdge: _storageEdgeToVueFlowEdge,
   };
 }
 
+/**
+ * 提供一个单例的工作流管理器实例。
+ * 这个 Composable 负责管理所有打开的工作流标签页的状态，
+ * 包括它们的节点、边、视口、脏状态以及与后端存储的交互。
+ * @returns 工作流管理器的公共 API。
+ */
 export function useWorkflowManager() {
   if (!instance) {
     instance = createWorkflowManager();
