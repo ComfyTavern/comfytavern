@@ -41,6 +41,22 @@ const completedExecutionIds = new Set<string>();
 // 记录待处理的清理任务
 const pendingCleanups = new Map<string, ReturnType<typeof setTimeout>>();
 
+/**
+ * 咕咕：定义一个白名单，包含所有与工作流执行直接相关、必须携带 promptId 的消息类型。
+ * 其他类型的消息（如插件状态更新、全局通知等）将被此路由器忽略。
+ */
+const EXECUTION_MESSAGE_TYPES = new Set<string>([
+  WebSocketMessageType.PROMPT_ACCEPTED_RESPONSE,
+  WebSocketMessageType.EXECUTION_STATUS_UPDATE,
+  WebSocketMessageType.NODE_EXECUTING,
+  WebSocketMessageType.NODE_PROGRESS,
+  WebSocketMessageType.NODE_COMPLETE,
+  WebSocketMessageType.NODE_ERROR,
+  WebSocketMessageType.NODE_YIELD,
+  WebSocketMessageType.WORKFLOW_INTERFACE_YIELD,
+  WebSocketMessageType.ERROR, // 全局错误也可能与执行相关
+]);
+
 
 let isRouterInitialized = false;
 let unsubscribeFromCore: (() => void) | null = null;
@@ -95,6 +111,21 @@ const cleanupExecution = (executionId: string) => {
 
 
 const handleRawMessage = (message: WebSocketMessage<any>) => {
+  // 咕咕：第一层过滤，如果消息类型与执行无关，则直接忽略，不进行任何处理。
+  // 这样可以防止此路由器处理其他 store（如 pluginStore）关心的消息。
+  if (!EXECUTION_MESSAGE_TYPES.has(message.type)) {
+    // 特殊处理几个历史遗留的非执行类消息，它们也由此路由器处理
+    if (message.type === WebSocketMessageType.WORKFLOW_LIST) {
+      ensureStoresInitialized();
+      workflowStore?.fetchAvailableWorkflows();
+    } else if (message.type === WebSocketMessageType.NODES_RELOADED) {
+      ensureStoresInitialized();
+      nodeStore?.handleNodesReloadedNotification(message.payload as NodesReloadedPayload);
+    }
+    // 对于所有其他非执行类消息，直接返回，不做任何警告。
+    return;
+  }
+
   ensureStoresInitialized();
   if (!executionStore || !workflowStore || !nodeStore) {
     console.error("[WebSocketRouter] Core stores not properly initialized.");
@@ -102,21 +133,8 @@ const handleRawMessage = (message: WebSocketMessage<any>) => {
   }
 
   try {
-    // console.debug("WebSocketRouter message received:", message);
     const payload = message.payload as any;
     const messagePromptId = payload?.promptId;
-
-    // 1. 处理全局非执行类消息
-    if (!messagePromptId && message.type !== WebSocketMessageType.PROMPT_ACCEPTED_RESPONSE) {
-      if (message.type === WebSocketMessageType.WORKFLOW_LIST) {
-        workflowStore.fetchAvailableWorkflows();
-      } else if (message.type === WebSocketMessageType.NODES_RELOADED) {
-        nodeStore.handleNodesReloadedNotification(payload as NodesReloadedPayload);
-      } else if (message.type !== WebSocketMessageType.ERROR){
-        console.warn(`[WebSocketRouter] Received message without promptId. Type: ${message.type}.`, payload);
-      }
-      return;
-    }
 
     // 2. 核心路由逻辑
     const acceptedPromptId = (message.type === WebSocketMessageType.PROMPT_ACCEPTED_RESPONSE)
@@ -124,10 +142,10 @@ const handleRawMessage = (message: WebSocketMessage<any>) => {
       : messagePromptId;
 
     if (!acceptedPromptId) {
-      console.error("[WebSocketRouter] Message related to execution is missing promptId.", message);
+      // 咕咕：现在只有执行类消息会进入此逻辑，所以如果缺少 promptId，就是一个明确的错误。
+      console.error(`[WebSocketRouter] Execution message type "${message.type}" is missing promptId.`, message);
       return;
     }
-
     // 2a. 认领阶段: PROMPT_ACCEPTED_RESPONSE 到达
     if (message.type === WebSocketMessageType.PROMPT_ACCEPTED_RESPONSE) {
       if (initiatingExecutionId) {
