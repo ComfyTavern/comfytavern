@@ -15,7 +15,7 @@ import App from './App.vue'
 import router from './router'
 import { vComfyTooltip } from './directives/vComfyTooltip';
 import { connect as connectWebSocket } from './services/WebSocketCoreService';
-import { loadPlugins } from './services/PluginLoaderService';
+import { loadAllPlugins } from './services/PluginLoaderService';
 import { initializeExtensionApi } from './services/ExtensionApiService';
 
 async function initializeApp() {
@@ -36,7 +36,7 @@ async function initializeApp() {
   app.directive('comfy-tooltip', vComfyTooltip);
 
   // 在挂载应用前加载插件
-  await loadPlugins();
+  await loadAllPlugins();
 
   app.mount('#app')
 }

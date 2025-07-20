@@ -6,15 +6,7 @@
           <h2 class="text-2xl font-bold text-text-base">{{ t('settings.plugins.title') }}</h2>
           <p class="text-sm text-text-secondary mt-1">{{ t('settings.plugins.description') }}</p>
         </div>
-        <button @click="handleReloadPlugins"
-          class="px-4 py-2 bg-primary text-primary-content rounded-lg shadow hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap self-start"
-          :disabled="isLoading || !hasPendingChanges">
-          {{ t('settings.plugins.reloadButton') }}
-        </button>
-      </div>
-
-      <div v-if="hasPendingChanges" class="mb-4 p-3 bg-warning/20 text-warning-content border border-warning rounded-lg">
-        <p>{{ t('settings.plugins.pendingChanges') }}</p>
+        <!-- 咕咕：移除全局重载按钮，因为现在是即时响应 -->
       </div>
     </div>
 
@@ -44,6 +36,7 @@
                 @update:model-value="togglePluginStatus(plugin, $event)"
                 size="large"
                 v-comfy-tooltip="plugin.isEnabled ? t('settings.plugins.disableTooltip') : t('settings.plugins.enableTooltip')"
+                :disabled="pluginStore.isPluginPending(plugin.name)"
               />
             </div>
           </div>
@@ -66,7 +59,8 @@ import { useThemeStore } from '@/stores/theme';
 
 const { t } = useI18n();
 const pluginStore = usePluginStore();
-const { plugins, isLoading, hasPendingChanges } = storeToRefs(pluginStore);
+// 咕咕：移除 hasPendingChanges，因为它不再需要
+const { plugins, isLoading } = storeToRefs(pluginStore);
 const themeStore = useThemeStore();
 
 const scrollbarOptions = computed(() => ({
@@ -88,7 +82,5 @@ const togglePluginStatus = (plugin: ExtensionInfo, isEnabled: boolean) => {
   pluginStore.setPluginEnabled(plugin.name, isEnabled);
 };
 
-const handleReloadPlugins = () => {
-  pluginStore.reloadPlugins();
-};
+// 咕咕：移除 handleReloadPlugins，因为它不再需要
 </script>

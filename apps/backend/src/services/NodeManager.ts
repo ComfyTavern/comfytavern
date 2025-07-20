@@ -115,6 +115,30 @@ export class NodeManager {
   }
 
   /**
+   * 根据命名空间卸载一组节点。
+   * @param namespace - 要卸载的节点的命名空间。
+   * @returns 返回被卸载的节点数量。
+   */
+  unregisterNodesByNamespace(namespace: string): number {
+    const nodesToUnregister: string[] = [];
+    for (const [fullType, definition] of this.nodes.entries()) {
+      if (definition.namespace === namespace) {
+        nodesToUnregister.push(fullType);
+      }
+    }
+
+    for (const fullType of nodesToUnregister) {
+      this.nodes.delete(fullType);
+    }
+
+    if (nodesToUnregister.length > 0) {
+      console.log(`[NodeManager] Unregistered ${nodesToUnregister.length} nodes for namespace: ${namespace}`);
+    }
+
+    return nodesToUnregister.length;
+  }
+
+  /**
    * 清空所有已注册的节点。
    */
   clearNodes() {

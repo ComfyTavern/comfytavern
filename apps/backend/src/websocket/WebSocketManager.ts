@@ -270,3 +270,5 @@ export class WebSocketManager {
     return Array.from(this.clients.keys());
   }
 }
+
+export const webSocketManager = new WebSocketManager();

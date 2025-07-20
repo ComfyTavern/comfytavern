@@ -8,6 +8,7 @@ import { useProjectStore } from './stores/projectStore'; // 导入项目状态�
 import { useUiStore } from './stores/uiStore'; // 导入 UI Store
 import { useAuthStore } from './stores/authStore'; // + 导入 authStore
 import { useSettingsStore } from './stores/settingsStore'; // + 导入 settingsStore
+import { usePluginStore } from './stores/pluginStore'; // + 咕咕：导入插件 store
 import { useLanguagePackManager } from './composables/useLanguagePackManager'; // + 导入 i18n manager
 import { useI18n } from 'vue-i18n'; // + 导入 vue-i18n
 import InitialUsernameSetupModal from './components/auth/InitialUsernameSetupModal.vue'; // + Import modal
@@ -26,6 +27,7 @@ const uiStore = useUiStore(); // 初始化 UI Store
 const projectStore = useProjectStore();
 const authStore = useAuthStore(); // + 初始化 authStore
 const settingsStore = useSettingsStore(); // + 初始化 settingsStore
+const pluginStore = usePluginStore(); // + 咕咕：初始化插件 store
 const languageManager = useLanguagePackManager(); // + 初始化 i18n manager
 const { t, locale, setLocaleMessage } = useI18n({ useScope: 'global' }); // + 获取全局 i18n 实例的方法
 
@@ -43,6 +45,7 @@ onMounted(async () => {
   themeStore.initTheme();
   await authStore.fetchUserContext(); // + 获取用户上下文
   uiStore.setupMobileViewListener(); // + 设置移动端视图监听器
+  pluginStore.listenToPluginChanges(); // + 咕咕：开始监听插件变更
 
   // + i18n 初始化
   const availableLangs = await languageManager.discoverLanguagePacks();

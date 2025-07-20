@@ -33,10 +33,26 @@ export const pluginRoutes = new Elysia({ prefix: '/api/plugins' })
     }
 
     try {
+      // 1. 更新持久化配置
       await pluginConfigService.setPluginState(pluginName, enabled);
+
+      // 2. 触发实时加载/卸载
+      if (enabled) {
+        const loadedPlugin = await PluginLoader.enablePlugin(pluginName);
+        if (!loadedPlugin) {
+          throw new Error(`Failed to dynamically enable plugin: ${pluginName}`);
+        }
+      } else {
+        const success = await PluginLoader.disablePlugin(pluginName);
+        if (!success) {
+          throw new Error(`Failed to dynamically disable plugin: ${pluginName}`);
+        }
+      }
+
+      // 3. 返回成功响应
       return {
         success: true,
-        message: `插件 "${pluginName}" ${enabled ? '已启用' : '已禁用'}`
+        message: `插件 "${pluginName}" 已成功 ${enabled ? '启用' : '禁用'}.`
       };
     } catch (error) {
       console.error(`[API] Error setting plugin state for ${pluginName}:`, error);
