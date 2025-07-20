@@ -268,3 +268,16 @@ export const WorkflowStorageObjectSchema = z.object({
   }).nullable().optional(),
 });
 export type WorkflowStorageObject = z.infer<typeof WorkflowStorageObjectSchema>;
+
+/**
+ * Schema 定义：用于在列表中显示的工作流元数据。
+ */
+export const WorkflowMetadataSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  updatedAt: z.string().datetime().optional(),
+  creationMethod: z.string().optional(),
+  referencedWorkflows: z.array(z.string()).optional(),
+});
+export type WorkflowMetadata = z.infer<typeof WorkflowMetadataSchema>;

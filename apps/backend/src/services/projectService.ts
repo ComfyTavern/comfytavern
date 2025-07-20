@@ -680,10 +680,12 @@ export async function createProject(
 }
 
 // 定义 listWorkflows 返回的单个工作流项目类型
+// 定义 listWorkflows 返回的单个工作流项目类型
 interface ListedWorkflow {
   id: string;
   name: string;
   description?: string;
+  updatedAt?: string; // 添加 updatedAt
   creationMethod?: string;
   referencedWorkflows?: string[];
 }
@@ -742,6 +744,7 @@ export async function listWorkflows(userId: string, projectId: string): Promise<
             id,
             name,
             description: workflowData.description,
+            updatedAt: workflowData.updatedAt, // 添加 updatedAt
             creationMethod: workflowData.creationMethod,
             referencedWorkflows: workflowData.referencedWorkflows,
           };
@@ -762,7 +765,6 @@ export async function listWorkflows(userId: string, projectId: string): Promise<
       `[Service:listWorkflows] Found ${resolvedWorkflows.length} valid workflows for project ID '${projectId}'.`
     );
     return resolvedWorkflows;
-    return resolvedWorkflows;
   } catch (error: any) {
     console.error(
       `[Service:listWorkflows] Error listing workflows for project ID '${projectId}' for user '${userId}':`,
@@ -773,7 +775,6 @@ export async function listWorkflows(userId: string, projectId: string): Promise<
     );
   }
 }
-
 /**
  * 定义工作流已存在的特定错误类型
  */

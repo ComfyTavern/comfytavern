@@ -275,18 +275,18 @@ export const projectRoutesPlugin = (
           }
         ) // End of GET /:projectId/metadata
 
-        // PUT /api/projects/:projectId/metadata - 更新项目元数据
+        // PUT /api/projects/:projectId - 更新项目元数据
         .put(
-          "/:projectId/metadata",
+          "/:projectId",
           async (ctx) => { // 让 Elysia 推断 ctx
             const { params: { projectId: rawProjectId }, body, set, userContext } = ctx as AuthenticatedContext & { params: { projectId: string } }; // 类型断言
             const userId = getUserIdFromContext(userContext);
             if (!userId) {
               set.status = 401; // Unauthorized
-              console.error(`[PUT /${rawProjectId}/metadata] 未经授权的访问：无法确定 userId。`);
+              console.error(`[PUT /${rawProjectId}] 未经授权的访问：无法确定 userId。`);
               return { error: "未经授权的访问：无法确定 userId。" };
             }
-            const operationName = `PUT /${rawProjectId}/metadata`;
+            const operationName = `PUT /${rawProjectId}`;
             const safeIdResult = getSafeProjectIdOrErrorResponse(rawProjectId, set, operationName);
             if (typeof safeIdResult !== "string") {
               return safeIdResult; // 返回错误响应对象
@@ -343,7 +343,7 @@ export const projectRoutesPlugin = (
             params: t.Object({ projectId: t.String() }),
             // 在处理函数内部进行请求体验证，此处移除 Schema 定义。
           }
-        ) // End of PUT /:projectId/metadata
+        ) // End of PUT /:projectId
 
         // GET /api/projects/:projectId/workflows - 列出项目内的工作流
         .get(

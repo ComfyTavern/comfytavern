@@ -5,7 +5,8 @@ import type {
   HistoryEntry,
   GroupInterfaceInfo,
   WorkflowStorageObject,
-  GroupSlotInfo
+  GroupSlotInfo,
+  WorkflowMetadata
 } from "@comfytavern/types";
 import { useTabStore, type Tab } from "./tabStore";
 import { ref, nextTick, watch, computed } from "vue";
@@ -25,15 +26,7 @@ import { getWorkflow } from '../utils/api';
 import { useWebSocket } from '@/composables/useWebSocket';
 
 export const useWorkflowStore = defineStore("workflow", () => {
-  const availableWorkflows = ref<
-    Array<{
-      id: string;
-      name: string;
-      description?: string;
-      creationMethod?: string;
-      referencedWorkflows?: string[];
-    }>
-  >([]);
+  const availableWorkflows = ref<WorkflowMetadata[]>([]);
 
   const tabStore = useTabStore();
   const dialogService = useDialogService();

@@ -10,7 +10,7 @@ export const useProjectStore = defineStore('project', () => {
   const isLoading = ref(false);
   const error = ref<string | null>(null);
   const availableProjects = ref<ProjectMetadata[]>([]); // 新增：存储项目列表
-  const { get, post } = useApi(); // 获取封装的 get 和 post 方法
+  const { get, post, put } = useApi(); // 获取封装的 get, post 和 put 方法
 
   async function loadProject(projectId: string): Promise<boolean> { // Return a promise indicating success/failure
     if (!projectId) {
@@ -110,6 +110,44 @@ export const useProjectStore = defineStore('project', () => {
   }
 
 
+  // 新增：更新项目
+  async function updateProject(projectId: string, projectData: Partial<Pick<ProjectMetadata, 'name' | 'description'>>): Promise<ProjectMetadata | null> {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      const updatedProject = await put<ProjectMetadata>(`/projects/${encodeURIComponent(projectId)}`, projectData);
+
+      const validationResult = ProjectMetadataSchema.safeParse(updatedProject);
+      if (!validationResult.success) {
+        console.error('Updated project metadata validation failed:', validationResult.error.flatten());
+        throw new Error('Invalid project metadata received after update.');
+      }
+
+      const validatedData = validationResult.data;
+      console.info('Project updated:', validatedData);
+
+      // 更新当前项目元数据
+      if (currentProjectId.value === projectId) {
+        currentProjectMetadata.value = validatedData;
+      }
+
+      // 更新项目列表中的对应项
+      const index = availableProjects.value.findIndex(p => p.id === projectId);
+      if (index !== -1) {
+        availableProjects.value[index] = validatedData;
+      }
+
+      return validatedData;
+    } catch (err: any) {
+      console.error('Failed to update project:', err.response?.data || err.message || err);
+      error.value = err.response?.data?.error || err.message || 'An unknown error occurred while updating the project.';
+      return null;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+
   // 暴露状态和 action
   return {
     currentProjectId,
@@ -120,5 +158,6 @@ export const useProjectStore = defineStore('project', () => {
     loadProject,
     fetchAvailableProjects, // 暴露获取列表 action
     createProject, // 暴露创建项目 action
+    updateProject, // 暴露更新项目 action
   };
 });

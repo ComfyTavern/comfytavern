@@ -1,4 +1,4 @@
-import type { WorkflowObject } from '@comfytavern/types' // 使用共享类型
+import type { WorkflowObject, WorkflowMetadata } from '@comfytavern/types' // 使用共享类型
 import { useApi } from '@/utils/api' // 导入封装好的 API 工具
 import { deepClone } from '@/utils/deepClone' // 导入 deepClone
 
@@ -7,14 +7,14 @@ const { get, post, put, del } = useApi()
 
 /**
  * 获取所有工作流列表（仅元数据）
- * @returns 工作流元数据列表 Promise<Array<{ id: string; name: string }>>
+ * @returns 工作流元数据列表 Promise<WorkflowMetadata[]>
  */
-export const listWorkflowsApi = async (projectId: string): Promise<Array<{ id: string; name: string }>> => {
+export const listWorkflowsApi = async (projectId: string): Promise<WorkflowMetadata[]> => {
   console.log(`API: Listing workflows for project ${projectId}...`)
   try {
     // 使用封装的 get 方法
     // 移除开头的 /api，因为 baseURL 已经包含了它
-    const data = await get<Array<{ id: string; name: string }>>(`/projects/${encodeURIComponent(projectId)}/workflows`)
+    const data = await get<WorkflowMetadata[]>(`/projects/${encodeURIComponent(projectId)}/workflows`)
     console.debug('API: Workflows list received:', data) // Changed to debug - less critical than start/end/error
     return data
   } catch (error) {

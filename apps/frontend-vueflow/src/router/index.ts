@@ -133,10 +133,15 @@ const router = createRouter({
           name: 'ProjectApiAdapters',
           component: () => import('../views/project/ApiAdaptersView.vue'),
         },
-        // 未来可以添加更多子路由，如 'scenes', 'settings' 等
-      ],
-    },
-  ],
-})
-
+        // 新增项目设置路由
+        {
+          path: 'settings',
+          name: 'ProjectSettings',
+          component: () => import('../views/project/ProjectSettingsView.vue'),
+        },
+          // 未来可以添加更多子路由，如 'scenes', 'settings' 等
+        ],
+      },
+    ],
+  })
 export default router
