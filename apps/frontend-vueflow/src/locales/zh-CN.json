@@ -71,13 +71,6 @@
   "editorHost": {
     "noActiveTabs": "没有活动的编辑标签页。请从节点输入处打开编辑器。"
   },
-  "editorView": {
-    "loadingDefinitions": "正在加载节点定义...",
-    "loadingNodes": "正在加载节点数据...",
-    "noNodesFound": "未找到节点",
-    "searchNodes": "搜索节点...",
-    "unclassified": "未分类"
-  },
   "fileManager": {
     "breadcrumbs": {
       "cancel": "取消",
@@ -403,7 +396,7 @@
           "readFileError": "读取文件时出错:",
           "saveAsError": "另存为操作时发生严重错误:",
           "saveError": "保存工作流时出错:",
-          "sidebarRefUnavailable": "侧边栏引用不可用，请确保 SidebarManager 已正确加载"
+          "sidebarRefUnavailable": "侧边栏引用不可用，请确保 WorkflowSidebar 已正确加载"
         },
         "new": "新建",
         "notifications": {
@@ -688,18 +681,10 @@
       "no_content": "咕？这里似乎没有内容... 可能是正在施工中。"
     },
     "plugins": {
-      "title": "插件管理",
       "description": "启用或禁用已安装的插件。更改后需要重载插件才能生效。",
-      "reloadButton": "重载插件",
-      "reloadSuccess": "插件已成功重载",
-      "reloadError": "重载插件失败: {error}",
-      "pluginName": "插件",
-      "pluginVersion": "版本",
-      "pluginAuthor": "作者",
-      "pluginEnabled": "启用",
-      "enableTooltip": "点击启用",
       "disableTooltip": "点击禁用",
-      "pendingChanges": "插件设置已更改。点击“重载插件”以应用更改并刷新页面。"
+      "enableTooltip": "点击启用",
+      "title": "插件管理"
     },
     "sections": {
       "about": "关于",
@@ -755,48 +740,6 @@
     "toggleSidebar": "折叠/展开侧边栏",
     "toggleTheme": "切换主题",
     "userAvatar": "用户头像"
-  },
-  "sidebarManager": {
-    "buttons": {
-      "goHome": "返回",
-      "settings": "设置"
-    },
-    "tabs": {
-      "history": {
-        "label": "历史",
-        "title": "操作历史"
-      },
-      "info": {
-        "label": "信息",
-        "title": "工作流信息"
-      },
-      "interface": {
-        "label": "接口",
-        "title": "工作流接口"
-      },
-      "nodes": {
-        "label": "节点",
-        "title": "节点库"
-      },
-      "performance": {
-        "label": "统计",
-        "title": "节点统计"
-      },
-      "workflows": {
-        "label": "工作流",
-        "title": "工作流管理"
-      }
-    },
-    "theme": {
-      "dark": "暗色",
-      "light": "亮色",
-      "system": "系统"
-    },
-    "tooltips": {
-      "goHome": "返回主页",
-      "settings": "设置",
-      "toggleTheme": "切换显示模式"
-    }
   },
   "testPanel": {
     "daisyuiShowcase": {
@@ -969,6 +912,13 @@
     "copyFailed": "复制失败: {error}",
     "copySuccess": "复制成功"
   },
+  "workflowEditor": {
+    "loadingDefinitions": "正在加载节点定义...",
+    "loadingNodes": "正在加载节点数据...",
+    "noNodesFound": "未找到节点",
+    "searchNodes": "搜索节点...",
+    "unclassified": "未分类"
+  },
   "workflowInfoPanel": {
     "buttons": {
       "logJson": "输出工作流 JSON 到控制台 (Debug)"
@@ -1045,6 +995,48 @@
       "loadWorkflow": "点击加载 **{name}**\n\n---\n{description}",
       "orphanGroup": "这是一个由“创建组”产生且当前未被引用的工作流",
       "referencedBy": "被 {count} 个工作流引用"
+    }
+  },
+  "workflowSidebar": {
+    "buttons": {
+      "goHome": "返回",
+      "settings": "设置"
+    },
+    "tabs": {
+      "history": {
+        "label": "历史",
+        "title": "操作历史"
+      },
+      "info": {
+        "label": "信息",
+        "title": "工作流信息"
+      },
+      "interface": {
+        "label": "接口",
+        "title": "工作流接口"
+      },
+      "nodes": {
+        "label": "节点",
+        "title": "节点库"
+      },
+      "performance": {
+        "label": "统计",
+        "title": "节点统计"
+      },
+      "workflows": {
+        "label": "工作流",
+        "title": "工作流管理"
+      }
+    },
+    "theme": {
+      "dark": "暗色",
+      "light": "亮色",
+      "system": "系统"
+    },
+    "tooltips": {
+      "goHome": "返回主页",
+      "settings": "设置",
+      "toggleTheme": "切换显示模式"
     }
   }
 }

@@ -111,7 +111,7 @@ const nodeMenuSections = computed(() => {
     })
     .forEach((node: FrontendNodeDefinition) => {
       const namespace = node.namespace || 'core';
-      const category = node.category || t('editorView.unclassified');
+      const category = node.category || t('workflowEditor.unclassified');
 
       // 初始化命名空间
       if (!sections[namespace]) {

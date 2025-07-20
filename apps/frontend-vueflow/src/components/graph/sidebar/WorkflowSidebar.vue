@@ -1,11 +1,11 @@
 <template>
-  <div class="sidebar-manager">
+  <div class="workflow-sidebar">
     <!-- 左侧图标栏 -->
     <div class="sidebar-icon-bar">
       <!-- 返回主页按钮 -->
-      <RouterLink to="/" class="icon-button w-full" v-comfy-tooltip="t('sidebarManager.tooltips.goHome')">
+      <RouterLink to="/" class="icon-button w-full" v-comfy-tooltip="t('workflowSidebar.tooltips.goHome')">
         <span class="text-xl">🏠</span>
-        <span class="tab-label">{{ t('sidebarManager.buttons.goHome') }}</span>
+        <span class="tab-label">{{ t('workflowSidebar.buttons.goHome') }}</span>
       </RouterLink>
 
       <!-- 中间标签按钮 -->
@@ -19,21 +19,21 @@
       <!-- 底部控制按钮 -->
       <div class="bottom-buttons-container">
         <!-- 主题切换按钮 -->
-        <button class="icon-button w-full" @click="cycleDisplayMode" v-comfy-tooltip="t('sidebarManager.tooltips.toggleTheme')">
+        <button class="icon-button w-full" @click="cycleDisplayMode" v-comfy-tooltip="t('workflowSidebar.tooltips.toggleTheme')">
           <span class="tab-icon">
             <span v-if="displayMode === 'system'">💻</span>
             <span v-else-if="displayMode === 'light'">☀️</span>
             <span v-else>🌙</span> <!-- displayMode === 'dark' -->
           </span>
           <span class="tab-label">
-            {{ displayMode === 'system' ? t('sidebarManager.theme.system') : displayMode === 'dark' ? t('sidebarManager.theme.dark') : t('sidebarManager.theme.light') }}
+            {{ displayMode === 'system' ? t('workflowSidebar.theme.system') : displayMode === 'dark' ? t('workflowSidebar.theme.dark') : t('workflowSidebar.theme.light') }}
           </span>
         </button>
 
         <!-- 设置按钮 -->
-        <button class="icon-button w-full" @click="uiStore.openSettingsModal({ width: '800px', height: '75vh' })" v-comfy-tooltip="t('sidebarManager.tooltips.settings')">
+        <button class="icon-button w-full" @click="uiStore.openSettingsModal({ width: '800px', height: '75vh' })" v-comfy-tooltip="t('workflowSidebar.tooltips.settings')">
           <span class="tab-icon">⚙️</span>
-          <span class="tab-label">{{ t('sidebarManager.buttons.settings') }}</span>
+          <span class="tab-label">{{ t('workflowSidebar.buttons.settings') }}</span>
         </button>
       </div>
     </div>
@@ -98,52 +98,52 @@ function cycleDisplayMode() {
 }
 
 // 定义可用的标签页
+// 定义可用的标签页
 const tabs = ref<SidebarTab[]>([
   {
     id: 'nodes',
-    labelKey: 'sidebarManager.tabs.nodes.label',
-    titleKey: 'sidebarManager.tabs.nodes.title',
+    labelKey: 'workflowSidebar.tabs.nodes.label',
+    titleKey: 'workflowSidebar.tabs.nodes.title',
     icon: '📦',
     component: markRaw(NodePanel)
   },
   {
     id: 'workflows',
-    labelKey: 'sidebarManager.tabs.workflows.label',
-    titleKey: 'sidebarManager.tabs.workflows.title',
+    labelKey: 'workflowSidebar.tabs.workflows.label',
+    titleKey: 'workflowSidebar.tabs.workflows.title',
     icon: '📁', // 使用文件夹图标
     component: markRaw(WorkflowPanel)
   },
   { // <-- 添加接口编辑器标签页
     id: 'interface',
-    labelKey: 'sidebarManager.tabs.interface.label',
-    titleKey: 'sidebarManager.tabs.interface.title',
+    labelKey: 'workflowSidebar.tabs.interface.label',
+    titleKey: 'workflowSidebar.tabs.interface.title',
     icon: '↔️', // 使用双向箭头图标
     component: markRaw(GroupIOEdit)
   },
   { // <-- 添加历史记录标签页
     id: 'history',
-    labelKey: 'sidebarManager.tabs.history.label',
-    titleKey: 'sidebarManager.tabs.history.title',
+    labelKey: 'workflowSidebar.tabs.history.label',
+    titleKey: 'workflowSidebar.tabs.history.title',
     icon: '📜', // 使用卷轴图标
     component: markRaw(HistoryPanel)
   },
   {
     id: 'performance',
-    labelKey: 'sidebarManager.tabs.performance.label',
-    titleKey: 'sidebarManager.tabs.performance.title',
+    labelKey: 'workflowSidebar.tabs.performance.label',
+    titleKey: 'workflowSidebar.tabs.performance.title',
     icon: '📊', // 使用条形图图标
     component: markRaw(PerformancePanel)
   },
   { // <-- 添加工作流信息标签页
     id: 'info',
-    labelKey: 'sidebarManager.tabs.info.label',
-    titleKey: 'sidebarManager.tabs.info.title',
+    labelKey: 'workflowSidebar.tabs.info.label',
+    titleKey: 'workflowSidebar.tabs.info.title',
     icon: 'ℹ️', // 使用信息图标
     component: markRaw(WorkflowInfoPanel)
   },
   // 未来可以添加更多标签页
 ]);
-
 // 当前激活的标签页，可以为 null 表示关闭状态
 const activeTab = ref<string | null>(null); // 当前激活的标签页 ID，null 表示关闭
 
@@ -186,7 +186,7 @@ defineExpose({
 </script>
 
 <style scoped>
-.sidebar-manager {
+.workflow-sidebar {
   @apply h-full flex bg-background-base;
 }
 

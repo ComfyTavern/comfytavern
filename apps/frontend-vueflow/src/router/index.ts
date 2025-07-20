@@ -8,7 +8,7 @@ import { useProjectStore } from '../stores/projectStore' // 导入项目 store
 // 导入新组件和视图
 import ProjectLayout from '../views/project/ProjectLayout.vue' // 导入新的项目布局
 import ProjectDashboardView from '../views/project/ProjectDashboardView.vue'
-import EditorView from '../views/project/EditorView.vue'
+import WorkflowEditorView from '../views/project/WorkflowEditorView.vue'
 import PanelListView from '../views/project/PanelListView.vue'
 import PanelContainer from '../components/panel/PanelContainer.vue'
 
@@ -107,7 +107,7 @@ const router = createRouter({
         {
           path: 'editor/:workflowId?',
           name: 'ProjectEditor',
-          component: EditorView,
+          component: WorkflowEditorView,
         },
         // 应用面板子路由
         {

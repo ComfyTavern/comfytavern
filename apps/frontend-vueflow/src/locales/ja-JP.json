@@ -71,13 +71,6 @@
   "editorHost": {
     "noActiveTabs": "アクティブな編集タブがありません。ノード入力からエディタを開いてください。"
   },
-  "editorView": {
-    "loadingDefinitions": "ノード定義を読み込み中...",
-    "loadingNodes": "ノードデータを読み込み中...",
-    "noNodesFound": "ノードが見つかりません",
-    "searchNodes": "ノードを検索...",
-    "unclassified": "未分類"
-  },
   "fileManager": {
     "breadcrumbs": {
       "cancel": "キャンセル",
@@ -687,12 +680,19 @@
       "custom_module_wip": "将来的にはカスタムの複雑な設定モジュールがここに配置される予定です、現在工事中... ぐぅ〜",
       "no_content": "ぐぅ？ここには何もないようです... 工事中かもしれません。"
     },
+    "plugins": {
+      "description": "インストール済みのプラグインを有効または無効にします。変更を有効にするにはプラグインの再読み込みが必要です。",
+      "disableTooltip": "クリックして無効化",
+      "enableTooltip": "クリックして有効化",
+      "title": "プラグイン管理"
+    },
     "sections": {
       "about": "概要",
       "display": "表示",
       "keybindings": "キーボードショートカット",
       "llm": "モデル構成",
       "mcp": "MCP",
+      "plugins": "プラグイン管理",
       "test_panel": "テストパネル",
       "user": "ユーザー"
     },
@@ -740,48 +740,6 @@
     "toggleSidebar": "サイドバーを折りたたむ/展開する",
     "toggleTheme": "テーマを切り替え",
     "userAvatar": "ユーザーアバター"
-  },
-  "sidebarManager": {
-    "buttons": {
-      "goHome": "戻る",
-      "settings": "設定"
-    },
-    "tabs": {
-      "history": {
-        "label": "履歴",
-        "title": "操作履歴"
-      },
-      "info": {
-        "label": "情報",
-        "title": "ワークフロー情報"
-      },
-      "interface": {
-        "label": "インターフェース",
-        "title": "ワークフローインターフェース"
-      },
-      "nodes": {
-        "label": "ノード",
-        "title": "ノードライブラリ"
-      },
-      "performance": {
-        "label": "統計",
-        "title": "ノード統計"
-      },
-      "workflows": {
-        "label": "ワークフロー",
-        "title": "ワークフロー管理"
-      }
-    },
-    "theme": {
-      "dark": "暗色",
-      "light": "亮色",
-      "system": "システム"
-    },
-    "tooltips": {
-      "goHome": "ホームに戻る",
-      "settings": "設定",
-      "toggleTheme": "表示モードを切り替え"
-    }
   },
   "testPanel": {
     "daisyuiShowcase": {
@@ -954,6 +912,13 @@
     "copyFailed": "コピー失敗: {error}",
     "copySuccess": "コピー成功"
   },
+  "workflowEditor": {
+    "loadingDefinitions": "ノード定義を読み込み中...",
+    "loadingNodes": "ノードデータを読み込み中...",
+    "noNodesFound": "ノードが見つかりません",
+    "searchNodes": "ノードを検索...",
+    "unclassified": "未分類"
+  },
   "workflowInfoPanel": {
     "buttons": {
       "logJson": "ワークフローJSONをコンソールに出力 (デバッグ)"
@@ -1030,6 +995,48 @@
       "loadWorkflow": "クリックして **{name}** を読み込み\n\n---\n{description}",
       "orphanGroup": "これは「グループを作成」によって生成され、現在参照されていないワークフローです",
       "referencedBy": "{count}個のワークフローによって参照されています"
+    }
+  },
+  "workflowSidebar": {
+    "buttons": {
+      "goHome": "戻る",
+      "settings": "設定"
+    },
+    "tabs": {
+      "history": {
+        "label": "履歴",
+        "title": "操作履歴"
+      },
+      "info": {
+        "label": "情報",
+        "title": "ワークフロー情報"
+      },
+      "interface": {
+        "label": "インターフェース",
+        "title": "ワークフローインターフェース"
+      },
+      "nodes": {
+        "label": "ノード",
+        "title": "ノードライブラリ"
+      },
+      "performance": {
+        "label": "統計",
+        "title": "ノード統計"
+      },
+      "workflows": {
+        "label": "ワークフロー",
+        "title": "ワークフロー管理"
+      }
+    },
+    "theme": {
+      "dark": "暗色",
+      "light": "亮色",
+      "system": "システム"
+    },
+    "tooltips": {
+      "goHome": "ホームに戻る",
+      "settings": "設定",
+      "toggleTheme": "表示モードを切り替え"
     }
   }
 }

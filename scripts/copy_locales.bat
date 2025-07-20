@@ -37,5 +37,4 @@ xcopy "%SOURCE_DIR%\*.json" "%DEST_DIR%\" /Y /I /F
 
 echo.
 echo 语言环境文件已成功复制！
-pause
 endlocal

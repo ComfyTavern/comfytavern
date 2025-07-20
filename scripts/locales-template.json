@@ -71,13 +71,6 @@
   "editorHost": {
     "noActiveTabs": "[TODO]"
   },
-  "editorView": {
-    "loadingDefinitions": "[TODO]",
-    "loadingNodes": "[TODO]",
-    "noNodesFound": "[TODO]",
-    "searchNodes": "[TODO]",
-    "unclassified": "[TODO]"
-  },
   "fileManager": {
     "breadcrumbs": {
       "cancel": "[TODO]",
@@ -687,12 +680,19 @@
       "custom_module_wip": "[TODO]",
       "no_content": "[TODO]"
     },
+    "plugins": {
+      "description": "[TODO]",
+      "disableTooltip": "[TODO]",
+      "enableTooltip": "[TODO]",
+      "title": "[TODO]"
+    },
     "sections": {
       "about": "[TODO]",
       "display": "[TODO]",
       "keybindings": "[TODO]",
       "llm": "[TODO]",
       "mcp": "[TODO]",
+      "plugins": "[TODO]",
       "test_panel": "[TODO]",
       "user": "[TODO]"
     },
@@ -740,48 +740,6 @@
     "toggleSidebar": "[TODO]",
     "toggleTheme": "[TODO]",
     "userAvatar": "[TODO]"
-  },
-  "sidebarManager": {
-    "buttons": {
-      "goHome": "[TODO]",
-      "settings": "[TODO]"
-    },
-    "tabs": {
-      "history": {
-        "label": "[TODO]",
-        "title": "[TODO]"
-      },
-      "info": {
-        "label": "[TODO]",
-        "title": "[TODO]"
-      },
-      "interface": {
-        "label": "[TODO]",
-        "title": "[TODO]"
-      },
-      "nodes": {
-        "label": "[TODO]",
-        "title": "[TODO]"
-      },
-      "performance": {
-        "label": "[TODO]",
-        "title": "[TODO]"
-      },
-      "workflows": {
-        "label": "[TODO]",
-        "title": "[TODO]"
-      }
-    },
-    "theme": {
-      "dark": "[TODO]",
-      "light": "[TODO]",
-      "system": "[TODO]"
-    },
-    "tooltips": {
-      "goHome": "[TODO]",
-      "settings": "[TODO]",
-      "toggleTheme": "[TODO]"
-    }
   },
   "testPanel": {
     "daisyuiShowcase": {
@@ -954,6 +912,13 @@
     "copyFailed": "[TODO]",
     "copySuccess": "[TODO]"
   },
+  "workflowEditor": {
+    "loadingDefinitions": "[TODO]",
+    "loadingNodes": "[TODO]",
+    "noNodesFound": "[TODO]",
+    "searchNodes": "[TODO]",
+    "unclassified": "[TODO]"
+  },
   "workflowInfoPanel": {
     "buttons": {
       "logJson": "[TODO]"
@@ -1030,6 +995,48 @@
       "loadWorkflow": "[TODO]",
       "orphanGroup": "[TODO]",
       "referencedBy": "[TODO]"
+    }
+  },
+  "workflowSidebar": {
+    "buttons": {
+      "goHome": "[TODO]",
+      "settings": "[TODO]"
+    },
+    "tabs": {
+      "history": {
+        "label": "[TODO]",
+        "title": "[TODO]"
+      },
+      "info": {
+        "label": "[TODO]",
+        "title": "[TODO]"
+      },
+      "interface": {
+        "label": "[TODO]",
+        "title": "[TODO]"
+      },
+      "nodes": {
+        "label": "[TODO]",
+        "title": "[TODO]"
+      },
+      "performance": {
+        "label": "[TODO]",
+        "title": "[TODO]"
+      },
+      "workflows": {
+        "label": "[TODO]",
+        "title": "[TODO]"
+      }
+    },
+    "theme": {
+      "dark": "[TODO]",
+      "light": "[TODO]",
+      "system": "[TODO]"
+    },
+    "tooltips": {
+      "goHome": "[TODO]",
+      "settings": "[TODO]",
+      "toggleTheme": "[TODO]"
     }
   }
 }

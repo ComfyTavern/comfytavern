@@ -8,13 +8,13 @@
     <div class="editor-main flex-1 relative overflow-hidden">
       <div v-if="loading" class="loading-overlay">
         <div class="loading-spinner"></div>
-        <div class="loading-text">{{ t("editorView.loadingNodes") }}</div>
+        <div class="loading-text">{{ t("workflowEditor.loadingNodes") }}</div>
       </div>
 
       <!-- 主要内容布局 - 仅在节点定义加载后渲染 -->
       <div v-if="nodeDefinitionsLoaded" class="editor-content flex h-full">
         <!-- 侧边栏管理器 -->
-        <SidebarManager
+        <WorkflowSidebar
           ref="sidebarManagerRef"
           @add-node="handleAddNodeFromPanel"
           @node-selected="handleNodeSelected"
@@ -53,8 +53,8 @@
               :loading="loading"
               @select="handleHierarchicalNodeSelect"
               class="node-search-panel-canvas"
-              :search-placeholder="t('editorView.searchNodes')"
-              :no-results-text="t('editorView.noNodesFound')"
+              :search-placeholder="t('workflowEditor.searchNodes')"
+              :no-results-text="t('workflowEditor.noNodesFound')"
             />
           </div>
           <!-- 可停靠编辑器 -->
@@ -66,7 +66,7 @@
         </div>
       </div>
       <div v-else class="flex items-center justify-center h-full text-text-muted">
-        {{ t("editorView.loadingDefinitions") }}
+        {{ t("workflowEditor.loadingDefinitions") }}
       </div>
 
       <!-- 节点预览面板 - 仅在侧边栏准备好后渲染 -->
@@ -110,7 +110,7 @@ import type { MenuItem as HierarchicalMenuItem } from "../../components/common/H
 import type { FrontendNodeDefinition } from "../../stores/nodeStore"; // 确保导入
 import BaseNode from "../../components/graph/nodes/BaseNode.vue";
 import FrameNode from "../../components/graph/nodes/FrameNode.vue"; // 导入 FrameNode
-import SidebarManager from "../../components/graph/sidebar/SidebarManager.vue";
+import WorkflowSidebar from "../../components/graph/sidebar/WorkflowSidebar.vue";
 import NodePreviewPanel from "../../components/graph/sidebar/NodePreviewPanel.vue";
 import RightPreviewPanel from "../../components/graph/sidebar/RightPreviewPanel.vue";
 import DockedEditorWrapper from "../../components/graph/editor/DockedEditorWrapper.vue";
@@ -129,8 +129,8 @@ import RegexEditorModal from "../../components/modals/RegexEditorModal.vue"; // 
 import { useUiStore } from "../../stores/uiStore"; // ++ 导入 UI store
 
 // 组件实例引用
-// 定义 SidebarManager 的类型
-type SidebarManagerInstance = InstanceType<typeof SidebarManager> & {
+// 定义 WorkflowSidebar 的类型
+type WorkflowSidebarInstance = InstanceType<typeof WorkflowSidebar> & {
   setActiveTab: (tabId: string) => void;
   isSidebarVisible: boolean;
   activeTab: string | null;
@@ -140,7 +140,7 @@ const { t } = useI18n();
 const editorContainerRef = ref<HTMLElement | null>(null);
 const canvasRef = ref<InstanceType<typeof Canvas> | null>(null);
 const dockedEditorWrapperRef = ref<InstanceType<typeof DockedEditorWrapper> | null>(null);
-const sidebarManagerRef = ref<SidebarManagerInstance | null>(null);
+const sidebarManagerRef = ref<WorkflowSidebarInstance | null>(null);
 
 // 存储实例
 const nodeStore = useNodeStore();
@@ -179,7 +179,7 @@ const hierarchicalNodeMenuSections = computed(() => {
     })
     .forEach((node: FrontendNodeDefinition) => {
       const namespace = node.namespace || "core";
-      const category = node.category || t("editorView.unclassified");
+      const category = node.category || t("workflowEditor.unclassified");
 
       if (!sections[namespace]) {
         sections[namespace] = {

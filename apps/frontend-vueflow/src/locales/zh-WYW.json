@@ -71,13 +71,6 @@
   "editorHost": {
     "noActiveTabs": "无在运之签。请于机括纳处启之。"
   },
-  "editorView": {
-    "loadingDefinitions": "机括玄义正载",
-    "loadingNodes": "机括正载",
-    "noNodesFound": "未得机括",
-    "searchNodes": "寻机括",
-    "unclassified": "未归籍"
-  },
   "fileManager": {
     "breadcrumbs": {
       "cancel": "罢之",
@@ -687,12 +680,19 @@
       "custom_module_wip": "此乃未来玄奥枢机之处，营造未竟。",
       "no_content": "此间空空如也，或尚在营造。"
     },
+    "plugins": {
+      "description": "启或禁已装之插件。欲使更易生效，需重载插件。",
+      "disableTooltip": "点此以禁",
+      "enableTooltip": "点此以启",
+      "title": "插件司"
+    },
     "sections": {
       "about": "此为何物",
       "display": "显形之法",
       "keybindings": "急键",
       "llm": "玄思妙算",
       "mcp": "传信协约",
+      "plugins": "插件司",
       "test_panel": "玄机试炼场",
       "user": "卿家"
     },
@@ -740,48 +740,6 @@
     "toggleSidebar": "展/敛侧厢",
     "toggleTheme": "更迭仪轨",
     "userAvatar": "卿家真容"
-  },
-  "sidebarManager": {
-    "buttons": {
-      "goHome": "归",
-      "settings": "设"
-    },
-    "tabs": {
-      "history": {
-        "label": "往事",
-        "title": "往事之鉴"
-      },
-      "info": {
-        "label": "注疏",
-        "title": "机巧流注疏"
-      },
-      "interface": {
-        "label": "枢纽",
-        "title": "机巧流之枢纽"
-      },
-      "nodes": {
-        "label": "机括",
-        "title": "机括宝库"
-      },
-      "performance": {
-        "label": "计数",
-        "title": "机括之计"
-      },
-      "workflows": {
-        "label": "机巧流",
-        "title": "机巧流总管"
-      }
-    },
-    "theme": {
-      "dark": "昏昏",
-      "light": "昭昭",
-      "system": "随天时"
-    },
-    "tooltips": {
-      "goHome": "归庭",
-      "settings": "机巧枢要",
-      "toggleTheme": "更迭仪轨"
-    }
   },
   "testPanel": {
     "daisyuiShowcase": {
@@ -954,6 +912,13 @@
     "copyFailed": "摹拓未竟: {error}",
     "copySuccess": "摹拓功成"
   },
+  "workflowEditor": {
+    "loadingDefinitions": "机括玄义正载",
+    "loadingNodes": "机括正载",
+    "noNodesFound": "未得机括",
+    "searchNodes": "寻机括",
+    "unclassified": "未归籍"
+  },
   "workflowInfoPanel": {
     "buttons": {
       "logJson": "于控制台录机巧流（调试用）"
@@ -1030,6 +995,48 @@
       "loadWorkflow": "点击加载 **{name}**\n\n---\n{description}",
       "orphanGroup": "此乃“创建组”所生且当前未被引用之机巧流",
       "referencedBy": "被 {count} 个机巧流引用"
+    }
+  },
+  "workflowSidebar": {
+    "buttons": {
+      "goHome": "归",
+      "settings": "设"
+    },
+    "tabs": {
+      "history": {
+        "label": "往事",
+        "title": "往事之鉴"
+      },
+      "info": {
+        "label": "注疏",
+        "title": "机巧流注疏"
+      },
+      "interface": {
+        "label": "枢纽",
+        "title": "机巧流之枢纽"
+      },
+      "nodes": {
+        "label": "机括",
+        "title": "机括宝库"
+      },
+      "performance": {
+        "label": "计数",
+        "title": "机括之计"
+      },
+      "workflows": {
+        "label": "机巧流",
+        "title": "机巧流总管"
+      }
+    },
+    "theme": {
+      "dark": "昏昏",
+      "light": "昭昭",
+      "system": "随天时"
+    },
+    "tooltips": {
+      "goHome": "归庭",
+      "settings": "机巧枢要",
+      "toggleTheme": "更迭仪轨"
     }
   }
 }
