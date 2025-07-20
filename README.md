@@ -30,6 +30,20 @@ ComfyTavern 致力于将复杂的 AI 工作流，转化为直观、好用、可�
 
 ---
 
+## 📸 界面一览
+
+<p align="center">
+  <img alt="主页" src="docs/images/首页-主页-中文-暗色-暖阳余晖主题.png" width="49%">
+  <img alt="工作流编辑器" src="docs/images/项目-工作流编辑器-LLM适配器演示工作流-节点库-节点预览-执行输出预览.png" width="49%">
+</p>
+<p align="center">
+  <img alt="文件管理" src="docs/images/首页-文件管理-中文-暗色.png" width="32%">
+  <img alt="设置-暗色" src="docs/images/首页-设置-显示-中文-暗色-樱花烂漫主题.png" width="32%">
+  <img alt="设置-亮色" src="docs/images/首页-设置-显示-英语-亮色-默认主题.png" width="32%">
+</p>
+
+---
+
 ### ✨ 核心特性
 
 ComfyTavern 的设计围绕三大支柱：**独特的智能体架构 → 专业的编排工具 → 开放的应用生态**。

@@ -30,6 +30,20 @@ ComfyTavernは、複雑なAIワークフローを直感的で使いやすく、�
 
 ---
 
+## 📸 インターフェース一覧
+
+<p align="center">
+  <img alt="ホーム" src="docs/images/首页-主页-中文-暗色-暖阳余晖主题.png" width="49%">
+  <img alt="ワークフローエディタ" src="docs/images/项目-工作流编辑器-LLM适配器演示工作流-节点库-节点预览-执行输出预览.png" width="49%">
+</p>
+<p align="center">
+  <img alt="ファイルマネージャー" src="docs/images/首页-文件管理-中文-暗色.png" width="32%">
+  <img alt="設定 - ダーク" src="docs/images/首页-设置-显示-中文-暗色-樱花烂漫主题.png" width="32%">
+  <img alt="設定 - ライト" src="docs/images/首页-设置-显示-英语-亮色-默认主题.png" width="32%">
+</p>
+
+---
+
 ### ✨ 主要機能
 
 ComfyTavernのデザインは、**ユニークなエージェントアーキテクチャ → プロフェッショナルなオーケストレーションツール → オープンなアプリケーションエコシステム**という3つの柱を中心に展開しています。

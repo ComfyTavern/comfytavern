@@ -30,6 +30,20 @@
 
 ---
 
+## 📸 界面一览
+
+<p align="center">
+  <img alt="主页" src="docs/images/首页-主页-中文-暗色-暖阳余晖主题.png" width="49%">
+  <img alt="工作流编辑器" src="docs/images/项目-工作流编辑器-LLM适配器演示工作流-节点库-节点预览-执行输出预览.png" width="49%">
+</p>
+<p align="center">
+  <img alt="文件管理" src="docs/images/首页-文件管理-中文-暗色.png" width="32%">
+  <img alt="设置-暗色" src="docs/images/首页-设置-显示-中文-暗色-樱花烂漫主题.png" width="32%">
+  <img alt="设置-亮色" src="docs/images/首页-设置-显示-英语-亮色-默认主题.png" width="32%">
+</p>
+
+---
+
 ### ✨ 核心之妙
 
 玄思妙境之营造，围绕三大支柱：**独特之灵偶架构 → 专业之编排利器 → 开放之应用生态**。

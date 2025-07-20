@@ -30,6 +30,20 @@ We believe that the power of AI lies not only in the sophistication of the creat
 
 ---
 
+## 📸 Interface Preview
+
+<p align="center">
+  <img alt="Home" src="docs/images/首页-主页-中文-暗色-暖阳余晖主题.png" width="49%">
+  <img alt="Workflow Editor" src="docs/images/项目-工作流编辑器-LLM适配器演示工作流-节点库-节点预览-执行输出预览.png" width="49%">
+</p>
+<p align="center">
+  <img alt="File Manager" src="docs/images/首页-文件管理-中文-暗色.png" width="32%">
+  <img alt="Settings - Dark" src="docs/images/首页-设置-显示-中文-暗色-樱花烂漫主题.png" width="32%">
+  <img alt="Settings - Light" src="docs/images/首页-设置-显示-英语-亮色-默认主题.png" width="32%">
+</p>
+
+---
+
 ### ✨ Core Features
 
 ComfyTavern's design revolves around three main pillars: **unique agent architecture → professional orchestration tools → open application ecosystem.**
