@@ -65,7 +65,9 @@
   "dataList": {
     "toolbar": {
       "ascending": "[TODO]",
+      "clearSelection": "[TODO]",
       "descending": "[TODO]",
+      "selectAll": "[TODO]",
       "selected": "[TODO]",
       "sortBy": "[TODO]",
       "switchToGrid": "[TODO]",
@@ -608,6 +610,7 @@
     "createSuccess": "[TODO]",
     "deleteSelected": "[TODO]",
     "deleteSuccess": "[TODO]",
+    "enter": "[TODO]",
     "errors": {
       "createFailed": "[TODO]",
       "deleteFailed": "[TODO]",

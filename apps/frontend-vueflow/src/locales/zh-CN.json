@@ -65,7 +65,9 @@
   "dataList": {
     "toolbar": {
       "ascending": "升序",
+      "clearSelection": "取消选择",
       "descending": "降序",
+      "selectAll": "全选",
       "selected": "已选择 {count} 项",
       "sortBy": "排序",
       "switchToGrid": "网格视图",
@@ -608,6 +610,7 @@
     "createSuccess": "项目创建成功",
     "deleteSelected": "删除所选 ({count})",
     "deleteSuccess": "项目已成功删除。",
+    "enter": "进入",
     "errors": {
       "createFailed": "项目创建失败",
       "deleteFailed": "删除项目失败。",

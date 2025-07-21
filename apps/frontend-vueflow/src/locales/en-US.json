@@ -65,7 +65,9 @@
   "dataList": {
     "toolbar": {
       "ascending": "Ascending",
+      "clearSelection": "Clear Selection",
       "descending": "Descending",
+      "selectAll": "Select All",
       "selected": "{count} selected",
       "sortBy": "Sort by",
       "switchToGrid": "Grid View",
@@ -608,6 +610,7 @@
     "createSuccess": "Project created successfully",
     "deleteSelected": "Delete Selected ({count})",
     "deleteSuccess": "Project(s) deleted successfully.",
+    "enter": "Enter",
     "errors": {
       "createFailed": "Failed to create project",
       "deleteFailed": "Failed to delete project(s).",

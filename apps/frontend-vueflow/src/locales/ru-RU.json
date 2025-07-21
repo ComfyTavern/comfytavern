@@ -65,7 +65,9 @@
   "dataList": {
     "toolbar": {
       "ascending": "По возрастанию",
+      "clearSelection": "Очистить выбор",
       "descending": "По убыванию",
+      "selectAll": "Выбрать все",
       "selected": "Выбрано: {count}",
       "sortBy": "Сортировать по",
       "switchToGrid": "Вид сетки",
@@ -608,6 +610,7 @@
     "createSuccess": "Проект успешно создан",
     "deleteSelected": "Удалить выбранные ({count})",
     "deleteSuccess": "Проект(ы) успешно удалены.",
+    "enter": "Войти",
     "errors": {
       "createFailed": "Не удалось создать проект",
       "deleteFailed": "Не удалось удалить проект(ы).",

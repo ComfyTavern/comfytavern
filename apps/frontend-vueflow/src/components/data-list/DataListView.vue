@@ -1,9 +1,18 @@
 <template>
   <div class="data-list-view flex flex-col h-full">
     <slot name="header"></slot>
-    <DataToolbar :search-term="filter.searchTerm" @update:search-term="setSearchTerm" :sort-config="sort"
-      @update:sort-config="setSort" :display-mode="displayMode" @update:display-mode="newMode => displayMode = newMode"
-      :sort-options="sortOptions" :selected-count="selectedItems.length">
+    <DataToolbar
+      :search-term="filter.searchTerm"
+      @update:search-term="setSearchTerm"
+      :sort-config="sort"
+      @update:sort-config="setSort"
+      :display-mode="displayMode"
+      @update:display-mode="newMode => displayMode = newMode"
+      :sort-options="sortOptions"
+      :selected-count="selectedItems.length"
+      @select-all="toggleSelectAll"
+      @clear-selection="clearSelection"
+    >
       <template #actions>
         <slot name="toolbar-actions" :selected-items="selectedItems"></slot>
       </template>
@@ -98,7 +107,7 @@
           @dblclick="$emit('item-dblclick', item)"
           class="relative rounded-lg border border-border-base hover:border-primary transition-colors cursor-pointer"
           :class="{ 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background-base': isSelected(item) }">
-          <input v-if="selectable" type="checkbox" :checked="isSelected(item)" @change="toggleItemSelection(item)"
+          <input v-if="showGridCheckboxes" type="checkbox" :checked="isSelected(item)" @change="toggleItemSelection(item)"
             @click.stop
             class="absolute top-3 right-3 h-4 w-4 rounded border-border-base text-primary focus:ring-primary z-10" />
           <slot v-if="slots['grid-item']" name="grid-item" :item="item" :is-selected="isSelected(item)"></slot>
@@ -162,6 +171,10 @@ const props = defineProps({
 
   // --- Selection ---
   selectable: {
+    type: Boolean,
+    default: false,
+  },
+  hideCheckboxesUntilSelect: {
     type: Boolean,
     default: false,
   },
@@ -337,9 +350,25 @@ const isIndeterminate = computed(() => {
   return selectedItems.value.length > 0 && !isAllSelected.value;
 });
 
+const showGridCheckboxes = computed(() => {
+  if (!props.selectable) {
+    return false;
+  }
+  // If the prop is enabled, only show checkboxes if items are selected.
+  if (props.hideCheckboxesUntilSelect) {
+    return selectedItems.value.length > 0;
+  }
+  // Otherwise, show them if selectable is true.
+  return true;
+});
+
+const clearSelection = () => {
+  setSelection([]);
+};
+
 const toggleSelectAll = () => {
   if (isAllSelected.value) {
-    setSelection([]);
+    clearSelection();
   } else {
     setSelection([...items.value]);
   }
@@ -415,7 +444,9 @@ const getProperty = (obj: any, key: string | keyof T): any => {
 // Expose a refresh method to the parent
 defineExpose({
   refresh: fetchData,
-  clearSelection: () => setSelection([]),
+  clearSelection,
+  selectAll: () => setSelection([...items.value]),
+  toggleSelectAll,
 });
 
 </script>

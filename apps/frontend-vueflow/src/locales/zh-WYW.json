@@ -65,7 +65,9 @@
   "dataList": {
     "toolbar": {
       "ascending": "升序",
+      "clearSelection": "尽释",
       "descending": "降序",
+      "selectAll": "悉选",
       "selected": "已择 {count} 项",
       "sortBy": "排序",
       "switchToGrid": "网格视图",
@@ -608,6 +610,7 @@
     "createSuccess": "锦囊创建成功",
     "deleteSelected": "毁所择 ({count})",
     "deleteSuccess": "锦囊已毁。",
+    "enter": "入",
     "errors": {
       "createFailed": "锦囊创建失败",
       "deleteFailed": "毁囊未竟。",

@@ -16,6 +16,20 @@
           <p class="text-sm font-medium text-text-base px-3 py-1.5 bg-primary/10 rounded-md">
             {{ t('dataList.toolbar.selected', { count: selectedCount }) }}
           </p>
+          <button
+            @click="$emit('select-all')"
+            class="text-sm text-text-secondary hover:text-primary transition-colors px-2 py-1"
+            v-comfy-tooltip="t('dataList.toolbar.selectAll')"
+          >
+            {{ t('dataList.toolbar.selectAll') }}
+          </button>
+          <button
+            @click="$emit('clear-selection')"
+            class="text-sm text-text-secondary hover:text-primary transition-colors px-2 py-1"
+            v-comfy-tooltip="t('dataList.toolbar.clearSelection')"
+          >
+            {{ t('dataList.toolbar.clearSelection') }}
+          </button>
           <div class="h-6 w-px bg-border-base"></div>
           <slot name="actions"></slot>
         </div>
@@ -96,6 +110,8 @@ const emit = defineEmits<{
   (e: 'update:searchTerm', value: string): void;
   (e: 'update:sortConfig', value: SortConfig<T>): void;
   (e: 'update:displayMode', value: DisplayMode): void;
+  (e: 'select-all'): void;
+  (e: 'clear-selection'): void;
 }>();
 
 const { t } = useI18n();

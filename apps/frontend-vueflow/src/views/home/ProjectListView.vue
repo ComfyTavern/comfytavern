@@ -49,9 +49,10 @@ const sortOptions = [
 
 // 2.5. 定义列表视图的列
 const columns: ColumnDefinition<ProjectMetadata>[] = [
-  { key: 'name', label: t('common.name'), sortable: true, width: '30%' },
-  { key: 'description', label: t('common.description'), sortable: false, width: '45%' },
+  { key: 'name', label: t('common.name'), sortable: true, width: '25%' },
+  { key: 'description', label: t('common.description'), sortable: false, width: '40%' },
   { key: 'updatedAt', label: t('projects.lastUpdated'), sortable: true, width: '25%' },
+  { key: 'actions', label: t('common.actions'), sortable: false, width: '10%' },
 ];
 
 // 3. 定义操作方法
@@ -137,6 +138,7 @@ const promptAndCreateProject = async () => {
         :loading-message="t('projects.loading')" :empty-message="t('projects.noProjects')"
         :error-message="t('projects.loadError')"
         :selectable="true"
+        :hide-checkboxes-until-select="true"
         @selection-change="handleSelectionChange"
       >
         <template #header>
@@ -165,8 +167,17 @@ const promptAndCreateProject = async () => {
             <h2 class="text-lg font-semibold text-text-base mb-2 truncate">{{ item.name }}</h2>
             <p class="text-sm text-text-secondary mb-3 flex-grow">{{ item.description || t('projects.noDescription') }}
             </p>
-            <div class="text-xs text-text-muted mt-auto">
-              {{ t('projects.lastUpdated') }}: {{ new Date(item.updatedAt).toLocaleString() }}
+            <div class="flex justify-between items-center mt-auto">
+              <div class="text-xs text-text-muted">
+                {{ t('projects.lastUpdated') }}: {{ new Date(item.updatedAt).toLocaleString() }}
+              </div>
+              <button
+                @click.stop="openProject(item)"
+                class="px-2 py-1 bg-primary text-primary-content rounded text-xs font-medium hover:opacity-90 transition-opacity"
+                v-comfy-tooltip="t('projects.enter')"
+              >
+                {{ t('projects.enter') }}
+              </button>
             </div>
           </div>
         </template>
@@ -180,6 +191,15 @@ const promptAndCreateProject = async () => {
           </td>
           <td class="px-3 py-2.5 text-text-muted whitespace-nowrap cursor-pointer">
             {{ new Date(item.updatedAt).toLocaleString() }}
+          </td>
+          <td class="px-3 py-2.5 whitespace-nowrap text-right">
+            <button
+              @click.stop="openProject(item)"
+              class="px-2 py-1 bg-primary text-primary-content rounded text-xs font-medium hover:opacity-90 transition-opacity"
+              v-comfy-tooltip="t('projects.enter')"
+            >
+              {{ t('projects.enter') }}
+            </button>
           </td>
         </template>
       </DataListView>
