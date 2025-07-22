@@ -2,11 +2,11 @@
 
 ## 1. 节点系统 (`apps/backend/src/nodes/`) 概览
 
-`apps/backend/src/nodes/` 目录是 ComfyTavern 后端所有可执行节点类型定义的核心位置。这些节点是工作流执行引擎的基本构建块和功能单元，封装了各种原子操作，如数据加载、处理、LLM 调用、逻辑控制等。
+`apps/backend/src/nodes/` 目录是 ComfyTavern 后端所有**内置**可执行节点类型定义的核心位置。节点是工作流执行引擎的基本构建块和功能单元，封装了各种原子操作。它们可以由系统内置提供，也可以通过**插件系统**动态加载。
 
 ### 目录职责
 
-该目录及其子目录（如 `io/`, `llm/`, `loaders/`, `processors/`, `Utilities/`）负责组织和存放不同类别的节点定义文件（通常是 `.ts` 文件）。每个文件或其导出的 `definition` 对象描述了一个特定节点的功能、输入、输出和执行逻辑。
+`apps/backend/src/nodes/` 及其子目录负责组织和存放**内置节点**的定义文件。而插件提供的节点则位于各自插件的目录中。每个节点定义文件（通常是 `.ts` 文件）或其导出的 `definition` 对象描述了一个特定节点的功能、输入、输出和执行逻辑。
 
 ### 节点在系统中的作用
 
@@ -41,7 +41,7 @@
 每个节点定义通常包含以下核心部分：
 
 *   **`type: string`**：节点的唯一类型标识符（例如 `"TextMerge"`, `"GenericLlmRequest"`）。
-*   **`namespace?: string`**：节点的命名空间（例如 `"core"`, `"builtin"`）。由 [`NodeManager.ts`](../../../../apps/backend/src/services/NodeManager.ts:26) 在注册时确定，优先级为：节点显式定义 > [`nodeRegistration.ts`](../../../../apps/backend/src/utils/nodeRegistration.ts:9) 提供的默认命名空间 > 从文件路径推断。最终的完整类型为 `namespace:type`。
+*   **`namespace?: string`**：节点的命名空间（例如 `"core"`, `"my-plugin"`）。由 [`NodeManager.ts`](../../../../apps/backend/src/services/NodeManager.ts:26) 在注册时确定，优先级为：节点显式定义 > **插件加载器提供的插件名称** > [`nodeRegistration.ts`](../../../../apps/backend/src/utils/nodeRegistration.ts:9) 提供的默认命名空间 > 从文件路径推断。最终的完整类型为 `namespace:type`。
 *   **`category: string`**：节点所属的功能分类（例如 `"实用工具"`, `"LLM"`, `"Loaders"`），用于前端组织和展示。
 *   **`displayName: string`**：用户友好的显示名称，在前端 UI 上显示。
 *   **`description: string`**：对节点功能的详细描述。
@@ -206,13 +206,16 @@
 
 节点定义在系统启动时被发现、加载、验证并注册到 [`NodeManager`](../../../../apps/backend/src/services/NodeManager.ts:1) 中，以便后续在工作流执行等场景中使用。
 
-### 节点加载 ([`NodeLoader.ts`](../../../../apps/backend/src/services/NodeLoader.ts:1))
+### 节点加载 ([`NodeLoader.ts`](../../../../apps/backend/src/services/NodeLoader.ts:1) 和 [`PluginLoader.ts`](../../../../apps/backend/src/services/PluginLoader.ts:1))
 
-*   `NodeLoader.loadNodes(dirPath: string)` 方法负责扫描指定目录（通常是 `apps/backend/src/nodes/` 及其子目录）下的节点文件。
-*   它会遍历目录中的 `.ts` 文件（排除 `.d.ts` 和一些特殊文件如 `index.ts` 自身）。
-*   对于每个有效的节点文件，它会动态 `import()` 该模块。
-*   它期望模块导出一个名为 `definition` 的单个 [`NodeDefinition`](../../../../packages/types/src/node.ts:134) 对象，或者一个名为 `definitions` 的 [`NodeDefinition`](../../../../packages/types/src/node.ts:134) 数组。
-*   对于子目录，它还会尝试加载该子目录下的 `index.ts` 文件，这个 `index.ts` 文件通常会聚合导出该目录下所有节点的定义（例如 [`apps/backend/src/nodes/io/index.ts`](../../../../apps/backend/src/nodes/io/index.ts:1)）。
+节点的加载分为两部分：内置节点和插件节点。
+
+*   **内置节点加载**:
+    *   在应用启动时，会调用 `NodeLoader.loadNodes(dirPath)` 方法扫描内置节点目录（`apps/backend/src/nodes/`）。
+    *   `NodeLoader` 会遍历目录中的 `.ts` 文件，动态 `import()` 模块，并查找导出的 `definition` 或 `definitions`。
+*   **插件节点加载**:
+    *   当一个插件被加载时（通过 [`PluginLoader.ts`](../../../../apps/backend/src/services/PluginLoader.ts:1)），如果其 `plugin.yaml` 清单文件中定义了 `nodes` 入口，`PluginLoader` 会调用 `NodeLoader.loadNodes(pluginNodesPath, pluginName)`。
+    *   `NodeLoader` 会加载指定路径下的插件节点，并将插件的名称（如 `"my-plugin"`）作为默认的命名空间传递给 `NodeManager`。
 
 ### 节点注册 ([`NodeManager.ts`](../../../../apps/backend/src/services/NodeManager.ts:1) 和 [`nodeRegistration.ts`](../../../../apps/backend/src/utils/nodeRegistration.ts:1))
 
@@ -221,8 +224,9 @@
     *   `NodeManager` 会为每个节点确定一个最终的命名空间 (`node.namespace`)。
     *   优先级如下：
         1.  节点定义中显式设置的 `namespace` 字段。
-        2.  如果节点定义中没有 `namespace`，并且是通过 `createNodeRegisterer` (来自 [`nodeRegistration.ts`](../../../../apps/backend/src/utils/nodeRegistration.ts:9)) 注册的，则使用注册器提供的默认命名空间。这通常在各个节点目录的 `index.ts` 中使用，例如 `export const definitions: NodeDefinition[] = [{ ...SomeNodeDefinition, namespace: 'core' }];`。
-        3.  如果以上都没有，`NodeManager` 会尝试根据节点文件的路径相对于 `apps/backend/src/nodes/` 的位置来推断命名空间（当前简化为所有子目录都推断为 `"core"`，未知结构为 `"unknown"`）。
+        2.  如果节点由插件加载，则使用插件的名称作为命名空间。
+        3.  如果节点定义中没有 `namespace`，并且是通过 `createNodeRegisterer` (来自 [`nodeRegistration.ts`](../../../../apps/backend/src/utils/nodeRegistration.ts:9)) 注册的，则使用注册器提供的默认命名空间。
+        4.  如果以上都没有，`NodeManager` 会尝试根据节点文件的路径相对于 `apps/backend/src/nodes/` 的位置来推断命名空间（当前简化为所有子目录都推断为 `"core"`，未知结构为 `"unknown"`）。
 *   **存储**：`NodeManager` 内部使用一个 `Map` (`this.nodes`) 来存储节点定义，键是节点的完整类型（`fullType = "namespace:type"`），值是 `NodeDefinition` 对象。
 *   `nodeManager` 是一个单例实例，全局可用。
 

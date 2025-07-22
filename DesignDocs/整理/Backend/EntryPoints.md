@@ -11,10 +11,10 @@
 1.  **环境初始化**：
     *   加载并解析配置文件（如 [`config.ts`](../../../../apps/backend/src/config.ts:1)），获取端口、路径、模式等关键配置。
     *   确定并打印当前的用户操作模式（例如 `SingleUser`, `MultiUser`）。
-    *   确保应用运行所需的关键目录（如日志目录、数据目录、工作流目录、项目目录）存在。
-2.  **节点加载**：
+    *   确保应用运行所需的关键目录（如日志目录、数据目录、项目目录、**插件目录**）存在。
+2.  **节点与插件加载**：
     *   加载内置节点：从 [`apps/backend/src/nodes`](../../../../apps/backend/src/nodes:1) 目录加载核心节点定义。
-    *   加载自定义节点：根据配置文件中 `CUSTOM_NODE_PATHS` 的设置，从用户指定的路径加载扩展节点。
+    *   **加载插件**：调用 `PluginLoader.loadPlugins()`，根据配置加载所有已启用的插件。插件可以贡献它们自己的节点、API 路由和前端资源。
 3.  **服务初始化**：
     *   初始化核心服务，如 [`DatabaseService`](../../../../apps/backend/src/services/DatabaseService.ts:1)，用于数据库连接和操作。
     *   实例化管理器，如 [`WebSocketManager`](../../../../apps/backend/src/websocket/WebSocketManager.ts:1) 和 [`ConcurrencyScheduler`](../../../../apps/backend/src/services/ConcurrencyScheduler.ts:1)。
@@ -23,7 +23,7 @@
     *   注册核心中间件和插件，如 CORS 处理、静态文件服务。
     *   应用全局中间件，例如身份验证中间件 ([`authMiddleware`](../../../../apps/backend/src/middleware/authMiddleware.ts:1))。
 5.  **路由挂载**：
-    *   引入并挂载各个功能模块的 API 路由，包括认证 ([`authRoutes`](../../../../apps/backend/src/routes/authRoutes.ts:1))、用户密钥 ([`userKeysRoutes`](../../../../apps/backend/src/routes/userKeysRoutes.ts:1))、用户配置 ([`userProfileRoutes`](../../../../apps/backend/src/routes/userProfileRoutes.ts:1))、节点信息 ([`nodeApiRoutes`](../../../../apps/backend/src/routes/nodeRoutes.ts:1))、客户端脚本 ([`clientScriptRoutes`](../../../../apps/backend/src/routes/nodeRoutes.ts:1))、全局工作流 ([`globalWorkflowRoutes`](../../../../apps/backend/src/routes/workflowRoutes.ts:1))、执行引擎 ([`executionApiRoutes`](../../../../apps/backend/src/routes/executionRoutes.ts:1))、角色卡 ([`characterApiRoutes`](../../../../apps/backend/src/routes/characterRoutes.ts:1)) 和项目管理 ([`projectRoutesPlugin`](../../../../apps/backend/src/routes/projectRoutes.ts:1))。
+    *   引入并挂载各个功能模块的 API 路由，包括**文件管理 (`fileManagerRoutes`)**、**插件管理 (`pluginRoutes`)**、认证 (`authRoutes`)、项目管理 (`projectRoutesPlugin`) 等。
 6.  **WebSocket 服务集成**：
     *   定义 WebSocket 路由 (`/ws`)，并集成由 [`createWebsocketHandler`](../../../../apps/backend/src/websocket/handler.ts:1) 创建的处理器，该处理器依赖于 `ConcurrencyScheduler` 和 `WebSocketManager`。
 7.  **服务器启动**：
@@ -91,6 +91,8 @@ const app = new Elysia()
 .use(nodeApiRoutes)          // 节点信息、描述等 API 路由
 .use(clientScriptRoutes)     // 节点客户端脚本路由
 .use(globalWorkflowRoutes)   // 全局工作流（模板）相关路由
+.use(pluginRoutes)            // 插件管理路由
+.use(fileManagerRoutes)       // 文件管理路由
 .use(executionApiRoutes)     // 工作流执行相关路由
 .use(characterApiRoutes)     // 角色卡（如 SillyTavern 格式）相关路由
 .use(projectRoutesPlugin({ appVersion })); // 项目管理相关路由 (作为插件形式)
@@ -172,8 +174,9 @@ app.listen(PORT, (server) => {
     *   负责数据库的初始化和连接管理。在应用启动早期被调用以确保数据库可用。
 *   **[`./middleware/authMiddleware`](../../../../apps/backend/src/middleware/authMiddleware.ts:27)**:
     *   提供身份验证中间件，用于保护需要认证的 API 端点。
-*   **[`./services/NodeLoader`](../../../../apps/backend/src/services/NodeLoader.ts:33)**:
-    *   负责从指定路径加载内置节点和自定义节点定义。这是应用核心功能（工作流编排）的基础。
+*   **[`./services/NodeLoader`](../../../../apps/backend/src/services/NodeLoader.ts:33)** & **[`./services/PluginLoader`](../../../../apps/backend/src/services/PluginLoader.ts:1)**:
+    *   `NodeLoader` 负责加载节点定义文件。
+    *   `PluginLoader` 负责在启动时加载所有已启用的插件，并使用 `NodeLoader` 加载插件提供的节点。
 *   **[`./websocket/handler`](../../../../apps/backend/src/websocket/handler.ts:34)** & **[`./websocket/WebSocketManager`](../../../../apps/backend/src/websocket/WebSocketManager.ts:35)**:
     *   `WebSocketManager` 用于管理所有活动的 WebSocket 连接。
     *   `handler` (由 `createWebsocketHandler` 创建) 定义了 WebSocket 连接的生命周期事件（如 `open`, `message`, `close`, `error`）的处理逻辑，并与 `ConcurrencyScheduler` 交互以进行实时通信。

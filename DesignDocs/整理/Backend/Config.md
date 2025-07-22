@@ -39,10 +39,10 @@
     *   **来源**: 从 `config.json` 中的 `execution.max_concurrent_workflows` 读取。如果未配置，默认为 `5`。
     *   **影响**: 控制系统资源消耗，防止因过多并发工作流导致性能问题。
 
-*   **`CUSTOM_NODE_PATHS: string[]`**
-    *   **用途**: 定义自定义节点的加载路径列表。这些路径应相对于项目根目录。
-    *   **来源**: 从 `config.json` 中的 `customNodePaths` 读取。如果未配置，默认为空数组 `[]`。
-    *   **影响**: 允许用户扩展应用功能，通过加载指定目录下的自定义节点。
+*   **`pluginPaths: string[]`** (替代了旧的 `customNodePaths`)
+    *   **用途**: 定义插件的加载目录列表。这些路径应相对于项目根目录。
+    *   **来源**: 从 `config.json` 中的 `pluginPaths` 读取。
+    *   **影响**: `PluginLoader` 服务会扫描这些目录来发现和加载插件，从而扩展应用功能。
 
 *   **`MULTI_USER_MODE: boolean`**
     *   **用途**: 启用或禁用多用户模式。

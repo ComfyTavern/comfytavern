@@ -43,7 +43,7 @@
     *   `topologicalSort()` 构建图的邻接表 (`this.adj`)，计算节点的入度，并使用Kahn算法进行拓扑排序，生成节点执行顺序 `this.executionOrder`。
     *   如果图中存在循环，`topologicalSort()` 会抛出错误。
 *   **初始化节点实例和执行上下文**:
-    *   引擎通过 [`NodeManager`](../../../../apps/backend/src/services/NodeManager.ts:1) 获取节点的定义 ([`NodeDefinition`](../../../../packages/types/src/node.ts:1))，其中包含 `execute` 方法。
+    *   引擎通过 [`NodeManager`](../../../../apps/backend/src/services/NodeManager.ts:1) 获取节点的定义 ([`NodeDefinition`](../../../../packages/types/src/node.ts:1))，无论该节点是内置的还是由插件提供的。定义中包含 `execute` 方法。
     *   执行上下文 (`context`) 在调用节点 `execute` 方法时动态构建，包含 `promptId`、当前 `nodeId`、工作流接口输入/输出定义。
 
 ### 节点迭代与执行

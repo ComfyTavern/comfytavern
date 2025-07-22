@@ -66,10 +66,10 @@ Elysia 的 `.derive()` 方法允许在每个请求的上下文中动态计算和
     *   从请求头获取 `Authorization`。
     *   如果存在 `Bearer` token，提取 token (API 密钥)。
     *   调用 `AuthService.authenticateViaApiKey()` 验证密钥。
-    *   如果验证成功，则调用 `AuthService.getUserContext()` 获取用户上下文，并赋值给 `derivedUserContext`。
-    *   如果 API 密钥验证失败，当前逻辑下不会立即设置 `derivedAuthError`，而是会继续尝试后续的认证方法。 (TODO: 根据代码注释，未来可能会在 API 密钥强制且失败时设置错误)。
+    *   如果验证成功，则直接基于该认证结果构建用户上下文。
+    *   如果 API 密钥验证**失败**，则会直接抛出错误，中断后续认证流程。
 3.  **通用用户上下文获取**：
-    *   如果经过 API 密钥认证后 `derivedUserContext` 仍为 `null` (即 API 密钥未提供、无效或未导致用户上下文的确定)，并且没有由 API 密钥认证逻辑直接设置错误，则会再次调用 `AuthService.getUserContext()`。这通常依赖于 Cookie 或其他会话机制。
+    *   如果**没有提供 API 密钥**，则会调用 `AuthService.getUserContext()`，该方法会根据当前的操作模式（`SingleUser` 或 `MultiUser`）和可能的会话信息（如 Cookie）来确定用户上下文。
 4.  **错误处理**：
     *   在上述过程中，任何来自 `AuthService` 的调用（如 `authenticateViaApiKey` 或 `getUserContext`）如果抛出异常，会被捕获。
     *   捕获到的错误会被记录到内部的 `derivedAuthError`，并格式化为 `derivedAuthErrorInfo`。
