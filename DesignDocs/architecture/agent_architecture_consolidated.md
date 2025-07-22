@@ -1,8 +1,8 @@
-# ComfyTavern Agent 架构详细规划报告 (v3 - 整合版)
+# ComfyTavern Agent 架构详细规划报告
 
 ## 摘要 (Executive Summary)
 
-本报告详细阐述了 ComfyTavern 平台 Agent 系统的统一架构设计。在对现有相关设计文档进行深度分析和整合，并结合平台核心价值主张的基础上，我们确立了一套以“轻量级核心 + 模板化赋能”为指导策略的 Agent 架构。
+本报告详细阐述了 ComfyTavern 平台 Agent 系统的统一架构设计。该设计旨在为平台提供一个强大、灵活且可扩展的 Agent 系统，其核心策略是"轻量级核心 + 模板化赋能"。
 
 核心结论包括：
 
@@ -20,7 +20,7 @@
 
 ComfyTavern 平台致力于成为一个面向创作者和最终用户的 AI 创作与应用平台，其核心目标之一是将复杂的工作流封装成易于使用的交互式应用面板。Agent（智能体）作为实现这一目标的关键组件，承载着执行复杂逻辑、与用户交互、乃至模拟动态世界的期望。
 
-在项目早期，已有多份关于 Agent 架构的初步设计文档（如 `agent-architecture-plan.md` 和 `agent-architecture-plan-v2.md`），它们从不同角度探索了 Agent 的可能性，提出了包括事件驱动模型、自主审议循环、知识库集成等有价值的概念。然而，这些文档间在核心定义、驱动机制、实现层级等方面存在一定的差异和模糊之处。
+ComfyTavern 平台旨在构建一个强大、灵活且可扩展的 Agent 系统。为了实现这一目标，我们需要一个统一的架构，它不仅要定义 Agent 的核心本质，还要明确其与平台现有服务（如工作流、知识库、场景）的协同方式。
 
 主要的挑战在于：
 
@@ -31,7 +31,7 @@ ComfyTavern 平台致力于成为一个面向创作者和最终用户的 AI 创�
 - Agent 应该在平台的哪个层级实现？它与场景、项目等核心概念如何协同？
 - 如何支持从单个 Agent 应用到复杂的多 Agent 协作场景的平滑过渡？
 
-本报告旨在回应这些挑战，通过对现有思路的梳理、整合与演进，提出一个统一、清晰、可落地的 Agent 架构规划。
+本报告旨在提出一个统一、清晰、可落地的 Agent 架构规划，以应对这些挑战。
 
 ### 1.2. 核心设计原则与战略选择
 
@@ -71,9 +71,8 @@ ComfyTavern 平台致力于成为一个面向创作者和最终用户的 AI 创�
 - **第三章：核心服务与组件在 Agent 架构中的角色** - 详细说明场景实例、Agent 运行时、工作流引擎、知识库等核心组件如何协同支持 Agent 的运作。
 - **第四章：整体架构图与层级关系** - 通过可视化方式呈现整合后的架构。
 - **第五章：“多 Agent 协作”的实现模式** - 探讨在当前策略下如何构建多 Agent 应用。
-- **第六章：对现有设计文档的修订建议** - 确保平台知识体系的一致性。
-- **第七章：未来展望与开放问题** - 讨论后续发展方向。
-- **附录** - 提供相关的 Schema 示例。
+- **第六章：未来展望与开放问题** - 讨论后续发展方向。
+- **第七章：附录** - 提供相关的 Schema 示例。
 
 通过本报告的规划，我们期望为 ComfyTavern Agent 系统的开发和演进提供一个清晰、稳固的路线图。
 
@@ -109,12 +108,9 @@ ComfyTavern 平台致力于成为一个面向创作者和最终用户的 AI 创�
       - 决定向事件总线发布一个或多个事件（例如，通知其他 Agent 或触发其他系统响应）。
       - 决定更新自身的私有状态 (`PrivateState`) 或请求更新世界状态 (`WorldState`)。
       - 决定进入反思/学习阶段 (Learning & Reflection)。
-- **输出决策 (Output Decision)**：审议工作流的最终输出是 Agent 的决策，这通常表现为对 `AgentRuntime` 的一组指令，例如：
-  - 需要调用的技能工作流 ID 及其输入参数。
-  - 需要执行的原子工具及其参数。
-  - 需要发布的事件内容。
-  - 需要更新的私有状态内容。
-  - 一个明确的“进入反思”信号。
+- **输出决策 (Output Decision)**：审议工作流的最终输出是 Agent 的决策。当需要调用工具或技能时，决策会以**通用工具调用协议 (Tavern Action Manifest - TAM)** 的格式输出。该格式封装了所有必要的调用信息，例如：
+  - 需要调用的工具 ID (无论是原子工具还是封装了技能工作流的工具) 及其参数，包裹在 `<|[REQUEST_TOOL]|>...<|[END_TOOL]|>` 块中。
+  - 其他非工具类决策，如直接更新私有状态、发布事件或进入反思，可以通过特定的内部工具或专门的工作流输出来实现。
 
 #### 2.1.2. 私有状态 (PrivateState)：Agent 的短期记忆与个性化数据
 
@@ -147,11 +143,15 @@ Agent 的能力体现在它能够调用的技能工作流和原子工具上。
   - **示例**：`Generate_Detailed_Scene_Description.json` (场景描述生成), `Negotiate_Trade_Offer.json` (交易谈判), `Explore_Unknown_Area.json` (区域探索)。
   - **调用**：由 Agent 的审议循环根据当前目标和规划决定调用哪个技能工作流，并提供必要的输入参数。
   - **定义**：这些是普通的 ComfyTavern 工作流文件，其 ID 被列在 Agent Profile 的 `skill_workflow_ids_inventory` 中。
-- **原子工具 (Atomic Tools)**：
-  - **定位**：提供更细粒度、单一功能的底层操作。通常由后端直接实现为特殊的节点类型或可调用函数。
-  - **示例**：`ReadPrivateStateTool`, `UpdatePrivateStateTool`, `ReadWorldStateTool`, `RequestWorldStateUpdateTool`, `PublishEventTool`, `QueryKnowledgeBaseTool`, `WriteToKnowledgeBaseTool`, `GenerateRandomNumberTool`。
-  - **调用**：同样由审议循环决策调用。
-  - **定义**：其 ID 被列在 Agent Profile 的 `tool_ids_inventory` 中。
+- **工具 (Tools)**：
+  - **定位**：根据 **通用工具调用协议 (TAM)** 的定义，工具是一个可被外部调用的、具有明确功能定义的能力接口。它向调用者暴露一个稳定的 ID 和一组参数。
+  - **实现多样性**: 工具的内部实现是灵活的，它可以是：
+    - 一个单一的原子节点。
+    - 一个封装了复杂逻辑的完整工作流 (即此前的“技能工作流”概念)。
+    - 一个由后端直接提供的服务 (例如，`system.get_current_time`)。
+  - **统一调用**: 无论内部实现如何，所有工具都通过统一的 TAM 协议进行调用。这使得“技能工作流”和“原子工具”在调用层面被统一为“工具”。
+  - **示例**：`FileOperator.WriteFile` (服务实现), `image.generate_portrait` (工作流实现), `math.add` (节点实现)。
+  - **定义与授权**: Agent 可用的工具 ID 被列在 Agent Profile 的 `tool_ids_inventory` 中，作为其能力清单和授权凭证。
 
 #### 2.1.5. 学习与反思机制 (Learning & Reflection)
 
@@ -233,11 +233,12 @@ Agent 定义（我们暂定其文件名为 `agent_profile.json`，后续可根�
     "string" // e.g., "workflows/generate_image_skill.json", "workflows/summarize_text_skill.json"
     // 这些是 Agent 在其审议循环中可以决策调用的能力。
   ],
-
-  "tool_ids_inventory": [
-    // (可选) 此 Agent 类型可使用的“原子工具”的标识符列表。
-    "string" // e.g., "ReadPrivateStateTool", "PublishEventTool", "WriteToKnowledgeBaseTool"
-    // 这些是更底层的、通常由后端提供的功能。
+"tool_ids_inventory": [
+  // (可选) 此 Agent 类型可使用的“工具”的 ID 列表。
+  "string" // e.g., "FileOperator.WriteFile", "image.generate_portrait", "system.get_current_time"
+  // 这些是 Agent 在其审议循环中可以决策调用的、遵循 TAM 协议的能力。
+  // 其实现可以是节点、工作流或后端服务。
+],
   ],
 
   "initial_goals_reference": [
@@ -489,7 +490,7 @@ Agent 定义（我们暂定其文件名为 `agent_profile.json`，后续可根�
 
 ### 3.5. 智能事件总线 (`IntelligentEventBus`)：Agent 感知与行动的渠道
 
-智能事件总线是 Agent 与其运行环境（包括其他 Agent、世界状态变化、用户交互等）进行异步消息通信的核心基础设施。其设计可参考 [`DesignDocs/architecture/agent-architecture-plan.md`](DesignDocs/architecture/agent-architecture-plan.md:1) 中关于事件总线的详细规划。
+智能事件总线是 Agent 与其运行环境（包括其他 Agent、世界状态变化、用户交互等）进行异步消息通信的核心基础设施。
 
 - **定位**：一个高性能、支持结构化事件、具备一定智能（如过滤、路由、优先级、循环检测）的平台级消息中间件。
 - **与 Agent 的关系**：
@@ -504,7 +505,7 @@ Agent 定义（我们暂定其文件名为 `agent_profile.json`，后续可根�
 
 ### 3.6. 世界状态服务 (`WorldStateService`)：全局共享环境信息
 
-世界状态服务负责管理和维护场景实例范围内的共享环境状态，为 Agent 提供关于其所处“世界”的客观信息。其设计可参考 [`DesignDocs/architecture/agent-architecture-plan.md`](DesignDocs/architecture/agent-architecture-plan.md:1) 中关于事务性全局状态机的规划。
+世界状态服务负责管理和维护场景实例范围内的共享环境状态，为 Agent 提供关于其所处"世界"的客观信息。
 
 - **定位**：一个提供事务性、版本化、可并发访问的共享状态存储服务，其作用域通常限定在单个场景实例内。
 - **与 Agent 的关系**：
@@ -767,7 +768,15 @@ Agent 也可以通过观察和修改共享的 `WorldState` 来实现间接的协
       - `gm_agent_instance` 的 `AgentRuntime` 也订阅了 `comfytavern.rpg.image_generation_result` 事件。
       - 收到结果事件后，其审议工作流被触发（或从等待状态中被唤醒）。它根据 `task_id` 匹配结果，获取图像 URL。
       - 审议后，GM Agent 决定下一步行动，例如，通过“面板交互工具”将场景描述和生成的图像一起展示给用户。
-      - **生成玩家选项**: 为了让玩家能够与场景互动，GM Agent 可能会接着决定为玩家生成一组行动选项。此时，它会调用一个专门的工具（例如 `RequestUserInteractionTool`），这个调用指令会封装生成选项所需的上下文（如“玩家正站在森林边缘，面前有一条小径和一座古老的雕像”）和期望的选项数量或类型。这个工具调用的结果是一个结构化的选项列表，前端应用面板可以将其渲染为可点击的按钮，从而将 Agent 的决策无缝转化为用户的交互界面。这体现了 Agent 如何通过工具调用来主动驱动和塑造用户体验。
+      - **生成玩家选项**: 为了让玩家能够与场景互动，GM Agent 可能会接着决定为玩家生成一组行动选项。此时，它的审议工作流会输出一个符合 **TAM 协议** 的工具调用指令，例如：
+        ```
+        <|[REQUEST_TOOL]|>
+        command:「始」ui.request_user_choice「末」
+        context_text:「始」你正站在森林边缘，面前有一条蜿蜒的小径和一座布满苔藓的古老雕像。你打算？「末」
+        options_prompt:「始」提供三个选项：1. 沿着小径探索；2. 检查古老的雕像；3. 呼喊看是否有人。「末」
+        <|[END_TOOL]|>
+        ```
+      - 这个 TAM 指令被 `ToolManager` 解析并执行。`ui.request_user_choice` 工具的实现会与前端交互，将选项渲染为可点击的按钮。用户的选择随后会作为新的事件或上下文，触发 GM Agent 的下一轮审议。这体现了 Agent 如何通过标准的工具调用协议来主动驱动和塑造用户体验。
 
 3.  **学习沉淀 (可选)**：
     - 如果在图像生成过程中，GM Agent 或 Image Agent（或其工作流）发现某种特定的 Prompt 组合或参数设置效果特别好，其反思机制（如果实现）可以将此经验作为 `best_practice` 类型的 CAIU 贡献到共享知识库中，供未来参考。
@@ -775,68 +784,9 @@ Agent 也可以通过观察和修改共享的 `WorldState` 来实现间接的协
 通过这种基于事件的异步任务委托和结果回收机制，结合 Agent 自身的审议能力，即使没有复杂的底层多 Agent 直接通信协议，也能实现灵活且强大的协作效果。应用模板的价值就在于将这些模式预先封装好，供创作者学习和使用。
 
 
-## 6. 对现有设计文档的修订建议
+## 6. 未来展望与开放问题
 
-随着我们确立了统一的 Agent 架构（v3 - 整合版），有必要回顾并处理项目中现存的、与 Agent 相关的早期设计文档，以避免混淆，并确保所有开发者和贡献者都能基于最新的、一致的架构愿景进行工作。
-
-以下是对几份关键旧文档的具体处理建议：
-
-### 6.1. 关于 [`DesignDocs/architecture/agent-architecture-plan.md`](DesignDocs/architecture/agent-architecture-plan.md:1) (Agent v1/v6.1 方案)
-
-这份文档在早期探索中提出了许多有价值的概念，特别是关于“世界上下文”（全局状态机和智能事件总线）以及 `agent.json` 作为 Agent 定义的初步设想。
-
-*   **核心价值提取**：
-    *   **智能事件总线 (`IntelligentEventBus`)**：其详细设计（包括事件 Schema、安全与流量控制机制如循环检测、深度限制、优先级队列等）仍然非常具有参考价值，应作为本 v3 架构中事件总线服务的核心设计输入。
-    *   **事务性全局状态机 (`Transactional Global State Machine` / `WorldStateService`)**：其关于 `world_state.json` 的结构、事务性更新、乐观/悲观锁机制等思想，也应作为本 v3 架构中世界状态服务的核心设计输入。
-    *   **`agent.json` 的初步思想**：虽然本 v3 架构将其演进为 `agent_profile.json` 并赋予了新的内涵（如核心审议工作流），但 v1 文档中关于 Agent 订阅事件、行为映射、私有状态等方面的思考，为 `agent_profile.json` 的字段设计提供了一些有益的参考。
-*   **处理建议**：
-    1.  **提取并整合**：将上述有价值的设计思想（特别是事件总线和世界状态服务的详细规划）正式整合到本 v3 架构文档的相关章节（或作为详细附录，或在对应服务的设计文档中明确引用和采纳）。
-    2.  **归档**：在完成价值提取和整合后，建议将 [`DesignDocs/architecture/agent-architecture-plan.md`](DesignDocs/architecture/agent-architecture-plan.md:1) 文件标记为**“已过时/已整合 (Superseded/Integrated)”**，并移入项目的存档目录（例如 `DesignDocs/old/` 或 `DesignDocs/archive/`）。不建议直接删除，以保留设计演进的轨迹。
-    3.  **明确引用关系**：在本 v3 文档中，可以简要说明其与此旧文档的继承与发展关系。
-
-### 6.2. 关于 [`DesignDocs/architecture/agent-architecture-plan-v2.md`](DesignDocs/architecture/agent-architecture-plan-v2.md:1) (Agent v2 方案 - 理念整合版)
-
-这份文档对 Agent 的自主性、目标驱动、审议循环以及学习反思机制进行了更深入的思考，是本 v3 架构的核心理念来源。
-
-*   **核心价值采纳**：
-    *   **自主 Agent (Autonomous Agent) 核心哲学**：v3 架构完全采纳了其关于构建以目标驱动、具备学习与反思能力的自主 Agent 为核心的理念。
-    *   **Agent 核心审议循环 (Deliberation Loop)**：其关于审议循环的输入、处理（LLM驱动的推理规划）、输出决策的详细描述，构成了 v3 架构中 Agent“大脑”的核心运作模式。
-    *   **目标与动机管理 (Goal & Motivation Management)**：v3 架构采纳了将目标作为 Agent 核心驱动力，并可以作为 CAIU 存储和管理的设计。
-    *   **学习与反思机制 (Learning & Reflection Mechanism)**：v3 架构采纳了 Agent 通过反思贡献知识、实现个体学习和群体知识共享的核心思想。
-    *   **工作流作为“技能”与“工具”的定位**：v3 架构明确了工作流是被 Agent 审议核心调用的能力，而非 Agent 行为的唯一或主要定义者。
-*   **处理建议**：
-    1.  **作为主要思想源泉**：本 v3 架构文档在很大程度上是对 [`DesignDocs/architecture/agent-architecture-plan-v2.md`](DesignDocs/architecture/agent-architecture-plan-v2.md:1) 核心理念的进一步工程化、具体化和整合（特别是补充了 Agent 定义、运行时、与场景的结合等细节）。
-    2.  **归档**：同样地，在确认本 v3 文档已充分吸收并发展了其核心思想后，建议将 [`DesignDocs/architecture/agent-architecture-plan-v2.md`](DesignDocs/architecture/agent-architecture-plan-v2.md:1) 文件也标记为**“已过时/已整合 (Superseded/Integrated)”**并移入存档目录。
-    3.  **明确致谢与演进关系**：在本 v3 文档的引言或相关章节，应明确指出其思想主要继承和发展自此 v2 方案。
-
-### 6.3. 关于 [`DesignDocs/architecture/scene-architecture.md`](DesignDocs/architecture/scene-architecture.md:1) (场景架构)
-
-这份文档详细规划了场景作为状态机编排引擎的核心构成。在本 v3 Agent 架构中，场景的角色被重新定位，但其部分核心思想仍然有价值。
-
-*   **核心价值与调整**：
-    *   **状态机与编排思想**：场景作为状态机进行宏观流程编排的思想，在 v3 架构中仍然是“可选的宏观编排者”角色的基础。场景可以通过状态转换、条件判断和动作执行来协调更高层级的流程。
-    *   **核心构成元素**：其定义的场景状态 (States/Nodes)、转换 (Transitions)、变量 (Variables)、动作 (Actions) 等元素，对于实现场景的编排功能依然有参考意义。
-    *   **与 Agent 的关系调整**：关键在于，场景的编排不应直接控制 Agent 的微观审议和决策，而是作为 Agent 运行的“宿主环境”和生命周期管理者。场景可以影响 Agent 的初始条件、高阶目标，或通过事件与 Agent 交互，但 Agent 的核心行为由其自身的审议循环驱动。
-*   **处理建议**：
-    1.  **修订而非完全取代**：不建议直接归档此文档。而是需要根据本 v3 Agent 架构对其进行**重大修订**。
-    2.  **修订方向**：
-        *   在引言和核心定位部分，明确场景在新的 Agent 架构下的角色：Agent 实例的宿主、运行时上下文提供者、生命周期管理者，以及可选的宏观流程编排器。
-        *   在场景定义（`scene.json`）的 Schema 中，增加关于如何声明和配置其包含的 Agent 实例的部分（如本 v3 文档 3.1.1 节所述）。
-        *   调整场景与工作流的交互描述，使其与 Agent 通过 `AgentRuntime` 调用工作流（包括审议工作流和技能工作流）的模式相一致。场景自身也可以调用工作流执行场景级的编排逻辑。
-        *   强调场景与 Agent 间的交互主要是通过共享 `WorldState`、`EventBus` 以及场景对 Agent 生命周期和高阶目标的管理来实现。
-    3.  **保持其作为“场景设计”的独立价值**：修订后的场景架构文档，将专注于如何设计和实现场景这一层级的逻辑，使其能够良好地承载和配合自主 Agent 的运行。
-
-### 6.4. 其他相关文档的微调建议
-
-*   [`DesignDocs/architecture/project-architecture.md`](DesignDocs/architecture/project-architecture.md:1): 需要在其 `project.json` Schema 中增加对 `Agent Profile` 定义文件引用的支持。
-*   [`DesignDocs/architecture/knowledgebase-architecture.md`](DesignDocs/architecture/knowledgebase-architecture.md:1): 其 CAIU 结构和 Agent 知识贡献机制与本 v3 架构高度兼容，可能只需微调或补充关于 `goal`, `best_practice`, `reflection_note` 等特定 CAIU 类型的示例和应用场景。
-*   [`DesignDocs/architecture/面板与接口/frontend-api-manager-and-integration.md`](DesignDocs/architecture/面板与接口/frontend-api-manager-and-integration.md:1) 和 [`DesignDocs/architecture/面板与接口/panel-spec-and-lifecycle.md`](DesignDocs/architecture/面板与接口/panel-spec-and-lifecycle.md:1): 这两份文档中关于应用面板与后端交互的机制，需要进行修订，以精确对齐本 v3 架构所确立的“审议循环驱动”模型。核心是明确：用户的输入是作为 Agent 下一次审议循环的新上下文，而不是用于续跑或触发一个分裂的工作流。
-
-通过上述处理，我们可以确保 ComfyTavern 的核心架构文档体系保持最新、一致和聚焦，为后续的开发工作提供清晰的指引。姐姐的决定——将本 v3 报告作为主要的 Agent 文档，并将旧的两篇核心 Agent 文档（v1 和 v2 方案）移入回收站（或存档），是非常明智的，有助于避免未来的混淆。
-
-## 7. 未来展望与开放问题
-
-本报告提出的 Agent 架构 (v3 - 整合版) 为 ComfyTavern 平台构建了一个坚实的基础，使其能够支持高度自主和具备学习能力的 Agent。然而，随着平台的发展和应用场景的深化，仍然有一些值得未来探索和解决的开放问题与展望：
+本报告提出的 Agent 架构为 ComfyTavern 平台构建了一个坚实的基础，使其能够支持高度自主和具备学习能力的 Agent。然而，随着平台的发展和应用场景的深化，仍然有一些值得未来探索和解决的开放问题与展望：
 
 *   **Agent 间的直接通信协议 (如果需要)**：
     *   当前架构主要依赖事件总线和共享世界状态实现 Agent 间的间接异步协作。未来，如果某些特定场景（例如，需要高速、低延迟、点对点协商的 Agent 交互）确实需要更直接的通信机制，可以考虑设计一套轻量级的 Agent 间消息传递协议。但这需要仔细评估其必要性与复杂性，避免过度设计。
@@ -869,10 +819,9 @@ Agent 也可以通过观察和修改共享的 `WorldState` 来实现间接的协
     *   推动 Agent Profile、核心审议工作流模板、以及常用技能工作流的标准化，有助于形成繁荣的创作者生态。
     *   考虑提供 Agent 开发工具包 (SDK) 或更友好的可视化编辑器，降低 Agent 的创建门槛。
 
-解决这些开放问题将是一个持续演进的过程。本 v3 架构为这些未来的探索提供了坚实的第一步。
+解决这些开放问题将是一个持续演进的过程。本架构为这些未来的探索提供了坚实的第一步。
 
-## 附录 (Appendix)
-
+## 7. 附录 (Appendix)
 ### A. `agent_profile.json` 完整 Schema (示例)
 
 这是一个更详细的 `agent_profile.json` 概念性 Schema 示例，扩充了之前的定义，并加入了一些注释说明。实际实现时，部分字段的类型和结构可能需要根据具体技术选型进一步细化。
@@ -959,13 +908,14 @@ Agent 也可以通过观察和修改共享的 `WorldState` 来实现间接的协
   ],
 
   "tool_ids_inventory": [
-    "ReadPrivateStateTool",
-    "UpdatePrivateStateTool",
-    "QueryKnowledgeBaseTool",
-    "WriteToKnowledgeBaseTool", // For reflections
-    "PublishEventTool",
-    "ReadWorldStateTool",
-    "RequestUserInteractionTool" // 生成一个交互请求，由前端处理并构建新工作流
+    // 遵循 TAM 协议的工具 ID 列表
+    "core:ReadPrivateState",      // 读取私有状态
+    "core:UpdatePrivateState",      // 更新私有状态
+    "kb:Query",                     // 查询知识库
+    "kb:WriteEntry",                // 写入知识库 (用于反思)
+    "event:Publish",                // 发布事件
+    "world:ReadState",              // 读取世界状态
+    "ui:RequestUserInteraction"     // 请求用户交互 (如显示选项)
   ],
 
   "initial_goals_reference": [
@@ -1073,7 +1023,3 @@ Agent 也可以通过观察和修改共享的 `WorldState` 来实现间接的协
 ```
 
 这些 Schema 示例旨在提供一个具体的蓝图，帮助理解 Agent Profile 和场景定义如何协同工作，以在 ComfyTavern 中创建和管理富有生命力的 Agent 实例和动态的交互场景。实际部署时，这些 Schema 会通过 Zod 或类似的库进行严格定义和校验。
-
----
-
-到此，这份详细规划报告的主要内容就完成了。
