@@ -61,6 +61,13 @@ nodes:
   # 节点定义的入口文件或目录，相对于此 YAML 文件的位置
   entry: ./nodes
 
+# (可选) 声明此插件提供的工具
+# 注意：工具的具体接口（参数、实现）在独立的 *.tool.json 文件中定义，
+# plugin.yaml 只负责声明工具所在的目录，以便 ToolManager 发现它们。
+tools:
+  # 工具定义文件所在的目录
+  entry: ./tools
+
 # (可选) 声明此插件提供的前端资源
 frontend:
   # 开发模式下的入口，用于 Vite 集成
@@ -247,6 +254,14 @@ permissions:
             if (manifest.nodes) {
               const nodesPath = path.join(pluginPath, manifest.nodes.entry);
               await NodeLoader.loadNodes(nodesPath);
+            }
+
+            // 3. 处理工具 (由 ToolManager 负责加载)
+            if (manifest.tools) {
+              const toolsPath = path.join(pluginPath, manifest.tools.entry);
+              // 假设存在一个 ToolManager 来处理工具的加载
+              // await ToolManager.loadToolsFromPath(toolsPath);
+              console.log(`[PluginLoader] Found tools for '${manifest.displayName}' at: ${toolsPath}. ToolManager should handle loading.`);
             }
             console.log(`[PluginLoader] Successfully loaded plugin: ${manifest.displayName} (v${manifest.version})`);
 
