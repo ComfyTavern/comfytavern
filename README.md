@@ -6,6 +6,10 @@
 [![Stars](https://img.shields.io/github/stars/ComfyTavern/comfytavern?style=social)](https://github.com/ComfyTavern/comfytavern)
 
 <p align="center">
+  <img alt="ComfyTavern Banner" src="docs/images/ComfyTavern(Beta)_Banner.png">
+</p>
+
+<p align="center">
   <a href="./README.md"><b>简体中文</b></a>
   &nbsp;•&nbsp;
   <a href="./README.en.md">English</a>
