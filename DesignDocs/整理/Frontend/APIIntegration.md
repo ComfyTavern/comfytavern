@@ -160,3 +160,60 @@
     *   然而，为了更好的状态管理和逻辑分离，更复杂的或涉及共享状态的 API 调用通常会委托给 Pinia store 或 Composable。
 
 通过这种方式，API 交互逻辑得到了良好的组织和封装，使得前端应用代码更加清晰、可维护和可测试。
+### 2.5. `apps/frontend-vueflow/src/api/adapterApi.ts`
+
+*   **模块名称及其路径**: [`apps/frontend-vueflow/src/api/adapterApi.ts`](apps/frontend-vueflow/src/api/adapterApi.ts:1)
+*   **负责的 API 领域**: 该模块负责处理前端 API 适配器（ApiAdapter）的 CRUD 操作。这些适配器定义了应用面板如何与后端工作流进行数据转换和调用。其底层操作依赖于文件管理器 API 来读写适配器配置的 JSON 文件。
+*   **关键 API 调用函数**:
+    *   **`list(projectId: string): Promise<ApiAdapter[]>`**: 列出指定项目的所有 API 适配器。
+    *   **`get(projectId: string, adapterId: string): Promise<ApiAdapter | null>`**: 获取单个 API 适配器的详细定义。
+    *   **`create(projectId: string, payload: CreateApiAdapterPayload): Promise<ApiAdapter>`**: 创建一个新的 API 适配器。
+    *   **`update(projectId: string, adapterId: string, payload: UpdateApiAdapterPayload): Promise<ApiAdapter>`**: 更新一个现有的 API 适配器。
+    *   **`remove(projectId: string, adapterId: string): Promise<void>`**: 删除一个 API 适配器。
+*   **内部实现简述**: 这些函数通过调用 `fileManagerApiClient` 的 `listDir`, `readFile`, `writeFile`, `deleteFilesOrDirs` 等方法，将 API 适配器作为项目目录下的 JSON 文件进行管理。
+
+### 2.6. `apps/frontend-vueflow/src/api/fileManagerApi.ts`
+
+*   **模块名称及其路径**: [`apps/frontend-vueflow/src/api/fileManagerApi.ts`](apps/frontend-vueflow/src/api/fileManagerApi.ts:1)
+*   **负责的 API 领域**: 该模块提供了与后端文件管理服务 (FAMService) 交互的核心 API。它允许前端应用执行各种文件和目录操作。
+*   **关键 API 调用函数**:
+    *   **`listDir(logicalPath: string, options?: { ensureExists?: boolean }): Promise<FAMItem[]>`**: 列出指定逻辑路径下的文件和目录。
+    *   **`createDir(parentLogicalPath: string, dirName: string): Promise<FAMItem>`**: 在指定父路径下创建新目录。
+    *   **`writeFile(targetLogicalPath: string, formData: FormData): Promise<FAMItem[]>`**: 上传一个或多个文件到指定路径。
+    *   **`renameFileOrDir(logicalPath: string, newName: string): Promise<FAMItem>`**: 重命名文件或目录。
+    *   **`moveFilesOrDirs(sourcePaths: string[], targetParentPath: string): Promise<FAMItem[]>`**: 移动一个或多个文件/目录。
+    *   **`deleteFilesOrDirs(logicalPaths: string[]): Promise<void>`**: 删除一个或多个文件/目录。
+    *   **`getDownloadFileLink(logicalPath: string): Promise<string>`**: 获取文件的直接下载链接。
+    *   **`readFile(logicalPath: string): Promise<any>`**: 读取指定文件的内容。
+    *   **`writeJsonFile(logicalPath: string, content: object): Promise<void>`**: 直接通过 JSON 内容写入一个文件（通常用于配置文件）。
+*   **内部实现简述**: 所有函数都使用 `useApi()` 提供的底层 HTTP 方法 (`get`, `post`, `put`, `del`) 向后端 `/fam` 前缀下的相应端点发起请求。
+
+### 2.7. `apps/frontend-vueflow/src/api/llmConfigApi.ts`
+
+*   **模块名称及其路径**: [`apps/frontend-vueflow/src/api/llmConfigApi.ts`](apps/frontend-vueflow/src/api/llmConfigApi.ts:1)
+*   **负责的 API 领域**: 该模块负责处理与大语言模型 (LLM) 配置相关的 API 端点，包括管理 API 渠道（凭证）、已激活的模型以及 LLM 提供商列表。
+*   **关键 API 调用函数**:
+    *   **API 渠道 (Credentials)**:
+        *   **`getProviders(): Promise<{ id: string; name: string }[]>`**: 获取所有可用的 LLM 提供商列表。
+        *   **`getApiChannels(): Promise<ApiCredentialConfig[]>`**: 获取所有用户配置的 API 渠道。
+        *   **`saveApiChannel(channel: Partial<ApiCredentialConfig>): Promise<ApiCredentialConfig>`**: 保存（创建或更新）一个 API 渠道。
+        *   **`deleteApiChannel(id: string): Promise<void>`**: 删除一个 API 渠道。
+        *   **`listModelsFromChannel(id: string): Promise<string[]>`**: 列出指定渠道可用的模型 ID。
+    *   **已激活的模型 (Activated Models)**:
+        *   **`getActivatedModels(): Promise<ActivatedModelInfo[]>`**: 获取所有已激活的模型列表。
+        *   **`addActivatedModel(modelData: Omit<ActivatedModelInfo, 'id' | 'createdAt'>): Promise<ActivatedModelInfo>`**: 添加一个新激活的模型。
+        *   **`updateActivatedModel(id: string, modelData: Partial<Omit<ActivatedModelInfo, 'id' | 'createdAt'>>): Promise<ActivatedModelInfo>`**: 更新一个已激活的模型。
+        *   **`deleteActivatedModel(id: string): Promise<void>`**: 删除一个已激活的模型。
+    *   **模型发现 (Model Discovery)**:
+        *   **`discoverModelsFromChannel(channelId: string): Promise<any[]>`**: 从指定渠道发现可用的模型。
+*   **内部实现简述**: 这些函数都使用 `useApi()` 提供的底层 HTTP 方法 (`get`, `post`, `put`, `del`) 向后端 `/llm` 前缀下的相应端点发起请求。
+
+### 2.8. `apps/frontend-vueflow/src/api/pluginApi.ts`
+
+*   **模块名称及其路径**: [`apps/frontend-vueflow/src/api/pluginApi.ts`](apps/frontend-vueflow/src/api/pluginApi.ts:1)
+*   **负责的 API 领域**: 该模块负责处理与后端插件管理相关的 API 端点。
+*   **关键 API 调用函数**:
+    *   **`getPlugins(): Promise<ExtensionInfo[]>`**: 获取所有已发现的插件列表。
+    *   **`setPluginState(pluginName: string, enabled: boolean): Promise<{ success: boolean; message: string }>`**: 设置指定插件的启用/禁用状态。
+    *   **`reloadPlugins(): Promise<{ success: boolean; message: string; count: number }>`**: 请求后端重新扫描并加载所有插件（通常在安装或删除插件文件后调用）。
+*   **内部实现简述**: 这些函数使用 `api` (即 `useApi()` 的实例) 向后端 `/plugins` 前缀下的相应端点发起请求。

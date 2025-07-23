@@ -15,7 +15,7 @@ ComfyTavern 项目主要依赖以下测试框架和工具：
 *   **`@vue/test-utils`**: 这是 Vue 官方的测试工具库 ([`apps/frontend-vueflow/package.json:66`](apps/frontend-vueflow/package.json:66))，用于 Vue 组件的单元测试和集成测试。它提供了挂载组件、模拟用户交互、断言组件状态和输出等功能。
 *   **`jsdom`**: 用于在 Node.js 环境中模拟浏览器环境 ([`apps/frontend-vueflow/package.json:69`](apps/frontend-vueflow/package.json:69))，使得我们可以在没有真实浏览器的情况下测试 DOM 操作和组件渲染。
 
-对于后端（Elysia/Bun），虽然目前没有明确指定测试框架，但可以考虑使用与 Bun 生态兼容的测试工具，或者 Vitest 本身也可以用于测试 Node.js 环境下的 JavaScript/TypeScript 代码。具体的后端测试策略可能会在后续进一步明确。
+对于后端（Elysia/Bun），**Vitest 同样可以用于测试 Node.js/Bun 环境下的 TypeScript 代码**。具体的后端测试策略可能需要根据实际需求进一步细化，但 Vitest 是一个可行的选择。
 
 ## 3. 测试类型与策略
 
@@ -107,7 +107,7 @@ ComfyTavern 项目主要依赖以下测试框架和工具：
 根据项目结构和配置文件，运行测试的主要命令如下：
 
 *   **运行前端单元测试**:
-    在项目根目录下，首先需要进入前端应用目录，然后执行测试命令。
+    在项目根目录下，**首先需要进入前端应用目录**，然后执行测试命令。
     ```powershell
     cd apps/frontend-vueflow
     bun run test:unit
@@ -128,7 +128,7 @@ ComfyTavern 项目主要依赖以下测试框架和工具：
     cd apps/frontend-vueflow
     bun run test:unit --coverage
     ```
-    (注意: `--coverage` 是 Vitest 的标准参数。执行后，覆盖率报告通常会生成在 `apps/frontend-vueflow/coverage/` 目录下，可以通过打开其中的 `index.html` 文件查看。)
+    (注意: `--coverage` 是 Vitest 的标准参数。执行后，覆盖率报告通常会生成在 `apps/frontend-vueflow/coverage/` 目录下，您可以通过在浏览器中打开该目录下的 `index.html` 文件来查看详细报告。)
 
 测试结果会直接输出到终端。如果测试失败，会显示详细的错误信息和堆栈跟踪。
 

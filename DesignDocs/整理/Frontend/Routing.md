@@ -10,11 +10,11 @@
 
 Vue Router 是 Vue.js 官方的路由管理器。在 ComfyTavern 项目中，它扮演着至关重要的角色：
 
-*   **客户端路由**：实现不同视图（页面）之间的无刷新切换，提升用户体验。
-*   **URL 与组件映射**：将浏览器的 URL 映射到相应的 Vue 组件，使得每个 URL 都有一个对应的视图。
-*   **导航控制**：提供编程式导航和声明式导航（通过 `<router-link>`）的能力。
-*   **导航守卫**：允许在路由切换的不同阶段执行自定义逻辑，例如权限验证、数据预取等。
-*   **参数传递**：支持通过 URL 传递参数，并在组件中获取这些参数。
+- **客户端路由**：实现不同视图（页面）之间的无刷新切换，提升用户体验。
+- **URL 与组件映射**：将浏览器的 URL 映射到相应的 Vue 组件，使得每个 URL 都有一个对应的视图。
+- **导航控制**：提供编程式导航和声明式导航（通过 `<router-link>`）的能力。
+- **导航守卫**：允许在路由切换的不同阶段执行自定义逻辑，例如权限验证、数据预取等。
+- **参数传递**：支持通过 URL 传递参数，并在组件中获取这些参数。
 
 ## 2. 路由配置详解 ([`index.ts`](apps/frontend-vueflow/src/router/index.ts:1))
 
@@ -25,7 +25,7 @@ Vue Router 是 Vue.js 官方的路由管理器。在 ComfyTavern 项目中，它
 Vue Router 实例通过 `createRouter` 函数创建：
 
 ```typescript
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from "vue-router";
 // ... 其他导入
 
 const router = createRouter({
@@ -33,14 +33,14 @@ const router = createRouter({
   routes: [
     // ... 路由表
   ],
-})
+});
 ```
 
-*   **`createRouter(options)`**: 这是 Vue Router v4 创建路由实例的标准方法。
-*   **`history: createWebHistory(import.meta.env.BASE_URL)`**:
-    *   这指定了路由的历史模式。`createWebHistory` 使用 HTML5 History API 来实现 URL 的改变，这意味着 URL 看起来更“真实”（例如 `https://example.com/users/1` 而不是 `https://example.com/#/users/1`）。
-    *   `import.meta.env.BASE_URL` 通常由 Vite 在构建时设置，代表应用的基础路径。
-    *   使用 HTML5 History API 模式时，需要服务器端进行相应的配置，以确保在用户直接访问某个深层链接（例如刷新页面或通过书签访问）时，服务器能够正确地返回应用的 `index.html` 文件，而不是返回 404 错误。
+- **`createRouter(options)`**: 这是 Vue Router v4 创建路由实例的标准方法。
+- **`history: createWebHistory(import.meta.env.BASE_URL)`**:
+  - 这指定了路由的历史模式。`createWebHistory` 使用 HTML5 History API 来实现 URL 的改变，这意味着 URL 看起来更“真实”（例如 `https://example.com/users/1` 而不是 `https://example.com/#/users/1`）。
+  - `import.meta.env.BASE_URL` 通常由 Vite 在构建时设置，代表应用的基础路径。
+  - 使用 HTML5 History API 模式时，需要服务器端进行相应的配置，以确保在用户直接访问某个深层链接（例如刷新页面或通过书签访问）时，服务器能够正确地返回应用的 `index.html` 文件，而不是返回 404 错误。
 
 ### 2.2. 路由表 (`routes` 数组)
 
@@ -57,8 +57,8 @@ const router = createRouter({
 }
 ```
 
-*   **`path: '/'`**: 匹配应用的根路径。
-*   **`redirect: '/home'`**: 当用户访问根路径时，会自动重定向到 `/home` 路径。
+- **`path: '/'`**: 匹配应用的根路径。
+- **`redirect: '/home'`**: 当用户访问根路径时，会自动重定向到 `/home` 路径。
 
 #### 2.2.2. 主页布局路由 (`/home`)
 
@@ -83,33 +83,38 @@ const router = createRouter({
       component: CharacterCardView,
     },
     {
+      path: 'files', // 新增的文件管理器路由
+      name: 'files',
+      component: () => import('../views/home/FileManagerPage.vue'),
+    },
+    {
       path: 'about',
       name: 'about',
-      component: () => import('../views/AboutView.vue'),
+      component: () => import('../views/home/AboutView.vue'),
     },
     {
       path: 'settings',
       name: 'settings',
-      component: () => import('../views/SettingsView.vue'),
+      component: () => import('../views/settings/SettingsView.vue'),
     },
     {
       path: 'settings/test-panel',
       name: 'settings-test-panel',
-      component: () => import('../views/TestPanelView.vue'),
+      component: () => import('../views/settings/TestPanelView.vue'),
     },
   ],
 }
 ```
 
-*   **`path: '/home'`**: 匹配 `/home` 路径。
-*   **`component: HomeLayout`**: 当路径匹配 `/home` 或其子路径时，会首先渲染 [`HomeLayout`](apps/frontend-vueflow/src/views/HomeLayout.vue:1) 组件。这个布局组件内部通常会包含一个 `<router-view />` 来渲染匹配到的子路由组件。
-*   **`children`**: 定义了嵌套在 `HomeLayout` 下的子路由。
-    *   **`path: ''` (name: `home`)**: 这是 `/home` 路径下的默认子路由。当用户访问 `/home` 时，会渲染 [`HomeView`](apps/frontend-vueflow/src/views/HomeView.vue:1) 组件。
-    *   **`path: 'projects'` (name: `projects`)**: 匹配 `/home/projects`，渲染 [`ProjectListView`](apps/frontend-vueflow/src/views/ProjectListView.vue:1) 组件。
-    *   **`path: 'characters'` (name: `characters`)**: 匹配 `/home/characters`，渲染 [`CharacterCardView`](apps/frontend-vueflow/src/views/CharacterCardView.vue:1) 组件。
-    *   **`path: 'about'` (name: `about`)**: 匹配 `/home/about`，渲染 [`AboutView`](apps/frontend-vueflow/src/views/AboutView.vue:1) 组件。这里使用了动态导入 `() => import('../views/AboutView.vue')`，实现了路由懒加载，即该组件的代码只会在访问此路由时才会被下载和解析。
-    *   **`path: 'settings'` (name: `settings`)**: 匹配 `/home/settings`，渲染 [`SettingsView`](apps/frontend-vueflow/src/views/SettingsView.vue:1) 组件（懒加载）。
-    *   **`path: 'settings/test-panel'` (name: `settings-test-panel`)**: 匹配 `/home/settings/test-panel`，渲染 [`TestPanelView`](apps/frontend-vueflow/src/views/TestPanelView.vue:1) 组件（懒加载）。
+- **`path: '/home'`**: 匹配 `/home` 路径。
+- **`component: HomeLayout`**: 当路径匹配 `/home` 或其子路径时，会首先渲染 [`HomeLayout`](apps/frontend-vueflow/src/views/HomeLayout.vue:1) 组件。这个布局组件内部通常会包含一个 `<router-view />` 来渲染匹配到的子路由组件。
+- **`children`**: 定义了嵌套在 `HomeLayout` 下的子路由。
+  - **`path: ''` (name: `home`)**: 这是 `/home` 路径下的默认子路由。当用户访问 `/home` 时，会渲染 [`HomeView`](apps/frontend-vueflow/src/views/HomeView.vue:1) 组件。
+  - **`path: 'projects'` (name: `projects`)**: 匹配 `/home/projects`，渲染 [`ProjectListView`](apps/frontend-vueflow/src/views/ProjectListView.vue:1) 组件。
+  - **`path: 'characters'` (name: `characters`)**: 匹配 `/home/characters`，渲染 [`CharacterCardView`](apps/frontend-vueflow/src/views/CharacterCardView.vue:1) 组件。
+  - **`path: 'about'` (name: `about`)**: 匹配 `/home/about`，渲染 [`AboutView`](apps/frontend-vueflow/src/views/AboutView.vue:1) 组件。这里使用了动态导入 `() => import('../views/AboutView.vue')`，实现了路由懒加载，即该组件的代码只会在访问此路由时才会被下载和解析。
+  - **`path: 'settings'` (name: `settings`)**: 匹配 `/home/settings`，渲染 [`SettingsView`](apps/frontend-vueflow/src/views/SettingsView.vue:1) 组件（懒加载）。
+  - **`path: 'settings/test-panel'` (name: `settings-test-panel`)**: 匹配 `/home/settings/test-panel`，渲染 [`TestPanelView`](apps/frontend-vueflow/src/views/TestPanelView.vue:1) 组件（懒加载）。
 
 #### 2.2.3. 编辑器路由 (`/projects/:projectId/editor/:workflowId?`)
 
@@ -124,14 +129,14 @@ const router = createRouter({
 }
 ```
 
-*   **`path: '/projects/:projectId/editor/:workflowId?'`**:
-    *   这是一个动态路由，包含两个参数：`projectId` 和 `workflowId`。
-    *   `:projectId` 是必需的参数，用于标识当前操作的项目。
-    *   `:workflowId?` 是可选参数（由 `?` 标记），用于标识在编辑器中打开的特定工作流。
-*   **`name: 'Editor'`**: 为该路由命名为 `Editor`，方便编程式导航。
-*   **`component: EditorView`**: 当路径匹配时，渲染 [`EditorView`](apps/frontend-vueflow/src/views/EditorView.vue:1) 组件。
-*   **`beforeEnter`**: 这是一个路由独享的守卫。详见下面的“导航守卫”部分。
-*   **`meta`**: 此路由当前没有显式定义 `meta` 字段。
+- **`path: '/projects/:projectId/editor/:workflowId?'`**:
+  - 这是一个动态路由，包含两个参数：`projectId` 和 `workflowId`。
+  - `:projectId` 是必需的参数，用于标识当前操作的项目。
+  - `:workflowId?` 是可选参数（由 `?` 标记），用于标识在编辑器中打开的特定工作流。
+- **`name: 'Editor'`**: 为该路由命名为 `Editor`，方便编程式导航。
+- **`component: EditorView`**: 当路径匹配时，渲染 [`EditorView`](apps/frontend-vueflow/src/views/EditorView.vue:1) 组件。
+- **`beforeEnter`**: 这是一个路由独享的守卫。详见下面的“导航守卫”部分。
+- **`meta`**: 此路由当前没有显式定义 `meta` 字段。
 
 ### 2.3. 导航守卫 (Navigation Guards)
 
@@ -186,8 +191,8 @@ beforeEnter: async (to: RouteLocationNormalized, _from: RouteLocationNormalized,
 3.  **检查 `projectId` 是否存在**: 如果 `projectId` 缺失，则记录错误并重定向到名为 `home` 的路由。
 4.  **检查项目是否已加载**: 如果目标 `projectId` 与 `projectStore.currentProjectId` 相同，说明项目已经加载，直接允许导航 (`next()`)。
 5.  **加载项目**: 如果项目未加载或与当前加载的不同，则调用 `projectStore.loadProject(projectId)` 异步加载项目数据。
-    *   **加载成功**: 如果 `loadProject` 返回 `true`，则允许导航 (`next()`)。
-    *   **加载失败或发生错误**: 如果加载失败或过程中抛出异常，则记录错误并重定向到名为 `home` 的路由。
+    - **加载成功**: 如果 `loadProject` 返回 `true`，则允许导航 (`next()`)。
+    - **加载失败或发生错误**: 如果加载失败或过程中抛出异常，则记录错误并重定向到名为 `home` 的路由。
 
 这个守卫确保在进入编辑器视图之前，相应的项目数据已经被加载到 `projectStore` 中。
 
@@ -203,15 +208,15 @@ beforeEnter: async (to: RouteLocationNormalized, _from: RouteLocationNormalized,
 
 ```typescript
 // apps/frontend-vueflow/src/main.ts
-import { createApp } from 'vue'
-import App from './App.vue'
-import router from './router' // 导入路由实例
+import { createApp } from "vue";
+import App from "./App.vue";
+import router from "./router"; // 导入路由实例
 // ... 其他导入
 
-const app = createApp(App)
+const app = createApp(App);
 
-app.use(router) // 将路由实例注册到 Vue 应用
-app.mount('#app')
+app.use(router); // 将路由实例注册到 Vue 应用
+app.mount("#app");
 ```
 
 通过 `app.use(router)`，整个应用都可以访问到路由功能。
@@ -230,7 +235,7 @@ app.mount('#app')
 </router-link>
 ```
 
-*   `to` 属性指定目标路由，可以是一个字符串路径，也可以是一个描述目标位置的对象（例如使用 `name` 和 `params`）。
+- `to` 属性指定目标路由，可以是一个字符串路径，也可以是一个描述目标位置的对象（例如使用 `name` 和 `params`）。
 
 ### 3.3. 编程式导航 (`useRouter`)
 
@@ -240,32 +245,32 @@ app.mount('#app')
 
 ```typescript
 // 在某个 Vue 组件的 <script setup> 中
-import { useRouter } from 'vue-router'
+import { useRouter } from "vue-router";
 
-const router = useRouter()
+const router = useRouter();
 
 function goToAboutPage() {
-  router.push('/home/about')
+  router.push("/home/about");
 }
 
 function openProjectEditor(projectId: string) {
-  router.push({ name: 'Editor', params: { projectId } })
+  router.push({ name: "Editor", params: { projectId } });
 }
 
 function replaceWithSettings() {
-  router.replace({ name: 'settings' }) // 替换当前历史记录项
+  router.replace({ name: "settings" }); // 替换当前历史记录项
 }
 
 function goBack() {
-  router.go(-1) // 后退一步
+  router.go(-1); // 后退一步
 }
 ```
 
 常用的编程式导航方法包括：
 
-*   `router.push(location)`: 导航到新的 URL，并向历史栈添加一条新记录。
-*   `router.replace(location)`: 导航到新的 URL，但替换当前历史记录项，而不是添加新的。
-*   `router.go(n)`: 在历史栈中向前或向后移动 `n` 步。
+- `router.push(location)`: 导航到新的 URL，并向历史栈添加一条新记录。
+- `router.replace(location)`: 导航到新的 URL，但替换当前历史记录项，而不是添加新的。
+- `router.go(n)`: 在历史栈中向前或向后移动 `n` 步。
 
 ### 3.4. 渲染路由组件 (`<router-view>`)
 
