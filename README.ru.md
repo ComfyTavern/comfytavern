@@ -1,5 +1,6 @@
 # ComfyTavern (Бета)
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ComfyTavern/comfytavern)
 [![Status](https://img.shields.io/badge/status-Beta-orange)](https://github.com/ComfyTavern/comfytavern)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](./LICENSE)
 [![Stars](https://img.shields.io/github/stars/ComfyTavern/comfytavern?style=social)](https://github.com/ComfyTavern/comfytavern)
