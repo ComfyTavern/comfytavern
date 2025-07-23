@@ -18,13 +18,13 @@
 
 ### 🌉 Connecting AI Creation with End-User Experience
 
-ComfyTavern is dedicated to transforming complex AI workflows into intuitive, user-friendly, and interactive **mini-applications**.
+ComfyTavern is an AI creation and application platform for creators and end-users. It is dedicated to transforming complex AI workflows into intuitive, user-friendly, and interactive **mini-applications**.
 
 We provide **creators** with a powerful, fluid visual node editor to orchestrate AI logic; simultaneously, we enable **end-users** to experience rich AI functionalities like AI chat, visual novels, and intelligent agents (Agent) "out-of-the-box" through independent **application panels**, without needing to understand the underlying technology.
 
 We believe that the power of AI lies not only in the sophistication of the creation process but also in the convenience of the final experience.
 
-**➡️ Current Core: PC-based VueFlow Node Editor + Basic Workflow Execution.**
+**➡️ Current Core: PC-based VueFlow Node Editor + Plugin Extensions + Unified File Asset Management.**
 
 ## [👉 Quick Start](#-installation-and-startup)
 
@@ -46,9 +46,24 @@ We believe that the power of AI lies not only in the sophistication of the creat
 
 ### ✨ Core Features
 
-ComfyTavern's design revolves around three main pillars: **unique agent architecture → professional orchestration tools → open application ecosystem.**
+ComfyTavern's design revolves around three main pillars: **professional orchestration tools → open application ecosystem → unique intelligent agent architecture.**
 
-#### 1. 🎯 Vision: Agent-centric Application Architecture
+#### 1. 🚀 Capability: High-Performance Engine and Professional Editor
+
+-   **Full-link Streaming Engine**: The backend is specifically designed for real-time interaction. From input and node transmission to API response, it fully supports streaming and asynchronous concurrency, providing real-time feedback on execution status via WebSocket, ensuring performance for AI conversations, dynamic content generation, and other applications.
+-   **Professional Visual Editor**:
+    -   **Modular Node Groups**: Create node groups with one click, encapsulating complex logic into reusable modules.
+    -   **Smooth Experience**: Streamlined UI, rich right-click menus, multi-level operations, dual clipboards, history, etc.
+    -   **Powerful Node System**: Supports various data types, custom schemas, embedded interactive components, and client-side script extensions.
+
+#### 2. ⭐ Ecosystem: Open, Compatible, and Developer-Friendly
+
+-   **Plugin Architecture**: Both frontend and backend support plugin extensions. Developers can easily create custom nodes, UI components, and even integrate new services, dynamically loading them via the plugin manager.
+-   **Unified File Asset Management (FAM)**: Provides a visual file manager that supports project-level and user-level file operations, providing a reliable data and asset management foundation for AI applications.
+-   **Application Panel SDK**: Provides a dedicated `@comfytavern/panel-sdk` to enable developers to easily build interactive application panels that securely communicate with the main application, encapsulating workflows into final products.
+-   **API Driven**: Core functionalities are exposed via API (HTTP/WebSocket), laying the foundation for third-party integrations and future evolution into an **Engine as a Service**.
+
+#### 3. 🎯 Vision: Agent-centric Application Architecture
 
 This is not just a feature, but the architectural cornerstone that distinguishes ComfyTavern from other platforms. We are not simply replicating or combining existing tools; instead, we offer a new paradigm:
 
@@ -59,27 +74,15 @@ This is not just a feature, but the architectural cornerstone that distinguishes
 
 This architecture enables creators to build AI applications with dynamic behavior and learning potential that far exceed traditional presets.
 
-#### 2. 🚀 Capability: High-Performance Engine and Professional Editor
-
--   **Full-link Streaming Engine**: The backend is specifically designed for real-time interaction. From input and node transmission to API response, it fully supports streaming and asynchronous concurrency, providing real-time feedback on execution status via WebSocket, ensuring performance for AI conversations, dynamic content generation, and other applications.
--   **Professional Visual Editor**:
-    -   **Modular Node Groups**: Create node groups with one click, encapsulating complex logic into reusable modules.
-    -   **Smooth Experience**: Streamlined UI, rich right-click menus, multi-level operations, dual clipboards, history, etc.
-    -   **Powerful Node System**: Supports various data types, custom schemas, embedded interactive components, and client-side script extensions.
-
-#### 3. ⭐ Ecosystem: Open, Compatible, and Developer-Friendly
-
--   **API Driven**: Core functionalities are exposed via API (HTTP/WebSocket), laying the foundation for the platform's evolution into an **Engine as a Service** and third-party integrations.
--   **Easy to Extend**: Provides clear TypeScript interfaces and robust type definitions, facilitating the creation of custom nodes and encouraging community contributions.
--   **Open Compatibility**: Plans to provide tools to assist in migrating assets from platforms like SillyTavern (e.g., character cards) to integrate into a broader ecosystem.
-
 ---
 
 ### 📄 Documentation
 
--   **[Node Type System](docs/node-types/node-types.en.md)**: Understanding the basics of node data interaction.
--   **[Custom Node Development Guide](docs/guides/custom-node-development.en.md)**: Steps to extend ComfyTavern's functionality.
--   **[Customizing UI Language Pack](docs/guides/customizing-ui-language.md)**: Adding or updating interface languages.
+-   **[Project Overview](DesignDocs/整理/ProjectOverview.md)**: In-depth understanding of project architecture, technology selection, and core modules.
+-   **[Custom Node Development Guide](docs/guides/custom-node-development.zh.md)**: Steps to extend ComfyTavern's functionality.
+-   **[Plugin and Tool Architecture](DesignDocs/architecture/unified-plugin-and-tool-architecture.md)**: Understanding how the plugin system works.
+-   **[File Asset Management Guide](docs/guides/file-asset-management-guide.md)**: Understanding the design and use of the file system.
+-   **[Application Panel SDK Development Guide](docs/guides/panel-sdk-guide.md)**: Learning how to create interactive application panels.
 
 ---
 
@@ -87,10 +90,12 @@ This architecture enables creators to build AI applications with dynamic behavio
 
 The project is actively progressing:
 
--   **Phase 1: Core Engine (Ready)**
+-   **Phase 1: Core Engine and Extensibility (Ready)**
     -   ✅ Visual Editor Core (VueFlow)
-    -   ✅ Backend Node Dynamic Loading
-    -   ✅ Workflow Execution Engine (Asynchronous, Streaming)
+    -   ✅ Backend Node Dynamic Loading and Execution Engine (Asynchronous, Streaming)
+    -   ✅ Frontend and Backend Plugin Architecture
+    -   ✅ Unified File Asset Management (FAM)
+    -   ✅ Application Panel SDK (Panel SDK)
 
 -   **Phase 2: Application and Servitization (Recent Core)**
     -   ⏳ **Agent Runtime**: Implement Agent loading and core "deliberation-action" loop.
@@ -107,10 +112,6 @@ The project is actively progressing:
     -   🔭 **Multi-Agent Collaboration**: Explore and support collaborative modes for multiple Agents in the same scene.
     -   🔭 **Developer Ecosystem**: Provide standardized Agent and panel templates, building a creator community.
 
--   **Other Plans**:
-    -   ⏳ Mobile adaptation (e.g., Tauri)
-    -   ⏳ Built-in Agent creation assistant
-
 ---
 
 ### 🏗️ Project Structure
@@ -119,17 +120,13 @@ The project is actively progressing:
 apps/
   ├── backend/            # Backend Service (Elysia + Bun)
   └── frontend-vueflow/   # Frontend (Vue 3 + Vite + VueFlow)
-data/                     # Application Data (databases, etc.), mapped to system://data/
-docs/                     # Project Documentation
-library/                  # Global Shared Asset Library (templates, examples), mapped to shared://library/
-logs/                     # Log Files
 packages/
   ├── types/              # Shared TypeScript Types
-  └── utils/              # Shared Utility Functions
-plugins/
-  └── nodes/              # User Custom Nodes
-public/                   # Public Static Resources
-userData/                 # User Data Root Directory (includes independent projects, libraries, etc. for each user)
+  ├── utils/              # Shared Utility Functions
+  └── panel-sdk/          # Application Panel SDK
+plugins/                  # User Custom Plugins
+userData/                 # User Data Root Directory (includes projects, configurations, etc.)
+...
 ```
 
 ---
@@ -141,7 +138,6 @@ userData/                 # User Data Root Directory (includes independent proje
 -   [Bun](https://bun.sh) v1.2.5+ (Main Runtime)
 -   Node.js v20+ (for development tools)
 -   Windows / Linux / macOS
--   (Docker support planned)
 
 **1. Get the Code:**
 
@@ -160,14 +156,14 @@ bun install
 
 **3. Start the Application:**
 
-- **For first-time startup or after updates**, it is recommended to use **Full Startup**, which checks and prepares all necessary configurations (e.g., database):
+The project provides a one-click startup script that automatically handles environment checks, dependency installation, database initialization, etc.
 
-| Platform        | Production Mode           | Development Mode           |
-| :---------- | :----------------- | :----------------- |
-| Windows     | `.\start.bat`      | `.\start.bat dev`  |
-| Linux/macOS | `./start.sh`       | `./start.sh dev`   |
+| Platform        | Production Mode      | Development Mode          |
+| :---------- | :------------ | :---------------- |
+| Windows     | `.\start.bat` | `.\start.bat dev` |
+| Linux/macOS | `./start.sh`  | `./start.sh dev`  |
 
-- **For daily development**, if you confirm no configuration changes, you can use **Fast Startup** to skip checks for faster speed:
+-   **For daily development**, if you confirm no configuration changes, you can use **Fast Startup** to skip checks for faster speed:
 
 | Platform        | Production Mode               | Development Mode               |
 | :---------- | :--------------------- | :--------------------- |
@@ -179,22 +175,9 @@ bun install
 -   Frontend: `http://localhost:5573/`
 -   Backend: `http://localhost:3233/`
 
--   Frontend: `http://localhost:5573/`
--   Backend: `http://localhost:3233/`
-
-### FAQ:
-
 **Forcing a Frontend Rebuild**
 
-To improve startup speed, `start.bat` and `start_fast.bat` will skip the build step by default if they detect that the frontend build artifacts (the `apps/frontend-vueflow/dist` directory) already exist.
-
-If you have modified the frontend code, or suspect that the frontend is not displaying correctly, you can force a rebuild:
-
-```bash
-bun run build
-```
-
-This command will delete the old build artifacts and generate new files, ensuring you are seeing the latest version.
+The startup script will skip existing frontend builds by default. If you have modified the frontend code, please run `bun run build` to force a rebuild.
 
 ---
 
@@ -202,35 +185,32 @@ This command will delete the old build artifacts and generate new files, ensurin
 
 #### Step One: Create a Project
 
-After successful startup, visit the frontend at `http://localhost:5573/`.
-
-1.  Click **Projects** in the left navigation bar.
-2.  Click the **Create New Project** button.
-3.  Enter a project name and confirm to enter the visual node editor.
+1.  After successful startup, visit `http://localhost:5573/` (default port).
+2.  Navigate to the **Project List** page from the left sidebar.
+3.  Click the **Create New Project** button, enter a project name, and confirm. You will then enter the project's **Overview Page**.
 
 #### Step Two: Connect AI Services
 
-For security and convenience, API keys are managed centrally within the application and are not saved in workflow files.
+Before starting creation, it is recommended to configure AI services for use in workflows.
 
-1.  Go to **Settings** -> **Model Configuration** page.
-2.  Click **New Channel**, select your AI service provider (e.g., OpenAI, Anthropic, etc.), and fill in the `Base URL` and `API Key`.
-3.  Add the model IDs supported by this channel (e.g., `gpt-4o`).
-4.  Save the channel.
+1.  Go to the **Settings** -> **Model Configuration** page in the left navigation bar on the homepage.
+2.  Click **New Channel**, select your AI service provider, and fill in the `Base URL` and `API Key`.
+3.  Add the model IDs supported by this channel (e.g., `gpt-4o`) and save.
 
-#### Step Three: Use AI in Workflow
+#### Step Three: Create and Edit Workflow
 
-1.  **Add Nodes**: From the left node library panel, add `💬Create Message` and `⚡Generic LLM Request` nodes from the `LLM` category to the canvas.
-2.  **Fill Content**: Select the `💬Create Message` node and enter your question. Select the `⚡Generic LLM Request` node and fill in your configured model ID (e.g., `gpt-4o`).
-3.  **Connect Data Flow**:
-    *   Connect the `Message` output of `💬Create Message` to the `Message List` input of `⚡Generic LLM Request`.
-    *   Connect the `Response Text` output of `⚡Generic LLM Request` to the `Group Output` node.
-4.  **Execute and View**: Click execute to see the AI's response in the right preview panel.
+1.  On the project overview page, click to enter the **Workflow Editor**.
+2.  **Add Nodes**: From the `LLM` category in the left node library, add `💬Create Message` and `⚡Generic LLM Request` nodes to the canvas.
+3.  **Fill Content**: Enter your question in the `💬Create Message` node, and fill in the model ID configured in the previous step in the `⚡Generic LLM Request` node.
+4.  **Connect Data Flow**: Connect the `Message` output of `💬Create Message` to the `Message List` input of `⚡Generic LLM Request`.
 
-#### Step Four: View Results
+#### Step Four: Execute and View Results
 
--   Click the **Preview Panel** (🔍 icon) on the right side of the editor.
--   It is recommended to view all final results connected to the `Group Output` node in "**Group Overview**" mode.
--   You can also right-click any node's output handle and select "Set as Preview" to view intermediate data.
+1.  Click the **Execute** button above the canvas.
+2.  All node outputs will be sent in real-time to the **Preview Panel** on the right. Click the **Preview** (🔍 icon) button in the bottom right corner of the editor to expand or collapse the panel.
+3.  **Recommended Usage**:
+    -   In "**Group Overview**" mode, you can clearly see all final results connected to the `Group Output` node.
+    -   You can also right-click any node's output handle and select "**Set as Preview**" to observe the intermediate data of that node individually.
 
 ---
 
@@ -238,33 +218,16 @@ For security and convenience, API keys are managed centrally within the applicat
 
 #### Database
 
-This project uses SQLite, which will be automatically created on first startup (not fast startup). If you update the version and it involves database schema changes, please run the following command to upgrade:
-
-```bash
-bun run db:upgrade
-```
+This project uses SQLite, which will be automatically created and migrated on first startup. If you update the version and it involves database structure changes, please run `bun run db:upgrade`.
 
 #### Production Environment (PM2)
 
 The project provides scripts for production environment deployment and management via PM2.
 
--   **Start all services**:
-    ```bash
-    bun run manage:pm2 start
-    ```
--   **View all service statuses**:
-    ```bash
-    bun run manage:pm2 list
-    ```
--   **View logs**:
-    ```bash
-    bun run manage:pm2 logs comfytavern-backend
-    ```
--   **Stop all services**:
-    ```bash
-    bun run manage:pm2 stop
-    ```
-> For more commands, please refer to `ecosystem.config.cjs` or PM2 documentation.
+-   **Start all services**: `bun run manage:pm2 start`
+-   **View all service statuses**: `bun run manage:pm2 list`
+-   **View logs**: `bun run manage:pm2 logs comfytavern-backend`
+-   **Stop all services**: `bun run manage:pm2 stop`
 
 ---
 
@@ -281,8 +244,8 @@ The project is in its early Beta and rapid iteration phase, and functionalities 
 
 ### 💻 Tech Stack
 
--   **Frontend**: Vue 3 + TypeScript + Vite + [Vue Flow](https://vueflow.dev/)
--   **Backend**: [Bun](https://bun.sh/) + [Elysia](https://elysiajs.com/)
+-   **Frontend**: Vue 3 + TypeScript + Vite + [Vue Flow](https://vueflow.dev/) + Pinia + Tailwind CSS
+-   **Backend**: [Bun](https://bun.sh/) + [Elysia](https://elysiajs.com/) + Drizzle ORM (SQLite)
 -   **Real-time Communication**: WebSocket
 
 ---
