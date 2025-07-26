@@ -115,6 +115,23 @@ export function useWorkflowViewManagement() {
   }
 
   /**
+   * 触发指定 ID 节点或所有节点的内部状态更新。
+   * @param internalId 标签页的内部 ID
+   * @param ids 要更新的节点 ID 数组，如果未提供，则更新所有节点
+   */
+  async function updateNodeInternals(internalId: string, ids?: string[]) {
+    try {
+      // 等待实例准备好，设置一个较短的超时时间，因为通常在用户交互后调用此函数
+      const instance = await waitForVueFlowInstance(internalId, 500);
+      if (instance) {
+        instance.updateNodeInternals(ids);
+      }
+    } catch (error) {
+      console.warn(`[updateNodeInternals] 无法获取标签页 ${internalId} 的 VueFlow 实例:`, error);
+    }
+  }
+
+  /**
    * 等待指定标签页的 VueFlow 实例可用。
    * @param internalId 标签页的内部 ID
    * @param timeout 超时时间 (毫秒)
@@ -147,6 +164,7 @@ export function useWorkflowViewManagement() {
     getVueFlowInstance,
     setViewport,
     updateEdgeStylesForTab,
-    waitForVueFlowInstance, // 导出新函数
+    updateNodeInternals, // 导出新函数
+    waitForVueFlowInstance,
   };
 }

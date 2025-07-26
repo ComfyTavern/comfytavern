@@ -934,7 +934,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
-   * [DEPRECATED] 已迁移至 `edgeActions.ts`
+   * [DEPRECATED] 已迁移至 `nodeActions.ts` (因为它可以删除节点和边)
    * 删除指定的元素（节点和/或边）并记录历史。
    * @param internalId - 目标标签页的内部 ID。
    * @param elementsToRemove - 要删除的节点或边对象的数组。
@@ -1552,6 +1552,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `lifecycleActions.ts`
    * 更新工作流的名称，记录历史，并更新标签页标题。
    * @param internalId - 标签页的内部 ID。
    * @param newName - 新的工作流名称。
@@ -1603,6 +1604,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `lifecycleActions.ts`
    * 更新工作流的描述并记录历史。
    * @param internalId - 标签页的内部 ID。
    * @param newDescription - 新的工作流描述。
@@ -1656,6 +1658,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `lifecycleActions.ts`
    * 设置或清除工作流的预览目标，并记录历史。
    * @param internalId - 标签页的内部 ID。
    * @param target - 预览目标对象 { nodeId: string, slotKey: string } 或 null 来清除。
@@ -1891,6 +1894,7 @@ export function useWorkflowInteractionCoordinator() {
   };
 
   /**
+   * [DEPRECATED] 已迁移至 `edgeActions.ts`
    * 更新节点输入连接顺序并记录历史。
    * @param internalId - 标签页的内部 ID。
    * @param nodeId - 目标节点的 ID。
@@ -1964,6 +1968,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `edgeActions.ts`
    * 处理边从输入端断开的操作，并更新原目标节点的 inputConnectionOrders (如果它是多输入插槽)。
    * @param internalId - 标签页的内部 ID。
    * @param edgeId - 要断开的边的 ID。
@@ -2041,6 +2046,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `edgeActions.ts`
    * 处理边连接到输入端的操作，并更新目标节点的 inputConnectionOrders (如果它是多输入插槽)。
    * @param internalId - 标签页的内部 ID。
    * @param newEdgeParams - 包含 source/target node/handle 的新边参数。
@@ -2118,6 +2124,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `edgeActions.ts`
    * 处理将一条现有连接从其旧的连接点移动到新的连接点。
    * 包括处理从单输入到多输入、多输入到单输入、多输入到多输入（可能涉及顺序改变）等情况。
    * @param internalId - 标签页的内部 ID。

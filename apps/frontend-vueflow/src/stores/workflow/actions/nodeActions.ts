@@ -1,29 +1,25 @@
 // apps/frontend-vueflow/src/stores/workflow/actions/nodeActions.ts
-import { klona } from 'klona';
+import { klona } from "klona";
 import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core";
-import type { WorkflowStoreContext } from '../types';
-import type { HistoryEntry } from '@comfytavern/types';
-import { getNodeType, parseSubHandleId } from '../../../utils/nodeUtils';
-import { nextTick } from 'vue';
+import type { WorkflowStoreContext } from "../types";
+import type { HistoryEntry } from "@comfytavern/types";
+import { getNodeType, parseSubHandleId } from "../../../utils/nodeUtils";
 
+/**
+ * 创建与节点操作相关的 Action。
+ * @param context - 提供对 store 核心部分的访问。
+ * @returns 一个包含节点操作函数的对象。
+ */
 export function createNodeActions(context: WorkflowStoreContext) {
-  const { workflowManager, recordHistory } = context;
+  const { workflowManager, updateNodeInternals } = context;
 
   /**
-   * 异步更新指定节点的内部状态和视图
-   * @param internalId - 标签页的内部 ID
-   * @param nodeIds - 需要更新的节点 ID 数组
+   * 更新节点的标签（显示名称）并记录历史。
+   * @param internalId - 标签页的内部 ID。
+   * @param nodeId - 要更新的节点的 ID。
+   * @param newLabel - 新的标签文本。
+   * @param entry - 描述此操作的历史记录条目。
    */
-  async function updateNodeInternals(internalId: string, nodeIds: string[]) {
-    const instance = context.workflowViewManagement.getVueFlowInstance(internalId);
-    if (instance) {
-      await nextTick();
-      await nextTick();
-      instance.updateNodeInternals(nodeIds);
-      await nextTick();
-    }
-  }
-
   async function updateNodeLabelAndRecord(
     internalId: string,
     nodeId: string,
@@ -71,9 +67,16 @@ export function createNodeActions(context: WorkflowStoreContext) {
 
     await workflowManager.setElements(internalId, nextSnapshot.elements);
 
-    recordHistory(internalId, entry, nextSnapshot);
+    context.recordHistory(internalId, entry, nextSnapshot);
   }
 
+  /**
+   * 更新节点的尺寸（宽度和/或高度）并记录历史。
+   * @param internalId - 标签页的内部 ID。
+   * @param nodeId - 要更新的节点的 ID。
+   * @param dimensions - 包含 `width` 和/或 `height` 的对象。
+   * @param entry - 描述此操作的历史记录条目。
+   */
   async function updateNodeDimensionsAndRecord(
     internalId: string,
     nodeId: string,
@@ -128,17 +131,21 @@ export function createNodeActions(context: WorkflowStoreContext) {
       (dimensions.height !== undefined && originalNode.height !== dimensions.height);
 
     if (!hasChanged) {
-      console.debug(
-        "[NodeActions:updateNodeDimensionsAndRecord] 尺寸未改变。跳过历史记录。"
-      );
+      console.debug("[NodeActions:updateNodeDimensionsAndRecord] 尺寸未改变。跳过历史记录。");
       return;
     }
 
     await workflowManager.setElements(internalId, nextSnapshot.elements);
 
-    recordHistory(internalId, entry, nextSnapshot);
+    context.recordHistory(internalId, entry, nextSnapshot);
   }
 
+  /**
+   * 更新一个或多个节点的父节点（用于节点组/框架）并记录历史。
+   * @param internalId - 标签页的内部 ID。
+   * @param updates - 一个包含节点 ID、新父节点 ID 和位置更新的数组。
+   * @param entry - 可选的，描述此批量操作的历史记录条目。
+   */
   async function updateNodeParentAndRecord(
     internalId: string,
     updates: { nodeId: string; parentNodeId: string | null; position: { x: number; y: number } }[],
@@ -170,8 +177,12 @@ export function createNodeActions(context: WorkflowStoreContext) {
       if (node) {
         const oldParentNode = (node as any).parentNode || null;
         const newParentNode = update.parentNodeId;
-        
-        if (oldParentNode !== newParentNode || node.position.x !== update.position.x || node.position.y !== update.position.y) {
+
+        if (
+          oldParentNode !== newParentNode ||
+          node.position.x !== update.position.x ||
+          node.position.y !== update.position.y
+        ) {
           (node as any).parentNode = newParentNode;
           node.position = update.position;
           hasChanged = true;
@@ -186,10 +197,18 @@ export function createNodeActions(context: WorkflowStoreContext) {
 
     await workflowManager.setElements(internalId, nextSnapshot.elements);
     if (entry) {
-      recordHistory(internalId, entry, nextSnapshot);
+      context.recordHistory(internalId, entry, nextSnapshot);
     }
   }
 
+  /**
+   * 更新节点上特定输入插槽的值，并记录历史。
+   * @param internalId - 标签页的内部 ID。
+   * @param nodeId - 目标节点的 ID。
+   * @param inputKey - 目标输入插槽的键。
+   * @param value - 要设置的新值。
+   * @param entry - 描述此操作的历史记录条目。
+   */
   async function updateNodeInputValueAndRecord(
     internalId: string,
     nodeId: string,
@@ -249,6 +268,15 @@ export function createNodeActions(context: WorkflowStoreContext) {
     }
   }
 
+  /**
+   * 更新节点上特定配置项的值，并记录历史。
+   * 对节点组的 `referencedWorkflowId` 有特殊处理逻辑。
+   * @param internalId - 标签页的内部 ID。
+   * @param nodeId - 目标节点的 ID。
+   * @param configKey - 目标配置项的键。
+   * @param value - 要设置的新值。
+   * @param entry - 描述此操作的历史记录条目。
+   */
   async function updateNodeConfigValueAndRecord(
     internalId: string,
     nodeId: string,
@@ -338,7 +366,8 @@ export function createNodeActions(context: WorkflowStoreContext) {
         targetNode.label = "📦节点组";
 
         const edgesConnectedToNodeGroup = currentSnapshot.elements.filter(
-          (el): el is VueFlowEdge => "source" in el && (el.source === nodeId || el.target === nodeId)
+          (el): el is VueFlowEdge =>
+            "source" in el && (el.source === nodeId || el.target === nodeId)
         );
 
         if (edgesConnectedToNodeGroup.length > 0) {
@@ -347,7 +376,7 @@ export function createNodeActions(context: WorkflowStoreContext) {
             (el) => !("source" in el) || !removedEdgeIds.has(el.id)
           );
           nextSnapshot.elements = finalElements;
-          
+
           const removedEdgesData = edgesConnectedToNodeGroup.map((edge) => klona(edge));
           if (entry.details) {
             entry.details.removedEdgesOnClearReference = removedEdgesData;
@@ -371,6 +400,15 @@ export function createNodeActions(context: WorkflowStoreContext) {
     }
   }
 
+  /**
+   * 更改节点的工作模式，并记录历史。
+   * 这会更新节点的配置值，并自动处理因模式切换导致的插槽增减和相关边的移除。
+   * @param internalId - 标签页的内部 ID。
+   * @param nodeId - 目标节点的 ID。
+   * @param configKey - 存储模式的配置键。
+   * @param newModeId - 要切换到的新模式的 ID。
+   * @param entry - 描述此操作的历史记录条目。
+   */
   async function changeNodeModeAndRecord(
     internalId: string,
     nodeId: string,
@@ -389,7 +427,9 @@ export function createNodeActions(context: WorkflowStoreContext) {
       (el) => el.id === nodeId && !("source" in el)
     );
     if (nodeIndex === -1) {
-      console.error(`[NodeActions:changeNodeModeAndRecord] 在标签页 ${internalId} 中未找到节点 ${nodeId}。`);
+      console.error(
+        `[NodeActions:changeNodeModeAndRecord] 在标签页 ${internalId} 中未找到节点 ${nodeId}。`
+      );
       return;
     }
     const targetNode = nextSnapshot.elements[nodeIndex] as VueFlowNode;
@@ -430,10 +470,18 @@ export function createNodeActions(context: WorkflowStoreContext) {
         const edge = el as VueFlowEdge;
         let shouldRemove = false;
 
-        if (edge.source === nodeId && edge.sourceHandle && removedOutputKeys.has(parseSubHandleId(edge.sourceHandle).originalKey)) {
+        if (
+          edge.source === nodeId &&
+          edge.sourceHandle &&
+          removedOutputKeys.has(parseSubHandleId(edge.sourceHandle).originalKey)
+        ) {
           shouldRemove = true;
         }
-        if (edge.target === nodeId && edge.targetHandle && removedInputKeys.has(parseSubHandleId(edge.targetHandle).originalKey)) {
+        if (
+          edge.target === nodeId &&
+          edge.targetHandle &&
+          removedInputKeys.has(parseSubHandleId(edge.targetHandle).originalKey)
+        ) {
           shouldRemove = true;
         }
 
@@ -450,7 +498,7 @@ export function createNodeActions(context: WorkflowStoreContext) {
         entry.details = { removedEdges: edgesToRemove };
       }
     }
-    
+
     // 4. 应用状态更新
     await context.workflowManager.setElements(internalId, nextSnapshot.elements);
 
@@ -462,7 +510,11 @@ export function createNodeActions(context: WorkflowStoreContext) {
 
     // 7. 触发预览
     if (context.workflowPreview.isPreviewEnabled.value) {
-      context.workflowPreview.triggerPreview(nodeId, { type: "config", key: configKey, value: newModeId });
+      context.workflowPreview.triggerPreview(nodeId, {
+        type: "config",
+        key: configKey,
+        value: newModeId,
+      });
     }
   }
 
@@ -544,9 +596,7 @@ export function createNodeActions(context: WorkflowStoreContext) {
     }
     const currentSnapshot = workflowManager.getCurrentSnapshot(internalId);
     if (!currentSnapshot) {
-      console.error(
-        `[NodeActions:addElementsAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
-      );
+      console.error(`[NodeActions:addElementsAndRecord] 无法获取标签页 ${internalId} 的当前快照。`);
       return;
     }
 
@@ -556,14 +606,18 @@ export function createNodeActions(context: WorkflowStoreContext) {
 
     await workflowManager.setElements(internalId, nextSnapshot.elements);
 
-    recordHistory(internalId, entry, nextSnapshot);
+    context.recordHistory(internalId, entry, nextSnapshot);
   }
 
   async function addNodeAndRecord(internalId: string, nodeToAdd: VueFlowNode, entry: HistoryEntry) {
     await addElementsAndRecord(internalId, [nodeToAdd], [], entry);
   }
 
-  async function addFrameNodeAndRecord(internalId: string, frameNode: VueFlowNode, entry: HistoryEntry) {
+  async function addFrameNodeAndRecord(
+    internalId: string,
+    frameNode: VueFlowNode,
+    entry: HistoryEntry
+  ) {
     await addElementsAndRecord(internalId, [frameNode], [], entry);
   }
 
@@ -609,9 +663,7 @@ export function createNodeActions(context: WorkflowStoreContext) {
 
     // 如果没有任何节点被实际更新，则跳过
     if (!updated) {
-      console.warn(
-        "[NodeActions:updateNodePositionAndRecord] 没有节点被更新。跳过历史记录。"
-      );
+      console.warn("[NodeActions:updateNodePositionAndRecord] 没有节点被更新。跳过历史记录。");
       return;
     }
 
@@ -622,7 +674,7 @@ export function createNodeActions(context: WorkflowStoreContext) {
     // 记录历史
     // 传递 nextSnapshot 确保记录的是我们预期的、包含所有位置更新的状态
     if (entry) {
-      recordHistory(internalId, entry, nextSnapshot);
+      context.recordHistory(internalId, entry, nextSnapshot);
     }
   }
 
@@ -755,14 +807,10 @@ export function createNodeActions(context: WorkflowStoreContext) {
 
     await workflowManager.setElements(internalId, nextSnapshot.elements);
 
-    recordHistory(internalId, entry, nextSnapshot);
+    context.recordHistory(internalId, entry, nextSnapshot);
 
     if (nodesToUpdateInternals.size > 0) {
-      // TODO: updateNodeInternals
-      console.debug(
-        `[NodeActions:removeElementsAndRecord] Should call updateNodeInternals for nodes:`,
-        Array.from(nodesToUpdateInternals)
-      );
+      await updateNodeInternals(internalId, Array.from(nodesToUpdateInternals));
     }
   }
 

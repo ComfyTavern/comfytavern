@@ -20,6 +20,7 @@ import type { useWorkflowGrouping } from '@/composables/group/useWorkflowGroupin
 import type { useMultiInputConnectionActions } from '@/composables/node/useMultiInputConnectionActions';
 import type { useWorkflowPreview } from '@/composables/workflow/useWorkflowPreview';
 import type { useWorkflowInterfaceManagement } from '@/composables/workflow/useWorkflowInterfaceManagement';
+import type { useSlotDefinitionHelper } from '@/composables/node/useSlotDefinitionHelper';
 
 export interface WorkflowStoreContext {
   // 核心 State (以 Ref 的形式)
@@ -37,6 +38,7 @@ export interface WorkflowStoreContext {
   multiInputActions: ReturnType<typeof useMultiInputConnectionActions>;
   workflowPreview: ReturnType<typeof useWorkflowPreview>;
   workflowInterfaceManagement: ReturnType<typeof useWorkflowInterfaceManagement>;
+  getSlotDefinition: ReturnType<typeof useSlotDefinitionHelper>['getSlotDefinition'];
 
   // 需要共享的 Getters (以 ComputedRef 的形式)
   currentSnapshot: ComputedRef<WorkflowStateSnapshot | undefined>;
@@ -44,4 +46,5 @@ export interface WorkflowStoreContext {
   // 需要共享的底层方法 (函数签名)
   recordHistory: (internalId: string, entry: HistoryEntry, snapshot: WorkflowStateSnapshot) => void;
   setElements: (internalId: string, elements: (VueFlowNode | VueFlowEdge)[]) => Promise<void>;
+  updateNodeInternals: (internalId: string, nodeIds: string[]) => Promise<void>;
 }

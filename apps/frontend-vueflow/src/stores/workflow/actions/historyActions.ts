@@ -1,9 +1,9 @@
 // apps/frontend-vueflow/src/stores/workflow/actions/historyActions.ts
-import { nextTick } from 'vue';
-import { klona } from 'klona';
+import { nextTick } from "vue";
+import { klona } from "klona";
 import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core";
-import type { WorkflowStateSnapshot } from '@/types/workflowTypes';
-import type { WorkflowStoreContext } from '../types';
+import type { WorkflowStateSnapshot } from "@/types/workflowTypes";
+import type { WorkflowStoreContext } from "../types";
 
 // 依赖项，需要通过 context 传入
 // - tabStore
@@ -14,6 +14,11 @@ import type { WorkflowStoreContext } from '../types';
 export function createHistoryActions(context: WorkflowStoreContext) {
   const { tabStore, historyManager, workflowManager, workflowViewManagement } = context;
 
+  /**
+   * 撤销指定标签页中的操作。
+   * @param steps - 要撤销的步数，默认为 1。
+   * @param internalId - 可选的标签页内部 ID。如果未提供，则使用当前活动的标签页。
+   */
   async function undo(steps: number = 1, internalId?: string) {
     const idToUndo = internalId ?? tabStore.activeTabId;
     if (!idToUndo) {
@@ -62,7 +67,10 @@ export function createHistoryActions(context: WorkflowStoreContext) {
           );
         }
       } catch (error) {
-        console.error(`[HistoryActions] 在撤销标签页 ${idToUndo} 期间应用默认工作流时出错：`, error);
+        console.error(
+          `[HistoryActions] 在撤销标签页 ${idToUndo} 期间应用默认工作流时出错：`,
+          error
+        );
       }
       return;
     }
@@ -112,6 +120,11 @@ export function createHistoryActions(context: WorkflowStoreContext) {
     }
   }
 
+  /**
+   * 重做指定标签页中的操作。
+   * @param steps - 要重做的步数，默认为 1。
+   * @param internalId - 可选的标签页内部 ID。如果未提供，则使用当前活动的标签页。
+   */
   async function redo(steps: number = 1, internalId?: string) {
     const idToRedo = internalId ?? tabStore.activeTabId;
     if (!idToRedo) {
