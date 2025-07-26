@@ -1,16 +1,17 @@
-// apps/frontend-vueflow/src/stores/workflow/actions/historyActions.ts
 import { nextTick } from "vue";
 import { klona } from "klona";
 import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core";
 import type { WorkflowStateSnapshot } from "@/types/workflowTypes";
 import type { WorkflowStoreContext } from "../types";
 
-// 依赖项，需要通过 context 传入
-// - tabStore
-// - historyManager
-// - workflowManager
-// - workflowViewManagement
-
+/**
+ * 历史记录操作模块
+ *
+ * 负责处理工作流的撤销和重做功能，包括：
+ * - 记录历史快照
+ * - 应用历史快照
+ * - 管理历史记录的长度
+ */
 export function createHistoryActions(context: WorkflowStoreContext) {
   const { tabStore, historyManager, workflowManager, workflowViewManagement } = context;
 
