@@ -1126,7 +1126,8 @@ async function createGroupFromSelectionLogic(
       `创建节点组: ${nodeGroupInstance.label || nodeGroupNodeId}`, // summary
       { nodeId: nodeGroupNodeId, referencedWorkflowId: newWorkflowId } // details
     );
-    workflowStore.recordHistorySnapshot(
+    workflowStore.recordHistory(
+      currentTabId,
       historyEntry, // <-- Pass HistoryEntry object
       snapshotPayload // Pass the constructed payload
     );

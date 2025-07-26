@@ -3,6 +3,7 @@ import { RouterView } from 'vue-router'
 import { onMounted, onUnmounted, watch, ref, watchEffect } from 'vue' // + Import ref, watchEffect
 import { useThemeStore } from './stores/theme'
 import { useWorkflowStore } from './stores/workflowStore' // 导入工作流状态管理
+import { useWorkflowViewManagement } from './composables/workflow/useWorkflowViewManagement'; // + 导入视图管理
 import { useTabStore } from './stores/tabStore' // 导入标签页状态管理
 import { useProjectStore } from './stores/projectStore'; // 导入项目状态管理
 import { useUiStore } from './stores/uiStore'; // 导入 UI Store
@@ -21,7 +22,8 @@ import TooltipRenderer from './components/common/TooltipRenderer.vue'; // + 导�
 
 // 初始化主题状态管理
 const themeStore = useThemeStore()
-const workflowStore = useWorkflowStore()
+const workflowStore = useWorkflowStore();
+const workflowViewManagement = useWorkflowViewManagement(); // + 初始化视图管理
 const tabStore = useTabStore()
 const uiStore = useUiStore(); // 初始化 UI Store
 const projectStore = useProjectStore();
@@ -88,7 +90,7 @@ onMounted(async () => {
 watch(currentAppliedMode, (newModeValue) => {
   console.debug(`App.vue: currentAppliedMode changed to ${newModeValue}. Updating edge styles.`);
   if (activeTabId.value) {
-    workflowStore.updateEdgeStylesForTab(activeTabId.value);
+    workflowViewManagement.updateEdgeStylesForTab(activeTabId.value);
   } else {
     console.debug('App.vue: 未找到活动标签页，跳过边样式更新。');
   }

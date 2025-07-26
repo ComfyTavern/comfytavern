@@ -475,14 +475,14 @@ export function createNodeActions(context: WorkflowStoreContext) {
 
         if (
           edge.source === nodeId &&
-          edge.sourceHandle &&
+          typeof edge.sourceHandle === "string" &&
           removedOutputKeys.has(parseSubHandleId(edge.sourceHandle).originalKey)
         ) {
           shouldRemove = true;
         }
         if (
           edge.target === nodeId &&
-          edge.targetHandle &&
+          typeof edge.targetHandle === "string" &&
           removedInputKeys.has(parseSubHandleId(edge.targetHandle).originalKey)
         ) {
           shouldRemove = true;
@@ -923,6 +923,56 @@ export function createNodeActions(context: WorkflowStoreContext) {
     editorState.openOrFocusEditorTab(context);
   };
 
+  async function synchronizeGroupNode(internalId: string, nodeId: string, referencedWorkflowId: string) {
+    const groupUpdateResult = await context.workflowGrouping.updateNodeGroupWorkflowReference(
+      nodeId,
+      referencedWorkflowId,
+      internalId
+    );
+
+    if (groupUpdateResult.success && groupUpdateResult.updatedNodeData) {
+      const currentSnapshot = context.workflowManager.getCurrentSnapshot(internalId);
+      if (!currentSnapshot) {
+        console.error(`[NodeActions:synchronizeGroupNode] 无法获取标签页 ${internalId} 的当前快照。`);
+        return;
+      }
+      const nextSnapshot = klona(currentSnapshot);
+      const nodeIndex = nextSnapshot.elements.findIndex((el) => el.id === nodeId && !("source" in el));
+      if (nodeIndex === -1) {
+        console.error(`[NodeActions:synchronizeGroupNode] 在标签页 ${internalId} 中未找到节点 ${nodeId}。`);
+        return;
+      }
+      const targetNode = nextSnapshot.elements[nodeIndex] as VueFlowNode;
+
+      const baseLabel = groupUpdateResult.updatedNodeData.label;
+      const finalDisplayLabel = baseLabel ? `📦 ${baseLabel}` : `📦 节点组`;
+
+      const newInputs = groupUpdateResult.updatedNodeData.groupInterface?.inputs || {};
+      const newOutputs = groupUpdateResult.updatedNodeData.groupInterface?.outputs || {};
+
+      targetNode.data = {
+        ...targetNode.data,
+        groupInterface: groupUpdateResult.updatedNodeData.groupInterface,
+        label: finalDisplayLabel,
+        displayName: finalDisplayLabel,
+        inputs: newInputs,
+        outputs: newOutputs,
+      };
+      targetNode.label = finalDisplayLabel;
+
+      let finalElements = nextSnapshot.elements;
+      if (groupUpdateResult.edgeIdsToRemove && groupUpdateResult.edgeIdsToRemove.length > 0) {
+        const edgeIdsToRemoveSet = new Set(groupUpdateResult.edgeIdsToRemove);
+        finalElements = finalElements.filter(
+          (el) => !("source" in el) || !edgeIdsToRemoveSet.has(el.id)
+        );
+      }
+      
+      await context.workflowManager.setElements(internalId, finalElements);
+      await updateNodeInternals(internalId, [nodeId]);
+    }
+  }
+
   return {
     updateNodePositionAndRecord,
     updateNodeLabelAndRecord,
@@ -937,5 +987,6 @@ export function createNodeActions(context: WorkflowStoreContext) {
     addFrameNodeAndRecord,
     removeElementsAndRecord,
     openDockedEditorForNodeInput,
+    synchronizeGroupNode,
   };
 }

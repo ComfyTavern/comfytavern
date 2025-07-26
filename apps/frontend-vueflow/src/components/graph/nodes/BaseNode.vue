@@ -34,7 +34,6 @@ import { useNodeResize } from "../../../composables/node/useNodeResize";
 import { useNodeState } from "../../../composables/node/useNodeState";
 import { useNodeProps as useNodePropsComposable } from "../../../composables/node/useNodeProps";
 import { useNodeActions } from "../../../composables/node/useNodeActions";
-import { useWorkflowInteractionCoordinator } from "../../../composables/workflow/useWorkflowInteractionCoordinator";
 import { useNodeClientScript } from "../../../composables/node/useNodeClientScript";
 import { useWorkflowManager } from "../../../composables/workflow/useWorkflowManager";
 import { useNodeModeSlots } from "../../../composables/node/useNodeModeSlots"; // 新增：导入 useNodeModeSlots
@@ -80,7 +79,6 @@ const workflowStore = useWorkflowStore(); // ++ 获取 workflowStore 实例
 
 // VueFlow 和工作流管理器
 const vueFlowInstance = useVueFlow(); // 确保 vueFlowInstance 在此作用域
-const interactionCoordinator = useWorkflowInteractionCoordinator(); // 获取工作流交互协调器实例
 const workflowManager = useWorkflowManager(); // 获取工作流管理器实例
 const uiStore = useUiStore(); // +++ 获取 UI Store 实例
 
@@ -546,7 +544,7 @@ const handleOutputAltClick = (outputSlot: DisplayOutputSlotInfo, event: MouseEve
       slotKey: slotKeyStr,
     }
   );
-  interactionCoordinator.setPreviewTargetAndRecord(internalId, newTarget, entry);
+  workflowStore.setPreviewTargetAndRecord(internalId, newTarget, entry);
 };
 
 const openEditorForInput = (input: InputDefinition) => {
@@ -554,7 +552,7 @@ const openEditorForInput = (input: InputDefinition) => {
     console.warn(t('graph.nodes.baseNode.consoleWarnCannotOpenEditorNoActiveTab', { nodeId: props.id }));
     return;
   }
-  if (!interactionCoordinator.openDockedEditorForNodeInput) {
+  if (!workflowStore.openDockedEditorForNodeInput) {
     console.warn(t('graph.nodes.baseNode.consoleWarnOpenDockedEditorNotFound', { nodeId: props.id }));
     return;
   }
@@ -580,7 +578,7 @@ const openEditorForInput = (input: InputDefinition) => {
     }
   }
 
-  interactionCoordinator.openDockedEditorForNodeInput(
+  workflowStore.openDockedEditorForNodeInput(
     activeTabId.value,
     props.id,
     inputKeyString,

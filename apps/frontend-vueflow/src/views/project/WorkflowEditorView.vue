@@ -448,11 +448,7 @@ onMounted(async () => {
         const nodeGroup = el as Node;
         const referencedWorkflowId = nodeGroup.data.configValues.referencedWorkflowId as string;
         if (changedTemplates.has(referencedWorkflowId)) {
-          await workflowStore.synchronizeGroupNodeInterfaceAndValues(
-            tabId,
-            nodeGroup.id,
-            referencedWorkflowId
-          );
+          await workflowStore.synchronizeGroupNode(tabId, nodeGroup.id, referencedWorkflowId);
         }
       }
     }

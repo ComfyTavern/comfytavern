@@ -245,7 +245,7 @@ function handleInputNameBlur() {
       oldValue: oldDisplayNameValue,
       newValue: newDisplayName,
     });
-    workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry
     oldInputDisplayName.value = null; // Reset old name after update call
   }
 }
@@ -286,7 +286,7 @@ function handleInputTypeChange(event: Event) {
       oldValue: oldType,
       newValue: newType,
     });
-    workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry
   }
 }
 
@@ -331,7 +331,7 @@ function handleInputDescriptionBlur() {
       oldValue: oldDescription,
       newValue: newDescription,
     });
-    workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry
   }
 }
 
@@ -378,7 +378,7 @@ function handleInputDefaultValueChange() {
       oldValue: oldDefaultValue,
       newValue: newDefaultValue,
     });
-    workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry
   }
 }
 
@@ -423,7 +423,7 @@ function handleInputMinBlur() {
       oldValue: oldMin,
       newValue: newMin,
     });
-    workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry
   }
 }
 
@@ -468,7 +468,7 @@ function handleInputMaxBlur() {
       oldValue: oldMax,
       newValue: newMax,
     });
-    workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry
   }
 }
 // --- 结束新增处理函数 ---
@@ -515,7 +515,7 @@ function handleOutputNameBlur() {
       oldValue: oldDisplayNameValue,
       newValue: newDisplayName,
     });
-    workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry
     oldOutputDisplayName.value = null; // Reset old name after update call
   }
 }
@@ -556,7 +556,7 @@ function handleOutputTypeChange(event: Event) {
       oldValue: oldType,
       newValue: newType,
     });
-    workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry
   }
 }
 
@@ -600,7 +600,7 @@ function handleOutputDescriptionBlur() {
       oldValue: oldDescription,
       newValue: newDescription,
     });
-    workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry
   }
 }
 

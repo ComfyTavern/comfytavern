@@ -8,7 +8,7 @@ import TabbedEditorHost from "@/components/common/TabbedEditorHost.vue";
 import type { EditorOpeningContext, TabData, EditorInstanceConfig } from "@/types/editorTypes";
 import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager";
 import { useThemeStore } from "@/stores/theme";
-import { useWorkflowInteractionCoordinator } from "@/composables/workflow/useWorkflowInteractionCoordinator";
+import { useWorkflowStore } from "@/stores/workflowStore";
 import type { HistoryEntry, HistoryEntryDetails } from "@comfytavern/types";
 
 // == Props, Events, Methods (Expose) ==
@@ -25,7 +25,7 @@ interface Emits {
 const emit = defineEmits<Emits>();
 
 const workflowManager = useWorkflowManager();
-const interactionCoordinator = useWorkflowInteractionCoordinator();
+const workflowStore = useWorkflowStore();
 const themeStore = useThemeStore(); // 获取主题存储实例
 
 // == UI State Management ==
@@ -185,7 +185,7 @@ async function handleSave(content: string) {
 
     if (inputPath.startsWith("inputs.")) {
       const inputKey = inputPath.substring("inputs.".length);
-      await interactionCoordinator.updateNodeInputValueAndRecord(
+      await workflowStore.updateNodeInputValueAndRecord(
         activeTabId,
         nodeId,
         inputKey,
@@ -194,7 +194,7 @@ async function handleSave(content: string) {
       );
     } else if (inputPath.startsWith("config.")) {
       const configKey = inputPath.substring("config.".length);
-      await interactionCoordinator.updateNodeConfigValueAndRecord(
+      await workflowStore.updateNodeConfigValueAndRecord(
         activeTabId,
         nodeId,
         configKey,
@@ -205,7 +205,7 @@ async function handleSave(content: string) {
       // 对于其他路径，可能需要一个更通用的更新方法，或者明确约定路径格式
       // 暂时作为配置更新处理
       console.warn(`未知的 inputPath 前缀: ${inputPath}，尝试作为配置更新。`);
-      await interactionCoordinator.updateNodeConfigValueAndRecord(
+      await workflowStore.updateNodeConfigValueAndRecord(
         activeTabId,
         nodeId,
         inputPath, // 直接使用 inputPath 作为 key
@@ -298,7 +298,7 @@ function handleTabbedEditorSave(tab: TabData, newContent: string) {
 
     if (inputPath.startsWith("inputs.")) {
       const inputKey = inputPath.substring("inputs.".length);
-      interactionCoordinator.updateNodeInputValueAndRecord(
+      workflowStore.updateNodeInputValueAndRecord(
         activeTabId,
         nodeId,
         inputKey,
@@ -307,7 +307,7 @@ function handleTabbedEditorSave(tab: TabData, newContent: string) {
       );
     } else if (inputPath.startsWith("config.")) {
       const configKey = inputPath.substring("config.".length);
-      interactionCoordinator.updateNodeConfigValueAndRecord(
+      workflowStore.updateNodeConfigValueAndRecord(
         activeTabId,
         nodeId,
         configKey,
@@ -316,7 +316,7 @@ function handleTabbedEditorSave(tab: TabData, newContent: string) {
       );
     } else {
       console.warn(`未知的 inputPath 前缀: ${inputPath}，尝试作为配置更新。`);
-      interactionCoordinator.updateNodeConfigValueAndRecord(
+      workflowStore.updateNodeConfigValueAndRecord(
         activeTabId,
         nodeId,
         inputPath,

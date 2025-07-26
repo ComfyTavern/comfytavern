@@ -606,11 +606,23 @@ const handleSlotDisconnect = (context: {
   handleType: "source" | "target";
 }) => {
   if (activeTabId.value) {
-    workflowStore.removeEdgesForHandle(
+    const entry = createHistoryEntry(
+      "delete",
+      "edge",
+      `断开节点 ${context.nodeId} 句柄 ${context.handleId} 的连接`,
+      {
+        nodeId: context.nodeId,
+        handleId: context.handleId,
+        handleType: context.handleType,
+      }
+    );
+    // This is a fire-and-forget action from the UI, history is created inside the store action.
+    workflowStore.removeEdgesByHandleAndRecord(
       activeTabId.value,
       context.nodeId,
       context.handleId,
-      context.handleType
+      context.handleType,
+      entry
     );
   }
   closeSlotContextMenu();

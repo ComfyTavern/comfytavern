@@ -144,7 +144,7 @@ export function useGroupIOActions(
       { key: newKey, type: type } // Add type to details
     );
  
-    workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry object
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry object
     // markAsDirty is handled within updateWorkflowInterface now
 
     nextTick(() => {
@@ -187,7 +187,7 @@ export function useGroupIOActions(
       { key: keyToRemove, name: inputNameToRemove, slotType: 'input' } // Add name and slotType to details
     );
 
-    workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry object
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry object
 
     if (selectedInputKey.value === keyToRemove) {
       selectedInputKey.value = null;
@@ -248,7 +248,7 @@ export function useGroupIOActions(
       { key: newKey, type: type } // Add type to details
     );
  
-    workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry object
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry object
 
     nextTick(() => {
       selectOutput(newKey);
@@ -293,7 +293,7 @@ export function useGroupIOActions(
       { key: keyToRemove, name: outputNameToRemove, slotType: 'output' } // Add name and slotType to details
     );
 
-    workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry object
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry object
 
     if (selectedOutputKey.value === keyToRemove) {
       selectedOutputKey.value = null;
@@ -342,7 +342,7 @@ export function useGroupIOActions(
         '排序输入', // summary
         {} // details (no specific details needed for sort)
       );
-      workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry object
+      workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry object
     } else {
       console.log("[useGroupIOActions] Inputs already sorted or no change needed (pre-check).");
     }
@@ -387,7 +387,7 @@ export function useGroupIOActions(
         '排序输出', // summary
         {} // details
       );
-      workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry object
+      workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry object
     } else {
       console.log("[useGroupIOActions] Outputs already sorted or no change needed (pre-check).");
     }
@@ -483,7 +483,7 @@ export function useGroupIOActions(
       summary, // summary
       { key: keyToMove, direction: direction } // details
     );
-    workflowStore.updateWorkflowInterface(activeTabId.value, updateFn, entry); // Pass entry object
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry object
   }
 
   // --- 过滤后的计算属性 (用于移动按钮禁用状态) ---

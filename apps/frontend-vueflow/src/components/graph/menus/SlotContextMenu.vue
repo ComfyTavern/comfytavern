@@ -46,7 +46,6 @@ import { useI18n } from "vue-i18n";
 import { useWorkflowStore } from "@/stores/workflowStore"; // 保持，因为 onDisconnect 和 onDeleteSlot 仍在使用
 import { useTabStore } from "@/stores/tabStore";
 import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager";
-import { useWorkflowInteractionCoordinator } from "@/composables/workflow/useWorkflowInteractionCoordinator"; // 新增导入
 import { getNodeType } from "@/utils/nodeUtils";
 import { createHistoryEntry } from "@comfytavern/utils";
 import { DataFlowType, type GroupSlotInfo, type HistoryEntry } from "@comfytavern/types"; // 移除了 PreviewTarget
@@ -79,7 +78,6 @@ const { t } = useI18n();
 const workflowStore = useWorkflowStore(); // 保留
 const tabStore = useTabStore();
 const workflowManager = useWorkflowManager();
-const interactionCoordinator = useWorkflowInteractionCoordinator(); // 新增
 
 // 计算属性：判断当前是否为输出插槽
 const isOutputSlot = computed(() => props.handleType === 'source');
@@ -344,7 +342,7 @@ const onDeleteSlot = () => {
 
   // 7. 调用 Store 的 action 来更新工作流接口定义
   // 此 action 会处理状态更新、添加历史记录、标记工作流为已修改，并可能触发同步
-  workflowStore.updateWorkflowInterface(groupWorkflowId, updateFn, entry);
+  workflowStore.updateWorkflowInterfaceAndRecord(groupWorkflowId, updateFn, entry);
 
   // 8. 操作完成，关闭上下文菜单
   emit("close");
@@ -375,7 +373,7 @@ const setAsPreview = async () => {
     }
   );
 
-  await interactionCoordinator.setPreviewTargetAndRecord(activeTabId, target, entry);
+  await workflowStore.setPreviewTargetAndRecord(activeTabId, target, entry);
   emit("close");
 };
 
@@ -402,7 +400,7 @@ const clearPreview = async () => {
     }
   );
 
-  await interactionCoordinator.setPreviewTargetAndRecord(activeTabId, null, entry);
+  await workflowStore.setPreviewTargetAndRecord(activeTabId, null, entry);
   emit("close");
 };
 </script>
