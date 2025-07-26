@@ -79,6 +79,9 @@ export class ConcurrencyScheduler {
 
     // 发送接受确认 (主要针对 WebSocket)
     if (source === 'websocket' && clientId) {
+      // 咕咕：关键修复！将客户端订阅到这个特定的执行场景，确保消息只发给它。
+      this.wsManager.subscribeToScene(clientId, promptId);
+
       const acceptedPayload: PromptAcceptedResponsePayload = { promptId };
       this.wsManager.sendMessageToClient(clientId, 'PROMPT_ACCEPTED_RESPONSE', acceptedPayload);
     }
@@ -220,8 +223,9 @@ export class ConcurrencyScheduler {
     if (status === ExecutionStatus.ERROR && errorInfo) {
       payload.errorInfo = { message: errorInfo.message, stack: errorInfo.stack }; // 提取关键错误信息
     }
-    console.log(`[Scheduler] Broadcasting status update for ${promptId}: ${status}`);
-    this.wsManager.broadcast('EXECUTION_STATUS_UPDATE', payload);
+    console.log(`[Scheduler] Publishing status update for ${promptId}: ${status}`);
+    // 咕咕：关键修复！从广播改为向特定场景发布，确保只有相关的客户端收到状态更新。
+    this.wsManager.publishToScene(promptId, 'EXECUTION_STATUS_UPDATE', payload);
   }
 
   /**

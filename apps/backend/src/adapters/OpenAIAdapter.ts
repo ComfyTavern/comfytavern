@@ -100,8 +100,23 @@ export class OpenAIAdapter implements ILlmApiAdapter {
       });
 
       let accumulatedText = '';
-      
+      let finalFinishReason: string | null = null;
+      let finalUsage: any = null;
+      let partCounter = 0;
+
       for await (const part of stream) {
+        partCounter++;
+        console.log(`[OpenAIAdapter] [PART ${partCounter}] Received raw part from API: ${JSON.stringify(part)}`);
+        
+        // 记录最终的 finish_reason 和 usage
+        const choice = part.choices?.[0];
+        if (choice?.finish_reason) {
+          finalFinishReason = choice.finish_reason;
+        }
+        if (part.usage) {
+          finalUsage = part.usage;
+        }
+
         const chunks = this.transformOpenAIStreamChunk(part);
         for (const chunk of chunks) {
           // 如果是文本块，累积文本内容
@@ -112,12 +127,13 @@ export class OpenAIAdapter implements ILlmApiAdapter {
         }
       }
 
-      // 流结束时发送完成信息
+      // 流结束时发送包含所有最终信息的完成块
       yield {
         type: 'finish_reason_chunk',
         content: {
-          finish_reason: 'stop',
+          finish_reason: finalFinishReason || 'stop', // 如果没有明确的 reason，默认为 stop
           accumulated_text: accumulatedText,
+          usage: finalUsage, // 将最终的 usage 数据附加到这里
         },
       } as ChunkPayload;
 
@@ -167,15 +183,15 @@ export class OpenAIAdapter implements ILlmApiAdapter {
       });
     }
 
-    // 处理完成原因
-    if (choice.finish_reason) {
-      payloads.push({
-        type: 'finish_reason_chunk',
-        content: {
-          finish_reason: choice.finish_reason,
-        },
-      });
-    }
+    // 不再在这里处理 finish_reason，统一在 executeStream 的末尾处理
+    // if (choice.finish_reason) {
+    //   payloads.push({
+    //     type: 'finish_reason_chunk',
+    //     content: {
+    //       finish_reason: choice.finish_reason,
+    //     },
+    //   });
+    // }
 
     return payloads;
   }

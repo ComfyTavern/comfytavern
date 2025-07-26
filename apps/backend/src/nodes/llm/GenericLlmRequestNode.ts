@@ -116,7 +116,10 @@ class GenericLlmRequestNodeImpl {
         let accumulatedText = '';
         let finalResponse: StandardResponse | null = null;
 
+        let chunkCounter = 0;
         for await (const chunk of adapter.executeStream(payload)) {
+          chunkCounter++;
+          console.log(`[GenericLlmRequestNode ${nodeId}] [CHUNK ${chunkCounter}] Yielding chunk to engine: ${JSON.stringify(chunk)}`);
           // 将每个流块发送给前端
           yield chunk;
 
@@ -130,6 +133,8 @@ class GenericLlmRequestNodeImpl {
             finalResponse = {
               text: chunk.content?.accumulated_text || accumulatedText,
               model: activated_model_id,
+              // 从 finish_reason_chunk 中提取 usage 数据
+              usage: chunk.content?.usage,
             };
           }
         }
@@ -138,6 +143,8 @@ class GenericLlmRequestNodeImpl {
         return {
           response: finalResponse,
           responseText: accumulatedText,
+          // 将 usage 也作为顶级输出，方便直接连接
+          usage: finalResponse?.usage,
         };
 
       } else {
@@ -260,6 +267,12 @@ export const genericLlmRequestNodeDefinition: NodeDefinition = {
       dataFlowType: 'STRING',
       displayName: '响应文本',
       description: 'LLM 返回的主要文本内容。\n在流式模式下，这是累积所有文本块后的最终结果。',
+      matchCategories: ['LlmOutput']
+    },
+    usage: {
+      dataFlowType: 'OBJECT',
+      displayName: 'Token 用量',
+      description: 'LLM 返回的 token 使用情况统计',
       matchCategories: ['LlmOutput']
     },
     stream_output: {

@@ -85,12 +85,14 @@ class BoundedBuffer<T> {
     if (this.isDone) {
       throw new Error('Cannot push to a finished buffer.');
     }
+    console.log(`[BoundedBuffer] Pushing chunk. Buffer size before: ${this.buffer.length}`);
     this.buffer.push(chunk);
     this.tryResolveWaiting();
   }
 
   signalEnd(): void {
     if (!this.isDone) {
+      console.log('[BoundedBuffer] Signaling end.');
       this.isDone = true;
       this.tryResolveWaiting();
     }
@@ -98,30 +100,33 @@ class BoundedBuffer<T> {
 
   signalError(error: any): void {
     if (!this.isDone) {
+      console.error('[BoundedBuffer] Signaling error:', error.message, error.stack);
       this.isDone = true;
       this.error = error;
       // 立即 reject 所有等待者
       while (this.waitingResolvers.length > 0) {
         this.waitingResolvers.shift()!.reject(this.error);
       }
-      // this.tryResolveWaiting(); // tryResolveWaiting 也会被其他地方调用，这里确保错误优先传播
     }
   }
 
   private tryResolveWaiting(): void {
+    console.log(`[BoundedBuffer] tryResolveWaiting. Waiting: ${this.waitingResolvers.length}, Buffered: ${this.buffer.length}, Done: ${this.isDone}`);
     while (this.waitingResolvers.length > 0) {
       const callbacks = this.waitingResolvers.shift()!; // 改为 callbacks
       if (this.isDone && this.error) { // 优先处理错误
-        callbacks.reject(this.error); // <<< 关键：调用 reject
-        continue; // 处理下一个等待者
+        console.log('[BoundedBuffer] Rejecting a waiting consumer with an error.');
+        callbacks.reject(this.error);
+        continue;
       }
       if (this.buffer.length > 0) {
+        console.log('[BoundedBuffer] Resolving a waiting consumer with a chunk.');
         callbacks.resolve({ value: this.buffer.shift()!, done: false });
       } else if (this.isDone) {
-        // 此时 this.error 必然为 null (因为上面已经处理了 error 情况)
+        console.log('[BoundedBuffer] Resolving a waiting consumer with done=true.');
         callbacks.resolve({ value: undefined, done: true });
       } else {
-        this.waitingResolvers.unshift(callbacks); // 放回去
+        this.waitingResolvers.unshift(callbacks);
         break;
       }
     }
@@ -672,7 +677,7 @@ export class ExecutionEngine {
       nodeId,
       errorDetails: { message: String(errorDetails) },
     };
-    this.wsManager.broadcast('NODE_ERROR', payload);
+    this.wsManager.publishToScene(this.promptId, 'NODE_ERROR', payload);
   }
 
   private async executeNode(
@@ -696,7 +701,7 @@ export class ExecutionEngine {
 
     this.nodeStates[nodeId] = ExecutionStatus.RUNNING;
     const executingPayload: NodeExecutingPayload = { promptId: this.promptId, nodeId };
-    this.wsManager.broadcast('NODE_EXECUTING', executingPayload);
+    this.wsManager.publishToScene(this.promptId, 'NODE_EXECUTING', executingPayload);
     // console.log(`[Engine-${this.promptId}] Executing node ${nodeId} (${node.fullType})...`);
 
     const nodeStartTime = Date.now();
@@ -722,7 +727,7 @@ export class ExecutionEngine {
         const errorMsg = `Node ${node.fullType} (${nodeId}) has no valid execute function for the current mode ('${currentModeId || 'default'}').`;
         throw new Error(errorMsg);
       }
-      
+
       // 4. 准备执行上下文
       const context = {
         promptId: this.promptId,
@@ -760,7 +765,7 @@ export class ExecutionEngine {
           yieldedContent: finalPayloadContent,
           isLastChunk: true,
         };
-        this.wsManager.broadcast('NODE_YIELD', finalPayload);
+        this.wsManager.publishToScene(this.promptId, 'NODE_YIELD', finalPayload);
         return { status: ExecutionStatus.COMPLETE };
       }
 
@@ -875,130 +880,80 @@ export class ExecutionEngine {
     });
 
     const streamLifecyclePromise = (async () => {
+      console.log(`[Engine-${promptId}] streamLifecyclePromise started for ${nodeIdentifier}`);
       let batchResult: Record<string, any> | void = undefined;
       let pullerError: any = null;
 
-      // Puller Task: 从 nodeGenerator 拉取数据到 buffer
       const pullerTask = (async () => {
+        console.log(`[Engine-${promptId}] PULLER_TASK_STARTED for node ${nodeIdentifier}`);
         let chunkCounter = 0;
-        // console.log(`[Engine-${promptId}] PULLER_TASK_STARTED for node ${nodeIdentifier}`);
         try {
-          // --- 移除掉错误的 for await...of 循环 ---
-          /*
-          for await (const chunk of nodeGenerator) {
-                chunkCounter++;
-          }
-          */
-          // --- 只保留手动迭代 ---
+          let nextResult = await nodeGenerator.next();
+          console.log(`[Engine-${promptId}] PULLER_TASK initial nextResult.done=${nextResult.done}`);
 
-          // 直接使用 nodeGenerator
-          // const manualGenerator = nodeGenerator; // 不再需要别名
-          let nextResult = await nodeGenerator.next(); // 直接在原始 generator 上调用
-          chunkCounter = 0; // 确保计数器从0开始
-
-          while (!nextResult.done) { // 只有当 done 为 false 时，value 才是 yield 出来的 chunk
+          while (!nextResult.done) {
             chunkCounter++;
-            if (this.isInterrupted) { // 增加中断检查
+            if (this.isInterrupted) {
               throw new Error('Execution interrupted during stream pulling.');
             }
             if (buffer.isFull()) {
-              console.error(`[Engine-${promptId}] Buffer overflow for node ${nodeIdentifier}.`);
-              // 溢出时，不仅抛错，还要通知 buffer
               const overflowError = new BufferOverflowError(`Node ${nodeIdentifier} stream buffer overflow.`);
               buffer.signalError(overflowError);
-              throw overflowError; // 抛出以便外层捕获
+              throw overflowError;
             }
-            // ✅ 关键：将 yield 出来的值推入 buffer
-            await buffer.push(nextResult.value);
-            // console.log(`[Engine-${promptId}] PULLER_TASK_PUSHED_CHUNK ${chunkCounter} for node ${nodeIdentifier}`);
-            nextResult = await nodeGenerator.next(); // 获取下一个
-          }
-          // ✅ 循环结束，nextResult.done 为 true，此时 nextResult.value 是生成器的 return 值
-          batchResult = nextResult.value;
 
+            console.log(`[Engine-${promptId}] PULLER_TASK pushing chunk ${chunkCounter} to buffer.`);
+            await buffer.push(nextResult.value);
+            console.log(`[Engine-${promptId}] PULLER_TASK pushed chunk ${chunkCounter}. Getting next...`);
+
+            nextResult = await nodeGenerator.next();
+            console.log(`[Engine-${promptId}] PULLER_TASK nextResult.done=${nextResult.done} for chunk after ${chunkCounter}`);
+          }
+
+          batchResult = nextResult.value;
+          console.log(`[Engine-${promptId}] PULLER_TASK loop finished after ${chunkCounter} chunks.`);
         } catch (error: any) {
-          console.error(`[Engine-${promptId}] Puller task for ${nodeIdentifier} caught error: ${error.message}`, error.stack);
+          console.error(`[Engine-${promptId}] Puller task for ${nodeIdentifier} caught error after ${chunkCounter} chunks: ${error.message}`, error.stack);
           pullerError = error;
-          buffer.signalError(error); // 确保任何错误都通知 buffer
+          buffer.signalError(error);
         } finally {
-          // 确保无论如何都 signalEnd 或 signalError (signalError内部会设置isDone)
+          console.log(`[Engine-${promptId}] PULLER_TASK_FINALLY for node ${nodeIdentifier}.`);
           if (!pullerError) {
-            // console.log(`[Engine-${promptId}] PULLER_TASK_FINALLY for node ${nodeIdentifier}. Buffer signaled end. Processed ${chunkCounter} chunks.`);
             buffer.signalEnd();
-          } else {
-            // 如果已有错误，signalError 已经被调用过了
-            // console.log(`[Engine-${promptId}] PULLER_TASK_FINALLY_ERROR for node ${nodeIdentifier}. Buffer signaled error. Processed ${chunkCounter} chunks before error.`);
           }
         }
       })();
 
-      // The original for...await loop was removed.
-      // Manual iteration logic is now self-contained above.
-
       try {
-        // 首先等待 pullerTask 完成，它负责填充 buffer 并最终调用 buffer.signalEnd() 或 signalError()
-        await pullerTask; // 等待生产结束
-
-        // 调整 1: 先等待所有消费者 Promise 完成
-        // 必须等消费者把 buffer/sourceStream 读完，sourceStream 才会 end
-        await Promise.all(consumerPromises); // 等待消费结束
-
-        // 调整 2: 将防御性检查移到等待消费者之后
-        // pullerTask 完成后，BoundedBuffer 应该已经 signalEnd 或 signalError。
-        // 并且所有 consumerPromises 也已完成。
-        // 此时 sourceStream (从 BoundedBuffer 创建) 应该已经结束或出错。
-        // 我们可以选择性地在这里给事件循环一个机会
-        await new Promise(r => setTimeout(r, 0)); // 短暂让出控制权 (可选，但保留无妨)
-
-        // 只有在没有 pullerError 且消费者也都完成的情况下，才检查流是否"自然"结束
-        if (!pullerError && !sourceStream.readableEnded && !sourceStream.destroyed) {
-          // 此时如果还没结束，才是真正的异常情况
-          const forcedError = new Error(`Forced destroy of sourceStream for ${nodeIdentifier} as it did not end naturally AFTER puller and all consumers finished.`);
-          console.warn(`[Engine-${promptId}] DEBUG: sourceStream for ${nodeIdentifier} did not end/destroy naturally AFTER puller and consumers. Forcing destroy. ReadableEnded: ${sourceStream.readableEnded}, Destroyed: ${sourceStream.destroyed}`);
-          // 只有在没有其他错误时才用 forcedError 销毁
-          if (!sourceStream.destroyed) sourceStream.destroy(forcedError);
-        }
-        // 如果 pullerTask 本身有错误，确保用那个错误销毁流（如果还没销毁的话）
-        if (pullerError && !sourceStream.destroyed) {
-          sourceStream.destroy(pullerError);
-        }
-        // 防御性检查结束
+        console.log(`[Engine-${promptId}] streamLifecyclePromise awaiting all tasks for ${nodeIdentifier}`);
+        await Promise.all([pullerTask, ...consumerPromises]);
+        console.log(`[Engine-${promptId}] streamLifecyclePromise all tasks completed for ${nodeIdentifier}`);
 
         if (pullerError) {
-          // 如果 pullerTask 本身就有错误，即使其他消费者可能已处理，也应优先抛出 puller 的错误。
           throw pullerError;
         }
 
-        // 只有在 pullerTask 无错，并且所有 consumerPromises 都成功解决后，才认为完全成功。
-        // Promise.all(consumerPromises) 如果有 reject，这里就不会执行到。
-        // console.log(`[Engine-${promptId}] All streams and puller for node ${nodeIdentifier} have finished successfully.`);
-
-        batchResultResolver(batchResult); // Resolve the promise for batch outputs
-
-        // 更新全局状态
-        // 注意：this.nodeResults[nodeId] 不在这里用 batchResult 更新，因为它持有的是 Promise
+        console.log(`[Engine-${promptId}] Node ${nodeIdentifier} stream processing finished successfully.`);
+        batchResultResolver(batchResult);
         this.nodeStates[nodeId] = ExecutionStatus.COMPLETE;
         const durationMs = Date.now() - nodeStartTime;
-        // 日志记录和发送 NODE_COMPLETE 时，使用实际的 batchResult
         const resultForLoggingAndEvent = (typeof batchResult === 'object' && batchResult !== null) ? batchResult : {};
         loggingService.logNodeComplete(nodeId, fullType, resultForLoggingAndEvent, durationMs)
           .catch(err => console.error(`[Engine-${promptId}] Failed to log stream node complete for ${nodeIdentifier}:`, err));
         this.sendNodeComplete(nodeId, resultForLoggingAndEvent);
-        // console.log(`[Engine-${promptId}] Node ${nodeIdentifier} officially marked as COMPLETE.`);
 
       } catch (error: any) {
-        batchResultRejector(error); // Reject the promise for batch outputs
+        console.error(`[Engine-${promptId}] streamLifecyclePromise for ${nodeIdentifier} caught error:`, error.message, error.stack);
+        batchResultRejector(error);
 
         const durationMs = Date.now() - nodeStartTime;
         const errorMessage = error.message || String(error);
-        // console.error(`[Engine-${promptId}] Error in stream lifecycle for node ${nodeIdentifier}:`, errorMessage, error.stack);
         this.nodeStates[nodeId] = this.isInterrupted ? ExecutionStatus.INTERRUPTED : ExecutionStatus.ERROR;
         loggingService.logNodeError(nodeId, fullType, error, durationMs)
           .catch(err => console.error(`[Engine-${promptId}] Failed to log stream node error for ${nodeIdentifier}:`, err));
         this.sendNodeError(nodeId, errorMessage);
       }
     })();
-
     this.backgroundTasks.push(streamLifecyclePromise);
     return { streams: streamOutputsToReturn, batchDataPromise };
   }
@@ -1013,22 +968,40 @@ export class ExecutionEngine {
     } else {
       nodeIdentifier = `UnknownNode(${nodeId})`;
     }
-    // console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_STARTED for node ${nodeIdentifier}`);
+    console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_STARTED for node ${nodeIdentifier}`);
+    
+    const iterator = readable[Symbol.asyncIterator]();
     try {
-      for await (const chunk of readable) {
+      let chunkCounter = 0;
+      while (true) {
+        console.log(`[Engine-${promptId}] Consumer for ${nodeIdentifier} awaiting next chunk...`);
+        const result = await iterator.next();
+        console.log(`[Engine-${promptId}] Consumer for ${nodeIdentifier} got result: done=${result.done}`);
+
+        if (result.done) {
+          console.log(`[Engine-${promptId}] Consumer for ${nodeIdentifier} received done signal.`);
+          break;
+        }
+
+        chunkCounter++;
+        const chunk = result.value as ChunkPayload;
+        const isLastChunk = chunk.type === 'finish_reason_chunk' || chunk.type === 'error_chunk';
+
+        console.log(`[ExecutionEngine] [Node ${nodeId}] [CHUNK ${chunkCounter}] Received chunk from node: ${JSON.stringify(chunk)}`);
         const payload: NodeYieldPayload = {
           promptId,
-          sourceNodeId: nodeId, // Keep original nodeId for payload
-          yieldedContent: chunk as ChunkPayload,
-          isLastChunk: false,
+          sourceNodeId: nodeId,
+          yieldedContent: chunk,
+          isLastChunk: isLastChunk,
         };
-        this.wsManager.broadcast('NODE_YIELD', payload);
-        loggingService.logStreamChunk(promptId, nodeId, chunk as ChunkPayload, false, 'NODE_YIELD')
+        this.wsManager.publishToScene(promptId, 'NODE_YIELD', payload);
+        console.log(`[ExecutionEngine] [Node ${nodeId}] [CHUNK ${chunkCounter}] Broadcasted NODE_YIELD.`);
+        loggingService.logStreamChunk(promptId, nodeId, chunk, isLastChunk, 'NODE_YIELD')
           .catch(err => console.error(`[Engine-${promptId}] Failed to log NODE_YIELD chunk for ${nodeIdentifier}:`, err));
       }
-      // console.log(`[Engine-${promptId}] consumeForEventBus for node ${nodeIdentifier}: for-await loop completed.`);
+      console.log(`[Engine-${promptId}] consumeForEventBus for node ${nodeIdentifier}: while loop completed.`);
     } catch (error: any) {
-      // console.error(`[Engine-${promptId}] consumeForEventBus for node ${nodeIdentifier} caught error during stream consumption:`, error);
+      console.error(`[Engine-${promptId}] consumeForEventBus for node ${nodeIdentifier} caught error during stream consumption:`, error);
       loggingService.logStreamError(promptId, nodeId, error, 'NODE_YIELD')
         .catch(err => console.error(`[Engine-${promptId}] Failed to log NODE_YIELD error for ${nodeIdentifier}:`, err));
       const finalErrorPayload: NodeYieldPayload = {
@@ -1037,29 +1010,19 @@ export class ExecutionEngine {
         yieldedContent: { type: 'error_chunk', content: `Stream consumption error: ${error.message}` },
         isLastChunk: true,
       };
-      this.wsManager.broadcast('NODE_YIELD', finalErrorPayload);
+      this.wsManager.publishToScene(promptId, 'NODE_YIELD', finalErrorPayload);
       throw error;
+    } finally {
+      console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_FINISHED for node ${nodeIdentifier}`);
     }
-    const finalPayloadContent: ChunkPayload = { type: 'finish_reason_chunk', content: 'Stream ended' };
-    const finalPayload: NodeYieldPayload = {
-      promptId,
-      sourceNodeId: nodeId,
-      yieldedContent: finalPayloadContent,
-      isLastChunk: true,
-    };
-    this.wsManager.broadcast('NODE_YIELD', finalPayload);
-    loggingService.logStreamChunk(promptId, nodeId, finalPayloadContent, true, 'NODE_YIELD')
-      .catch(err => console.error(`[Engine-${promptId}] Failed to log final NODE_YIELD chunk for ${nodeIdentifier}:`, err));
-    // console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_FINISHED for node ${nodeIdentifier}`);
   }
-
   private sendNodeComplete(nodeId: NanoId, output: any): void {
     const payload: NodeCompletePayload = {
       promptId: this.promptId,
       nodeId,
       output,
     };
-    this.wsManager.broadcast('NODE_COMPLETE', payload);
+    this.wsManager.publishToScene(this.promptId, 'NODE_COMPLETE', payload);
   }
 
   private handleBypassedNode(
@@ -1198,7 +1161,7 @@ export class ExecutionEngine {
       nodeId,
       pseudoOutputs,
     };
-    this.wsManager.broadcast('NODE_BYPASSED', payload);
+    this.wsManager.publishToScene(this.promptId, 'NODE_BYPASSED', payload);
   }
 
   // 新增辅助函数：获取下游流连接
@@ -1234,7 +1197,7 @@ export class ExecutionEngine {
           yieldedContent: chunk as ChunkPayload,
           isLastChunk: false,
         };
-        this.wsManager.broadcast(WebSocketMessageType.WORKFLOW_INTERFACE_YIELD, payload);
+        this.wsManager.publishToScene(this.promptId, WebSocketMessageType.WORKFLOW_INTERFACE_YIELD, payload);
         loggingService.logStreamChunk(this.promptId, interfaceKey as NanoId, chunk as ChunkPayload, false, 'INTERFACE_YIELD')
           .catch(logErr => console.error(`[Engine-${this.promptId}] Failed to log INTERFACE_YIELD chunk for ${interfaceKey}:`, logErr));
         chunkIndex++;
@@ -1249,7 +1212,7 @@ export class ExecutionEngine {
           yieldedContent: finalChunkContent,
           isLastChunk: true,
         };
-        this.wsManager.broadcast(WebSocketMessageType.WORKFLOW_INTERFACE_YIELD, payload);
+        this.wsManager.publishToScene(this.promptId, WebSocketMessageType.WORKFLOW_INTERFACE_YIELD, payload);
         loggingService.logStreamChunk(this.promptId, interfaceKey as NanoId, finalChunkContent, true, 'INTERFACE_YIELD')
           .catch(logErr => console.error(`[Engine-${this.promptId}] Failed to log final INTERFACE_YIELD chunk for ${interfaceKey}:`, logErr));
         this.activeInterfaceStreamConsumers.delete(interfaceKey);

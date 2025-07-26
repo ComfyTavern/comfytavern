@@ -289,6 +289,10 @@ const handler = createWebsocketHandler(scheduler, wsManager);
 app.ws("/ws", {
   ...websocketSchema, // 应用导入的 Schema
   ...handler, // 应用创建的 handler 对象
+  drain: (ws) => {
+    // 使用新的、更清晰的 handleDrain 方法
+    wsManager.handleDrain(ws as any);
+  },
 });
 
 // --- 启动服务器 ---
