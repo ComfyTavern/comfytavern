@@ -3,7 +3,7 @@ import { defineConfig } from "vitepress";
 export default defineConfig({
   title: "ComfyTavern 文档",
   description: "一个面向创作者和最终用户的 AI 创作与应用平台。",
-  base: "/ComfyTavern/docs/",
+  base: "/",
   cleanUrls: true,
   lastUpdated: true,
 
