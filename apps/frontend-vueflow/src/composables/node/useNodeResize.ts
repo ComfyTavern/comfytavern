@@ -12,7 +12,7 @@ import { useNodeStore } from "@/stores/nodeStore";
 // Remove unused workflowStore import
 // import { useWorkflowStore } from '@/stores/workflowStore';
 import { useTabStore } from "@/stores/tabStore";
-import { useWorkflowInteractionCoordinator } from "../workflow/useWorkflowInteractionCoordinator";
+import { useWorkflowStore } from "@/stores/workflowStore";
 // Import useWorkflowManager
 import { useWorkflowManager } from "../workflow/useWorkflowManager";
 import type { HistoryEntry, InputDefinition, DataFlowTypeName } from "@comfytavern/types"; // <-- Import HistoryEntry
@@ -64,9 +64,8 @@ export function useNodeResize(props: Readonly<UseNodeResizeProps>) {
   const { updateNode, viewport } = useVueFlow();
   const nodeStore = useNodeStore();
   // Remove unused workflowStore instance
-  // const workflowStore = useWorkflowStore();
+  const workflowStore = useWorkflowStore();
   const tabStore = useTabStore();
-  const interactionCoordinator = useWorkflowInteractionCoordinator();
   // Get workflowManager instance
   const workflowManager = useWorkflowManager();
 
@@ -156,7 +155,7 @@ export function useNodeResize(props: Readonly<UseNodeResizeProps>) {
         );
 
         // 调用协调器函数，传递 entry 对象
-        interactionCoordinator.updateNodeDimensionsAndRecord(
+        workflowStore.updateNodeDimensionsAndRecord(
           activeId,
           nodeId,
           { width: width.value }, // 只更新宽度

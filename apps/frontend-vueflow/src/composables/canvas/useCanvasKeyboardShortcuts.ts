@@ -6,7 +6,6 @@ import { useWorkflowGrouping } from "../group/useWorkflowGrouping"; // <-- 导�
 import { createHistoryEntry } from "@comfytavern/utils"; // <-- 导入 createHistoryEntry
 import { type DataFlowTypeName, type HistoryEntry, type OutputDefinition as OriginalOutputDefinition, DataFlowType, type GroupSlotInfo } from "@comfytavern/types"; // <-- 从 types 导入 HistoryEntry, OutputDefinition, DataFlowType 和 GroupSlotInfo
 import { useWorkflowManager } from "../workflow/useWorkflowManager";
-import { useWorkflowInteractionCoordinator } from "../workflow/useWorkflowInteractionCoordinator";
 import { useNodeStore } from "@/stores/nodeStore";
 import { useCanvasClipboard } from "./useCanvasClipboard"; // <-- 新增导入
 
@@ -26,7 +25,6 @@ export function useCanvasKeyboardShortcuts(containerRef: Ref<HTMLElement | null>
   const workflowStore = useWorkflowStore(); // <-- 获取 WorkflowStore 实例
   const { groupSelectedNodes: performGrouping } = useWorkflowGrouping(); // <-- 获取分组函数
   const workflowManager = useWorkflowManager();
-  const interactionCoordinator = useWorkflowInteractionCoordinator();
   const nodeStore = useNodeStore();
   const { handleLocalCopy, handleLocalPaste, handleSystemCopy, handleSystemPaste } = useCanvasClipboard(); // <-- 使用新的 composable
 
@@ -355,7 +353,7 @@ export function useCanvasKeyboardShortcuts(containerRef: Ref<HTMLElement | null>
         ...(newTarget && { slotKey: newTarget.slotKey }),
       }
     );
-    await interactionCoordinator.setPreviewTargetAndRecord(internalId, newTarget, entry);
+    await workflowStore.setPreviewTargetAndRecord(internalId, newTarget, entry);
     console.log(`Alt+Click (Node Cycle on ${node.label || node.id}): ${historySummary}`);
   };
 
