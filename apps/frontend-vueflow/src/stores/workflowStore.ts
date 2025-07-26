@@ -9,40 +9,53 @@ import type {
   WorkflowMetadata
 } from "@comfytavern/types";
 import { useTabStore, type Tab } from "./tabStore";
-import { ref, nextTick, watch, computed } from "vue";
-import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager";
-import { useWorkflowHistory } from "@/composables/workflow/useWorkflowHistory";
-import { useWorkflowData } from "@/composables/workflow/useWorkflowData";
-import { useWorkflowViewManagement } from "@/composables/workflow/useWorkflowViewManagement";
-import { useWorkflowInterfaceManagement } from "@/composables/workflow/useWorkflowInterfaceManagement";
-import { useWorkflowGrouping } from "@/composables/group/useWorkflowGrouping";
-import { useWorkflowLifecycleCoordinator } from "@/composables/workflow/useWorkflowLifecycleCoordinator";
-import { useWorkflowInteractionCoordinator } from "@/composables/workflow/useWorkflowInteractionCoordinator";
+import { ref, watch, computed } from "vue";
+import { useWorkflowManager } from "../composables/workflow/useWorkflowManager";
+import { useWorkflowHistory } from "../composables/workflow/useWorkflowHistory";
+import { useWorkflowData } from "../composables/workflow/useWorkflowData";
+import { useWorkflowViewManagement } from "../composables/workflow/useWorkflowViewManagement";
+import { useWorkflowInterfaceManagement } from "../composables/workflow/useWorkflowInterfaceManagement";
+import { useWorkflowGrouping } from "../composables/group/useWorkflowGrouping";
+import { useWorkflowLifecycleCoordinator } from "../composables/workflow/useWorkflowLifecycleCoordinator";
+import { useWorkflowInteractionCoordinator } from "../composables/workflow/useWorkflowInteractionCoordinator";
+import { useWorkflowPreview } from "../composables/workflow/useWorkflowPreview";
+import { useMultiInputConnectionActions } from '../composables/node/useMultiInputConnectionActions';
 import { WebSocketMessageType, DataFlowType, BuiltInSocketMatchCategory } from "@comfytavern/types";
 import { getEffectiveDefaultValue } from "@comfytavern/utils";
 import { klona } from "klona";
 import { useDialogService } from '../services/DialogService';
 import { getWorkflow } from '../utils/api';
-import { useWebSocket } from '@/composables/useWebSocket';
+import { useWebSocket } from '../composables/useWebSocket';
+
+// 导入新的 Actions 工厂函数
+import { createHistoryActions } from './workflow/actions/historyActions';
+import { createLifecycleActions } from './workflow/actions/lifecycleActions';
+import { createNodeActions } from './workflow/actions/nodeActions';
+import { createEdgeActions } from './workflow/actions/edgeActions';
+import type { WorkflowStoreContext } from "./workflow/types";
 
 export const useWorkflowStore = defineStore("workflow", () => {
+  // --- 核心 State ---
   const availableWorkflows = ref<WorkflowMetadata[]>([]);
+  const changedTemplateWorkflowIds = ref(new Set<string>());
 
+  // --- 依赖注入 (DI Container) ---
   const tabStore = useTabStore();
   const dialogService = useDialogService();
   const { sendMessage } = useWebSocket();
-
   const workflowManager = useWorkflowManager();
   const workflowData = useWorkflowData();
   const workflowViewManagement = useWorkflowViewManagement();
   const workflowInterfaceManagement = useWorkflowInterfaceManagement();
   const workflowGrouping = useWorkflowGrouping();
   const workflowLifecycleCoordinator = useWorkflowLifecycleCoordinator();
-  const workflowInteractionCoordinator = useWorkflowInteractionCoordinator();
-
-  const changedTemplateWorkflowIds = ref(new Set<string>());
+  const workflowInteractionCoordinator = useWorkflowInteractionCoordinator(); // 仍然需要用于遗留函数
+  const workflowPreview = useWorkflowPreview(); // +++
   const historyManager = useWorkflowHistory();
+  const coordinatorActiveTabIdRef = computed(() => tabStore.activeTabId);
+  const multiInputActions = useMultiInputConnectionActions(coordinatorActiveTabIdRef);
 
+  // --- 监视器 ---
   watch(
     () => tabStore.tabs,
     (newTabs, oldTabs) => {
@@ -57,180 +70,42 @@ export const useWorkflowStore = defineStore("workflow", () => {
     { deep: true }
   );
 
-  async function undo(steps: number = 1, internalId?: string) {
-    const idToUndo = internalId ?? tabStore.activeTabId;
-    if (!idToUndo) {
-      console.warn("[WorkflowStore] 无法撤销，没有活动的标签页或未提供 ID。");
-      return;
-    }
-    if (steps <= 0) {
-      console.warn(`[WorkflowStore] Cannot undo ${steps} steps.`);
-      return;
-    }
+  // --- 创建 Actions 上下文 ---
+  const context: WorkflowStoreContext = {
+    // 依赖
+    tabStore,
+    dialogService,
+    workflowManager,
+    historyManager,
+    workflowViewManagement,
+    workflowLifecycleCoordinator,
+    workflowGrouping,
+    workflowPreview, // +++
+    multiInputActions,
+    // 核心 State (暂未完全移入)
+    elements: ref([]), // Placeholder
+    workflowData: ref(null), // Placeholder
+    // Getters
+    currentSnapshot: computed(() => {
+      const activeId = tabStore.activeTabId;
+      return activeId ? workflowManager.getCurrentSnapshot(activeId) : undefined;
+    }),
+    // 底层方法
+    recordHistory: (internalId, entry, snapshot) => {
+      historyManager.recordSnapshot(internalId, entry, snapshot);
+    },
+    setElements: async (internalId, elements) => {
+      await workflowManager.setElements(internalId, elements);
+    },
+  };
 
-    historyManager.ensureHistoryState(idToUndo);
-    let targetSnapshot: WorkflowStateSnapshot | null = null;
-    for (let i = 0; i < steps; i++) {
-      if (!historyManager.canUndo(idToUndo).value) {
-        break;
-      }
-      targetSnapshot = historyManager.undo(idToUndo);
-      if (targetSnapshot === null) {
-        break;
-      }
-    }
+  // --- 实例化 Actions ---
+  const historyActions = createHistoryActions(context);
+  const lifecycleActions = createLifecycleActions(context);
+  const nodeActions = createNodeActions(context);
+  const edgeActions = createEdgeActions(context);
 
-    if (targetSnapshot === null) {
-      try {
-        const instance = workflowViewManagement.getVueFlowInstance(idToUndo);
-        const defaultSnapshot = await workflowManager.applyDefaultWorkflowToTab(idToUndo);
-        await nextTick();
-        if (instance && defaultSnapshot) {
-          const nodes = defaultSnapshot.elements.filter(
-            (el): el is VueFlowNode => !("source" in el)
-          );
-          const edges = defaultSnapshot.elements.filter((el): el is VueFlowEdge => "source" in el);
-          instance.setNodes(nodes);
-          instance.setEdges(edges);
-          instance.setViewport(defaultSnapshot.viewport);
-        } else if (!instance) {
-          console.warn(
-            `[WorkflowStore] 在应用默认状态之前无法获取标签页 ${idToUndo} 的 VueFlow 实例。`
-          );
-        } else if (!defaultSnapshot) {
-          console.warn(
-            `[WorkflowStore] 撤销到初始状态后无法获取标签页 ${idToUndo} 的默认快照（post-nextTick）。实例可用。`
-          );
-        }
-      } catch (error) {
-        console.error(`[WorkflowStore] 在撤销标签页 ${idToUndo} 期间应用默认工作流时出错：`, error);
-      }
-      return;
-    }
-
-    const appliedCore = workflowManager.applyStateSnapshot(idToUndo, targetSnapshot);
-
-    if (!appliedCore) {
-      console.error(
-        `[WorkflowStore] 在撤销标签页 ${idToUndo} 期间应用核心数据快照失败。正在中止画布更新。`
-      );
-      return;
-    }
-
-    const instance = workflowViewManagement.getVueFlowInstance(idToUndo);
-    if (instance) {
-      try {
-        const nodes = targetSnapshot.elements.filter(
-          (el: VueFlowNode | VueFlowEdge): el is VueFlowNode => !("source" in el)
-        );
-        const edges = targetSnapshot.elements.filter(
-          (el: VueFlowNode | VueFlowEdge): el is VueFlowEdge => "source" in el
-        );
-        const viewport = targetSnapshot.viewport;
-
-        instance.setNodes([]);
-        instance.setEdges([]);
-        await nextTick();
-        instance.setNodes(nodes);
-        instance.setEdges(edges);
-        instance.setViewport(viewport);
-
-        const stateAfterUndo = workflowManager.getActiveTabState();
-        if (stateAfterUndo) {
-          stateAfterUndo.elements = klona(targetSnapshot.elements);
-          stateAfterUndo.viewport = klona(targetSnapshot.viewport);
-        }
-      } catch (error) {
-        console.error(
-          `[WorkflowStore] 在撤销期间应用快照时出错（直接应用）标签页 ${idToUndo}：`,
-          error
-        );
-      }
-    } else {
-      console.warn(
-        `[WorkflowStore] 在撤销期间无法获取标签页 ${idToUndo} 的 VueFlow 实例。无法应用快照。`
-      );
-    }
-  }
-
-  async function redo(steps: number = 1, internalId?: string) {
-    const idToRedo = internalId ?? tabStore.activeTabId;
-    if (!idToRedo) {
-      console.warn("[WorkflowStore] 无法重做，没有活动的标签页或未提供 ID。");
-      return;
-    }
-    if (steps <= 0) {
-      console.warn(`[WorkflowStore] Cannot redo ${steps} steps.`);
-      return;
-    }
-
-    historyManager.ensureHistoryState(idToRedo);
-    let targetSnapshot: WorkflowStateSnapshot | null = null;
-    let actualSteps = 0;
-    for (let i = 0; i < steps; i++) {
-      if (!historyManager.canRedo(idToRedo).value) {
-        break;
-      }
-      targetSnapshot = historyManager.redo(idToRedo);
-      actualSteps++;
-      if (targetSnapshot === null) {
-        console.warn(
-          `[WorkflowStore] historyManager.redo 在 ${actualSteps} 步后意外返回 null，标签页 ${idToRedo}。`
-        );
-        break;
-      }
-    }
-
-    if (targetSnapshot) {
-      const appliedCore = workflowManager.applyStateSnapshot(idToRedo, targetSnapshot);
-      if (!appliedCore) {
-        console.error(
-          `[WorkflowStore] 在重做标签页 ${idToRedo} 期间应用核心数据快照失败。正在中止画布更新。`
-        );
-        return;
-      }
-
-      const instance = workflowViewManagement.getVueFlowInstance(idToRedo);
-      if (instance) {
-        try {
-          const nodes = targetSnapshot.elements.filter(
-            (el): el is VueFlowNode => !("source" in el)
-          );
-          const edges = targetSnapshot.elements.filter((el): el is VueFlowEdge => "source" in el);
-          const viewport = targetSnapshot.viewport;
-
-          instance.setNodes([]);
-          instance.setEdges([]);
-          await nextTick();
-          instance.setNodes(nodes);
-          instance.setEdges(edges);
-          instance.setViewport(viewport);
-
-          const stateAfterRedo = workflowManager.getActiveTabState();
-          if (stateAfterRedo) {
-            stateAfterRedo.elements = klona(targetSnapshot.elements);
-            stateAfterRedo.viewport = klona(targetSnapshot.viewport);
-          }
-        } catch (error) {
-          console.error(
-            `[WorkflowStore] 在重做期间应用快照时出错（直接应用）标签页 ${idToRedo}：`,
-            error
-          );
-        }
-      } else {
-        console.warn(
-          `[WorkflowStore] 在重做期间无法获取标签页 ${idToRedo} 的 VueFlow 实例。无法应用快照。`
-        );
-      }
-    } else if (actualSteps === 0) {
-      // No steps executed
-    } else {
-      console.warn(
-        `[WorkflowStore] 重做完成 ${actualSteps} 步，但结束时没有标签页 ${idToRedo} 的有效目标快照。`
-      );
-    }
-  }
-
+  // --- 遗留函数 (待迁移) ---
   function handleNodeButtonClick(internalId: string, nodeId: string, inputKey: string) {
     sendMessage({
       type: WebSocketMessageType.BUTTON_CLICK,
@@ -240,60 +115,6 @@ export const useWorkflowStore = defineStore("workflow", () => {
         internalId: internalId,
       },
     });
-  }
-
-  function getEdgeById(internalId: string, edgeId: string): VueFlowEdge | undefined {
-    const elements = workflowManager.getElements(internalId);
-    return elements.find(el => el.id === edgeId && "source" in el) as VueFlowEdge | undefined;
-  }
-
-  async function updateMultiInputConnectionsAndRecord(
-    internalId: string,
-    nodeId: string,
-    inputKey: string,
-    newOrderedEdgeIds: string[],
-    edgeTargetHandleChanges: Array<{ edgeId: string; oldTargetHandle?: string | null; newTargetHandle?: string | null }>,
-    entry: HistoryEntry
-  ): Promise<void> {
-    const currentSnapshot = workflowManager.getCurrentSnapshot(internalId);
-    if (!currentSnapshot) {
-      console.error(
-        `[WorkflowStore:updateMultiInputConnectionsAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
-      );
-      return;
-    }
-
-    const nextSnapshot = klona(currentSnapshot);
-    const nodeToUpdate = nextSnapshot.elements.find(
-      (el) => el.id === nodeId && !("source" in el)
-    ) as VueFlowNode | undefined;
-
-    if (!nodeToUpdate) {
-      console.error(
-        `[WorkflowStore:updateMultiInputConnectionsAndRecord] 在 nextSnapshot 中未找到节点 ${nodeId}。`
-      );
-      return;
-    }
-    nodeToUpdate.data = nodeToUpdate.data || {};
-    nodeToUpdate.data.inputConnectionOrders = nodeToUpdate.data.inputConnectionOrders || {};
-    nodeToUpdate.data.inputConnectionOrders[inputKey] = newOrderedEdgeIds;
-
-    for (const change of edgeTargetHandleChanges) {
-      const edgeToUpdate = nextSnapshot.elements.find(
-        (el) => el.id === change.edgeId && "source" in el
-      ) as VueFlowEdge | undefined;
-      if (edgeToUpdate) {
-        if (change.newTargetHandle !== undefined) {
-          edgeToUpdate.targetHandle = change.newTargetHandle;
-        }
-      } else {
-        console.warn(
-          `[WorkflowStore:updateMultiInputConnectionsAndRecord] 在 nextSnapshot 中未找到要更新 targetHandle 的边 ${change.edgeId}。`
-        );
-      }
-    }
-    await workflowManager.setElements(internalId, nextSnapshot.elements);
-    historyManager.recordSnapshot(internalId, entry, nextSnapshot);
   }
 
   async function applyElementChangesAndRecordHistory(
@@ -341,96 +162,21 @@ export const useWorkflowStore = defineStore("workflow", () => {
     }
   }
 
-  function formatDateTime(date: Date): string {
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const day = date.getDate().toString().padStart(2, "0");
-    const hours = date.getHours().toString().padStart(2, "0");
-    const minutes = date.getMinutes().toString().padStart(2, "0");
-    const seconds = date.getSeconds().toString().padStart(2, "0");
-    return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
-  }
-
-  async function promptAndSaveWorkflow(isSaveAs: boolean = false): Promise<boolean> {
-    const activeId = tabStore.activeTabId;
-    if (!activeId) {
-      console.error("[WorkflowStore] 无法提示保存：没有活动的标签页。");
-      dialogService.showError("无法保存：请先打开一个标签页。");
-      return false;
-    }
-
-    const currentData = workflowManager.getWorkflowData(activeId);
-    const currentName = currentData?.name;
-    let defaultName: string;
-
-    if (isSaveAs) {
-      defaultName = `${currentName || "工作流"} 副本`;
-    } else {
-      const timestamp = formatDateTime(new Date());
-      defaultName = `新工作流 ${timestamp}`;
-    }
-
-    const title = isSaveAs ? "另存为工作流" : "保存工作流";
-    const message = isSaveAs ? "请输入新的工作流名称:" : "请输入工作流名称:";
-
-    const newName = await dialogService.showInput({
-      title: title,
-      message: message,
-      initialValue: defaultName,
-      inputPlaceholder: "工作流名称",
-      confirmText: "确定",
-      cancelText: "取消",
-    });
-
-    if (newName !== null && newName.trim()) { // dialogService.showInput 在取消时返回 null
-      const finalName = newName.trim();
-      try {
-        const success = await workflowLifecycleCoordinator.saveWorkflow(finalName);
-        if (!success) {
-          console.warn(`[WorkflowStore promptAndSaveWorkflow] 保存工作流 "${finalName}" 失败 (saveWorkflow 返回 false)。`);
-        } else {
-          console.info(`[WorkflowStore promptAndSaveWorkflow] 保存工作流 "${finalName}" 成功。`);
-        }
-        return success;
-      } catch (error) {
-        console.error(`[WorkflowStore promptAndSaveWorkflow] 调用 saveWorkflow 时捕获到错误:`, error);
-        return false;
-      }
-    } else {
-      console.log(`[WorkflowStore promptAndSaveWorkflow] 用户取消保存或名称为空 (prompt 返回: ${newName})。`);
-      return false;
-    }
-  }
-
   function getTabState(internalId: string): TabWorkflowState | undefined {
     return workflowManager.getAllTabStates.value.get(internalId);
   }
 
-  /**
-   * 更新指定标签页的工作流数据和脏状态。
-   * @param internalId 标签页的内部 ID
-   * @param newData 新的工作流数据
-   * @param isDirty 新的脏状态
-   */
   function updateWorkflowData(internalId: string, newData: WorkflowData, isDirty: boolean) {
     const state = workflowManager.getAllTabStates.value.get(internalId);
     if (state) {
       state.workflowData = newData;
       state.isDirty = isDirty;
-      // 可以在这里添加一些调试日志
       console.debug(`[WorkflowStore] Updated workflow data for tab ${internalId}.`);
     } else {
       console.warn(`[WorkflowStore] Could not find state for tab ${internalId} to update workflow data.`);
     }
   }
 
-  /**
-   * 将 NodeGroup 实例特定输入槽的值重置为模板默认值，并记录历史。
-   * 此操作会将该输入槽的当前值更改为模板中定义的默认值。
-   * @param internalId 当前标签页的内部 ID。
-   * @param nodeId NodeGroup 实例的 ID。
-   * @param slotKey 输入槽的 key。
-   */
   async function resetNodeGroupInputToDefaultAndRecord(internalId: string, nodeId: string, slotKey: string) {
     const currentSnapshot = workflowManager.getCurrentSnapshot(internalId);
     if (!currentSnapshot) {
@@ -458,12 +204,11 @@ export const useWorkflowStore = defineStore("workflow", () => {
 
     const templateDefaultValue = getEffectiveDefaultValue(slotDefInInterface);
 
-    // 直接修改快照中的值
     if (!nodeToUpdate.data.inputs) {
       nodeToUpdate.data.inputs = {};
     }
 
-    const oldValue = nodeToUpdate.data.inputs[slotKey]?.value; // 获取旧值前确保 inputs[slotKey] 存在
+    const oldValue = nodeToUpdate.data.inputs[slotKey]?.value;
 
     if (!nodeToUpdate.data.inputs[slotKey]) {
       nodeToUpdate.data.inputs[slotKey] = { ...slotDefInInterface, value: klona(templateDefaultValue) };
@@ -542,7 +287,6 @@ export const useWorkflowStore = defineStore("workflow", () => {
       const originalNodeInSnapshot = snapshotBeforeSync.elements.find(el => el.id === nodeGroupInstanceId && el.type === "core:NodeGroup") as VueFlowNode | undefined;
       if (originalNodeInSnapshot?.data?.inputs) {
         for (const [key, inputObj] of Object.entries(originalNodeInSnapshot.data.inputs)) {
-          // Ensure inputObj is an object and has a 'value' property
           if (typeof inputObj === 'object' && inputObj !== null && 'value' in inputObj) {
             oldInputValuesFromSnapshot[key] = klona((inputObj as { value: any }).value);
           }
@@ -593,7 +337,7 @@ export const useWorkflowStore = defineStore("workflow", () => {
       if (newGroupInterface.inputs) {
         for (const inputKey in newGroupInterface.inputs) {
           const slotDef = newGroupInterface.inputs[inputKey];
-          if (slotDef) { // Ensure slotDef is not undefined
+          if (slotDef) {
             finalInputsForNodeData[inputKey] = {
               ...(slotDef),
               value: newInputValues[inputKey] !== undefined ? newInputValues[inputKey] : getEffectiveDefaultValue(slotDef)
@@ -641,10 +385,13 @@ export const useWorkflowStore = defineStore("workflow", () => {
     }
   }
 
+  // --- 最终导出的 Store ---
   return {
+    // State
     availableWorkflows,
-    fetchWorkflow,
     changedTemplateWorkflowIds: computed(() => changedTemplateWorkflowIds.value),
+    
+    // Getters
     getActiveTabState: workflowManager.getActiveTabState,
     getWorkflowData: workflowManager.getWorkflowData,
     isWorkflowDirty: workflowManager.isWorkflowDirty,
@@ -653,6 +400,18 @@ export const useWorkflowStore = defineStore("workflow", () => {
     isTabLoaded: workflowManager.isTabLoaded,
     getAllTabStates: workflowManager.getAllTabStates,
     getTabState,
+    canUndo: (id: string) => historyManager.canUndo(id),
+    canRedo: (id: string) => historyManager.canRedo(id),
+    hasUnsavedChanges: (id: string) => historyManager.hasUnsavedChanges(id),
+    activeHistoryIndex,
+
+    // Actions from Modules
+    ...historyActions,
+    ...lifecycleActions,
+    ...nodeActions,
+    ...edgeActions,
+
+    // Legacy Actions (to be migrated)
     setElements: workflowManager.setElements,
     markAsDirty: workflowManager.markAsDirty,
     removeWorkflowData: workflowManager.removeWorkflowData,
@@ -660,12 +419,6 @@ export const useWorkflowStore = defineStore("workflow", () => {
     ensureTabState: workflowManager.ensureTabState,
     saveWorkflowAsNew: workflowData.saveWorkflowAsNew,
     extractGroupInterface: workflowData.extractGroupInterface,
-    undo,
-    redo,
-    canUndo: (id: string) => historyManager.canUndo(id),
-    canRedo: (id: string) => historyManager.canRedo(id),
-    hasUnsavedChanges: (id: string) => historyManager.hasUnsavedChanges(id),
-    activeHistoryIndex,
     setVueFlowInstance: workflowViewManagement.setVueFlowInstance,
     getVueFlowInstance: workflowViewManagement.getVueFlowInstance,
     setViewport: workflowViewManagement.setViewport,
@@ -715,42 +468,19 @@ export const useWorkflowStore = defineStore("workflow", () => {
       return success;
     },
     createNewWorkflow: workflowLifecycleCoordinator.createNewWorkflowAndRecord,
-    handleConnectionWithInterfaceUpdate:
-      workflowInteractionCoordinator.handleConnectionWithInterfaceUpdate,
     handleNodeButtonClick,
     recordHistorySnapshot,
-    promptAndSaveWorkflow,
-    getEdgeById,
-    updateMultiInputConnectionsAndRecord,
     applyElementChangesAndRecordHistory,
     updateNodePositionAndRecord: workflowInteractionCoordinator.updateNodePositionAndRecord,
-    addNodeAndRecord: workflowInteractionCoordinator.addNodeAndRecord,
-    addFrameNodeAndRecord: workflowInteractionCoordinator.addFrameNodeAndRecord, // 添加分组框
-    addEdgeAndRecord: workflowInteractionCoordinator.addEdgeAndRecord,
-    removeElementsAndRecord: workflowInteractionCoordinator.removeElementsAndRecord,
-    updateNodeInputValueAndRecord: workflowInteractionCoordinator.updateNodeInputValueAndRecord,
-    updateNodeConfigValueAndRecord: workflowInteractionCoordinator.updateNodeConfigValueAndRecord,
-    changeNodeModeAndRecord: workflowInteractionCoordinator.changeNodeModeAndRecord,
-    updateNodeLabelAndRecord: workflowInteractionCoordinator.updateNodeLabelAndRecord, // 新增
-    updateNodeDimensionsAndRecord: workflowInteractionCoordinator.updateNodeDimensionsAndRecord, // 新增，修复 FrameNode 尺寸调整
-    updateNodeParentAndRecord: workflowInteractionCoordinator.updateNodeParentAndRecord, // 新增
-    removeEdgesByHandleAndRecord: workflowInteractionCoordinator.removeEdgesByHandleAndRecord,
     updateWorkflowNameAndRecord: workflowInteractionCoordinator.updateWorkflowNameAndRecord,
     updateWorkflowDescriptionAndRecord:
       workflowInteractionCoordinator.updateWorkflowDescriptionAndRecord,
-    updateNodeInputConnectionOrderAndRecord:
-      workflowInteractionCoordinator.updateNodeInputConnectionOrderAndRecord,
-    disconnectEdgeFromInputAndRecord:
-      workflowInteractionCoordinator.disconnectEdgeFromInputAndRecord,
-    connectEdgeToInputAndRecord:
-      workflowInteractionCoordinator.connectEdgeToInputAndRecord,
-    moveAndReconnectEdgeAndRecord:
-      workflowInteractionCoordinator.moveAndReconnectEdgeAndRecord,
     markTemplateAsChanged: (templateId: string) => {
       changedTemplateWorkflowIds.value.add(templateId);
     },
     resetNodeGroupInputToDefaultAndRecord,
     synchronizeGroupNodeInterfaceAndValues,
     updateWorkflowData,
+    fetchWorkflow,
   };
 });

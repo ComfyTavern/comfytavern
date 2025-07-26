@@ -7,6 +7,7 @@ import { useVueFlow, Handle, Position, type NodeProps } from "@vue-flow/core";
 
 // Pinia 和状态存储
 import { storeToRefs } from "pinia";
+import { useWorkflowStore } from "@/stores/workflowStore"; // ++ 导入 workflowStore
 // import { useThemeStore } from "../../../stores/theme"; // 不再需要
 import { useTabStore } from "../../../stores/tabStore";
 import { useExecutionStore } from "../../../stores/executionStore";
@@ -75,6 +76,7 @@ const { activeTabId } = storeToRefs(tabStore);
 const projectStore = useProjectStore();
 const { currentProjectId } = storeToRefs(projectStore); // 只解构 currentProjectId
 // const performanceStatsStore = usePerformanceStatsStore(); // 已移除：不再在此处统计组件
+const workflowStore = useWorkflowStore(); // ++ 获取 workflowStore 实例
 
 // VueFlow 和工作流管理器
 const vueFlowInstance = useVueFlow(); // 确保 vueFlowInstance 在此作用域
@@ -463,7 +465,7 @@ const handleComponentBlur = (inputKey: string, currentValue: string) => {
     summary,
     { inputKey: inputKey, value: truncatedValue }
   );
-  interactionCoordinator.updateNodeInputValueAndRecord(
+  workflowStore.updateNodeInputValueAndRecord(
     activeTabId.value,
     props.id,
     inputKey,
@@ -732,7 +734,7 @@ const handleActionTriggered = (payload: {
             // 存储整个规则数组的副本以用于撤销/重做
             { inputKey: payload.inputKey, value: JSON.parse(JSON.stringify(updatedRules)) }
           );
-          interactionCoordinator.updateNodeInputValueAndRecord(
+          workflowStore.updateNodeInputValueAndRecord(
             activeTabId.value,
             props.id,
             payload.inputKey,
