@@ -109,7 +109,7 @@ const formatDetailValue = (
   const nestedIndent = "  ".repeat(currentDepth + 1 + (isInsideArray ? 1 : 0));
 
   if (currentDepth > MAX_RECURSION_DEPTH) {
-    return `${indent}${t('historyPanel.formatDetail.depthLimitExceeded')}`;
+    return `${indent}【${t('historyPanel.formatDetail.depthLimitExceeded')}】`;
   }
 
   if (value === null) return `${indent}null`;
@@ -117,9 +117,11 @@ const formatDetailValue = (
   if (typeof value === "boolean") return `${indent}${String(value)}`;
   if (typeof value === "number") return `${indent}${String(value)}`;
   if (typeof value === "string") {
-    return value.length > STRING_MAX_LEN
-      ? `${indent}"${value.substring(0, STRING_MAX_LEN)}..."`
-      : `${indent}"${value}"`;
+    // 对可能引起问题的字符进行转义，尽管在此处直接显示字符串，但这是个好习惯
+    const escapedValue = value.replace(/\{/g, '&#123;').replace(/\}/g, '&#125;');
+    return escapedValue.length > STRING_MAX_LEN
+      ? `${indent}"${escapedValue.substring(0, STRING_MAX_LEN)}..."`
+      : `${indent}"${escapedValue}"`;
   }
 
   // 特定对象类型的优先处理
@@ -133,8 +135,8 @@ const formatDetailValue = (
     ) {
       const nodeIdStr = String(value.nodeId);
       const displayNodeId = nodeIdStr.length > ID_MAX_LEN ? nodeIdStr.substring(0, ID_MAX_LEN) + "..." : nodeIdStr;
-      let nodeStr = `${indent}${t('historyPanel.formatDetail.nodeInfo', { nodeName: value.nodeName, nodeType: value.nodeType, displayNodeId })}`;
-      return nodeStr;
+      // 直接构建字符串，不使用 i18n
+      return `${indent}Node: ${value.nodeName} (Type: ${value.nodeType}, ID: ${displayNodeId})`;
     }
     // 边对象
     if (
@@ -150,27 +152,29 @@ const formatDetailValue = (
       const targetNodeIdStr = String(value.targetNodeId);
       const displayTargetNodeId = targetNodeIdStr.length > ID_MAX_LEN ? targetNodeIdStr.substring(0, ID_MAX_LEN) + "..." : targetNodeIdStr;
 
-      return `${indent}${t('historyPanel.formatDetail.edgeInfo', { displayEdgeId, displaySourceNodeId, sourceHandle: value.sourceHandle || "", displayTargetNodeId, targetHandle: value.targetHandle || "" })}`;
+      // 直接构建字符串
+      return `${indent}Edge: ${displayEdgeId} (From: ${displaySourceNodeId}[${value.sourceHandle || ''}] To: ${displayTargetNodeId}[${value.targetHandle || ''}])`;
     }
   }
 
   if (Array.isArray(value)) {
-    if (value.length === 0) return `${indent}${t('historyPanel.formatDetail.emptyArray')}`;
-    let arrStr = `${indent}${t('historyPanel.formatDetail.arrayLength', { length: value.length })}`;
+    if (value.length === 0) return `${indent}[]`;
+    let arrStr = `${indent}[ (length: ${value.length}) `;
     const itemsToShow = currentDepth === 0 ? value : value.slice(0, ARRAY_MAX_ITEMS_SHALLOW); // 顶层数组完整显示，嵌套数组部分显示
     for (let i = 0; i < itemsToShow.length; i++) {
       arrStr += `\n${nestedIndent}- ${formatDetailValue(itemsToShow[i], currentDepth + 1, true).trimStart()}`;
     }
     if (currentDepth > 0 && value.length > ARRAY_MAX_ITEMS_SHALLOW) {
-      arrStr += `\n${nestedIndent}- ${t('historyPanel.formatDetail.arrayMoreItems', { count: value.length - ARRAY_MAX_ITEMS_SHALLOW })}`;
+      arrStr += `\n${nestedIndent}- ... (${value.length - ARRAY_MAX_ITEMS_SHALLOW} more items)`;
     }
+    arrStr += `\n${indent}]`;
     return arrStr;
   }
 
   if (typeof value === "object" && value !== null) {
     const objValue = value as Record<string, any>;
     const keys = Object.keys(objValue);
-    if (keys.length === 0) return `${indent}${t('historyPanel.formatDetail.emptyObject')}`;
+    if (keys.length === 0) return `${indent}{}`;
     let objStr = `${indent}{`;
     const propsToShow = currentDepth === 0 ? keys : keys.slice(0, OBJECT_MAX_PROPS_SHALLOW);
     for (let i = 0; i < propsToShow.length; i++) {
@@ -183,7 +187,7 @@ const formatDetailValue = (
       ).trimStart()}`;
     }
     if (currentDepth > 0 && keys.length > OBJECT_MAX_PROPS_SHALLOW) {
-      objStr += `\n${nestedIndent}${t('historyPanel.formatDetail.objectMoreProperties', { count: keys.length - OBJECT_MAX_PROPS_SHALLOW })}`;
+      objStr += `\n${nestedIndent}... (${keys.length - OBJECT_MAX_PROPS_SHALLOW} more properties)`;
     }
     objStr += `\n${indent}}`;
     return objStr;
@@ -195,7 +199,7 @@ const formatDetailValue = (
       ? `${indent}${str.substring(0, STRING_MAX_LEN)}...`
       : `${indent}${str}`;
   } catch (e) {
-    return `${indent}${t('historyPanel.formatDetail.serializationFailed')}`;
+    return `${indent}[${t('historyPanel.formatDetail.serializationFailed')}]`;
   }
 };
 
