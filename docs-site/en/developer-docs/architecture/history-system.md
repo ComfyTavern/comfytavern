@@ -168,7 +168,7 @@ Gets the current state snapshot of the specified tab.
 #### applyStateSnapshot(internalId: string, snapshot: WorkflowStateSnapshot): boolean
 Applies a state snapshot to the specified tab, mainly used for history recovery.
 
-#### setElements(internalId: string, elements: Array<VueFlowNode | VueFlowEdge>)
+#### setElements(internalId: string, elements: `Array<VueFlowNode | VueFlowEdge>`)
 Updates canvas elements and marks them as "dirty" state.
 
 ### 5.3 WorkflowHistory API
