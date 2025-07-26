@@ -294,10 +294,9 @@ const removeModel = (modelId: string) => {
 // 当提供商变化时，更新适配器类型和默认URL
 watch(
   () => formData.value.providerId,
-  (newProviderId) => {
+  (newProviderId, oldProviderId) => {
     formData.value.adapterType = newProviderId;
 
-    // 根据提供商设置默认URL
     const defaultUrls: Record<string, string> = {
       openai: "https://api.openai.com/v1",
       anthropic: "https://api.anthropic.com",
@@ -306,7 +305,14 @@ watch(
       ollama: "http://localhost:11434",
     };
 
-    if (newProviderId && defaultUrls[newProviderId]) {
+    const currentBaseUrl = formData.value.baseUrl.trim();
+    const previousDefaultUrl = oldProviderId ? defaultUrls[oldProviderId] : "";
+
+    // 只有当 baseUrl 为空，或者其值为上一个提供商的默认值时，才进行更新
+    // 这样可以避免覆盖用户手动输入的自定义 URL
+    const shouldUpdateUrl = !currentBaseUrl || currentBaseUrl === previousDefaultUrl;
+
+    if (newProviderId && defaultUrls[newProviderId] && shouldUpdateUrl) {
       formData.value.baseUrl = defaultUrls[newProviderId];
     }
   }
