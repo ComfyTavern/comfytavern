@@ -102,8 +102,8 @@ export class OpenAIAdapter implements ILlmApiAdapter {
       let accumulatedText = '';
       
       for await (const part of stream) {
-        const chunk = this.transformOpenAIStreamChunk(part);
-        if (chunk) {
+        const chunks = this.transformOpenAIStreamChunk(part);
+        for (const chunk of chunks) {
           // 如果是文本块，累积文本内容
           if (chunk.type === 'text_chunk' && typeof chunk.content === 'string') {
             accumulatedText += chunk.content;
@@ -139,43 +139,45 @@ export class OpenAIAdapter implements ILlmApiAdapter {
   /**
    * 将 OpenAI 流式响应块转换为标准化的 ChunkPayload 格式。
    * @param chunk - OpenAI 流式响应的单个块。
-   * @returns 转换后的 ChunkPayload，如果块无效则返回 null。
+   * @returns 转换后的 ChunkPayload 数组，因为一个块可能包含多种信息。
    */
-  private transformOpenAIStreamChunk(chunk: any): ChunkPayload | null {
+  private transformOpenAIStreamChunk(chunk: any): ChunkPayload[] {
+    const payloads: ChunkPayload[] = [];
+
+    // 即使没有 choices，也可能有用量信息
+    if (chunk.usage) {
+      payloads.push({
+        type: 'usage_chunk',
+        content: chunk.usage,
+      });
+    }
+
     if (!chunk.choices || chunk.choices.length === 0) {
-      return null;
+      return payloads;
     }
 
     const choice = chunk.choices[0];
     const delta = choice.delta;
 
     // 处理文本增量
-    if (delta.content) {
-      return {
+    if (delta && delta.content) {
+      payloads.push({
         type: 'text_chunk',
         content: delta.content,
-      };
+      });
     }
 
     // 处理完成原因
     if (choice.finish_reason) {
-      return {
+      payloads.push({
         type: 'finish_reason_chunk',
         content: {
           finish_reason: choice.finish_reason,
         },
-      };
+      });
     }
 
-    // 处理用量信息（如果有）
-    if (chunk.usage) {
-      return {
-        type: 'usage_chunk',
-        content: chunk.usage,
-      };
-    }
-
-    return null;
+    return payloads;
   }
 
   /**
