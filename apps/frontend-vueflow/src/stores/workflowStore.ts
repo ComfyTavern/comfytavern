@@ -471,7 +471,6 @@ export const useWorkflowStore = defineStore("workflow", () => {
     handleNodeButtonClick,
     recordHistorySnapshot,
     applyElementChangesAndRecordHistory,
-    updateNodePositionAndRecord: workflowInteractionCoordinator.updateNodePositionAndRecord,
     updateWorkflowNameAndRecord: workflowInteractionCoordinator.updateWorkflowNameAndRecord,
     updateWorkflowDescriptionAndRecord:
       workflowInteractionCoordinator.updateWorkflowDescriptionAndRecord,

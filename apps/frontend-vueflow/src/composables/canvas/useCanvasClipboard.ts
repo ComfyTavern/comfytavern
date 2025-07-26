@@ -7,7 +7,7 @@ import { serializeWorkflowFragment, deserializeWorkflowFragment } from '@/utils/
 import { useDialogService } from '@/services/DialogService';
 import type { HistoryEntry } from "@comfytavern/types";
 import { nextTick } from "vue";
-import { useWorkflowInteractionCoordinator } from "../workflow/useWorkflowInteractionCoordinator";
+import { useWorkflowStore } from "@/stores/workflowStore";
 
 
 /**
@@ -23,7 +23,7 @@ export function useCanvasClipboard() {
   } = useVueFlow();
 
   const tabStore = useTabStore();
-  const coordinator = useWorkflowInteractionCoordinator(); // 获取协调器实例
+  const workflowStore = useWorkflowStore();
   const { writeText, readText, error: clipboardError, isSupported: clipboardIsSupported } = useClipboard();
   const dialogService = useDialogService();
 
@@ -128,7 +128,7 @@ export function useCanvasClipboard() {
     };
 
     // 5. 使用协调器添加元素并记录历史
-    await coordinator.addElementsAndRecord(activeTabId, newNodes, newEdges, historyEntry);
+    await workflowStore.addElementsAndRecord(activeTabId, newNodes, newEdges, historyEntry);
 
     // 6. 选中新添加的元素
     await nextTick();

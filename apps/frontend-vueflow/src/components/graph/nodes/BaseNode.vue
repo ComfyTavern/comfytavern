@@ -491,7 +491,7 @@ const handleComponentResizeEnd = (inputKey: string, payload: { newHeight: number
     summary,
     { inputKey: inputKey, state: stateUpdate }
   );
-  interactionCoordinator.updateNodeComponentStateAndRecord(
+  workflowStore.updateNodeComponentStateAndRecord(
     activeTabId.value,
     props.id,
     inputKey,

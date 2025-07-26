@@ -378,7 +378,7 @@ export function createNodeActions(context: WorkflowStoreContext) {
     newModeId: string,
     entry: HistoryEntry
   ) {
-    const currentSnapshot = workflowManager.getCurrentSnapshot(internalId);
+    const currentSnapshot = context.workflowManager.getCurrentSnapshot(internalId);
     if (!currentSnapshot) {
       console.error(`[NodeActions:changeNodeModeAndRecord] 无法获取标签页 ${internalId} 的快照。`);
       return;
@@ -395,6 +395,7 @@ export function createNodeActions(context: WorkflowStoreContext) {
     const targetNode = nextSnapshot.elements[nodeIndex] as VueFlowNode;
     const nodeDef = targetNode.data as any;
 
+    // 1. 更新配置值
     targetNode.data = {
       ...targetNode.data,
       configValues: {
@@ -403,6 +404,7 @@ export function createNodeActions(context: WorkflowStoreContext) {
       },
     };
 
+    // 2. 确定因模式切换而移除的插槽
     const oldModeId = entry.details?.oldValue as string | undefined;
     const oldModeDef = oldModeId ? nodeDef.modes?.[oldModeId] : undefined;
     const newModeDef = nodeDef.modes?.[newModeId];
@@ -420,24 +422,19 @@ export function createNodeActions(context: WorkflowStoreContext) {
     const removedInputKeys = new Set([...oldInputKeys].filter((k) => !newInputKeys.has(k)));
     const removedOutputKeys = new Set([...oldOutputKeys].filter((k) => !newOutputKeys.has(k)));
 
+    // 3. 从快照中过滤掉连接到已移除插槽的边
     if (removedInputKeys.size > 0 || removedOutputKeys.size > 0) {
       const edgesToRemove: VueFlowEdge[] = [];
       nextSnapshot.elements = nextSnapshot.elements.filter((el) => {
-        if (!("source" in el)) return true;
+        if (!("source" in el)) return true; // 保留节点
         const edge = el as VueFlowEdge;
         let shouldRemove = false;
 
-        if (edge.source === nodeId && typeof edge.sourceHandle === 'string') {
-          const sourceKey = edge.sourceHandle.split('__')[0];
-          if (sourceKey && removedOutputKeys.has(sourceKey)) {
-            shouldRemove = true;
-          }
+        if (edge.source === nodeId && edge.sourceHandle && removedOutputKeys.has(parseSubHandleId(edge.sourceHandle).originalKey)) {
+          shouldRemove = true;
         }
-        if (edge.target === nodeId && typeof edge.targetHandle === 'string') {
-          const targetKey = edge.targetHandle.split('__')[0];
-          if (targetKey && removedInputKeys.has(targetKey)) {
-            shouldRemove = true;
-          }
+        if (edge.target === nodeId && edge.targetHandle && removedInputKeys.has(parseSubHandleId(edge.targetHandle).originalKey)) {
+          shouldRemove = true;
         }
 
         if (shouldRemove) {
@@ -454,13 +451,85 @@ export function createNodeActions(context: WorkflowStoreContext) {
       }
     }
     
-    await workflowManager.setElements(internalId, nextSnapshot.elements);
+    // 4. 应用状态更新
+    await context.workflowManager.setElements(internalId, nextSnapshot.elements);
 
-    // TODO: updateNodeInternals
+    // 5. 更新节点视图
+    await updateNodeInternals(internalId, [nodeId]);
 
-    recordHistory(internalId, entry, nextSnapshot);
+    // 6. 记录历史
+    context.recordHistory(internalId, entry, nextSnapshot);
 
-    // TODO: 触发预览
+    // 7. 触发预览
+    if (context.workflowPreview.isPreviewEnabled.value) {
+      context.workflowPreview.triggerPreview(nodeId, { type: "config", key: configKey, value: newModeId });
+    }
+  }
+
+  async function updateNodeComponentStateAndRecord(
+    internalId: string,
+    nodeId: string,
+    inputKey: string,
+    stateUpdate: { height?: number; value?: string },
+    entry: HistoryEntry
+  ) {
+    if (!nodeId || !inputKey || !stateUpdate) {
+      console.warn("[NodeActions:updateNodeComponentStateAndRecord] 无效参数。");
+      return;
+    }
+
+    const currentSnapshot = context.workflowManager.getCurrentSnapshot(internalId);
+    if (!currentSnapshot) {
+      console.error(
+        `[NodeActions:updateNodeComponentStateAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
+      );
+      return;
+    }
+
+    const nextSnapshot = klona(currentSnapshot);
+    const nodeIndex = nextSnapshot.elements.findIndex(
+      (el) => el.id === nodeId && !("source" in el)
+    );
+    if (nodeIndex === -1) {
+      console.error(
+        `[NodeActions:updateNodeComponentStateAndRecord] 在标签页 ${internalId} 中未找到节点 ${nodeId}。`
+      );
+      return;
+    }
+    const targetNode = nextSnapshot.elements[nodeIndex] as VueFlowNode;
+
+    targetNode.data = targetNode.data || {};
+    targetNode.data.componentStates = targetNode.data.componentStates || {};
+    targetNode.data.componentStates[inputKey] = targetNode.data.componentStates[inputKey] || {};
+    if (stateUpdate.height !== undefined)
+      targetNode.data.componentStates[inputKey].height = stateUpdate.height;
+    if (stateUpdate.value !== undefined)
+      targetNode.data.componentStates[inputKey].value = stateUpdate.value;
+
+    const originalNode = currentSnapshot.elements.find(
+      (el) => el.id === nodeId && !("source" in el)
+    ) as VueFlowNode | undefined;
+    if (!originalNode) {
+      console.error(
+        `[NodeActions:updateNodeComponentStateAndRecord] Original node ${nodeId} not found in current snapshot for comparison.`
+      );
+      return;
+    }
+    const originalComponentState = originalNode.data?.componentStates?.[inputKey] || {};
+    const hasChanged =
+      (stateUpdate.height !== undefined && originalComponentState.height !== stateUpdate.height) ||
+      (stateUpdate.value !== undefined && originalComponentState.value !== stateUpdate.value);
+
+    if (!hasChanged) {
+      console.debug(
+        "[NodeActions:updateNodeComponentStateAndRecord] 组件状态未改变。跳过历史记录。"
+      );
+      return;
+    }
+
+    await context.workflowManager.setElements(internalId, nextSnapshot.elements);
+
+    context.recordHistory(internalId, entry, nextSnapshot);
   }
 
   async function addElementsAndRecord(
@@ -496,6 +565,65 @@ export function createNodeActions(context: WorkflowStoreContext) {
 
   async function addFrameNodeAndRecord(internalId: string, frameNode: VueFlowNode, entry: HistoryEntry) {
     await addElementsAndRecord(internalId, [frameNode], [], entry);
+  }
+
+  async function updateNodePositionAndRecord(
+    internalId: string,
+    updates: { nodeId: string; position: { x: number; y: number } }[],
+    entry?: HistoryEntry
+  ) {
+    if (!updates || updates.length === 0) {
+      console.warn("[NodeActions:updateNodePositionAndRecord] 提供了无效参数。");
+      return;
+    }
+    const currentSnapshot = workflowManager.getCurrentSnapshot(internalId);
+    if (!currentSnapshot) {
+      console.error(
+        `[NodeActions:updateNodePositionAndRecord] 无法获取标签页 ${internalId} 的当前快照。`
+      );
+      return;
+    }
+
+    // 准备下一个状态快照
+    const nextSnapshot = klona(currentSnapshot);
+    // 创建一个节点 ID 到节点对象的映射，方便查找
+    const nodeMap = new Map(
+      nextSnapshot.elements
+        .filter((el) => !("source" in el))
+        .map((node) => [node.id, node as VueFlowNode])
+    );
+
+    // 修改 nextSnapshot 中的节点位置
+    let updated = false;
+    for (const update of updates) {
+      const node = nodeMap.get(update.nodeId);
+      if (node) {
+        node.position = update.position;
+        updated = true;
+      } else {
+        console.warn(
+          `[NodeActions:updateNodePositionAndRecord] 更新时在快照中未找到节点 ${update.nodeId}。`
+        );
+      }
+    }
+
+    // 如果没有任何节点被实际更新，则跳过
+    if (!updated) {
+      console.warn(
+        "[NodeActions:updateNodePositionAndRecord] 没有节点被更新。跳过历史记录。"
+      );
+      return;
+    }
+
+    // 应用状态更新
+    // 注意：workflowManager.updateNodePositions 内部调用 setElements
+    await workflowManager.updateNodePositions(internalId, updates);
+
+    // 记录历史
+    // 传递 nextSnapshot 确保记录的是我们预期的、包含所有位置更新的状态
+    if (entry) {
+      recordHistory(internalId, entry, nextSnapshot);
+    }
   }
 
   async function removeElementsAndRecord(
@@ -639,12 +767,15 @@ export function createNodeActions(context: WorkflowStoreContext) {
   }
 
   return {
+    updateNodePositionAndRecord,
     updateNodeLabelAndRecord,
     updateNodeDimensionsAndRecord,
     updateNodeParentAndRecord,
     updateNodeInputValueAndRecord,
     updateNodeConfigValueAndRecord,
     changeNodeModeAndRecord,
+    updateNodeComponentStateAndRecord,
+    addElementsAndRecord,
     addNodeAndRecord,
     addFrameNodeAndRecord,
     removeElementsAndRecord,
