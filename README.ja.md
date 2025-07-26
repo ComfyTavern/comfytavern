@@ -4,6 +4,7 @@
 [![Status](https://img.shields.io/badge/status-Beta-orange)](https://github.com/ComfyTavern/comfytavern)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](./LICENSE)
 [![Stars](https://img.shields.io/github/stars/ComfyTavern/comfytavern?style=social)](https://github.com/ComfyTavern/comfytavern)
+[![Documentation](https://img.shields.io/badge/docs-online-brightgreen)](https://comfytavern.github.io/comfytavern)
 
 <p align="center">
   <img alt="ComfyTavern Banner" src="docs/images/ComfyTavern(Beta)_Banner.png">
@@ -31,7 +32,9 @@ ComfyTavernは、クリエイターとエンドユーザー向けのAI創作・�
 
 **➡️ 現在のコア：PC版VueFlowノードエディタ + プラグイン拡張 + 統一ファイル資産管理。**
 
-## [👉 クイックスタート](#-インストールと起動)
+### [👉 クイックスタート](#-インストールと起動)
+
+### [📄 ドキュメント](https://comfytavern.github.io/comfytavern/)
 
 ---
 
@@ -78,16 +81,6 @@ ComfyTavernのデザインは、**プロフェッショナルなオーケスト�
     -   **アプリケーションパネルはエージェントとユーザーのインタラクションの「顔」**: これらは固定されたUIではなく、エージェントと非同期通信し、その状態にリアルタイムで応答する動的なフロントエンドであり、真に活気のあるインタラクティブな体験を構築します。
 
 このアーキテクチャにより、クリエイターは従来のプリセットをはるかに超える、動的な振る舞いと学習の可能性を備えたAIアプリケーションを構築できます。
-
----
-
-### 📄 ドキュメント
-
--   **[プロジェクト概要](DesignDocs/整理/ProjectOverview.md)**：プロジェクトアーキテクチャ、技術選定、コアモジュールの詳細な理解。
--   **[カスタムノード開発ガイド](docs/guides/custom-node-development.zh.md)**：ComfyTavernの機能を拡張する手順。
--   **[プラグインとツールアーキテクチャ](DesignDocs/architecture/unified-plugin-and-tool-architecture.md)**：プラグインシステムの仕組みを理解する。
--   **[ファイル資産管理ガイド](docs/guides/file-asset-management-guide.md)**：ファイルシステムの設計と使用方法を理解する。
--   **[アプリケーションパネルSDK開発ガイド](docs/guides/panel-sdk-guide.md)**：インタラクティブなアプリケーションパネルの作成方法を学ぶ。
 
 ---
 

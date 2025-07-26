@@ -4,6 +4,7 @@
 [![Status](https://img.shields.io/badge/status-Beta-orange)](https://github.com/ComfyTavern/comfytavern)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](./LICENSE)
 [![Stars](https://img.shields.io/github/stars/ComfyTavern/comfytavern?style=social)](https://github.com/ComfyTavern/comfytavern)
+[![Documentation](https://img.shields.io/badge/docs-online-brightgreen)](https://comfytavern.github.io/comfytavern)
 
 <p align="center">
   <img alt="ComfyTavern Banner" src="docs/images/ComfyTavern(Beta)_Banner.png">
@@ -31,7 +32,9 @@
 
 **➡️ 当下核心：PC 端 VueFlow 天工坊 + 插件化扩展 + 统一文件资产管理。**
 
-## [👉 初探门径](#-置备与发轫)
+### [👉 初探门径](#-置备与发轫)
+
+### [📄 典籍](https://comfytavern.github.io/comfytavern/)
 
 ---
 
@@ -78,16 +81,6 @@
     -   **应用仪盘者，乃灵偶与用户交互之“面容”**: 其不再是固定之界面，而是与灵偶异步通信、实时响应其状态之动态前端，构建真正有生命力之交互体验。
 
 此架构使营造者能构建出远超传统预设、真正具备动态行为与学习潜力之 AI 应用。
-
----
-
-### 📄 典籍
-
--   **[项目概览](DesignDocs/整理/ProjectOverview.md)**：深入了解项目架构、技术选型和核心模块。
--   **[自定义机括营造指南](docs/guides/custom-node-development.zh.md)**：拓展玄思妙境功能之步骤。
--   **[插件与工具架构](DesignDocs/architecture/unified-plugin-and-tool-architecture.md)**：了解插件系统之运作原理。
--   **[文件资产管理指南](docs/guides/file-asset-management-guide.md)**：了解文件系统之设计与运用。
--   **[应用仪盘 SDK 营造指南](docs/guides/panel-sdk-guide.md)**：学习如何创建交互式应用仪盘。
 
 ---
 

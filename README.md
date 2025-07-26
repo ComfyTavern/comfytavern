@@ -4,6 +4,7 @@
 [![Status](https://img.shields.io/badge/status-Beta-orange)](https://github.com/ComfyTavern/comfytavern)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](./LICENSE)
 [![Stars](https://img.shields.io/github/stars/ComfyTavern/comfytavern?style=social)](https://github.com/ComfyTavern/comfytavern)
+[![Documentation](https://img.shields.io/badge/docs-online-brightgreen)](https://comfytavern.github.io/comfytavern)
 
 <p align="center">
   <img alt="ComfyTavern Banner" src="docs/images/ComfyTavern(Beta)_Banner.png">
@@ -31,7 +32,9 @@ ComfyTavern 是一个面向创作者和最终用户的 AI 创作与应用平台�
 
 **➡️ 当前核心：PC 端 VueFlow 节点编辑器 + 插件化扩展 + 统一文件资产管理。**
 
-## [👉 快速上手](#-安装与启动)
+### [👉 快速上手](#-安装与启动)
+
+### [📄 文档](https://comfytavern.github.io/comfytavern/)
 
 ---
 
@@ -78,16 +81,6 @@ ComfyTavern 的设计围绕三大支柱：**专业的编排工具 → 开放的�
   - **应用面板 (App Panel) 是 Agent 与用户交互的“面孔”**: 它不再是固定的 UI，而是与 Agent 异步通信、实时响应其状态的动态前端，构建真正有生命力的交互体验。
 
 这种架构使创作者能构建出远超传统预设的、真正具备动态行为和学习潜力的 AI 应用。
-
----
-
-### 📄 文档
-
-- **[项目概览](DesignDocs/整理/ProjectOverview.md)**：深入了解项目架构、技术选型和核心模块。
-- **[自定义节点开发指南](docs/guides/custom-node-development.zh.md)**：扩展 ComfyTavern 功能的步骤。
-- **[插件与工具架构](DesignDocs/architecture/unified-plugin-and-tool-architecture.md)**：了解插件系统的工作原理。
-- **[文件资产管理指南](docs/guides/file-asset-management-guide.md)**：了解文件系统的设计和使用。
-- **[应用面板 SDK 开发指南](docs/guides/panel-sdk-guide.md)**：学习如何创建交互式应用面板。
 
 ---
 

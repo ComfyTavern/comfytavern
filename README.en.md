@@ -4,6 +4,7 @@
 [![Status](https://img.shields.io/badge/status-Beta-orange)](https://github.com/ComfyTavern/comfytavern)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](./LICENSE)
 [![Stars](https://img.shields.io/github/stars/ComfyTavern/comfytavern?style=social)](https://github.com/ComfyTavern/comfytavern)
+[![Documentation](https://img.shields.io/badge/docs-online-brightgreen)](https://comfytavern.github.io/comfytavern)
 
 <p align="center">
   <img alt="ComfyTavern Banner" src="docs/images/ComfyTavern(Beta)_Banner.png">
@@ -31,7 +32,9 @@ We believe that the power of AI lies not only in the sophistication of the creat
 
 **➡️ Current Core: PC-based VueFlow Node Editor + Plugin Extensions + Unified File Asset Management.**
 
-## [👉 Quick Start](#-installation-and-startup)
+### [👉 Quick Start](#-installation-and-startup)
+
+### [📄 Documentation](https://comfytavern.github.io/comfytavern/)
 
 ---
 
@@ -78,16 +81,6 @@ This is not just a feature, but the architectural cornerstone that distinguishes
     -   **Application Panels are the "face" of Agent-user interaction**: They are no longer fixed UIs, but dynamic frontends that communicate asynchronously with Agents and respond to their states in real-time, building truly vibrant interactive experiences.
 
 This architecture enables creators to build AI applications with dynamic behavior and learning potential that far exceed traditional presets.
-
----
-
-### 📄 Documentation
-
--   **[Project Overview](DesignDocs/整理/ProjectOverview.md)**: In-depth understanding of project architecture, technology selection, and core modules.
--   **[Custom Node Development Guide](docs/guides/custom-node-development.zh.md)**: Steps to extend ComfyTavern's functionality.
--   **[Plugin and Tool Architecture](DesignDocs/architecture/unified-plugin-and-tool-architecture.md)**: Understanding how the plugin system works.
--   **[File Asset Management Guide](docs/guides/file-asset-management-guide.md)**: Understanding the design and use of the file system.
--   **[Application Panel SDK Development Guide](docs/guides/panel-sdk-guide.md)**: Learning how to create interactive application panels.
 
 ---
 
