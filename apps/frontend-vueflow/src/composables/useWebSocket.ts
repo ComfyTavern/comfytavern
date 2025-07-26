@@ -1,4 +1,4 @@
-import { readonly, onMounted, onUnmounted, watch, type Ref, computed } from "vue";
+import { readonly, watch, type Ref, computed } from "vue";
 import { useExecutionStore } from "@/stores/executionStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useWorkflowStore } from "@/stores/workflowStore";
@@ -331,35 +331,34 @@ export const setInitiatingExecution = (executionId: string) => {
 export function useWebSocket() {
   const wsCore = useWebSocketCore();
 
-  const initialize = () => {
-    if (isRouterInitialized) return;
+  if (!isRouterInitialized) {
     ensureStoresInitialized();
     unsubscribeFromCore = wsCore.subscribe('execution-router', handleRawMessage);
     console.log('[WebSocketRouter] Initialized and subscribed to core service.');
     isRouterInitialized = true;
-  };
-  
-  onMounted(() => {
-    initialize();
+
+    // Watch for active tab changes, but only set up the watcher once.
     watch(() => activeTabId?.value, (newTabId, oldTabId) => {
       if (newTabId !== oldTabId) {
         console.log(`[WebSocketRouter] Active tab changed from ${oldTabId} to ${newTabId}`);
       }
     });
-  });
+  }
 
-  onUnmounted(() => {
+  const disconnect = () => {
     if (unsubscribeFromCore) {
       unsubscribeFromCore();
-      console.log('[WebSocketRouter] Unsubscribed from core service.');
+      console.log('[WebSocketRouter] Manually unsubscribed from core service.');
+      isRouterInitialized = false;
+      unsubscribeFromCore = null;
     }
-    isRouterInitialized = false;
-  });
+  };
 
   return {
     isConnected: readonly(wsCore.isConnected),
     error: readonly(wsCore.error),
     sendMessage: wsCore.sendMessage,
     setInitiatingExecution,
+    disconnect, // 暴露断开连接的方法
   };
 }
