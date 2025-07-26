@@ -35,7 +35,7 @@ function getTabClasses(tab: Tab): string[] {
   const classes = [
     'flex', 'items-center', 'px-3', 'py-1.5', 'text-sm', 'font-medium',
     'border-b-2', 'cursor-pointer', 'transition-colors', 'duration-150',
-    'whitespace-nowrap', 'group', // 添加 group 用于控制关闭按钮的显示
+    'whitespace-nowrap', 'group', 'max-w-xs', // 添加 group 用于控制关闭按钮的显示,并设置最大宽度
   ]
   if (tab.internalId === activeTabId.value) {
     classes.push(
@@ -73,7 +73,10 @@ const handleWheel = (event: WheelEvent) => {
   if (osInstance) {
     const viewport = osInstance.elements().viewport;
     if (event.deltaY !== 0 && viewport.scrollWidth > viewport.clientWidth) {
-      event.preventDefault(); // 恢复 preventDefault
+      // 只有在可以取消且确实需要横向滚动时才阻止默认行为
+      if (event.cancelable) {
+        event.preventDefault();
+      }
       viewport.scrollLeft += event.deltaY;
     }
   }
@@ -85,7 +88,8 @@ onMounted(() => {
     if (instance) {
       osInstance = instance;
       const viewport = osInstance.elements().viewport;
-      viewport.addEventListener('wheel', handleWheel, { passive: false });
+      // 移除 passive: false, 让浏览器自行处理, 在需要时于 handleWheel 内调用 preventDefault
+      viewport.addEventListener('wheel', handleWheel);
     } else {
       // 保留一个警告，以防未来 osInstance 获取方式改变或出现问题
       console.warn('[TabBar] Failed to get OverlayScrollbars instance on mount. Horizontal wheel scroll might not work.');
@@ -115,8 +119,8 @@ onUnmounted(() => {
     }" class="min-w-0">
       <nav class="-mb-px flex space-x-1" aria-label="Tabs">
         <a v-for="tab in tabs" :key="tab.internalId" href="#" :class="getTabClasses(tab)"
-          @click.prevent="selectTab(tab.internalId)">
-          <span>{{ tab.label }}</span>
+           @click.prevent="selectTab(tab.internalId)">
+           <span class="truncate">{{ tab.label }}</span>
           <span v-if="tab.isDirty" class="ml-1 text-error">*</span>
           <button :class="getCloseButtonClasses(tab)" @click.prevent="closeTab($event, tab.internalId)"
             aria-label="Close tab">
