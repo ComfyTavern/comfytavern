@@ -1,0 +1,19 @@
+{
+  "name": "comfytavern-docs",
+  "version": "1.0.0",
+  "description": "Documentation for ComfyTavern",
+  "main": "index.js",
+  "scripts": {
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/babel__parser": "^7.1.5",
+    "vitepress": "^1.6.3",
+    "vue": "^3.5.18"
+  }
+}
