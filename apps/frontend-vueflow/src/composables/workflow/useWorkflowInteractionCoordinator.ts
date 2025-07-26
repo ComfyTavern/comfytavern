@@ -1771,6 +1771,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `nodeActions.ts`。
    * 打开可停靠编辑器以编辑节点输入。
    * @param activeTabId - 当前活动工作流的 ID。
    * @param nodeId - 目标节点的 ID。

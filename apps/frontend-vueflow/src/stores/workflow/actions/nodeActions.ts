@@ -2,8 +2,11 @@
 import { klona } from "klona";
 import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core";
 import type { WorkflowStoreContext } from "../types";
-import type { HistoryEntry } from "@comfytavern/types";
+import type { HistoryEntry, InputDefinition } from "@comfytavern/types";
+import { DataFlowType } from "@comfytavern/types";
 import { getNodeType, parseSubHandleId } from "../../../utils/nodeUtils";
+import { useEditorState } from "@/composables/editor/useEditorState";
+import type { EditorOpeningContext } from "@/types/editorTypes";
 
 /**
  * 创建与节点操作相关的 Action。
@@ -814,6 +817,112 @@ export function createNodeActions(context: WorkflowStoreContext) {
     }
   }
 
+  const openDockedEditorForNodeInput = (
+    activeTabId: string,
+    nodeId: string,
+    inputKey: string,
+    currentValue: any, // currentValue 可以是任何类型
+    inputDefinition: InputDefinition, // InputDefinition 是 GroupSlotInfo
+    editorTitle?: string
+  ) => {
+    const editorState = useEditorState();
+
+    // 确定 editorType
+    let editorType = "text"; // 默认类型
+    if (inputDefinition.config?.languageHint) {
+      editorType = inputDefinition.config.languageHint as string;
+    } else {
+      switch (inputDefinition.dataFlowType) {
+        case DataFlowType.OBJECT: // 用于 JSON_LIKE
+          editorType = "json";
+          break;
+        case DataFlowType.STRING: // 用于 MARKDOWN_LIKE 或普通文本
+          editorType = "text"; // 或者 'markdown' 如果有其他提示
+          break;
+        default:
+          editorType = "text";
+          break;
+      }
+    }
+    if (inputDefinition.config?.uiWidget === "CodeInput" && !inputDefinition.config?.languageHint) {
+      editorType = (inputDefinition.config?.language as string) || "plaintext";
+    } else if (
+      inputDefinition.config?.uiWidget === "TextAreaInput" &&
+      !inputDefinition.config?.languageHint
+    ) {
+      if (inputDefinition.matchCategories?.includes("Markdown")) {
+        editorType = "markdown";
+      } else {
+        editorType = "text";
+      }
+    }
+
+    // 准备 initialContent，确保 JSON 对象被字符串化
+    let finalInitialContent: string;
+    if (editorType === "json" && typeof currentValue === "object" && currentValue !== null) {
+      try {
+        finalInitialContent = JSON.stringify(currentValue, null, 2); // 美化 JSON 字符串
+      } catch (e) {
+        console.error(`Error stringifying JSON for editor ${nodeId}.${inputKey}:`, e);
+        finalInitialContent = String(currentValue); // 回退到普通字符串转换
+      }
+    } else if (currentValue === null || currentValue === undefined) {
+      finalInitialContent = ""; // 对于 null 或 undefined，使用空字符串
+    } else {
+      finalInitialContent = String(currentValue); // 其他类型转换为字符串
+    }
+
+    const finalTitle = editorTitle || `编辑 ${nodeId} - ${inputKey}`;
+
+    const context: EditorOpeningContext = {
+      nodeId,
+      inputPath: `inputs.${inputKey}`, // 假设我们总是编辑 'inputs' 下的属性
+      initialContent: finalInitialContent, // 使用处理过的 initialContent
+      languageHint: editorType,
+      title: finalTitle, // 使用 editorTitle 或生成的默认标题
+      onSave: (newContent: string) => {
+        // newContent 从编辑器出来总是字符串
+        let valueToSave: any = newContent;
+        if (editorType === "json") {
+          try {
+            valueToSave = JSON.parse(newContent);
+          } catch (e) {
+            console.error(`Error parsing JSON from editor for ${nodeId}.${inputKey}:`, e);
+            // 决定如何处理解析错误：是保存原始字符串还是报错？
+            // 暂时保存原始字符串，但可能需要用户提示或更复杂的错误处理
+          }
+        }
+
+        const historyEntry: HistoryEntry = {
+          actionType: "modify", // 使用 actionType
+          objectType: "nodeInput", // 使用 objectType
+          summary: `更新节点 ${nodeId} 输入 ${inputKey}`,
+          timestamp: Date.now(),
+          details: {
+            nodeId,
+            inputKey,
+            propertyName: inputKey, // 对应 HistoryEntryDetails
+            oldValue: currentValue, // oldValue 仍然是原始的 currentValue
+            newValue: valueToSave, // newValue 是处理过的 (可能是对象或字符串)
+          },
+        };
+        updateNodeInputValueAndRecord(activeTabId, nodeId, inputKey, valueToSave, historyEntry);
+        console.log(
+          `[NodeActions] Docked editor content saved for ${nodeId}.${inputKey}:`,
+          valueToSave
+        );
+      },
+    };
+
+    // 确保编辑器面板可见
+    if (!editorState.isDockedEditorVisible.value) {
+      editorState.toggleDockedEditor();
+    }
+
+    // 调用 editorState 中的方法来打开/激活编辑器标签页
+    editorState.openOrFocusEditorTab(context);
+  };
+
   return {
     updateNodePositionAndRecord,
     updateNodeLabelAndRecord,
@@ -827,5 +936,6 @@ export function createNodeActions(context: WorkflowStoreContext) {
     addNodeAndRecord,
     addFrameNodeAndRecord,
     removeElementsAndRecord,
+    openDockedEditorForNodeInput,
   };
 }
