@@ -32,19 +32,19 @@ workflowStore (内阁府)
 ### 2.2 核心组件
 
 #### WorkflowStore
-- **位置**: [`apps/frontend-vueflow/src/stores/workflowStore.ts`](apps/frontend-vueflow/src/stores/workflowStore.ts:1)
+- **位置**: `apps/frontend-vueflow/src/stores/workflowStore.ts`
 - **职责**: 作为状态管理的中心枢纽，组装各个 Action 模块并暴露统一的 API
 
 #### HistoryActions
-- **位置**: [`apps/frontend-vueflow/src/stores/workflow/actions/historyActions.ts`](apps/frontend-vueflow/src/stores/workflow/actions/historyActions.ts:1)
+- **位置**: `apps/frontend-vueflow/src/stores/workflow/actions/historyActions.ts`
 - **职责**: 专门处理撤销/重做逻辑，管理历史记录的创建、应用和清理
 
 #### WorkflowManager
-- **位置**: [`apps/frontend-vueflow/src/composables/workflow/useWorkflowManager.ts`](apps/frontend-vueflow/src/composables/workflow/useWorkflowManager.ts:1)
+- **位置**: `apps/frontend-vueflow/src/composables/workflow/useWorkflowManager.ts`
 - **职责**: 管理工作流的核心状态，包括元素、视口和工作流数据
 
 #### WorkflowHistory
-- **位置**: [`apps/frontend-vueflow/src/composables/workflow/useWorkflowHistory.ts`](apps/frontend-vueflow/src/composables/workflow/useWorkflowHistory.ts:1)
+- **位置**: `apps/frontend-vueflow/src/composables/workflow/useWorkflowHistory.ts`
 - **职责**: 底层历史记录存储和管理，维护历史栈和索引
 
 ## 三、数据结构
@@ -162,27 +162,27 @@ sequenceDiagram
 
 ### 5.2 WorkflowManager API
 
-#### getCurrentSnapshot(internalId: string): WorkflowStateSnapshot | undefined
+#### `getCurrentSnapshot(internalId: string): WorkflowStateSnapshot | undefined`
 获取指定标签页的当前状态快照。
 
-#### applyStateSnapshot(internalId: string, snapshot: WorkflowStateSnapshot): boolean
+#### `applyStateSnapshot(internalId: string, snapshot: WorkflowStateSnapshot): boolean`
 应用状态快照到指定标签页，主要用于历史记录恢复。
 
-#### setElements(internalId: string, elements: Array<VueFlowNode | VueFlowEdge>)
+#### `setElements(internalId: string, elements: Array<VueFlowNode | VueFlowEdge>)`
 更新画布元素并标记为"脏"状态。
 
 ### 5.3 WorkflowHistory API
 
-#### recordSnapshot(internalId: string, entry: HistoryEntry, payload: WorkflowStateSnapshot)
+#### `recordSnapshot(internalId: string, entry: HistoryEntry, payload: WorkflowStateSnapshot)`
 记录新的历史快照。
 
-#### canUndo(internalId: string): ComputedRef<boolean>
+#### `canUndo(internalId: string): ComputedRef<boolean>`
 检查是否可以执行撤销操作。
 
-#### canRedo(internalId: string): ComputedRef<boolean>
+#### `canRedo(internalId: string): ComputedRef<boolean>`
 检查是否可以执行重做操作。
 
-#### getHistorySummaries(internalId: string): ComputedRef<string[]>
+#### `getHistorySummaries(internalId: string): ComputedRef<string[]>`
 获取历史记录的摘要列表，用于UI显示。
 
 ## 六、实现新的历史记录操作

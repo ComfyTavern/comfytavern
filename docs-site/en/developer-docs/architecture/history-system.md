@@ -32,19 +32,19 @@ workflowStore (Cabinet Office)
 ### 2.2 Core Components
 
 #### WorkflowStore
-- **Location**: [`apps/frontend-vueflow/src/stores/workflowStore.ts`](apps/frontend-vueflow/src/stores/workflowStore.ts:1)
+- **Location**: `apps/frontend-vueflow/src/stores/workflowStore.ts`
 - **Responsibility**: Serves as the central hub for state management, assembling various Action modules and exposing a unified API.
 
 #### HistoryActions
-- **Location**: [`apps/frontend-vueflow/src/stores/workflow/actions/historyActions.ts`](apps/frontend-vueflow/src/stores/workflow/actions/historyActions.ts:1)
+- **Location**: `apps/frontend-vueflow/src/stores/workflow/actions/historyActions.ts`
 - **Responsibility**: Specifically handles undo/redo logic, managing the creation, application, and cleanup of history records.
 
 #### WorkflowManager
-- **Location**: [`apps/frontend-vueflow/src/composables/workflow/useWorkflowManager.ts`](apps/frontend-vueflow/src/composables/workflow/useWorkflowManager.ts:1)
+- **Location**: `apps/frontend-vueflow/src/composables/workflow/useWorkflowManager.ts`
 - **Responsibility**: Manages the core state of the workflow, including elements, viewport, and workflow data.
 
 #### WorkflowHistory
-- **Location**: [`apps/frontend-vueflow/src/composables/workflow/useWorkflowHistory.ts`](apps/frontend-vueflow/src/composables/workflow/useWorkflowHistory.ts:1)
+- **Location**: `apps/frontend-vueflow/src/composables/workflow/useWorkflowHistory.ts`
 - **Responsibility**: Underlying history storage and management, maintaining the history stack and index.
 
 ## III. Data Structures
@@ -162,27 +162,27 @@ Redoes the specified number of operations.
 
 ### 5.2 WorkflowManager API
 
-#### getCurrentSnapshot(internalId: string): WorkflowStateSnapshot | undefined
+#### `getCurrentSnapshot(internalId: string): WorkflowStateSnapshot | undefined`
 Gets the current state snapshot of the specified tab.
 
-#### applyStateSnapshot(internalId: string, snapshot: WorkflowStateSnapshot): boolean
+#### `applyStateSnapshot(internalId: string, snapshot: WorkflowStateSnapshot): boolean`
 Applies a state snapshot to the specified tab, mainly used for history recovery.
 
-#### setElements(internalId: string, elements: `Array<VueFlowNode | VueFlowEdge>`)
+#### `setElements(internalId: string, elements: Array<VueFlowNode | VueFlowEdge>)`
 Updates canvas elements and marks them as "dirty" state.
 
 ### 5.3 WorkflowHistory API
 
-#### recordSnapshot(internalId: string, entry: HistoryEntry, payload: WorkflowStateSnapshot)
+#### `recordSnapshot(internalId: string, entry: HistoryEntry, payload: WorkflowStateSnapshot)`
 Records a new history snapshot.
 
-#### canUndo(internalId: string): ComputedRef<boolean>
+#### `canUndo(internalId: string): ComputedRef<boolean>`
 Checks if an undo operation can be performed.
 
-#### canRedo(internalId: string): ComputedRef<boolean>
+#### `canRedo(internalId: string): ComputedRef<boolean>`
 Checks if a redo operation can be performed.
 
-#### getHistorySummaries(internalId: string): ComputedRef<string[]>
+#### `getHistorySummaries(internalId: string): ComputedRef<string[]>`
 Gets a summary list of history records for UI display.
 
 ## VI. Implementing New History Operations

@@ -8,7 +8,7 @@ This guide will detail the complete process of developing a custom node, includi
 
 *   **Backend Definition**: How to define node properties, inputs, outputs, and configuration using TypeScript.
 *   **Execution Logic**: How to implement the backend processing logic for nodes, and how to integrate frontend client scripts for richer interaction.
-*   **Frontend Rendering**: How node definitions affect their visual representation and user interaction in the frontend editor (primarily through the generic [`BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue) component).
+*   **Frontend Rendering**: How node definitions affect their visual representation and user interaction in the frontend editor (primarily through the generic `BaseNode.vue` component).
 
 Understanding and following the specifications in this guide will help you create custom nodes that are powerful, easy to maintain, and well-integrated with the ComfyTavern system.
 
@@ -26,7 +26,7 @@ Ensure your development environment is configured with the following tools:
 The main code for custom nodes is typically located in the following directories:
 
 *   **Built-in Node Definitions and Logic**: `apps/backend/src/nodes/` (This is where the project's core built-in nodes are stored).
-*   **Custom/Third-Party Nodes**: It's recommended to place them in the `plugins/nodes/` directory in the project root. You can also configure other paths in the `customNodePaths` array in the [`config.json`](config.json:1) file at the project root to load your nodes. After modifying the configuration or adding new nodes, please restart the backend service.
+*   **Custom/Third-Party Nodes**: It's recommended to place them in the `plugins/nodes/` directory in the project root. You can also configure other paths in the `customNodePaths` array in the `config.json` file at the project root to load your nodes. After modifying the configuration or adding new nodes, please restart the backend service.
     *   Within these paths, you can create subdirectories based on node categories, e.g., `plugins/nodes/MyCustomNodes/`.
     *   Each node usually corresponds to a `.ts` file, e.g., `MyCustomNode.ts`.
 *   **Client Scripts (if needed)**: Typically placed in a `client-scripts/` subdirectory within the node definition file's directory, e.g., `apps/backend/src/nodes/MyCustomNodes/client-scripts/MyCustomNode.js`.
@@ -36,7 +36,7 @@ The main code for custom nodes is typically located in the following directories
 
 ## 3. Node Definition (`NodeDefinition`)
 
-The core of each custom node is a TypeScript object that conforms to the `NodeDefinition` interface (defined in [`packages/types/src/node.ts`](packages/types/src/node.ts:88)). This object describes the node's metadata, input/output ports, configuration items, and behavior in detail.
+The core of each custom node is a TypeScript object that conforms to the `NodeDefinition` interface (defined in `packages/types/src/node.ts`). This object describes the node's metadata, input/output ports, configuration items, and behavior in detail.
 
 ```typescript
 // Example: MyCustomNode.ts
@@ -66,7 +66,7 @@ export const definition: NodeDefinition = {
 
 The `inputs` object defines all input ports for the node. The keys of the object are the unique identifiers for the input ports (unique within the node), and the values are objects conforming to the `InputDefinition` interface.
 
-Reference: [`InputDefinition` Interface Definition](packages/types/src/node.ts:65)
+Reference: `InputDefinition` Interface Definition
 
 ```typescript
 // InputDefinition Structure Example
@@ -90,11 +90,11 @@ interface SlotDefinitionBase {
 *   `displayName?: string`: Optional. The name displayed for the input port in the UI. If not provided, the frontend may use the port's key name or `description`.
 *   `description?: string`: Optional. A detailed description of the input port, used for Tooltip.
 *   `required?: boolean | ((configValues: Record<string, any>) => boolean)`: Optional. Indicates whether this input is required. Can be a boolean value, or a function that receives the node's current configuration values and returns a boolean, to implement conditional requirements. Defaults to `false`.
-*   `multi?: boolean`: Optional. If `true`, this input port can accept multiple connections. The corresponding input value in the backend `execute` method will be an array. Defaults to `false`. See [`apps/backend/src/nodes/Utilities/MergeNode.ts`](apps/backend/src/nodes/Utilities/MergeNode.Node.ts:1) for an example of `text_inputs`.
-*   `config?: Record<string, any>`: **Core configuration object**. Properties in this object directly affect the type and behavior of the UI control corresponding to this input port when it is not connected. These properties should be compatible with the various input option Zod Schemas defined in [`packages/types/src/node.ts`](packages/types/src/node.ts:1) (such as [`zNumericInputOptions`](packages/types/src/node.ts:13), [`zStringInputOptions`](packages/types/src/node.ts:22), etc.).
+*   `multi?: boolean`: Optional. If `true`, this input port can accept multiple connections. The corresponding input value in the backend `execute` method will be an array. Defaults to `false`. See `apps/backend/src/nodes/Utilities/MergeNode.Node.ts` for an example of `text_inputs`.
+*   `config?: Record<string, any>`: **Core configuration object**. Properties in this object directly affect the type and behavior of the UI control corresponding to this input port when it is not connected. These properties should be compatible with the various input option Zod Schemas defined in `packages/types/src/node.ts` (such as `zNumericInputOptions`, `zStringInputOptions`, etc.).
 *   `actions?: NodeInputAction[]`: Optional. Defines a set of action buttons displayed next to the input slot. Each button is defined by a `NodeInputAction` object, including properties like `id`, `icon`, `label`, `tooltip`, `handlerType` (e.g., `'builtin_preview'`, `'builtin_editor'`), `handlerArgs`, and `showConditionKey`. These buttons are rendered and managed by the frontend's `NodeInputActionsBar.vue` component, allowing for interactions like previewing, editing, and custom events. For detailed definition, please refer to the `docs/node-types` document regarding the `NodeInputAction` section.
 
-    *   **Common `config` properties (refer to [`TestWidgetsNode.ts`](apps/backend/src/nodes/Utilities/TestWidgetsNode.ts:1) and the rendering logic of [`BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue:1)):**
+    *   **Common `config` properties (refer to `TestWidgetsNode.ts` and the rendering logic of `BaseNode.vue`):**
         *   `default: any`: The default value for the input control.
         *   `multiline?: boolean`: (For `STRING` type) If `true`, renders as a multi-line text area (TextAreaInput), otherwise a single line (StringInput).
         *   `placeholder?: string`: Placeholder text for the input box.
@@ -105,7 +105,7 @@ interface SlotDefinitionBase {
         *   `display_only?: boolean`: (For `STRING` and other types) If `true`, only displays text content even when not connected, not editable (TextDisplay).
         *   `bottomEditorMode?: string`: (For types requiring complex editing like code, JSON, Markdown) Configures the mode of the bottom docked editor, optional `'lightweightSingle'` (lightweight single page) or `'fullMultiTab'` (full-featured multi-tab, default). Triggered when the user clicks the edit button next to the input control.
 
-**Input Definition Example (excerpt from [`TestWidgetsNode.ts`](apps/backend/src/nodes/Utilities/TestWidgetsNode.ts:1)):**
+**Input Definition Example (excerpt from `TestWidgetsNode.ts`):**
 ```typescript
 inputs: {
   string_input: {
@@ -143,7 +143,7 @@ inputs: {
 
 The `outputs` object defines all output ports for the node. The structure is similar to `inputs`, but `OutputDefinition` is simpler.
 
-Reference: [`OutputDefinition` Interface Definition](packages/types/src/node.ts:73)
+Reference: `OutputDefinition` Interface Definition
 
 ```typescript
 // OutputDefinition Structure Example
@@ -204,7 +204,7 @@ configSchema: {
 // configValues will store the user's selected values in the workflow, e.g.:
 // { processingMode: 'accurate', retryAttempts: 2 }
 ```
-In the frontend [`BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue:1), these configuration items will be rendered in a dedicated area of the node using logic similar to input ports.
+In the frontend `BaseNode.vue`, these configuration items will be rendered in a dedicated area of the node using logic similar to input ports.
 
 ### 3.5 Bypass Behavior (`bypassBehavior`)
 
@@ -246,10 +246,10 @@ async execute(
 
 *   **Parameters**:
     *   `inputs: Record<string, any>`: An object containing all connected and parsed input values. Keys are the input port IDs you defined in `NodeDefinition.inputs`. If an input port is `multi: true` 则对应的值会是一个数组.
-    *   `context?: NodeExecutionContext`: An optional execution context object ([`NodeExecutionContext`](packages/types/src/node.ts:193)). It may contain `nodeId` and a way to access the node's own `configValues` (the specific implementation may depend on how the execution engine passes context; please refer to relevant documentation or the implementation of `ExecutionEngine.ts`).
+    *   `context?: NodeExecutionContext`: An optional execution context object (`NodeExecutionContext`). It may contain `nodeId` and a way to access the node's own `configValues` (the specific implementation may depend on how the execution engine passes context; please refer to relevant documentation or the implementation of `ExecutionEngine.ts`).
 *   **Return Value**: A `Promise` that resolves to an object where keys are the output port IDs you defined in `NodeDefinition.outputs`, and values are the corresponding output data.
 *   **Error Handling**: If an error occurs during execution, you can throw an exception. The execution engine will catch this exception and update the node status accordingly.
-*   **Backend Role for Frontend-Driven Nodes**: For nodes where the main logic is executed on the frontend via client scripts (like [`RandomNumberNode.ts`](apps/backend/src/nodes/Utilities/RandomNumberNode.ts:1)), the backend `execute` method might be very simple, e.g., only serving as a data passthrough, or handling some simple validation or preparation that cannot be done on the frontend.
+*   **Backend Role for Frontend-Driven Nodes**: For nodes where the main logic is executed on the frontend via client scripts (like `RandomNumberNode.ts`), the backend `execute` method might be very simple, e.g., only serving as a data passthrough, or handling some simple validation or preparation that cannot be done on the frontend.
 
 ### 4.2 Frontend Execution (Client Scripts)
 
@@ -263,18 +263,18 @@ For nodes that require complex frontend interaction (such as responding to butto
     *   Directly manipulating the DOM or using browser-specific APIs.
     *   Implementing instant feedback without backend involvement.
 *   **Writing Client Scripts**:
-    *   Client scripts are loaded and executed in the frontend [`BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue:1) component via the `useNodeClientScript` composable.
+    *   Client scripts are loaded and executed in the frontend `BaseNode.vue` component via the `useNodeClientScript` composable.
     *   Scripts typically export an object or function containing specific hooks or methods for `BaseNode.vue` to call. For example, a function to handle button clicks.
     *   **Interacting with the Node Instance**: Client scripts can access certain states or methods of their associated node instance, such as:
         *   Getting input values.
         *   Updating the node's input values via `updateInputValue` (passed to the script context by `BaseNode.vue`) (this is typically used to simulate changes in the node's internal state).
-        *   Triggering messages to be sent to the backend (e.g., constructing and sending a [`ButtonClickPayload`](packages/types/src/node.ts:261) type WebSocket message via `handleButtonClick`).
-    *   **Example**: Refer to [`apps/backend/src/nodes/Utilities/RandomNumberNode.ts`](apps/backend/src/nodes/Utilities/RandomNumberNode.ts:1) and its corresponding `apps/backend/src/nodes/Utilities/client-scripts/RandomNumberNode.js`.
+        *   Triggering messages to be sent to the backend (e.g., constructing and sending a `ButtonClickPayload` type WebSocket message via `handleButtonClick`).
+    *   **Example**: Refer to `apps/backend/src/nodes/Utilities/RandomNumberNode.ts` and its corresponding `apps/backend/src/nodes/Utilities/client-scripts/RandomNumberNode.js`.
         *   `RandomNumberNode.js` might export an object containing methods like `onRerollButtonClick`. When the user clicks the "Reroll" button, `BaseNode.vue` will call this method. The method might internally generate a random number and update the node's `value` input via `updateInputValue`, and potentially trigger an update of the `number` output (the specific mechanism requires checking the implementation details of `useNodeClientScript` and `BaseNode.vue`).
 
 ## 5. Frontend Rendering and Interaction (`BaseNode.vue`)
 
-All custom nodes (unless there is a special mechanism) are rendered uniformly by the frontend component [`apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue:1). Therefore, understanding how your node definition affects the behavior of `BaseNode.vue` is very important.
+All custom nodes (unless there is a special mechanism) are rendered uniformly by the frontend component `apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue`. Therefore, understanding how your node definition affects the behavior of `BaseNode.vue` is very important.
 
 *   **Unified Renderer**: `BaseNode.vue` receives the node's `props` (including most of the node definition obtained from the backend) and is responsible for rendering the node's header (title, category, ID), body, input/output ports (Handles), and UI controls corresponding to unconnected inputs.
 *   **Dynamic Selection of Input Controls**:
@@ -283,7 +283,7 @@ All custom nodes (unless there is a special mechanism) are rendered uniformly by
 *   **Handle (Connection Point) Styles**: The color and style of Handles change dynamically based on their `dataFlowType` to provide visual cues.
 *   **Multi-Input Rendering**: Input ports with `multi: true` will have a special "runway" rendering effect on the frontend, allowing multiple connections.
 *   **Linkage between Action Buttons and Complex Inputs**:
-    *   Action buttons next to input slots (such as preview, edit, custom buttons) are now dynamically generated and managed by the [`apps/frontend-vueflow/src/components/graph/nodes/NodeInputActionsBar.vue`](apps/frontend-vueflow/src/components/graph/nodes/NodeInputActionsBar.vue:1) component based on the `actions` array and `matchCategories` (like `CanPreview`) in the `InputDefinition`.
+    *   Action buttons next to input slots (such as preview, edit, custom buttons) are now dynamically generated and managed by the `apps/frontend-vueflow/src/components/graph/nodes/NodeInputActionsBar.vue` component based on the `actions` array and `matchCategories` (like `CanPreview`) in the `InputDefinition`.
     *   For example, an input marked with `CanPreview` or with a `'builtin_preview'` action defined in `actions` will display a preview button. Clicking this button triggers the built-in Tooltip preview logic.
     *   Similarly, editable inputs (not marked with `NoDefaultEdit`, or with a `'builtin_editor'` action defined in `actions`) will display an edit button. Upon clicking, `BaseNode.vue` (triggered by an event from `NodeInputActionsBar.vue`) will call the `interactionCoordinator.openDockedEditorForNodeInput` method, opening an editor for the corresponding content in the bottom docked editor. Parameters like the editor type can be specified in `handlerArgs`.
     *   `WILDCARD` type inputs with `matchCategories` including `TRIGGER` will still be rendered as buttons (ButtonInput). Their click events are typically handled by client scripts, or more specific behavior can be defined through `actions`.
@@ -293,7 +293,7 @@ All custom nodes (unless there is a special mechanism) are rendered uniformly by
 
 To ensure that the ComfyTavern system can recognize and use your custom nodes, you need to make sure they are correctly organized and exported.
 
-*   **Backend Node Organization and Export Pattern**: (Refer to [`apps/backend/src/nodes/Utilities/index.ts`](apps/backend/src/nodes/Utilities/index.ts:1))
+*   **Backend Node Organization and Export Pattern**: (Refer to `apps/backend/src/nodes/Utilities/index.ts`)
     1.  **Single Node File**: Each custom node is typically defined in a separate `.ts` file (e.g., `MyCustomNode.ts`).
     2.  **Export `definition`**: In this file, you need to export a constant named `definition`, whose value is an object conforming to the `NodeDefinition` interface.
         ```typescript
@@ -315,7 +315,7 @@ To ensure that the ComfyTavern system can recognize and use your custom nodes, y
           // ... Other node definitions
         ];
         ```
-*   **Node Loader (`NodeLoader.ts`)**: The project's backend includes a node loader (roughly located at `apps/backend/src/nodes/NodeLoader.ts`). It first loads built-in node directories (e.g., subdirectories under `apps/backend/src/nodes/`). Then, it reads the `customNodePaths` configuration item (defaults to `["plugins/nodes"]`) from the [`config.json`](config.json:1) file in the project root and scans these paths for nodes. The loader looks for `index.ts` files that export a `definitions` array in these directories to load all custom nodes. `NodeManager.ts` is responsible for managing these loaded node definitions.
+*   **Node Loader (`NodeLoader.ts`)**: The project's backend includes a node loader (roughly located at `apps/backend/src/nodes/NodeLoader.ts`). It first loads built-in node directories (e.g., subdirectories under `apps/backend/src/nodes/`). Then, it reads the `customNodePaths` configuration item (defaults to `["plugins/nodes"]`) from the `config.json` file in the project root and scans these paths for nodes. The loader looks for `index.ts` files that export a `definitions` array in these directories to load all custom nodes. `NodeManager.ts` is responsible for managing these loaded node definitions.
 
 ## 7. A Complete Example
 
@@ -376,7 +376,7 @@ export const definitions: NodeDefinition[] = [
   // ... Other node definitions
 ];
 ```
-Ensure that a path like `plugins/nodes/MyCustomNodes/` aligns with the `customNodePaths` configuration in [`config.json`](config.json:1) (or simply use the default `plugins/nodes/` directory). After restarting the system, this "String Reverse" node should appear under the "Text Processing" category in the frontend node panel.
+Ensure that a path like `plugins/nodes/MyCustomNodes/` aligns with the `customNodePaths` configuration in `config.json` (or simply use the default `plugins/nodes/` directory). After restarting the system, this "String Reverse" node should appear under the "Text Processing" category in the frontend node panel.
 
 ## 8. Best Practices
 
@@ -396,16 +396,16 @@ Ensure that a path like `plugins/nodes/MyCustomNodes/` aligns with the `customNo
 *   **Single Responsibility**:
     *   Try to keep each node focused on a single, clear function. If a node's logic is too complex, consider splitting it into multiple smaller, composable nodes.
 *   **Consider Frontend Interaction**:
-    *   When designing the node's `inputs` and `configSchema`, think about how they will be rendered in the frontend [`BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue:1) and how users will interact with them. Choose appropriate `dataFlowType`, `matchCategories`, and `config` properties to optimize the user experience.
+    *   When designing the node's `inputs` and `configSchema`, think about how they will be rendered in the frontend `BaseNode.vue` and how users will interact with them. Choose appropriate `dataFlowType`, `matchCategories`, and `config` properties to optimize the user experience.
 
 ## 9. Debugging Tips
 
 *   **Backend Logs**: Add `console.log` or use a more professional logging library in your `execute` method or node loading related logic for debugging. The output from the Bun runtime will appear in the terminal where the backend was started.
 *   **Frontend Browser Console**:
     *   Open the browser's developer tools (usually F12).
-    *   Check the `Console` tab for errors or debugging information that [`BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue:1) or other frontend components might output.
+    *   Check the `Console` tab for errors or debugging information that `BaseNode.vue` or other frontend components might output.
     *   For client scripts, you can directly use `console.log` in the script, and the output will appear in the browser console. You can also use the browser's `Debugger` tool to set breakpoints for debugging.
-*   **Using [`TestWidgetsNode.ts`](apps/backend/src/nodes/Utilities/TestWidgetsNode.ts:1)**: This node contains examples of various input types. If you encounter issues when implementing the UI or behavior of a specific input type, you can refer to how this node is defined and how it behaves on the frontend to help troubleshoot.
+*   **Using `TestWidgetsNode.ts`**: This node contains examples of various input types. If you encounter issues when implementing the UI or behavior of a specific input type, you can refer to how this node is defined and how it behaves on the frontend to help troubleshoot.
 *   **Check Network Requests**: Use the developer tools' `Network` tab to inspect API requests (e.g., loading node definitions) and WebSocket messages between the frontend and backend, ensuring data is transmitted as expected.
 *   **Check Code**: `bun tsc -p apps/frontend-vueflow/tsconfig.json --noEmit`, `bun tsc -p apps/backend/tsconfig.json --noEmit`
 *   **Node Group Node**: Node group nodes dynamically obtain internal IO slots from referenced workflow groups and display them in their own input and output panels. These slots are not saved to the workflow file but only save the configuration reference information, which is then dynamically obtained upon loading.
@@ -413,10 +413,10 @@ Ensure that a path like `plugins/nodes/MyCustomNodes/` aligns with the `customNo
 
 ## 10. Appendix (Optional)
 
-*   **Common `DataFlowType` and `SocketMatchCategory` List**: Please refer to the project's [`docs/node-types/node-types.zh.md`](docs/node-types/node-types.zh.md) (Chinese) or [`docs/node-types/node-types.en.md`](docs/node-types/node-types.en.md) (English) documents for the most detailed and up-to-date list and explanations.
+*   **Common `DataFlowType` and `SocketMatchCategory` List**: Please refer to the project's `docs/node-types/node-types.zh.md` (Chinese) or `docs/node-types/node-types.en.md` (English) documents for the most detailed and up-to-date list and explanations.
 *   **Introduction to Zod Schema**: Zod is a TypeScript-first schema declaration and validation library. In ComfyTavern, it is primarily used for:
     *   Defining and validating the payload structure of WebSocket messages.
     *   Defining and validating the request and response bodies of backend APIs.
-    *   In [`packages/types/src/node.ts`](packages/types/src/node.ts:1), various input configuration options (such as [`zNumericInputOptions`](packages/types/src/node.ts:13)) are defined using Zod Schema. This helps ensure the correctness of the `config` object in node definitions and allows TypeScript types to be inferred from them. When writing custom nodes, you need to ensure that your `config` object properties are compatible with these Zod Schemas.
+    *   In `packages/types/src/node.ts`, various input configuration options (such as `zNumericInputOptions`) are defined using Zod Schema. This helps ensure the correctness of the `config` object in node definitions and allows TypeScript types to be inferred from them. When writing custom nodes, you need to ensure that your `config` object properties are compatible with these Zod Schemas.
 
 Hope this guide helps you successfully develop powerful custom nodes!

@@ -10,7 +10,7 @@ This guide provides a unified set of content creation, UI design, and code style
 
 The UI is built on a dynamic theming system driven by Pinia, deeply integrated with Tailwind CSS. This provides great flexibility and consistency by dynamically loading theme configurations and applying CSS variables.
 
-- **Core Logic**: `useThemeStore` in [`theme.ts`](../../apps/frontend-vueflow/src/stores/theme.ts) is responsible for managing all theme functionalities.
+- **Core Logic**: `useThemeStore` in `theme.ts` is responsible for managing all theme functionalities.
 - **Core Principle**: **Always use colors via predefined Tailwind utility classes or CSS variables; avoid hardcoding color values in styles or templates.**
 
 ### 2.1 Color Usage
@@ -21,7 +21,7 @@ The UI is built on a dynamic theming system driven by Pinia, deeply integrated w
 
 ### 2.2 Theme Extension
 
-The best practice for extending or creating new themes is to **create new theme preset JSON files** in the [`src/assets/themes/`](../../apps/frontend-vueflow/src/assets/themes/) directory. `useThemeStore` will automatically discover and load them.
+The best practice for extending or creating new themes is to **create new theme preset JSON files** in the `src/assets/themes/` directory. `useThemeStore` will automatically discover and load them.
 
 ---
 
@@ -101,14 +101,14 @@ Components closely related to core business (e.g., graph editor, settings page).
 - **Development Principles**:
   - **Clear Responsibility**: The main responsibility of input components is to provide a UI to edit specific types of values, avoiding mixing in too much business logic.
   - **Reuse Base**: Reuse base components from the `common` directory as much as possible.
-  - **Support Multiple Sizes**: To enable cross-context reuse (e.g., inside nodes and on settings pages), it is recommended to add a `size` property (e.g., `'small' | 'large'`) to input components, controlling display via different CSS classes. [`BooleanToggle.vue`](../../apps/frontend-vueflow/src/components/graph/inputs/BooleanToggle.vue) is a good example.
+  -   **Support Multiple Sizes**: To enable cross-context reuse (e.g., inside nodes and on settings pages), it is recommended to add a `size` property (e.g., `'small' | 'large'`) to input components, controlling display via different CSS classes. `BooleanToggle.vue` is a good example.
 
 ### 4.3 Data-Driven View Construction (Settings Page)
 
 The settings page (`/components/settings`) is a classic example of data-driven views. Developers should not manually write layouts, but rather dynamically generate them by **defining arrays of configuration objects**.
 
 - **Core Architecture**:
-  - [`SettingsLayout.vue`](../../apps/frontend-vueflow/src/components/settings/SettingsLayout.vue) acts as a controller, reading the configuration array and dynamically rendering sections and navigation.
+  - `SettingsLayout.vue` acts as a controller, reading the configuration array and dynamically rendering sections and navigation.
   - It supports both `data-driven` (generating standard lists from configuration) and `component` (embedding custom components directly) modes, balancing efficiency and flexibility.
 - **Development Principles**:
   - **Definition over Coding**: Your primary job is to define `SettingItemConfig` objects, not to write HTML.
@@ -128,7 +128,7 @@ We advocate for **component-level responsive design**, allowing components to ad
 
 We recommend using `ResizeObserver` to listen for changes in the component's root element size, thereby dynamically switching its internal layout, rather than traditional `@media` queries.
 
-- **Exemplary Case**: [`ApiChannelList.vue`](../../apps/frontend-vueflow/src/components/llm-config/ApiChannelList.vue) renders as a `<table>` in a wide container, and switches to a vertically stacked card list in a narrow container.
+-   **Exemplary Case**: `ApiChannelList.vue` renders as a `<table>` in a wide container, and switches to a vertically stacked card list in a narrow container.
 - **Development Principle**: Prioritize this pattern, designing at least two layouts (wide screen/narrow screen) for complex components.
 
 ### 4.2 General Mobile Optimization
@@ -145,7 +145,7 @@ All user-facing text must be localized.
 
 - **Core Rules**:
   - **Use `$t` function**: All user-facing strings must be wrapped by `vue-i18n`'s `$t('key.path')` function.
-  - **Chinese as Baseline**: **All new i18n keys must first be defined in the [`zh-CN.json`](../../apps/frontend-vueflow/src/locales/zh-CN.json) file**, and then synchronized to other languages.
+  - **Chinese as Baseline**: **All new i18n keys must first be defined in the [`zh-CN.json`](../../../../apps/frontend-vueflow/src/locales/zh-CN.json) file**, and then synchronized to other languages.
   - **Key Naming**: Use dot-separated structured naming, e.g., `common.buttons.confirm`.
 
 ---
@@ -166,7 +166,7 @@ All user-facing text must be localized.
 
 To provide a vivid example that puts all the above principles into practice, we have created the **UI Component Test Panel**. This view is the best place to explore, test, and understand our core UI components, services, and design patterns.
 
-- **Source Location**: [`apps/frontend-vueflow/src/views/settings/TestPanelView.vue`](../../apps/frontend-vueflow/src/views/settings/TestPanelView.vue)
+- **Source Location**: `apps/frontend-vueflow/src/views/settings/TestPanelView.vue`
 - **Access Method**: In the application's settings page, there will typically be a "Test Panel" or similar entry point.
 
 **You can find the application of the following practices in this file:**

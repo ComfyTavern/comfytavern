@@ -10,7 +10,7 @@
 
 UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind CSS 深度集成，通过动态加载主题配置并应用 CSS 变量，提供了极大的灵活性和一致性。
 
-- **核心逻辑**: [`theme.ts`](../../apps/frontend-vueflow/src/stores/theme.ts) 中的 `useThemeStore` 负责管理所有主题功能。
+- **核心逻辑**: `theme.ts` 中的 `useThemeStore` 负责管理所有主题功能。
 - **核心原则**: **始终通过预定义的 Tailwind 功能类或 CSS 变量来使用颜色，尽量不在样式或模板中硬编码颜色值。**
 
 ### 2.1 颜色使用
@@ -21,7 +21,7 @@ UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind 
 
 ### 2.2 主题扩展
 
-扩展或创建新主题的最佳实践是在 [`src/assets/themes/`](../../apps/frontend-vueflow/src/assets/themes/) 目录下**创建新的主题预设 JSON 文件**。`useThemeStore` 会自动发现并加载它。
+扩展或创建新主题的最佳实践是在 `src/assets/themes/` 目录下**创建新的主题预设 JSON 文件**。`useThemeStore` 会自动发现并加载它。
 
 ---
 
@@ -101,14 +101,14 @@ UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind 
 - **开发原则**:
   - **职责明确**: 输入组件的主要职责是提供一个 UI 来编辑特定类型的值，避免混入过多业务逻辑。
   - **复用基础**: 尽可能复用 `common` 目录下的基础组件。
-  - **支持多尺寸**: 为实现跨上下文复用（如节点内部和设置页面），推荐为输入组件增加 `size` 属性（如 `'small' | 'large'`），通过不同的 CSS 类来控制显式。[`BooleanToggle.vue`](../../apps/frontend-vueflow/src/components/graph/inputs/BooleanToggle.vue) 是一个很好的范例。
+  -   **支持多尺寸**: 为实现跨上下文复用（如节点内部和设置页面），推荐为输入组件增加 `size` 属性（如 `'small' | 'large'`），通过不同的 CSS 类来控制显式。`BooleanToggle.vue` 是一个很好的范例。
 
 ### 4.3 数据驱动的视图构建 (设置页面)
 
 设置页面 (`/components/settings`) 是数据驱动视图的典范。开发者不应手动编写布局，而是通过**定义配置对象数组**来动态生成。
 
 - **核心架构**:
-  - [`SettingsLayout.vue`](../../apps/frontend-vueflow/src/components/settings/SettingsLayout.vue) 作为控制器，读取配置数组，动态渲染分区和导航。
+  - `SettingsLayout.vue` 作为控制器，读取配置数组，动态渲染分区和导航。
   - 它支持 `data-driven`（通过配置生成标准列表）和 `component`（直接嵌入自定义组件）两种模式，兼具效率与灵活性。
 - **开发原则**:
   - **定义优于编码**: 你的主要工作是定义 `SettingItemConfig` 对象，而不是编写 HTML。
@@ -128,7 +128,7 @@ UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind 
 
 我们推荐使用 `ResizeObserver` 监听组件根元素的尺寸变化，从而动态切换其内部布局，而不是传统的 `@media` 查询。
 
-- **典范案例**: [`ApiChannelList.vue`](../../apps/frontend-vueflow/src/components/llm-config/ApiChannelList.vue) 在宽容器下渲染为 `<table>`，在窄容器下则切换为垂直堆叠的卡片列表。
+-   **典范案例**: `ApiChannelList.vue` 在宽容器下渲染为 `<table>`，在窄容器下则切换为垂直堆叠的卡片列表。
 - **开发原则**: 优先使用此模式，为复杂组件设计至少两种布局（宽屏/窄屏）。
 
 ### 4.2 通用移动端优化
@@ -145,7 +145,7 @@ UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind 
 
 - **核心规则**:
   - **使用 `$t` 函数**: 所有面向用户的字符串必须通过 `vue-i18n` 的 `$t('key.path')` 函数包裹。
-  - **以中文为基准**: **所有新的 i18n key 必须首先在 [`zh-CN.json`](../../apps/frontend-vueflow/src/locales/zh-CN.json) 文件中定义**，再同步至其他语言。
+  - **以中文为基准**: **所有新的 i18n key 必须首先在 [`zh-CN.json`](../../../../apps/frontend-vueflow/src/locales/zh-CN.json) 文件中定义**，再同步至其他语言。
   - **Key 命名**: 采用点分隔的结构化命名，如 `common.buttons.confirm`。
 
 ---
@@ -166,7 +166,7 @@ UI 建立在由 Pinia 驱动的动态主题系统之上，该系统与 Tailwind 
 
 为了提供一个将上述所有原则付诸实践的鲜活示例，我们创建了 **UI 组件测试面板**。这个视图是探索、测试和理解我们核心 UI 组件、服务和设计模式的最佳场所。
 
-- **源码位置**: [`apps/frontend-vueflow/src/views/settings/TestPanelView.vue`](../../apps/frontend-vueflow/src/views/settings/TestPanelView.vue)
+- **源码位置**: `apps/frontend-vueflow/src/views/settings/TestPanelView.vue`
 - **访问方式**: 在应用的设置页面中，通常会有一个“测试面板”或类似的入口。
 
 **你可以在这个文件中找到以下实践的应用：**

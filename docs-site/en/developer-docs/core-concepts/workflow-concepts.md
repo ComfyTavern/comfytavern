@@ -15,10 +15,10 @@ In ComfyTavern, a **Workflow** is the core mechanism that defines AI interaction
 
 For developers familiar with programming, ComfyTavern's workflows can be understood as **low-code asynchronous functions**:
 
-- **Inputs**: Workflows can define clear input interfaces ([`interfaceInputs`](docs/guides/workflow-concepts.md:64)), just like function parameters, to receive external data.
-- **Outputs**: Workflows can also define output interfaces ([`interfaceOutputs`](docs/guides/workflow-concepts.md:67)) to return results after execution, similar to function return values.
+- **Inputs**: Workflows can define clear input interfaces (`interfaceInputs`), just like function parameters, to receive external data.
+- **Outputs**: Workflows can also define output interfaces (`interfaceOutputs`) to return results after execution, similar to function return values.
 - **Asynchronous Execution**: Workflow execution is inherently asynchronous. Nodes (especially those involving I/O operations or complex computations, such as LLM calls) typically execute asynchronously, and the completion of the entire workflow depends on the completion of all its internal asynchronous operations. This is very similar to the widely used `async/await` pattern in modern programming.
-- **Encapsulation & Reusability**: Through Node Groups ([`core:NodeGroup`](docs/guides/workflow-concepts.md:131)), a workflow can be encapsulated into an independent, reusable unit, much like a function that can be called multiple times. Other workflows can "call" this Node Group, pass inputs to it, and obtain its outputs.
+- **Encapsulation & Reusability**: Through Node Groups (`core:NodeGroup`), a workflow can be encapsulated into an independent, reusable unit, much like a function that can be called multiple times. Other workflows can "call" this Node Group, pass inputs to it, and obtain its outputs.
 - **Internal Logic**: The connections between nodes and edges within a workflow define the data processing and control flow, which can be seen as the specific implementation logic within a function body.
 
 Viewing workflows as asynchronous functions not only helps developers understand their operation using existing programming experience but also better integrates them into broader software development practices. For example, they can be treated as callable units of a backend service or interacted with asynchronously in frontend applications. In the Agent architecture, this analogy is particularly apt: the Agent's core deliberation loop can be seen as a highly complex "main asynchronous function" continuously called by `AgentRuntime`, while the Agent's skill workflows are similar to "sub-asynchronous functions" encapsulating specific functionalities, called on demand within this main function.
@@ -97,7 +97,7 @@ With the introduction of the Agent system, workflows play a more central and div
   - **IncomingEvents** received from the event bus.
   - **AvailableCapabilities** declared in the Agent Profile, including skill workflows and atomic tool lists.
   - Relevant information retrieved from knowledge bases.
-  (For more detailed input context, refer to Section 2.1.1 in [`DesignDocs/architecture/agent_architecture_v3_consolidated.md`](../../DesignDocs/architecture/agent_architecture_v3_consolidated.md:94))
+  (For more detailed input context, refer to Section 2.1.1 in `DesignDocs/architecture/agent_architecture_v3_consolidated.md`)
 - **Typical Outputs**: Agent's decision instructions, which usually manifest as a set of requests to `AgentRuntime`, such as:
   - The **skill workflow ID** to be called and its input parameters.
   - The **atomic tool** to be executed and its parameters.
@@ -158,18 +158,18 @@ A workflow goes through creation, editing, storage, loading, and execution stage
 
 - **User Interaction**: Users create and modify workflows on the VueFlow-provided visual canvas through dragging, connecting, etc.
 - **State Management**:
-  - Core state is uniformly managed by [`workflowStore.ts`](../../apps/frontend-vueflow/src/stores/workflowStore.ts:1), which coordinates multiple Composable functions (located in the [`apps/frontend-vueflow/src/composables/workflow/`](../../apps/frontend-vueflow/src/composables/workflow/:1) directory) to handle various aspects of the workflow, such as data management ([`useWorkflowData.ts`](../../apps/frontend-vueflow/src/composables/workflow/useWorkflowData.ts:1)), view management ([`useWorkflowViewManagement.ts`](../../apps/frontend-vueflow/src/composables/workflow/useWorkflowViewManagement.ts:1)), interface management ([`useWorkflowInterfaceManagement.ts`](../../apps/frontend-vueflow/src/composables/workflow/useWorkflowInterfaceManagement.ts:1)), etc.
+  - Core state is uniformly managed by `workflowStore.ts` which coordinates multiple Composable functions (located in the `apps/frontend-vueflow/src/composables/workflow/` directory) to handle various aspects of the workflow, such as data management (`useWorkflowData.ts`), view management (`useWorkflowViewManagement.ts`), interface management (`useWorkflowInterfaceManagement.ts`), etc.
   - The frontend internally uses VueFlow library's `Node` and `Edge` objects to represent elements on the canvas.
 - **History**:
   - Every important user operation (e.g., adding a node, connecting an edge, modifying parameters) is recorded.
-  - [`useWorkflowHistory.ts`](../../apps/frontend-vueflow/src/composables/workflow/useWorkflowHistory.ts:1) and `recordHistorySnapshot`, `undo`, `redo` methods in `workflowStore.ts` are responsible for implementing undo and redo functionalities.
+  - `useWorkflowHistory.ts` and `recordHistorySnapshot`, `undo`, `redo` methods in `workflowStore.ts` are responsible for implementing undo and redo functionalities.
 
 ### 4.2. Storage
 
 - **Triggering Save**: User saves the workflow via UI operation.
 - **Data Transformation (Frontend)**:
-  - Calls [`useWorkflowData.saveWorkflow()`](../../apps/frontend-vueflow/src/composables/workflow/useWorkflowData.ts:66) function.
-  - Internally uses [`transformVueFlowToCoreWorkflow()`](../../apps/frontend-vueflow/src/utils/workflowTransformer.ts:386) (located in [`workflowTransformer.ts`](../../apps/frontend-vueflow/src/utils/workflowTransformer.ts:1)) to convert VueFlow's data structure (mainly node and edge lists, and viewport information) into the backend-friendly `WorkflowStorageObject` format for persistent storage.
+  - Calls `useWorkflowData.saveWorkflow()` function.
+  - Internally uses `transformVueFlowToCoreWorkflow()` (located in `workflowTransformer.ts`) to convert VueFlow's data structure (mainly node and edge lists, and viewport information) into the backend-friendly `WorkflowStorageObject` format for persistent storage.
   - `WorkflowStorageObject` includes `WorkflowStorageNode[]` and `WorkflowStorageEdge[]`, which are more streamlined representations of nodes and edges, storing only necessary information such as ID, type, position, input values, config values, custom descriptions, etc.
 - **API Call**: The frontend sends the transformed `WorkflowStorageObject` to the backend.
 - **Backend Processing**: The backend receives the data and typically saves it as a JSON file within the project (e.g., `projects/<projectId>/workflows/<workflowId>.json`). Global workflows are currently not recommended for direct modification via API.
@@ -180,18 +180,18 @@ A workflow goes through creation, editing, storage, loading, and execution stage
 - **API Call**: The frontend requests the backend to load the specified workflow.
 - **Backend Processing**: The backend reads the corresponding JSON file and returns the `WorkflowStorageObject` to the frontend.
 - **Data Transformation (Frontend)**:
-  - Calls [`useWorkflowData.loadWorkflow()`](../../apps/frontend-vueflow/src/composables/workflow/useWorkflowData.ts:245) function.
-  - Internally uses [`transformWorkflowToVueFlow()`](../../apps/frontend-vueflow/src/utils/workflowTransformer.ts:454) to convert the `WorkflowStorageObject` obtained from the backend back into a list of `Node` and `Edge` objects that the frontend VueFlow library can directly render and manipulate.
+  - Calls `useWorkflowData.loadWorkflow()` function.
+  - Internally uses `transformWorkflowToVueFlow()` to convert the `WorkflowStorageObject` obtained from the backend back into a list of `Node` and `Edge` objects that the frontend VueFlow library can directly render and manipulate.
   - This process includes reconstructing the node's `data` object based on node definitions, populating input/output information, and handling NodeGroup interface loading (if the referenced child workflow's interface changes, synchronization might be needed).
 
 ### 4.4. Execution
 
 - **Triggering Execution (Frontend)**: User triggers execution via editor UI (execute button) or application panel API.
-  - **Unified Call Entry Point**: All execution requests are routed to the unified [`WorkflowInvocationService`](../../apps/frontend-vueflow/src/services/WorkflowInvocationService.ts:1).
+  - **Unified Call Entry Point**: All execution requests are routed to the unified `WorkflowInvocationService`.
   - **Calling `invoke()`**: Calls the `WorkflowInvocationService.invoke(request)` method. The `request` object will specify the execution mode (`mode: 'live'` or `mode: 'saved'`) and the target ID (`targetId`).
   - **Data Preparation (`live` mode)**:
     - **Client Script**: The service first executes the client script hooks defined in the nodes of the current workflow (e.g., `onWorkflowExecute`).
-    - **Flattening**: Then, it calls [`flattenWorkflow()`](../../apps/frontend-vueflow/src/utils/workflowFlattener.ts:1) to recursively expand all Node Groups, forming a single-level node graph.
+    - **Flattening**: Then, it calls `flattenWorkflow()` to recursively expand all Node Groups, forming a single-level node graph.
     - **Data Transformation**: Uses `transformVueFlowToCoreWorkflow()` and other transformation functions to convert the frontend's VueFlow state into the `WorkflowExecutionPayload` format required by the backend execution engine.
   - **Data Preparation (`saved` mode)**:
     - The service directly loads the saved workflow, which is already in `WorkflowStorageObject` format, from the backend, and then converts it to `WorkflowExecutionPayload`.
@@ -206,7 +206,7 @@ A workflow goes through creation, editing, storage, loading, and execution stage
   - `AgentRuntime` then performs subsequent processing based on the workflow's execution results, such as updating the Agent's `PrivateState`, publishing events to the event bus, or using the deliberation results as input for the next deliberation.
   - Core deliberation workflows may be continuously executed by `AgentRuntime` in an event-driven or periodic manner. Skill workflows are typically called on demand after the deliberation core makes a decision.
 
-- **Execution Processing (Backend [`apps/backend/src/ExecutionEngine.ts`](../../apps/backend/src/ExecutionEngine.ts:1))**:
+- **Execution Processing (Backend `apps/backend/src/ExecutionEngine.ts`)**:
   - An `ExecutionEngine` instance is created to handle this execution request.
   - **Topological Sorting**: Performs topological sorting on the received nodes and edges to determine a cyclic-free node execution order.
   - **Node-by-Node Execution**:
@@ -225,8 +225,8 @@ A workflow goes through creation, editing, storage, loading, and execution stage
   - References the target child workflow via the `referencedWorkflowId` property.
   - NodeGroup instances dynamically load and display the `interfaceInputs` and `interfaceOutputs` defined by their referenced child workflow as their own input and output slots.
   - The `groupInterface` property is a copy of the child workflow's interface definition, allowing NodeGroup instances to: 1) quickly display their expected input/output slots upon loading; 2) allow users to directly set and store values for these interface inputs (if they support direct editing, such as text or number inputs) in the NodeGroup instance's `data.inputs`.
-  - The frontend uses [`useGroupIOSlots.ts`](../../apps/frontend-vueflow/src/composables/group/useGroupIOSlots.ts:1) and related Composable functions to manage NodeGroup interface display and user interaction.
-  - When the interface of a referenced child workflow (template) changes, the `workflowStore.synchronizeGroupNodeInterfaceAndValues()` method in [`workflowStore.ts`](../../apps/frontend-vueflow/src/stores/workflowStore.ts:472) can be used to synchronize updates to the interface definitions and input values of all NodeGroup instances using that template, ensuring consistency.
+  - The frontend uses `useGroupIOSlots.ts` and related Composable functions to manage NodeGroup interface display and user interaction.
+  - When the interface of a referenced child workflow (template) changes, the `workflowStore.synchronizeGroupNodeInterfaceAndValues()` method in `workflowStore.ts` can be used to synchronize updates to the interface definitions and input values of all NodeGroup instances using that template, ensuring consistency.
   - In the Agent architecture, complex Agent skills (Skill Workflows) are also very suitable for encapsulation using Node Groups. This not only increases the modularity of skills but also makes them easier to share and reuse across different Agent Profiles. For example, a general "text summarization skill" or "image generation skill" can be encapsulated as a Node Group and called by multiple different types of Agents.
 - **Node Bypass**:
   - Nodes can be marked as "bypassed." When a node is bypassed, its `execute()` method is not called.
@@ -246,27 +246,27 @@ A workflow goes through creation, editing, storage, loading, and execution stage
   - Also supports deserialization from such a JSON string, allowing the fragment to be pasted into the current or other workflows.
   - Simplifies `WorkflowStorageNode` and `WorkflowStorageEdge` formats are used during serialization.
 - **Default Workflow**:
-  - The project provides a static default workflow definition ([`DefaultWorkflow.json`](../../apps/frontend-vueflow/src/data/DefaultWorkflow.json:1)) as the base canvas content for new tabs or empty states.
+  - The project provides a static default workflow definition (`DefaultWorkflow.json`) as the base canvas content for new tabs or empty states.
 
 ## 6. Related Core Type Definitions (Zod Schemas in `@comfytavern/types`)
 
 ComfyTavern uses Zod to define and validate schemas for its core data structures. These type definitions are located in the `packages/types/src/` directory.
 
 - **Workflow Structure**:
-  - [`WorkflowObjectSchema`](../../packages/types/src/workflow.ts:164) ([`workflow.ts`](../../packages/types/src/workflow.ts:1)): Defines the overall structure of a workflow, including metadata, node list, edge list, viewport, and interface definitions.
-  - [`WorkflowNodeSchema`](../../packages/types/src/workflow.ts:74) ([`workflow.ts`](../../packages/types/src/workflow.ts:1)): Defines the structure of a single node.
-  - [`WorkflowEdgeSchema`](../../packages/types/src/workflow.ts:129) ([`workflow.ts`](../../packages/types/src/workflow.ts:1)): Defines the structure of an edge.
+  - `WorkflowObjectSchema` (`workflow.ts`): Defines the overall structure of a workflow, including metadata, node list, edge list, viewport, and interface definitions.
+  - `WorkflowNodeSchema` (`workflow.ts`): Defines the structure of a single node.
+  - `WorkflowEdgeSchema` (`workflow.ts`): Defines the structure of an edge.
 - **Storage Format**:
-  - `WorkflowStorageObject` (Interface in [`workflow.ts`](../../packages/types/src/workflow.ts:217)): The complete workflow structure for persistent storage.
-  - `WorkflowStorageNode` (Interface in [`workflow.ts`](../../packages/types/src/workflow.ts:230)): Node structure for persistent storage.
-  - `WorkflowStorageEdge` (Interface in [`workflow.ts`](../../packages/types/src/workflow.ts:247)): Edge structure for persistent storage.
+  - `WorkflowStorageObject` (Interface in `workflow.ts`): The complete workflow structure for persistent storage.
+  - `WorkflowStorageNode` (Interface in `workflow.ts`): Node structure for persistent storage.
+  - `WorkflowStorageEdge` (Interface in `workflow.ts`): Edge structure for persistent storage.
 - **Execution Related**:
-  - [`ExecutionNodeSchema`](../../packages/types/src/schemas.ts:79) ([`schemas.ts`](../../packages/types/src/schemas.ts:1)): Simplified node structure used by the backend execution engine.
-  - [`ExecutionEdgeSchema`](../../packages/types/src/schemas.ts:92) ([`schemas.ts`](../../packages/types/src/schemas.ts:1)): Simplified edge structure used by the backend execution engine.
-  - [`WorkflowExecutionPayloadSchema`](../../packages/types/src/schemas.ts:104) ([`schemas.ts`](../../packages/types/src/schemas.ts:1)): The complete payload definition sent to the backend to initiate workflow execution.
+  - `ExecutionNodeSchema` (`schemas.ts`): Simplified node structure used by the backend execution engine.
+  - `ExecutionEdgeSchema` (`schemas.ts`): Simplified edge structure used by the backend execution engine.
+  - `WorkflowExecutionPayloadSchema` (`schemas.ts`): The complete payload definition sent to the backend to initiate workflow execution.
 - **Node Group and Interface**:
-  - [`GroupSlotInfoSchema`](../../packages/types/src/node.ts:280) ([`node.ts`](../../packages/types/src/node.ts:1)): Defines the detailed information for a single slot in a Node Group or workflow interface.
-  - [`GroupInterfaceInfoSchema`](../../packages/types/src/schemas.ts:50) ([`schemas.ts`](../../packages/types/src/schemas.ts:1)): Defines the complete interface information for a Node Group (including input and output slot records).
-  - [`NodeGroupDataSchema`](../../packages/types/src/workflow.ts:44) ([`workflow.ts`](../../packages/types/src/workflow.ts:1)): Specific `data` field structure for NodeGroup type nodes.
+  - `GroupSlotInfoSchema` (`node.ts`): Defines the detailed information for a single slot in a Node Group or workflow interface.
+  - `GroupInterfaceInfoSchema` (`schemas.ts`): Defines the complete interface information for a Node Group (including input and output slot records).
+  - `NodeGroupDataSchema` (`workflow.ts`): Specific `data` field structure for NodeGroup type nodes.
 
 This document should help understand the core concepts and operation of workflows in ComfyTavern.
