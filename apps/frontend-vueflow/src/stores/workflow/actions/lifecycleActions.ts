@@ -1,4 +1,5 @@
 // apps/frontend-vueflow/src/stores/workflow/actions/lifecycleActions.ts
+import type { GroupSlotInfo, HistoryEntry } from '@comfytavern/types';
 import type { WorkflowStoreContext } from '../types';
 
 function formatDateTime(date: Date): string {
@@ -12,7 +13,38 @@ function formatDateTime(date: Date): string {
 }
 
 export function createLifecycleActions(context: WorkflowStoreContext) {
-  const { tabStore, dialogService, workflowManager, workflowLifecycleCoordinator } = context;
+  const { tabStore, dialogService, workflowManager, workflowLifecycleCoordinator, recordHistory, workflowInterfaceManagement, currentSnapshot } = context;
+
+  /**
+   * 更新工作流的接口定义并记录历史。
+   * 这是对 useWorkflowInterfaceManagement 中 updateWorkflowInterface 的封装，增加了历史记录功能。
+   * @param internalId 标签页的内部 ID。
+   * @param updateFn 一个函数，接收当前的输入和输出，并返回更新后的对象。
+   * @param entry 描述此操作的历史记录条目。
+   */
+  async function updateWorkflowInterfaceAndRecord(
+    internalId: string,
+    updateFn: (
+      currentInputs: Record<string, GroupSlotInfo>,
+      currentOutputs: Record<string, GroupSlotInfo>
+    ) => {
+      inputs: Record<string, GroupSlotInfo>;
+      outputs: Record<string, GroupSlotInfo>;
+    },
+    entry: HistoryEntry
+  ) {
+    const snapshotBefore = currentSnapshot.value;
+    if (!snapshotBefore) {
+      console.error(`[lifecycleActions] 无法为 ${internalId} 获取更新前的快照。`);
+      return;
+    }
+    
+    // 我们在此记录旧状态
+    recordHistory(internalId, entry, snapshotBefore);
+
+    // 调用底层的、不记录历史的接口更新方法
+    await workflowInterfaceManagement.updateWorkflowInterface(internalId, updateFn);
+  }
 
   async function promptAndSaveWorkflow(isSaveAs: boolean = false): Promise<boolean> {
     const activeId = tabStore.activeTabId;
@@ -69,5 +101,6 @@ export function createLifecycleActions(context: WorkflowStoreContext) {
 
   return {
     promptAndSaveWorkflow,
+    updateWorkflowInterfaceAndRecord,
   };
 }

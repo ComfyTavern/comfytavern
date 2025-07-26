@@ -19,6 +19,7 @@ import type { useWorkflowLifecycleCoordinator } from '@/composables/workflow/use
 import type { useWorkflowGrouping } from '@/composables/group/useWorkflowGrouping';
 import type { useMultiInputConnectionActions } from '@/composables/node/useMultiInputConnectionActions';
 import type { useWorkflowPreview } from '@/composables/workflow/useWorkflowPreview';
+import type { useWorkflowInterfaceManagement } from '@/composables/workflow/useWorkflowInterfaceManagement';
 
 export interface WorkflowStoreContext {
   // 核心 State (以 Ref 的形式)
@@ -35,6 +36,7 @@ export interface WorkflowStoreContext {
   workflowGrouping: ReturnType<typeof useWorkflowGrouping>;
   multiInputActions: ReturnType<typeof useMultiInputConnectionActions>;
   workflowPreview: ReturnType<typeof useWorkflowPreview>;
+  workflowInterfaceManagement: ReturnType<typeof useWorkflowInterfaceManagement>;
 
   // 需要共享的 Getters (以 ComputedRef 的形式)
   currentSnapshot: ComputedRef<WorkflowStateSnapshot | undefined>;

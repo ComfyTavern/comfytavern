@@ -82,6 +82,7 @@ export const useWorkflowStore = defineStore("workflow", () => {
     workflowGrouping,
     workflowPreview, // +++
     multiInputActions,
+    workflowInterfaceManagement,
     // 核心 State (暂未完全移入)
     elements: ref([]), // Placeholder
     workflowData: ref(null), // Placeholder
@@ -434,11 +435,8 @@ export const useWorkflowStore = defineStore("workflow", () => {
       },
       entry: HistoryEntry
     ) => {
-      await workflowInteractionCoordinator.updateWorkflowInterfaceAndRecord(
-        internalId,
-        updateFn,
-        entry
-      );
+      // @ts-expect-error this is now a direct action
+      await this.updateWorkflowInterfaceAndRecord(internalId, updateFn, entry);
       changedTemplateWorkflowIds.value.add(internalId);
       console.debug(`[WorkflowStore] Template ${internalId} marked as changed after interface update.`);
     },

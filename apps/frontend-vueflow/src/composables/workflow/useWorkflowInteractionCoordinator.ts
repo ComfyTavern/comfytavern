@@ -6,7 +6,12 @@ import { useTabStore } from "@/stores/tabStore";
 import type { EditorOpeningContext } from "@/types/editorTypes";
 import type { WorkflowStateSnapshot } from "@/types/workflowTypes";
 import { getNodeType, parseSubHandleId } from "@/utils/nodeUtils";
-import type { GroupSlotInfo, HistoryEntry, InputDefinition, NodeDefinition } from "@comfytavern/types";
+import type {
+  GroupSlotInfo,
+  HistoryEntry,
+  InputDefinition,
+  NodeDefinition,
+} from "@comfytavern/types";
 import { DataFlowType } from "@comfytavern/types";
 import type { Edge, Node as VueFlowNode, XYPosition } from "@vue-flow/core";
 import { klona } from "klona/full";
@@ -113,6 +118,7 @@ export function useWorkflowInteractionCoordinator() {
   // (可选) 触发副作用，例如预览执行。
 
   /**
+   * [DEPRECATED] 已迁移至 `nodeActions.ts`
    * 更新节点输入值，记录历史，并在启用预览时触发预览请求。
    * @param internalId - 标签页的内部 ID。
    * @param nodeId - 目标节点的 ID。
@@ -189,6 +195,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `nodeActions.ts`
    * 更新节点配置值，记录历史，并在启用预览时触发预览请求。
    * 特殊处理 NodeGroup 的 referencedWorkflowId 更改。
    * @param internalId - 标签页的内部 ID。
@@ -380,6 +387,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `nodeActions.ts`
    * 原子性地更改节点的模式，更新其配置值，移除因插槽变化而失效的边，并记录单一历史条目。
    * @param internalId - 标签页的内部 ID。
    * @param nodeId - 目标节点的 ID。
@@ -399,7 +407,9 @@ export function useWorkflowInteractionCoordinator() {
       "changeNodeModeAndRecord"
     );
     if (snapshotError || !currentSnapshot) {
-      console.error(snapshotError || `[changeNodeModeAndRecord] 无法获取标签页 ${internalId} 的快照。`);
+      console.error(
+        snapshotError || `[changeNodeModeAndRecord] 无法获取标签页 ${internalId} 的快照。`
+      );
       return;
     }
 
@@ -449,10 +459,18 @@ export function useWorkflowInteractionCoordinator() {
         const edge = el as Edge;
         let shouldRemove = false;
 
-        if (edge.source === nodeId && edge.sourceHandle && removedOutputKeys.has(parseSubHandleId(edge.sourceHandle).originalKey)) {
+        if (
+          edge.source === nodeId &&
+          edge.sourceHandle &&
+          removedOutputKeys.has(parseSubHandleId(edge.sourceHandle).originalKey)
+        ) {
           shouldRemove = true;
         }
-        if (edge.target === nodeId && edge.targetHandle && removedInputKeys.has(parseSubHandleId(edge.targetHandle).originalKey)) {
+        if (
+          edge.target === nodeId &&
+          edge.targetHandle &&
+          removedInputKeys.has(parseSubHandleId(edge.targetHandle).originalKey)
+        ) {
           shouldRemove = true;
         }
 
@@ -469,7 +487,7 @@ export function useWorkflowInteractionCoordinator() {
         entry.details = { removedEdges: edgesToRemove };
       }
     }
-    
+
     // 4. 应用状态更新
     await workflowManager.setElements(internalId, nextSnapshot.elements);
 
@@ -486,6 +504,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `nodeActions.ts`
    * 更新一个或多个节点的位置，并原子性地记录历史快照。
    * @param internalId - 目标标签页的内部 ID。
    * @param updates - 一个包含 { nodeId, position } 对象的数组，描述要更新的节点及其新位置。
@@ -555,6 +574,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `edgeActions.ts`
    * 处理需要同时添加边和更新工作流接口（例如 GroupInput/GroupOutput）的连接操作。
    * 原子性地更新状态、记录历史并更新视图（触发节点内部更新）。
    * @param internalId - 标签页的内部 ID。
@@ -691,26 +711,33 @@ export function useWorkflowInteractionCoordinator() {
 
   /**
    /**
+    * [DEPRECATED] 已迁移至 `nodeActions.ts` (作为 addElementsAndRecord 的一部分)
     * 将单个节点添加到指定标签页的状态并记录历史。
     * @param internalId - 目标标签页的内部 ID。
     * @param nodeToAdd - 要添加的 VueFlowNode 对象。
     * @param entry - 描述此操作的历史记录条目。
     */
-   async function addNodeAndRecord(internalId: string, nodeToAdd: VueFlowNode, entry: HistoryEntry) {
-     await addElementsAndRecord(internalId, [nodeToAdd], [], entry);
-   }
- 
-   /**
-    * 添加一个分组框（Frame）节点到指定标签页并记录历史。
-    * @param internalId - 目标标签页的内部 ID。
-    * @param frameNode - 要添加的 Frame 节点对象。
-    * @param entry - 描述此操作的历史记录条目。
-    */
-   async function addFrameNodeAndRecord(internalId: string, frameNode: VueFlowNode, entry: HistoryEntry) {
-     // Frame 节点本质上也是一个节点，所以我们可以复用 addElementsAndRecord 逻辑
-     await addElementsAndRecord(internalId, [frameNode], [], entry);
-   }
+  async function addNodeAndRecord(internalId: string, nodeToAdd: VueFlowNode, entry: HistoryEntry) {
+    await addElementsAndRecord(internalId, [nodeToAdd], [], entry);
+  }
+
   /**
+   * [DEPRECATED] 已迁移至 `nodeActions.ts` (作为 addElementsAndRecord 的一部分)
+   * 添加一个分组框（Frame）节点到指定标签页并记录历史。
+   * @param internalId - 目标标签页的内部 ID。
+   * @param frameNode - 要添加的 Frame 节点对象。
+   * @param entry - 描述此操作的历史记录条目。
+   */
+  async function addFrameNodeAndRecord(
+    internalId: string,
+    frameNode: VueFlowNode,
+    entry: HistoryEntry
+  ) {
+    // Frame 节点本质上也是一个节点，所以我们可以复用 addElementsAndRecord 逻辑
+    await addElementsAndRecord(internalId, [frameNode], [], entry);
+  }
+  /**
+   * [DEPRECATED] 已迁移至 `nodeActions.ts`
    * 批量添加节点和边，并原子性地记录历史。
    * @param internalId - 目标标签页的内部 ID。
    * @param nodesToAdd - 要添加的 VueFlowNode 对象数组。
@@ -754,6 +781,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `lifecycleActions.ts`
    * 原子性地更新工作流接口（输入/输出），并处理因接口删除而需要移除的边，最后记录历史。
    * @param internalId - 标签页的内部 ID。
    * @param updateFn - 一个函数，接收当前的 inputs 和 outputs，并返回更新后的 { inputs, outputs } 对象。
@@ -870,6 +898,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `edgeActions.ts`
    * 将单个边添加到指定标签页的状态并记录历史。
    * @param internalId - 目标标签页的内部 ID。
    * @param edgeToAdd - 要添加的 Edge 对象。
@@ -905,6 +934,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `edgeActions.ts`
    * 删除指定的元素（节点和/或边）并记录历史。
    * @param internalId - 目标标签页的内部 ID。
    * @param elementsToRemove - 要删除的节点或边对象的数组。
@@ -1129,6 +1159,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `edgeActions.ts`
    * 删除连接到指定节点句柄的所有边并记录历史。
    * @param internalId - 目标标签页的内部 ID。
    * @param nodeId - 目标节点的 ID。
@@ -1219,6 +1250,7 @@ export function useWorkflowInteractionCoordinator() {
    * @param entry - 描述此操作的历史记录条目。
    */
   /**
+   * [DEPRECATED] 已迁移至 `nodeActions.ts`
    * 更新节点的标签（显示名称）并记录历史。
    * @param internalId - 标签页的内部 ID。
    * @param nodeId - 目标节点的 ID。
@@ -1284,6 +1316,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `nodeActions.ts`
    * 更新节点的尺寸（宽度和/或高度）并记录历史。
    * @param internalId - 标签页的内部 ID。
    * @param nodeId - 目标节点的 ID。
@@ -1366,6 +1399,7 @@ export function useWorkflowInteractionCoordinator() {
   }
 
   /**
+   * [DEPRECATED] 已迁移至 `nodeActions.ts`
    * 更新一个或多个节点的父节点，并记录历史。
    * @param internalId - 标签页的内部 ID。
    * @param updates - 一个包含 { nodeId, parentNodeId } 对象的数组，parentNodeId 为 null 表示移除父节点。
@@ -1406,8 +1440,12 @@ export function useWorkflowInteractionCoordinator() {
       if (node) {
         const oldParentNode = (node as any).parentNode || null;
         const newParentNode = update.parentNodeId;
-        
-        if (oldParentNode !== newParentNode || node.position.x !== update.position.x || node.position.y !== update.position.y) {
+
+        if (
+          oldParentNode !== newParentNode ||
+          node.position.x !== update.position.x ||
+          node.position.y !== update.position.y
+        ) {
           (node as any).parentNode = newParentNode;
           node.position = update.position; // 同时更新位置
           hasChanged = true;
@@ -1416,7 +1454,9 @@ export function useWorkflowInteractionCoordinator() {
     }
 
     if (!hasChanged) {
-      console.debug("[InteractionCoordinator:updateNodeParentAndRecord] 节点的父节点未改变。跳过历史记录。");
+      console.debug(
+        "[InteractionCoordinator:updateNodeParentAndRecord] 节点的父节点未改变。跳过历史记录。"
+      );
       return;
     }
 
@@ -1426,8 +1466,8 @@ export function useWorkflowInteractionCoordinator() {
     }
   }
 
-
   /**
+   * [DEPRECATED] 已迁移至 `nodeActions.ts`
    * 更新节点内部特定组件的状态（例如文本区域的高度或值）并记录历史。
    * 用于处理节点内部 UI 组件引起的状态变化。
    * @param internalId - 标签页的内部 ID。
@@ -2189,7 +2229,7 @@ export function useWorkflowInteractionCoordinator() {
     removeElementsAndRecord, // 删除元素 (节点/边)
     updateNodeInputValueAndRecord, // 更新节点输入值 (含预览触发)
     updateNodeConfigValueAndRecord, // 更新节点配置值 (含预览触发和 NodeGroup 逻辑)
-changeNodeModeAndRecord, // 原子性地更改节点模式
+    changeNodeModeAndRecord, // 原子性地更改节点模式
     updateNodeLabelAndRecord,
     updateNodeDimensionsAndRecord, // 更新节点尺寸
     updateNodeComponentStateAndRecord, // 更新节点内部组件状态
@@ -2199,10 +2239,10 @@ changeNodeModeAndRecord, // 原子性地更改节点模式
     updateWorkflowDescriptionAndRecord, // 更新工作流描述
     setPreviewTargetAndRecord, // 新增：设置/清除预览目标并记录历史
     openDockedEditorForNodeInput, // 新增：打开可停靠编辑器
-    updateNodeInputConnectionOrderAndRecord,
-    disconnectEdgeFromInputAndRecord,
-    connectEdgeToInputAndRecord,
-    moveAndReconnectEdgeAndRecord,
+    updateNodeInputConnectionOrderAndRecord, // in edgeActions
+    disconnectEdgeFromInputAndRecord, // in edgeActions
+    connectEdgeToInputAndRecord, // in edgeActions
+    moveAndReconnectEdgeAndRecord, // in edgeActions
     addElementsAndRecord, // <-- 导出新函数
 
     // --- 预览相关 (来自 useWorkflowPreview) ---
