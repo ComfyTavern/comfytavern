@@ -47,7 +47,8 @@ export type SerializedWorkflowFragment = z.infer<typeof SerializedWorkflowFragme
 type GetEdgeStylePropsFunc = (
   sourceType: string,
   targetType: string,
-  isDark: boolean
+  isDark: boolean,
+  isStream?: boolean
 ) => {
   animated: boolean;
   style: Record<string, any>;
@@ -121,11 +122,11 @@ export async function transformWorkflowToVueFlow(
   };
 
   // Frontend-specific adapter for getEdgeStyleProps
-  const getEdgeStylePropsAdapter = (sourceType: string, targetType: string) => {
+  const getEdgeStylePropsAdapter = (sourceType: string, targetType: string, isStream?: boolean) => {
     const isDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
     // Note: The original `getEdgeStylePropsFunc` from `useEdgeStyles` takes `isDark` as its third argument.
     // We adapt the call here to include it.
-    return getEdgeStylePropsFunc(sourceType, targetType, isDark);
+    return getEdgeStylePropsFunc(sourceType, targetType, isDark, isStream);
   };
 
   return transformStorageToVueFlow(

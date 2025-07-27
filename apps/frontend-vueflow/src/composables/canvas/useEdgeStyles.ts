@@ -29,11 +29,18 @@ function getCssVariableValue(variableName: string, fallbackColor: string): strin
 export function getEdgeStyleProps(
   sourceType: string,
   targetType: string,
-  isDark: boolean
+  isDark: boolean,
+  isStream?: boolean
 ): EdgeStyleProps {
   let edgeAnimated = false;
   let colorSet = ''; // 颜色将从 CSS 变量获取
   let strokeDasharray: string | undefined = undefined;
+
+  if (isStream) {
+    edgeAnimated = true;
+    strokeDasharray = "5 5";
+  }
+
   const themeSuffix = isDark ? 'dark' : 'light';
   const defaultFallbackColor = isDark ? '#6B7280' : '#9CA3AF'; // 硬编码的回退默认色
 
@@ -46,21 +53,13 @@ export function getEdgeStyleProps(
       : null;
 
   if (primaryType) {
-    // 特殊处理 STRING 类型 (蓝色虚线)
-    if (primaryType === DataFlowType.STRING) {
-      edgeAnimated = true;
-      const varName = `--handle-color-string-${themeSuffix}`;
-      colorSet = getCssVariableValue(varName, isDark ? '#63b3ed' : '#1890ff'); // 提供回退色
-      strokeDasharray = "5 5";
-    } else {
-      // 其他已知类型
-      // 将 SocketType (大写) 转换为 CSS 变量名中的小写部分
-      const typeLower = primaryType.toLowerCase();
-      const varName = `--handle-color-${typeLower}-${themeSuffix}`;
-      // 为其他类型提供一个通用的回退色，或者可以根据类型提供不同的回退
-      const fallbackColor = defaultFallbackColor;
-      colorSet = getCssVariableValue(varName, fallbackColor);
-    }
+    // 其他已知类型
+    // 将 SocketType (大写) 转换为 CSS 变量名中的小写部分
+    const typeLower = primaryType.toLowerCase();
+    const varName = `--handle-color-${typeLower}-${themeSuffix}`;
+    // 为其他类型提供一个通用的回退色，或者可以根据类型提供不同的回退
+    const fallbackColor = defaultFallbackColor;
+    colorSet = getCssVariableValue(varName, fallbackColor);
   }
 
   // 如果 primaryType 是 null (两端都是 Any) 或未知类型，则使用默认颜色变量

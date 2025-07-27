@@ -316,7 +316,7 @@ export async function transformStorageToVueFlow(
   workflowLoader: WorkflowLoader,
   // Dependencies to be provided by the frontend caller
   getSlotDefinitionFunc: (node: VueFlowNode, handleId: string, type: 'source' | 'target') => any,
-  getEdgeStylePropsFunc: (sourceType: string, targetType: string) => any
+  getEdgeStylePropsFunc: (sourceType: string, targetType: string, isStream?: boolean) => any
 ): Promise<{ flowData: FlowExportObject; viewport: WorkflowViewport }> {
   const workflowLoadCache = new Map<string, Promise<WorkflowStorageObject | null>>();
   const cachedLoadFunc = (wfId: string): Promise<WorkflowStorageObject | null> => {
@@ -412,9 +412,10 @@ export async function transformStorageToVueFlow(
     const sourceNode = vueFlowNodesMap.get(storageEdge.source);
     const targetNode = vueFlowNodesMap.get(storageEdge.target);
     let sourceType = "any", targetType = "any";
+    let sourceSlotDef: any;
 
     if (sourceNode && storageEdge.sourceHandle) {
-      const sourceSlotDef = getSlotDefinitionFunc(sourceNode, storageEdge.sourceHandle, 'source');
+      sourceSlotDef = getSlotDefinitionFunc(sourceNode, storageEdge.sourceHandle, 'source');
       if (sourceSlotDef?.dataFlowType) sourceType = sourceSlotDef.dataFlowType;
     }
     if (targetNode && storageEdge.targetHandle) {
@@ -422,7 +423,8 @@ export async function transformStorageToVueFlow(
       if (targetSlotDef?.dataFlowType) targetType = targetSlotDef.dataFlowType;
     }
 
-    const styleProps = getEdgeStylePropsFunc(sourceType, targetType);
+    const isStream = sourceSlotDef?.isStream;
+    const styleProps = getEdgeStylePropsFunc(sourceType, targetType, isStream);
     return {
       id: storageEdge.id, source: storageEdge.source, target: storageEdge.target,
       sourceHandle: storageEdge.sourceHandle, targetHandle: storageEdge.targetHandle,

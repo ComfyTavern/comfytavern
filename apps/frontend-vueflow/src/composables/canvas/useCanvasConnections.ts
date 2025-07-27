@@ -334,7 +334,8 @@ export function useCanvasConnections({
     else if (isTargetWild && !isSourceConv) finalTargetDft = finalSourceDft;
     else if (isSourceWild && !isTargetConv) finalSourceDft = finalTargetDft;
 
-    const { animated, style, markerEnd } = getEdgeStyleProps(finalSourceDft, finalTargetDft, isDark.value);
+    const isStream = sourceOutputDef.isStream;
+    const { animated, style, markerEnd } = getEdgeStyleProps(finalSourceDft, finalTargetDft, isDark.value, isStream);
 
     let edgeType = 'default'; // 始终使用默认边类型
     let finalTargetHandleForEdge = params.targetHandle; // 始终使用 Vue Flow 提供的实际连接句柄 (即子句柄 ID)
@@ -547,7 +548,8 @@ export function useCanvasConnections({
     // <<<< END CONVERTIBLE_ANY LOGIC >>>>
 
     // 更新边的样式和数据属性，使用转换后的类型
-    const { animated, style, markerEnd } = getEdgeStyleProps(finalSourceDefForEdge.dataFlowType, finalTargetDefForEdge.dataFlowType, isDark.value);
+    const isStream = finalSourceDefForEdge.isStream;
+    const { animated, style, markerEnd } = getEdgeStyleProps(finalSourceDefForEdge.dataFlowType, finalTargetDefForEdge.dataFlowType, isDark.value, isStream);
     newEdgeParamsForCoordinator.animated = animated;
     newEdgeParamsForCoordinator.style = style;
     newEdgeParamsForCoordinator.markerEnd = markerEnd;
