@@ -39,12 +39,12 @@ ComfyTavern 支持用户自定义界面语言。通过添加自定义语言包�
 
 除了 `_meta` 对象外，文件的其余部分应包含您要翻译的键值对。**强烈建议您使用项目提供的模板作为起点，以确保覆盖所有必要的翻译键。**
 
-我们提供了一个自动扫描脚本 [`scripts/i18n-scanner.ts`](../../scripts/i18n-scanner.ts) 来从源代码中提取所有需要翻译的文本键，并生成一个模板文件。
+我们提供了一个自动扫描脚本 `scripts/i18n-scanner.ts` 来从源代码中提取所有需要翻译的文本键，并生成一个模板文件。
 
 **对于普通用户：**
-您可以直接使用项目中预置的模板文件：[`scripts/locales-template.json`](../../scripts/locales-template.json)。
+您可以直接使用项目中预置的模板文件：`scripts/locales-template.json`。
 这个文件包含了所有UI文本的键，以及一个供您填写的 `_meta` 结构，对应的值均为 `"[TODO]"`。您需要做的就是：
-1.  复制 [`scripts/locales-template.json`](../../scripts/locales-template.json) 的内容。
+1.  复制 `scripts/locales-template.json` 的内容。
 2.  创建一个新的、以上述命名规范命名的文件（例如 `fr-FR.json`）。
 3.  将复制的内容粘贴进去，然后修改 `_meta` 对象中的占位符为您语言的实际名称。
 4.  将所有其他值为 `"[TODO]"` 的键翻译成您的目标语言。
@@ -95,7 +95,7 @@ ComfyTavern 支持用户自定义界面语言。通过添加自定义语言包�
 例如，如果您创建了 `fr-FR.json`，则应将其放置为：
 `user://library/locales/ui/@ComfyTavern-ui/fr-FR.json`
 
-您还可以将语言包文件放置在共享目录中`shared://library/locales/ui/@ComfyTavern-ui/` 或者`public\library\locales\ui\@ComfyTavern-ui` ，以便访问该部署实例的其他用户可以使用这些语言包。
+您还可以将语言包文件放置在共享目录中 `shared://library/locales/ui/@ComfyTavern-ui/` 或者 `public\library\locales\ui\@ComfyTavern-ui` ，以便访问该部署实例的其他用户可以使用这些语言包。
 
 ### 步骤 3：在应用中选择新语言
 
@@ -114,7 +114,7 @@ ComfyTavern 支持用户自定义界面语言。通过添加自定义语言包�
 
 ## 开发者指南：使用脚本生成与更新语言包
 
-为了方便开发者和贡献者维护语言包，我们提供了一个强大的扫描工具：[`scripts/i18n-scanner.ts`](../../scripts/i18n-scanner.ts)。
+为了方便开发者和贡献者维护语言包，我们提供了一个强大的扫描工具：`scripts/i18n-scanner.ts`。
 
 ### 脚本功能
 
@@ -124,28 +124,38 @@ ComfyTavern 支持用户自定义界面语言。通过添加自定义语言包�
 2.  **处理内置语言包**：更新核心开发者维护的语言包（位于 `apps/frontend-vueflow/src/locales`），并将合并产物输出到 `scripts/merged_locales/built-in/`。
 3.  **处理扩展语言包**：更新您放置在 `locales-extensions` 目录下的自定义语言包，并将合并产物输出到 `locales-extensions/merged_locales/`。
 
-### 如何使用脚本更新您的自定义语言包
+### 开发者工作流程
 
-这是一个两步流程：首先使用脚本更新文件，然后将更新后的文件部署到应用中。
+根据您的目标，有两种主要的工作流程。
 
-#### 步骤 A：使用脚本生成合并文件
+#### 场景 1：创建或更新个人/扩展语言包
 
-1.  **放置您的文件**：将您正在翻译的语言包文件（例如 `my-lang.json`）放置在项目根目录下的 `locales-extensions` 文件夹中。
+如果您希望创建供个人使用或分享的语言包，而不是将其作为应用的核心部分，请遵循此流程。
+
+1.  **放置您的文件**：将您正在翻译的语言包文件（例如 `my-lang.json`）放置在项目根目录下的 `locales-extensions` 文件夹中。如果该文件夹不存在，请手动创建。
 2.  **运行扫描脚本**：在项目根目录下，打开终端并执行：
     ```bash
     bun run i18n:scan
     ```
 3.  **获取更新后的文件**：脚本执行完毕后，在 `locales-extensions/merged_locales/` 目录下找到更新后的文件（例如 `my-lang.json`）。这个文件现在包含了所有最新的翻译键，同时保留了您已完成的翻译。
+4.  **部署到应用**：要使您的语言包生效，您必须将上一步中得到的最终文件，**手动复制**到“**步骤 2：放置语言包文件**”中描述的运行时目录之一（例如 `user://library/locales/ui/@ComfyTavern-ui/`）。
 
-#### 步骤 B：使语言包在应用中生效
+**请注意**：`locales-extensions` 目录仅为脚本处理提供便利，应用本身不会从中加载文件。
 
-**`locales-extensions` 目录仅为脚本处理提供便利，应用本身不会从中加载文件。**
+#### 场景 2：贡献或更新内置语言包（核心开发）
 
-要使您的语言包生效，您必须完成最后一步：
+如果您是 ComfyTavern 的核心贡献者，希望更新或添加一个内置语言包，请遵循以下步骤：
 
--   将您在**步骤 A**中得到的、位于 `locales-extensions/merged_locales/` 目录下的最终文件，**复制**到“**步骤 2：放置语言包文件**”中描述的运行时目录之一（例如 `user://library/locales/ui/@ComfyTavern-ui/`）。
+1.  **定位文件**：内置语言包的源文件位于 `apps/frontend-vueflow/src/locales`。
+2.  **运行扫描**：执行 `bun run i18n:scan`。脚本会扫描最新的翻译键，并将合并后的文件输出到 `scripts/merged_locales/built-in/` 目录。
+3.  **翻译**：在 `scripts/merged_locales/built-in/` 目录中找到您的语言文件，完成所有值为 `"[TODO]"` 的条目的翻译。
+4.  **复制回项目**：完成翻译后，执行以下命令将文件复制回应用源目录：
+    ```bash
+    bun run i18n:copy
+    ```
+    此命令会自动将合并后的语言包复制到 `apps/frontend-vueflow/src/locales`，完成更新。
 
-完成这个复制操作并刷新应用后，您的自定义语言就会出现在设置菜单中。
+完成以上步骤并重新构建应用后，您的更改将成为内置语言包的一部分。
 
 ## 高级：翻译覆盖与合并
 
