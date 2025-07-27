@@ -1,25 +1,27 @@
 <template>
   <BaseModal :visible="props.isVisible" @close="closeModal" title="编辑头像">
-    <div class="avatar-editor-content">
-      <div class="upload-section">
-        <p class="section-title">上传本地图片</p>
-        <input type="file" ref="fileInputRef" @change="handleFileChange" accept="image/*" style="display: none;" />
-        <button class="px-4 py-2 text-sm font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50" @click="triggerFileInput">选择文件</button>
-        <p v-if="fileName" class="file-name-display">已选择: {{ fileName }}</p>
-      </div>
+    <template #content>
+      <div class="avatar-editor-content">
+        <div class="upload-section">
+          <p class="section-title">上传本地图片</p>
+          <input type="file" ref="fileInputRef" @change="handleFileChange" accept="image/*" style="display: none;" />
+          <button class="px-4 py-2 text-sm font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50" @click="triggerFileInput">选择文件</button>
+          <p v-if="fileName" class="file-name-display">已选择: {{ fileName }}</p>
+        </div>
 
-      <div class="url-section">
-        <p class="section-title">使用网络链接</p>
-        <input type="url" v-model="imageUrl" placeholder="粘贴图片 URL" class="input-field" />
-        <button class="ml-2 px-3 py-1.5 text-xs font-medium text-primary bg-primary-soft rounded-md hover:bg-primary-soft/80" @click="loadUrlForPreview" :disabled="!imageUrl">预览URL</button>
-      </div>
+        <div class="url-section">
+          <p class="section-title">使用网络链接</p>
+          <input type="url" v-model="imageUrl" placeholder="粘贴图片 URL" class="input-field" />
+          <button class="ml-2 px-3 py-1.5 text-xs font-medium text-primary bg-primary-soft rounded-md hover:bg-primary-soft/80" @click="loadUrlForPreview" :disabled="!imageUrl">预览URL</button>
+        </div>
 
-      <div v-if="previewSrc" class="preview-section">
-        <p class="section-title">预览</p>
-        <img :src="previewSrc" alt="头像预览" class="avatar-preview-modal" />
+        <div v-if="previewSrc" class="preview-section">
+          <p class="section-title">预览</p>
+          <img :src="previewSrc" alt="头像预览" class="avatar-preview-modal" />
+        </div>
+        <p v-if="errorMsg" class="error-message">{{ errorMsg }}</p>
       </div>
-      <p v-if="errorMsg" class="error-message">{{ errorMsg }}</p>
-    </div>
+    </template>
 
     <template #footer>
       <div class="flex justify-end space-x-3 w-full">

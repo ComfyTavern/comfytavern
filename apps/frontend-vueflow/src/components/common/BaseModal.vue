@@ -41,9 +41,8 @@
         </div>
 
         <div class="modal-content-area p-2">
-          <slot>
-            <!-- 默认插槽，用于插入自定义组件 -->
-            <component v-if="_contentDefinition && _contentDefinition.component" :is="_contentDefinition.component" v-bind="_contentDefinition.props" />
+          <slot name="content">
+            <!-- 内容将由父组件通过 #content 插槽提供 -->
           </slot>
         </div>
 
@@ -58,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount, useSlots, type Component as VueComponent, computed, nextTick } from 'vue';
+import { ref, watch, onMounted, onBeforeUnmount, useSlots, computed, nextTick } from 'vue';
 import { useUiStore } from '@/stores/uiStore';
 
 const props = withDefaults(defineProps<{
@@ -68,8 +67,6 @@ const props = withDefaults(defineProps<{
   height?: string; // 修改：模态框固定高度
   showCloseButton?: boolean;
   closeOnBackdropClick?: boolean;
-  // 用于内部渲染 DialogService 传递过来的组件
-  _contentDefinition?: { component: VueComponent, props?: Record<string, any> };
   bare?: boolean; // 新增 prop，用于无样式模式
   dialogClass?: string;
   contentClass?: string;

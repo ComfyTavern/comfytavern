@@ -63,7 +63,9 @@ const currentPluginName = ref<string>(props.initialPlugin.name);
 
 // Get all plugins that have configuration options
 const configurablePlugins = computed(() => {
-  return pluginStore.plugins.filter(p => p.configOptions && p.configOptions.length > 0);
+  const pluginsWithOptions = pluginStore.plugins.filter(p => p.configOptions && p.configOptions.length > 0);
+  console.log('Configurable plugins:', JSON.stringify(pluginsWithOptions, null, 2));
+  return pluginsWithOptions;
 });
 
 // Format plugins for SelectInput component

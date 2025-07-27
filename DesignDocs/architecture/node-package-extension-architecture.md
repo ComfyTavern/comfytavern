@@ -730,7 +730,7 @@ configOptions:
 }
 ```
 
-这个 `openModalWithContent` action 会更新 `uiStore` 的状态，而一个全局的 `<BaseModal>` 组件会监听这些状态，并将 `ExtensionConfigPanel` 作为其 `_contentDefinition` 的一部分来渲染。这套机制完全复用了现有强大的 `BaseModal.vue` 组件。
+这个 `openModalWithContent` action 会更新 `uiStore` 的状态，而一个全局的 `DialogContainer.vue` 组件会监听这些状态，在其内部渲染 `<BaseModal>`，并将 `ExtensionConfigPanel` (即 `PluginDetailModal`) 作为 `#content` 插槽的内容传递进去。这套机制完全复用了现有强大的 `BaseModal.vue` 组件和全局 `uiStore` 状态管理。
 
 3.  **状态管理集成**:
     - 所有扩展的配置值都将由现有的 `settingsStore` 管理。

@@ -214,7 +214,9 @@ useWebSocket();
     <!-- 全局设置模态框 -->
     <BaseModal :visible="isSettingsModalVisible" :title="t('settings.title')" :width="settingsModalProps.width"
       :height="settingsModalProps.height" @update:visible="!$event && uiStore.closeSettingsModal()">
-      <SettingsLayout />
+      <template #content>
+        <SettingsLayout />
+      </template>
     </BaseModal>
 
     <!-- + Initial Username Setup Modal -->

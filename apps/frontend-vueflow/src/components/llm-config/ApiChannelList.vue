@@ -133,13 +133,15 @@
         </h3>
       </template>
 
-      <ApiChannelForm
-        :initial-data="editingChannel"
-        @submit="handleFormSubmit"
-        @cancel="closeModal"
-        @validity-change="isFormForFooterValid = $event"
-        :key="editingChannel ? editingChannel.id : 'new'"
-      />
+      <template #content>
+        <ApiChannelForm
+          :initial-data="editingChannel"
+          @submit="handleFormSubmit"
+          @cancel="closeModal"
+          @validity-change="isFormForFooterValid = $event"
+          :key="editingChannel ? editingChannel.id : 'new'"
+        />
+      </template>
 
       <template #footer>
         <div class="flex justify-end space-x-3 w-full">

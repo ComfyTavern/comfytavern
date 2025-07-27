@@ -1,84 +1,86 @@
 <template>
   <BaseModal :visible="visible" v-comfy-tooltip="t('fileManager.uploadManager.title')" @close="handleClose" modal-class="w-full max-w-2xl"
     :close-on-backdrop="!isUploading" data-testid="fm-upload-manager-modal">
-    <div class="p-4 sm:p-6 space-y-4 text-sm">
-      <div v-if="!filesToUpload || filesToUpload.length === 0"
-        class="text-center py-8 text-text-muted">
-        <CloudArrowUpIcon class="h-16 w-16 mx-auto mb-3 opacity-50 text-text-muted" />
-        <p>{{ t('fileManager.uploadManager.noFilesToUpload') }}</p>
-        <p class="text-xs mt-1">{{ t('fileManager.uploadManager.noFilesHint') }}</p>
-      </div>
-
-      <div v-else class="space-y-3">
-        <div class="flex justify-between items-center mb-3">
-          <p class="text-text-base">
-            {{ t('fileManager.uploadManager.targetPathLabel') }} <strong class="font-mono">{{ targetPathDisplay }}</strong>
-          </p>
-          <div v-if="overallProgress > 0 && overallProgress < 100 && !allUploadsCompletedOrFailed"
-            class="text-xs text-info">
-            {{ t('fileManager.uploadManager.overallProgress', { progress: overallProgress.toFixed(0) }) }}
-          </div>
-          <div v-if="allUploadsCompletedOrFailed && !isUploading" class="text-xs">
-            <span v-if="successfulUploadsCount === filesToUpload.length"
-              class="text-success">{{ t('fileManager.uploadManager.allSuccess') }}</span>
-            <span v-else class="text-warning">{{ t('fileManager.uploadManager.someSuccess', { successCount: successfulUploadsCount, totalCount: filesToUpload.length }) }}</span>
-          </div>
+    <template #content>
+      <div class="p-4 sm:p-6 space-y-4 text-sm">
+        <div v-if="!filesToUpload || filesToUpload.length === 0"
+          class="text-center py-8 text-text-muted">
+          <CloudArrowUpIcon class="h-16 w-16 mx-auto mb-3 opacity-50 text-text-muted" />
+          <p>{{ t('fileManager.uploadManager.noFilesToUpload') }}</p>
+          <p class="text-xs mt-1">{{ t('fileManager.uploadManager.noFilesHint') }}</p>
         </div>
 
-        <!-- 总体进度条 (可选) -->
-        <progress v-if="isUploading || (overallProgress > 0 && overallProgress < 100)"
-          class="progress progress-info w-full h-2" :value="overallProgress" max="100"></progress>
+        <div v-else class="space-y-3">
+          <div class="flex justify-between items-center mb-3">
+            <p class="text-text-base">
+              {{ t('fileManager.uploadManager.targetPathLabel') }} <strong class="font-mono">{{ targetPathDisplay }}</strong>
+            </p>
+            <div v-if="overallProgress > 0 && overallProgress < 100 && !allUploadsCompletedOrFailed"
+              class="text-xs text-info">
+              {{ t('fileManager.uploadManager.overallProgress', { progress: overallProgress.toFixed(0) }) }}
+            </div>
+            <div v-if="allUploadsCompletedOrFailed && !isUploading" class="text-xs">
+              <span v-if="successfulUploadsCount === filesToUpload.length"
+                class="text-success">{{ t('fileManager.uploadManager.allSuccess') }}</span>
+              <span v-else class="text-warning">{{ t('fileManager.uploadManager.someSuccess', { successCount: successfulUploadsCount, totalCount: filesToUpload.length }) }}</span>
+            </div>
+          </div>
 
-        <div class="max-h-[50vh] overflow-y-auto space-y-2 pr-1">
-          <div v-for="fileEntry in uploadQueue" :key="fileEntry.id"
-            class="p-2.5 border rounded-md border-border-base bg-background-base">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center overflow-hidden">
-                <component :is="getFileIcon(fileEntry.file.name)"
-                  class="h-6 w-6 mr-2 text-text-muted flex-shrink-0" />
-                <div class="truncate">
-                  <p class="font-medium text-text-base truncate" v-comfy-tooltip="fileEntry.file.name">
-                    {{ fileEntry.file.name }}
-                  </p>
-                  <p class="text-xs text-text-muted">
-                    {{ formatFileSize(fileEntry.file.size) }}
-                  </p>
+          <!-- 总体进度条 (可选) -->
+          <progress v-if="isUploading || (overallProgress > 0 && overallProgress < 100)"
+            class="progress progress-info w-full h-2" :value="overallProgress" max="100"></progress>
+
+          <div class="max-h-[50vh] overflow-y-auto space-y-2 pr-1">
+            <div v-for="fileEntry in uploadQueue" :key="fileEntry.id"
+              class="p-2.5 border rounded-md border-border-base bg-background-base">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center overflow-hidden">
+                  <component :is="getFileIcon(fileEntry.file.name)"
+                    class="h-6 w-6 mr-2 text-text-muted flex-shrink-0" />
+                  <div class="truncate">
+                    <p class="font-medium text-text-base truncate" v-comfy-tooltip="fileEntry.file.name">
+                      {{ fileEntry.file.name }}
+                    </p>
+                    <p class="text-xs text-text-muted">
+                      {{ formatFileSize(fileEntry.file.size) }}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-center space-x-2 flex-shrink-0 ml-2">
+                  <span v-if="fileEntry.status === 'uploading'" class="text-xs text-info">
+                    {{ fileEntry.progress.toFixed(0) }}%
+                  </span>
+                  <CheckCircleIcon v-if="fileEntry.status === 'success'"
+                    class="h-5 w-5 text-success" />
+                  <XCircleIcon v-if="fileEntry.status === 'error'" class="h-5 w-5 text-error"
+                    v-comfy-tooltip="fileEntry.error || t('fileManager.uploadManager.uploadFailed')" />
+                  <ClockIcon v-if="fileEntry.status === 'pending'" class="h-5 w-5 text-text-muted"
+                    v-comfy-tooltip="t('fileManager.uploadManager.statusWaiting')" />
+                  <PauseCircleIcon v-if="fileEntry.status === 'paused'"
+                    class="h-5 w-5 text-warning" v-comfy-tooltip="t('fileManager.uploadManager.statusPaused')" />
+
+                  <!-- 单个文件操作按钮 (未来扩展) -->
+                  <!-- <button v-if="fileEntry.status === 'pending' || fileEntry.status === 'error'" @click="retryUpload(fileEntry.id)" class="btn btn-xs btn-ghost">重试</button> -->
+                  <!-- <button v-if="fileEntry.status === 'uploading'" @click="pauseUpload(fileEntry.id)" class="btn btn-xs btn-ghost">暂停</button> -->
+                  <!-- <button v-if="fileEntry.status === 'paused'" @click="resumeUpload(fileEntry.id)" class="btn btn-xs btn-ghost">继续</button> -->
+                  <button v-if="canCancel(fileEntry)" @click="cancelUpload(fileEntry.id)"
+                    class="btn btn-xs btn-ghost text-error hover:bg-error/10"
+                    v-comfy-tooltip="t('fileManager.uploadManager.cancelUpload')">
+                    <XMarkIcon class="h-4 w-4" />
+                  </button>
                 </div>
               </div>
-              <div class="flex items-center space-x-2 flex-shrink-0 ml-2">
-                <span v-if="fileEntry.status === 'uploading'" class="text-xs text-info">
-                  {{ fileEntry.progress.toFixed(0) }}%
-                </span>
-                <CheckCircleIcon v-if="fileEntry.status === 'success'"
-                  class="h-5 w-5 text-success" />
-                <XCircleIcon v-if="fileEntry.status === 'error'" class="h-5 w-5 text-error"
-                  v-comfy-tooltip="fileEntry.error || t('fileManager.uploadManager.uploadFailed')" />
-                <ClockIcon v-if="fileEntry.status === 'pending'" class="h-5 w-5 text-text-muted"
-                  v-comfy-tooltip="t('fileManager.uploadManager.statusWaiting')" />
-                <PauseCircleIcon v-if="fileEntry.status === 'paused'"
-                  class="h-5 w-5 text-warning" v-comfy-tooltip="t('fileManager.uploadManager.statusPaused')" />
-
-                <!-- 单个文件操作按钮 (未来扩展) -->
-                <!-- <button v-if="fileEntry.status === 'pending' || fileEntry.status === 'error'" @click="retryUpload(fileEntry.id)" class="btn btn-xs btn-ghost">重试</button> -->
-                <!-- <button v-if="fileEntry.status === 'uploading'" @click="pauseUpload(fileEntry.id)" class="btn btn-xs btn-ghost">暂停</button> -->
-                <!-- <button v-if="fileEntry.status === 'paused'" @click="resumeUpload(fileEntry.id)" class="btn btn-xs btn-ghost">继续</button> -->
-                <button v-if="canCancel(fileEntry)" @click="cancelUpload(fileEntry.id)"
-                  class="btn btn-xs btn-ghost text-error hover:bg-error/10"
-                  v-comfy-tooltip="t('fileManager.uploadManager.cancelUpload')">
-                  <XMarkIcon class="h-4 w-4" />
-                </button>
-              </div>
+              <progress v-if="fileEntry.status === 'uploading'" class="progress progress-info w-full h-1 mt-1"
+                :value="fileEntry.progress" max="100"></progress>
+              <p v-if="fileEntry.status === 'error'" class="text-xs text-error mt-1 truncate"
+                v-comfy-tooltip="fileEntry.error || undefined">
+                {{ t('fileManager.uploadManager.errorPrefix') }} {{ fileEntry.error }}
+              </p>
             </div>
-            <progress v-if="fileEntry.status === 'uploading'" class="progress progress-info w-full h-1 mt-1"
-              :value="fileEntry.progress" max="100"></progress>
-            <p v-if="fileEntry.status === 'error'" class="text-xs text-error mt-1 truncate"
-              v-comfy-tooltip="fileEntry.error || undefined">
-              {{ t('fileManager.uploadManager.errorPrefix') }} {{ fileEntry.error }}
-            </p>
           </div>
         </div>
       </div>
-    </div>
+    </template>
 
     <template #footer>
       <div class="flex justify-between items-center p-3 bg-background-surface rounded-b-md">

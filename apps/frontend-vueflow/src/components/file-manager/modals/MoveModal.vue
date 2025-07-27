@@ -1,34 +1,36 @@
 <template>
   <BaseModal :visible="visible" v-comfy-tooltip="t('fileManager.moveModal.title')" @close="handleClose" modal-class="w-full max-w-lg"
     data-testid="fm-move-modal">
-    <div class="p-4 sm:p-6 space-y-4 text-sm">
-      <p v-if="itemsToMove.length > 0">
-        {{ t('fileManager.moveModal.itemsToMove', { count: itemsToMove.length }) }}
-      <ul class="list-disc list-inside max-h-32 overflow-y-auto bg-background-base p-2 rounded-md mt-1">
-        <li v-for="item in itemsToMove" :key="item.logicalPath" class="truncate" v-comfy-tooltip="item.name">
-          <component :is="item.itemType === 'directory' ? FolderIcon : DocumentIcon"
-            class="h-4 w-4 inline-block mr-1.5 align-text-bottom text-text-muted" />
-          {{ item.name }}
-        </li>
-      </ul>
-      </p>
-      <p v-else>{{ t('fileManager.moveModal.noItemsToMove') }}</p>
-
-      <div>
-        <label for="targetPathInput" class="block text-sm font-medium text-text-base mb-1">
-          {{ t('fileManager.moveModal.targetFolderLabel') }}
-        </label>
-        <!-- 简化的路径输入，未来可以替换为路径选择器组件 -->
-        <input id="targetPathInput" ref="targetPathInputRef" v-model="targetPath" type="text"
-          class="input input-bordered input-sm w-full bg-background-base text-text-base border-border-base"
-          :placeholder="t('fileManager.moveModal.targetPathPlaceholder')" @keydown.enter="handleConfirm" />
-        <p v-if="pathError" class="text-xs text-error mt-1">{{ pathError }}</p>
-        <p class="text-xs text-text-muted mt-1">
-          {{ t('fileManager.moveModal.pathHint') }}
+    <template #content>
+      <div class="p-4 sm:p-6 space-y-4 text-sm">
+        <p v-if="itemsToMove.length > 0">
+          {{ t('fileManager.moveModal.itemsToMove', { count: itemsToMove.length }) }}
+        <ul class="list-disc list-inside max-h-32 overflow-y-auto bg-background-base p-2 rounded-md mt-1">
+          <li v-for="item in itemsToMove" :key="item.logicalPath" class="truncate" v-comfy-tooltip="item.name">
+            <component :is="item.itemType === 'directory' ? FolderIcon : DocumentIcon"
+              class="h-4 w-4 inline-block mr-1.5 align-text-bottom text-text-muted" />
+            {{ item.name }}
+          </li>
+        </ul>
         </p>
+        <p v-else>{{ t('fileManager.moveModal.noItemsToMove') }}</p>
+
+        <div>
+          <label for="targetPathInput" class="block text-sm font-medium text-text-base mb-1">
+            {{ t('fileManager.moveModal.targetFolderLabel') }}
+          </label>
+          <!-- 简化的路径输入，未来可以替换为路径选择器组件 -->
+          <input id="targetPathInput" ref="targetPathInputRef" v-model="targetPath" type="text"
+            class="input input-bordered input-sm w-full bg-background-base text-text-base border-border-base"
+            :placeholder="t('fileManager.moveModal.targetPathPlaceholder')" @keydown.enter="handleConfirm" />
+          <p v-if="pathError" class="text-xs text-error mt-1">{{ pathError }}</p>
+          <p class="text-xs text-text-muted mt-1">
+            {{ t('fileManager.moveModal.pathHint') }}
+          </p>
+        </div>
+        <!-- TODO: 未来可以集成一个迷你文件浏览器或树状视图来选择目标路径 -->
       </div>
-      <!-- TODO: 未来可以集成一个迷你文件浏览器或树状视图来选择目标路径 -->
-    </div>
+    </template>
 
     <template #footer>
       <div class="flex justify-end space-x-2 p-3 bg-background-surface rounded-b-md">

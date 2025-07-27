@@ -56,6 +56,7 @@
     "refresh": "刷新",
     "retry": "重试",
     "searchEllipsis": "搜索...",
+    "settings": "设置",
     "success": "成功",
     "type": "类型",
     "version": "版本",
@@ -702,12 +703,15 @@
       "no_content": "咕？这里似乎没有内容... 可能是正在施工中。"
     },
     "plugins": {
+      "configurationTitle": "{pluginName} - 配置",
       "description": "启用或禁用已安装的插件。状态变更会立即生效。",
       "disableTooltip": "点击禁用",
       "enableTooltip": "点击启用",
       "loadError": "加载插件列表失败",
+      "noConfiguration": "此插件没有可配置的选项。",
       "reload": "重新加载插件",
       "reloading": "正在重新加载...",
+      "switchTo": "切换插件",
       "title": "插件管理"
     },
     "sections": {
