@@ -110,41 +110,35 @@ const onAvatarError = (event: Event) => {
 };
 
 const handleUploadAvatar = () => {
-  const handleSaveAvatar = async (payload: { file?: File }) => {
-    if (!payload.file) {
-      dialogService.showError('没有提供头像文件。');
-      console.error("没有提供头像文件。");
-      return;
-    }
-
-    try {
-      // uiStore.showLoading('正在上传头像...'); // 考虑添加一个全局加载指示器
-      const response = await apiUploadAvatar(payload.file);
-      if (response.success && response.avatarUrl) {
-        await authStore.fetchUserContext();
-        dialogService.showSuccess('头像上传成功！');
-        uiStore.closeModalWithContent();
-      } else {
-        dialogService.showError(response.message || '头像上传失败。');
-        console.error("头像上传失败:", response.message);
-      }
-    } catch (error: any) {
-      dialogService.showError(error.message || '上传头像时发生错误。');
-      console.error("上传头像时发生错误:", error);
-    } finally {
-      // uiStore.hideLoading();
-    }
-  };
-
-  uiStore.openModalWithContent({
+  const modalId = uiStore.openModal({
     component: defineAsyncComponent(() => import('@/components/modals/AvatarEditorModal.vue')),
     props: {
       currentAvatarUrl: currentUser.value?.avatarUrl,
-      onSave: handleSaveAvatar,
+      onSave: async (payload: { file?: File }) => {
+        if (!payload.file) {
+          dialogService.showError('没有提供头像文件。');
+          console.error("没有提供头像文件。");
+          return;
+        }
+
+        try {
+          const response = await apiUploadAvatar(payload.file);
+          if (response.success && response.avatarUrl) {
+            await authStore.fetchUserContext();
+            dialogService.showSuccess('头像上传成功！');
+            uiStore.closeModal(modalId);
+          } else {
+            dialogService.showError(response.message || '头像上传失败。');
+            console.error("头像上传失败:", response.message);
+          }
+        } catch (error: any) {
+          dialogService.showError(error.message || '上传头像时发生错误。');
+          console.error("上传头像时发生错误:", error);
+        }
+      },
     },
     modalProps: {
       title: '编辑头像',
-      // isVisible is now controlled by the store
     }
   });
 };

@@ -741,7 +741,7 @@ const handleActionTriggered = (payload: {
           );
         };
 
-        uiStore.openModalWithContent({
+        uiStore.openModal({
           component: defineAsyncComponent(() => import('../../modals/RegexEditorModal.vue')),
           props: {
             nodeId: props.id,

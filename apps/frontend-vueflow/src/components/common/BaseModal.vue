@@ -72,6 +72,7 @@ const props = withDefaults(defineProps<{
   bare?: boolean; // 新增 prop，用于无样式模式
   dialogClass?: string;
   contentClass?: string;
+  zIndexOverride?: number; // 咕咕：允许覆盖 z-index
 }>(), {
   showCloseButton: true,
   closeOnBackdropClick: true,
@@ -102,7 +103,8 @@ const dynamicZIndex = ref(uiStore.baseZIndex); // 初始化为基础 z-index
 
 watch(() => props.visible, (newValue) => {
   if (newValue) {
-    dynamicZIndex.value = uiStore.getNextZIndex();
+    // 咕咕：如果提供了 zIndexOverride，则使用它，否则从 store 获取新的 z-index
+    dynamicZIndex.value = props.zIndexOverride ?? uiStore.getNextZIndex();
     // DOM 更新后启动入场动画
     nextTick(() => {
       showContentTransition.value = true;

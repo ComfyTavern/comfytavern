@@ -44,7 +44,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useUiStore } from '@/stores/uiStore';
 
 const props = defineProps<{
   currentAvatarUrl?: string;
@@ -52,7 +51,7 @@ const props = defineProps<{
   onClose?: () => void;
 }>();
 
-const uiStore = useUiStore();
+const emit = defineEmits(['close-modal']);
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const selectedFile = ref<File | null>(null);
@@ -133,7 +132,7 @@ const loadUrlForPreview = async () => {
 
 const closeModal = () => {
   props.onClose?.();
-  uiStore.closeModalWithContent();
+  emit('close-modal');
 };
 
 const saveAvatar = async () => {

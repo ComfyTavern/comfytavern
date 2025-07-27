@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia';
 import type { Component } from 'vue';
 
-interface ModalContent {
+// 咕咕：定义模态框实例的接口，包含唯一ID和z-index
+export interface ModalInstance {
+  id: string;
   component: Component | null;
   props?: Record<string, any>;
   modalProps?: {
@@ -10,8 +12,9 @@ interface ModalContent {
     height?: string;
     showCloseIcon?: boolean;
     closeOnBackdrop?: boolean;
-    bare?: boolean; // 新增 bare 选项
+    bare?: boolean;
   };
+  zIndex: number;
 }
 
 interface UiStoreState {
@@ -37,8 +40,8 @@ interface UiStoreState {
   // 新增：列表视图列宽
   listViewColumnWidths: { [viewId: string]: { [columnId: string]: number } };
 
-  // 新增：动态模态框内容
-  modalContent: ModalContent | null;
+  // 咕咕：将单个模态框内容替换为模态框堆栈
+  modalStack: ModalInstance[];
 }
 
 const BASE_Z_INDEX = 1000; // 定义基础 z-index 值
@@ -214,16 +217,27 @@ export const useUiStore = defineStore('ui', {
       isMobileView: initialIsMobileView, // 使用初始化的值
       panelLogHeight: initialPanelLogHeight, // 新增
       listViewColumnWidths: initialListViewColumnWidths, // 新增
-      modalContent: null, // 新增
+      modalStack: [], // 咕咕：初始化模态框堆栈
     };
   },
   actions: {
-    // 动态内容模态框
-    openModalWithContent(payload: ModalContent) {
-      this.modalContent = payload;
+    // 咕咕：重构模态框管理，以支持堆栈
+    openModal(payload: Omit<ModalInstance, 'id' | 'zIndex'>): string {
+      const id = `modal-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const zIndex = this.getNextZIndex();
+      const modalInstance: ModalInstance = {
+        ...payload,
+        id,
+        zIndex,
+      };
+      this.modalStack.push(modalInstance);
+      return id;
     },
-    closeModalWithContent() {
-      this.modalContent = null;
+    closeModal(id: string) {
+      const index = this.modalStack.findIndex(m => m.id === id);
+      if (index > -1) {
+        this.modalStack.splice(index, 1);
+      }
     },
 
     setupMobileViewListener() {

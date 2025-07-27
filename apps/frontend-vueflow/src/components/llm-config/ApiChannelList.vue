@@ -144,6 +144,7 @@ const { channels, isLoadingChannels } = storeToRefs(llmConfigStore);
 const dialogService = useDialogService();
 
 const editingChannel = ref<ApiCredentialConfig | null>(null);
+let activeModalId: string | null = null;
 
 const containerRef = ref<HTMLElement | null>(null);
 const containerWidth = ref(0);
@@ -174,10 +175,9 @@ const openAddModal = () => {
 const openEditModal = (channel: ApiCredentialConfig) => {
   openModal(channel);
 };
-
 const openModal = (channel: ApiCredentialConfig | null = null) => {
   editingChannel.value = channel;
-  uiStore.openModalWithContent({
+  activeModalId = uiStore.openModal({
     component: ApiChannelForm,
     props: {
       initialData: channel,
@@ -188,7 +188,8 @@ const openModal = (channel: ApiCredentialConfig | null = null) => {
       title: channel ? "编辑 API 渠道" : "新建 API 渠道",
       width: 'max-w-2xl',
       showCloseIcon: true,
-    }
+    },
+    // 咕咕：onClose 不是 ModalInstance 的一部分，状态重置逻辑移到 closeModal 中
   });
 };
 
@@ -213,8 +214,12 @@ const confirmDelete = async (channel: ApiCredentialConfig) => {
 };
 
 const closeModal = () => {
-  uiStore.closeModalWithContent();
+  if (activeModalId) {
+    uiStore.closeModal(activeModalId);
+  }
+  // 咕咕：在这里重置状态
   editingChannel.value = null;
+  activeModalId = null;
 };
 
 const handleFormSubmit = async (formData: ApiChannelFormData) => {

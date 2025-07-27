@@ -331,12 +331,13 @@ const handleContextMenuAction = (action: string, _menuItem?: import('./FileConte
     case 'move':
       const itemsToMove = targetFileItem ? (selectedItemsFromStore.some((sel: FAMItem) => sel.logicalPath === targetFileItem.logicalPath) ? selectedItemsFromStore : [targetFileItem]) : selectedItemsFromStore;
       if (itemsToMove.length > 0) {
-        uiStore.openModalWithContent({
+        uiStore.openModal({
           component: MoveModal,
           props: {
             itemsToMove,
             onConfirmMove: (items: FAMItem[], targetPath: string) => {
               fileManagerStore.moveItems(items, targetPath);
+              // The modal will be closed by its internal logic on success
             },
           },
           modalProps: {

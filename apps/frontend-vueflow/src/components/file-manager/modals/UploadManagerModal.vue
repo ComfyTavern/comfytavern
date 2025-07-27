@@ -92,7 +92,6 @@
 import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
-import { useUiStore } from '@/stores/uiStore';
 import * as fileManagerApi from '@/api/fileManagerApi';
 import {
   CloudArrowUpIcon, CheckCircleIcon, XCircleIcon, ClockIcon, PauseCircleIcon, PlayIcon, XMarkIcon,
@@ -116,8 +115,9 @@ const props = defineProps<{
   onUploadsFinished?: (results: { successCount: number, errorCount: number }) => void;
 }>();
 
+const emit = defineEmits(['close-modal']);
+
 const fileManagerStore = useFileManagerStore();
-const uiStore = useUiStore();
 const uploadQueue = ref<UploadFileEntry[]>([]);
 const isUploading = ref(false); // True if any file is actively being uploaded or in queue to be auto-started
 const allowCloseWhenUploading = ref(false); // Or make it a prop
@@ -255,7 +255,7 @@ const handleClose = () => {
     // For now, just prevent closing or allow based on prop
     return;
   }
-  uiStore.closeModalWithContent();
+  emit('close-modal');
   // Reset state if modal is closed and uploads are done or cancelled
   if (!isUploading.value) {
     uploadQueue.value = [];

@@ -98,7 +98,7 @@ function cycleDisplayMode() {
 }
 
 const openSettings = () => {
-  uiStore.openModalWithContent({
+  uiStore.openModal({
     component: defineAsyncComponent(() => import('../../settings/SettingsLayout.vue')),
     modalProps: {
       title: t('settings.title'),

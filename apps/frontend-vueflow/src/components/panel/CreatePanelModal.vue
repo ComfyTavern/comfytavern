@@ -34,7 +34,6 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useUiStore } from '@/stores/uiStore';
 import CreateNewPanelModal from '@/components/panel/CreateNewPanelModal.vue';
 import CreatePanelFromTemplateModal from '@/components/panel/CreatePanelFromTemplateModal.vue';
 
@@ -44,14 +43,14 @@ const props = defineProps<{
   onClose?: () => void;
 }>();
 
-const uiStore = useUiStore();
+const emit = defineEmits(['close-modal']);
 
 const selection = ref<'new' | 'template' | null>(null);
 
 const closeModal = () => {
   selection.value = null;
   props.onClose?.();
-  uiStore.closeModalWithContent();
+  emit('close-modal');
 };
 
 const panelCreated = () => {

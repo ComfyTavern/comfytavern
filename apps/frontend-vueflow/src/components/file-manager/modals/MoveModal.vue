@@ -45,7 +45,6 @@ import { ref, computed, watch, nextTick, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { FAMItem } from '@comfytavern/types';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
-import { useUiStore } from '@/stores/uiStore';
 import { FolderIcon, DocumentIcon, ArrowRightCircleIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps<{
@@ -53,9 +52,10 @@ const props = defineProps<{
   onConfirmMove: (items: FAMItem[], targetPath: string) => void;
 }>();
 
+const emit = defineEmits(['close-modal']);
+
 const { t } = useI18n();
 const fileManagerStore = useFileManagerStore();
-const uiStore = useUiStore();
 const targetPath = ref('');
 const pathError = ref<string | null>(null);
 const targetPathInputRef = ref<HTMLInputElement | null>(null);
@@ -107,13 +107,13 @@ onMounted(() => {
 });
 
 const handleClose = () => {
-  uiStore.closeModalWithContent();
+  emit('close-modal');
 };
 
 const handleConfirm = () => {
   if (validatePath(targetPath.value) && canConfirm.value) {
     props.onConfirmMove(props.itemsToMove, targetPath.value.trim());
-    uiStore.closeModalWithContent();
+    emit('close-modal');
   }
 };
 

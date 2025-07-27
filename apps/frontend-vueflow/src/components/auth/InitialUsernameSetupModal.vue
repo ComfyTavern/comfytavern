@@ -77,7 +77,6 @@
 import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '@/stores/authStore';
-import { useUiStore } from '@/stores/uiStore';
 
 const props = defineProps<{
   initialUsername?: string;
@@ -86,9 +85,10 @@ const props = defineProps<{
   onClose?: () => void;
 }>();
 
+const emit = defineEmits(['close-modal']);
+
 const { t } = useI18n();
 const authStore = useAuthStore();
-const uiStore = useUiStore();
 
 const nickname = ref('');
 const isLoading = ref(false);
@@ -120,7 +120,7 @@ const handleSave = async () => {
     const result = await authStore.updateUsername(nickname.value.trim());
     if (result.success) {
       props.onSaved?.();
-      uiStore.closeModalWithContent();
+      emit('close-modal');
     } else {
       errorMessage.value = result.message || t('auth.initialUsernameSetup.errors.saveFailed');
     }
@@ -134,7 +134,7 @@ const handleSave = async () => {
 
 const handleSkip = () => {
   props.onClose?.();
-  uiStore.closeModalWithContent();
+  emit('close-modal');
 };
 </script>
 

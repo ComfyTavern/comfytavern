@@ -103,7 +103,6 @@
 import { ref, onMounted, reactive } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useFileManagerStore, type FilterOptions } from '@/stores/fileManagerStore';
-import { useUiStore } from '@/stores/uiStore';
 
 type SizeUnit = 'B' | 'KB' | 'MB' | 'GB';
 const UNIT_MULTIPLIERS: Record<SizeUnit, number> = {
@@ -115,7 +114,8 @@ const UNIT_MULTIPLIERS: Record<SizeUnit, number> = {
 
 const { t } = useI18n();
 const fileManagerStore = useFileManagerStore();
-const uiStore = useUiStore();
+
+const emit = defineEmits(['close-modal']);
 
 // Local state for form inputs, initialized from store or defaults
 const localFilters = reactive({
@@ -231,7 +231,7 @@ const applyFilters = () => {
   };
 
   fileManagerStore.updateFilterOptions(optionsToStore);
-  uiStore.closeModalWithContent();
+  emit('close-modal');
 };
 
 const resetFilters = () => {
@@ -249,7 +249,7 @@ const resetFilters = () => {
 };
 
 const handleClose = () => {
-  uiStore.closeModalWithContent();
+  emit('close-modal');
 };
 
 </script>

@@ -8,26 +8,28 @@
     />
 
     <!-- 2. uiStore 驱动的、用于复杂内容的全局模态框 -->
-    <BaseModal
-      v-if="uiStore.modalContent"
-      :visible="true"
-      :title="uiStore.modalContent.modalProps?.title"
-      :width="uiStore.modalContent.modalProps?.width"
-      :height="uiStore.modalContent.modalProps?.height"
-      :show-close-button="uiStore.modalContent.modalProps?.showCloseIcon"
-      :close-on-backdrop-click="uiStore.modalContent.modalProps?.closeOnBackdrop"
-      :bare="uiStore.modalContent.modalProps?.bare"
-      @close="uiStore.closeModalWithContent"
-    >
-      <template #content>
-        <component
-          v-if="uiStore.modalContent.component"
-          :is="uiStore.modalContent.component"
-          v-bind="uiStore.modalContent.props"
-          @close-modal="uiStore.closeModalWithContent"
-        />
-      </template>
-    </BaseModal>
+    <template v-for="modal in uiStore.modalStack" :key="modal.id">
+      <BaseModal
+        :visible="true"
+        :title="modal.modalProps?.title"
+        :width="modal.modalProps?.width"
+        :height="modal.modalProps?.height"
+        :show-close-button="modal.modalProps?.showCloseIcon"
+        :close-on-backdrop-click="modal.modalProps?.closeOnBackdrop"
+        :bare="modal.modalProps?.bare"
+        :z-index-override="modal.zIndex"
+        @close="uiStore.closeModal(modal.id)"
+      >
+        <template #content>
+          <component
+            v-if="modal.component"
+            :is="modal.component"
+            v-bind="modal.props"
+            @close-modal="uiStore.closeModal(modal.id)"
+          />
+        </template>
+      </BaseModal>
+    </template>
 
     <!-- 3. DialogService 驱动的通知 (Toasts) -->
     <!--

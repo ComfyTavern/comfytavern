@@ -3,7 +3,6 @@ import { ref, watch, computed, onMounted } from 'vue';
 import { klona } from 'klona/lite'; // 用于深拷贝
 import type { RegexRule } from '@comfytavern/types';
 import draggable from 'vuedraggable';
-import { useUiStore } from '@/stores/uiStore';
 import { nanoid } from 'nanoid';
 
 // 内部使用的、带有临时拖拽 ID 的规则类型
@@ -17,7 +16,7 @@ const props = defineProps<{
   onClose?: () => void;
 }>();
 
-const uiStore = useUiStore();
+const emit = defineEmits(['close-modal']);
 const internalRules = ref<InternalRegexRule[]>([]); // 使用 InternalRegexRule
 const selectedRuleIndex = ref<number | null>(null);
 
@@ -38,7 +37,7 @@ const currentRule = computed(() => {
 
 const closeModal = () => {
   props.onClose?.();
-  uiStore.closeModalWithContent();
+  emit('close-modal');
 };
 
 const saveChanges = () => {

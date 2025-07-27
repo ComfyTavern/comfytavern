@@ -644,7 +644,7 @@ export const useFileManagerStore = defineStore('fileManager', {
       const uiStore = useUiStore();
       const dialogService = useDialogService();
 
-      uiStore.openModalWithContent({
+      uiStore.openModal({
         component: UploadManagerModal,
         props: {
           filesToUpload: files,

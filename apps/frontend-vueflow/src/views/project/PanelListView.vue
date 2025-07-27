@@ -88,7 +88,7 @@ const handlePanelCreated = () => {
 };
 
 const openCreateModal = () => {
-  uiStore.openModalWithContent({
+  uiStore.openModal({
     component: defineAsyncComponent(() => import('@/components/panel/CreatePanelModal.vue')),
     props: {
       projectId: currentProjectId.value,

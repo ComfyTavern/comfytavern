@@ -145,7 +145,7 @@ const togglePluginStatus = (plugin: ExtensionInfo, isEnabled: boolean) => {
 
 const openPluginSettings = (plugin: ExtensionInfo) => {
   console.log('Opening settings for plugin:', plugin.name, plugin);
-  uiStore.openModalWithContent({
+  uiStore.openModal({
     component: markRaw(PluginDetailModal),
     props: {
       initialPlugin: plugin,

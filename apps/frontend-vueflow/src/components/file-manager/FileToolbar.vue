@@ -264,7 +264,7 @@ import FilterModal from './modals/FilterModal.vue';
 import ViewSettingsModal from './modals/ViewSettingsModal.vue';
 
 const openFilterModal = () => {
-  uiStore.openModalWithContent({
+  uiStore.openModal({
     component: FilterModal,
     modalProps: {
       title: t('fileManager.filterModal.title'),
@@ -275,7 +275,7 @@ const openFilterModal = () => {
 };
 
 const openViewSettingsModal = () => {
-  uiStore.openModalWithContent({
+  uiStore.openModal({
     component: ViewSettingsModal,
     modalProps: {
       title: t('fileManager.viewSettings.title'),

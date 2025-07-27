@@ -523,7 +523,7 @@ const showLargeTextToast = () => {
 // --- UiStore 方法 ---
 const openSettings = () => {
   uiStoreResult.value = t("testPanel.uiStore.resultsContent.openingSettings");
-  uiStore.openModalWithContent({
+  const modalId = uiStore.openModal({
     component: defineAsyncComponent(() => import('@/components/settings/SettingsLayout.vue')),
     modalProps: {
       title: t('settings.title'),
@@ -531,8 +531,11 @@ const openSettings = () => {
       height: '75vh',
     },
     props: {
+      // 咕咕：注意，现在 SettingsLayout 需要能够调用 closeModal(id)
+      // 暂时我们先假设它会 emit 一个 'close' 事件
       onClose: () => {
         uiStoreResult.value = t("testPanel.uiStore.resultsContent.settingsClosed");
+        uiStore.closeModal(modalId); // 咕咕：确保关闭正确的模态框
       }
     }
   });
@@ -557,7 +560,7 @@ const openRegexEditor = () => {
     },
   ];
 
-  uiStore.openModalWithContent({
+  uiStore.openModal({
     component: defineAsyncComponent(() => import('@/components/modals/RegexEditorModal.vue')),
     modalProps: {
       title: '正则表达式编辑器',
@@ -573,7 +576,7 @@ const openRegexEditor = () => {
         uiStoreResult.value = t("testPanel.uiStore.resultsContent.regexEditorSaved", {
           count: updatedRules.length,
         });
-        // closeModalWithContent 会在 RegexEditorModal 内部调用
+        // RegexEditorModal 现在会 emit 'close-modal'，由 DialogContainer 监听并关闭
       },
       onClose: () => {
         uiStoreResult.value = '正则编辑器已关闭';
@@ -584,11 +587,12 @@ const openRegexEditor = () => {
 
 const openInitialUsernameSetup = () => {
   uiStoreResult.value = t("testPanel.uiStore.resultsContent.openingInitialUsernameSetup");
-  uiStore.openModalWithContent({
+  uiStore.openModal({
     component: InitialUsernameSetupModal,
     props: {
       onSaved: () => {
         uiStoreResult.value = t('testPanel.uiStore.resultsContent.initialUsernameSaved');
+        // 假设 InitialUsernameSetupModal 也会 emit 'close-modal'
       },
       onClose: () => {
         uiStoreResult.value = t('testPanel.uiStore.resultsContent.initialUsernameClosed');

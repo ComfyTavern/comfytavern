@@ -86,7 +86,6 @@
 import { reactive, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useFileManagerStore, type ViewSettings } from '@/stores/fileManagerStore';
-import { useUiStore } from '@/stores/uiStore';
 import type { FAMItem } from '@comfytavern/types';
 
 const { t } = useI18n();
@@ -97,7 +96,8 @@ type AvailableColumn = {
 };
 
 const fileManagerStore = useFileManagerStore();
-const uiStore = useUiStore();
+
+const emit = defineEmits(['close-modal']);
 
 // Local state for form inputs
 const localSettings = reactive<ViewSettings>({ ...fileManagerStore.viewSettings });
@@ -122,11 +122,11 @@ const applySettings = () => {
     localSettings.visibleColumns.unshift('name');
   }
   fileManagerStore.updateViewSettings({ ...localSettings });
-  uiStore.closeModalWithContent();
+  emit('close-modal');
 };
 
 const handleClose = () => {
-  uiStore.closeModalWithContent();
+  emit('close-modal');
 };
 
 </script>
