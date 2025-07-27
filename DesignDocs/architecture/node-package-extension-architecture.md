@@ -648,25 +648,25 @@ sequenceDiagram
 
 ## 9. 扩展配置与开关系统
 
-为了提供灵活控制，我们引入配置系统，该系统将无缝集成到现有的数据驱动设置页面中。
+为了提供灵活控制，我们引入一个分层的、基于文件的配置系统。该系统将无缝集成到现有的数据驱动设置页面中。
 
 ### 9.1. 清单中的配置声明
 
-插件的 `plugin.yaml` 可以添加 `configOptions` 数组。**此数组的结构必须严格遵守 `SettingItemConfig` 接口** ([`apps/frontend-vueflow/src/types/settings.ts`](apps/frontend-vueflow/src/types/settings.ts:1))。
+插件的 `plugin.yaml` 可以添加 `configOptions` 数组。**此数组的结构必须严格遵守 `SettingItemConfig` 接口**。
 
 ```yaml
 name: my-awesome-plugin
 displayName: 我的超棒插件
 # ...
 configOptions:
-  - key: "extensions.my-awesome-plugin.enableFeatureX"
+  - key: "enableFeatureX" # 注意：这里的 key 是相对于插件配置的，不需要完整路径
     type: "boolean"
     label: "启用功能 X"
     description: "是否激活实验性功能 X。"
     defaultValue: true
     categoryKey: "features"
     category: "功能开关"
-  - key: "extensions.my-awesome-plugin.maxItems"
+  - key: "maxItems"
     type: "number"
     label: "最大项目数"
     defaultValue: 10
@@ -675,83 +675,88 @@ configOptions:
     step: 1
     categoryKey: "limits"
     category: "限制"
+    scope: "instance" # 新增：声明配置作用域
 ```
 
 **关键约定**:
 
-- **`key`**: 必须遵循 `extensions.{pluginName}.{optionId}` 的格式，以确保全局唯一性并避免冲突。`{pluginName}` 应与 `plugin.yaml` 中的 `name` 字段一致。
-- **其他字段**: `type`, `label`, `defaultValue`, `categoryKey` 等均与 `SettingItemConfig` 定义一致。
+-   **`key`**: 现在是相对于插件的配置键，无需包含 `extensions.{pluginName}` 前缀。后端将自动处理命名空间。
+-   **`scope` (可选)**: 新增字段，用于声明配置的作用域。
+    -   `user` (默认): 用户级配置，每个用户可以独立设置。
+    -   `instance`: 实例级配置，由管理员设置，对所有用户生效。
 
-### 9.2. 前端集成方案：`PluginManager` 与 `PluginDetailModal`
+### 9.2. 配置架构：分层文件存储
 
-插件配置的前端交互已经实现，它深度集成了现有的 `DataListView`、`uiStore` 模态框堆栈和数据驱动的设置组件，为用户提供了统一、流畅的管理体验。
+我们采用分层文件存储策略，将配置与核心数据库解耦，以提升灵活性和安全性。
 
-1.  **插件列表与入口 (`PluginManager.vue`)**:
-    -   在“设置” -> “插件管理”中，[`PluginManager.vue`](apps/frontend-vueflow/src/components/settings/PluginManager.vue:1) 组件使用 [`DataListView`](apps/frontend-vueflow/src/components/data-list/DataListView.vue:1) 来展示所有已发现的插件。
-    -   对于那些在 `plugin.yaml` 中定义了 `configOptions` 的插件，列表的每一行都会自动显示一个“设置”图标按钮。
+1.  **实例级配置 (Instance-level)**
+    *   **用途**: 由应用部署者（管理员）设定的全局配置，对所有用户生效。通常用于定义插件的基础行为或出于安全考虑禁用某些功能。
+    *   **特点**: 对普通用户只读。
+    *   **存储位置**: 应用服务器的配置目录中，例如：`config/extensions/{plugin-id}.json`。
 
-2.  **打开配置模态框**:
-    -   点击“设置”按钮会触发 `openPluginSettings` 方法。
-    -   此方法调用 `uiStore.openModal()`，这是一个强大的模态框管理 action，它将一个模态框实例推入 `uiStore` 的 `modalStack` 堆栈中。
-    -   `openModal` 的参数指定了要渲染的核心内容组件：[`PluginDetailModal.vue`](apps/frontend-vueflow/src/components/settings/PluginDetailModal.vue:1)，并将当前插件的完整信息 (`extensionInfo`) 作为 `props` 传递给它。
+2.  **用户级配置 (User-level)**
+    *   **用途**: 用户个人的偏好设置，会覆盖实例级的同名配置。
+    *   **特点**: 用户可读可写。
+    *   **存储位置**: 用户的专属数据目录中，例如：`userData/{userId}/settings/{plugin-id}.json`。
 
-3.  **配置模态框 (`PluginDetailModal.vue`)**:
-    -   这是一个专门用于展示和管理单个（或多个）插件配置的容器组件。
-    -   它接收插件信息作为 prop，并包含一个下拉菜单，允许用户在所有可配置的插件之间快速切换，而无需关闭模态框。
-    -   模态框的核心内容区域使用了 [`SettingsPanel.vue`](apps/frontend-vueflow/src/components/settings/SettingsPanel.vue:1) 组件，将插件的 `configOptions` 直接作为 `config` prop 传入。
-    -   这套机制完美复用了项目已有的、成熟的数据驱动设置 UI 系统 (`SettingsPanel`, `SettingGroup`, `SettingItemRow`, `SettingControl`)，确保了插件配置与核心设置在外观和行为上的一致性。
+### 9.3. 后端支持：服务与 API
 
-4.  **底层模态框机制 (`DialogContainer.vue` & `uiStore`)**:
-    -   全局唯一的 [`DialogContainer.vue`](apps/frontend-vueflow/src/components/common/DialogContainer.vue:1) 组件负责监听 `uiStore.modalStack` 的变化。
-    -   当有新的模态框实例被推入堆栈时，`DialogContainer` 会渲染一个 [`BaseModal.vue`](apps/frontend-vueflow/src/components/common/BaseModal.vue:1) 实例，并将 `PluginDetailModal` 作为其内容动态渲染。
-    -   这种基于堆栈的模态框管理系统，不仅支持了插件配置，也为未来更复杂的、可叠加的模态框交互（如在插件配置中再打开一个文件选择器）打下了坚实的基础。
+1.  **`PluginConfigService` (后端)**:
+    *   该服务负责处理插件配置的读取、合并与写入。
+    *   **读取逻辑**: 当请求一个插件的配置时，服务会先读取实例级配置文件，再读取用户级配置文件，然后在内存中合并两者（用户级覆盖实例级）。
+    *   **写入逻辑**: 只写入用户级配置文件。
+    *   **状态管理**: 该服务也负责管理插件的启用/禁用状态，存储在 `config/plugin_states.json`。
 
-5.  **状态管理集成**:
-    -   所有扩展的配置值都将由现有的 `settingsStore` 管理。
-    -   **持久化**: `settingsStore` 将通过后端 API (`GET /api/profile/settings`, `POST /api/profile/settings`) 从数据库中加载和保存设置。这确保了所有配置（包括核心和扩展的）都能在用户账户下跨设备同步。
-    -   `SettingControl` 的行为保持不变，它依然通过 `settingsStore` 读写数据，底层的持久化逻辑对它来说是透明的。
+2.  **API 端点 (`pluginRoutes.ts`)**:
+    *   `GET /api/plugins/:pluginName/settings`: 获取指定插件的合并后配置（对当前用户）。
+    *   `POST /api/plugins/:pluginName/settings`: 保存当前用户的用户级配置。
 
-### 9.3. API 扩展
+### 9.4. 前端集成方案
 
-`extensionApi` 提供的方法将直接代理到 `settingsStore`，并自动处理 key 的前缀。
+前端交互机制（`PluginManager.vue`, `PluginDetailModal.vue` 等）保持不变，但底层的状态管理和持久化逻辑将进行重构。
+
+1.  **`settingsStore` 重构**:
+    *   **持久化逻辑**: `settingsStore` 将被重构。它不再直接读写 `localStorage`。
+    *   **加载**: 当需要某个插件的配置时，它会通过 `GET /api/plugins/:pluginName/settings` 从后端加载，并缓存结果。
+    *   **保存**: 当用户修改设置时，它会通过 `POST /api/plugins/:pluginName/settings` 将**仅包含用户级**的配置数据发送到后端保存。
+
+2.  **透明集成**:
+    *   `SettingControl` 等 UI 组件的行为保持不变。它们依然通过 `settingsStore` 的 `getSetting` 和 `updateSetting` 方法读写数据，底层的 API 调用对它们是透明的。
+
+### 9.5. API 扩展
+
+`extensionApi` 提供的方法将代理到重构后的 `settingsStore`。
 
 ```typescript
 // 在 ExtensionApiService 内部实现
 interface ExtensionApi {
   // ...
-  // pluginName 会由 API 服务在内部自动获取
-  getConfig(optionId: string): any;
-  onConfigChange(optionId: string, callback: (newValue: any) => void): void;
+  getConfig(optionId: string, defaultValue?: any): Promise<any>;
+  // onConfigChange 保持不变
 }
 
 // 示例实现:
 class ExtensionApiService {
   private pluginName: string;
+  private settings: Record<string, any> | null = null;
+
   constructor(pluginName: string) { this.pluginName = pluginName; }
 
-  getConfig(optionId: string) {
-    const key = `extensions.${this.pluginName}.${optionId}`;
-    // 从 plugin.yaml 中找到对应的 config，获取 defaultValue
-    const defaultValue = ...;
-    return useSettingsStore().getSetting(key, defaultValue);
+  private async loadConfig() {
+    if (this.settings === null) {
+      // 调用 settingsStore 的方法，该方法会触发 API 调用并缓存
+      this.settings = await useSettingsStore().loadPluginSettings(this.pluginName);
+    }
   }
 
-  onConfigChange(optionId: string, callback: (newValue: any) => void) {
-    const key = `extensions.${this.pluginName}.${optionId}`;
-    watch(() => useSettingsStore().settings[key], callback);
+  async getConfig(optionId: string, defaultValue?: any) {
+    await this.loadConfig();
+    // 从缓存的配置中读取
+    return this.settings?.[optionId] ?? defaultValue;
   }
+  // ...
 }
 ```
-
-### 9.4. 后端支持
-
-- 后端在 `/api/plugins` 响应中，需要完整地返回每个插件的 `configOptions` 数组。前端将利用这些元数据来动态构建设置界面。
-- `PluginLoader` 负责在扫描时收集所有插件信息（包括 `web` 目录路径和 `configOptions`）。
-- 主 `index.ts` 文件在启动时，调用 `PluginLoader.loadPlugins(app)` 来完成所有插件的加载和静态目录注册。
-
-### 9.5. 前端启动流程
-
-- 在 `main.ts` 中，`PluginLoader` 的初始化和执行应在 `app.use(router)` 之后，`app.mount('#app')` 之前。
 
 ## 10. 多用户模式支持
 
@@ -760,44 +765,38 @@ class ExtensionApiService {
 ### 10.1. 插件的安装、发现与启用状态
 
 1.  **安装与发现 (系统级)**:
-
-    - 插件的安装（即代码文件放置在 `plugins/` 目录）是物理层面的，由系统管理员完成。
-    - `PluginLoader` 在后端启动时会**发现**所有物理存在的插件包。
+    -   插件的安装（即代码文件放置在 `plugins/` 目录）是物理层面的，由系统管理员完成。
+    -   `PluginLoader` 在后端启动时会**发现**所有物理存在的插件包。
 
 2.  **启用状态 (全局配置)**:
-    - 一个插件被发现后，不代表它对用户可用。它的“启用/禁用”状态是一个**全局配置**。
-    - 这个状态将存储在数据库的一个新表 `system_settings` 中（例如，`key: 'extensions.my-awesome-plugin.enabled'`, `value: 'true'`)。
-    - **只有管理员** (`isAdmin: true`) 才能修改插件的全局启用状态。
+    -   一个插件被发现后，不代表它对用户可用。它的“启用/禁用”状态是一个**全局配置**。
+    -   这个状态将存储在一个**全局配置文件**中，例如 `config/plugin_states.json`。这由 `PluginConfigService` 管理。
+    -   **只有管理员** (`isAdmin: true`) 才能修改插件的全局启用状态。
 
 ### 10.2. 配置的存储与权限
 
-1.  **全局配置 (`scope: 'global'`)**:
+1.  **实例级配置 (`scope: 'instance'`)**:
+    -   在 `plugin.yaml` 的 `configOptions` 中，可以添加 `scope: 'instance'` 字段。
+    -   这些配置项的值存储在实例级配置文件中 (`config/extensions/{plugin-id}.json`)。
+    -   只有管理员能通过专门的管理界面修改这些值。
 
-    - 在 `plugin.yaml` 的 `configOptions` 中，可以添加 `scope: 'global'` 字段（替代 `global: true`，语义更清晰）。
-    - 这些配置项的值也存储在 `system_settings` 表中。
-    - 只有管理员能通过专门的管理界面修改这些值。
-
-2.  **个人配置 (`scope: 'user'`, 默认)**:
-    - 这些配置项的值存储在 `user_settings` 表中（或类似的用户数据结构中），与 `users.uid` 关联。
-    - 任何用户都可以修改自己的个人配置，前提是该插件已被管理员全局启用。
+2.  **用户级配置 (`scope: 'user'`, 默认)**:
+    -   这些配置项的值存储在用户级配置文件中 (`userData/{userId}/settings/{plugin-id}.json`)。
+    -   任何用户都可以修改自己的个人配置，前提是该插件已被管理员全局启用。
 
 ### 10.3. 后端 API 扩展
 
 1.  **`/api/plugins` (GET)**:
+    -   此 API 的响应需要扩展，增加一个 `isEnabled` 字段，告诉前端该插件是否已被管理员全局启用。
+    -   前端 `PluginLoader` 将只加载 `isEnabled: true` 的插件的 JS/CSS。
 
-    - 此 API 的响应需要扩展，增加一个 `isEnabled` 字段，告诉前端该插件是否已被管理员全局启用。
-    - 前端 `PluginLoader` 将只加载 `isEnabled: true` 的插件的 JS/CSS。
-
-2.  **管理员 API (`/api/admin/plugins`)**:
-
-    - **`GET /`**: 获取所有**已发现**的插件列表及其当前的全局启用状态。
-    - **`POST /toggle`**: 切换一个插件的全局启用/禁用状态。请求体：`{ name: 'my-awesome-plugin', enabled: boolean }`。
+2.  **管理员 API (`/api/plugins/:pluginName/state`)**:
+    -   **`PUT`**: 切换一个插件的全局启用/禁用状态。请求体：`{ enabled: boolean }`。
 
 3.  **设置 API**:
-    - **`GET /api/profile/settings`**: 返回当前用户的**个人设置**。
-    - **`GET /api/system/settings`**: 返回所有**全局设置**（包括插件的全局配置）。前端会在加载时同时请求这两个接口，然后合并成完整的配置状态。
-    - **`POST /api/profile/settings`**: 普通用户用此接口更新自己的**个人设置**。
-    - **`POST /api/admin/settings`**: 管理员用此接口更新**全局设置**。
+    -   `GET /api/plugins/:pluginName/settings`: 获取指定插件的合并后配置（对当前用户）。
+    -   `POST /api/plugins/:pluginName/settings`: 保存当前用户的用户级配置。
+    -   **管理员 API**: 需要一个专门的管理员端点来修改实例级配置，例如 `POST /api/admin/settings/extensions/{plugin-id}` (此部分待定)。
 
 ### 10.4. 前端 UI 流程
 
@@ -806,7 +805,7 @@ class ExtensionApiService {
 - **管理员**:
   - 拥有一个额外的“插件管理”设置分区。
   - 在此分区，可以看到所有**已发现**的插件列表，并可以通过开关来全局启用/禁用它们。
-  - 可以在此分区或“扩展”分区的特定区域修改插件的**全局配置**。
+  - 可以在此分区或“扩展”分区的特定区域修改插件的**实例级配置**。
 
 ## 11. 附录 A: UI 注入点实现蓝图
 

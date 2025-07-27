@@ -107,4 +107,59 @@ export const pluginRoutes = new Elysia({ prefix: '/api/plugins' })
       summary: '重新加载所有插件',
       tags: ['Plugins'],
     }
+  })
+  .get('/:pluginName/settings', async (context) => {
+    const { params, userContext, set } = context as PluginRouteContext & {
+      params: { pluginName: string }
+    };
+    const { pluginName } = params;
+    const userId = userContext?.currentUser?.uid ?? null;
+
+    try {
+      const settings = await pluginConfigService.getPluginSettings(pluginName, userId);
+      return settings;
+    } catch (error) {
+      console.error(`[API] Error getting settings for plugin ${pluginName}:`, error);
+      set.status = 500;
+      return { error: 'Failed to retrieve plugin settings.' };
+    }
+  }, {
+    params: t.Object({
+      pluginName: t.String()
+    }),
+    detail: {
+      summary: '获取指定插件的合并后配置',
+      tags: ['Plugins'],
+    }
+  })
+  .post('/:pluginName/settings', async (context) => {
+    const { params, body, userContext, set } = context as PluginRouteContext & {
+      params: { pluginName: string },
+      body: Record<string, any>
+    };
+    const { pluginName } = params;
+    const userId = userContext?.currentUser?.uid;
+
+    if (!userId) {
+      set.status = 401;
+      return { error: 'User not authenticated.' };
+    }
+
+    try {
+      await pluginConfigService.savePluginSettings(pluginName, userId, body);
+      return { success: true, message: 'Settings saved successfully.' };
+    } catch (error) {
+      console.error(`[API] Error saving settings for plugin ${pluginName}:`, error);
+      set.status = 500;
+      return { error: 'Failed to save plugin settings.' };
+    }
+  }, {
+    params: t.Object({
+      pluginName: t.String()
+    }),
+    body: t.Object({}, { additionalProperties: true }),
+    detail: {
+      summary: '保存当前用户的插件配置',
+      tags: ['Plugins'],
+    }
   });
