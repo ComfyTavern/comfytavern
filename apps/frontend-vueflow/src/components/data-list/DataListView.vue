@@ -179,7 +179,7 @@ const props = defineProps({
   },
   hideCheckboxesUntilSelect: {
     type: Boolean,
-    default: false,
+    default: true,
   },
 
   // --- Custom Messages ---

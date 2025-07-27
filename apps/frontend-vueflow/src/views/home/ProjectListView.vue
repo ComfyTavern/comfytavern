@@ -138,7 +138,6 @@ const promptAndCreateProject = async () => {
         :loading-message="t('projects.loading')" :empty-message="t('projects.noProjects')"
         :error-message="t('projects.loadError')"
         :selectable="true"
-        :hide-checkboxes-until-select="true"
         @selection-change="handleSelectionChange"
       >
         <template #header>
