@@ -5,7 +5,7 @@
 
 **中文相当重要**
 
-**i18n内容以中文为准，以中文为主，以中文为尊！**
+**i18n 内容以中文为准，以中文为主，以中文为尊！**
 
 **注意，如果你不确定文件是否存在，你应该先列出对应目录下的具体文件再读取，而不是直接读取假设存在的文件。改动任何文件前，先确认文件是否存在，如果存在，先读取内容，再进行修改。**
 
@@ -122,8 +122,57 @@ ComfyTavern 的核心价值主张体现在以下两个层面：
   - 不支持 `&&` 连接命令，请使用分号 `;` 或分多次执行。
   - 启动 `.bat` 文件需要添加 `.\` 前缀，例如 `.\start.bat`。
 - **后端入口**: `apps/backend/src/index.ts` (已重构，具体路由见 `apps/backend/src/routes/`)
-- **核心类型定义**: `packages/types/src/schemas.ts` (使用 Zod 定义和验证)
 - **节点或插槽的显示**：优先使用`displayName`,其次再是 id。
+
+#### 项目公共类型定义
+packages\types\src\adapter.ts
+packages\types\src\auth.ts
+packages\types\src\common.ts
+packages\types\src\execution.ts
+packages\types\src\history.ts
+packages\types\src\index.ts
+packages\types\src\llm.ts
+packages\types\src\node.ts
+packages\types\src\panel.ts
+packages\types\src\png-chunk-text.d.ts
+packages\types\src\png-chunks-extract.d.ts
+packages\types\src\project.ts
+packages\types\src\SillyTavern.ts
+packages\types\src\theme.ts
+packages\types\src\workflow.ts
+
+
+- 关于微型应用面板的文件路径：ComfyTavern 所在\userData\{用户 UID}\projects\{项目名称}\ui\{一个目录名字}\index.html(或其他什么的反正是个入口) 是类似这种结构的
+
+- 项目目录结构 （参考）
+
+```
+/YourProjectName/                  # 项目根目录 (位于 userData/{userId}/projects/ 下)
+├── project.json                   # 项目元数据与核心资产声明文件
+│
+├── agent_profiles/                # 存放 Agent Profile 定义文件 (.json)
+│   └── npc_herbalist_profile.json
+│
+├── workflows/                     # 存放工作流定义文件 (.json)
+│   ├── core_deliberation/
+│   ├── skills/
+│   └── scene_logic/
+│
+├── knowledgebases/                # 存放项目本地知识库
+│   └── world_lore_kb/
+│
+├── scenes/                        # 存放场景/剧本定义文件 (.json)
+│   └── market_square_scene.json
+│
+├── ui/                            # 存放应用面板的定义和 UI 资产
+│   ├── my_chat_panel/
+│   │   ├── panel.json
+│   │   └── index.html
+│   └── image_gen_panel.json
+│
+└── assets/                        # 存放项目直接使用的媒体资源
+└── outputs/                       # 存放项目运行时输出文件
+```
 
 ## 参考资料
 
@@ -240,6 +289,9 @@ src/
 - **代码检查**: `bunx vue-tsc --build apps/frontend-vueflow/tsconfig.json`,`bun tsc -p apps/backend/tsconfig.json --noEmit`
 - **通用类型导入**：`@comfytavern/types`是通用类型的导入路径，通过`index.ts`统一注册了所有通用类型定义。
 - **工作流数据转换**：我们以画布数据为单一事实来源的，这个`workflowTransformer.ts`转换仅保存/加载和创建执行负载才会用。
+- **API 调用路径规范**: 前端 API 请求的 URL **不应**包含 `/api` 前缀。`axios` 实例已将 `/api` 设置为 `baseURL`，所有请求路径都应相对于此基地址。
+  - **错误**: `api.get('/api/users')`
+  - **正确**: `api.get('/users')`
 
 ### 10. Tooltip 使用规范 (v-comfy-tooltip)
 
@@ -302,7 +354,7 @@ src/
 首先，在你的 Vue 组件或 Composable 中引入服务：
 
 ```typescript
-import { useDialogService } from '@/services/DialogService'; // 路径根据实际项目结构调整
+import { useDialogService } from "@/services/DialogService"; // 路径根据实际项目结构调整
 
 const dialogService = useDialogService();
 ```
@@ -315,14 +367,14 @@ const dialogService = useDialogService();
 
 显示一个简单的消息对话框，通常只有一个“确定”按钮。
 
--   **`options`**: [`UniversalDialogOptions`](apps/frontend-vueflow/src/services/DialogService.ts:14)
-    -   `title?: string` (默认: '消息')
-    -   `message?: string` (必需)
-    -   `confirmText?: string` (默认: '确定')
-    -   `showCloseIcon?: boolean` (默认: `true`)
-    -   `closeOnBackdrop?: boolean` (默认: `true` for message)
-    -   `autoClose?: number` (毫秒, 0 表示不自动关闭, 默认: 0)
--   **返回**: `Promise<void>`，当对话框关闭时 resolve。
+- **`options`**: [`UniversalDialogOptions`](apps/frontend-vueflow/src/services/DialogService.ts:14)
+  - `title?: string` (默认: '消息')
+  - `message?: string` (必需)
+  - `confirmText?: string` (默认: '确定')
+  - `showCloseIcon?: boolean` (默认: `true`)
+  - `closeOnBackdrop?: boolean` (默认: `true` for message)
+  - `autoClose?: number` (毫秒, 0 表示不自动关闭, 默认: 0)
+- **返回**: `Promise<void>`，当对话框关闭时 resolve。
 
 **示例**:
 
@@ -330,13 +382,13 @@ const dialogService = useDialogService();
 async function showInfoMessage() {
   try {
     await dialogService.showMessage({
-      title: '提示',
-      message: '操作已成功完成。'
+      title: "提示",
+      message: "操作已成功完成。",
     });
-    console.log('消息框已关闭');
+    console.log("消息框已关闭");
   } catch (error) {
     // 通常 showMessage 不会 reject，除非内部导入组件失败
-    console.error('显示消息框失败:', error);
+    console.error("显示消息框失败:", error);
   }
 }
 ```
@@ -345,33 +397,33 @@ async function showInfoMessage() {
 
 显示一个确认对话框，通常有“确定”和“取消”按钮。
 
--   **`options`**: [`UniversalDialogOptions`](apps/frontend-vueflow/src/services/DialogService.ts:14)
-    -   `title?: string` (默认: '确认')
-    -   `message?: string` (必需)
-    -   `confirmText?: string` (默认: '确定')
-    -   `cancelText?: string` (默认: '取消')
-    -   `showCancelButton?: boolean` (默认由 Dialog.vue 内部根据 type='confirm' 控制显示)
-    -   `showCloseIcon?: boolean` (默认: `true`)
-    -   `closeOnBackdrop?: boolean` (默认: `false` for confirm)
-    -   `dangerConfirm?: boolean` (默认: `false`, 确认按钮是否为危险操作样式)
--   **返回**: `Promise<boolean>`，用户点击“确定”时 resolve `true`，点击“取消”或关闭时 resolve `false`。
+- **`options`**: [`UniversalDialogOptions`](apps/frontend-vueflow/src/services/DialogService.ts:14)
+  - `title?: string` (默认: '确认')
+  - `message?: string` (必需)
+  - `confirmText?: string` (默认: '确定')
+  - `cancelText?: string` (默认: '取消')
+  - `showCancelButton?: boolean` (默认由 Dialog.vue 内部根据 type='confirm' 控制显示)
+  - `showCloseIcon?: boolean` (默认: `true`)
+  - `closeOnBackdrop?: boolean` (默认: `false` for confirm)
+  - `dangerConfirm?: boolean` (默认: `false`, 确认按钮是否为危险操作样式)
+- **返回**: `Promise<boolean>`，用户点击“确定”时 resolve `true`，点击“取消”或关闭时 resolve `false`。
 
 **示例**:
 
 ```typescript
 async function confirmDeletion() {
   const confirmed = await dialogService.showConfirm({
-    title: '确认删除',
-    message: '您确定要删除这条记录吗？此操作不可撤销。',
+    title: "确认删除",
+    message: "您确定要删除这条记录吗？此操作不可撤销。",
     dangerConfirm: true,
-    confirmText: '删除',
+    confirmText: "删除",
   });
 
   if (confirmed) {
-    console.log('用户确认删除');
+    console.log("用户确认删除");
     // 执行删除操作
   } else {
-    console.log('用户取消删除');
+    console.log("用户取消删除");
   }
 }
 ```
@@ -380,33 +432,33 @@ async function confirmDeletion() {
 
 显示一个带输入框的对话框。
 
--   **`options`**: [`UniversalDialogOptions`](apps/frontend-vueflow/src/services/DialogService.ts:14)
-    -   `title?: string` (默认: '请输入')
-    -   `message?: string` (可选，输入框上方的提示信息)
-    -   `confirmText?: string` (默认: '确定')
-    -   `cancelText?: string` (默认: '取消')
-    -   `initialValue?: string` (默认: `''`)
-    -   `inputPlaceholder?: string` (默认: '请输入内容...')
-    -   `inputType?: 'text' | 'password' | 'number' | 'textarea'` (默认: `'text'`)
-    -   `inputRows?: number` (当 `inputType` 为 `'textarea'` 时生效, 默认: 3)
--   **返回**: `Promise<string | null>`，用户点击“确定”时 resolve 输入的字符串，点击“取消”或关闭时 resolve `null`。
+- **`options`**: [`UniversalDialogOptions`](apps/frontend-vueflow/src/services/DialogService.ts:14)
+  - `title?: string` (默认: '请输入')
+  - `message?: string` (可选，输入框上方的提示信息)
+  - `confirmText?: string` (默认: '确定')
+  - `cancelText?: string` (默认: '取消')
+  - `initialValue?: string` (默认: `''`)
+  - `inputPlaceholder?: string` (默认: '请输入内容...')
+  - `inputType?: 'text' | 'password' | 'number' | 'textarea'` (默认: `'text'`)
+  - `inputRows?: number` (当 `inputType` 为 `'textarea'` 时生效, 默认: 3)
+- **返回**: `Promise<string | null>`，用户点击“确定”时 resolve 输入的字符串，点击“取消”或关闭时 resolve `null`。
 
 **示例**:
 
 ```typescript
 async function requestUsername() {
   const username = await dialogService.showInput({
-    title: '设置用户名',
-    message: '请输入您的新用户名：',
-    initialValue: '默认用户',
-    inputPlaceholder: '至少3个字符',
+    title: "设置用户名",
+    message: "请输入您的新用户名：",
+    initialValue: "默认用户",
+    inputPlaceholder: "至少3个字符",
   });
 
   if (username !== null) {
-    console.log('用户输入:', username);
+    console.log("用户输入:", username);
     // 处理用户名
   } else {
-    console.log('用户取消输入');
+    console.log("用户取消输入");
   }
 }
 ```
@@ -419,23 +471,23 @@ async function requestUsername() {
 
 显示一个通用的通知。
 
--   **`options`**: [`ToastOptions`](apps/frontend-vueflow/src/services/DialogService.ts:36)
-    -   `title?: string`
-    -   `message: string` (必需)
-    -   `type?: 'info' | 'success' | 'warning' | 'error'` (默认: `'info'`)
-    -   `duration?: number` (毫秒, 默认: 3000)
-    -   `position?: ToastPosition` (默认: `'top-right'`)
-        -   `ToastPosition`: `'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center'` ([`apps/frontend-vueflow/src/services/DialogService.ts:11`](apps/frontend-vueflow/src/services/DialogService.ts:11))
--   **返回**: `string`，通知的唯一 ID。
+- **`options`**: [`ToastOptions`](apps/frontend-vueflow/src/services/DialogService.ts:36)
+  - `title?: string`
+  - `message: string` (必需)
+  - `type?: 'info' | 'success' | 'warning' | 'error'` (默认: `'info'`)
+  - `duration?: number` (毫秒, 默认: 3000)
+  - `position?: ToastPosition` (默认: `'top-right'`)
+    - `ToastPosition`: `'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center'` ([`apps/frontend-vueflow/src/services/DialogService.ts:11`](apps/frontend-vueflow/src/services/DialogService.ts:11))
+- **返回**: `string`，通知的唯一 ID。
 
 **示例**:
 
 ```typescript
 dialogService.showToast({
-  title: '更新成功',
-  message: '您的个人资料已保存。',
-  type: 'success',
-  position: 'top-center',
+  title: "更新成功",
+  message: "您的个人资料已保存。",
+  type: "success",
+  position: "top-center",
   duration: 5000,
 });
 ```
@@ -444,29 +496,29 @@ dialogService.showToast({
 
 为常见的通知类型提供了便捷方法：
 
--   `showSuccess(message: string, title?: string, duration?: number): string`
--   `showError(message: string, title?: string, duration?: number): string`
--   `showWarning(message: string, title?: string, duration?: number): string`
--   `showInfo(message: string, title?: string, duration?: number): string`
+- `showSuccess(message: string, title?: string, duration?: number): string`
+- `showError(message: string, title?: string, duration?: number): string`
+- `showWarning(message: string, title?: string, duration?: number): string`
+- `showInfo(message: string, title?: string, duration?: number): string`
 
 **示例**:
 
 ```typescript
-dialogService.showSuccess('用户登录成功！');
-dialogService.showError('网络连接失败，请稍后再试。', '错误');
+dialogService.showSuccess("用户登录成功！");
+dialogService.showError("网络连接失败，请稍后再试。", "错误");
 ```
 
 #### 11.4 状态与组件
 
--   **状态管理**: 服务通过 Pinia store 管理对话框队列 (`dialogQueue`) 和当前活动对话框 (`activeDialog`)，以及通知列表 (`toasts`)。这些状态通常由服务内部管理，开发者无需直接操作。
--   **对话框组件**: 实际的对话框 UI 由 [`apps/frontend-vueflow/src/components/common/Dialog.vue`](apps/frontend-vueflow/src/components/common/Dialog.vue:1) 组件渲染，该组件由服务动态导入。
--   **通知组件**: 通知 UI 由 [`apps/frontend-vueflow/src/components/common/ToastNotification.vue`](apps/frontend-vueflow/src/components/common/ToastNotification.vue:1) 渲染，并通过 [`apps/frontend-vueflow/src/components/common/DialogContainer.vue`](apps/frontend-vueflow/src/components/common/DialogContainer.vue:1) 在应用顶层管理和显示。
+- **状态管理**: 服务通过 Pinia store 管理对话框队列 (`dialogQueue`) 和当前活动对话框 (`activeDialog`)，以及通知列表 (`toasts`)。这些状态通常由服务内部管理，开发者无需直接操作。
+- **对话框组件**: 实际的对话框 UI 由 [`apps/frontend-vueflow/src/components/common/Dialog.vue`](apps/frontend-vueflow/src/components/common/Dialog.vue:1) 组件渲染，该组件由服务动态导入。
+- **通知组件**: 通知 UI 由 [`apps/frontend-vueflow/src/components/common/ToastNotification.vue`](apps/frontend-vueflow/src/components/common/ToastNotification.vue:1) 渲染，并通过 [`apps/frontend-vueflow/src/components/common/DialogContainer.vue`](apps/frontend-vueflow/src/components/common/DialogContainer.vue:1) 在应用顶层管理和显示。
 
 #### 11.5 注意事项
 
--   **动态导入**: 对话框组件 (`Dialog.vue`) 是按需动态导入的，这意味着第一次调用相关 `show` 方法时可能会有轻微延迟。
--   **Promise 处理**: 所有 `showConfirm` 和 `showInput` 方法都返回 Promise，请确保正确处理其 `resolve` 和 `reject`（尽管 `reject` 场景较少，主要为组件加载失败）。`showMessage` 的 Promise 主要用于知道何时关闭。
--   **上下文**: 由于是全局服务，确保在合适的 Vue 上下文中使用（例如在 `setup` 函数或组件方法中）。
+- **动态导入**: 对话框组件 (`Dialog.vue`) 是按需动态导入的，这意味着第一次调用相关 `show` 方法时可能会有轻微延迟。
+- **Promise 处理**: 所有 `showConfirm` 和 `showInput` 方法都返回 Promise，请确保正确处理其 `resolve` 和 `reject`（尽管 `reject` 场景较少，主要为组件加载失败）。`showMessage` 的 Promise 主要用于知道何时关闭。
+- **上下文**: 由于是全局服务，确保在合适的 Vue 上下文中使用（例如在 `setup` 函数或组件方法中）。
 
 ## Elysia.js 使用注意事项
 
