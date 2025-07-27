@@ -62,7 +62,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { SettingItemConfig } from '@/types/settings';
+import type { SettingItemConfig } from '@comfytavern/types';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useI18n } from 'vue-i18n'; // + 咕咕：添加 useI18n 导入
 

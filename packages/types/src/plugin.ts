@@ -2,7 +2,6 @@
  * @fileoverview 定义插件系统的核心类型，如插件清单 (Manifest) 和扩展信息 (ExtensionInfo)。
  */
 
-// @ts-ignore - 暂时忽略，因为 settings.ts 可能还不存在或尚未导出此类型
 import type { SettingItemConfig } from './settings';
 
 /**

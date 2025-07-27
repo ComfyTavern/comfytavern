@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import type { SettingItemConfig } from "@/types/settings";
+import type { SettingItemConfig } from "@comfytavern/types";
 import SettingControl from "./SettingControl.vue";
 import { useAuthStore } from "@/stores/authStore";
 import { storeToRefs } from "pinia";

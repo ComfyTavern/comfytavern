@@ -19,6 +19,7 @@ export * from './auth';
 export * from './llm';
 export * from './plugin';
 export * from './view';
+export * from './settings';
 
 // 其他
 export * from './history';

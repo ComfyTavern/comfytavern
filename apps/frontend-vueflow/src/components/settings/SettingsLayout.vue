@@ -42,7 +42,7 @@
 import { ref, computed, defineComponent, defineAsyncComponent, markRaw, watch, onMounted, onUnmounted, provide } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from 'vue-router';
-import type { SettingsSection, SettingItemConfig } from "@/types/settings";
+import type { SettingsSection, SettingItemConfig } from "@comfytavern/types";
 import { fileManagerApiClient } from "@/api/fileManagerApi"; // + 咕咕：导入 fileManagerApiClient
 import { useDialogService } from "@/services/DialogService"; // + 咕咕：导入 DialogService
 import SettingsPanel from "./SettingsPanel.vue";

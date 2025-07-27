@@ -262,7 +262,7 @@ import InitialUsernameSetupModal from "@/components/auth/InitialUsernameSetupMod
 import type { RegexRule } from "@comfytavern/types";
 // import SettingControl from '@/components/settings/SettingControl.vue'; // 不再直接使用
 import SettingsPanel from "@/components/settings/SettingsPanel.vue"; // + 导入 SettingsPanel
-import type { SettingItemConfig } from "@/types/settings";
+import type { SettingItemConfig } from "@comfytavern/types";
 import { useSettingsStore } from "@/stores/settingsStore";
 
 const { t } = useI18n();

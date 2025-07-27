@@ -9,7 +9,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { SettingItemConfig } from '@/types/settings';
+import type { SettingItemConfig } from '@comfytavern/types';
 import SettingGroup from './SettingGroup.vue';
 import SettingItemRow from './SettingItemRow.vue';
 

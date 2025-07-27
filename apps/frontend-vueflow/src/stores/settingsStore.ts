@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, watch, onMounted, reactive } from 'vue';
-import type { SettingItemConfig } from '@/types/settings'; // 确保路径正确
+import type { SettingItemConfig } from '@comfytavern/types'; // 确保路径正确
 import { defaultLocale } from '@/locales';
 
 // 简易防抖函数
