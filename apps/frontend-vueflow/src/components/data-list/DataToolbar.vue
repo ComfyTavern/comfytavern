@@ -70,6 +70,13 @@
         </transition>
       </div>
 
+      <!-- 刷新按钮 -->
+      <button v-if="showRefreshButton" @click="$emit('refresh')" :disabled="isRefreshing"
+        v-comfy-tooltip="t('common.refresh')"
+        class="flex items-center justify-center h-8 w-8 rounded-md hover:bg-background-modifier-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <ArrowPathIcon :class="['h-5 w-5 text-text-secondary', { 'animate-spin': isRefreshing }]" />
+      </button>
+
       <!-- 视图模式切换 -->
       <button @click="$emit('update:displayMode', displayMode === 'list' ? 'grid' : 'list')"
         v-comfy-tooltip="t(displayMode === 'list' ? 'dataList.toolbar.switchToGrid' : 'dataList.toolbar.switchToList')"
@@ -94,6 +101,7 @@ import {
   ArrowDownIcon,
   Squares2X2Icon,
   QueueListIcon,
+  ArrowPathIcon,
 } from '@heroicons/vue/24/outline';
 
 const props = withDefaults(defineProps<{
@@ -102,8 +110,12 @@ const props = withDefaults(defineProps<{
   displayMode: DisplayMode;
   sortOptions: { label: string; field: keyof T | string }[];
   selectedCount?: number;
+  showRefreshButton?: boolean;
+  isRefreshing?: boolean;
 }>(), {
   selectedCount: 0,
+  showRefreshButton: false,
+  isRefreshing: false,
 });
 
 const emit = defineEmits<{
@@ -112,6 +124,7 @@ const emit = defineEmits<{
   (e: 'update:displayMode', value: DisplayMode): void;
   (e: 'select-all'): void;
   (e: 'clear-selection'): void;
+  (e: 'refresh'): void;
 }>();
 
 const { t } = useI18n();

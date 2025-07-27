@@ -1,13 +1,34 @@
 <template>
   <div class="dialog-container">
-    <!-- 动态渲染当前活动的对话框 -->
+    <!-- 1. DialogService 驱动的简单对话框 -->
     <component
       v-if="dialogService.activeDialog"
       :is="dialogService.activeDialog.component"
       v-bind="dialogService.activeDialog.props"
     />
 
-    <!-- 按位置分组渲染通知 -->
+    <!-- 2. uiStore 驱动的、用于复杂内容的全局模态框 -->
+    <BaseModal
+      v-if="uiStore.modalContent"
+      :visible="true"
+      :title="uiStore.modalContent.modalProps?.title"
+      :width="uiStore.modalContent.modalProps?.width"
+      :height="uiStore.modalContent.modalProps?.height"
+      :show-close-button="uiStore.modalContent.modalProps?.showCloseIcon"
+      :close-on-backdrop-click="uiStore.modalContent.modalProps?.closeOnBackdrop"
+      @close="uiStore.closeModalWithContent"
+    >
+      <template #content>
+        <component
+          v-if="uiStore.modalContent.component"
+          :is="uiStore.modalContent.component"
+          v-bind="uiStore.modalContent.props"
+          @close-modal="uiStore.closeModalWithContent"
+        />
+      </template>
+    </BaseModal>
+
+    <!-- 3. DialogService 驱动的通知 (Toasts) -->
     <!--
       为每个可能的通知位置创建一个容器。
       每个容器将负责在该特定位置堆叠通知。
@@ -39,11 +60,13 @@
 </template>
 
 <script setup lang="ts">
-// import { computed } from 'vue'; // 'computed' 已声明，但从未读取其值。
 import { useDialogService, type ToastPosition } from '@/services/DialogService';
+import { useUiStore } from '@/stores/uiStore';
 import ToastNotification from './ToastNotification.vue';
+import BaseModal from './BaseModal.vue';
 
 const dialogService = useDialogService();
+const uiStore = useUiStore();
 
 // 所有可能的通知位置，用于创建容器
 const allToastPositions: ToastPosition[] = [

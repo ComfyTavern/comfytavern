@@ -9,6 +9,20 @@ interface RegexEditorModalData {
   onSave: (updatedRules: RegexRule[]) => void;
 }
 
+import type { Component } from 'vue';
+
+interface ModalContent {
+  component: Component | null;
+  props?: Record<string, any>;
+  modalProps?: {
+    title?: string;
+    width?: string;
+    height?: string;
+    showCloseIcon?: boolean;
+    closeOnBackdrop?: boolean;
+  };
+}
+
 interface UiStoreState {
   isRegexEditorModalVisible: boolean;
   regexEditorModalData: RegexEditorModalData | null;
@@ -41,6 +55,9 @@ interface UiStoreState {
 
   // 新增：列表视图列宽
   listViewColumnWidths: { [viewId: string]: { [columnId: string]: number } };
+
+  // 新增：动态模态框内容
+  modalContent: ModalContent | null;
 }
 
 const defaultSettingsModalProps = {
@@ -227,9 +244,18 @@ export const useUiStore = defineStore('ui', {
       isMobileView: initialIsMobileView, // 使用初始化的值
       panelLogHeight: initialPanelLogHeight, // 新增
       listViewColumnWidths: initialListViewColumnWidths, // 新增
+      modalContent: null, // 新增
     };
   },
   actions: {
+    // 动态内容模态框
+    openModalWithContent(payload: ModalContent) {
+      this.modalContent = payload;
+    },
+    closeModalWithContent() {
+      this.modalContent = null;
+    },
+
     setupMobileViewListener() {
       if (typeof window !== 'undefined') {
         const mediaQueryMobile = window.matchMedia('(max-width: 1024px)');

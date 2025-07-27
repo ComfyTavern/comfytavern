@@ -12,6 +12,9 @@
       :selected-count="selectedItems.length"
       @select-all="toggleSelectAll"
       @clear-selection="clearSelection"
+      :show-refresh-button="showRefreshButton"
+      :is-refreshing="isRefreshing"
+      @refresh="$emit('refresh')"
     >
       <template #actions>
         <slot name="toolbar-actions" :selected-items="selectedItems"></slot>
@@ -194,11 +197,22 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+
+  // --- Controls ---
+  showRefreshButton: {
+    type: Boolean,
+    default: false,
+  },
+  isRefreshing: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits<{
   (e: 'selection-change', selectedItems: T[]): void;
   (e: 'item-dblclick', item: T): void;
+  (e: 'refresh'): void;
 }>();
 
 const { t } = useI18n();

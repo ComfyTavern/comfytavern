@@ -45,14 +45,23 @@ export class PluginLoader {
             const manifest = yaml.load(manifestContent) as PluginManifest;
             const isEnabled = await pluginConfigService.isPluginEnabled(pluginName);
 
-            allDiscoveredPlugins.push({
+            const extensionInfo: ExtensionInfo = {
               name: manifest.name,
               displayName: manifest.displayName,
               version: manifest.version,
               description: manifest.description,
-              configOptions: manifest.configOptions,
+              configOptions: manifest.configOptions, // 始终包含配置项
               isEnabled: isEnabled,
-            });
+            };
+
+            // 只有当插件启用时，才处理并添加前端资源信息
+            if (isEnabled && manifest.frontend) {
+               const frontendInfo = this._prepareFrontendInfo(manifest, pluginPath);
+               if (frontendInfo) {
+                 extensionInfo.frontend = frontendInfo;
+               }
+            }
+            allDiscoveredPlugins.push(extensionInfo);
           } catch (error) {
             console.error(`[PluginLoader] Failed to read manifest for plugin '${pluginName}':`, error);
           }
@@ -203,33 +212,12 @@ export class PluginLoader {
         isEnabled: true,
       };
 
+      // 处理前端资源
       if (manifest.frontend) {
-        const publicPath = path.posix.join('/plugins', manifest.name);
-        let entryFile: string | undefined;
-        let styleFiles: string[] = [];
-        let assetSubDir: string | undefined;
-
-        if (manifest.frontend.type === 'vanilla' && manifest.frontend.vanilla) {
-          assetSubDir = manifest.frontend.vanilla.rootDir || 'web';
-          entryFile = manifest.frontend.vanilla.entry;
-          styleFiles = manifest.frontend.vanilla.styles || [];
-        } else if (manifest.frontend.build) {
-          assetSubDir = manifest.frontend.build.outputDir;
-          entryFile = manifest.frontend.build.entry;
-          styleFiles = manifest.frontend.build.styles || [];
-        } else {
-          console.warn(`[PluginLoader] Plugin '${pluginName}' has a frontend section but is missing 'build' or 'vanilla' configuration. Skipping frontend part.`);
-        }
-
-        if (assetSubDir && entryFile) {
-          extensionInfo.frontend = {
-            entryUrl: path.posix.join(publicPath, assetSubDir, entryFile.replace(/^\.\//, '')),
-            styleUrls: styleFiles.map(s => path.posix.join(publicPath, assetSubDir, s.replace(/^\.\//, ''))),
-            webRootDir: pluginPath,
-          };
-        }
+        extensionInfo.frontend = this._prepareFrontendInfo(manifest, pluginPath);
       }
 
+      // 处理后端节点 (复用 NodeLoader)
       if (manifest.nodes) {
         const nodesPath = path.join(pluginPath, manifest.nodes.entry);
         await NodeLoader.loadNodes(nodesPath, manifest.name);
@@ -243,5 +231,35 @@ export class PluginLoader {
       console.error(`[PluginLoader] Failed to load plugin '${pluginName}' from '${pluginPath}':`, error);
       return null;
     }
+  }
+
+  private static _prepareFrontendInfo(manifest: PluginManifest, pluginPath: string): FrontendInfo | undefined {
+    if (!manifest.frontend) return undefined;
+
+    const publicPath = path.posix.join('/plugins', manifest.name);
+    let entryFile: string | undefined;
+    let styleFiles: string[] = [];
+    let assetSubDir: string | undefined;
+
+    if (manifest.frontend.type === 'vanilla' && manifest.frontend.vanilla) {
+      assetSubDir = manifest.frontend.vanilla.rootDir || 'web';
+      entryFile = manifest.frontend.vanilla.entry;
+      styleFiles = manifest.frontend.vanilla.styles || [];
+    } else if (manifest.frontend.build) {
+      assetSubDir = manifest.frontend.build.outputDir;
+      entryFile = manifest.frontend.build.entry;
+      styleFiles = manifest.frontend.build.styles || [];
+    }
+
+    if (assetSubDir && entryFile) {
+      return {
+        entryUrl: path.posix.join(publicPath, assetSubDir, entryFile.replace(/^\.\//, '')),
+        styleUrls: styleFiles.map(s => path.posix.join(publicPath, assetSubDir, s.replace(/^\.\//, ''))),
+        webRootDir: pluginPath,
+      };
+    }
+    
+    console.warn(`[PluginLoader] Plugin '${manifest.name}' has a frontend section but is missing 'build' or 'vanilla' configuration. Skipping frontend part.`);
+    return undefined;
   }
 }

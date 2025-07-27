@@ -2,6 +2,7 @@
   <div class="plugin-manager h-full flex flex-col bg-background-base">
     <div class="flex-1 overflow-auto px-4">
       <DataListView
+        ref="dataListViewRef"
         view-id="plugin-manager"
         :fetcher="pluginFetcher"
         :sort-options="sortOptions"
@@ -13,6 +14,9 @@
         :loading-message="t('common.loading')"
         :empty-message="t('common.noResults')"
         :error-message="t('settings.plugins.loadError')"
+        show-refresh-button
+        :is-refreshing="pluginStore.isLoading"
+        @refresh="reloadPlugins"
       >
         <template #header>
           <div class="pt-4 pb-2">
@@ -20,17 +24,6 @@
             <p class="text-sm text-text-secondary mt-1">{{ t('settings.plugins.description') }}</p>
           </div>
           <div class="border-t border-border-base opacity-60"></div>
-        </template>
-
-        <template #toolbar-actions>
-          <button
-            @click="reloadPlugins"
-            :disabled="pluginStore.isLoading"
-            class="px-3 py-1.5 text-sm bg-primary text-primary-content rounded-md font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-          >
-            <ArrowPathIcon :class="['h-4 w-4', { 'animate-spin': pluginStore.isLoading }]" />
-            <span class="ml-2">{{ pluginStore.isLoading ? t('settings.plugins.reloading') : t('settings.plugins.reload') }}</span>
-          </button>
         </template>
 
         <template #grid-item="{ item }">
@@ -42,7 +35,15 @@
               </h3>
               <p class="text-sm text-text-secondary mt-1 flex-grow">{{ item.description || t('common.noDescription') }}</p>
             </div>
-            <div class="ml-auto mt-4 flex-shrink-0">
+            <div class="ml-auto mt-4 flex-shrink-0 flex items-center space-x-2">
+              <button
+                v-if="item.configOptions && item.configOptions.length > 0"
+                @click="openPluginSettings(item)"
+                class="p-2 rounded-md hover:bg-background-highlight transition-colors"
+                v-comfy-tooltip="t('common.settings')"
+              >
+                <Cog6ToothIcon class="h-5 w-5 text-text-secondary" />
+              </button>
               <BooleanToggle
                 :model-value="item.isEnabled ?? true"
                 @update:model-value="togglePluginStatus(item, $event)"
@@ -65,13 +66,23 @@
             v{{ item.version }}
           </td>
           <td class="px-3 py-2.5 text-right">
-             <BooleanToggle
+            <div class="flex items-center justify-end space-x-2">
+              <button
+                v-if="item.configOptions && item.configOptions.length > 0"
+                @click="openPluginSettings(item)"
+                class="p-1.5 rounded-md hover:bg-background-highlight transition-colors"
+                v-comfy-tooltip="t('common.settings')"
+              >
+                <Cog6ToothIcon class="h-4 w-4 text-text-secondary" />
+              </button>
+              <BooleanToggle
                 :model-value="item.isEnabled ?? true"
                 @update:model-value="togglePluginStatus(item, $event)"
                 size="small"
                 v-comfy-tooltip="item.isEnabled ? t('settings.plugins.disableTooltip') : t('settings.plugins.enableTooltip')"
                 :disabled="pluginStore.isPluginPending(item.name)"
               />
+            </div>
           </td>
         </template>
       </DataListView>
@@ -80,16 +91,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, markRaw } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { usePluginStore } from '@/stores/pluginStore';
+import { useUiStore } from '@/stores/uiStore';
 import BooleanToggle from '@/components/graph/inputs/BooleanToggle.vue';
 import type { ExtensionInfo, SortConfig, ColumnDefinition } from '@comfytavern/types';
 import DataListView from '@/components/data-list/DataListView.vue';
-import { ArrowPathIcon } from '@heroicons/vue/24/solid';
+import PluginDetailModal from './PluginDetailModal.vue';
+import { Cog6ToothIcon } from '@heroicons/vue/24/outline';
 
 const { t } = useI18n();
 const pluginStore = usePluginStore();
+const uiStore = useUiStore();
 const dataListViewRef = ref<{ refresh: () => void } | null>(null);
 
 const pluginFetcher = async (params: { sort?: SortConfig<ExtensionInfo> }) => {
@@ -127,6 +141,22 @@ const columns: ColumnDefinition<ExtensionInfo>[] = [
 
 const togglePluginStatus = (plugin: ExtensionInfo, isEnabled: boolean) => {
   pluginStore.setPluginEnabled(plugin.name, isEnabled);
+};
+
+const openPluginSettings = (plugin: ExtensionInfo) => {
+  uiStore.openModalWithContent({
+    component: markRaw(PluginDetailModal),
+    props: {
+      initialPlugin: plugin,
+    },
+    modalProps: {
+      title: t('settings.plugins.configurationTitle', { pluginName: plugin.displayName }),
+      width: '800px',
+      height: 'calc(100vh - 120px)',
+      showCloseIcon: true,
+      closeOnBackdrop: false,
+    },
+  });
 };
 
 /**
