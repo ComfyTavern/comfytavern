@@ -845,6 +845,11 @@ export class ExecutionEngine {
       if (definition.outputs[outputKey].isStream) {
         const downstreamConnections = this.getDownstreamStreamConnections(nodeId, outputKey);
 
+        // 检查此输出是否也连接到工作流的最终输出接口
+        const isConnectedToInterface = Object.values(this.payload.outputInterfaceMappings || {}).some(
+          mapping => mapping.sourceNodeId === nodeId && mapping.sourceSlotKey === outputKey
+        );
+
         const passThroughForOutput = new Stream.PassThrough({ objectMode: true });
         passThroughForOutput.on('error', (err) => { /* console.error(`[Engine-${promptId}] DEBUG_STREAM: passThroughForOutput '${outputKey}' for ${nodeIdentifier} errored:`, err) */ });
         passThroughForOutput.on('end', () => { /* console.log(`[Engine-${promptId}] DEBUG_STREAM: passThroughForOutput '${outputKey}' for ${nodeIdentifier} ended.`) */ });
@@ -853,7 +858,8 @@ export class ExecutionEngine {
         sourceStream.pipe(passThroughForOutput);
         streamOutputsToReturn[outputKey] = passThroughForOutput; // 这个流将返回给 executeNode 并存入 nodeResults
 
-        if (downstreamConnections.length === 0) {
+        // 只有当流既没有连接到下游节点，也没有连接到最终输出接口时，才认为它是未被消费的
+        if (downstreamConnections.length === 0 && !isConnectedToInterface) {
           // 如果流输出没有连接，确保它被消费以防止 sourceStream 阻塞
           // console.log(`[Engine-${promptId}] Stream output '${outputKey}' for node ${nodeIdentifier} has no downstream connections. Consuming to prevent stall.`);
           passThroughForOutput.resume(); // 确保数据被丢弃，防止阻塞上游
@@ -870,7 +876,6 @@ export class ExecutionEngine {
         // 但这可能导致重复的错误处理或日志。暂时让下游节点负责。
       }
     }
-
     // 2. 创建并管理流生命周期 Promise
     let batchResultResolver!: (value: Record<string, any> | void | PromiseLike<Record<string, any> | void>) => void;
     let batchResultRejector!: (reason?: any) => void;

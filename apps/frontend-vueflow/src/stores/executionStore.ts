@@ -131,85 +131,85 @@ export const useExecutionStore = defineStore('execution', () => {
 
   // 更新节点为执行中状态
   const updateNodeExecuting = (internalId: string, payload: NodeExecutingPayload) => {
-      const state = ensureTabExecutionState(internalId);
-      if (payload.promptId === state.promptId) {
-          console.debug(`[ExecutionStore] Node executing for tab ${internalId}: ${payload.nodeId}`);
-          state.nodeStates[payload.nodeId] = ExecutionStatus.RUNNING;
-          // 清除该节点的旧错误和进度
-          delete state.nodeErrors[payload.nodeId];
-          delete state.nodeProgress[payload.nodeId];
-          // 可选：清除旧的预览输出？
-          // delete state.nodePreviewOutputs[payload.nodeId];
-      } else {
-          console.warn(`[ExecutionStore] Received NODE_EXECUTING for prompt ${payload.promptId} which does not match tab ${internalId}'s current prompt ${state.promptId}. Ignoring node ${payload.nodeId}.`);
-      }
+    const state = ensureTabExecutionState(internalId);
+    if (payload.promptId === state.promptId) {
+      console.debug(`[ExecutionStore] Node executing for tab ${internalId}: ${payload.nodeId}`);
+      state.nodeStates[payload.nodeId] = ExecutionStatus.RUNNING;
+      // 清除该节点的旧错误和进度
+      delete state.nodeErrors[payload.nodeId];
+      delete state.nodeProgress[payload.nodeId];
+      // 可选：清除旧的预览输出？
+      // delete state.nodePreviewOutputs[payload.nodeId];
+    } else {
+      console.warn(`[ExecutionStore] Received NODE_EXECUTING for prompt ${payload.promptId} which does not match tab ${internalId}'s current prompt ${state.promptId}. Ignoring node ${payload.nodeId}.`);
+    }
   };
 
   // 更新节点进度
   const updateNodeProgress = (internalId: string, payload: NodeProgressPayload) => {
-      const state = ensureTabExecutionState(internalId);
-      if (payload.promptId === state.promptId) {
-          console.debug(`[ExecutionStore] Node progress for tab ${internalId}, node ${payload.nodeId}: ${payload.value}/${payload.max}`);
-          state.nodeProgress[payload.nodeId] = { value: payload.value, max: payload.max };
-          // 确保状态至少是 RUNNING
-          if (state.nodeStates[payload.nodeId] !== ExecutionStatus.RUNNING && state.nodeStates[payload.nodeId] !== ExecutionStatus.COMPLETE && state.nodeStates[payload.nodeId] !== ExecutionStatus.ERROR) {
-             state.nodeStates[payload.nodeId] = ExecutionStatus.RUNNING;
-          }
-      } else {
-          console.warn(`[ExecutionStore] Received NODE_PROGRESS for prompt ${payload.promptId} which does not match tab ${internalId}'s current prompt ${state.promptId}. Ignoring node ${payload.nodeId}.`);
+    const state = ensureTabExecutionState(internalId);
+    if (payload.promptId === state.promptId) {
+      console.debug(`[ExecutionStore] Node progress for tab ${internalId}, node ${payload.nodeId}: ${payload.value}/${payload.max}`);
+      state.nodeProgress[payload.nodeId] = { value: payload.value, max: payload.max };
+      // 确保状态至少是 RUNNING
+      if (state.nodeStates[payload.nodeId] !== ExecutionStatus.RUNNING && state.nodeStates[payload.nodeId] !== ExecutionStatus.COMPLETE && state.nodeStates[payload.nodeId] !== ExecutionStatus.ERROR) {
+        state.nodeStates[payload.nodeId] = ExecutionStatus.RUNNING;
       }
+    } else {
+      console.warn(`[ExecutionStore] Received NODE_PROGRESS for prompt ${payload.promptId} which does not match tab ${internalId}'s current prompt ${state.promptId}. Ignoring node ${payload.nodeId}.`);
+    }
   };
 
   // 更新节点执行结果 (完成)
-  // 更新节点执行结果 (完成)
   const updateNodeExecutionResult = (internalId: string, payload: NodeCompletePayload) => {
-      const state = ensureTabExecutionState(internalId);
-      // payload.promptId 是消息中携带的 promptId
-      // state.promptId 是当前标签页激活的主工作流的 promptId
+    const state = ensureTabExecutionState(internalId);
+    // payload.promptId 是消息中携带的 promptId
+    // state.promptId 是当前标签页激活的主工作流的 promptId
 
-      // 检查消息是否与当前活动的主工作流相关
-      if (payload.promptId === state.promptId) {
-          console.debug(`[ExecutionStore] Node complete for tab ${internalId} (Main Workflow: ${state.promptId}), node ${payload.nodeId}. Output:`, payload.output);
-          state.nodeStates[payload.nodeId] = ExecutionStatus.COMPLETE;
-          delete state.nodeErrors[payload.nodeId];
-          delete state.nodeProgress[payload.nodeId];
+    // 检查消息是否与当前活动的主工作流相关
+    if (payload.promptId === state.promptId) {
+      console.debug(`[ExecutionStore] Node complete for tab ${internalId} (Main Workflow: ${state.promptId}), node ${payload.nodeId}. Output:`, payload.output);
+      state.nodeStates[payload.nodeId] = ExecutionStatus.COMPLETE;
+      delete state.nodeErrors[payload.nodeId];
+      delete state.nodeProgress[payload.nodeId];
 
-          // 这是主工作流的结果
-          state.nodeOutputs[payload.nodeId] = payload.output;
-          // 清除该节点的预览输出，因为现在有了最终的、权威的结果
-          delete state.nodePreviewOutputs[payload.nodeId];
-      } else {
-          // 如果 promptId 不匹配主工作流的 promptId，则假定它是预览工作流的结果
-          // 注意：这依赖于预览工作流使用与主工作流不同的 promptId
-          console.debug(`[ExecutionStore] Node complete for tab ${internalId} (Preview Workflow: ${payload.promptId}), node ${payload.nodeId}. Output:`, payload.output);
-          // 即使是预览，也应该更新节点状态，但可能需要区分
-          // 暂时也设置为 COMPLETE，UI层面可以根据是否在 G' 中来决定如何显示
-          state.nodeStates[payload.nodeId] = ExecutionStatus.COMPLETE; // 或者一个特殊的 PREVIEW_COMPLETE? 目前类型不支持
-          delete state.nodeErrors[payload.nodeId]; // 清除错误 (预览也可能出错后成功)
-          delete state.nodeProgress[payload.nodeId]; // 清除进度
+      // 这是主工作流的结果
+      state.nodeOutputs[payload.nodeId] = payload.output;
+      // 清除该节点的预览输出，因为现在有了最终的、权威的结果
+      delete state.nodePreviewOutputs[payload.nodeId];
+    } else {
+      // 如果 promptId 不匹配主工作流的 promptId，则假定它是预览工作流的结果
+      // 注意：这依赖于预览工作流使用与主工作流不同的 promptId
+      console.debug(`[ExecutionStore] Node complete for tab ${internalId} (Preview Workflow: ${payload.promptId}), node ${payload.nodeId}. Output:`, payload.output);
+      // 即使是预览，也应该更新节点状态，但可能需要区分
+      // 暂时也设置为 COMPLETE，UI层面可以根据是否在 G' 中来决定如何显示
+      state.nodeStates[payload.nodeId] = ExecutionStatus.COMPLETE; // 或者一个特殊的 PREVIEW_COMPLETE? 目前类型不支持
+      delete state.nodeErrors[payload.nodeId]; // 清除错误 (预览也可能出错后成功)
+      delete state.nodeProgress[payload.nodeId]; // 清除进度
 
-          // 这是预览工作流的结果
-          state.nodePreviewOutputs[payload.nodeId] = payload.output;
-      }
+      // 这是预览工作流的结果
+      state.nodePreviewOutputs[payload.nodeId] = payload.output;
+    }
   };
   // 更新节点错误状态
   const updateNodeError = (internalId: string, payload: NodeErrorPayload) => {
-      const state = ensureTabExecutionState(internalId);
-      if (payload.promptId === state.promptId) {
-          console.error(`[ExecutionStore] Node error for tab ${internalId}, node ${payload.nodeId}:`, payload.errorDetails);
-          state.nodeStates[payload.nodeId] = ExecutionStatus.ERROR;
-          state.nodeErrors[payload.nodeId] = payload.errorDetails;
-          delete state.nodeProgress[payload.nodeId]; // 清除进度
-      } else {
-          console.warn(`[ExecutionStore] Received NODE_ERROR for prompt ${payload.promptId} which does not match tab ${internalId}'s current prompt ${state.promptId}. Ignoring node ${payload.nodeId}.`);
-      }
-  };
-
-  // 新增：处理节点流式输出 (NODE_YIELD)
-  const handleNodeYield = (internalId: string, payload: NodeYieldPayload) => {
     const state = ensureTabExecutionState(internalId);
     if (payload.promptId === state.promptId) {
-      console.debug(`[ExecutionStore] Node yield for tab ${internalId}, node ${payload.sourceNodeId}`, payload.yieldedContent);
+      console.error(`[ExecutionStore] Node error for tab ${internalId}, node ${payload.nodeId}:`, payload.errorDetails);
+      state.nodeStates[payload.nodeId] = ExecutionStatus.ERROR;
+      state.nodeErrors[payload.nodeId] = payload.errorDetails;
+      delete state.nodeProgress[payload.nodeId]; // 清除进度
+    } else {
+      console.warn(`[ExecutionStore] Received NODE_ERROR for prompt ${payload.promptId} which does not match tab ${internalId}'s current prompt ${state.promptId}. Ignoring node ${payload.nodeId}.`);
+    }
+  };
+
+  // 新增：处理节点流式输出 (NODE_YIELD) - 直接处理
+  const handleNodeYield = (internalId: string, payload: NodeYieldPayload) => {
+    // console.log(`[ExecutionStore] [SYNC] Handling NODE_YIELD for tab ${internalId}, node ${payload.sourceNodeId}`);
+    const state = ensureTabExecutionState(internalId);
+
+    if (payload.promptId === state.promptId) {
       let nodeStreamContent = state.streamingNodeContent[payload.sourceNodeId];
       if (!nodeStreamContent) {
         nodeStreamContent = { accumulatedText: '', lastChunkTimestamp: 0, rawChunks: [] };
@@ -223,20 +223,20 @@ export const useExecutionStore = defineStore('execution', () => {
         nodeStreamContent.accumulatedText += payload.yieldedContent.content;
       }
 
-      // 如果是最后一个块，可以考虑做一些清理或标记
       if (payload.isLastChunk) {
         // console.debug(`[ExecutionStore] Last chunk received for node ${payload.sourceNodeId} on tab ${internalId}`);
-        // 例如: nodeStreamContent.isComplete = true; (需要扩展接口)
       }
+
     } else {
-      console.warn(`[ExecutionStore] Received NODE_YIELD for prompt ${payload.promptId} which does not match tab ${internalId}'s current prompt ${state.promptId}. Ignoring node ${payload.sourceNodeId}.`);
+      // console.warn(`[ExecutionStore] NODE_YIELD for prompt ${payload.promptId} does not match tab ${internalId}'s current prompt ${state.promptId}. Ignoring.`);
     }
   };
-
+  // 处理工作流接口的流式输出 - 直接处理
   const handleWorkflowInterfaceYield = (internalId: string, payload: WorkflowInterfaceYieldPayload) => {
+    // console.log(`[ExecutionStore] [SYNC] Handling WORKFLOW_INTERFACE_YIELD for tab ${internalId}, key ${payload.interfaceOutputKey}`);
     const state = ensureTabExecutionState(internalId);
+
     if (payload.promptId === state.promptId) {
-      console.debug(`[ExecutionStore] Workflow interface yield for tab ${internalId}, key ${payload.interfaceOutputKey}`, payload.yieldedContent);
       let interfaceStreamContent = state.streamingInterfaceOutputs[payload.interfaceOutputKey];
       if (!interfaceStreamContent) {
         interfaceStreamContent = { accumulatedText: '', lastChunkTimestamp: 0, rawChunks: [] };
@@ -246,23 +246,21 @@ export const useExecutionStore = defineStore('execution', () => {
       interfaceStreamContent.rawChunks.push(payload.yieldedContent);
       interfaceStreamContent.lastChunkTimestamp = Date.now();
 
-      // 假设 yieldedContent 也是 ChunkPayload 类型或者可以判断其类型
       if (typeof payload.yieldedContent === 'object' && payload.yieldedContent !== null && 'type' in payload.yieldedContent && 'content' in payload.yieldedContent) {
-        const chunk = payload.yieldedContent as ChunkPayload; // Type assertion
+        const chunk = payload.yieldedContent as ChunkPayload;
         if (chunk.type === 'text_chunk' && typeof chunk.content === 'string') {
           interfaceStreamContent.accumulatedText += chunk.content;
         }
-      } else if (typeof payload.yieldedContent === 'string') { // 直接是字符串的情况
+      } else if (typeof payload.yieldedContent === 'string') {
         interfaceStreamContent.accumulatedText += payload.yieldedContent;
       }
 
-
       if (payload.isLastChunk) {
-        console.debug(`[ExecutionStore] Last interface chunk received for key ${payload.interfaceOutputKey} on tab ${internalId}`);
+        // console.debug(`[ExecutionStore] Last interface chunk received for key ${payload.interfaceOutputKey} on tab ${internalId}`);
         interfaceStreamContent.isComplete = true;
       }
     } else {
-      console.warn(`[ExecutionStore] Received WORKFLOW_INTERFACE_YIELD for prompt ${payload.promptId} which does not match tab ${internalId}'s current prompt ${state.promptId}. Ignoring key ${payload.interfaceOutputKey}.`);
+      // console.warn(`[ExecutionStore] WORKFLOW_INTERFACE_YIELD for prompt ${payload.promptId} does not match tab ${internalId}'s current prompt ${state.promptId}. Ignoring.`);
     }
   };
 
@@ -281,7 +279,7 @@ export const useExecutionStore = defineStore('execution', () => {
     state.workflowStatus = status;
     // 如果提供了 promptId (例如，从 PROMPT_REQUEST 发送处)，则设置它
     if (associatedPromptId) {
-        state.promptId = associatedPromptId;
+      state.promptId = associatedPromptId;
     }
     // 当手动设置为 QUEUED 或 RUNNING 时，清除之前的错误信息和时间戳
     if (status === ExecutionStatus.QUEUED || status === ExecutionStatus.RUNNING) {
@@ -337,7 +335,7 @@ export const useExecutionStore = defineStore('execution', () => {
   };
 
   const getNodeProgress = (internalId: string, nodeId: string): { value: number; max: number } | undefined => {
-      return tabExecutionStates.get(internalId)?.nodeProgress[nodeId];
+    return tabExecutionStates.get(internalId)?.nodeProgress[nodeId];
   };
 
   // 获取最终输出
@@ -346,16 +344,16 @@ export const useExecutionStore = defineStore('execution', () => {
   };
 
   const getAllNodeOutputs = (internalId: string, nodeId: string): Record<string, any> | undefined => {
-      return tabExecutionStates.get(internalId)?.nodeOutputs[nodeId];
+    return tabExecutionStates.get(internalId)?.nodeOutputs[nodeId];
   };
 
   // 获取预览输出
   const getNodePreviewOutput = (internalId: string, nodeId: string, outputKey: string): any | undefined => {
-      return tabExecutionStates.get(internalId)?.nodePreviewOutputs[nodeId]?.[outputKey];
+    return tabExecutionStates.get(internalId)?.nodePreviewOutputs[nodeId]?.[outputKey];
   };
 
   const getAllNodePreviewOutputs = (internalId: string, nodeId: string): Record<string, any> | undefined => {
-      return tabExecutionStates.get(internalId)?.nodePreviewOutputs[nodeId];
+    return tabExecutionStates.get(internalId)?.nodePreviewOutputs[nodeId];
   };
 
   // 新增：获取节点累积的流式文本
@@ -393,7 +391,7 @@ export const useExecutionStore = defineStore('execution', () => {
     // Expose tab-specific states and actions
     tabExecutionStates, // Expose the whole map if needed, or prefer specific getters
     // Actions
-    prepareForNewExecution, 
+    prepareForNewExecution,
     handlePromptAccepted,
     updateWorkflowStatus,
     updateNodeExecuting,

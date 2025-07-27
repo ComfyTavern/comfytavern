@@ -53,7 +53,7 @@ export const definition: NodeDefinition = {
 
   inputs: {
     inputStream: {
-      dataFlowType: 'WILDCARD',
+      dataFlowType: 'STRING',
       isStream: true,
       displayName: '输入流',
       description: '要处理的输入文本流',
@@ -75,7 +75,7 @@ export const definition: NodeDefinition = {
 
   outputs: {
     outputStream: {
-      dataFlowType: 'WILDCARD',
+      dataFlowType: 'STRING',
       isStream: true,
       displayName: '输出流',
       description: '添加后缀后的文本流'

@@ -262,15 +262,13 @@ export class WebSocketManager {
           clientInfo.queue.shift(); // Sent successfully
         } else {
           // result is 0 (dropped) or -1 (backpressure)
-          // 在这两种情况下，我们都应该停止发送并等待 drain 事件。
-          // Bun 文档： "A value of 0 indicates the message was dropped, this can happen if the socket is closed or not ready."
-          // "If backpressure is applied, send() will return -1."
+          // 遇到背压，保持 isSending = true 并退出。
+          // 等待 drain 事件来继续处理队列。
           if (result === 0) {
-            console.warn(
-              `[WS Manager] Message dropped for client ${clientId} (send returned 0). Waiting for drain event.`
-            );
+            // console.warn(`[WS Manager] Message dropped for client ${clientId} (send returned 0). Queue will be retried on next event or drain.`);
           }
-          break; // 停止处理此客户端的队列，等待 drain
+          // **关键修复**: 不要在这里重置 isSending，因为我们正在等待 drain。
+          return;
         }
       }
     } catch (error) {
@@ -279,10 +277,11 @@ export class WebSocketManager {
         error
       );
       this.removeClient(clientInfo.ws);
-    } finally {
-      if (clientInfo) {
-        clientInfo.isSending = false;
-      }
+    }
+
+    // **关键修复**: 只有当 while 循环正常完成（即队列为空）时，才重置 isSending。
+    if (clientInfo) {
+      clientInfo.isSending = false;
     }
   }
 
@@ -294,8 +293,11 @@ export class WebSocketManager {
   public handleDrain(ws: WsContext): void {
     const clientId = this.getClientId(ws);
     if (clientId) {
-      // console.log(`[WS Manager] Drain event for client ${clientId}. Resuming queue.`);
-      this._trySendQueue(clientId);
+      const clientInfo = this.clients.get(clientId);
+      if (clientInfo) {
+        // console.log(`[WS Manager] Drain event for client ${clientId}. Resuming queue.`);
+        this._trySendQueue(clientId);
+      }
     }
   }
 

@@ -1,9 +1,42 @@
-import type { NodeDefinition } from '@comfytavern/types'
-// Removed: import { nodeManager } from '../NodeManager'
+import type { NodeDefinition, NodeExecutionContext } from '@comfytavern/types';
+import { Stream } from 'node:stream';
 
 export class GroupOutputNodeImpl {
-  static async execute(inputs: Record<string, any>, context: any): Promise<Record<string, any>> {
-    return {} // GroupOutput 节点本身不产生输出
+  static async execute(
+    inputs: Record<string, any>,
+    context: NodeExecutionContext
+  ): Promise<Record<string, any>> { // Must return a record
+    const { nodeId } = context;
+    const consumptionPromises: Promise<void>[] = [];
+
+    for (const key in inputs) {
+      const value = inputs[key];
+      if (value instanceof Stream.Readable) {
+        const promise = (async () => {
+          // console.log(`[GroupOutputNode-${nodeId}] Consuming stream from input '${key}' to prevent blocking.`);
+          try {
+            // Drain the stream by iterating over it without yielding anything.
+            // This ensures the upstream producer can complete its operation.
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            for await (const _ of value) {
+              // Do nothing with the chunk, just consume it.
+            }
+            // console.log(`[GroupOutputNode-${nodeId}] Finished consuming stream for input '${key}'.`);
+          } catch (error: any) {
+            // console.error(`[GroupOutputNode-${nodeId}] Error consuming stream for input '${key}':`, error);
+            // We log the error but don't re-throw, to allow other streams to be consumed.
+            // The error will be handled by the upstream node's lifecycle management.
+          }
+        })();
+        consumptionPromises.push(promise);
+      }
+    }
+
+    // Wait for all stream consumptions to finish.
+    await Promise.all(consumptionPromises);
+
+    // GroupOutput itself doesn't return any data, but must conform to the type.
+    return {};
   }
 }
 
