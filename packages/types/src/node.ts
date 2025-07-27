@@ -99,14 +99,19 @@ export const GroupSlotInfoSchema = z.object({
   min: z.number().optional(),
   /** 数值类型的最大值 */
   max: z.number().optional(),
-}).merge(z.object({
+  /** 显示名称 */
   displayName: z.string().optional(),
+  /** 数据流类型 */
   dataFlowType: z.enum(Object.values(DataFlowType) as [DataFlowTypeName, ...DataFlowTypeName[]]),
+  /** 是否为流式插槽 */
   isStream: z.boolean().optional(),
+  /** 用于匹配的类别标签 */
   matchCategories: z.array(z.string()).optional(),
+  /** 是否允许动态类型 */
   allowDynamicType: z.boolean().optional(),
+  /** 是否隐藏句柄 */
   hideHandle: z.boolean().optional(),
-}));
+});
 /** 类型推断：节点组插槽的详细信息 */
 export type GroupSlotInfo = z.infer<typeof GroupSlotInfoSchema>;
 

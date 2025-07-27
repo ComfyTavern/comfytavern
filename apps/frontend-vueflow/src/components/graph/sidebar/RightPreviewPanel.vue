@@ -266,10 +266,6 @@ const displayableGroupOutputs = computed<Record<string, OutputDefinition>>(() =>
   return result;
 });
 
-// const displayableGroupOutputsCount = computed(() => { // 已被 processedGroupOutputs.length 替代
-//   return Object.keys(displayableGroupOutputs.value).length;
-// });
-
 const toggleGroupOutputCollapse = (outputKey: string) => {
   if (!activeTabId.value) return;
   const workflowId = activeTabId.value;
@@ -494,13 +490,6 @@ const isMarkdownSlot = computed(() => {
 
 
 // --- 组输出总览模式：新计算属性和方法 ---
-
-// 获取接口的累积流文本 (已存在，保持)
-// const getInterfaceStreamText = (interfaceKey: string) => { ... };
-// 接口流是否结束 (已存在，保持)
-// const isInterfaceStreamDone = (interfaceKey: string) => { ... };
-// 接口流是否处理中 (已存在，保持)
-// const isInterfaceStreamProcessing = (interfaceKey: string) => { ... };
 
 // 核心方法：获取组输出项的合并内容
 const getMergedGroupContent = (key: string, outputDef: OutputDefinition) => {

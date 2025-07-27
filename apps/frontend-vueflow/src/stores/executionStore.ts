@@ -243,16 +243,21 @@ export const useExecutionStore = defineStore('execution', () => {
         state.streamingInterfaceOutputs[payload.interfaceOutputKey] = interfaceStreamContent;
       }
 
-      interfaceStreamContent.rawChunks.push(payload.yieldedContent);
+      const yieldedContent = payload.yieldedContent;
+      const chunks = Array.isArray(yieldedContent) ? yieldedContent : [yieldedContent];
+
+      interfaceStreamContent.rawChunks.push(...chunks);
       interfaceStreamContent.lastChunkTimestamp = Date.now();
 
-      if (typeof payload.yieldedContent === 'object' && payload.yieldedContent !== null && 'type' in payload.yieldedContent && 'content' in payload.yieldedContent) {
-        const chunk = payload.yieldedContent as ChunkPayload;
-        if (chunk.type === 'text_chunk' && typeof chunk.content === 'string') {
-          interfaceStreamContent.accumulatedText += chunk.content;
+      for (const content of chunks) {
+        if (typeof content === 'object' && content !== null && 'type' in content && 'content' in content) {
+          const chunk = content as ChunkPayload;
+          if (chunk.type === 'text_chunk' && typeof chunk.content === 'string') {
+            interfaceStreamContent.accumulatedText += chunk.content;
+          }
+        } else if (typeof content === 'string') {
+          interfaceStreamContent.accumulatedText += content;
         }
-      } else if (typeof payload.yieldedContent === 'string') {
-        interfaceStreamContent.accumulatedText += payload.yieldedContent;
       }
 
       if (payload.isLastChunk) {

@@ -378,6 +378,7 @@ export function useCanvasConnections({
       matchCategories: [...newCats], // Ensure new array
       displayName: connectedSlot.displayName || baseSlot.key,
       customDescription: connectedSlot.customDescription || (connectedSlot as any).description || "",
+      isStream: connectedSlot.isStream ?? baseSlot.isStream, // 咕咕：修复isStream属性丢失的问题
       config: { // Deep copy or selective copy of config
         ...baseConfig, // Start with base config
         ...connectedConfig, // Override with connected slot's config

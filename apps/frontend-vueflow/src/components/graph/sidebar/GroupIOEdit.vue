@@ -471,6 +471,35 @@ function handleInputMaxBlur() {
     workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry); // Pass entry
   }
 }
+
+function handleInputStreamChange(event: Event) {
+  if (activeTabId.value && selectedInputKey.value) {
+    const keyToUpdate = selectedInputKey.value;
+    const newIsStream = (event.target as HTMLInputElement).checked;
+    const oldIsStream = selectedInputData.value?.isStream;
+
+    const updateFn = (
+      currentInputs: Record<string, GroupSlotInfo>,
+      currentOutputs: Record<string, GroupSlotInfo>
+    ): { inputs: Record<string, GroupSlotInfo>; outputs: Record<string, GroupSlotInfo> } => {
+      const updatedInputs = { ...currentInputs };
+      if (updatedInputs[keyToUpdate]) {
+        updatedInputs[keyToUpdate] = { ...updatedInputs[keyToUpdate], isStream: newIsStream };
+      }
+      return { inputs: updatedInputs, outputs: currentOutputs };
+    };
+
+    const inputName = selectedInputData.value?.displayName || keyToUpdate;
+    const summary = t("history.groupIO.inputStreamChanged", { inputName, isStream: newIsStream });
+    const entry: HistoryEntry = createHistoryEntry("modify", "interfaceInput", summary, {
+      key: keyToUpdate,
+      propertyName: "isStream",
+      oldValue: oldIsStream,
+      newValue: newIsStream,
+    });
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry);
+  }
+}
 // --- 结束新增处理函数 ---
 
 // --- 输出编辑处理函数 ---
@@ -604,6 +633,35 @@ function handleOutputDescriptionBlur() {
   }
 }
 
+function handleOutputStreamChange(event: Event) {
+  if (activeTabId.value && selectedOutputKey.value) {
+    const keyToUpdate = selectedOutputKey.value;
+    const newIsStream = (event.target as HTMLInputElement).checked;
+    const oldIsStream = selectedOutputData.value?.isStream;
+
+    const updateFn = (
+      currentInputs: Record<string, GroupSlotInfo>,
+      currentOutputs: Record<string, GroupSlotInfo>
+    ): { inputs: Record<string, GroupSlotInfo>; outputs: Record<string, GroupSlotInfo> } => {
+      const updatedOutputs = { ...currentOutputs };
+      if (updatedOutputs[keyToUpdate]) {
+        updatedOutputs[keyToUpdate] = { ...updatedOutputs[keyToUpdate], isStream: newIsStream };
+      }
+      return { inputs: currentInputs, outputs: updatedOutputs };
+    };
+
+    const outputName = selectedOutputData.value?.displayName || keyToUpdate;
+    const summary = t("history.groupIO.outputStreamChanged", { outputName, isStream: newIsStream });
+    const entry: HistoryEntry = createHistoryEntry("modify", "interfaceOutput", summary, {
+      key: keyToUpdate,
+      propertyName: "isStream",
+      oldValue: oldIsStream,
+      newValue: newIsStream,
+    });
+    workflowStore.updateWorkflowInterfaceAndRecord(activeTabId.value, updateFn, entry);
+  }
+}
+
 // 辅助函数：获取 Handle 的 CSS 类
 function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
   const classes: string[] = []; // 初始化为空数组
@@ -690,6 +748,12 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
                     v-comfy-tooltip="{ content: `${input.displayName} (${String(key)})` }">{{ input.displayName || key
                     }}</span>
                   <div class="flex items-center space-x-1.5 flex-shrink-0">
+                    <svg v-if="input.isStream" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-yellow-400"
+                      viewBox="0 0 20 20" fill="currentColor" v-comfy-tooltip="t('sidebar.groupIOEdit.streamTooltip')">
+                      <path fill-rule="evenodd"
+                        d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
+                        clip-rule="evenodd" />
+                    </svg>
                     <span class="text-xs text-text-muted">{{ input.dataFlowType }}</span>
                     <span :class="getHandleClasses(input, true)" style="
                         width: 8px !important;
@@ -759,6 +823,12 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
                     v-comfy-tooltip="{ content: `${output.displayName} (${String(key)})` }">{{ output.displayName || key
                     }}</span>
                   <div class="flex items-center space-x-1.5 flex-shrink-0">
+                    <svg v-if="output.isStream" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-yellow-400"
+                      viewBox="0 0 20 20" fill="currentColor" v-comfy-tooltip="t('sidebar.groupIOEdit.streamTooltip')">
+                      <path fill-rule="evenodd"
+                        d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
+                        clip-rule="evenodd" />
+                    </svg>
                     <span class="text-xs text-text-secondary">{{ output.dataFlowType }}</span>
                     <span :class="getHandleClasses(output, false)" style="
                           width: 8px !important;
@@ -857,6 +927,11 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
             <label class="col-span-1 text-right text-text-base">{{ t('sidebar.groupIOEdit.descriptionLabel') }}</label>
             <input v-model="editingDescription" type="text" class="col-span-2 input-xs text-text-muted"
               :placeholder="t('sidebar.groupIOEdit.descriptionPlaceholder')" @blur="handleInputDescriptionBlur" />
+
+            <label class="col-span-1 text-right text-text-base">{{ t('sidebar.groupIOEdit.streamLabel') }}</label>
+            <input :checked="selectedInputData.isStream" type="checkbox"
+              class="col-span-2 justify-self-start h-4 w-4 rounded border-border-base text-primary focus:ring-primary bg-background-base"
+              @change="handleInputStreamChange" />
 
             <!-- 默认值输入 -->
             <label class="col-span-1 text-right text-text-base">{{ t('sidebar.groupIOEdit.defaultValueLabel') }}</label>
@@ -966,6 +1041,11 @@ function getHandleClasses(slot: GroupSlotInfo, isInput: boolean): string[] {
             <label class="col-span-1 text-right text-text-base">{{ t('sidebar.groupIOEdit.descriptionLabel') }}</label>
             <input v-model="editingDescription" type="text" class="col-span-2 input-xs text-text-muted"
               :placeholder="t('sidebar.groupIOEdit.descriptionPlaceholder')" @blur="handleOutputDescriptionBlur" />
+
+            <label class="col-span-1 text-right text-text-base">{{ t('sidebar.groupIOEdit.streamLabel') }}</label>
+            <input :checked="selectedOutputData.isStream" type="checkbox"
+              class="col-span-2 justify-self-start h-4 w-4 rounded border-border-base text-primary focus:ring-primary bg-background-base"
+              @change="handleOutputStreamChange" />
 
             <!-- TODO: 添加 config 字段 -->
           </div>
