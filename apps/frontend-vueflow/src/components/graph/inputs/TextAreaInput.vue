@@ -1,6 +1,8 @@
 <template>
   <div class="textarea-input-wrapper">
+    <label v-if="props.label" :for="id" class="sr-only">{{ props.label }}</label>
     <textarea
+      :id="id"
       ref="textareaRef"
       :value="props.modelValue"
       :placeholder="props.placeholder"
@@ -26,13 +28,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, computed } from "vue"; // 导入 computed
+import { ref, onMounted, onUnmounted, nextTick, computed, useId } from "vue"; // 导入 computed
 
 // 移除了 isDraggingResize 和 initialHeightOnMouseDown
 const initialValueOnFocus = ref<string | null>(null); // Store initial text value on focus
 
 interface Props {
   modelValue: string;
+  label?: string;
   placeholder?: string;
   disabled?: boolean;
   hasError?: boolean;
@@ -48,6 +51,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: "",
+  label: '',
   placeholder: "",
   disabled: false,
   hasError: false,
@@ -56,6 +60,8 @@ const props = withDefaults(defineProps<Props>(), {
   readonly: false,
   size: "small", // 设置 size 默认值
 });
+
+const id = useId();
 
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const emit = defineEmits<{

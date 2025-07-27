@@ -1,7 +1,8 @@
 <template>
   <div ref="rootRef" class="select-input relative w-full">
+    <label v-if="props.label" :for="id" class="sr-only">{{ props.label }}</label>
     <!-- Display Area / Trigger -->
-    <button type="button" :disabled="props.disabled || props.readonly" @click.stop="toggleDropdown"
+    <button :id="id" type="button" :disabled="props.disabled || props.readonly" @click.stop="toggleDropdown"
       class="node-input w-full rounded border transition-colors duration-200 flex items-center justify-between text-left bg-background-base dark:bg-background-surface border-border-base text-text-base focus:ring-1 focus:ring-inset focus:ring-primary/50 focus:border-transparent hover:border-primary"
       :class="[
         sizeClasses.button,
@@ -12,8 +13,8 @@
           'disabled:bg-background-base dark:disabled:bg-background-surface/50 disabled:text-text-muted disabled:cursor-not-allowed':
             props.disabled,
         },
-      ]" aria-haspopup="listbox" :aria-expanded="isDropdownVisible">
-      <span :class="{ 'text-text-muted': !selectedOptionLabel }">
+      ]" aria-haspopup="listbox" :aria-expanded="isDropdownVisible" :aria-labelledby="id">
+      <span class="truncate" :class="{ 'text-text-muted': !selectedOptionLabel }">
         {{ selectedOptionLabel || props.placeholder || "请选择" }}
       </span>
       <!-- Dropdown Arrow -->
@@ -38,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
+import { ref, computed, nextTick, useId } from "vue";
 import { useVueFlow } from "@vue-flow/core"; // Import useVueFlow
 import SuggestionDropdown from "../../common/SuggestionDropdown.vue"; // Import SuggestionDropdown
 
@@ -50,6 +51,7 @@ interface Option {
 interface Props {
   modelValue: string | number;
   suggestions: (string | number | Option)[];
+  label?: string;
   placeholder?: string;
   disabled?: boolean;
   hasError?: boolean;
@@ -64,6 +66,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   modelValue: "",
   suggestions: () => [],
+  label: '',
   placeholder: "",
   disabled: false,
   hasError: false,
@@ -73,6 +76,8 @@ const props = withDefaults(defineProps<Props>(), {
   applyCanvasScale: true, // 默认应用画布缩放
   searchable: false, // 默认不启用搜索
 });
+
+const id = useId();
 
 const sizeClasses = computed(() => {
   if (props.size === "large") {

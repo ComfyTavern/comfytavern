@@ -1,8 +1,9 @@
 <template>
   <div class="boolean-toggle">
-    <label class="relative inline-flex items-center" :class="sizeClasses.cursor">
+    <label class="relative inline-flex items-center" :class="sizeClasses.cursor"
+      role="switch" :aria-checked="modelValue" :aria-readonly="props.readonly">
       <input type="checkbox" :checked="modelValue" @change="toggle" class="sr-only peer"
-        :disabled="props.disabled || props.readonly">
+        :disabled="props.disabled || props.readonly" tabindex="-1">
       <div
         class="rounded-full peer peer-focus:ring-4 peer-focus:ring-primary-soft bg-neutral-soft peer-checked:after:border-transparent after:content-[''] after:absolute after:bg-background-base after:border-border-base after:border after:rounded-full after:transition-all peer-checked:bg-primary peer-disabled:border peer-disabled:border-border-base"
         :class="sizeClasses.wrapper">

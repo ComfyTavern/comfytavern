@@ -1,8 +1,10 @@
 <template>
-  <div ref="rootRef" class="number-input relative w-full">
+  <div ref="rootRef" class="number-input relative w-full" role="group" :aria-label="props.label">
+    <label v-if="props.label" :for="id" class="sr-only">{{ props.label }}</label>
     <!-- Standard number input with steppers/drag -->
     <template v-if="isEditing">
       <input
+        :id="id"
         ref="inputRef"
         type="number"
         :value="editingValue"
@@ -49,6 +51,7 @@
           :class="sizeClasses.stepperButton"
           @click.stop="stepValue(-1)"
           :disabled="props.disabled || props.readonly"
+          aria-label="减少"
         >
           <svg
             class="w-2.5 h-2.5 transform rotate-90"
@@ -69,6 +72,11 @@
         <!-- 数值显示 -->
         <div
           ref="valueDisplayRef"
+          role="slider"
+          :aria-valuemin="props.min"
+          :aria-valuemax="props.max"
+          :aria-valuenow="props.modelValue"
+          :aria-label="props.label || '数值'"
           class="flex flex-1 items-center select-none text-text-base text-right transition-colors duration-200 bg-background-base dark:bg-background-surface"
           :class="[
             sizeClasses.valueDisplay,
@@ -92,6 +100,7 @@
           :class="sizeClasses.stepperButton"
           @click.stop="stepValue(1)"
           :disabled="props.disabled || props.readonly"
+          aria-label="增加"
         >
           <svg
             class="w-2.5 h-2.5 transform -rotate-90"
@@ -135,13 +144,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onUnmounted, nextTick, computed } from "vue";
+import { ref, watch, onUnmounted, nextTick, computed, useId } from "vue";
 import { useVueFlow } from "@vue-flow/core";
 import SuggestionDropdown from "../../common/SuggestionDropdown.vue";
 // import Tooltip from "../../common/Tooltip.vue"; // Tooltip 组件不再直接使用
 
 interface Props {
   modelValue: number;
+  label?: string;
   type?: "INTEGER" | "FLOAT"; // 将整数类型从旧的INT改为INTEGER
   min?: number;
   max?: number;
@@ -155,6 +165,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: 0,
+  label: '',
   type: "FLOAT",
   min: undefined,
   max: undefined,
@@ -165,6 +176,8 @@ const props = withDefaults(defineProps<Props>(), {
   readonly: false,
   size: 'small',
 });
+
+const id = useId();
 
 const emit = defineEmits<{
   "update:modelValue": [value: number];

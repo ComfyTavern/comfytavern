@@ -1,6 +1,7 @@
 <template>
   <div ref="rootRef" class="string-input relative w-full flex items-center min-w-0">
-    <input ref="inputRef" type="text" :value="props.modelValue" :placeholder="props.placeholder"
+    <label v-if="props.label" :for="id" class="sr-only">{{ props.label }}</label>
+    <input :id="id" ref="inputRef" type="text" :value="props.modelValue" :placeholder="props.placeholder"
       v-comfy-tooltip="props.placeholder" :disabled="props.disabled" :readonly="props.readonly" @change="handleChange"
       class="node-input flex-1 rounded border transition-colors duration-200 min-w-0 bg-background-base dark:bg-background-surface border-border-base text-text-base placeholder-text-muted focus:ring-1 focus:ring-inset focus:ring-primary/50 focus:border-transparent hover:border-primary"
       :class="[sizeClasses.input, // 修正：使用数组来合并 class
@@ -39,12 +40,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
+import { ref, computed, nextTick, useId } from "vue";
 import { useVueFlow } from "@vue-flow/core";
 import SuggestionDropdown from "../../common/SuggestionDropdown.vue";
 
 interface Props {
   modelValue: string;
+  label?: string;
   placeholder?: string;
   disabled?: boolean;
   hasError?: boolean;
@@ -57,6 +59,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: "",
+  label: '',
   placeholder: "",
   disabled: false,
   hasError: false,
@@ -66,6 +69,8 @@ const props = withDefaults(defineProps<Props>(), {
   preferFloatingEditor: false,
   size: "small",
 });
+
+const id = useId();
 
 const emit = defineEmits<{
   "update:modelValue": [value: string];

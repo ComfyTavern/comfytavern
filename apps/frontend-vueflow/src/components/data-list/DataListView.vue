@@ -402,6 +402,15 @@ const toggleItemSelection = (item: T) => {
 };
 
 const handleItemClick = (event: MouseEvent, item: T, index: number) => {
+  const target = event.target as HTMLElement;
+
+  // 检查点击的是否是可交互元素或其子元素。
+  // 这可以防止在点击按钮、链接或输入框时触发行选择。
+  const interactiveSelector = 'a, button, input, select, textarea, [role="button"], [role="checkbox"], [role="switch"], [role="menuitem"]';
+  if (target.closest(interactiveSelector)) {
+    return;
+  }
+
   // 如果未开启 selectable，普通单击选中单个
   if (!props.selectable) {
     setSelection([item]);

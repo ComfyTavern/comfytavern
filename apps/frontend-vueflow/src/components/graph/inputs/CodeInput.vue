@@ -3,6 +3,7 @@
     <button
       type="button"
       v-comfy-tooltip="'预览代码'"
+      aria-label="预览代码"
       class="p-1 rounded hover:bg-background-hover focus:outline-none focus:ring-1 focus:ring-primary/50"
       @click="handlePreview"
     >
@@ -12,6 +13,7 @@
     <button
       type="button"
       v-comfy-tooltip="'编辑代码'"
+      aria-label="编辑代码"
       class="p-1 rounded hover:bg-background-hover focus:outline-none focus:ring-1 focus:ring-primary/50"
       @click="handleEdit"
     >

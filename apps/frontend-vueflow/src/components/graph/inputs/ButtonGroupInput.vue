@@ -1,5 +1,5 @@
 <template>
-  <div class="button-group-input" role="group">
+  <div class="button-group-input" role="group" :aria-label="props.ariaLabel">
     <button
       v-for="option in props.options"
       :key="String(option.value)"
@@ -37,6 +37,7 @@ interface Props {
   id?: string;
   size?: "small" | "large";
   disabled?: boolean;
+  ariaLabel?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -44,6 +45,7 @@ const props = withDefaults(defineProps<Props>(), {
   size: 'small', // Default to small for node usage
   disabled: false,
   options: () => [],
+  ariaLabel: 'Button group',
 });
 
 const emit = defineEmits(['update:modelValue']);
