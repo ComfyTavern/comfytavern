@@ -380,15 +380,6 @@
         "unknownSlot": "未知枢纽"
       },
       "workflow": {
-        "dialogs": {
-          "saveAs": {
-            "copySuffix": "副本",
-            "message": "请为新的机巧流命名：",
-            "newWorkflowCopy": "新的机巧流副本",
-            "placeholder": "机巧流名称",
-            "title": "另存为新的机巧流"
-          }
-        },
         "errors": {
           "cannotCreateNoActiveTab": "无法创建新的机巧流：没有活动的标签页。",
           "cannotCreatePleaseOpenTab": "无法创建新的机巧流：请先打开一个标签页。",
@@ -398,15 +389,11 @@
           "cannotExportPleaseOpenTab": "无法导出：请先打开一个标签页。",
           "cannotImportNoActiveTab": "无法导入：没有活动的标签页。",
           "cannotImportPleaseOpenTab": "无法导入：请先打开一个标签页。",
-          "cannotSaveAsNoActiveTab": "无法另存为：没有活动的标签页。",
-          "cannotSaveAsNoProject": "无法另存为：当前项目ID未知。",
-          "cannotSaveAsNoState": "无法获取当前机巧流的完整状态以进行另存为。",
           "cannotSaveNoActiveTab": "无法保存：没有活动的标签页。",
           "cannotSavePleaseOpenTab": "无法保存：请先打开一个标签页。",
           "importFailed": "导入机巧流未竟: {error}",
           "invalidFileFormat": "无效的机巧流文件格式。需要包含 nodes, edges, 和 viewport。",
           "readFileFailed": "读取文件失败。",
-          "saveAsFailed": "另存为未竟: {error}",
           "saveFailed": "保存机巧流未竟: {error}"
         },
         "export": "导出",
@@ -416,16 +403,13 @@
           "importSuccessTemporary": "机巧流导入成功（临时实现）。",
           "openSidebarFailed": "打开侧边栏机巧流面板失败:",
           "readFileError": "读取文件时出错:",
-          "saveAsError": "另存为操作时发生严重错误:",
           "saveError": "保存机巧流时出错:",
           "sidebarRefUnavailable": "侧边栏引用不可用，请确保SidebarManager已正确加载"
         },
         "new": "新建",
         "notifications": {
           "importSuccess": "机巧流 \"{name}\" 已导入到当前标签页。请记得保存。",
-          "importSuccessTitle": "导入成功",
-          "saveAsFailed": "另存为未竟：未能保存新的机巧流记录。请检查控制台获取更多信息。",
-          "saveAsSuccess": "机巧流 \"{name}\" 已成功另存为并在新标签页中打开。"
+          "importSuccessTitle": "导入成功"
         },
         "open": "打开...",
         "redo": "重做",
@@ -487,9 +471,11 @@
       "inputMaxValueChanged": "易纳 {inputName} 之最大值",
       "inputMinValueChanged": "易纳 {inputName} 之最小值",
       "inputNameChanged": "易纳 {inputName} 之名为 '{oldName}' -> '{newName}'",
+      "inputStreamChanged": "易纳 {inputName} 之流式",
       "inputTypeChanged": "易纳 {inputName} 之类为 '{oldType}' -> '{newType}'",
       "outputDescriptionChanged": "易吐 {outputName} 之注疏",
       "outputNameChanged": "易吐 {outputName} 之名为 '{oldName}' -> '{newName}'",
+      "outputStreamChanged": "易吐 {outputName} 之流式",
       "outputTypeChanged": "易吐 {outputName} 之类为 '{oldType}' -> '{newType}'"
     }
   },
@@ -768,6 +754,8 @@
       "selectInterfaceToEdit": "请于上列择一枢纽以修之。",
       "sortInputsTooltip": "以名序纳",
       "sortOutputsTooltip": "以名序吐",
+      "streamLabel": "流式:",
+      "streamTooltip": "若此枢纽为流式数据所用，则启之",
       "title": "机巧流之枢纽",
       "typeLabel": "类属:"
     },

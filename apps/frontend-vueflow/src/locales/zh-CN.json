@@ -380,15 +380,6 @@
         "unknownSlot": "未知插槽"
       },
       "workflow": {
-        "dialogs": {
-          "saveAs": {
-            "copySuffix": "副本",
-            "message": "请输入新工作流的名称：",
-            "newWorkflowCopy": "新工作流副本",
-            "placeholder": "工作流名称",
-            "title": "另存为新工作流"
-          }
-        },
         "errors": {
           "cannotCreateNoActiveTab": "无法创建新工作流：没有活动的标签页。",
           "cannotCreatePleaseOpenTab": "无法创建新工作流：请先打开一个标签页。",
@@ -398,15 +389,11 @@
           "cannotExportPleaseOpenTab": "无法导出：请先打开一个标签页。",
           "cannotImportNoActiveTab": "无法导入：没有活动的标签页。",
           "cannotImportPleaseOpenTab": "无法导入：请先打开一个标签页。",
-          "cannotSaveAsNoActiveTab": "无法另存为：没有活动的标签页。",
-          "cannotSaveAsNoProject": "无法另存为：当前项目ID未知。",
-          "cannotSaveAsNoState": "无法获取当前工作流的完整状态以进行另存为。",
           "cannotSaveNoActiveTab": "无法保存：没有活动的标签页。",
           "cannotSavePleaseOpenTab": "无法保存：请先打开一个标签页。",
           "importFailed": "导入工作流失败: {error}",
           "invalidFileFormat": "无效的工作流文件格式。需要包含 nodes, edges, 和 viewport。",
           "readFileFailed": "读取文件失败。",
-          "saveAsFailed": "另存为失败: {error}",
           "saveFailed": "保存工作流失败: {error}"
         },
         "export": "导出",
@@ -416,16 +403,13 @@
           "importSuccessTemporary": "工作流导入成功（临时实现）。",
           "openSidebarFailed": "打开侧边栏工作流面板失败:",
           "readFileError": "读取文件时出错:",
-          "saveAsError": "另存为操作时发生严重错误:",
           "saveError": "保存工作流时出错:",
           "sidebarRefUnavailable": "侧边栏引用不可用，请确保 WorkflowSidebar 已正确加载"
         },
         "new": "新建",
         "notifications": {
           "importSuccess": "工作流 \"{name}\" 已导入到当前标签页。请记得保存。",
-          "importSuccessTitle": "导入成功",
-          "saveAsFailed": "另存为失败：未能保存新的工作流记录。请检查控制台获取更多信息。",
-          "saveAsSuccess": "工作流 \"{name}\" 已成功另存为并在新标签页中打开。"
+          "importSuccessTitle": "导入成功"
         },
         "open": "打开...",
         "redo": "重做",
@@ -487,9 +471,11 @@
       "inputMaxValueChanged": "修改输入 {inputName} 最大值",
       "inputMinValueChanged": "修改输入 {inputName} 最小值",
       "inputNameChanged": "修改输入 {inputName} 名称: '{oldName}' -> '{newName}'",
+      "inputStreamChanged": "修改输入 {inputName} 的流式状态",
       "inputTypeChanged": "修改输入 {inputName} 类型: '{oldType}' -> '{newType}'",
       "outputDescriptionChanged": "修改输出 {outputName} 描述",
       "outputNameChanged": "修改输出 {outputName} 名称: '{oldName}' -> '{newName}'",
+      "outputStreamChanged": "修改输出 {outputName} 的流式状态",
       "outputTypeChanged": "修改输出 {outputName} 类型: '{oldType}' -> '{newType}'"
     }
   },
@@ -768,6 +754,8 @@
       "selectInterfaceToEdit": "请在上方列表中选择一个接口进行编辑。",
       "sortInputsTooltip": "按名称排序输入",
       "sortOutputsTooltip": "按名称排序输出",
+      "streamLabel": "流式:",
+      "streamTooltip": "如果此接口用于流式数据，请启用",
       "title": "工作流接口",
       "typeLabel": "类型:"
     },

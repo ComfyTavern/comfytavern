@@ -135,8 +135,8 @@ const formatDetailValue = (
     ) {
       const nodeIdStr = String(value.nodeId);
       const displayNodeId = nodeIdStr.length > ID_MAX_LEN ? nodeIdStr.substring(0, ID_MAX_LEN) + "..." : nodeIdStr;
-      // 直接构建字符串，不使用 i18n
-      return `${indent}Node: ${value.nodeName} (Type: ${value.nodeType}, ID: ${displayNodeId})`;
+      const nodeStr = `${indent}${t('historyPanel.formatDetail.nodeInfo', { nodeName: value.nodeName, nodeType: value.nodeType, displayNodeId })}`;
+      return nodeStr;
     }
     // 边对象
     if (
@@ -152,20 +152,19 @@ const formatDetailValue = (
       const targetNodeIdStr = String(value.targetNodeId);
       const displayTargetNodeId = targetNodeIdStr.length > ID_MAX_LEN ? targetNodeIdStr.substring(0, ID_MAX_LEN) + "..." : targetNodeIdStr;
 
-      // 直接构建字符串
-      return `${indent}Edge: ${displayEdgeId} (From: ${displaySourceNodeId}[${value.sourceHandle || ''}] To: ${displayTargetNodeId}[${value.targetHandle || ''}])`;
+      return `${indent}${t('historyPanel.formatDetail.edgeInfo', { displayEdgeId, displaySourceNodeId, sourceHandle: value.sourceHandle || "", displayTargetNodeId, targetHandle: value.targetHandle || "" })}`;
     }
   }
 
   if (Array.isArray(value)) {
-    if (value.length === 0) return `${indent}[]`;
-    let arrStr = `${indent}[ (length: ${value.length}) `;
+    if (value.length === 0) return `${indent}${t('historyPanel.formatDetail.emptyArray')}`;
+    let arrStr = `${indent}${t('historyPanel.formatDetail.arrayLength', { length: value.length })}`;
     const itemsToShow = currentDepth === 0 ? value : value.slice(0, ARRAY_MAX_ITEMS_SHALLOW); // 顶层数组完整显示，嵌套数组部分显示
     for (let i = 0; i < itemsToShow.length; i++) {
       arrStr += `\n${nestedIndent}- ${formatDetailValue(itemsToShow[i], currentDepth + 1, true).trimStart()}`;
     }
     if (currentDepth > 0 && value.length > ARRAY_MAX_ITEMS_SHALLOW) {
-      arrStr += `\n${nestedIndent}- ... (${value.length - ARRAY_MAX_ITEMS_SHALLOW} more items)`;
+      arrStr += `\n${nestedIndent}- ${t('historyPanel.formatDetail.arrayMoreItems', { count: value.length - ARRAY_MAX_ITEMS_SHALLOW })}`;
     }
     arrStr += `\n${indent}]`;
     return arrStr;
@@ -174,7 +173,7 @@ const formatDetailValue = (
   if (typeof value === "object" && value !== null) {
     const objValue = value as Record<string, any>;
     const keys = Object.keys(objValue);
-    if (keys.length === 0) return `${indent}{}`;
+    if (keys.length === 0) return `${indent}${t('historyPanel.formatDetail.emptyObject')}`;
     let objStr = `${indent}{`;
     const propsToShow = currentDepth === 0 ? keys : keys.slice(0, OBJECT_MAX_PROPS_SHALLOW);
     for (let i = 0; i < propsToShow.length; i++) {
@@ -187,7 +186,7 @@ const formatDetailValue = (
       ).trimStart()}`;
     }
     if (currentDepth > 0 && keys.length > OBJECT_MAX_PROPS_SHALLOW) {
-      objStr += `\n${nestedIndent}... (${keys.length - OBJECT_MAX_PROPS_SHALLOW} more properties)`;
+      objStr += `\n${nestedIndent}${t('historyPanel.formatDetail.objectMoreProperties', { count: keys.length - OBJECT_MAX_PROPS_SHALLOW })}`;
     }
     objStr += `\n${indent}}`;
     return objStr;

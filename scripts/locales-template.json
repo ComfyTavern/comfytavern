@@ -380,15 +380,6 @@
         "unknownSlot": "[TODO]"
       },
       "workflow": {
-        "dialogs": {
-          "saveAs": {
-            "copySuffix": "[TODO]",
-            "message": "[TODO]",
-            "newWorkflowCopy": "[TODO]",
-            "placeholder": "[TODO]",
-            "title": "[TODO]"
-          }
-        },
         "errors": {
           "cannotCreateNoActiveTab": "[TODO]",
           "cannotCreatePleaseOpenTab": "[TODO]",
@@ -398,15 +389,11 @@
           "cannotExportPleaseOpenTab": "[TODO]",
           "cannotImportNoActiveTab": "[TODO]",
           "cannotImportPleaseOpenTab": "[TODO]",
-          "cannotSaveAsNoActiveTab": "[TODO]",
-          "cannotSaveAsNoProject": "[TODO]",
-          "cannotSaveAsNoState": "[TODO]",
           "cannotSaveNoActiveTab": "[TODO]",
           "cannotSavePleaseOpenTab": "[TODO]",
           "importFailed": "[TODO]",
           "invalidFileFormat": "[TODO]",
           "readFileFailed": "[TODO]",
-          "saveAsFailed": "[TODO]",
           "saveFailed": "[TODO]"
         },
         "export": "[TODO]",
@@ -416,16 +403,13 @@
           "importSuccessTemporary": "[TODO]",
           "openSidebarFailed": "[TODO]",
           "readFileError": "[TODO]",
-          "saveAsError": "[TODO]",
           "saveError": "[TODO]",
           "sidebarRefUnavailable": "[TODO]"
         },
         "new": "[TODO]",
         "notifications": {
           "importSuccess": "[TODO]",
-          "importSuccessTitle": "[TODO]",
-          "saveAsFailed": "[TODO]",
-          "saveAsSuccess": "[TODO]"
+          "importSuccessTitle": "[TODO]"
         },
         "open": "[TODO]",
         "redo": "[TODO]",
@@ -487,9 +471,11 @@
       "inputMaxValueChanged": "[TODO]",
       "inputMinValueChanged": "[TODO]",
       "inputNameChanged": "[TODO]",
+      "inputStreamChanged": "[TODO]",
       "inputTypeChanged": "[TODO]",
       "outputDescriptionChanged": "[TODO]",
       "outputNameChanged": "[TODO]",
+      "outputStreamChanged": "[TODO]",
       "outputTypeChanged": "[TODO]"
     }
   },
@@ -768,6 +754,8 @@
       "selectInterfaceToEdit": "[TODO]",
       "sortInputsTooltip": "[TODO]",
       "sortOutputsTooltip": "[TODO]",
+      "streamLabel": "[TODO]",
+      "streamTooltip": "[TODO]",
       "title": "[TODO]",
       "typeLabel": "[TODO]"
     },

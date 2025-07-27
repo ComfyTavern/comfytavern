@@ -380,15 +380,6 @@
         "unknownSlot": "Unknown Slot"
       },
       "workflow": {
-        "dialogs": {
-          "saveAs": {
-            "copySuffix": "Copy",
-            "message": "Please enter the name for the new workflow:",
-            "newWorkflowCopy": "New Workflow Copy",
-            "placeholder": "Workflow Name",
-            "title": "Save As New Workflow"
-          }
-        },
         "errors": {
           "cannotCreateNoActiveTab": "Cannot create new workflow: No active tab.",
           "cannotCreatePleaseOpenTab": "Cannot create new workflow: Please open a tab first.",
@@ -398,15 +389,11 @@
           "cannotExportPleaseOpenTab": "Cannot export: Please open a tab first.",
           "cannotImportNoActiveTab": "Cannot import: No active tab.",
           "cannotImportPleaseOpenTab": "Cannot import: Please open a tab first.",
-          "cannotSaveAsNoActiveTab": "Cannot save as: No active tab.",
-          "cannotSaveAsNoProject": "Cannot save as: Current project ID is unknown.",
-          "cannotSaveAsNoState": "Cannot get the full state of the current workflow to save as.",
           "cannotSaveNoActiveTab": "Cannot save: No active tab.",
           "cannotSavePleaseOpenTab": "Cannot save: Please open a tab first.",
           "importFailed": "Failed to import workflow: {error}",
           "invalidFileFormat": "Invalid workflow file format. Requires nodes, edges, and viewport.",
           "readFileFailed": "Failed to read file.",
-          "saveAsFailed": "Save as failed: {error}",
           "saveFailed": "Failed to save workflow: {error}"
         },
         "export": "Export",
@@ -416,16 +403,13 @@
           "importSuccessTemporary": "Workflow imported successfully (temporary implementation).",
           "openSidebarFailed": "Failed to open sidebar workflow panel:",
           "readFileError": "Error reading file:",
-          "saveAsError": "A critical error occurred during the save as operation:",
           "saveError": "Error saving workflow:",
           "sidebarRefUnavailable": "Sidebar reference is unavailable, please ensure SidebarManager is loaded correctly"
         },
         "new": "New",
         "notifications": {
           "importSuccess": "Workflow \"{name}\" has been imported to the current tab. Please remember to save.",
-          "importSuccessTitle": "Import Successful",
-          "saveAsFailed": "Save as failed: Could not save the new workflow record. Check console for more info.",
-          "saveAsSuccess": "Workflow \"{name}\" has been successfully saved as and opened in a new tab."
+          "importSuccessTitle": "Import Successful"
         },
         "open": "Open...",
         "redo": "Redo",
@@ -487,9 +471,11 @@
       "inputMaxValueChanged": "Changed input {inputName} max value",
       "inputMinValueChanged": "Changed input {inputName} min value",
       "inputNameChanged": "Changed input {inputName} name: '{oldName}' -> '{newName}'",
+      "inputStreamChanged": "Changed input {inputName} stream status",
       "inputTypeChanged": "Changed input {inputName} type: '{oldType}' -> '{newType}'",
       "outputDescriptionChanged": "Changed output {outputName} description",
       "outputNameChanged": "Changed output {outputName} name: '{oldName}' -> '{newName}'",
+      "outputStreamChanged": "Changed output {outputName} stream status",
       "outputTypeChanged": "Changed output {outputName} type: '{oldType}' -> '{newType}'"
     }
   },
@@ -768,6 +754,8 @@
       "selectInterfaceToEdit": "Please select an interface from the list above to edit.",
       "sortInputsTooltip": "Sort inputs by name",
       "sortOutputsTooltip": "Sort outputs by name",
+      "streamLabel": "Stream:",
+      "streamTooltip": "Enable if this interface is for streaming data",
       "title": "Workflow Interface",
       "typeLabel": "Type:"
     },

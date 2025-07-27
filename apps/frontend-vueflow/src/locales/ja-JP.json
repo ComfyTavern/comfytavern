@@ -380,15 +380,6 @@
         "unknownSlot": "不明なスロット"
       },
       "workflow": {
-        "dialogs": {
-          "saveAs": {
-            "copySuffix": "のコピー",
-            "message": "新しいワークフローの名前を入力してください：",
-            "newWorkflowCopy": "新しいワークフローのコピー",
-            "placeholder": "ワークフロー名",
-            "title": "新しいワークフローとして保存"
-          }
-        },
         "errors": {
           "cannotCreateNoActiveTab": "新しいワークフローを作成できません：アクティブなタブがありません。",
           "cannotCreatePleaseOpenTab": "新しいワークフローを作成できません：まずタブを開いてください。",
@@ -398,15 +389,11 @@
           "cannotExportPleaseOpenTab": "エクスポートできません：まずタブを開いてください。",
           "cannotImportNoActiveTab": "インポートできません：アクティブなタブがありません。",
           "cannotImportPleaseOpenTab": "インポートできません：まずタブを開いてください。",
-          "cannotSaveAsNoActiveTab": "名前を付けて保存できません：アクティブなタブがありません。",
-          "cannotSaveAsNoProject": "名前を付けて保存できません：現在のプロジェクトIDが不明です。",
-          "cannotSaveAsNoState": "現在のワークフローの完全な状態を取得して名前を付けて保存できません。",
           "cannotSaveNoActiveTab": "保存できません：アクティブなタブがありません。",
           "cannotSavePleaseOpenTab": "保存できません：まずタブを開いてください。",
           "importFailed": "ワークフローのインポートに失敗しました: {error}",
           "invalidFileFormat": "無効なワークフローファイル形式です。nodes, edges, viewportが必要です。",
           "readFileFailed": "ファイルの読み込みに失敗しました。",
-          "saveAsFailed": "名前を付けて保存に失敗しました: {error}",
           "saveFailed": "ワークフローの保存に失敗しました: {error}"
         },
         "export": "エクスポート",
@@ -416,16 +403,13 @@
           "importSuccessTemporary": "ワークフローが正常にインポートされました（一時的な実装）。",
           "openSidebarFailed": "サイドバーのワークフローパネルを開けませんでした:",
           "readFileError": "ファイルの読み込み中にエラーが発生しました:",
-          "saveAsError": "名前を付けて保存操作中に重大なエラーが発生しました:",
           "saveError": "ワークフローの保存中にエラーが発生しました:",
           "sidebarRefUnavailable": "サイドバーの参照が利用できません。SidebarManagerが正しく読み込まれていることを確認してください"
         },
         "new": "新規",
         "notifications": {
           "importSuccess": "ワークフロー「{name}」が現在のタブにインポートされました。保存を忘れないでください。",
-          "importSuccessTitle": "インポート成功",
-          "saveAsFailed": "名前を付けて保存に失敗しました：新しいワークフローレコードを保存できませんでした。詳細はコンソールを確認してください。",
-          "saveAsSuccess": "ワークフロー「{name}」が正常に名前を付けて保存され、新しいタブで開かれました。"
+          "importSuccessTitle": "インポート成功"
         },
         "open": "開く...",
         "redo": "やり直し",
@@ -487,9 +471,11 @@
       "inputMaxValueChanged": "入力 {inputName} 最大値を変更",
       "inputMinValueChanged": "入力 {inputName} 最小値を変更",
       "inputNameChanged": "入力 {inputName} 名を変更: '{oldName}' -> '{newName}'",
+      "inputStreamChanged": "入力 {inputName} のストリーム状態を変更",
       "inputTypeChanged": "入力 {inputName} タイプを変更: '{oldType}' -> '{newType}'",
       "outputDescriptionChanged": "出力 {outputName} 説明を変更",
       "outputNameChanged": "出力 {outputName} 名を変更: '{oldName}' -> '{newName}'",
+      "outputStreamChanged": "出力 {outputName} のストリーム状態を変更",
       "outputTypeChanged": "出力 {outputName} タイプを変更: '{oldType}' -> '{newType}'"
     }
   },
@@ -768,6 +754,8 @@
       "selectInterfaceToEdit": "編集するインターフェースを上のリストから選択してください。",
       "sortInputsTooltip": "名前で入力をソート",
       "sortOutputsTooltip": "名前で出力をソート",
+      "streamLabel": "ストリーム:",
+      "streamTooltip": "このインターフェースがストリーミングデータ用の場合に有効化します",
       "title": "ワークフローインターフェース",
       "typeLabel": "タイプ:"
     },

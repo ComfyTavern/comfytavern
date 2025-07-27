@@ -380,15 +380,6 @@
         "unknownSlot": "Неизвестный слот"
       },
       "workflow": {
-        "dialogs": {
-          "saveAs": {
-            "copySuffix": "копия",
-            "message": "Введите имя нового рабочего процесса:",
-            "newWorkflowCopy": "Новая копия рабочего процесса",
-            "placeholder": "Имя рабочего процесса",
-            "title": "Сохранить как новый рабочий процесс"
-          }
-        },
         "errors": {
           "cannotCreateNoActiveTab": "Невозможно создать новый рабочий процесс: нет активной вкладки.",
           "cannotCreatePleaseOpenTab": "Невозможно создать новый рабочий процесс: пожалуйста, сначала откройте вкладку.",
@@ -398,15 +389,11 @@
           "cannotExportPleaseOpenTab": "Невозможно экспортировать: пожалуйста, сначала откройте вкладку.",
           "cannotImportNoActiveTab": "Невозможно импортировать: нет активной вкладки.",
           "cannotImportPleaseOpenTab": "Невозможно импортировать: пожалуйста, сначала откройте вкладку.",
-          "cannotSaveAsNoActiveTab": "Невозможно сохранить как: нет активной вкладки.",
-          "cannotSaveAsNoProject": "Невозможно сохранить как: ID текущего проекта неизвестен.",
-          "cannotSaveAsNoState": "Невозможно получить полное состояние текущего рабочего процесса для сохранения как.",
           "cannotSaveNoActiveTab": "Невозможно сохранить: нет активной вкладки.",
           "cannotSavePleaseOpenTab": "Невозможно сохранить: пожалуйста, сначала откройте вкладку.",
           "importFailed": "Не удалось импортировать рабочий процесс: {error}",
           "invalidFileFormat": "Неверный формат файла рабочего процесса. Должен содержать nodes, edges и viewport.",
           "readFileFailed": "Не удалось прочитать файл.",
-          "saveAsFailed": "Не удалось сохранить как: {error}",
           "saveFailed": "Не удалось сохранить рабочий процесс: {error}"
         },
         "export": "Экспорт",
@@ -416,16 +403,13 @@
           "importSuccessTemporary": "Рабочий процесс успешно импортирован (временная реализация).",
           "openSidebarFailed": "Не удалось открыть панель рабочего процесса в боковой панели:",
           "readFileError": "Ошибка при чтении файла:",
-          "saveAsError": "Критическая ошибка при операции 'Сохранить как':",
           "saveError": "Ошибка при сохранении рабочего процесса:",
           "sidebarRefUnavailable": "Ссылка на боковую панель недоступна, убедитесь, что SidebarManager загружен правильно"
         },
         "new": "Новый",
         "notifications": {
           "importSuccess": "Рабочий процесс \"{name}\" импортирован в текущую вкладку. Не забудьте сохранить.",
-          "importSuccessTitle": "Импорт успешен",
-          "saveAsFailed": "Не удалось сохранить как: не удалось сохранить новую запись рабочего процесса. Проверьте консоль для получения дополнительной информации.",
-          "saveAsSuccess": "Рабочий процесс \"{name}\" успешно сохранен как и открыт в новой вкладке."
+          "importSuccessTitle": "Импорт успешен"
         },
         "open": "Открыть...",
         "redo": "Повторить",
@@ -487,9 +471,11 @@
       "inputMaxValueChanged": "Изменить максимальное значение для входа {inputName}",
       "inputMinValueChanged": "Изменить минимальное значение для входа {inputName}",
       "inputNameChanged": "Изменить имя входа {inputName}: '{oldName}' -> '{newName}'",
+      "inputStreamChanged": "Изменен статус потока для входа {inputName}",
       "inputTypeChanged": "Изменить тип входа {inputName}: '{oldType}' -> '{newType}'",
       "outputDescriptionChanged": "Изменить описание для выхода {outputName}",
       "outputNameChanged": "Изменить имя выхода {outputName}: '{oldName}' -> '{newName}'",
+      "outputStreamChanged": "Изменен статус потока для выхода {outputName}",
       "outputTypeChanged": "Изменить тип выхода {outputName}: '{oldType}' -> '{newType}'"
     }
   },
@@ -768,6 +754,8 @@
       "selectInterfaceToEdit": "Пожалуйста, выберите интерфейс из списка выше для редактирования.",
       "sortInputsTooltip": "Сортировать входы по имени",
       "sortOutputsTooltip": "Сортировать выходы по имени",
+      "streamLabel": "Поток:",
+      "streamTooltip": "Включите, если этот интерфейс предназначен для потоковой передачи данных",
       "title": "Интерфейс рабочего процесса",
       "typeLabel": "Тип:"
     },
