@@ -31,7 +31,7 @@
         </button>
 
         <!-- 设置按钮 -->
-        <button class="icon-button w-full" @click="uiStore.openSettingsModal({ width: '800px', height: '75vh' })" v-comfy-tooltip="t('workflowSidebar.tooltips.settings')">
+        <button class="icon-button w-full" @click="openSettings" v-comfy-tooltip="t('workflowSidebar.tooltips.settings')">
           <span class="tab-icon">⚙️</span>
           <span class="tab-label">{{ t('workflowSidebar.buttons.settings') }}</span>
         </button>
@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, markRaw, onMounted, onUnmounted } from 'vue';
+import { ref, computed, markRaw, onMounted, onUnmounted, defineAsyncComponent } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { RouterLink } from 'vue-router'; // 确保导入
@@ -96,6 +96,17 @@ function cycleDisplayMode() {
   }
   themeStore.setDisplayMode(nextMode);
 }
+
+const openSettings = () => {
+  uiStore.openModalWithContent({
+    component: defineAsyncComponent(() => import('../../settings/SettingsLayout.vue')),
+    modalProps: {
+      title: t('settings.title'),
+      width: '60vw',
+      height: '75vh',
+    }
+  });
+};
 
 // 定义可用的标签页
 // 定义可用的标签页

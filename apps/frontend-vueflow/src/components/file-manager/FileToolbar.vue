@@ -129,7 +129,6 @@ import NumberInput from "@/components/graph/inputs/NumberInput.vue";
 import BooleanToggle from "@/components/graph/inputs/BooleanToggle.vue";
 import { useFileManagerStore, type ViewSettings } from "@/stores/fileManagerStore";
 import { useUiStore } from "@/stores/uiStore"; // + 导入 uiStore
-import { useDialogService } from "@/services/DialogService"; // 如果需要打开自定义模态框
 import {
   ArrowUpTrayIcon,
   FolderPlusIcon,
@@ -152,7 +151,6 @@ import {
 
 const fileManagerStore = useFileManagerStore();
 const uiStore = useUiStore(); // + 初始化 uiStore
-const dialogService = useDialogService(); // 仅当需要用它打开 FilterModal 等时
 const { t } = useI18n();
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
@@ -262,25 +260,29 @@ const handleSortDirectionToggle = (isChecked: boolean) => {
   fileManagerStore.updateViewSettings({ sortDirection: newDirection });
 };
 
+import FilterModal from './modals/FilterModal.vue';
+import ViewSettingsModal from './modals/ViewSettingsModal.vue';
+
 const openFilterModal = () => {
-  // 这里将打开 FilterModal.vue
-  // 假设 FilterModal 是通过 DialogService 或一个全局状态管理的
-  // dialogService.showCustomModal('FilterModal', { /* props */ });
-  console.log("TODO: Open FilterModal");
-  // 临时的:
-  if (fileManagerStore.isFilterActive) {
-    fileManagerStore.clearFilters();
-    dialogService.showToast({ message: t('fileManager.toolbar.filtersCleared'), type: "info" });
-  } else {
-    dialogService.showToast({ message: t('fileManager.toolbar.openAdvancedFilterPlaceholder'), type: "info" });
-  }
+  uiStore.openModalWithContent({
+    component: FilterModal,
+    modalProps: {
+      title: t('fileManager.filterModal.title'),
+      width: 'max-w-lg',
+      showCloseIcon: true,
+    }
+  });
 };
 
 const openViewSettingsModal = () => {
-  // 这里将打开 ViewSettingsModal.vue
-  // dialogService.showCustomModal('ViewSettingsModal', { /* props */ });
-  console.log("TODO: Open ViewSettingsModal");
-  dialogService.showToast({ message: t('fileManager.toolbar.openViewSettingsPlaceholder'), type: "info" });
+  uiStore.openModalWithContent({
+    component: ViewSettingsModal,
+    modalProps: {
+      title: t('fileManager.viewSettings.title'),
+      width: 'max-w-md',
+      showCloseIcon: true,
+    }
+  });
 };
 </script>
 

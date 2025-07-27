@@ -106,6 +106,18 @@
         <BooleanToggle v-model="formData.disabled" size="large" />
       </div>
     </div>
+
+    <!-- Form Actions -->
+    <div class="flex justify-end space-x-3 pt-4">
+      <button type="button" @click="$emit('cancel')"
+        class="px-4 py-2 text-sm font-medium text-text-secondary bg-background-surface border border-border-base rounded-md hover:bg-neutral-softest transition-colors">
+        取消
+      </button>
+      <button type="submit" :disabled="!isFormValid"
+        class="px-4 py-2 text-sm font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed">
+        保存
+      </button>
+    </div>
   </form>
 </template>
 
@@ -137,7 +149,6 @@ interface ApiChannelFormData {
 const emit = defineEmits<{
   submit: [data: ApiChannelFormData];
   cancel: [];
-  "validity-change": [isValid: boolean];
 }>();
 
 // Store
@@ -367,14 +378,6 @@ watch(
   (newData) => {
     initForm(newData);
   }
-);
-
-watch(
-  isFormValid,
-  (value) => {
-    emit("validity-change", !!value);
-  },
-  { immediate: true }
 );
 
 // 导出类型供父组件使用

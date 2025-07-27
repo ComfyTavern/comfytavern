@@ -37,18 +37,16 @@
     -->
   </div>
 
-  <!-- Avatar Editor Modal -->
-  <AvatarEditorModal :is-visible="isAvatarEditorVisible" :current-avatar-url="currentUser?.avatarUrl"
-    @close="isAvatarEditorVisible = false" @save-avatar="handleSaveAvatar" />
 </template>
 
 <script setup lang="ts">
 import type { SettingItemConfig } from "@comfytavern/types";
 import SettingControl from "./SettingControl.vue";
 import { useAuthStore } from "@/stores/authStore";
+import { useUiStore } from "@/stores/uiStore";
+import { useDialogService } from "@/services/DialogService";
 import { storeToRefs } from "pinia";
-import { computed, ref, onMounted, inject } from "vue"; // + 导入 onMounted
-import AvatarEditorModal from "@/components/modals/AvatarEditorModal.vue";
+import { computed, ref, onMounted, inject, defineAsyncComponent } from "vue";
 import { IsSettingsCompactKey } from "@/constants/injectionKeys";
 import { PencilSquareIcon } from "@heroicons/vue/24/outline";
 import { uploadAvatar as apiUploadAvatar } from "@/api/userProfileApi";
@@ -65,6 +63,8 @@ props.itemConfig; // 确保 props 被 TypeScript 插件认为是读取过的
 
 const { t } = useI18n();
 const authStore = useAuthStore();
+const uiStore = useUiStore();
+const dialogService = useDialogService();
 const isCompact = inject(IsSettingsCompactKey, ref(false));
 const { currentUser } = storeToRefs(authStore);
 // console.log('[SettingItemRow] Initial currentUser from store (at setup):', JSON.parse(JSON.stringify(currentUser.value)));
@@ -110,38 +110,43 @@ const onAvatarError = (event: Event) => {
 };
 
 const handleUploadAvatar = () => {
-  isAvatarEditorVisible.value = true; // 打开模态框
-};
-
-const isAvatarEditorVisible = ref(false);
-// const uiStore = useUiStore(); // (可选)
-
-const handleSaveAvatar = async (payload: { file?: File }) => {
-  if (!payload.file) {
-    // uiStore.showToast({ type: 'error', message: '没有提供头像文件。'});
-    console.error("没有提供头像文件。");
-    return;
-  }
-
-  try {
-    // uiStore.showLoading('正在上传头像...');
-    const response = await apiUploadAvatar(payload.file);
-    if (response.success && response.avatarUrl) {
-      await authStore.fetchUserContext(); // 修正：使用 fetchUserContext
-      // uiStore.showToast({ type: 'success', message: '头像上传成功！'});
-      // console.log('[SettingItemRow] 头像上传成功，用户上下文已刷新。新的 avatarUrl (相对):', response.avatarUrl);
-      // console.log('[SettingItemRow] displayedAvatarUrl 计算结果应为:', displayedAvatarUrl.value);
-      isAvatarEditorVisible.value = false;
-    } else {
-      // uiStore.showToast({ type: 'error', message: response.message || '头像上传失败。'});
-      console.error("头像上传失败:", response.message);
+  const handleSaveAvatar = async (payload: { file?: File }) => {
+    if (!payload.file) {
+      dialogService.showError('没有提供头像文件。');
+      console.error("没有提供头像文件。");
+      return;
     }
-  } catch (error: any) {
-    // uiStore.showToast({ type: 'error', message: error.message || '上传头像时发生错误。'});
-    console.error("上传头像时发生错误:", error);
-  } finally {
-    // uiStore.hideLoading();
-  }
+
+    try {
+      // uiStore.showLoading('正在上传头像...'); // 考虑添加一个全局加载指示器
+      const response = await apiUploadAvatar(payload.file);
+      if (response.success && response.avatarUrl) {
+        await authStore.fetchUserContext();
+        dialogService.showSuccess('头像上传成功！');
+        uiStore.closeModalWithContent();
+      } else {
+        dialogService.showError(response.message || '头像上传失败。');
+        console.error("头像上传失败:", response.message);
+      }
+    } catch (error: any) {
+      dialogService.showError(error.message || '上传头像时发生错误。');
+      console.error("上传头像时发生错误:", error);
+    } finally {
+      // uiStore.hideLoading();
+    }
+  };
+
+  uiStore.openModalWithContent({
+    component: defineAsyncComponent(() => import('@/components/modals/AvatarEditorModal.vue')),
+    props: {
+      currentAvatarUrl: currentUser.value?.avatarUrl,
+      onSave: handleSaveAvatar,
+    },
+    modalProps: {
+      title: '编辑头像',
+      // isVisible is now controlled by the store
+    }
+  });
 };
 
 // const settingsStore = useSettingsStore();

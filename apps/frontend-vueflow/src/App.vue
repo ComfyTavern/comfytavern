@@ -16,8 +16,6 @@ import InitialUsernameSetupModal from './components/auth/InitialUsernameSetupMod
 import { storeToRefs } from 'pinia'
 import { useWebSocket } from './composables/useWebSocket';
 import DialogContainer from './components/common/DialogContainer.vue'; // 导入对话框容器组件
-import BaseModal from './components/common/BaseModal.vue'; // 导入模态框组件
-import SettingsLayout from './components/settings/SettingsLayout.vue'; // 导入设置布局组件
 import TooltipRenderer from './components/common/TooltipRenderer.vue'; // + 导入全局 Tooltip 渲染器
 
 // 初始化主题状态管理
@@ -31,12 +29,11 @@ const authStore = useAuthStore(); // + 初始化 authStore
 const settingsStore = useSettingsStore(); // + 初始化 settingsStore
 const pluginStore = usePluginStore(); // + 咕咕：初始化插件 store
 const languageManager = useLanguagePackManager(); // + 初始化 i18n manager
-const { t, locale, setLocaleMessage } = useI18n({ useScope: 'global' }); // + 获取全局 i18n 实例的方法
+const { locale, setLocaleMessage } = useI18n({ useScope: 'global' }); // + 获取全局 i18n 实例的方法
 
 const { currentAppliedMode } = storeToRefs(themeStore); // 从 isDark 更改为 currentAppliedMode
 const { activeTabId } = storeToRefs(tabStore);
 const { currentProjectId } = storeToRefs(projectStore); // 获取当前项目 ID 的响应式引用
-const { isSettingsModalVisible, settingsModalProps } = storeToRefs(uiStore); // 获取设置模态框的显示状态和属性
 const { userContext, currentUser, isLoadingContext } = storeToRefs(authStore); // + Add currentUser, isLoadingContext
 const { i18nSettings, settings } = storeToRefs(settingsStore); // + 获取 i18n 设置
 
@@ -210,14 +207,6 @@ useWebSocket();
     <DialogContainer />
     <!-- 全局 Tooltip 渲染器 -->
     <TooltipRenderer />
-
-    <!-- 全局设置模态框 -->
-    <BaseModal :visible="isSettingsModalVisible" :title="t('settings.title')" :width="settingsModalProps.width"
-      :height="settingsModalProps.height" @update:visible="!$event && uiStore.closeSettingsModal()">
-      <template #content>
-        <SettingsLayout />
-      </template>
-    </BaseModal>
 
     <!-- + Initial Username Setup Modal -->
     <InitialUsernameSetupModal :visible="showInitialUsernameModal" :initial-username="currentUser?.username"

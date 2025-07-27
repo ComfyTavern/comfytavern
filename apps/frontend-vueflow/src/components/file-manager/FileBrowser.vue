@@ -81,6 +81,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useFileManagerStore, type ViewSettings } from '@/stores/fileManagerStore';
+import { useUiStore } from '@/stores/uiStore';
+import MoveModal from './modals/MoveModal.vue';
 import type { FAMItem } from '@comfytavern/types'; // 统一类型 FAMItem 从 @comfytavern/types 导入
 // import { onClickOutside } from '@vueuse/core'; // onClickOutside is handled by FileContextMenu itself
 import {
@@ -94,6 +96,7 @@ import FileGridItem from './FileGridItem.vue';
 import FileContextMenu from './FileContextMenu.vue';
 
 const fileManagerStore = useFileManagerStore();
+const uiStore = useUiStore();
 const { t } = useI18n();
 
 const isLoading = computed(() => fileManagerStore.isLoading);
@@ -328,9 +331,20 @@ const handleContextMenuAction = (action: string, _menuItem?: import('./FileConte
     case 'move':
       const itemsToMove = targetFileItem ? (selectedItemsFromStore.some((sel: FAMItem) => sel.logicalPath === targetFileItem.logicalPath) ? selectedItemsFromStore : [targetFileItem]) : selectedItemsFromStore;
       if (itemsToMove.length > 0) {
-        // TODO: Open MoveModal for itemsToMove
-        console.log('TODO: Open MoveModal for', itemsToMove.map((i: FAMItem) => i.name));
-        // Example: fileManagerStore.promptMoveItems(itemsToMove);
+        uiStore.openModalWithContent({
+          component: MoveModal,
+          props: {
+            itemsToMove,
+            onConfirmMove: (items: FAMItem[], targetPath: string) => {
+              fileManagerStore.moveItems(items, targetPath);
+            },
+          },
+          modalProps: {
+            title: t('fileManager.moveModal.title'),
+            width: 'max-w-lg',
+            showCloseIcon: true,
+          },
+        });
       }
       break;
     case 'copyPath':

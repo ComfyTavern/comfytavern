@@ -1,12 +1,5 @@
 <template>
   <div class="p-6 max-w-5xl mx-auto">
-    <InitialUsernameSetupModal :visible="isInitialUsernameSetupModalVisible" @close="
-      isInitialUsernameSetupModalVisible = false;
-    uiStoreResult = t('testPanel.uiStore.resultsContent.initialUsernameClosed');
-    " @saved="
-        isInitialUsernameSetupModalVisible = false;
-      uiStoreResult = t('testPanel.uiStore.resultsContent.initialUsernameSaved');
-      " />
     <h1 class="text-3xl font-bold mb-8 text-text-base">{{ t("testPanel.title") }}</h1>
 
     <!-- DialogService 测试 -->
@@ -253,14 +246,12 @@
 
 <script setup lang="ts">
 import PanelContainer from "@/components/panel/PanelContainer.vue"; // + 导入 PanelContainer
-import { ref, watch } from "vue";
+import { ref, defineAsyncComponent } from "vue";
 import { useI18n } from "vue-i18n";
 import { useDialogService } from "@/services/DialogService";
 import { useUiStore } from "@/stores/uiStore";
-// import { useAuthStore } from '@/stores/authStore'; // authStore 暂时不需要直接在此处调用特定方法来显示模态框
-import InitialUsernameSetupModal from "@/components/auth/InitialUsernameSetupModal.vue"; // + 导入模态框组件
+import InitialUsernameSetupModal from '@/components/auth/InitialUsernameSetupModal.vue';
 import type { RegexRule } from "@comfytavern/types";
-// import SettingControl from '@/components/settings/SettingControl.vue'; // 不再直接使用
 import SettingsPanel from "@/components/settings/SettingsPanel.vue"; // + 导入 SettingsPanel
 import type { SettingItemConfig } from "@comfytavern/types";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -268,12 +259,10 @@ import { useSettingsStore } from "@/stores/settingsStore";
 const { t } = useI18n();
 const dialogService = useDialogService();
 const uiStore = useUiStore();
-// const authStore = useAuthStore(); // 暂时注释掉，如果模态框内部需要，它自己会导入
 const settingsStore = useSettingsStore();
 
 const dialogServiceResult = ref(t("testPanel.dialogService.resultsContent.waiting"));
 const uiStoreResult = ref(t("testPanel.dialogService.resultsContent.waiting"));
-const isInitialUsernameSetupModalVisible = ref(false); // + 控制模态框显示的状态
 
 const testSettingItems = ref<SettingItemConfig[]>([
   {
@@ -534,11 +523,19 @@ const showLargeTextToast = () => {
 // --- UiStore 方法 ---
 const openSettings = () => {
   uiStoreResult.value = t("testPanel.uiStore.resultsContent.openingSettings");
-  uiStore.openSettingsModal({ width: "max-w-2xl", height: "80vh" });
-  // 实际的关闭和结果由 App.vue 中的 BaseModal 处理，这里只记录触发
-  // 可以在 BaseModal 的 @close 事件中更新 uiStoreResult，但这需要更复杂的事件传递
-  // 为简单起见，这里只记录打开操作
-  // 如果需要知道何时关闭，可以 watch uiStore.isSettingsModalVisible
+  uiStore.openModalWithContent({
+    component: defineAsyncComponent(() => import('@/components/settings/SettingsLayout.vue')),
+    modalProps: {
+      title: t('settings.title'),
+      width: 'max-w-3xl',
+      height: '75vh',
+    },
+    props: {
+      onClose: () => {
+        uiStoreResult.value = t("testPanel.uiStore.resultsContent.settingsClosed");
+      }
+    }
+  });
 };
 
 const openRegexEditor = () => {
@@ -559,50 +556,62 @@ const openRegexEditor = () => {
       description: "替换结尾",
     },
   ];
-  uiStore.openRegexEditorModal({
-    rules: mockRules,
-    nodeId: "testNode123",
-    inputKey: "testInputKey",
-    onSave: (updatedRules) => {
-      console.log("正则编辑器保存:", updatedRules);
-      uiStoreResult.value = t("testPanel.uiStore.resultsContent.regexEditorSaved", {
-        count: updatedRules.length,
-      });
-      uiStore.closeRegexEditorModal(); // 通常在 onSave 后关闭
+
+  uiStore.openModalWithContent({
+    component: defineAsyncComponent(() => import('@/components/modals/RegexEditorModal.vue')),
+    modalProps: {
+      title: '正则表达式编辑器',
+      width: 'max-w-4xl',
+      height: '80vh',
     },
+    props: {
+      rules: mockRules,
+      nodeId: "testNode123",
+      inputKey: "testInputKey",
+      onSave: (updatedRules: RegexRule[]) => {
+        console.log("正则编辑器保存:", updatedRules);
+        uiStoreResult.value = t("testPanel.uiStore.resultsContent.regexEditorSaved", {
+          count: updatedRules.length,
+        });
+        // closeModalWithContent 会在 RegexEditorModal 内部调用
+      },
+      onClose: () => {
+        uiStoreResult.value = '正则编辑器已关闭';
+      }
+    }
   });
 };
 
 const openInitialUsernameSetup = () => {
   uiStoreResult.value = t("testPanel.uiStore.resultsContent.openingInitialUsernameSetup");
-  isInitialUsernameSetupModalVisible.value = true; // + 更新 ref 来显示模态框
+  uiStore.openModalWithContent({
+    component: InitialUsernameSetupModal,
+    props: {
+      onSaved: () => {
+        uiStoreResult.value = t('testPanel.uiStore.resultsContent.initialUsernameSaved');
+      },
+      onClose: () => {
+        uiStoreResult.value = t('testPanel.uiStore.resultsContent.initialUsernameClosed');
+      }
+    },
+    modalProps: {
+      width: 'max-w-md',
+      bare: true,
+      closeOnBackdrop: false,
+    }
+  });
 };
 
 // --- UiStore 状态监听 ---
-watch(
-  () => uiStore.isSettingsModalVisible,
-  (isVisible, wasVisible) => {
-    if (wasVisible === true && isVisible === false) {
-      uiStoreResult.value = t("testPanel.uiStore.resultsContent.settingsClosed");
-    } else if (wasVisible === false && isVisible === true) {
-      // 可选：如果希望在打开时也更新，可以取消注释下一行
-      // uiStoreResult.value = '设置模态框已打开。';
-    }
-  }
-);
-
-// 如果需要，也可以为 RegexEditorModal 添加类似的 watch
 // watch(
-//   () => uiStore.isRegexEditorModalVisible,
+//   () => uiStore.isSettingsModalVisible,
 //   (isVisible, wasVisible) => {
 //     if (wasVisible === true && isVisible === false) {
-//       // 检查是否是通过保存关闭的，避免覆盖 onSave 的消息
-//       if (!uiStoreResult.value.startsWith('正则编辑器已保存')) {
-//         uiStoreResult.value = '正则编辑器模态框已关闭 (未保存)。';
-//       }
+//       uiStoreResult.value = t("testPanel.uiStore.resultsContent.settingsClosed");
 //     }
 //   }
 // );
+
 </script>
 
 <style scoped>

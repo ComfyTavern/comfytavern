@@ -1,5 +1,5 @@
 <template>
-  <div class="api-channel-list">
+  <div class="api-channel-list" ref="containerRef">
     <div class="flex flex-wrap gap-3 mb-4 sm:flex-row sm:justify-between sm:items-center">
       <h2 class="text-2xl font-bold text-text-base">API 渠道管理</h2>
       <button @click="openAddModal"
@@ -124,66 +124,26 @@
         </div>
       </div>
     </div>
-
-    <!-- Add/Edit Modal -->
-    <BaseModal :visible="isModalOpen" @close="closeModal" width="680px" height="80vh">
-      <template #header>
-        <h3 class="text-lg font-medium leading-6 text-text-base">
-          {{ editingChannel ? "编辑 API 渠道" : "新建 API 渠道" }}
-        </h3>
-      </template>
-
-      <template #content>
-        <ApiChannelForm
-          :initial-data="editingChannel"
-          @submit="handleFormSubmit"
-          @cancel="closeModal"
-          @validity-change="isFormForFooterValid = $event"
-          :key="editingChannel ? editingChannel.id : 'new'"
-        />
-      </template>
-
-      <template #footer>
-        <div class="flex justify-end space-x-3 w-full">
-          <button
-            type="button"
-            @click="closeModal"
-            class="px-4 py-2 text-sm font-medium text-text-secondary bg-background-surface border border-border-base rounded-md hover:bg-neutral-softest transition-colors"
-          >
-            取消
-          </button>
-          <button
-            type="submit"
-            form="api-channel-form"
-            :disabled="!isFormForFooterValid"
-            class="px-4 py-2 text-sm font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            保存
-          </button>
-        </div>
-      </template>
-    </BaseModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import { useLlmConfigStore } from "@/stores/llmConfigStore";
+import { useUiStore } from "@/stores/uiStore";
 import { storeToRefs } from "pinia";
 import { useDialogService } from "@/services/DialogService";
 import type { ApiCredentialConfig } from "@comfytavern/types";
-import BaseModal from "@/components/common/BaseModal.vue";
 import ApiChannelForm from "./ApiChannelForm.vue";
 import type { ApiChannelFormData } from "./ApiChannelForm.vue";
 import BooleanToggle from "@/components/graph/inputs/BooleanToggle.vue";
 
 const llmConfigStore = useLlmConfigStore();
+const uiStore = useUiStore();
 const { channels, isLoadingChannels } = storeToRefs(llmConfigStore);
 const dialogService = useDialogService();
 
-const isModalOpen = ref(false);
 const editingChannel = ref<ApiCredentialConfig | null>(null);
-const isFormForFooterValid = ref(false);
 
 const containerRef = ref<HTMLElement | null>(null);
 const containerWidth = ref(0);
@@ -208,13 +168,28 @@ onUnmounted(() => {
 });
 
 const openAddModal = () => {
-  editingChannel.value = null;
-  isModalOpen.value = true;
+  openModal();
 };
 
 const openEditModal = (channel: ApiCredentialConfig) => {
-  editingChannel.value = { ...channel };
-  isModalOpen.value = true;
+  openModal(channel);
+};
+
+const openModal = (channel: ApiCredentialConfig | null = null) => {
+  editingChannel.value = channel;
+  uiStore.openModalWithContent({
+    component: ApiChannelForm,
+    props: {
+      initialData: channel,
+      onSubmit: handleFormSubmit,
+      onCancel: closeModal,
+    },
+    modalProps: {
+      title: channel ? "编辑 API 渠道" : "新建 API 渠道",
+      width: 'max-w-2xl',
+      showCloseIcon: true,
+    }
+  });
 };
 
 const confirmDelete = async (channel: ApiCredentialConfig) => {
@@ -238,7 +213,7 @@ const confirmDelete = async (channel: ApiCredentialConfig) => {
 };
 
 const closeModal = () => {
-  isModalOpen.value = false;
+  uiStore.closeModalWithContent();
   editingChannel.value = null;
 };
 

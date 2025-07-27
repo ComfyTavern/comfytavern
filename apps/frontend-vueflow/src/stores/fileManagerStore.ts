@@ -4,6 +4,8 @@ import * as fileManagerApi from '@/api/fileManagerApi';
 import { FAMItemsSchema, type FAMItem } from '@comfytavern/types'; // 导入统一类型和 Schema
 import { useDialogService } from '@/services/DialogService'; // 导入对话框服务
 import i18n from '@/locales';
+import { useUiStore } from './uiStore';
+import UploadManagerModal from '@/components/file-manager/modals/UploadManagerModal.vue';
 
 
 export interface RecentAccessItem {
@@ -636,40 +638,43 @@ export const useFileManagerStore = defineStore('fileManager', {
     },
 
     // --- 文件上传 (UploadManagerModal 相关逻辑的入口) ---
-    // 此处仅为示例，实际 UploadManagerModal 可能有自己的 store 或直接处理
-    async uploadFiles(files: FileList) {
-      const dialogService = useDialogService();
+    uploadFiles(files: FileList) {
       if (!files || files.length === 0) return;
 
-      // 简单实现：直接上传，不打开 UploadManagerModal
-      // 实际项目中，这里会打开 UploadManagerModal.vue，并将 files 传递给它
-      // UploadManagerModal 内部会调用 fileManagerApi.writeFile，并管理上传进度
-      const formData = new FormData();
-      for (let i = 0; i < files.length; i++) {
-        const file = files.item(i); // 使用 .item(i) 获取 File 对象，可能为 null
-        if (file) { // 确保 file 不是 null
-          formData.append('files', file); // 'files' 需要与后端接收字段匹配
+      const uiStore = useUiStore();
+      const dialogService = useDialogService();
+
+      uiStore.openModalWithContent({
+        component: UploadManagerModal,
+        props: {
+          filesToUpload: files,
+          targetPath: this.currentLogicalPath,
+          onUploadsFinished: (results: { successCount: number, errorCount: number }) => {
+            console.log('Uploads finished:', results);
+            // 可以在这里显示一个总结性的通知
+            if (results.errorCount > 0) {
+              dialogService.showWarning(
+                i18n.global.t('fileManager.uploadManager.someSuccess', {
+                  successCount: results.successCount,
+                  totalCount: results.successCount + results.errorCount
+                })
+              );
+            } else {
+              dialogService.showSuccess(
+                i18n.global.t('fileManager.uploadManager.allSuccess')
+              );
+            }
+            // fileManagerStore.fetchItems() 已经在 UploadManagerModal 内部调用了
+          },
+        },
+        modalProps: {
+          title: i18n.global.t('fileManager.uploadManager.title'),
+          width: 'max-w-2xl',
+          showCloseIcon: true,
+          // 当上传时，不允许点击背景关闭
+          closeOnBackdrop: false, // UploadManager 内部会根据上传状态控制
         }
-      }
-
-      if (formData.getAll('files').length === 0 && files.length > 0) {
-        dialogService.showWarning(i18n.global.t('fileManager.store.upload.noValidFiles'));
-        return;
-      }
-      if (formData.getAll('files').length === 0) return; // 没有文件就不用继续了
-
-
-      this.isLoading = true; // 表示文件列表正在因上传而可能发生变化
-      try {
-        await fileManagerApi.writeFile(this.currentLogicalPath, formData);
-        dialogService.showSuccess(i18n.global.t('fileManager.store.upload.success', { count: files.length }));
-        await this.fetchItems(); // 上传成功后刷新列表
-      } catch (err) {
-        this.error = err;
-        dialogService.showError(i18n.global.t('fileManager.store.upload.error', { error: (err as Error).message }));
-      } finally {
-        this.isLoading = false;
-      }
+      });
     },
 
     // TODO: loadUserPreferences from localStorage

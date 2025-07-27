@@ -1,8 +1,7 @@
 <template>
-  <BaseModal :visible="visible" v-comfy-tooltip="t('fileManager.filterModal.title')" @close="handleClose" modal-class="w-full max-w-lg"
-    data-testid="fm-filter-modal">
-    <template #content>
-      <form @submit.prevent="applyFilters" class="p-4 sm:p-6 space-y-4">
+  <div data-testid="fm-filter-modal">
+    <div class="p-4 sm:p-6 space-y-4">
+      <form @submit.prevent="applyFilters" class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label for="filter-filename"
@@ -81,32 +80,30 @@
           </label>
         </div>
       </form>
-    </template>
+    </div>
 
-    <template #footer>
-      <div class="flex justify-between items-center p-3 bg-background-surface rounded-b-md">
-        <button @click="resetFilters" type="button"
-          class="btn btn-sm btn-ghost text-error hover:bg-error/10">
-          {{ t('fileManager.filterModal.resetButton') }}
+    <div class="flex justify-between items-center p-3 bg-background-surface rounded-b-md">
+      <button @click="resetFilters" type="button"
+        class="btn btn-sm btn-ghost text-error hover:bg-error/10">
+        {{ t('fileManager.filterModal.resetButton') }}
+      </button>
+      <div>
+        <button @click="handleClose" type="button" class="btn btn-sm btn-ghost mr-2">
+          {{ t('common.cancel') }}
         </button>
-        <div>
-          <button @click="handleClose" type="button" class="btn btn-sm btn-ghost mr-2">
-            {{ t('common.cancel') }}
-          </button>
-          <button @click="applyFilters" type="submit" class="btn btn-sm btn-primary">
-            {{ t('fileManager.filterModal.applyButton') }}
-          </button>
-        </div>
+        <button @click="applyFilters" type="submit" class="btn btn-sm btn-primary">
+          {{ t('fileManager.filterModal.applyButton') }}
+        </button>
       </div>
-    </template>
-  </BaseModal>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, reactive } from 'vue';
+import { ref, onMounted, reactive } from 'vue';
 import { useI18n } from 'vue-i18n';
-import BaseModal from '@/components/common/BaseModal.vue';
 import { useFileManagerStore, type FilterOptions } from '@/stores/fileManagerStore';
+import { useUiStore } from '@/stores/uiStore';
 
 type SizeUnit = 'B' | 'KB' | 'MB' | 'GB';
 const UNIT_MULTIPLIERS: Record<SizeUnit, number> = {
@@ -116,16 +113,9 @@ const UNIT_MULTIPLIERS: Record<SizeUnit, number> = {
   GB: 1024 * 1024 * 1024,
 };
 
-const props = defineProps<{
-  visible: boolean;
-}>();
-
-const emit = defineEmits<{
-  (e: 'close'): void;
-}>();
-
 const { t } = useI18n();
 const fileManagerStore = useFileManagerStore();
+const uiStore = useUiStore();
 
 // Local state for form inputs, initialized from store or defaults
 const localFilters = reactive({
@@ -142,55 +132,48 @@ const maxSizeUnitInput = ref<SizeUnit>('MB');
 const modifiedAfterDateInput = ref(''); // YYYY-MM-DD
 const modifiedBeforeDateInput = ref(''); // YYYY-MM-DD
 
+const syncStateFromStore = () => {
+  const storeFilters = fileManagerStore.filterOptions;
+  localFilters.namePattern = storeFilters.namePattern || '';
+  localFilters.itemType = storeFilters.itemType || '';
+  localFilters.showHiddenFiles = storeFilters.showHiddenFiles || false;
 
-// Sync localFilters with store when modal becomes visible
-watch(
-  () => props.visible,
-  (newVal) => {
-    if (newVal) {
-      const storeFilters = fileManagerStore.filterOptions;
-      localFilters.namePattern = storeFilters.namePattern || '';
-      localFilters.itemType = storeFilters.itemType || '';
-      localFilters.showHiddenFiles = storeFilters.showHiddenFiles || false;
+  if (storeFilters.sizeRange && storeFilters.sizeRange[0] !== undefined) {
+    const { value, unit } = convertBytesToAppropriateUnit(storeFilters.sizeRange[0]);
+    minSizeInput.value = value;
+    minSizeUnitInput.value = unit;
+  } else {
+    minSizeInput.value = undefined;
+    minSizeUnitInput.value = 'KB';
+  }
 
-      if (storeFilters.sizeRange && storeFilters.sizeRange[0] !== undefined) {
-        const { value, unit } = convertBytesToAppropriateUnit(storeFilters.sizeRange[0]);
-        minSizeInput.value = value;
-        minSizeUnitInput.value = unit;
-      } else {
-        minSizeInput.value = undefined;
-        minSizeUnitInput.value = 'KB';
-      }
+  if (storeFilters.sizeRange && storeFilters.sizeRange[1] !== undefined) {
+    const { value, unit } = convertBytesToAppropriateUnit(storeFilters.sizeRange[1]);
+    maxSizeInput.value = value;
+    maxSizeUnitInput.value = unit;
+  } else {
+    maxSizeInput.value = undefined;
+    maxSizeUnitInput.value = 'MB';
+  }
 
-      if (storeFilters.sizeRange && storeFilters.sizeRange[1] !== undefined) {
-        const { value, unit } = convertBytesToAppropriateUnit(storeFilters.sizeRange[1]);
-        maxSizeInput.value = value;
-        maxSizeUnitInput.value = unit;
-      } else {
-        maxSizeInput.value = undefined;
-        maxSizeUnitInput.value = 'MB';
-      }
+  const dateAfter = storeFilters.dateRange?.[0];
+  if (dateAfter instanceof Date) {
+    modifiedAfterDateInput.value = String(dateAfter.toISOString().split('T')[0] || '');
+  } else {
+    modifiedAfterDateInput.value = '';
+  }
 
-      const dateAfter = storeFilters.dateRange?.[0];
-      if (dateAfter instanceof Date) {
-        // Ensure result is always a string for modifiedAfterDateInput (ref(''))
-        modifiedAfterDateInput.value = String(dateAfter.toISOString().split('T')[0] || '');
-      } else {
-        modifiedAfterDateInput.value = '';
-      }
+  const dateBefore = storeFilters.dateRange?.[1];
+  if (dateBefore instanceof Date) {
+    modifiedBeforeDateInput.value = String(dateBefore.toISOString().split('T')[0] || '');
+  } else {
+    modifiedBeforeDateInput.value = '';
+  }
+};
 
-      const dateBefore = storeFilters.dateRange?.[1];
-      if (dateBefore instanceof Date) {
-        // Ensure result is always a string
-        modifiedBeforeDateInput.value = String(dateBefore.toISOString().split('T')[0] || '');
-      } else {
-        modifiedBeforeDateInput.value = '';
-      }
-    }
-  },
-  { immediate: true }
-);
-// Removed extra "}, { immediate: true });" that was causing syntax errors.
+onMounted(() => {
+  syncStateFromStore();
+});
 
 const convertToBytes = (value: number | undefined, unit: SizeUnit): number | undefined => {
   if (value === undefined || value === null || isNaN(value) || value < 0) return undefined;
@@ -212,13 +195,12 @@ const applyFilters = () => {
   let sizeRange: [number, number] | null = null;
   if (minBytes !== undefined && maxBytes !== undefined) {
     if (minBytes > maxBytes) {
-      // console.warn("Min size cannot be greater than max size. Swapping.");
       sizeRange = [maxBytes, minBytes];
     } else {
       sizeRange = [minBytes, maxBytes];
     }
   } else if (minBytes !== undefined) {
-    sizeRange = [minBytes, Infinity]; // Or some very large number if Infinity is not desired for backend
+    sizeRange = [minBytes, Infinity];
   } else if (maxBytes !== undefined) {
     sizeRange = [0, maxBytes];
   }
@@ -229,7 +211,6 @@ const applyFilters = () => {
 
   if (dateAfter && dateBefore) {
     if (dateAfter > dateBefore) {
-      // console.warn("Start date cannot be after end date. Swapping.");
       dateRange = [dateBefore, dateAfter];
     } else {
       dateRange = [dateAfter, dateBefore];
@@ -244,14 +225,13 @@ const applyFilters = () => {
     namePattern: localFilters.namePattern,
     itemType: localFilters.itemType,
     showHiddenFiles: localFilters.showHiddenFiles,
-    fileTypes: [], // This modal doesn't set specific fileTypes (extensions) for now.
-    // If itemType is 'file', one might want to allow extension input.
+    fileTypes: [],
     sizeRange,
     dateRange,
   };
 
   fileManagerStore.updateFilterOptions(optionsToStore);
-  emit('close');
+  uiStore.closeModalWithContent();
 };
 
 const resetFilters = () => {
@@ -266,13 +246,10 @@ const resetFilters = () => {
   modifiedBeforeDateInput.value = '';
 
   fileManagerStore.clearFilters();
-  // emit('close'); // User might want to see the reset fields before closing
 };
 
 const handleClose = () => {
-  // Reset local form to match store if user cancels without applying
-  // This is handled by the watch on props.visible
-  emit('close');
+  uiStore.closeModalWithContent();
 };
 
 </script>

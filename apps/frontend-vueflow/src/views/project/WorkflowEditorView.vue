@@ -49,16 +49,11 @@
     </div>
 
     <!-- 底部状态栏 -->
-    <StatusBar class="editor-statusbar" />
-    <!-- 右侧专用预览面板 -->
-    <RightPreviewPanel />
-
-    <!-- 正则表达式规则编辑器模态框 -->
-    <RegexEditorModal v-if="isRegexEditorModalVisible" :visible="isRegexEditorModalVisible"
-      :model-value="regexEditorModalData?.rules || []" :node-id="regexEditorModalData?.nodeId"
-      :input-key="regexEditorModalData?.inputKey" @update:visible="handleModalVisibleUpdate" @save="handleModalSave" />
-  </div>
-</template>
+        <StatusBar class="editor-statusbar" />
+        <!-- 右侧专用预览面板 -->
+        <RightPreviewPanel />
+      </div>
+    </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, markRaw, watch, nextTick, provide } from "vue";
@@ -86,8 +81,6 @@ import { useInterfaceWatcher } from "../../composables/editor/useInterfaceWatche
 import { useKeyboardShortcuts } from "../../composables/editor/useKeyboardShortcuts";
 import { useEditorState } from "../../composables/editor/useEditorState";
 import { useWorkflowLifecycleCoordinator } from "../../composables/workflow/useWorkflowLifecycleCoordinator";
-import RegexEditorModal from "../../components/modals/RegexEditorModal.vue";
-import { useUiStore } from "../../stores/uiStore";
 
 // 组件实例引用
 type WorkflowSidebarInstance = InstanceType<typeof WorkflowSidebar> & {
@@ -108,9 +101,7 @@ const lifecycleCoordinator = useWorkflowLifecycleCoordinator();
 const nodeStore = useNodeStore();
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore();
-const uiStore = useUiStore();
 const { nodeDefinitions } = storeToRefs(nodeStore);
-const { isRegexEditorModalVisible, regexEditorModalData } = storeToRefs(uiStore);
 const nodeDefinitionsLoaded = computed(
   () => !!nodeDefinitions.value && nodeDefinitions.value.length > 0
 );
@@ -463,20 +454,6 @@ onUnmounted(() => {
     workflowStore.setVueFlowInstance(activeTabId.value, null);
   }
 });
-
-// 处理模态框事件
-const handleModalVisibleUpdate = (isVisible: boolean) => {
-  if (!isVisible) {
-    uiStore.closeRegexEditorModal();
-  }
-};
-
-const handleModalSave = (updatedRules: any /* RegexRule[] */) => {
-  if (uiStore.regexEditorModalData?.onSave) {
-    uiStore.regexEditorModalData.onSave(updatedRules);
-  }
-  uiStore.closeRegexEditorModal(); // 保存后也关闭模态框
-};
 </script>
 
 <style scoped>

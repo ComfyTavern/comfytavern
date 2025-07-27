@@ -16,6 +16,7 @@
       :height="uiStore.modalContent.modalProps?.height"
       :show-close-button="uiStore.modalContent.modalProps?.showCloseIcon"
       :close-on-backdrop-click="uiStore.modalContent.modalProps?.closeOnBackdrop"
+      :bare="uiStore.modalContent.modalProps?.bare"
       @close="uiStore.closeModalWithContent"
     >
       <template #content>

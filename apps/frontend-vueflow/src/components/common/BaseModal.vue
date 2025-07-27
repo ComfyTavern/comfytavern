@@ -8,15 +8,17 @@
       @click="props.closeOnBackdropClick && handleClose()"
     >
       <div
-        class="relative transition-all duration-300 flex flex-col"
+        class="relative transition-all duration-300 flex flex-col w-full"
         :class="[
           props.bare
             ? ''
             : 'bg-background-surface/90 rounded-lg shadow-xl border border-border-base',
           props.dialogClass,
+          // 宽度类现在通过 style 应用，但保留默认值以防万一
+          !isPixelWidth(props.width) ? props.width : '',
           { 'opacity-0 scale-95': !showContentTransition, 'opacity-100 scale-100': showContentTransition }
         ]"
-        :style="{ width: props.width || 'max-w-md', height: props.height }"
+        :style="{ height: props.height, maxWidth: isPixelWidth(props.width) ? props.width : undefined }"
         @click.stop
       >
         <div v-if="hasHeaderSlot || props.title || props.showCloseButton"
@@ -40,7 +42,7 @@
           </button>
         </div>
 
-        <div class="modal-content-area p-2">
+        <div class="modal-content-area p-4" :class="props.contentClass">
           <slot name="content">
             <!-- 内容将由父组件通过 #content 插槽提供 -->
           </slot>
@@ -79,6 +81,11 @@ const props = withDefaults(defineProps<{
   dialogClass: '',
   contentClass: '',
 });
+
+// 辅助函数，用于判断宽度是像素值还是 Tailwind 类
+const isPixelWidth = (width?: string) => {
+  return width && /^\d+(px|rem|em|%|vw|vh)$/.test(width);
+};
 
 const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void;

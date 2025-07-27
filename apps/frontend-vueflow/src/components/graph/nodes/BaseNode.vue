@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 第 1 部分：导入
 // Vue 和 VueFlow 核心
-import { computed, ref, watch, nextTick, onMounted, onUnmounted } from "vue"; // 添加 onMounted, onUnmounted
+import { computed, ref, watch, nextTick, onMounted, onUnmounted, defineAsyncComponent } from "vue"; // 添加 onMounted, onUnmounted
 import { useI18n } from "vue-i18n";
 import { useVueFlow, Handle, Position, type NodeProps } from "@vue-flow/core";
 
@@ -741,11 +741,25 @@ const handleActionTriggered = (payload: {
           );
         };
 
-        uiStore.openRegexEditorModal({
-          nodeId: props.id,
-          inputKey: payload.inputKey,
-          rules: JSON.parse(JSON.stringify(currentRules)), // 传递深拷贝的规则给模态框
-          onSave: onSaveCallback,
+        uiStore.openModalWithContent({
+          component: defineAsyncComponent(() => import('../../modals/RegexEditorModal.vue')),
+          props: {
+            nodeId: props.id,
+            inputKey: payload.inputKey,
+            rules: JSON.parse(JSON.stringify(currentRules)), // 传递深拷贝的规则给模态框
+            onSave: onSaveCallback,
+            onClose: () => {
+              // 可选：处理关闭事件
+              console.log('Regex editor closed without saving.');
+            }
+          },
+          modalProps: {
+            title: `编辑正则表达式: ${inputDisplayName}`,
+            width: 'max-w-4xl',
+            height: '80vh',
+            showCloseIcon: true,
+            closeOnBackdrop: false,
+          }
         });
 
       } else {

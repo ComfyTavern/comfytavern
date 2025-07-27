@@ -1,6 +1,6 @@
 <template>
-  <BaseModal :visible="props.isVisible" @close="closeModal" title="编辑头像">
-    <template #content>
+  <div class="flex flex-col h-full">
+    <div class="p-6 flex-grow overflow-y-auto">
       <div class="avatar-editor-content">
         <div class="upload-section">
           <p class="section-title">上传本地图片</p>
@@ -21,39 +21,38 @@
         </div>
         <p v-if="errorMsg" class="error-message">{{ errorMsg }}</p>
       </div>
-    </template>
+    </div>
 
-    <template #footer>
-      <div class="flex justify-end space-x-3 w-full">
-        <button
-          type="button"
-          @click="closeModal"
-          class="px-4 py-2 text-sm font-medium text-text-secondary bg-background-surface border border-border-base rounded-md hover:bg-neutral-softest transition-colors"
-        >
-          取消
-        </button>
-        <button
-          @click="saveAvatar"
-          :disabled="!selectedFile && !finalImageUrl"
-          class="px-4 py-2 text-sm font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          保存
-        </button>
-      </div>
-    </template>
-  </BaseModal>
+    <div class="flex justify-end space-x-3 p-4 bg-background-surface border-t border-border-base">
+      <button
+        type="button"
+        @click="closeModal"
+        class="px-4 py-2 text-sm font-medium text-text-secondary bg-background-surface border border-border-base rounded-md hover:bg-neutral-softest transition-colors"
+      >
+        取消
+      </button>
+      <button
+        @click="saveAvatar"
+        :disabled="!selectedFile && !finalImageUrl"
+        class="px-4 py-2 text-sm font-medium text-primary-content bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        保存
+      </button>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'; // 移除了 computed
-import BaseModal from '@/components/common/BaseModal.vue';
+import { ref, onMounted } from 'vue';
+import { useUiStore } from '@/stores/uiStore';
 
 const props = defineProps<{
-  isVisible: boolean;
   currentAvatarUrl?: string;
+  onSave: (payload: { file: File }) => void;
+  onClose?: () => void;
 }>();
 
-const emit = defineEmits(['close', 'saveAvatar']);
+const uiStore = useUiStore();
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const selectedFile = ref<File | null>(null);
@@ -63,16 +62,14 @@ const previewSrc = ref<string | null>(null); // 用于预览图片
 const errorMsg = ref<string>('');
 const finalImageUrl = ref<string|null>(null); // 用于存储从URL加载并确认的图片
 
-watch(() => props.isVisible, (newVal) => {
-  if (newVal) {
-    // 当模态框显示时，重置状态
-    selectedFile.value = null;
-    fileName.value = '';
-    imageUrl.value = props.currentAvatarUrl?.startsWith('http') ? props.currentAvatarUrl : '';
-    previewSrc.value = props.currentAvatarUrl || null;
-    errorMsg.value = '';
-    finalImageUrl.value = props.currentAvatarUrl?.startsWith('http') ? props.currentAvatarUrl : null;
-  }
+onMounted(() => {
+  // 当模态框显示时，重置状态
+  selectedFile.value = null;
+  fileName.value = '';
+  imageUrl.value = props.currentAvatarUrl?.startsWith('http') ? props.currentAvatarUrl : '';
+  previewSrc.value = props.currentAvatarUrl || null;
+  errorMsg.value = '';
+  finalImageUrl.value = props.currentAvatarUrl?.startsWith('http') ? props.currentAvatarUrl : null;
 });
 
 const triggerFileInput = () => {
@@ -135,7 +132,8 @@ const loadUrlForPreview = async () => {
 
 
 const closeModal = () => {
-  emit('close');
+  props.onClose?.();
+  uiStore.closeModalWithContent();
 };
 
 const saveAvatar = async () => {
@@ -146,7 +144,7 @@ const saveAvatar = async () => {
       type: selectedFile.value.type,
       size: selectedFile.value.size,
     });
-    emit('saveAvatar', { file: selectedFile.value });
+    props.onSave({ file: selectedFile.value });
   } else if (finalImageUrl.value) {
     // 如果是网络URL，前端获取并转为File对象再上传
     try {
@@ -177,7 +175,7 @@ const saveAvatar = async () => {
         type: file.type,
         size: file.size,
       });
-      emit('saveAvatar', { file });
+      props.onSave({ file });
     } catch (e: any) {
       console.error("处理网络图片URL失败:", e);
       errorMsg.value = `处理网络图片失败: ${e.message}`;

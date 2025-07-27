@@ -8,10 +8,6 @@
       </button>
     </div>
 
-    <!-- 创建面板模态框 -->
-    <CreatePanelModal :visible="isCreateModalVisible" :project-id="currentProjectId" @update:visible="isCreateModalVisible = $event"
-      @created="handlePanelCreated" />
-
     <!-- 加载状态 -->
     <div v-if="panelStore.isLoadingList" class="text-center py-10">
       <p class="text-text-secondary">正在加载面板列表...</p>
@@ -69,32 +65,39 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue';
+import { onMounted, computed, defineAsyncComponent } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { usePanelStore } from '@/stores/panelStore';
+import { useUiStore } from '@/stores/uiStore';
 import { vComfyTooltip } from '@/directives/vComfyTooltip';
 import { Cog6ToothIcon, ArrowTopRightOnSquareIcon, BeakerIcon } from '@heroicons/vue/24/outline';
-import CreatePanelModal from '@/components/panel/CreatePanelModal.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
 import type { PanelDefinition } from '@comfytavern/types';
 
 const route = useRoute();
 const router = useRouter();
 const panelStore = usePanelStore();
-
-const isCreateModalVisible = ref(false);
+const uiStore = useUiStore();
 
 // 从路由参数中获取当前项目 ID
 const currentProjectId = computed(() => route.params.projectId as string);
 
-const openCreateModal = () => {
-  isCreateModalVisible.value = true;
-};
-
 const handlePanelCreated = () => {
-  isCreateModalVisible.value = false;
   // 列表已在 store action 中刷新，这里无需额外操作
   // 如果需要，可以在这里添加其他逻辑
+};
+
+const openCreateModal = () => {
+  uiStore.openModalWithContent({
+    component: defineAsyncComponent(() => import('@/components/panel/CreatePanelModal.vue')),
+    props: {
+      projectId: currentProjectId.value,
+      onCreated: handlePanelCreated,
+    },
+    modalProps: {
+      title: '新建面板',
+    }
+  });
 };
 
 const handlePanelSelect = (panel: PanelDefinition) => {
