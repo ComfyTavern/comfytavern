@@ -22,9 +22,9 @@
 -   **目标位置**: 主侧边栏 ([`SideBar.vue`](apps/frontend-vueflow/src/views/home/SideBar.vue:1)) 的导航链接区域。
 -   **分析**: `SideBar.vue` 的 `<nav>` 部分（L126-L173）通过一系列硬编码的 `<RouterLink>` 构建导航。
 -   **实现方案**:
-    1.  在 `uiStore` 中创建一个 `mainSidebarNavItems` 响应式数组。
+    1.  在 `pluginRegistryStore` 中创建一个 `mainSidebarNavItems` 响应式数组。
     2.  `SideBar.vue` 将重构为遍历 `mainSidebarNavItems` 来动态生成导航链接。
-    3.  提供 `api.ui.addSidebarNavItem({ item, position: 'top' | 'bottom' })` 方法，允许插件将自己的导航项（包含路由、图标、文本、排序权重等）添加到 `mainSidebarNavItems` 数组的开头或结尾。
+    3.  提供 `api.registry.addSidebarNavItem({ item, position: 'top' | 'bottom' })` 方法，允许插件将自己的导航项（包含路由、图标、文本、排序权重等）添加到 `mainSidebarNavItems` 数组的开头或结尾。
     4.  `PluginOutlet` 在这里不是最佳选择，因为导航项需要与 Vue Router 紧密集成，数据驱动更合适。
 
 #### **`ui:layout:header:left` / `ui:layout:header:center` / `ui:layout:header:right`**
@@ -36,7 +36,7 @@
     2.  `<PluginOutlet locationId="ui:layout:header:left" />`
     3.  `<PluginOutlet locationId="ui:layout:header:center" />`
     4.  `<PluginOutlet locationId="ui:layout:header:right" />`
-    5.  插件通过 `api.ui.registerComponent({ locationId: 'ui:layout:header:right', component: MyHeaderButton })` 来注册它们的组件。
+    5.  插件通过 `api.registry.registerComponent({ locationId: 'ui:layout:header:right', component: MyHeaderButton })` 来注册它们的组件。
 
 ### 2.2. 工作流编辑器 (`ui:editor:*`)
 
@@ -47,8 +47,8 @@
 -   **目标位置**: 编辑器侧边栏 ([`WorkflowSidebar.vue`](apps/frontend-vueflow/src/components/graph/sidebar/WorkflowSidebar.vue:1))。
 -   **分析**: 该组件已经完美地采用了数据驱动模式！它遍历一个名为 `tabs` 的本地 ref (L102) 来渲染所有标签页和对应的面板。
 -   **实现方案**:
-    1.  将 `tabs` 数据从组件本地状态提升到 `uiStore` 中，变为 `workflowSidebarTabs`。
-    2.  提供 `api.ui.addWorkflowSidebarTab({ id, titleKey, icon, component })` 方法。
+    1.  将 `tabs` 数据从组件本地状态提升到 `pluginRegistryStore` 中，变为 `workflowSidebarTabs`。
+    2.  提供 `api.registry.addWorkflowSidebarTab({ id, titleKey, icon, component })` 方法。
     3.  插件调用此 API，即可将其工具面板无缝集成到侧边栏中。这是数据驱动方案的最佳实践范例。
 
 #### **`ui:editor:canvas:toolbar`**
@@ -65,23 +65,23 @@
 -   **目标位置**: 画布的右键菜单 ([`ContextMenu.vue`](apps/frontend-vueflow/src/components/graph/menus/ContextMenu.vue:1))。
 -   **分析**: `Canvas.vue` (L25) 调用了 `ContextMenu` 组件。该菜单目前是静态定义的。
 -   **实现方案**:
-    1.  采用数据驱动。在 `uiStore` 中创建 `canvasContextMenuItems` 数组。
+    1.  采用数据驱动。在 `pluginRegistryStore` 中创建 `canvasContextMenuItems` 数组。
     2.  `ContextMenu.vue` 将重构为遍历此数组来动态生成菜单项。
-    3.  提供 `api.ui.addCanvasContextMenuItem({ label, icon, action, separator?: boolean })` 方法。`action` 回调函数将接收到画布的上下文信息（如点击位置）。
+    3.  提供 `api.registry.addCanvasContextMenuItem({ label, icon, action, separator?: boolean })` 方法。`action` 回调函数将接收到画布的上下文信息（如点击位置）。
 
 #### **`ui:editor:node:context-menu`**
 
 -   **目标位置**: 节点的右键菜单 ([`NodeContextMenu.vue`](apps/frontend-vueflow/src/components/graph/menus/NodeContextMenu.vue:1))。
 -   **分析**: 与画布右键菜单类似，目前是静态的。
 -   **实现方案**:
-    1.  同样采用数据驱动。在 `uiStore` 中创建 `nodeContextMenuItems` 数组。
+    1.  同样采用数据驱动。在 `pluginRegistryStore` 中创建 `nodeContextMenuItems` 数组。
     2.  `NodeContextMenu.vue` 重构为动态生成。
-    3.  提供 `api.ui.addNodeContextMenuItem({ label, icon, action, filter?: (node) => boolean })`。`filter` 函数允许插件指定该菜单项仅对特定类型的节点显示。`action` 回调将接收到被点击的节点实例。
+    3.  提供 `api.registry.addNodeContextMenuItem({ label, icon, action, filter?: (node) => boolean })`。`filter` 函数允许插件指定该菜单项仅对特定类型的节点显示。`action` 回调将接收到被点击的节点实例。
 
 #### **`ui:editor:statusbar:left` / `ui:editor:statusbar:right`**
 
 -   **目标位置**: 编辑器底部的状态栏 ([`StatusBar.vue`](apps/frontend-vueflow/src/components/graph/StatusBar.vue:1))。
--   **分析**: `WorkflowEditorView.vue` (L52) 中调用了 `StatusBar`。我们需要检查其内部结构。假设它是一个 flex 容器。
+-   **分析**: `WorkflowEditorView.vue` ([L52](apps/frontend-vueflow/src/views/project/WorkflowEditorView.vue:52)) 中调用了 `StatusBar`。通过检查其代码 ([`StatusBar.vue`](apps/frontend-vueflow/src/components/graph/StatusBar.vue:1))，确认其根元素是一个 `flex` 容器，并使用了 `justify-between` 来分布其子元素，这为在两端插入内容提供了理想的结构。
 -   **实现方案**:
     1.  在 `StatusBar.vue` 的根 flex 容器的开头和结尾，分别放置 `PluginOutlet`。
     2.  `<PluginOutlet locationId="ui:editor:statusbar:left" />`
@@ -118,10 +118,10 @@
 #### **`ui:settings:section`**
 
 -   **目标位置**: 设置页面 ([`SettingsLayout.vue`](apps/frontend-vueflow/src/components/settings/SettingsLayout.vue:1))。
--   **分析**: `SettingsLayout.vue` 已经完美实现了数据驱动！它通过 `sections` 计算属性 (L373) 来定义和渲染所有设置分区。
+-   **分析**: `SettingsLayout.vue` ([`apps/frontend-vueflow/src/components/settings/SettingsLayout.vue:1`](apps/frontend-vueflow/src/components/settings/SettingsLayout.vue:1)) 已经完美实现了数据驱动！它通过 `sections` 计算属性 ([L373](apps/frontend-vueflow/src/components/settings/SettingsLayout.vue:373)) 来定义和渲染所有设置分区。
 -   **实现方案**:
-    1.  将 `sections` 的定义从组件本地提升到 `settingsStore`。
-    2.  提供 `api.settings.addSection({ id, label, icon, component, dataConfig })` 方法。
+    1.  将 `sections` 的定义从组件本地提升到 `pluginRegistryStore`。（注意：这里是注册一个新的分区，所以归属 Registry 更合适，而分区内部具体配置项的值依然由 `settingsStore` 管理）
+    2.  提供 `api.registry.addSettingsSection({ id, label, icon, component, dataConfig })` 方法。
     3.  插件可以调用此 API 来添加一个全新的设置页面，可以是完全自定义的组件，也可以是遵循 `SettingItemConfig` 规范的数据驱动面板。
 
 ---
@@ -138,7 +138,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useUiStore } from '@/stores/uiStore';
+import { usePluginRegistryStore } from '@/stores/pluginRegistryStore';
 
 const props = defineProps<{
   locationId: string;
@@ -146,12 +146,12 @@ const props = defineProps<{
   [key: string]: any; 
 }>();
 
-const uiStore = useUiStore();
+const pluginRegistryStore = usePluginRegistryStore();
 
 const registeredUIs = computed(() => {
-  // uiStore.getRegisteredUI(locationId) 会返回一个包含组件和 props 的数组
+  // pluginRegistryStore.getRegisteredUI(locationId) 会返回一个包含组件和 props 的数组
   // 它还会智能地将 props 中传递的额外上下文合并到每个插件组件的 props 中
-  return uiStore.getRegisteredUI(props.locationId, props);
+  return pluginRegistryStore.getRegisteredUI(props.locationId, props);
 });
 </script>
 ```

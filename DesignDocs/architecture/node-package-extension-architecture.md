@@ -1,6 +1,6 @@
 # 插件与扩展架构实施计划 (Plugin & Extension Architecture Implementation Plan)
 
-**文档状态**: `已批准，待实施`
+**文档状态**: `部分实施，持续演进中`
 
 ## 1. 目标与原则
 
@@ -580,41 +580,46 @@ sequenceDiagram
     F->>F: 集成扩展功能
 ```
 
-## 8. 实现'近 PR' 效果的分层 API 策略
+## 8. 前端扩展实现策略：注册表与注入点
 
-为了实现“在不 PR 的情况下进行规范化改造”的目标，我们将 `extensionApi` 从设计哲学上进行升维。它不应仅仅是功能的“调用者”，更应该是核心应用的“手术刀”和“嫁接器”。我们将这套 API 按能力强度和侵入性，划分为三个层次，以覆盖绝大多数 PR 场景。
+为了实现“在不 PR 的情况下进行规范化改造”的目标，前端扩展的核心是提供一套稳定、可预测的 API 和 UI 注入机制。我们采用两大核心策略：**数据驱动注入**和**组件占位注入**。
 
-### 8.1. 第一层：安全“添加” (The Additive Layer)
+详细的实现方案蓝图，请参见：**[前端扩展点分析与实现方案](implementation/frontend-extension-points-analysis.md)**。
 
-此层级对应“我希望这里能多个东西”的需求，是最基础、最安全的一层，用于无风险地扩充应用能力。
+### 8.1. 核心服务：`pluginRegistryStore`
 
-- **核心能力**: 在预留的“插槽”（Plugin Outlets）中添加新内容。
-- **API 示例**:
-  - `api.ui.addMenuItem(...)`: 在主菜单、右键菜单等位置添加新选项。
-  - `api.ui.addPanel(...)`: 在侧边栏或底部添加一个全新的面板。
-  - `api.nodes.registerUI(...)`: 为特定节点类型注册一个自定义的 Vue 组件作为其界面。
-  - `api.router.addRoute(...)`: 添加一个全新的页面/视图，拥有自己的 URL。
-  - `api.ui.registerOutletComponent(outletName: string, component: VueComponent)`: **(推荐)** 向指定的“插件插座”注册一个组件。核心 UI 的关键位置（如节点头部、设置页面底部）会放置命名的 `<PluginOutlet name="..."/>` 组件，插件可直接向其注入 UI，这比覆盖组件更灵活、侵入性更低。
+-   **定位**: 所有插件 UI 元素的中央“注册表”。这是一个 Pinia Store，用于管理插件动态添加的各种界面元素，如菜单项、侧边栏标签、设置分区等。
+-   **职责**:
+    -   提供响应式的数据集合（如 `mainSidebarNavItems`, `canvasContextMenuItems`）。
+    -   提供 `api.registry.add...` 系列方法，供插件安全地向这些数据集合中添加内容。
+    -   提供 `getRegisteredUI` 等方法，供核心组件查询和渲染特定位置的插件 UI。
 
-### 8.2. 第二层：受控“修改” (The Interceptive Layer)
+### 8.2. 核心组件：`<PluginOutlet>`
 
-此层级对应“我希望这个过程能有所不同”的需求，允许插件“拦截”和“包装”核心行为与数据。
+-   **定位**: 通用的“插件插座”组件。
+-   **职责**:
+    -   放置在核心 UI 的关键位置，通过 `locationId` 属性声明自己的身份（如 `ui:node:header:post`）。
+    -   在内部，它会向 `pluginRegistryStore` 查询所有注册到该 `locationId` 的插件组件。
+    -   动态渲染所有查找到的组件，并能将自身的上下文（如所在节点的 props）传递给插件组件。
 
-- **核心能力**: 在不替换核心代码的情况下，通过钩子和装饰器模式，修改其行为。
-- **API 示例**:
-  - `api.hooks.on(hookName: string, callback: Function)`: 强大的钩子系统，类似 WordPress。我们可以在 `workflow:before-execute` 时修改输入，在 `node:render:after` 时添加额外信息，在 `settings:save:before` 时进行验证等。钩子应遍布应用关键流程。
-  - `api.ui.wrapComponent(componentId: string, wrapper: (original: VueComponent) => VueComponent)`: **(关键)** “装饰器模式”的体现。它并非直接替换，而是向插件提供“原始组件”的定义，并允许插件返回一个“包装后”的新组件。这比直接替换要灵活和安全得多。
+### 8.3. 扩展 API 策略
 
-### 8.3. 第三层：完全“替换” (The Override Layer)
+基于以上核心，前端 `extensionApi` 将围绕 `pluginRegistryStore` 构建，提供清晰、安全、分层的 API。
 
-此层级是最后的“杀手锏”，对应“我认为这个核心部分可以做得更好”的颠覆性需求。
+1.  **数据驱动注入 API (The Additive Layer)**:
+    -   **场景**: 向列表、菜单、标签页等结构化 UI 中添加新项目。
+    -   **API 示例**: `api.registry.addSidebarNavItem(...)`, `api.registry.addCanvasContextMenuItem(...)`。
+    -   **机制**: 这些 API 将插件提供的配置对象 `push` 到 `pluginRegistryStore` 中对应的响应式数组里。核心组件通过 `v-for` 遍历这些数组来动态渲染 UI。这是最安全、解耦最彻底的扩展方式。
 
-- **核心能力**: 完全用自己的实现替换掉核心的某个模块（组件或服务）。
-- **API 示例**:
-  - `api.ui.overrideComponent(componentId: string, newComponent: VueComponent)`: 直接将核心的画布组件、侧边栏等替换为插件自己的实现。
-  - `api.services.override(serviceName: string, newService: object)`: **(终极武器)** 替换掉核心服务，如 `workflowManager`。这意味着插件可以重写整个后端执行逻辑。
+2.  **组件占位注入 API (The Outlet Layer)**:
+    -   **场景**: 在预留的、自由度较高的“插座”位置渲染任意 Vue 组件。
+    -   **API 示例**: `api.registry.registerComponent({ locationId: 'ui:layout:header:right', component: MyHeaderButton })`。
+    -   **机制**: 此 API 将插件组件与一个 `locationId` 关联，并注册到 `pluginRegistryStore` 中。`<PluginOutlet>` 组件会根据自己的 `locationId` 找到并渲染这些组件。
 
-这些分层机制能覆盖绝大多数 PR 场景，而无需修改核心代码。对于极少数无法覆盖的深度修改，仍需 PR，但这大大降低了门槛。
+3.  **高级扩展 API (The Interceptive & Override Layers)**:
+    -   **场景**: 修改核心组件行为（包裹）或响应业务逻辑事件（钩子）。
+    -   **API 示例**: `api.ui.wrapComponent(...)`, `api.hooks.on(...)`。
+    -   **机制**: 这些高级功能仍在规划中，但它们同样会通过 `pluginRegistryStore` 或专门的 `hookService` 进行管理，以确保所有扩展行为都是可追踪和受控的。
 
 ### 8.4. 安全与权限模型
 
@@ -677,65 +682,34 @@ configOptions:
 - **`key`**: 必须遵循 `extensions.{pluginName}.{optionId}` 的格式，以确保全局唯一性并避免冲突。`{pluginName}` 应与 `plugin.yaml` 中的 `name` 字段一致。
 - **其他字段**: `type`, `label`, `defaultValue`, `categoryKey` 等均与 `SettingItemConfig` 定义一致。
 
-### 9.2. 前端集成方案：入口 + 模态框
+### 9.2. 前端集成方案：`PluginManager` 与 `PluginDetailModal`
 
-为了保持主设置页面的整洁，我们将采用“入口列表 + 独立配置模态框”的二级结构，并与现有 UI 服务深度集成。
+插件配置的前端交互已经实现，它深度集成了现有的 `DataListView`、`uiStore` 模态框堆栈和数据驱动的设置组件，为用户提供了统一、流畅的管理体验。
 
-1.  **创建“扩展”主分区**:
+1.  **插件列表与入口 (`PluginManager.vue`)**:
+    -   在“设置” -> “插件管理”中，[`PluginManager.vue`](apps/frontend-vueflow/src/components/settings/PluginManager.vue:1) 组件使用 [`DataListView`](apps/frontend-vueflow/src/components/data-list/DataListView.vue:1) 来展示所有已发现的插件。
+    -   对于那些在 `plugin.yaml` 中定义了 `configOptions` 的插件，列表的每一行都会自动显示一个“设置”图标按钮。
 
-    - 在 `SettingsLayout.vue` 中，动态创建一个名为 "扩展" (`extensions`) 的 `SettingsSection`。
-    - 这个分区的 `dataConfig` 将被构造成一个 `SettingItemConfig` 数组，每个元素代表一个插件的入口。
+2.  **打开配置模态框**:
+    -   点击“设置”按钮会触发 `openPluginSettings` 方法。
+    -   此方法调用 `uiStore.openModal()`，这是一个强大的模态框管理 action，它将一个模态框实例推入 `uiStore` 的 `modalStack` 堆栈中。
+    -   `openModal` 的参数指定了要渲染的核心内容组件：[`PluginDetailModal.vue`](apps/frontend-vueflow/src/components/settings/PluginDetailModal.vue:1)，并将当前插件的完整信息 (`extensionInfo`) 作为 `props` 传递给它。
 
-2.  **渲染扩展入口**:
+3.  **配置模态框 (`PluginDetailModal.vue`)**:
+    -   这是一个专门用于展示和管理单个（或多个）插件配置的容器组件。
+    -   它接收插件信息作为 prop，并包含一个下拉菜单，允许用户在所有可配置的插件之间快速切换，而无需关闭模态框。
+    -   模态框的核心内容区域使用了 [`SettingsPanel.vue`](apps/frontend-vueflow/src/components/settings/SettingsPanel.vue:1) 组件，将插件的 `configOptions` 直接作为 `config` prop 传入。
+    -   这套机制完美复用了项目已有的、成熟的数据驱动设置 UI 系统 (`SettingsPanel`, `SettingGroup`, `SettingItemRow`, `SettingControl`)，确保了插件配置与核心设置在外观和行为上的一致性。
 
-    - `SettingsPanel` 会遍历这个 `dataConfig` 数组。
-    - 对每一个插件，我们生成一个类型为 `action-button` 的 `SettingItemConfig`，并将其添加到 `dataConfig` 中。
-    - `SettingItemRow` 会自动渲染出插件的名称、描述以及一个“配置”按钮。
+4.  **底层模态框机制 (`DialogContainer.vue` & `uiStore`)**:
+    -   全局唯一的 [`DialogContainer.vue`](apps/frontend-vueflow/src/components/common/DialogContainer.vue:1) 组件负责监听 `uiStore.modalStack` 的变化。
+    -   当有新的模态框实例被推入堆栈时，`DialogContainer` 会渲染一个 [`BaseModal.vue`](apps/frontend-vueflow/src/components/common/BaseModal.vue:1) 实例，并将 `PluginDetailModal` 作为其内容动态渲染。
+    -   这种基于堆栈的模态框管理系统，不仅支持了插件配置，也为未来更复杂的、可叠加的模态框交互（如在插件配置中再打开一个文件选择器）打下了坚实的基础。
 
-3.  **打开配置模态框**:
-
-    - 点击“配置”按钮会触发 `onClick` 事件。
-    - 该事件将调用一个模态框服务。**推荐方案**：扩展 `uiStore`，增加一个通用的 `openComponentAsModal(component, props)` 方法，它能接收任何组件和其 props，并将其渲染在一个基础模态框 `BaseModal.vue` 中。这比 `DialogService` 更灵活，因为它不局限于简单的“确认/取消”模式，能更好地承载复杂组件。
-
-4.  **配置模态框**:
-    - 创建一个 `ExtensionConfigPanel.vue` 组件，它接收 `configOptions` 作为 prop。
-    - 在其内部，它会使用我们熟悉的 `<SettingsPanel :config="props.configOptions" />` 来渲染具体的配置表单。
-    - 这样，我们依然**完全复用**了 `SettingsPanel`, `SettingGroup`, `SettingItemRow`, `SettingControl` 等所有数据驱动的 UI 组件。
-
-**示例 `onClick` 实现**:
-
-```javascript
-// 在 SettingsLayout.vue 中为每个插件动态生成这个 SettingItemConfig
-{
-  key: `ext-entry-${extension.name}`,
-  type: 'action-button',
-  label: extension.displayName,
-  description: extension.description,
-  buttonText: '配置',
-  onClick: () => {
-    // 调用一个能打开 BaseModal 并动态渲染组件的 uiStore action
-    // 这个 action 会更新 uiStore 的状态，由一个全局的 BaseModal 监听并渲染
-    uiStore.openModalWithContent({ // 假设我们创建或使用了这样一个 action
-      component: defineAsyncComponent(() => import('@/components/settings/ExtensionConfigPanel.vue')),
-      props: {
-        configOptions: extension.configOptions
-      },
-      modalProps: {
-        title: `${extension.displayName} - 配置`,
-        width: 'max-w-2xl', // 自定义模态框宽度
-        height: '80vh'
-      }
-    });
-  }
-}
-```
-
-这个 `openModalWithContent` action 会更新 `uiStore` 的状态，而一个全局的 `DialogContainer.vue` 组件会监听这些状态，在其内部渲染 `<BaseModal>`，并将 `ExtensionConfigPanel` (即 `PluginDetailModal`) 作为 `#content` 插槽的内容传递进去。这套机制完全复用了现有强大的 `BaseModal.vue` 组件和全局 `uiStore` 状态管理。
-
-3.  **状态管理集成**:
-    - 所有扩展的配置值都将由现有的 `settingsStore` 管理。
-    - **持久化**: `settingsStore` 将被改造，不再使用 `localStorage`，而是通过后端 API (`GET /api/profile/settings`, `POST /api/profile/settings`) 从数据库中加载和保存设置。这确保了所有配置（包括核心和扩展的）都能在用户账户下跨设备同步。
-    - `SettingControl` 的行为保持不变，它依然通过 `settingsStore` 读写数据，底层的持久化逻辑对它来说是透明的。
+5.  **状态管理集成**:
+    -   所有扩展的配置值都将由现有的 `settingsStore` 管理。
+    -   **持久化**: `settingsStore` 将通过后端 API (`GET /api/profile/settings`, `POST /api/profile/settings`) 从数据库中加载和保存设置。这确保了所有配置（包括核心和扩展的）都能在用户账户下跨设备同步。
+    -   `SettingControl` 的行为保持不变，它依然通过 `settingsStore` 读写数据，底层的持久化逻辑对它来说是透明的。
 
 ### 9.3. API 扩展
 
@@ -834,128 +808,39 @@ class ExtensionApiService {
   - 在此分区，可以看到所有**已发现**的插件列表，并可以通过开关来全局启用/禁用它们。
   - 可以在此分区或“扩展”分区的特定区域修改插件的**全局配置**。
 
-## 11. 附录 A: UI 注入点详解 (UI Injection Points)
+## 11. 附录 A: UI 注入点实现蓝图
 
-为了支撑一个健壮的插件生态，我们必须定义一套稳定、清晰、可预测的核心 UI 注入点。这是连接插件与主应用的桥梁，也是本附录的核心内容。
+本附录将设计文档中的抽象注入点，与具体的实现策略和代码位置进行映射，为开发提供清晰的指引。
 
-### 11.1. 设计原则：包裹、插座与钩子的选择
+**核心实现文档**: **[前端扩展点分析与实现方案](implementation/frontend-extension-points-analysis.md)**
 
-为了帮助开发者做出正确的技术选型，我们提供以下指导原则：
+该文档详细阐述了如何通过**数据驱动注入** (`pluginRegistryStore`) 和**组件占位注入** (`<PluginOutlet>`) 两种核心模式，在不修改核心组件模板的前提下，实现所有 UI 扩展点。
 
-- **使用插座 (Outlet) 当你想要“添加”**:
-  - **场景**: 在一个预设的、非侵入性的位置添加一个**全新的、独立的 UI 单元**。
-  - **例子**: 在节点头部添加一个状态图标 (`node:header:right`)，或在侧边栏添加一个全新的功能面板 (`sidebar:icon-bar:tabs:after`)。
-  - **优势**: 完全解耦，风险最低，插件之间不会相互影响。
+以下是该方案的摘要和关键注入点列表：
 
-- **使用包裹 (Wrapping) 当你想要“修改”或“增强”**:
-  - **场景**: 修改一个**已有的核心组件**的行为或外观，例如在其前后添加元素、修改传入的 props 或监听其内部事件。
-  - **例子**: 为所有节点添加一个自定义边框 (`ui:BaseNode`)，或在设置面板顶部添加一个全局警告 (`ui:SettingsPanel`)。
-  - **优势**: 功能强大，能实现深度定制。但存在风险，多个插件包裹同一个组件时可能产生冲突。
+### 11.1. 数据驱动注入点
 
-- **使用钩子 (Hook) 当你想要“响应”或“拦截”**:
-  - **场景**: 响应一个**业务逻辑事件**或**拦截一个数据流**，通常不直接涉及 UI 渲染。
-  - **例子**: 在工作流执行前验证或修改输入数据 (`hook:client:workflow:before-execute`)，或在用户登录后执行特定操作 (`hook:client:auth:login`)。
-  - **优势**: 深入业务逻辑，实现功能自动化和流程改造。
+适用于菜单、列表、标签页等结构化 UI。插件通过调用 `api.registry.add...` 方法向 `pluginRegistryStore` 注册数据，核心组件遍历这些数据来渲染 UI。
 
-### 11.2. UI 包裹 (Wrapping)
-
-使用 `api.ui.wrapComponent(componentId, wrapper)`。它允许插件用自己的逻辑“包裹”一个核心组件。
-
-#### 核心组件 ID 列表 (可用于 `wrapComponent`)
-
-为了与节点的 `core` 命名空间区分，所有核心 UI 组件的 ID 都使用 `ui:` 前缀。
-
-| ID | 组件/区域 | 描述与用途 |
+| 注入点 ID | 目标位置/组件 | 实现方案 |
 | --- | --- | --- |
-| `ui:BaseNode` | **基础节点组件** | 包裹所有节点的基础渲染组件 (`BaseNode.vue`)。插件可以通过检查 `props.type` 来实现对特定类型节点的 UI 定制。**这是实现节点级 UI 扩展的核心。** |
-| `ui:NodeInputControl` | **节点输入控件** | **（新）** 包裹由 `getInputComponent` 动态解析出的具体输入控件（如 `InputNumber`, `InputText`）。这允许插件统一修改所有输入控件的行为，例如添加统一的“重置”按钮。 |
-| `ui:GraphEditor` | 主画布编辑器 | 包裹整个画布区域，可用于添加全局覆盖、监听画布事件等。 |
-| `ui:ContextMenu` | **上下文菜单** | **（新）** 包裹整个上下文菜单（右键菜单）组件。允许插件添加全局菜单项、分隔线，或根据上下文动态修改现有菜单项。 |
-| `ui:SidebarManager` | 编辑器侧边栏管理器 | 包裹整个编辑器侧边栏 (`SidebarManager.vue`)。 |
-| `ui:HomeSidebar` | 主页侧边栏 | 包裹主页的侧边栏 (`views/home/SideBar.vue`)。 |
-| `ui:StatusBar` | 编辑器状态栏 | 包裹底部的状态栏 (`StatusBar.vue`)。 |
-| `ui:RightPreviewPanel` | 右侧预览面板 | 包裹右侧的浮动预览面板 (`RightPreviewPanel.vue`)。 |
-| `ui:SettingsPanel` | 设置面板 | 包裹整个设置面板，可用于添加顶层警告或说明。 |
-| `ui:MainMenu` | 主菜单 | 包裹主菜单组件，可在菜单渲染前后添加逻辑。 |
+| `ui:layout:main-sidebar:nav-*` | 主侧边栏导航 ([`SideBar.vue`](apps/frontend-vueflow/src/views/home/SideBar.vue:1)) | 插件注册导航项数据，组件动态生成 `<RouterLink>`。 |
+| `ui:editor:sidebar:tabs` | 编辑器侧边栏 ([`WorkflowSidebar.vue`](apps/frontend-vueflow/src/components/graph/sidebar/WorkflowSidebar.vue:1)) | 插件注册标签页定义（ID, 标题, 图标, 面板组件），组件动态生成标签页和面板。 |
+| `ui:editor:canvas:context-menu` | 画布右键菜单 ([`ContextMenu.vue`](apps/frontend-vueflow/src/components/graph/menus/ContextMenu.vue:1)) | 插件注册菜单项数据（标签, 图标, 回调），组件动态生成菜单。 |
+| `ui:editor:node:context-menu` | 节点右键菜单 ([`NodeContextMenu.vue`](apps/frontend-vueflow/src/components/graph/menus/NodeContextMenu.vue:1)) | 同上，但注册时可提供 `filter` 函数，根据节点类型决定是否显示。 |
+| `ui:settings:section` | 设置页面 ([`SettingsLayout.vue`](apps/frontend-vueflow/src/components/settings/SettingsLayout.vue:1)) | 插件注册一个新的设置分区定义，组件动态渲染出整个分区。 |
 
-### 11.3. UI 插座 (Plugin Outlets)
+### 11.2. 组件占位注入点 (`<PluginOutlet>`)
 
-使用 `api.ui.registerOutletComponent(outletName, component)`。核心应用在关键位置预留了命名的 `<PluginOutlet>` 组件，插件可以直接向这些“插座”中添加独立的 UI 单元。
+适用于需要在特定位置自由渲染任意内容的场景。插件通过 `api.registry.registerComponent` 注册组件，`<PluginOutlet>` 根据 `locationId` 查找并渲染它们。
 
-#### 全局布局插座 (`ProjectLayout.vue`)
-
-| 插座名称 | 位置 | 描述 |
+| `locationId` | 目标位置/组件 | 描述 |
 | --- | --- | --- |
-| `layout:header:before-tabs` | 顶部导航栏，标签页之前 | 在项目“总览”、“编辑器”等主标签页前添加全局元素。 |
-| `layout:header:after-tabs` | 顶部导航栏，标签页之后 | 在主标签页后添加全局元素。 |
-| `layout:header:right` | 顶部导航栏最右侧 | 用于添加全局图标或按钮，如“帮助”、“通知中心”等。 |
-
-#### 编辑器布局插座 (`EditorView.vue`)
-
-**注意**: `editor:toolbar:*` 系列插座的实现，依赖于在 `EditorView.vue` 中创建一个明确的 `<Toolbar>` 组件来承载这些插座。
-
-| 插座名称 | 位置 | 描述 |
-| --- | --- | --- |
-| `editor:toolbar:left` | 编辑器顶部工具栏左侧 | 添加与工作流相关的操作按钮，如“导入/导出”。 |
-| `editor:toolbar:center` | 编辑器顶部工具栏中间 | 添加模式切换或核心操作按钮。 |
-| `editor:toolbar:right` | 编辑器顶部工具栏右侧 | 添加“执行”、“分享”等主要动作按钮。 |
-| `editor:canvas:overlay` | 画布容器的覆盖层 | 在画布之上渲染自定义内容，如水印、网格、辅助线或全局提示。 |
-| `editor:statusbar:left` | 底部状态栏左侧 | 显示自定义状态信息，如“连接状态”、“插件消息”。 |
-| `editor:statusbar:right` | 底部状态栏右侧 | 添加功能性控件，如“性能监视器”、“主题切换”。 |
-
-#### 侧边栏插座 (`SidebarManager.vue`)
-
-`SidebarManager.vue` 采用两段式布局：一个固定的垂直图标栏和一个动态滑出的内容面板。因此，插座主要围绕图标栏和动态加载的面板内容进行设计。
-
-| 插座名称 | 位置 | 描述 |
-| --- | --- | --- |
-| `sidebar:icon-bar:tabs:before` | 图标栏，核心标签页按钮组之前 | 在“节点”、“工作流”等核心标签页的上方添加插件自己的图标按钮，用于打开自定义侧边栏面板。 |
-| `sidebar:icon-bar:tabs:after` | 图标栏，核心标签页按钮组之后 | 在核心标签页的下方添加插件自己的图标按钮。 |
-| `sidebar:icon-bar:bottom:before` | 图标栏，底部控制按钮（主题、设置）之前 | 在底部控制区域的上方添加自定义图标按钮。 |
-| `sidebar:panel:header[{panelId}]` | 特定面板内部，内容之前 | 在节点列表 (`nodes`) 或工作流列表 (`workflows`) 等面板的顶部添加警告或快捷操作。 |
-| `sidebar:panel:footer[{panelId}]` | 特定面板内部，内容之后 | 在特定面板底部添加补充信息或按钮。 |
-
-**注**: 方括号 `[]` 中的 `panelId` 是一个占位符，实际的钩子名称会包含具体的面板 ID，例如 `sidebar:panel:header[nodes]`。
-
-#### 主页侧边栏插座 (`views/home/SideBar.vue`)
-
-| 插座名称 | 位置 | 描述 |
-| --- | --- | --- |
-| `home:sidebar:header` | 侧边栏顶部，Logo 之后 | 添加全局导航或信息展示，如“最新动态”。 |
-| `home:sidebar:nav:before` | 主导航项之前 | 在“项目”、“模板”等核心导航项上方添加自定义导航入口。 |
-| `home:sidebar:nav:after` | 主导航项之后 | 在核心导航项下方添加自定义导航入口，如“插件市场”。 |
-| `home:sidebar:footer` | 侧边栏底部，用户区域上方 | 添加全局工具或状态显示，如“帮助与反馈”。 |
-
-#### 节点插座 (`BaseNode.vue`)
-
-| 插座名称 | 位置 | 描述 |
-| --- | --- | --- |
-| `node:header:right` | 节点标题栏右侧 | 在节点标题上添加自定义图标、按钮或状态指示器。 |
-| `node:body:before` | 节点主体内容之前 | 在节点控件区域前插入自定义 UI。 |
-| `node:body:after` | 节点主体内容之后 | 在节点控件区域后插入自定义 UI，如预览、图表等。 |
-| `node:input:actions` | 节点输入项右侧 | **高级**: 这不是一个标准的 `<PluginOutlet>`。相反，它代表了通过节点定义中的 `actions` 数组，向 `NodeInputActionsBar.vue` 组件动态注入自定义按钮的能力。 |
-
-#### 模态框插座 (`BaseModal.vue`)
-
-| 插座名称 | 位置 | 描述 |
-| --- | --- | --- |
-| `modal:header` | **（新）** 模态框头部 | 在模态框标题区域添加额外的元素或替换整个标题。 |
-| `modal:footer` | **（新）** 模态框底部 | 在模态框默认的“确认/取消”按钮区域添加新的按钮，或构建完全自定义的底部操作栏。 |
-
-#### 设置页面插座 (`SettingsLayout.vue` 或类似组件)
-
-| 插座名称 | 位置 | 描述 |
-| --- | --- | --- |
-| `settings:section:before[${sectionKey}]` | 特定设置分区之前 | 在某个设置分区的开始处添加说明或组件。 |
-| `settings:section:after[${sectionKey}]` | 特定设置分区之后 | 在某个设置分区的末尾处添加补充信息或操作。 |
-
-#### 右侧预览面板插座 (`RightPreviewPanel.vue`)
-
-| 插座名称 | 位置 | 描述 |
-| --- | --- | --- |
-| `preview:panel:header` | 面板头部，标题后 | 在面板标题和模式切换按钮之间添加额外的控制或信息。 |
-| `preview:panel:content:before` | 内容区域顶部 | 在预览内容（无论是单一预览还是组总览）的上方添加自定义组件。 |
-| `preview:panel:content:after` | 内容区域底部 | 在预览内容的下方添加自定义组件，例如操作按钮或统计信息。 |
+| `ui:layout:header:*` | 顶部导航栏 ([`ProjectLayout.vue`](apps/frontend-vueflow/src/views/project/ProjectLayout.vue:1)) | 在导航栏的左、中、右区域放置插座。 |
+| `ui:editor:canvas:toolbar` | 画布容器 ([`Canvas.vue`](apps/frontend-vueflow/src/components/graph/Canvas.vue:1)) | 在画布上层放置一个绝对定位的插座，用于承载工具栏。 |
+| `ui:editor:statusbar:*` | 状态栏 ([`StatusBar.vue`](apps/frontend-vueflow/src/components/graph/StatusBar.vue:1)) | 在状态栏的左右两侧放置插座。 |
+| `ui:node:header:*` | 节点头部 ([`BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue:1)) | 在节点标题的前后放置插座，用于添加状态图标等。 |
+| `ui:node:content:*` | 节点主体 ([`BaseNode.vue`](apps/frontend-vueflow/src/components/graph/nodes/BaseNode.vue:1)) | 在节点内容的开始和结束处放置插座，用于添加预览等。 |
 
 ## 12. 附录 B: 流程钩子详解 (Process Hooks)
 
