@@ -1,16 +1,16 @@
 <template>
   <div data-testid="fm-move-modal">
     <div class="p-4 sm:p-6 space-y-4 text-sm">
-      <p v-if="itemsToMove.length > 0">
-        {{ t('fileManager.moveModal.itemsToMove', { count: itemsToMove.length }) }}
-      <ul class="list-disc list-inside max-h-32 overflow-y-auto bg-background-base p-2 rounded-md mt-1">
-        <li v-for="item in itemsToMove" :key="item.logicalPath" class="truncate" v-comfy-tooltip="item.name">
-          <component :is="item.itemType === 'directory' ? FolderIcon : DocumentIcon"
-            class="h-4 w-4 inline-block mr-1.5 align-text-bottom text-text-muted" />
-          {{ item.name }}
-        </li>
-      </ul>
-      </p>
+      <div v-if="itemsToMove.length > 0">
+        <p>{{ t('fileManager.moveModal.itemsToMove', { count: itemsToMove.length }) }}</p>
+        <ul class="list-disc list-inside max-h-32 overflow-y-auto bg-background-base p-2 rounded-md mt-1">
+          <li v-for="item in itemsToMove" :key="item.logicalPath" class="truncate" v-comfy-tooltip="item.name">
+            <component :is="item.itemType === 'directory' ? FolderIcon : DocumentIcon"
+              class="h-4 w-4 inline-block mr-1.5 align-text-bottom text-text-muted" />
+            {{ item.name }}
+          </li>
+        </ul>
+      </div>
       <p v-else>{{ t('fileManager.moveModal.noItemsToMove') }}</p>
 
       <div>
@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted } from 'vue';
+import { ref, computed, watch, nextTick, onMounted } from 'vue'; 
 import { useI18n } from 'vue-i18n';
 import type { FAMItem } from '@comfytavern/types';
 import { useFileManagerStore } from '@/stores/fileManagerStore';
