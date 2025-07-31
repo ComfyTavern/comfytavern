@@ -55,6 +55,71 @@
 
 此流程与“首次释出流程”完全相同。当应用组件发现其依赖的工作流文件在后端不存在时（无论是因为首次使用还是被用户删除），它都会自动执行一次“释出”操作来恢复文件。
 
+### 3.3 工作流调用流程
+
+当集成应用（如 `ChatView.vue`）需要执行其配套的工作流时，它将复用平台现有的工作流调用服务，其流程如下：
+
+1.  **获取服务**: 应用组件通过 `useWorkflowInvocation()` Composable 获取工作流调用服务。
+2.  **用户触发**: 用户在 `ChatView.vue` 中输入消息并点击发送。
+3.  **前端调用**:
+    *   `ChatView.vue` 调用 `invoke` 方法，并提供以下参数：
+      ```typescript
+      const { executionId } = await invoke({
+        mode: 'saved', // 明确使用已保存的工作流
+        targetId: 'user://projects/{projectId}/workflows/_apps/chat/main.json', // 目标工作流的逻辑路径
+        inputs: {
+          "user_input": "你好，世界！" // 需要覆盖的输入，键名需与工作流的接口输入ID匹配
+        },
+        source: 'panel' // 将自身标识为 'panel'，以复用现有逻辑
+      });
+      ```
+    *   `invoke` 方法返回一个唯一的 `executionId`，用于追踪本次执行。
+4.  **后端执行**: 后端接收到请求，加载指定路径的工作流，使用 `inputs` 覆盖默认输入，然后开始执行。
+5.  **前端监听与 UI 更新**:
+    *   `ChatView.vue` 使用 `watch` 监听 `executionStore` 中与 `executionId` 相关的状态。
+    *   **监听流式输出**:
+      ```typescript
+      watch(
+        () => executionStore.getAccumulatedInterfaceStreamedText(executionId, 'response_stream'),
+        (newText) => {
+          // 将收到的流式文本实时更新到聊天界面上
+          chatHistory.value[chatHistory.value.length - 1].text = newText;
+        }
+      );
+      ```
+    *   **监听执行状态**:
+      ```typescript
+      watch(
+        () => executionStore.getWorkflowStatus(executionId),
+        (status) => {
+          if (status === 'COMPLETE' || status === 'ERROR') {
+            // 处理执行完成或失败的逻辑
+          }
+        }
+      );
+      ```
+6.  **流程结束**: 工作流执行完毕，前端监听到 `COMPLETE` 状态，完成本次交互。
+
+### 3.4 配套工作流 IO 定义
+
+为了让聊天应用能正常工作，其配套的 `workflow.json` 需要提供以下输入和输出接口。
+
+#### 输入 (Inputs)
+
+| 接口ID (Key) | 显示名称 (DisplayName) | 数据类型 (DataType) | 描述 |
+| :--- | :--- | :--- | :--- |
+| `user_input` | 用户输入 | `STRING` | 从聊天界面接收到的用户发送的文本消息。 |
+| `llm_config` | LLM 配置 | `OBJECT` | (可选) 用于覆盖默认的 LLM 参数，例如 `temperature`, `max_tokens` 等。 |
+
+#### 输出 (Outputs)
+
+| 接口ID (Key) | 显示名称 (DisplayName) | 数据类型 (DataType) | 是否流式 (isStream) | 描述 |
+| :--- | :--- | :--- | :--- | :--- |
+| `response_stream` | 响应流 | `STRING` | `true` | 从 LLM 返回的流式文本响应，用于在界面上逐字显示。 |
+| `full_text` | 完整文本 | `STRING` | `false` | 流结束后，累积的完整回复文本。 |
+| `usage` | Token 用量 | `OBJECT` | `false` | 本次调用的 token 使用情况统计。 |
+
+
 ## 4. 实施计划
 
 ### 阶段 1: 后端 API 确认 (已完成)
