@@ -1,120 +1,89 @@
-# 工作流集成应用架构计划
+# 集成应用架构设计
 
-## 1. 概述
+## 1. 核心思想
 
-### 1.1 问题背景
+本架构旨在定义一种原生、高性能的“集成应用”体系。其核心思想是 **前端主导、后端执行**。集成应用及其所有配套资产（UI 组件、工作流定义等）均作为前端的一部分进行开发和分发。后端在此架构中扮演纯粹的服务角色，根据前端的指令管理用户项目中的文件并执行工作流。
 
-当前系统过度依赖“面板”框架，导致核心功能（如聊天应用）难以快速实现和原生集成。用户需要手动配置工作流、对接 API，这违背了“即开即用”的目标。同时，工作流文件缺乏组织（扁平目录），且没有保护机制，容易被误删。
+## 2. 系统组件与职责
 
-### 1.2 方案目标
+### 2.1 集成应用包 (Frontend)
 
-- 建立“工作流集成应用”体系，以支持项目路线图 Phase 2 的交互式应用 MVP。
-- 集成应用使用原生 Vue 组件渲染（固定在 `apps/frontend-vueflow/src/components/built-in-apps/`），无沙盒，提供最佳性能和开发体验，并集成 @comfytavern/panel-sdk 以复用工作流调用逻辑。
-- 集成应用启用时自动创建专属工作流子目录，支持多级结构，确保后端逻辑（如 LLM 调用和复杂交互）通过工作流封装。
-- 支持按需恢复：如果工作流文件丢失，从系统模板自动复制。
-- 所有模板文件（仅工作流 JSON）随主代码库 Git 版本化，便于维护和更新。
+- **位置**: `apps/frontend-vueflow/src/integrated-apps/`
+- **结构**: 每个集成应用是一个独立的目录，包含所有必需的资产。
+  ```
+  integrated-apps/
+  └── chat/
+      ├── ChatView.vue          # 应用的 UI 组件
+      ├── workflow.json         # 配套的默认工作流定义
+      ├── manifest.json         # 应用元数据 (名称, 描述)
+      └── icon.svg              # 应用图标
+  ```
+- **职责**:
+  1.  **作为资产源**: 持有应用的 UI 和配套工作流的“出厂版本”。
+  2.  **应用发现**: 在前端启动时，扫描 `integrated-apps` 目录，动态注册所有可用的应用。
+  3.  **生命周期管理**: 负责在用户项目中“释出”和“恢复”配套工作流。
 
-### 1.3 关键原则
+### 2.2 文件管理服务 (Backend)
 
-- **解耦**: 集成应用和工作流的关联由应用组件自身声明和管理，不依赖项目配置（如 project.json），避免职责拉扯。
-- **鲁棒性**: 系统通过 UI 驱动的按需检查，确保文件完整性。
-- **用户友好**: 用户只需访问集成应用，系统自动处理依赖，无需手动配置。
-- **可扩展**: 未来可添加更多集成应用（如聊天树图查看器 `chat-history-branching-design.md` 、Agent 管理器）。
+- **职责**: 提供一组 CRUD API，用于操作指定项目空间内的工作流文件。
+- **核心 API**: 使用通用的文件管理服务 (`/api/fam`)，通过“逻辑路径”进行操作。
+  - **写入/创建**: `POST /api/fam/write-json`
+    - **请求体**: `{ "logicalPath": "user://projects/{projectId}/workflows/_apps/chat/main.json", "content": { ... } }`
+  - **读取**: `GET /api/fam/read/user://projects/{projectId}/workflows/_apps/chat/main.json`
+    - **注意**: 当文件不存在时，此接口返回 `null` 而非 `404` 错误，便于前端处理。
+  - **删除**: `DELETE /api/fam/delete`
+    - **请求体**: `{ "logicalPaths": ["user://projects/{projectId}/workflows/_apps/chat/main.json"] }`
+- **特性**: 后端不包含任何“模板”或“应用”的概念。它只处理逻辑路径和文件内容，是一个被动的、受调遣的文件存储服务。
 
-### 1.4 高层设计
+### 2.3 工作流执行引擎 (Backend)
 
-- **系统模板库**: 存放在 `apps/backend/src/built-in-app-templates/`，包含每个集成应用的专属工作流 JSON 等，随主代码库 Git 版本化。
-- **启用流程**: 用户首次访问集成应用时，组件内部检查并复制模板到项目专属目录（如 `workflows/_app_chat/`），通过 FAM 服务确保文件完整性。
-- **渲染**: 前端动态显示入口，加载固定在 src 中的原生组件，支持与 Panel SDK 的集成以实现异步通信和实时交互。
-- **工作流加载**: 升级 WorkflowManager，支持路径如 `_app_chat/main.json`，封装后端执行逻辑。
-- **按需恢复 (UI 驱动)**: 集成应用页面加载时（onMounted），组件内部检查所需工作流是否存在。如果缺失，显示提示并提供一键恢复功能，调用后端服务从模板重新复制。工作流是集成应用专属的，仅供其内部使用，因此检查仅在应用激活时触发。这支持交互式应用的动态执行，而非传统聊天式的简单对话框。
-- **依赖声明**: 每个应用组件（如 ChatView.vue）硬编码其所需的工作流路径和模板源，便于随时修改而不影响项目配置。
+- **职责**: 接收一个有效的工作流路径，加载文件并执行。其职责与普通工作流的执行完全一致。
 
-## 2. 实施顺序
+## 3. 核心流程
 
-计划分为 4 个阶段，每个阶段有具体任务、依赖和输出。
+### 3.1 首次“释出”流程
 
-### 阶段 1: 基础改造（类型与后端核心）
+1.  **用户操作**: 用户在项目中首次访问“聊天”集成应用。
+2.  **前端检查**: `ChatView.vue` 组件在 `onMounted` 时，调用 `GET /api/fam/read/user://projects/{projectId}/workflows/_apps/chat/main.json` 尝试读取其所需的工作流文件。
+3.  **发现缺失**: 后端返回 `200 OK` 且响应体为 `null`，表示文件不存在。
+4.  **前端读取**: 前端逻辑判断响应为 `null`，从自身包内（`integrated-apps/chat/workflow.json`）读取默认工作流的内容。
+5.  **前端请求写入**: 前端调用 `POST /api/fam/write-json`，将默认工作流的 JSON 内容和目标逻辑路径 `user://projects/{projectId}/workflows/_apps/chat/main.json` 发送给后端。
+6.  **后端写入**: 后端的 `FileManagerService` 解析逻辑路径，在 `userData/{userId}/projects/{projectId}/workflows/_apps/chat/` 目录下创建 `main.json` 文件并写入内容。
+7.  **流程完成**: 前端再次请求工作流，成功获取并渲染应用。
 
-**目标**: 升级类型定义和工作流管理，支持目录和路径加载。
-**依赖**: 无。
-**任务**:
+### 3.2 文件恢复流程
 
-1. 更新 `packages/types/src/workflow.ts`:
-   - 在 `WorkflowMetadataSchema` 添加 `path: string` (支持子目录，如 `_app_chat/main`)。
-   - 添加 `templateSource: string` (可选，用于恢复，指向系统模板路径)。
-2. 改造 `apps/backend/src/services/WorkflowManager.ts`:
-   - 更新 `loadWorkflow` 支持路径参数（e.g., workflowId = '\_app_chat/main'），调整逻辑路径构建以处理斜杠。
-   - 职责聚焦于：成功加载文件或在文件不存在时返回错误。
-3. 更新 `apps/backend/src/routes/workflowRoutes.ts` (和任何相关路由):
-   - 支持路径在 API 参数中。
+此流程与“首次释出流程”完全相同。当应用组件发现其依赖的工作流文件在后端不存在时（无论是因为首次使用还是被用户删除），它都会自动执行一次“释出”操作来恢复文件。
 
-**输出**: 类型安全的工作流加载，支持目录路径。
-**风险**: API 变更可能影响前端，需同步更新。
+## 4. 实施计划
 
-### 阶段 2: 模板系统与恢复服务
+### 阶段 1: 后端 API 确认 (已完成)
 
-**目标**: 创建模板库并扩展现有服务以支持恢复逻辑。
-**依赖**: 阶段 1 完成。
-**任务**:
+- **结论**: 经过调查，现有的通用文件管理服务 (`FileManagerService`) 及其对应的 `/api/fam` 路由**完全满足**本架构的需求。
+- **实施要点**:
+  1.  **无需开发新 API**: 所有操作（读、写、删）均可通过 `/api/fam` 端点完成。
+  2.  **使用逻辑路径**: 前端需使用 `user://projects/{projectId}/...` 格式的逻辑路径与后端交互。
+- **状态**: 此阶段已完成，可直接进入前端开发。
 
-1. 创建目录 `apps/backend/src/built-in-app-templates/chat/`:
-   - 添加示例工作流文件 (e.g., main.json, sub1.json)。
-2. 扩展 `apps/backend/src/services/projectService.ts`:
-   - 新增方法: `restoreWorkflow(projectId, workflowPath, templateSource)`: 检查指定路径的工作流是否存在，如果缺失，则从模板库复制。
-3. 添加路由 `apps/backend/src/routes/builtInAppRoutes.ts` (或集成到现有路由):
-   - POST /api/projects/:projectId/restore-workflow: 调用 restoreWorkflow，用于组件内部的一键恢复。
+### 阶段 2: 前端集成应用框架
 
-**输出**: 后端能处理工作流恢复。
-**风险**: 文件复制需处理权限和冲突，通过 FAM 服务缓解。
+- **任务**:
+  1.  在前端创建 `src/integrated-apps/` 目录结构。
+  2.  实现一个 `IntegratedAppService`，负责在前端启动时扫描、发现并注册所有应用。
+  3.  创建 `useIntegratedApp` composable，封装检查、释出/恢复工作流的逻辑。
+- **输出**: 前端具备动态加载集成应用及其配套资产的能力。
 
-### 阶段 3: 前端集成与 UI
+### 阶段 3: 实现首个集成应用 (聊天)
 
-**目标**: 前端支持显示和渲染集成应用。
-**依赖**: 阶段 2 完成。
-**任务**:
+- **任务**:
+  1.  创建 `apps/frontend-vueflow/src/integrated-apps/chat/` 目录和所有配套文件 (`ChatView.vue`, `workflow.json` 等)。
+  2.  在 `ChatView.vue` 中使用 `useIntegratedApp` 来管理其工作流依赖。
+  3.  在 UI 中添加入口，允许用户访问聊天应用。
+- **输出**: 一个功能完整的、遵循新架构的聊天应用。
 
-1. 创建子模块 Store `apps/frontend-vueflow/src/stores/builtInAppStore.ts` (或类似):
-   - 管理集成应用的状态（如已启用列表），使用本地存储持久化。
-   - 新增方法: `checkAndRestoreDependencies(appId)`: 检查应用所需工作流路径，如果缺失，调用后端恢复 API。
-2. 创建原生组件 `apps/frontend-vueflow/src/components/built-in-apps/ChatView.vue`:
-   - 硬编码所需工作流路径 (e.g., const requiredWorkflows = [{ path: '_app_chat/main', template: 'chat/main.json' }])。
-   - 在组件挂载时 (onMounted)，调用子模块 Store 的 checkAndRestoreDependencies 检查并恢复依赖。
-   - 如果缺失，显示覆盖层或提示，包含“一键恢复”按钮。
-   - 恢复成功后，加载并执行工作流 (e.g., executeWorkflow('\_app_chat/main'))，封装复杂后端逻辑。
-3. 更新路由 `apps/frontend-vueflow/src/router/index.ts`:
-   - 添加动态路由 for 集成应用 (e.g., /project/:projectId/app/:appId)。
-4. 在项目视图 (e.g., ProjectDashboardView.vue) 添加集成应用入口:
-   - 根据子模块 Store 的状态动态显示入口（无需启用按钮，访问即检查）。
+### 阶段 4: 测试与文档
 
-**输出**: 用户能使用集成应用，支持开箱即用的交互式体验。
-**风险**: 动态路由需处理安全性，与 Panel SDK 集成以支持自定义扩展。
-
-### 阶段 4: 测试与优化
-
-**目标**: 确保系统稳定，处理边缘情况。
-**依赖**: 阶段 3 完成。
-**任务**:
-
-1. 定义手动测试场景 (e.g., 访问集成应用、删除文件后恢复、入口显示、交互式执行与 Agent 集成)。
-2. 处理停用: 在子模块 Store 中添加 disableApp 方法，删除子目录（但警告用户可能影响应用）。
-3. 优化 UI: 添加确认对话框、进度指示等。
-4. 文档: 更新 ProjectOverview.md，添加本架构描述。
-
-**输出**: 完整、可生产的系统。
-**风险**: 测试覆盖不足导致 bug，通过增量手动测试缓解。
-
-## 3. 潜在风险与缓解
-
-- **兼容性**: 所有变更需测试不影响现有面板系统。缓解: 增量开发，每阶段测试。
-- **性能**: 目录扫描可能慢。缓解: 缓存列表，仅在必要时刷新。
-- **安全**: 复制模板需验证路径。缓解: 使用 FAM 服务 的内置安全检查。
-- **版本更新**: 未来模板更新如何同步到用户项目。缓解: 通过组件内部的 restore 调用，比较版本并覆盖。
-
-## 4. 资源需求
-
-- 工具: VSCode, Bun, Git。
-- 测试环境: 本地开发服务器。
-- 后续: 集成到 CI/CD。
-
-这个计划文档是我们的“锚点”，不会丢失。如果有任何修改，请告诉我。
+- **任务**:
+  1.  测试首次使用、文件删除后恢复、应用切换等场景。
+  2.  为开发者撰写如何在前端添加新的集成应用的指南。
+- **输出**: 稳定可靠的系统和清晰的开发者文档。
