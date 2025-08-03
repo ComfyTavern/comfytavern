@@ -77,6 +77,13 @@
         <ArrowPathIcon :class="['h-5 w-5 text-text-secondary', { 'animate-spin': isRefreshing }]" />
       </button>
 
+      <!-- 复位宽度按钮 -->
+      <button @click="$emit('reset-widths')"
+        v-comfy-tooltip="'重置列宽'"
+        class="flex items-center justify-center h-8 w-8 rounded-md hover:bg-background-modifier-hover transition-colors">
+        <ArrowUturnLeftIcon class="h-5 w-5 text-text-secondary" />
+      </button>
+
       <!-- 视图模式切换 -->
       <button @click="$emit('update:displayMode', displayMode === 'list' ? 'grid' : 'list')"
         v-comfy-tooltip="t(displayMode === 'list' ? 'dataList.toolbar.switchToGrid' : 'dataList.toolbar.switchToList')"
@@ -102,6 +109,7 @@ import {
   Squares2X2Icon,
   QueueListIcon,
   ArrowPathIcon,
+  ArrowUturnLeftIcon,
 } from '@heroicons/vue/24/outline';
 
 const props = withDefaults(defineProps<{
@@ -125,6 +133,7 @@ const emit = defineEmits<{
   (e: 'select-all'): void;
   (e: 'clear-selection'): void;
   (e: 'refresh'): void;
+  (e: 'reset-widths'): void;
 }>();
 
 const { t } = useI18n();

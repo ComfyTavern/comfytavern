@@ -449,5 +449,11 @@ export const useUiStore = defineStore('ui', {
     getListViewColumnWidths(viewId: string): { [columnId: string]: number } {
       return this.listViewColumnWidths[viewId] || {};
     },
+    clearListViewColumnWidths(viewId: string) {
+      if (this.listViewColumnWidths[viewId]) {
+        delete this.listViewColumnWidths[viewId];
+        this._saveListViewColumnWidths();
+      }
+    },
   },
 });

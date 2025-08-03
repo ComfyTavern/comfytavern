@@ -15,6 +15,7 @@
       :show-refresh-button="showRefreshButton"
       :is-refreshing="isRefreshing"
       @refresh="$emit('refresh')"
+      @reset-widths="resetColumnWidths"
     >
       <template #actions>
         <slot name="toolbar-actions" :selected-items="selectedItems"></slot>
@@ -61,8 +62,8 @@
             <th
               v-if="selectable"
               scope="col"
-              class="px-3 py-2.5 border-b border-border-base rounded-tl-lg"
-              :style="{ width: '40px' }"
+              class="px-3 py-2.5 border-b border-border-base rounded-tl-lg checkbox-column"
+              style="width: 40px; min-width: 40px; max-width: 40px;"
             >
               <input
                 type="checkbox"
@@ -83,7 +84,7 @@
                 'rounded-tl-lg': !selectable && index === 0,
                 'rounded-tr-lg': index === finalColumns.length - 1,
               }"
-              :style="{ width: column.width }"
+              :style="getColumnStyle(column, index)"
               :data-column-key="column.key.toString()"
             >
               <div class="flex items-center">
@@ -113,7 +114,12 @@
               rowClass ? (typeof rowClass === 'function' ? rowClass(item) : rowClass) : '',
             ]"
           >
-            <td v-if="selectable" class="px-3 py-2.5" @click.stop :style="{ width: '40px' }">
+            <td
+              v-if="selectable"
+              class="px-3 py-2.5 checkbox-column"
+              @click.stop
+              style="width: 40px; min-width: 40px; max-width: 40px;"
+            >
               <input
                 type="checkbox"
                 :checked="isSelected(item)"
@@ -130,10 +136,10 @@
             <template v-else>
               <!-- Fallback list item rendering -->
               <td
-                v-for="column in finalColumns"
+                v-for="(column, index) in finalColumns"
                 :key="column.key.toString()"
                 class="px-3 py-2.5 whitespace-nowrap"
-                :style="{ width: column.width }"
+                :style="getColumnStyle(column, index)"
               >
                 {{ getProperty(item, column.key) }}
               </td>
@@ -348,6 +354,23 @@ const finalColumns = computed(() => {
   }));
 });
 
+// 获取列的样式，确保最后一列能够伸缩
+const getColumnStyle = (column: any, index: number) => {
+  const isLastColumn = index === finalColumns.value.length - 1;
+  
+  if (isLastColumn) {
+    // 最后一列不设置固定宽度，让它自动填充剩余空间
+    return column.width && column.width !== 'auto'
+      ? { minWidth: column.width }
+      : {};
+  } else {
+    // 其他列保持固定宽度
+    return column.width && column.width !== 'auto'
+      ? { width: column.width, minWidth: column.width, maxWidth: column.width }
+      : {};
+  }
+};
+
 onMounted(() => {
   const storedWidths = uiStore.getListViewColumnWidths(props.viewId);
   const initialWidths: { [key: string]: string } = {};
@@ -407,7 +430,6 @@ const doResize = (event: MouseEvent) => {
   columnWidths.value[resizingState.value.currentKey] = `${newCurrentWidth}px`;
   columnWidths.value[resizingState.value.nextKey] = `${newNextWidth}px`;
 };
-
 const stopResize = () => {
   if (!resizingState.value) return;
 
@@ -431,6 +453,17 @@ const stopResize = () => {
   resizingState.value = null;
   document.removeEventListener("mousemove", doResize);
   document.removeEventListener("mouseup", stopResize);
+};
+
+const resetColumnWidths = () => {
+  uiStore.clearListViewColumnWidths(props.viewId);
+  const initialWidths: { [key: string]: string } = {};
+  for (const col of props.columns) {
+    if (col.width) {
+      initialWidths[col.key.toString()] = col.width;
+    }
+  }
+  columnWidths.value = initialWidths;
 };
 
 const getItemKey = (item: T, index: number): string | number => {
@@ -570,5 +603,11 @@ defineExpose({
 <style scoped>
 .fixed-layout-table {
   table-layout: fixed;
+}
+
+.checkbox-column {
+  /* 确保复选框列绝对固定宽度 */
+  flex-shrink: 0;
+  flex-grow: 0;
 }
 </style>
