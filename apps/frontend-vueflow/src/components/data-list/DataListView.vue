@@ -7,7 +7,7 @@
       :sort-config="sort"
       @update:sort-config="setSort"
       :display-mode="displayMode"
-      @update:display-mode="newMode => displayMode = newMode"
+      @update:display-mode="(newMode) => (displayMode = newMode)"
       :sort-options="sortOptions"
       :selected-count="selectedItems.length"
       @select-all="toggleSelectAll"
@@ -21,9 +21,11 @@
       </template>
     </DataToolbar>
 
-    <div class="flex-1 overflow-auto relative px-2">
-      <div v-if="isLoading"
-        class="loading-overlay absolute inset-0 flex items-center justify-center bg-background-base/75 z-10">
+    <div class="flex-1 overflow-auto relative px-2" ref="containerRef">
+      <div
+        v-if="isLoading"
+        class="loading-overlay absolute inset-0 flex items-center justify-center bg-background-base/75 z-10"
+      >
         <slot name="loading">
           <div class="text-center">
             <ArrowPathIcon class="h-8 w-8 animate-spin text-primary mx-auto" />
@@ -35,34 +37,51 @@
       <div v-else-if="error" class="empty-placeholder p-8 text-center text-error">
         <slot name="error" :error="error">
           <ExclamationCircleIcon class="h-12 w-12 mx-auto mb-2" />
-          <p>{{ errorMessage || t('dataList.view.error') }}</p>
-          <pre class="text-xs text-left mt-2 bg-background-surface p-2 rounded">{{ error.message }}</pre>
+          <p>{{ errorMessage || t("dataList.view.error") }}</p>
+          <pre class="text-xs text-left mt-2 bg-background-surface p-2 rounded">{{
+            error.message
+          }}</pre>
         </slot>
       </div>
 
       <div v-else-if="items.length === 0" class="empty-placeholder p-8 text-center text-text-muted">
         <slot name="empty">
           <InformationCircleIcon class="h-12 w-12 mx-auto mb-2" />
-          <p>{{ emptyMessage || t('dataList.view.empty') }}</p>
+          <p>{{ emptyMessage || t("dataList.view.empty") }}</p>
         </slot>
       </div>
 
       <!-- 列表视图 -->
-      <table v-else-if="displayMode === 'list'" class="min-w-full text-base border-separate border-spacing-0 fixed-layout-table">
+      <table
+        v-else-if="displayMode === 'list'"
+        class="min-w-full text-base border-separate border-spacing-0 fixed-layout-table"
+      >
         <thead class="bg-background-surface sticky top-0 z-[5]">
           <tr>
-            <th v-if="selectable" scope="col"
-              class="px-3 py-2.5 border-b border-border-base rounded-tl-lg" :style="{ width: '40px' }">
-              <input type="checkbox" :checked="isAllSelected" :indeterminate="isIndeterminate" @change="toggleSelectAll"
-                class="h-4 w-4 rounded border-border-base text-primary focus:ring-primary" />
+            <th
+              v-if="selectable"
+              scope="col"
+              class="px-3 py-2.5 border-b border-border-base rounded-tl-lg"
+              :style="{ width: '40px' }"
+            >
+              <input
+                type="checkbox"
+                :checked="isAllSelected"
+                :indeterminate="isIndeterminate"
+                @change="toggleSelectAll"
+                class="h-4 w-4 rounded border-border-base text-primary focus:ring-primary"
+              />
             </th>
-            <th v-for="(column, index) in finalColumns" :key="column.key.toString()" scope="col"
+            <th
+              v-for="(column, index) in finalColumns"
+              :key="column.key.toString()"
+              scope="col"
               @click="column.sortable && changeSort(column.key)"
               class="px-3 py-2.5 text-left font-semibold text-text-base relative border-b border-border-base"
               :class="{
                 'cursor-pointer hover:bg-background-base': column.sortable,
                 'rounded-tl-lg': !selectable && index === 0,
-                'rounded-tr-lg': index === finalColumns.length - 1
+                'rounded-tr-lg': index === finalColumns.length - 1,
               }"
               :style="{ width: column.width }"
               :data-column-key="column.key.toString()"
@@ -83,20 +102,39 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-border-base bg-background-base">
-          <tr v-for="(item, index) in items" :key="getItemKey(item, index)"
-            @click="handleItemClick($event, item, index)" @dblclick="$emit('item-dblclick', item)"
-            class="transition-colors" :class="[
+          <tr
+            v-for="(item, index) in items"
+            :key="getItemKey(item, index)"
+            @click="handleItemClick($event, item, index)"
+            @dblclick="$emit('item-dblclick', item)"
+            class="transition-colors"
+            :class="[
               isSelected(item) ? 'bg-primary/20' : 'hover:bg-primary/10',
-              rowClass ? (typeof rowClass === 'function' ? rowClass(item) : rowClass) : ''
-            ]">
+              rowClass ? (typeof rowClass === 'function' ? rowClass(item) : rowClass) : '',
+            ]"
+          >
             <td v-if="selectable" class="px-3 py-2.5" @click.stop :style="{ width: '40px' }">
-              <input type="checkbox" :checked="isSelected(item)" @change="toggleItemSelection(item)"
-                class="h-4 w-4 rounded border-border-base text-primary focus:ring-primary" />
+              <input
+                type="checkbox"
+                :checked="isSelected(item)"
+                @change="toggleItemSelection(item)"
+                class="h-4 w-4 rounded border-border-base text-primary focus:ring-primary"
+              />
             </td>
-            <slot v-if="slots['list-item']" name="list-item" :item="item" :is-selected="isSelected(item)"></slot>
+            <slot
+              v-if="slots['list-item']"
+              name="list-item"
+              :item="item"
+              :is-selected="isSelected(item)"
+            ></slot>
             <template v-else>
               <!-- Fallback list item rendering -->
-              <td v-for="column in finalColumns" :key="column.key.toString()" class="px-3 py-2.5 whitespace-nowrap" :style="{ width: column.width }">
+              <td
+                v-for="column in finalColumns"
+                :key="column.key.toString()"
+                class="px-3 py-2.5 whitespace-nowrap"
+                :style="{ width: column.width }"
+              >
                 {{ getProperty(item, column.key) }}
               </td>
             </template>
@@ -105,19 +143,38 @@
       </table>
 
       <!-- 网格视图 -->
-      <div v-else-if="displayMode === 'grid'" class="grid gap-4 pt-4" :class="gridClass">
-        <div v-for="(item, index) in items" :key="getItemKey(item, index)" @click="handleItemClick($event, item, index)"
+      <div v-else-if="displayMode === 'grid'" class="grid gap-4 pt-4" :style="dynamicGridStyle">
+        <div
+          v-for="(item, index) in items"
+          :key="getItemKey(item, index)"
+          @click="handleItemClick($event, item, index)"
           @dblclick="$emit('item-dblclick', item)"
           class="relative rounded-lg border border-border-base hover:border-primary transition-colors cursor-pointer"
-          :class="{ 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background-base': isSelected(item) }">
-          <input v-if="showGridCheckboxes" type="checkbox" :checked="isSelected(item)" @change="toggleItemSelection(item)"
+          :class="{
+            'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background-base':
+              isSelected(item),
+          }"
+        >
+          <input
+            v-if="showGridCheckboxes"
+            type="checkbox"
+            :checked="isSelected(item)"
+            @change="toggleItemSelection(item)"
             @click.stop
-            class="absolute top-3 right-3 h-4 w-4 rounded border-border-base text-primary focus:ring-primary z-10" />
-          <slot v-if="slots['grid-item']" name="grid-item" :item="item" :is-selected="isSelected(item)"></slot>
+            class="absolute top-3 right-3 h-4 w-4 rounded border-border-base text-primary focus:ring-primary z-10"
+          />
+          <slot
+            v-if="slots['grid-item']"
+            name="grid-item"
+            :item="item"
+            :is-selected="isSelected(item)"
+          ></slot>
           <!-- Fallback grid item rendering -->
           <div v-else class="p-4 bg-background-surface rounded-lg h-full">
             <h4 class="font-bold text-sm text-text-muted mb-2">Fallback View</h4>
-            <pre class="text-xs bg-background-base p-2 rounded overflow-auto max-h-48">{{ item }}</pre>
+            <pre class="text-xs bg-background-base p-2 rounded overflow-auto max-h-48">{{
+              item
+            }}</pre>
           </div>
         </div>
       </div>
@@ -126,19 +183,19 @@
 </template>
 
 <script setup lang="ts" generic="T extends { [key: string]: any }">
-import { ref, type PropType, watch, useSlots, computed, onMounted } from 'vue';
-import { useI18n } from 'vue-i18n';
-import DataToolbar from './DataToolbar.vue';
-import type { ColumnDefinition, DisplayMode, SortConfig } from '@comfytavern/types';
-import { useDataList, type UseDataListOptions } from '@/composables/useDataList';
-import { useUiStore } from '@/stores/uiStore';
+import { ref, type PropType, watch, useSlots, computed, onMounted, onUnmounted } from "vue";
+import { useI18n } from "vue-i18n";
+import DataToolbar from "./DataToolbar.vue";
+import type { ColumnDefinition, DisplayMode, SortConfig } from "@comfytavern/types";
+import { useDataList, type UseDataListOptions } from "@/composables/useDataList";
+import { useUiStore } from "@/stores/uiStore";
 import {
   ArrowPathIcon,
   InformationCircleIcon,
   ExclamationCircleIcon,
   ArrowUpIcon,
   ArrowDownIcon,
-} from '@heroicons/vue/24/outline';
+} from "@heroicons/vue/24/outline";
 
 const props = defineProps({
   // --- View Identifier ---
@@ -149,26 +206,26 @@ const props = defineProps({
 
   // --- Data ---
   fetcher: {
-    type: Function as PropType<UseDataListOptions<T>['fetcher']>,
+    type: Function as PropType<UseDataListOptions<T>["fetcher"]>,
     required: true,
   },
   itemKey: {
     type: [String, Function] as PropType<keyof T | ((item: T) => string | number)>,
-    default: 'id',
+    default: "id",
   },
 
   // --- Display ---
   initialDisplayMode: {
     type: String as PropType<DisplayMode>,
-    default: 'grid',
+    default: "grid",
   },
   columns: {
     type: Array as PropType<ColumnDefinition<T>[]>,
     default: () => [],
   },
-  gridClass: {
-    type: String,
-    default: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
+  gridCardWidth: {
+    type: Number,
+    default: 260, // 默认卡片宽度
   },
   rowClass: [String, Function] as PropType<string | ((item: T) => string)>,
 
@@ -210,9 +267,9 @@ const props = defineProps({
 });
 
 const emit = defineEmits<{
-  (e: 'selection-change', selectedItems: T[]): void;
-  (e: 'item-dblclick', item: T): void;
-  (e: 'refresh'): void;
+  (e: "selection-change", selectedItems: T[]): void;
+  (e: "item-dblclick", item: T): void;
+  (e: "refresh"): void;
 }>();
 
 const { t } = useI18n();
@@ -220,6 +277,43 @@ const slots = useSlots();
 const uiStore = useUiStore();
 
 const displayMode = ref<DisplayMode>(props.initialDisplayMode);
+
+// --- Container Width Observer ---
+const containerRef = ref<HTMLElement | null>(null);
+const containerWidth = ref(0);
+
+const observer = new ResizeObserver((entries) => {
+  if (entries[0]) {
+    containerWidth.value = entries[0].contentRect.width;
+  }
+});
+
+onMounted(() => {
+  if (containerRef.value) {
+    observer.observe(containerRef.value);
+    containerWidth.value = containerRef.value.offsetWidth;
+  }
+});
+
+onUnmounted(() => {
+  if (containerRef.value) {
+    observer.unobserve(containerRef.value);
+  }
+});
+
+const dynamicGridStyle = computed(() => {
+  if (containerWidth.value > 0) {
+    const gap = 16; // 对应 gap-4
+    const columns = Math.max(
+      1,
+      Math.floor((containerWidth.value + gap) / (props.gridCardWidth + gap))
+    );
+    return {
+      "grid-template-columns": `repeat(${columns}, minmax(0, 1fr))`,
+    };
+  }
+  return {};
+});
 
 const {
   items,
@@ -248,9 +342,9 @@ const resizingState = ref<{
 } | null>(null);
 
 const finalColumns = computed(() => {
-  return props.columns.map(col => ({
+  return props.columns.map((col) => ({
     ...col,
-    width: columnWidths.value[col.key.toString()] || col.width || 'auto',
+    width: columnWidths.value[col.key.toString()] || col.width || "auto",
   }));
 });
 
@@ -270,10 +364,10 @@ onMounted(() => {
 });
 
 const startResize = (event: MouseEvent, columnKey: string) => {
-  const th = (event.target as HTMLElement).closest('th');
+  const th = (event.target as HTMLElement).closest("th");
   if (!th) return;
 
-  const currentIndex = finalColumns.value.findIndex(c => c.key.toString() === columnKey);
+  const currentIndex = finalColumns.value.findIndex((c) => c.key.toString() === columnKey);
   if (currentIndex === -1 || currentIndex >= finalColumns.value.length - 1) {
     return; // Cannot resize the last column's right edge
   }
@@ -292,8 +386,8 @@ const startResize = (event: MouseEvent, columnKey: string) => {
     nextWidth: nextTh.offsetWidth,
   };
 
-  document.addEventListener('mousemove', doResize);
-  document.addEventListener('mouseup', stopResize);
+  document.addEventListener("mousemove", doResize);
+  document.addEventListener("mouseup", stopResize);
 };
 
 const doResize = (event: MouseEvent) => {
@@ -335,13 +429,12 @@ const stopResize = () => {
   }
 
   resizingState.value = null;
-  document.removeEventListener('mousemove', doResize);
-  document.removeEventListener('mouseup', stopResize);
+  document.removeEventListener("mousemove", doResize);
+  document.removeEventListener("mouseup", stopResize);
 };
 
-
 const getItemKey = (item: T, index: number): string | number => {
-  if (typeof props.itemKey === 'function') {
+  if (typeof props.itemKey === "function") {
     return props.itemKey(item);
   }
   // 使用类型断言并转换为字符串，以确保返回类型正确
@@ -350,7 +443,7 @@ const getItemKey = (item: T, index: number): string | number => {
 };
 
 const isSelected = (item: T) => {
-  return selectedItems.value.some(selected => getItemKey(selected, -1) === getItemKey(item, -1));
+  return selectedItems.value.some((selected) => getItemKey(selected, -1) === getItemKey(item, -1));
 };
 
 const lastSelectedIndex = ref<number | null>(null);
@@ -391,7 +484,7 @@ const toggleSelectAll = () => {
 const toggleItemSelection = (item: T) => {
   const newSelection = [...selectedItems.value];
   const key = getItemKey(item, -1);
-  const existingIndex = newSelection.findIndex(i => getItemKey(i, -1) === key);
+  const existingIndex = newSelection.findIndex((i) => getItemKey(i, -1) === key);
 
   if (existingIndex > -1) {
     newSelection.splice(existingIndex, 1);
@@ -406,7 +499,8 @@ const handleItemClick = (event: MouseEvent, item: T, index: number) => {
 
   // 检查点击的是否是可交互元素或其子元素。
   // 这可以防止在点击按钮、链接或输入框时触发行选择。
-  const interactiveSelector = 'a, button, input, select, textarea, [role="button"], [role="checkbox"], [role="switch"], [role="menuitem"]';
+  const interactiveSelector =
+    'a, button, input, select, textarea, [role="button"], [role="checkbox"], [role="switch"], [role="menuitem"]';
   if (target.closest(interactiveSelector)) {
     return;
   }
@@ -440,15 +534,15 @@ const handleItemClick = (event: MouseEvent, item: T, index: number) => {
 const changeSort = (field: keyof T | string) => {
   const currentField = sort.value.field;
   const currentDirection = sort.value.direction;
-  let newDirection: 'asc' | 'desc' = 'asc';
+  let newDirection: "asc" | "desc" = "asc";
   if (currentField === field) {
-    newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+    newDirection = currentDirection === "asc" ? "desc" : "asc";
   }
   setSort({ field, direction: newDirection });
 };
 
 watch(selectedItems, (newSelection) => {
-  emit('selection-change', newSelection);
+  emit("selection-change", newSelection);
 });
 
 /**
@@ -458,8 +552,8 @@ watch(selectedItems, (newSelection) => {
  * @returns The property value, or undefined if not found.
  */
 const getProperty = (obj: any, key: string | keyof T): any => {
-  if (typeof key === 'string' && key.includes('.')) {
-    return key.split('.').reduce((o, i) => (o ? o[i] : undefined), obj);
+  if (typeof key === "string" && key.includes(".")) {
+    return key.split(".").reduce((o, i) => (o ? o[i] : undefined), obj);
   }
   return obj[key as any];
 };
@@ -471,7 +565,6 @@ defineExpose({
   selectAll: () => setSelection([...items.value]),
   toggleSelectAll,
 });
-
 </script>
 
 <style scoped>
