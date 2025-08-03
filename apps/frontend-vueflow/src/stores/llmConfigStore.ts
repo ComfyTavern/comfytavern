@@ -51,11 +51,12 @@ export const useLlmConfigStore = defineStore('llmConfig', () => {
     }
   };
 
-  const addChannel = async (channelData: ApiChannelFormData) => {
+  const addChannel = async (channelData: ApiChannelFormData): Promise<ApiCredentialConfig> => {
     try {
       // The user ID will be injected by the backend based on the session/token
       const newChannel = await llmConfigApi.saveApiChannel(channelData);
       channels.value.unshift(newChannel); // Add to the beginning of the list for immediate visibility
+      return newChannel;
     } catch (e: any) {
       const errorMessage = e.message || 'Failed to add API channel.';
       dialogService.showError(errorMessage, '添加失败');
@@ -63,13 +64,14 @@ export const useLlmConfigStore = defineStore('llmConfig', () => {
     }
   };
 
-  const updateChannel = async (channelData: ApiCredentialConfig) => {
+  const updateChannel = async (channelData: ApiCredentialConfig): Promise<ApiCredentialConfig> => {
     try {
       const updatedChannel = await llmConfigApi.saveApiChannel(channelData);
       const index = channels.value.findIndex(c => c.id === updatedChannel.id);
       if (index !== -1) {
         channels.value[index] = updatedChannel;
       }
+      return updatedChannel;
     } catch (e: any) {
       const errorMessage = e.message || 'Failed to update API channel.';
       dialogService.showError(errorMessage, '更新失败');
