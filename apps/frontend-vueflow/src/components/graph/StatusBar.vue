@@ -2,14 +2,15 @@
   <div
     class="status-bar bg-background-surface border-t border-border-base px-3 py-1.5 text-sm flex items-center justify-between shadow-inner">
     <div class="flex items-center space-x-4 flex-grow min-w-0">
-      <!-- Added flex-grow -->
       <div class="text-primary font-semibold flex-shrink-0">{{ projectName }}</div>
       <!-- 工作流菜单触发器 -->
       <div class="relative flex-shrink-0">
         <button ref="workflowButtonRef" @click="toggleWorkflowMenu" class="status-bar-button">
           工作流
         </button>
-        <WorkflowMenu ref="workflowMenuRef" v-if="showWorkflowMenu" @close="showWorkflowMenu = false" />
+        <div ref="workflowMenuContainerRef">
+          <WorkflowMenu v-if="showWorkflowMenu" @close="showWorkflowMenu = false" />
+        </div>
       </div>
       <TabBar class="flex-grow px-2" />
     </div>
@@ -20,7 +21,7 @@
         class="px-2 py-1 rounded border border-transparent text-text-muted hover:bg-neutral-softest focus:outline-none transition-all duration-150"
         :class="{
           'text-primary border-primary-soft bg-primary-softest': isDockedEditorVisible,
-          'text-text-muted': !isDockedEditorVisible, /* text-gray-500 is more like text-muted or text-secondary */
+          'text-text-muted': !isDockedEditorVisible,
         }">
         <svg v-if="isDockedEditorVisible" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" fill="none"
           viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -38,7 +39,7 @@
         class="px-2 py-1 rounded border border-transparent text-text-muted hover:bg-neutral-softest focus:outline-none transition-all duration-150"
         :class="{
           'text-primary border-primary-soft bg-primary-softest': isPreviewEnabled,
-          'text-text-muted': !isPreviewEnabled, /* text-gray-500 is more like text-muted or text-secondary */
+          'text-text-muted': !isPreviewEnabled,
         }">
         <svg v-if="isPreviewEnabled" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" fill="none"
           viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -54,12 +55,18 @@
             d="M2.458 12C3.732 7.943 7.523 5 12 5c1.556 0 3.04.28 4.416.793" />
         </svg>
       </button>
-      <!-- 执行按钮 -->
-      <button @click="handleExecuteWorkflow"
+
+      <!-- 执行/中止按钮 -->
+      <button v-if="isCurrentTabExecuting" @click="handleInterruptWorkflow"
+        class="px-3 py-1 rounded text-error-content font-medium bg-error/90 saturate-[.85] hover:bg-error/95 hover:saturate-[.75] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-error">
+        中止
+      </button>
+      <button v-else @click="handleExecuteWorkflow"
         class="px-3 py-1 rounded text-primary-content font-medium bg-success/90 saturate-[.85] hover:bg-success/95 hover:saturate-[.75] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-success">
         执行
       </button>
-      <!-- 显示工作流执行状态 -->
+
+      <!-- 显示当前标签页工作流执行状态 -->
       <span v-if="workflowStatusText" class="flex items-center space-x-1.5 text-xs font-medium ml-2" :class="{
         'text-warning': currentWorkflowStatus === ExecutionStatus.RUNNING,
         'text-success': currentWorkflowStatus === ExecutionStatus.COMPLETE,
@@ -73,22 +80,55 @@
           'bg-warning animate-pulse': currentWorkflowStatus === ExecutionStatus.RUNNING,
           'bg-success': currentWorkflowStatus === ExecutionStatus.COMPLETE,
           'bg-error': currentWorkflowStatus === ExecutionStatus.ERROR,
-          'bg-neutral': /* bg-gray-400 is more like neutral for an indicator */
+          'bg-neutral':
             currentWorkflowStatus === ExecutionStatus.IDLE ||
             currentWorkflowStatus === ExecutionStatus.QUEUED ||
             currentWorkflowStatus === ExecutionStatus.SKIPPED,
         }"></span>
         <span>{{ workflowStatusText }}</span>
       </span>
+
+      <!-- 队列状态 & 弹窗 -->
+      <div class="relative">
+        <div ref="queueStatusTriggerRef" @click="toggleQueuePopup"
+          class="flex items-center space-x-2 text-xs font-medium ml-4 cursor-pointer p-1 rounded-md hover:bg-neutral-softest">
+          <!-- 运行中状态 -->
+          <span class="flex items-center space-x-1.5" :class="{
+            'text-warning': runningCount > 0,
+            'text-text-muted': runningCount === 0
+          }">
+            <span class="inline-block h-2 w-2 rounded-full" :class="{
+              'bg-warning animate-pulse': runningCount > 0,
+              'bg-neutral': runningCount === 0
+            }"></span>
+            <span>运行: {{ runningCount }}</span>
+          </span>
+          <!-- 分隔符 -->
+          <span class="text-text-divider">|</span>
+          <!-- 排队中状态 -->
+          <span class="flex items-center space-x-1.5" :class="{
+            'text-info': pendingCount > 0,
+            'text-text-muted': pendingCount === 0
+          }">
+            <span class="inline-block h-2 w-2 rounded-full" :class="{
+              'bg-info': pendingCount > 0,
+              'bg-neutral': pendingCount === 0
+            }"></span>
+            <span>队列: {{ pendingCount }}</span>
+          </span>
+        </div>
+        <div ref="queuePopupContainerRef">
+          <QueueStatusPopup v-if="showQueuePopup" />
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
-// import type { Node as VueFlowNode, Edge as VueFlowEdge } from "@vue-flow/core"; // 不再直接在此处使用
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { onClickOutside } from "@vueuse/core";
-// import { klona } from "klona/full"; // 已移至 useWorkflowExecution
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useExecutionStore } from "@/stores/executionStore";
@@ -97,19 +137,11 @@ import { useProjectStore } from "@/stores/projectStore";
 import { storeToRefs } from "pinia";
 import WorkflowMenu from "@/components/graph/menus/WorkflowMenu.vue";
 import TabBar from "@/components/graph/TabBar.vue";
-// import { useWebSocket } from "@/composables/useWebSocket"; // 已移至 useWorkflowExecution
-import {
-  ExecutionStatus,
-  // WebSocketMessageType, // 已移至 useWorkflowExecution
-  // type ExecuteWorkflowPayload, // 已移至 useWorkflowExecution
-} from "@comfytavern/types";
-// import { // 已移至 useWorkflowExecution
-//   transformVueFlowToExecutionPayload,
-//   transformVueFlowToCoreWorkflow,
-// } from "@/utils/workflowTransformer";
-// import type { FlowExportObject } from "@vue-flow/core"; // 已移至 useWorkflowExecution
-import { useWorkflowExecution } from "@/composables/workflow/useWorkflowExecution"; // 导入新的 composable
-import { useDialogService } from '@/services/DialogService'; // 导入 DialogService
+import { ExecutionStatus } from "@comfytavern/types";
+import { useWorkflowExecution } from "@/composables/workflow/useWorkflowExecution";
+import { useDialogService } from '@/services/DialogService';
+import { useSystemStatusStore } from '@/stores/systemStatusStore';
+import QueueStatusPopup from './QueueStatusPopup.vue';
 
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore();
@@ -121,15 +153,42 @@ const { isDockedEditorVisible, toggleDockedEditor } = useEditorState();
 const projectStore = useProjectStore();
 const { currentProjectMetadata } = storeToRefs(projectStore);
 const projectName = computed(() => currentProjectMetadata.value?.name || "ComfyTavern");
-const dialogService = useDialogService(); // 获取 DialogService 实例
+const dialogService = useDialogService();
 
+const systemStatusStore = useSystemStatusStore();
+const { runningCount, pendingCount } = storeToRefs(systemStatusStore);
 const showWorkflowMenu = ref(false);
 const workflowButtonRef = ref<HTMLButtonElement | null>(null);
-const workflowMenuRef = ref<InstanceType<typeof WorkflowMenu> | null>(null);
-const targetElementRef = ref<HTMLElement | null>(null);
+const workflowMenuContainerRef = ref<HTMLDivElement | null>(null);
 
-// Computed property for the active tab's workflow data
-// 保留 activeWorkflowData，因为备用逻辑的讨论还在进行中
+const showQueuePopup = ref(false);
+const queuePopupContainerRef = ref<HTMLDivElement | null>(null);
+const queueStatusTriggerRef = ref<HTMLDivElement | null>(null);
+
+onClickOutside(
+  workflowMenuContainerRef,
+  (event: PointerEvent) => {
+    if (workflowButtonRef.value && !workflowButtonRef.value.contains(event.target as Node)) {
+      showWorkflowMenu.value = false;
+    }
+  },
+  {
+    ignore: [workflowButtonRef],
+  }
+);
+
+onClickOutside(
+  queuePopupContainerRef,
+  (event: PointerEvent) => {
+    if (queueStatusTriggerRef.value && !queueStatusTriggerRef.value.contains(event.target as Node)) {
+      showQueuePopup.value = false;
+    }
+  },
+  {
+    ignore: [queueStatusTriggerRef],
+  }
+);
+
 const activeWorkflowData = computed(() => {
   return activeTabId.value ? workflowStore.getWorkflowData(activeTabId.value) : null;
 });
@@ -139,6 +198,10 @@ const currentWorkflowStatus = computed(() => {
     return ExecutionStatus.IDLE;
   }
   return executionStore.getWorkflowStatus(activeTabId.value);
+});
+
+const isCurrentTabExecuting = computed(() => {
+  return currentWorkflowStatus.value === ExecutionStatus.RUNNING || currentWorkflowStatus.value === ExecutionStatus.QUEUED;
 });
 
 const workflowStatusText = computed(() => {
@@ -164,24 +227,12 @@ const toggleWorkflowMenu = () => {
   showWorkflowMenu.value = !showWorkflowMenu.value;
 };
 
-watch(workflowMenuRef, (newVal) => {
-  targetElementRef.value = newVal ? (newVal.$el as HTMLElement) : null;
-});
+const toggleQueuePopup = () => {
+  showQueuePopup.value = !showQueuePopup.value;
+};
 
-onClickOutside(
-  targetElementRef,
-  (event: PointerEvent) => {
-    if (workflowButtonRef.value && !workflowButtonRef.value.contains(event.target as Node)) {
-      showWorkflowMenu.value = false;
-    }
-  },
-  {
-    ignore: [workflowButtonRef],
-  }
-);
-
-// --- 执行工作流 ---
-const { executeWorkflow: executeActiveWorkflow } = useWorkflowExecution(); // 从 composable 获取执行函数
+// --- 执行与中断工作流 ---
+const { executeWorkflow: executeActiveWorkflow } = useWorkflowExecution();
 
 const handleExecuteWorkflow = async () => {
   console.log("触发执行工作流 (StatusBar)...");
@@ -192,26 +243,48 @@ const handleExecuteWorkflow = async () => {
     return;
   }
 
+  if (isCurrentTabExecuting.value) {
+    dialogService.showWarning("当前工作流已在执行或排队中。");
+    return;
+  }
+
   const currentElements = workflowStore.getElements(activeTabId.value);
   if (!currentElements || currentElements.length === 0) {
-    // 画布实时元素为空
-    const workflowDataFromStore = activeWorkflowData.value; // activeWorkflowData 是 computed(() => workflowStore.getWorkflowData(...))
+    const workflowDataFromStore = activeWorkflowData.value;
     if (workflowDataFromStore && workflowDataFromStore.nodes && workflowDataFromStore.nodes.length > 0) {
-      // Store 中有数据，说明可能只是画布未同步或未渲染完全
       console.warn("[StatusBar] 画布当前元素为空，但侦测到已加载的工作流数据。可能画布尚未完全渲染或同步。执行已取消。");
       dialogService.showError("画布尚未完全准备就绪，请稍等片刻或尝试重新加载工作流。");
     } else {
-      // Store 中也无数据，或数据无效
       console.error("[StatusBar] 无法执行：当前画布元素和工作流存储数据均为空或无效。");
       dialogService.showError("画布上没有元素可执行，或画布状态不正确。");
     }
-    return; // 阻止执行
+    return;
   }
-
-  // 画布元素看起来是存在的，调用 composable 执行
-  // composable 内部也会进行元素检查，作为双重保障
   await executeActiveWorkflow();
 };
+
+const handleInterruptWorkflow = async () => {
+  if (!activeTabId.value) {
+    dialogService.showError("没有活动的标签页来中断。");
+    return;
+  }
+  const promptId = executionStore.getCurrentPromptId(activeTabId.value);
+  if (!promptId) {
+    dialogService.showError("无法找到当前执行的ID，可能任务已完成或状态尚未同步。");
+    return;
+  }
+  await systemStatusStore.interrupt(promptId);
+};
+
+// --- 生命周期钩子 ---
+onMounted(() => {
+  // 获取初始的队列状态
+  systemStatusStore.fetchInitialSystemStats();
+});
+
+onUnmounted(() => {
+  // store 现在是全局监听，不需要在这里清理
+});
 </script>
 
 <style scoped>

@@ -28,3 +28,20 @@ export const RegexRuleSchema = z.object({
 });
 
 export const RegexRuleArraySchema = z.array(RegexRuleSchema);
+
+/**
+ * /api/system_stats 接口的响应体类型。
+ */
+export interface SystemStatsResponse {
+  maxConcurrentWorkflows: number;
+  runningExecutions: number;
+  pendingExecutions: number;
+}
+
+/**
+ * WebSocket 消息 'SYSTEM_QUEUE_UPDATE' 的载荷类型。
+ */
+export interface SystemQueueUpdatePayload {
+  runningExecutions: number;
+  pendingExecutions: number;
+}

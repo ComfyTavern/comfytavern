@@ -1,5 +1,6 @@
 import { readonly, watch, type Ref, computed } from "vue";
 import { useExecutionStore } from "@/stores/executionStore";
+import { useSystemStatusStore } from "@/stores/systemStatusStore"; // ++ 导入
 import { useTabStore } from "@/stores/tabStore";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useNodeStore } from "@/stores/nodeStore";
@@ -17,6 +18,7 @@ import type {
   NodeYieldPayload,
   WorkflowInterfaceYieldPayload,
   NodesReloadedPayload,
+  SystemQueueUpdatePayload, // ++ 导入
 } from "@comfytavern/types";
 
 import {
@@ -26,6 +28,7 @@ import {
 
 // --- Module-level state ---
 let executionStore: ReturnType<typeof useExecutionStore> | null = null;
+let systemStatusStore: ReturnType<typeof useSystemStatusStore> | null = null; // ++
 let tabStore: ReturnType<typeof useTabStore> | null = null;
 let workflowStore: ReturnType<typeof useWorkflowStore> | null = null;
 let nodeStore: ReturnType<typeof useNodeStore> | null = null;
@@ -65,6 +68,7 @@ let unsubscribeFromCore: (() => void) | null = null;
 
 const ensureStoresInitialized = () => {
   if (!executionStore) executionStore = useExecutionStore();
+  if (!systemStatusStore) systemStatusStore = useSystemStatusStore(); // ++
   if (!tabStore) tabStore = useTabStore();
   if (!workflowStore) workflowStore = useWorkflowStore();
   if (!nodeStore) nodeStore = useNodeStore();
@@ -121,6 +125,9 @@ const handleRawMessage = (message: WebSocketMessage<any>) => {
     } else if (message.type === WebSocketMessageType.NODES_RELOADED) {
       ensureStoresInitialized();
       nodeStore?.handleNodesReloadedNotification(message.payload as NodesReloadedPayload);
+    } else if (message.type === WebSocketMessageType.SYSTEM_QUEUE_UPDATE) { // ++
+      ensureStoresInitialized();
+      systemStatusStore?.updateQueueStatus(message.payload as SystemQueueUpdatePayload);
     }
     // 对于所有其他非执行类消息，直接返回，不做任何警告。
     return;

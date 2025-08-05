@@ -101,7 +101,7 @@
 import type { WorkflowData } from "@/types/workflowTypes";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useTabStore } from "@/stores/tabStore";
-import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager"; // <-- 新增导入
+import { useWorkflowManager } from "@/composables/workflow/useWorkflowManager";
 import { storeToRefs } from "pinia";
 import { ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
@@ -114,7 +114,7 @@ const { t } = useI18n();
 const sidebarRef = inject<{ setActiveTab: (tabId: string) => void }>("sidebarRef");
 const workflowStore = useWorkflowStore();
 const tabStore = useTabStore();
-const workflowManager = useWorkflowManager(); // <-- 新增实例化
+const workflowManager = useWorkflowManager();
 const dialogService = useDialogService();
 const { activeTabId } = storeToRefs(tabStore);
 const importInputRef = ref<HTMLInputElement | null>(null);
@@ -404,24 +404,6 @@ const handleRedoClick = () => {
   closeMenu();
 };
 
-// 添加键盘快捷键监听 (Ctrl+S, Ctrl+O)
-// onMounted(() => {
-//   const handleKeyDown = (event: KeyboardEvent) => {
-//     if (event.ctrlKey && event.key === 's') {
-//       event.preventDefault();
-//       handleSave();
-//     }
-//     // 导入没有标准快捷键，可以考虑 Ctrl+Shift+O 或其他
-//     // if (event.ctrlKey && event.key === 'o') {
-//     //   event.preventDefault();
-//     //   handleOpen(); // 这个是打开侧边栏的
-//     // }
-//   };
-//   window.addEventListener('keydown', handleKeyDown);
-//   onBeforeUnmount(() => {
-//     window.removeEventListener('keydown', handleKeyDown);
-//   });
-// });
 </script>
 
 <style scoped>

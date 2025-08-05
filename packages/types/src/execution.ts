@@ -135,6 +135,7 @@ export enum WebSocketMessageType {
   ERROR = "error",
   NODES_RELOADED = "NODES_RELOADED",
   WORKFLOW_INTERFACE_YIELD = "WORKFLOW_INTERFACE_YIELD", // 新增工作流接口流式输出消息类型
+  SYSTEM_QUEUE_UPDATE = "SYSTEM_QUEUE_UPDATE", // ++ 系统级队列状态更新
 }
 
 // 通用 WebSocket 消息结构
