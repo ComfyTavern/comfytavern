@@ -1,269 +1,177 @@
-# 通用工具调用协议 (Tavern Action Manifest - TAM)
+# Tavern Action Manifest (TAM) 协议
 
-**文档状态**: `修订中`
+**文档状态**: 具备可实施性。
 
-## 1. 引言
+### 1. 概述
 
-### 1.1. 背景与目的
+Tavern Action Manifest (TAM) 是一种为 ComfyTavern 平台设计的、标准化的工具调用协议。它旨在提供一个统一、简洁且对大型语言模型（LLM）友好的指令格式，使 Agent、工作流、UI 插件等任何组件都能以相同的方式请求执行工具。
 
-在 ComfyTavern 平台中，无论是复杂的自主 Agent、自动化的工作流，还是简单的用户界面，都需要一种标准化的方式来调用外部工具或执行预定义的功能。为了实现一个清晰、可靠且高效的调用机制，我们设计了 **Tavern Action Manifest (TAM)** 协议。
+#### 1.1. 设计原则
 
-本协议旨在定义一个**独立且通用的工具调用指令格式**。该协议的解析器不关心指令的来源——无论是来自大型语言模型 (LLM) 驱动的 Agent、开发者编写的脚本、用户通过 UI 的直接操作，还是其他系统的二次处理。其唯一职责是准确地解析符合 TAM 规范的指令，并调度执行。
+- **简洁性 (Simplicity)**: 使用最少的规则清晰地表达“做什么”和“用什么参数”。
+- **鲁棒性 (Robustness)**: 能够从复杂的文本中被可靠地提取，并内置容错机制以应对 LLM 生成的常见格式偏差。
+- **解耦 (Decoupling)**: TAM 协议本身只关注“调用”这一行为的载体。工具的发现、注册、权限管理和具体执行逻辑由平台其他模块负责。
+- **可读性 (Readability)**: 格式设计易于人类阅读、手写和调试，同时也便于 LLM 生成。
 
-### 1.2. 设计哲学：为所有调用者打造“趁手”的工具
+### 2. 核心语法
 
-TAM 协议的设计，旨在提供一种对人类和 AI 都友好的、极致鲁棒的指令格式。
+#### 2.1. 结构与边界
 
--   **尊重认知模式**: 协议的语法对 AI 而言应尽可能自然，接近其“母语”；对人类而言，则应清晰易读、易于手写。
--   **意图最小化 (Minimal Intent)**: 调用者只需表达“想做什么”，即最核心的意图，用最少、最直接的信息传递。
--   **封装复杂性 (Encapsulated Complexity)**: 所有繁琐的实现逻辑、格式转换、状态管理，都必须被封装在工具（或其适配器）内部。工具应该变得更“聪明”，从而让调用者可以更“专注”。
--   **支持批量操作**: 协议应支持将多步操作一次性提交，避免过多“请求-等待-响应”的循环打断连贯的思考或操作流程。
+一个 TAM 调用被包裹在一对明确的边界标记内。解析器会忽略边界标记的大小写及周围的空白字符（包括代码块的 ``` 围栏）。
 
-## 2. 核心协议：Tavern Action Manifest (TAM)
+- **边界标记**:
+  ```
+  <|[REQUEST_TOOL]|>
+  ... 键值对内容 ...
+  <|[END_TOOL]|>
+  ```
 
-### 2.1. 概述
+#### 2.2. 键值对格式
 
-TAM 采用一种以自定义特殊标记包裹、内部使用“关键字:「始」值「末」”格式的方案。
+- **格式**: `key:»»»value«««`
+- **键 (key)**: 描述参数的名称。
+- **值 (value)**: 参数的具体内容。可以包含任意字符，支持多行，且**无需任何转义**。这对于传递代码片段、JSON 对象或长篇文本至关重要。
+- **分隔符**: `»»»` 和 `«««` 是标准分隔符。解析器具备一定的容错能力，能处理备用分隔符（如 `>>>` 和 `<<<`）或尾部 分隔符缺失的情况，但会产生警告。
 
--   **AI 原生的边界标记**: 我们选用 `<|[REQUEST_TOOL]|>` 和 `<|[END_TOOL]|>` 作为边界。这种格式类似于 LLM 训练数据中常见的特殊标记 (Special Tokens)，对 AI 而言更自然，更不容易在生成时出错。
--   **极致鲁棒的参数传递**: 我们沿用并发展了 VCP 协议中最精华的 `key:「始」value「末」` 格式。这使得在传递包含代码、多行文本、JSON、XML 等任何特殊字符的复杂参数时，**无需进行任何转义**，极大地降低了出错率。
--   **清晰的指令结构**: 通过 `command` 关键字明确指定调用的工具，并通过数字后缀（如 `command1`, `filePath1`）实现对串联任务的优雅支持。
+#### 2.3. 键名标准化
 
-## 3. 协议规范详解
+为了稳健地处理 LLM 可能生成的不同风格的键名，解析器在处理前会对所有键名执行严格的标准化：
 
-### 3.1. 调用格式约定
+1.  移除首尾空白。
+2.  转换为全小写。
+3.  将所有非字母数字字符（如空格 ` `、连字符 `-`）统一替换为下划线 `_`。
+4.  折叠连续的下划线为单个。
 
-#### 3.1.1. 单一工具调用格式
+**示例**: `File-Path 1`、`filePath_1` 和 `File Path_1` 都会被标准化为 `file_path_1`。
 
-当任何调用者（Agent、脚本、UI）决定调用工具时，其输出应包含一个 `<|[REQUEST_TOOL]|>` 块。
+### 3. 关键特性
+
+#### 3.1. 多步骤串行执行
+
+TAM 支持在单个块内定义一个由多个步骤组成的串行工作流，从而减少通信开销。
+
+- **命令**: 使用带编号后缀的 `command_N` (如 `command_1`, `command_2`) 来定义执行步骤。
+- **参数**: 每个步骤的参数通过相同的编号后缀与命令关联 (如 `file_path_1` 属于 `command_1`)。
+- **执行顺序**: 解析器会根据命令的数字编号从小到大排序并依次执行。
+
+#### 3.2. 异步执行模型
+
+**核心原则：工具的执行模式（同步或异步）是其自身固有的属性，在定义时决定，而非在调用时指定。**
+
+- **工具定义**: 工具在平台注册时，必须声明其是同步还是异步。例如，一个文件写入操作可能是同步的，而一个耗时的图像生成任务则是异步的。
+- **执行器行为**: 当执行器收到 TAM 调用时，它会查询工具定义。
+  - **同步工具**: 执行器会阻塞并等待其完成，然后返回结果。
+  - **异步工具**: 执行器会立即启动任务并返回一个任务句柄（如 `task_id`），任务在后台运行。结果将通过平台级的事件总线（EventBus）在完成后通知调用方。
+- **对 LLM 的影响**: LLM 无需关心执行细节，只需按逻辑顺序调用工具即可，极大地简化了任务规划的复杂性。
+
+#### 3.3. 资源引用 (URI)
+
+为了高效传递大型数据（如文件、图像），应使用资源引用（URI）代替内容内联。
+
+- **格式**: `uri_[参数名]_[步骤编号]`
+- **示例**: `uri_image_1:»»»fam://project-data/images/input.png«««`
+- **说明**: `fam://` 是 ComfyTavern 内部的文件系统协议。执行器负责解析此 URI 并获取实际资源。
+
+### 4. 参数参考
+
+| 分类         | 字段模式                          | 示例                                  | 说明                                                                             |
+| :----------- | :-------------------------------- | :------------------------------------ | :------------------------------------------------------------------------------- |
+| **执行控制** | `command` / `command_N`           | `command_1:»»»File.Write«««`          | **必需**。指定要执行的工具的唯一 ID。`_N` 用于多步骤调用。                       |
+| **执行修饰** | `on_error_N`                      | `on_error_1:»»»continue«««`           | 定义第 N 步出错时的行为。`stop` (默认) 中断整个流程，`continue` 忽略错误并继续。 |
+|              | `retry_N`                         | `retry_1:»»»3«««`                     | 指定第 N 步失败后自动重试的次数。                                                |
+| **数据处理** | `type_hint_[param]_N`             | `type_hint_payload_2:»»»json«««`      | 为参数值提供类型提示，如 `json`, `base64`。执行器据此进行预处理。默认为 `text`。 |
+|              | `uri_[param]_N`                   | `uri_source_file_1:»»»fam://...«««`   | 通过 URI 传递参数值，用于大文件或二进制数据。                                    |
+| **共享参数** | `common_[param]`                  | `common_project_id:»»»proj-123«««`    | 定义一个对块内所有步骤都生效的公共参数。可被同名的步骤级参数覆盖。               |
+| **元数据**   | `request_id`                      | `request_id:»»»req-abc-123«««`        | 为整个 TAM 块提供唯一标识，用于日志追踪和幂等性控制。                            |
+|              | `comment`                         | `comment:»»»Debug note...«««`         | 注释。内容会被解析器忽略，仅用于调试或为人类阅读者提供上下文。                   |
+| **普通参数** | `[param_name]` / `[param_name]_N` | `file_path_1:»»»/path/to/file.txt«««` | 传递给工具的标准参数。                                                           |
+
+### 5. 使用示例
+
+#### 5.1. 简单的单步调用
 
 ```
-[可选的、调用者生成的自然语言文本，解释其决策或意图。]
-
 <|[REQUEST_TOOL]|>
-command:「始」ToolID「末」
-parameter_A:「始」参数值 A「末」
-parameter_B:「始」参数值 B，
-可以是多行。
-「末」
+command:»»»File.ApplyEdit«««
+file_path:»»»/path/to/main.js«««
+search_string:»»»console.log("old");«««
+replace_string:»»»console.log("new");«««
 <|[END_TOOL]|>
 ```
 
-#### 3.1.2. 串联任务格式 (Chained Task Format)
+#### 5.2. 复杂的多步工作流
 
-当需要在一个动作中按顺序执行多个命令时，使用数字后缀。解析器应按数字顺序依次执行。
+此示例演示了一个包含三步骤的报告生成流程：
+
+1.  调用图像工具生成封面（异步，出错也继续）。
+2.  向日志文件追加一行记录。
+3.  使用 JSON 负载和之前生成的封面图像（通过 URI 引用）构建最终报告。
 
 ```
 <|[REQUEST_TOOL]|>
-# 步骤 1: 创建文件
-command1:「始」FileOperator.WriteFile「末」
-filePath1:「始」/logs/today.log「末」
-content1:「始」任务开始...「末」
+request_id:»»»req-20250805-report«««
+common_output_dir:»»»fam://project-x/reports/today«««
+comment:»»»生成每日报告的完整流程«««
 
-# 步骤 2: 追加日志
-command2:「始」FileOperator.AppendFile「末」
-filePath2:「始」/logs/today.log「末」
-content2:「始」\n添加新记录。「末」
-<|[END_TOOL]|>
-```
+# 步骤 1: 异步生成封面图，如果失败则跳过
+command_1:»»»ImageTool.Generate«««
+on_error_1:»»»continue«««
+prompt_1:»»»一只戴着宇航头盔的猫头鹰，赛博朋克风格«««
+output_uri_1:»»»@{common_output_dir}/cover.png«««
 
-### 3.2. TAM 结构详解
+# 步骤 2: 同步写日志
+command_2:»»»File.Append«««
+file_path_2:»»»@{common_output_dir}/run.log«««
+content_2:»»»-- Report generation started at @{timestamp} --«««
 
--   **边界标记 (Boundary Markers)**: `<|[REQUEST_TOOL]|>` 和 `<|[END_TOOL]|>`，明确界定动作指令的范围。
--   **指令关键字 (Command Keyword)**: `command` (或 `command1`, `command2`...)，其值是工具的唯一 ID。
--   **参数键值对 (Parameter Key-Value)**: `key:「始」value「末」`。
-    -   `key`：参数名。解析器应对 `key` 的大小写、下划线不敏感，以提高容错性。
-    -   `「始」` 和 `「末」`：是固定不变的中文引号标记，用于界定参数值的开始和结束。它们之间的所有内容，包括换行符，都属于参数值。
-
-## 4. 工具、节点与工作流：概念澄清
-
-在 ComfyTavern 中，工具、节点和工作流是三个既相关又独立的核心概念。清晰地理解它们的区别与联系，对于构建可扩展、可维护的系统至关重要。
-
--   **节点 (Node)**:
-    -   **定义**: 节点是工作流的**基本构建块**。它代表一个原子的、可执行的操作单元，拥有明确的输入和输出。例如，`AddTwoNumbersNode`、`LoadImageNode`、`LlmPromptNode`。
-    -   **角色**: 节点的首要职责是服务于**工作流的构建**。创作者在画布上通过连接节点来编排复杂的逻辑。
-
--   **工作流 (Workflow)**:
-    -   **定义**: 工作流是由多个相互连接的节点组成的**有向无环图 (DAG)**。它封装了一套完整的、可执行的业务逻辑。
-    -   **角色**: 工作流是实现复杂任务（如 Agent 的审议循环、图像生成流程、数据处理管道）的主要方式。
-
--   **工具 (Tool)**:
-    -   **定义**: 工具是一个**可被外部调用的、具有明确功能定义的能力接口**。它向调用者（如 Agent、用户、脚本）暴露一个稳定的 ID 和一组参数，并返回一个可预测的结果。
-    -   **角色**: 工具的核心职责是**提供可供调用的能力**。它隐藏了内部的实现细节。
-    -   **与节点/工作流的关系**:
-        -   一个工具**可以封装**一个单一的节点。例如，可以创建一个名为 `math.add` 的工具，其内部实现是直接执行 `AddTwoNumbersNode`。
-        -   一个工具也**可以封装**一个完整的工作流。例如，可以创建一个名为 `image.generate_portrait` 的工具，其内部实现是执行一个包含多个步骤（如加载模型、设置提示词、采样、后处理）的复杂工作流。
-        -   一个工具还可以**直接由后端服务实现**，不依赖于任何节点或工作流。例如，一个名为 `system.get_current_time` 的工具可能只是调用一个后端函数。
-
-**核心区别**: **节点/工作流是“实现”，而工具是“接口”**。工具系统本身是独立的，它只关心工具的注册、发现和调用，而不关心工具背后是由节点、工作流还是原生代码实现的。这种分离使得我们可以将任何复杂的功能（无论它如何实现）都封装成一个标准化的工具，供平台各处调用。
-
-## 5. 扩展与第三方工具集成
-
-ComfyTavern 的强大之处在于其可扩展性。工具系统与平台的插件架构紧密集成，允许开发者和社区贡献者方便地添加第三方工具。其设计遵循 [`DesignDocs/architecture/node-package-extension-architecture.md`](DesignDocs/architecture/node-package-extension-architecture.md:1) 中定义的规范。
-
-### 5.1. 通过插件注册新工具
-
-开发者可以通过创建插件来为平台引入新的工具。
-
-1.  **创建插件**: 遵循插件目录结构，创建一个新的插件包。
-2.  **实现工具逻辑**:
-    -   如果工具是基于新节点的，则在插件的 `nodes/` 目录下创建节点文件。
-    -   如果工具是基于工作流的，则可以将工作流定义文件 (`.json`) 作为插件的一部分。
-    -   如果工具是纯后端服务，则可以在插件的后端逻辑中实现。
-3.  **声明工具**: 在插件的清单文件 `plugin.yaml` 中，增加一个新的 `tools` 部分来声明该插件提供的工具。
-
-### 5.2. 工具声明的分离原则
-
-为了保持 `plugin.yaml` 的职责单一（仅用于插件级注册），工具的具体定义被分离到专门的工具声明文件中。
-
-#### 5.2.1. `plugin.yaml` 中的角色
-
-在 `plugin.yaml` 中，我们只声明工具定义文件所在的目录。
-
-```yaml
-# ... (plugin.yaml 的其他部分)
-
-# (可选) 声明此插件提供的工具
-# plugin.yaml 只负责声明工具所在的目录，以便 ToolManager 发现它们。
-tools:
-  # 工具定义文件所在的目录，相对于 plugin.yaml
-  entry: ./tools
-```
-
-#### 5.2.2. 工具声明文件 (`*.tool.json`)
-
-在上述 `entry` 指向的目录（例如 `tools/`）下，可以包含一个或多个 `*.tool.json` 文件，每个文件定义一个工具。
-
-**示例: `tools/my-script-tool.tool.json`**
-```json
+# 步骤 3: 构建最终报告
+command_3:»»»Report.Build«««
+type_hint_payload_3:»»»json«««
+payload_3:»»»
 {
-  "id": "my-awesome-plugin:my_script_tool",
-  "displayName": "我的脚本工具",
-  "description": "一个封装了外部脚本的工具。",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "url": {
-        "type": "string",
-        "description": "要处理的目标URL"
-      }
-    },
-    "required": ["url"]
-  },
-  "implementation": {
-    "type": "script",
-    "command": "bun run scripts/my-script.ts"
-  }
+  "title": "每日运营报告",
+  "coverImageUri": "@{common_output_dir}/cover.png",
+  "logFileUri": "@{common_output_dir}/run.log",
+  "author": "咕咕"
 }
-```
-
-这种分离确保了工具的定义可以独立于插件的元数据进行管理和扩展。
-
-### 5.3. 工具的加载与执行
-
--   **加载**: 平台的 `PluginLoader` 在加载插件时，会解析 `plugin.yaml`。如果发现 `tools` 部分，它会将指定的工具目录路径 (`entry`) 告知 `ToolManager`。`ToolManager` 随后会扫描该路径下的所有 `*.tool.json` 文件，解析并注册这些工具。
--   **执行**: 当 `ToolManager` 收到一个 TAM 调用请求时，它会：
-    1.  根据 `command` 字段中的工具 ID 查找已注册的工具。
-    2.  校验传入的参数是否符合工具声明文件中的 `parameters` schema。
-    3.  根据工具的 `implementation` 定义，调度相应的执行器（例如，脚本执行器、服务调用器）。
-    4.  将执行结果返回给调用者。
-
-通过这套机制，第三方工具可以无缝集成到平台中，并被 Agent 或其他任何调用者使用。
-
-## 6. 工具调用指南
-
-本节为需要生成 TAM 指令的调用者（特别是 LLM）提供指导。
-
-### 6.1. 能力的发现与声明
-
--   **对于 Agent**: Agent 可用的工具集由其 `agent_profile.json` 中的 `tool_ids_inventory` 字段静态声明。这保证了 Agent 行为的安全性和可预测性。Agent 的核心审议工作流应被设计为能够理解并选择调用这些已声明的能力。
--   **对于其他调用者**: 其他调用者（如 UI 面板、脚本）可以通过查询 `ToolManager` 提供的 API (`GET /api/tools`) 来获取当前所有已注册、可用的工具列表及其参数定义。
-
-### 6.2. LLM Prompt 设计要点
-
-当使用 LLM 生成 TAM 时，Prompt 的设计至关重要。
-
-1.  **明确角色与目标**: 在系统指令中，告知 LLM 其角色和当前的高级目标。
-2.  **提供可用工具清单**: 将该 LLM 可用的工具列表（ID、描述、参数）作为上下文提供。
-3.  **提供动态知识 (RAG)**: 对于复杂的工具，可以结合 RAG，从知识库中检索该工具的详细用法示例、最佳实践、错误案例等，作为更丰富的上下文。
-4.  **引导决策与输出**: 指示 LLM 基于提供的上下文和知识参考，决策并生成一个符合 TAM 规范的 `<|[REQUEST_TOOL]|>` 块。强调 `command` 必须是其被赋予的能力之一。
-
-**示例 Prompt 片段**:
-
-```
-[当前任务]
-用户要求修改 main.js 文件中的一行代码。
-
-[可用工具参考]
-- Tool ID: FileOperator.ApplyEdit
-  - 描述: 用于精确替换文件中的一行或多行文本。
-  - 参数:
-    - filePath (string, required): 文件的绝对路径。
-    - search_string (string, required): 要查找并替换的旧内容。
-    - replace_string (string, required): 用于替换的新内容。
-
-[你的决策]
-请基于上述信息，生成一个符合 TAM 规范的工具调用指令来完成任务。
-
-[LLM 的输出]
-好的，我将使用 FileOperator.ApplyEdit 工具来修改文件。
-
-<|[REQUEST_TOOL]|>
-command:「始」FileOperator.ApplyEdit「末」
-filePath:「始」/path/to/your/project/main.js「末」
-search_string:「始」console.log("old message");「末」
-replace_string:「始」console.log("new message");「末」
+«««
 <|[END_TOOL]|>
 ```
 
-## 7. 运行时架构与执行流程
+_注意: `@{...}` 是一种平台侧的变量替换语法，TAM 本身不负责解析，仅作为纯文本传递。_
 
-本节阐述了 ComfyTavern 系统中，支撑 TAM 协议得以解析、执行和反馈的核心架构。
+#### 5.3. 宽容解析示例
 
-### 7.1. 核心组件与职责
+假设 LLM 生成了以下不规范的 TAM 块：
 
--   **调用者 (Caller)**: 任何生成 TAM 指令的实体，如 `AgentRuntime`、UI 面板、脚本等。
--   **工具管理器 (ToolManager)**: 平台的工具注册与管理中心。负责从插件和核心服务中加载工具定义，并提供工具查询和执行的统一入口。
--   **执行引擎 (ExecutionEngine)**: 平台的通用工作流执行器。
--   **节点/工作流/服务**: 工具的具体实现。
-
-### 7.2. 执行流程详解
-
-1.  **生成 (Generation)**: **调用者**根据其内部逻辑（如 Agent 的审议、用户的点击）生成一段包含 TAM 块的文本或指令。
-2.  **提交 (Submission)**: 调用者将此指令提交给**工具管理器 (ToolManager)** 的执行端点。
-3.  **解析与校验 (Parsing & Validation)**: `ToolManager` 解析文本，提取 TAM 块，并根据其内部注册的工具清单校验 `command` 的有效性及其参数的合法性。
-4.  **调度与执行 (Dispatch & Execution)**:
-    -   `ToolManager` 根据工具的实现类型，将任务分发给相应的后端执行器。
-    -   **节点/工作流封装的工具**: `ToolManager` 请求 `ExecutionEngine` 执行对应的节点或工作流。
-    -   **服务实现的工具**: `ToolManager` 直接调用相应的后端服务函数。
-5.  **反馈 (Feedback)**: 执行结果（成功或失败信息）由 `ToolManager` 返回给原始的**调用者**。调用者可以根据此反馈进行下一步操作（例如，Agent 将结果作为下一次审议的输入，形成闭环）。
-
-### 7.3. 架构流程图
-
-```mermaid
-sequenceDiagram
-    participant Caller as 调用者 (AgentRuntime, UI, Script)
-    participant ToolManager as 工具管理器 (ToolManager)
-    participant ExecEngine as 工作流引擎 (ExecutionEngine)
-    participant ToolImpl as 工具实现 (Node/Workflow/Service)
-
-    Caller->>ToolManager: 提交 TAM 调用指令
-    ToolManager->>ToolManager: 解析 TAM, 校验 Command 和参数
-    alt 校验成功
-        ToolManager->>ToolImpl: 根据实现类型调度执行
-        Note right of ToolManager: 如果是Node/Workflow, 则通过ExecEngine
-        ToolImpl-->>ToolManager: 返回执行结果
-        ToolManager-->>Caller: 返回最终结果
-    else 校验失败
-        ToolManager-->>Caller: 返回错误信息
-    end
-
-    Note over Caller: 根据返回结果进行下一步操作
+```
+<|[REQUEST_TOOL]|>
+  # 我的计划
+  Command_1: >>>File.Write<<<
+  File-Path 1:»»» /logs/today.log «««
+  CONTENT1:»»»start…
+  another line«««
+<|[END_TOOL]|>
 ```
 
-## 8. 未来展望
+**解析器处理结果**:
 
--   **工具权限与作用域**: 引入更精细的权限系统，控制不同调用者（如不同用户、不同 Agent）可以访问的工具集。
--   **异步工具与回调**: 支持长时间运行的异步工具，并通过 WebSockets 或回调机制返回结果。
--   **工具链的动态组合**: 探索允许 LLM 在一次调用中动态组合多个工具的输出与输入，形成临时的工具链。
--   **可视化工具市场**: 在前端提供一个可视化的“工具市场”或“能力中心”，让用户可以浏览、搜索和了解所有可用的工具。
+1.  **标准化键名**: `Command_1` → `command_1`, `File-Path 1` → `file_path_1`, `CONTENT1` → `content_1`。
+2.  **提取值**: 正确处理了 `>>>...<<<` 和 `»»»...«««` 分隔符，并修剪了值两端的空白。
+3.  **忽略注释**: `# 我的计划` 行被解析器忽略，前端UI可以显示注释内容。
+4.  **最终产出结构化数据**:
+    - `commands[0]`: `{ index: 1, toolId: "File.Write", params: { file_path: "/logs/today.log", content: "start…\nanother line" } }`
+    - `warnings`: `["mixed_delimiters_used"]`
+
+### 6. 职责边界
+
+- TAM **仅定义调用载体**。
+- 工具的命名空间、参数校验、权限管理、执行逻辑、错误处理与重试策略等，均由平台的**工具管理与执行模块**负责。
+- 平台可在不改变 TAM 语法的前提下，独立演进上述能力。
+
+### 7. 最佳实践
+
+- **优先生成规范格式**: 尽管解析器很宽容，但直接生成规范的 TAM 效率最高、最可靠。
+- **合并顺序任务**: 将多个有顺序依赖的操作合并到一个 TAM 块的 `command_1/2/3…` 中，以减少通信往返。
+- **引用大型数据**: 对于图像、音频或大型 JSON，使用 `uri_*` 字段传递引用，而不是直接内联。
+- **善用元数据**: 在手写调试或复杂场景下，使用 `comment` 和 `request_id` 增强可读性和可追溯性。
