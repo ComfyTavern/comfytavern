@@ -109,7 +109,7 @@
 | 接口ID (Key) | 显示名称 (DisplayName) | 数据类型 (DataType) | 描述 |
 | :--- | :--- | :--- | :--- |
 | `user_input` | 用户输入 | `STRING` | 从聊天界面接收到的用户发送的文本消息。 |
-| `llm_config` | LLM 配置 | `OBJECT` | (可选) 用于覆盖默认的 LLM 参数，例如 `temperature`, `max_tokens` 等。 |
+| `llm_config` | LLM 配置 | `STRING` | (可选) 一个包含 LLM 参数的 JSON 字符串，用于覆盖默认设置，例如 `'{"temperature": 0.7}'`。 |
 
 #### 输出 (Outputs)
 
