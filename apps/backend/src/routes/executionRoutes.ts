@@ -91,8 +91,8 @@ export const executionApiRoutes = new Elysia({ prefix: '/api' }) // 添加 /api 
     }
   })
 
-  // POST /api/interrupt/{promptId}: 中断指定的执行
-  .post('/interrupt/:promptId', ({ params, set }) => {
+  // DELETE /api/interrupt/{promptId}: 中断指定的执行
+  .delete('/interrupt/:promptId', ({ params, set }) => {
     const { promptId } = params;
     try {
       const success = scheduler.interruptExecution(promptId as NanoId);
@@ -111,7 +111,7 @@ export const executionApiRoutes = new Elysia({ prefix: '/api' }) // 添加 /api 
   }, {
     params: t.Object({ promptId: t.String() }),
     detail: {
-      summary: 'Interrupt a running or queued execution',
+      summary: 'Interrupt a running or queued execution (via DELETE)',
       description: 'Sends an interrupt signal to the specified workflow execution if it is currently running or waiting in the queue.',
       tags: ['Execution'],
     }

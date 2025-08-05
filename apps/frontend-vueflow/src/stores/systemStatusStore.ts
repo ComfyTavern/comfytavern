@@ -45,6 +45,9 @@ export const useSystemStatusStore = defineStore('systemStatus', () => {
       const lists = await getExecutions();
       runningList.value = lists.running;
       pendingList.value = lists.pending;
+      // 同步更新计数，确保UI一致性
+      runningCount.value = lists.running.length;
+      pendingCount.value = lists.pending.length;
     } catch (error) {
       console.error('[SystemStatusStore] Failed to fetch execution lists:', error);
     }

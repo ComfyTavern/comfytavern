@@ -292,7 +292,7 @@ export class ExecutionEngine {
         if (this.isInterrupted) {
           console.log(`[Engine-${this.promptId}] Execution interrupted before node ${nodeId}.`);
           this.skipDescendants(nodeId, ExecutionStatus.INTERRUPTED); // 标记后续节点为中断
-          throw new Error('Execution interrupted by user.');
+          break; // 静默退出循环，不再抛出错误
         }
 
         // 如果节点已经被标记为 SKIPPED 或 ERROR (例如，由于上游节点失败)，则跳过执行
@@ -334,7 +334,7 @@ export class ExecutionEngine {
             console.log(`[Engine-${this.promptId}] Node ${nodeId} execution interrupted. Marking as INTERRUPTED and skipping descendants.`);
             this.nodeStates[nodeId] = ExecutionStatus.INTERRUPTED;
             this.skipDescendants(nodeId, ExecutionStatus.INTERRUPTED);
-            throw new Error('Execution interrupted by user during node execution.'); // 抛出以终止整个 run
+            break; // 静默退出循环，不再抛出错误
           }
           // 对于 COMPLETE 或其他非错误/中断状态，继续执行
         } catch (error: any) {
@@ -373,10 +373,9 @@ export class ExecutionEngine {
 
       // 最终状态判断
       if (this.isInterrupted) {
-        const interruptErrorMsg = 'Execution interrupted by user.';
         console.log(`[Engine-${this.promptId}] Workflow execution was interrupted.`);
-        // loggingService.logWorkflowEnd(ExecutionStatus.INTERRUPTED, interruptErrorMsg) // 会在 catch 中处理
-        throw new Error(interruptErrorMsg); // 确保外层 catch 捕获并记录 INTERRUPTED
+        // 由于上游已经处理了日志和状态，这里直接返回即可
+        return { status: ExecutionStatus.INTERRUPTED };
       }
 
       if (hasExecutionError) {
@@ -404,11 +403,11 @@ export class ExecutionEngine {
       }
 
     } catch (error: any) {
-      // 这个 catch 块主要处理 run 方法内部直接抛出的错误，
-      // 例如拓扑排序失败、中断信号、或者在 for 循环中因中断而抛出的错误。
-      // 对于单个节点执行失败，如果上面没有正确处理并返回，也可能在这里捕获。
-      console.error(`[Engine-${this.promptId}] Workflow execution failed with an exception:`, error);
-      const finalStatus = this.isInterrupted ? ExecutionStatus.INTERRUPTED : ExecutionStatus.ERROR;
+      // 这个 catch 块现在主要处理非中断引发的意外错误，
+      // 例如拓扑排序失败、或节点执行中的其他未捕获异常。
+      console.error(`[Engine-${this.promptId}] Workflow execution failed with an unexpected exception:`, error);
+      // 既然中断不再抛出错误，这里的 finalStatus 应该总是 ERROR
+      const finalStatus = ExecutionStatus.ERROR;
       const errorMessage = error.message || String(error);
       loggingService.logWorkflowEnd(finalStatus, errorMessage)
         .catch(err => console.error(`[Engine-${this.promptId}] Failed to log workflow failure:`, err));
@@ -877,7 +876,8 @@ export class ExecutionEngine {
           // 直接从生成器迭代并将数据写入源流
           for await (const chunk of nodeGenerator) {
             if (this.isInterrupted) {
-              throw new Error('Execution interrupted during stream pulling.');
+              console.warn(`[Engine-${promptId}] PULLER_TASK: Interrupted during stream pulling for ${nodeIdentifier}.`);
+              break; // 静默退出循环
             }
             if (!sourceStream.writable) {
               // 如果流不再可写（例如因为下游错误），则停止拉取
@@ -1169,7 +1169,7 @@ export class ExecutionEngine {
         // console.debug(`[Engine-${this.promptId}] [${consumerId}] Received chunk. Index: ${chunkIndex}. Broadcasting... Payload: ${JSON.stringify(chunk)}`);
         if (this.isInterrupted) {
           console.warn(`[Engine-${this.promptId}] [${consumerId}] Interrupting data event for interface stream ${interfaceKey} at chunk ${chunkIndex}`);
-          stream.destroy(new Error('Interrupted by user'));
+          stream.destroy(); // 静默销毁流，这将触发 'close' 或 'end'
           return;
         }
         const payload: WorkflowInterfaceYieldPayload = {

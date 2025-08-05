@@ -176,6 +176,9 @@ export class ConcurrencyScheduler {
 
     // 发送最终状态更新
     this._sendStatusUpdate(promptId, finalStatus, errorInfo);
+    
+    // 广播队列状态变更
+    this._broadcastQueueUpdate();
 
     // TODO: 将结果存入 HistoryService
 
@@ -300,13 +303,18 @@ export class ConcurrencyScheduler {
       console.log(`[Scheduler] Found running execution ${promptId}. Attempting interrupt via engine...`);
       // 调用 ExecutionEngine 的 interrupt 方法
       if (runningExecution.engineInstance?.interrupt()) {
-        console.log(`[Scheduler] Interrupt signal sent to engine for ${promptId}.`);
-        // 引擎的 run 方法会捕获中断并返回 INTERRUPTED 状态，
-        // _handleExecutionCompletion 会处理后续逻辑。
+        console.log(`[Scheduler] Interrupt signal sent to engine for ${promptId}. Immediately handling completion...`);
+        // 立即处理完成逻辑，将任务从运行列表移除并广播状态，不再等待引擎自己结束。
+        // 这能确保前端状态立即刷新。
+        this._handleExecutionCompletion(promptId, ExecutionStatus.INTERRUPTED);
         return true;
       } else {
         console.warn(`[Scheduler] Failed to send interrupt signal to engine for ${promptId} (already interrupted or engine missing?).`);
-        // 即使发送失败，如果任务仍在运行列表中，最终也会被清理
+        // 如果发送信号失败，但任务仍在运行列表中，也尝试清理它
+        if (this.runningExecutions.has(promptId)) {
+          console.warn(`[Scheduler] Forcefully cleaning up stale running execution ${promptId}.`);
+          this._handleExecutionCompletion(promptId, ExecutionStatus.INTERRUPTED, { message: "Stale execution cleanup." });
+        }
         return false;
       }
     }
@@ -318,11 +326,24 @@ export class ConcurrencyScheduler {
       this.waitingQueue.splice(queueIndex, 1);
       // 发送状态更新 (中断)
       this._sendStatusUpdate(promptId, ExecutionStatus.INTERRUPTED);
+      // 广播队列状态变更
+      this._broadcastQueueUpdate();
       // TODO: 可能需要通知 HistoryService 记录中断的排队任务
       return true;
     }
 
     console.log(`[Scheduler] Execution ${promptId} not found in running or queue for interruption.`);
     return false;
+  }
+
+  /**
+   * 向所有客户端广播当前的队列状态。
+   */
+  private _broadcastQueueUpdate(): void {
+    const payload = {
+      runningExecutions: this.runningExecutions.size,
+      pendingExecutions: this.waitingQueue.length,
+    };
+    this.wsManager.broadcast('SYSTEM_QUEUE_UPDATE', payload);
   }
 }

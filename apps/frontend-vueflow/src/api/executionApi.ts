@@ -27,8 +27,8 @@ export async function getExecutions(): Promise<ExecutionsListResponse> {
  * @returns 后端返回的成功或失败信息。
  */
 export async function interruptExecution(promptId: NanoId): Promise<{ success: boolean; message: string }> {
-  const { post } = useApi();
-  // post 请求通常需要一个 body，即使为空
-  const response = await post<{ success: boolean; message: string }>(`/interrupt/${promptId}`, {});
+  const { del } = useApi();
+  // 使用 DELETE 请求，不需要 body
+  const response = await del<{ success: boolean; message: string }>(`/interrupt/${promptId}`);
   return response;
 }
