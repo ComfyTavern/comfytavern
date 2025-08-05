@@ -105,7 +105,8 @@ class BoundedBuffer<T> {
       this.error = error;
       // 立即 reject 所有等待者
       while (this.waitingResolvers.length > 0) {
-        this.waitingResolvers.shift()!.reject(this.error);
+        const resolver = this.waitingResolvers.shift()!;
+        resolver.reject(this.error);
       }
     }
   }
@@ -135,15 +136,16 @@ class BoundedBuffer<T> {
   [Symbol.asyncIterator](): AsyncGenerator<T, void, undefined> {
     const next = (): Promise<IteratorResult<T>> => {
       return new Promise<IteratorResult<T>>((resolve, reject) => { // Modified to allow rejection
+        // 首先检查是否已经有错误
+        if (this.isDone && this.error) {
+          reject(this.error);
+          return;
+        }
+        
         if (this.buffer.length > 0) {
           resolve({ value: this.buffer.shift()!, done: false });
         } else if (this.isDone) {
-          if (this.error) {
-            // This will cause the for-await-of loop to throw.
-            reject(this.error); // Reject the promise if there's an error
-          } else {
-            resolve({ value: undefined, done: true });
-          }
+          resolve({ value: undefined, done: true });
         } else {
           this.waitingResolvers.push({ resolve, reject }); // 存储 resolve 和 reject
         }
@@ -349,18 +351,22 @@ export class ExecutionEngine {
       //    必须在等待任何 backgroundTasks 之前调用，以确保所有消费者都已启动！
       //    _processAndBroadcastFinalOutputs 内部会调用 _handleStreamInterfaceOutput,
       //    后者将 Promise 加入 this.backgroundTasks 并开始消费。
-      console.log(`[Engine-${this.promptId}] Starting interface output processing...`);
       await this._processAndBroadcastFinalOutputs();
-      console.log(`[Engine-${this.promptId}] Interface output processing started. Background tasks count: ${this.backgroundTasks.length}`);
 
 
       // 2. 等待所有后台任务 (包括所有节点的 streamLifecyclePromise 和所有接口的 _handleStreamInterfaceOutput Promise)
       const allBackgroundPromises = [...this.backgroundTasks]; // 复制
       if (allBackgroundPromises.length > 0) {
-        console.log(`[Engine-${this.promptId}] Waiting for ALL ${allBackgroundPromises.length} background tasks (node streams + interface streams) to complete...`);
+        // console.log(`[Engine-${this.promptId}] Waiting for ALL ${allBackgroundPromises.length} background tasks (node streams + interface streams) to complete...`);
         // 这里会等待所有生产者和消费者完成
-        await Promise.all(allBackgroundPromises);
-        console.log(`[Engine-${this.promptId}] ALL background tasks completed.`);
+        try {
+          await Promise.all(allBackgroundPromises);
+          // console.log(`[Engine-${this.promptId}] ALL background tasks completed successfully.`);
+        } catch (backgroundError: any) {
+          console.error(`[Engine-${this.promptId}] One or more background tasks failed:`, backgroundError?.message || backgroundError, backgroundError?.stack);
+          // 背景任务失败视为存在执行错误
+          hasExecutionError = true;
+        }
       }
 
       // 移除原有的 阶段1 / 阶段3 的 Promise.all 和 this.backgroundTasks = []
@@ -819,64 +825,40 @@ export class ExecutionEngine {
     const nodeIdentifier = `${definition.displayName || definition.type}(${nodeId})`;
     const { promptId } = context;
 
-    const buffer = new BoundedBuffer<ChunkPayload>({ limit: 1000 }); // 可配置
-    const sourceStream = Stream.Readable.from(buffer, { objectMode: true });
+    // 1. 创建一个 PassThrough 流作为所有下游的源头
+    const sourceStream = new Stream.PassThrough({ objectMode: true });
 
     const streamOutputsToReturn: Record<string, Stream.Readable> = {};
     const consumerPromises: Promise<any>[] = [];
 
-    // DEBUG 日志
-    sourceStream.on('error', (err) => { /* console.error(`[Engine-${promptId}] DEBUG_STREAM: sourceStream for ${nodeIdentifier} errored:`, err) */ });
-    sourceStream.on('end', () => { /* console.log(`[Engine-${promptId}] DEBUG_STREAM: sourceStream for ${nodeIdentifier} ended.`) */ });
-    sourceStream.on('close', () => { /* console.log(`[Engine-${promptId}] DEBUG_STREAM: sourceStream for ${nodeIdentifier} closed.`) */ });
-
-
-    // 1. 设置多路广播 (Multicaster)
+    // 2. 设置多路广播 (Multicaster)
     // 分支 A: 事件总线
     const eventBusStream = new Stream.PassThrough({ objectMode: true });
-    eventBusStream.on('error', (err) => { /* console.error(`[Engine-${promptId}] DEBUG_STREAM: eventBusStream for ${nodeIdentifier} errored:`, err) */ });
-    eventBusStream.on('end', () => { /* console.log(`[Engine-${promptId}] DEBUG_STREAM: eventBusStream for ${nodeIdentifier} ended.`) */ });
-    eventBusStream.on('close', () => { /* console.log(`[Engine-${promptId}] DEBUG_STREAM: eventBusStream for ${nodeIdentifier} closed.`) */ });
     sourceStream.pipe(eventBusStream);
-    consumerPromises.push(this.consumeForEventBus(eventBusStream, nodeId, promptId)); // consumeForEventBus 将自行获取 identifier
+    consumerPromises.push(this.consumeForEventBus(eventBusStream, nodeId, promptId));
 
     // 分支 B: 连接下游节点
     for (const outputKey in definition.outputs) {
       if (definition.outputs[outputKey].isStream) {
         const downstreamConnections = this.getDownstreamStreamConnections(nodeId, outputKey);
-
-        // 检查此输出是否也连接到工作流的最终输出接口
         const isConnectedToInterface = Object.values(this.payload.outputInterfaceMappings || {}).some(
           mapping => mapping.sourceNodeId === nodeId && mapping.sourceSlotKey === outputKey
         );
 
         const passThroughForOutput = new Stream.PassThrough({ objectMode: true });
-        passThroughForOutput.on('error', (err) => { /* console.error(`[Engine-${promptId}] DEBUG_STREAM: passThroughForOutput '${outputKey}' for ${nodeIdentifier} errored:`, err) */ });
-        passThroughForOutput.on('end', () => { /* console.log(`[Engine-${promptId}] DEBUG_STREAM: passThroughForOutput '${outputKey}' for ${nodeIdentifier} ended.`) */ });
-        passThroughForOutput.on('close', () => { /* console.log(`[Engine-${promptId}] DEBUG_STREAM: passThroughForOutput '${outputKey}' for ${nodeIdentifier} closed.`) */ });
-
         sourceStream.pipe(passThroughForOutput);
-        streamOutputsToReturn[outputKey] = passThroughForOutput; // 这个流将返回给 executeNode 并存入 nodeResults
+        streamOutputsToReturn[outputKey] = passThroughForOutput;
 
-        // 只有当流既没有连接到下游节点，也没有连接到最终输出接口时，才认为它是未被消费的
         if (downstreamConnections.length === 0 && !isConnectedToInterface) {
-          // 如果流输出没有连接，确保它被消费以防止 sourceStream 阻塞
-          // console.log(`[Engine-${promptId}] Stream output '${outputKey}' for node ${nodeIdentifier} has no downstream connections. Consuming to prevent stall.`);
-          passThroughForOutput.resume(); // 确保数据被丢弃，防止阻塞上游
+          passThroughForOutput.resume();
           consumerPromises.push(streamEndPromise(passThroughForOutput).catch(err => {
             console.warn(`[Engine-${promptId}] Error ensuring unconsumed stream output '${outputKey}' for node ${nodeIdentifier} ended:`, err.message);
-            // 即使这里出错，也应该让 Promise resolve 或以特定方式处理，避免阻塞 Promise.all
-            // 对于这个 catch，我们只是记录警告，Promise 仍然会因错误而 reject，由 streamLifecyclePromise 的 catch 处理
-            throw err; // 重新抛出，让 streamLifecyclePromise 的 catch 捕获
+            throw err;
           }));
         }
-        // 如果有下游连接，下游节点会负责消费 passThroughForOutput。
-        // 我们可以选择性地在这里也添加 finished(passThroughForOutput) 到 consumerPromises
-        // 以确保即使下游节点消费逻辑有误，这个分支的流也能结束。
-        // 但这可能导致重复的错误处理或日志。暂时让下游节点负责。
       }
     }
-    // 2. 创建并管理流生命周期 Promise
+    // 3. 创建并管理流生命周期 Promise
     let batchResultResolver!: (value: Record<string, any> | void | PromiseLike<Record<string, any> | void>) => void;
     let batchResultRejector!: (reason?: any) => void;
     const batchDataPromise = new Promise<Record<string, any> | void>((resolve, reject) => {
@@ -885,60 +867,60 @@ export class ExecutionEngine {
     });
 
     const streamLifecyclePromise = (async () => {
-      console.log(`[Engine-${promptId}] streamLifecyclePromise started for ${nodeIdentifier}`);
       let batchResult: Record<string, any> | void = undefined;
       let pullerError: any = null;
+      let consumerError: any = null;
 
+      // 4. 定义并启动生产者任务 (pullerTask)
       const pullerTask = (async () => {
-        console.log(`[Engine-${promptId}] PULLER_TASK_STARTED for node ${nodeIdentifier}`);
-        let chunkCounter = 0;
         try {
-          let nextResult = await nodeGenerator.next();
-          console.log(`[Engine-${promptId}] PULLER_TASK initial nextResult.done=${nextResult.done}`);
-
-          while (!nextResult.done) {
-            chunkCounter++;
+          // 直接从生成器迭代并将数据写入源流
+          for await (const chunk of nodeGenerator) {
             if (this.isInterrupted) {
               throw new Error('Execution interrupted during stream pulling.');
             }
-            if (buffer.isFull()) {
-              const overflowError = new BufferOverflowError(`Node ${nodeIdentifier} stream buffer overflow.`);
-              buffer.signalError(overflowError);
-              throw overflowError;
+            if (!sourceStream.writable) {
+              // 如果流不再可写（例如因为下游错误），则停止拉取
+              console.warn(`[Engine-${promptId}] PULLER_TASK: sourceStream for ${nodeIdentifier} is not writable. Stopping pull.`);
+              break;
             }
-
-            console.log(`[Engine-${promptId}] PULLER_TASK pushing chunk ${chunkCounter} to buffer.`);
-            await buffer.push(nextResult.value);
-            console.log(`[Engine-${promptId}] PULLER_TASK pushed chunk ${chunkCounter}. Getting next...`);
-
-            nextResult = await nodeGenerator.next();
-            console.log(`[Engine-${promptId}] PULLER_TASK nextResult.done=${nextResult.done} for chunk after ${chunkCounter}`);
+            sourceStream.write(chunk);
           }
-
-          batchResult = nextResult.value;
-          console.log(`[Engine-${promptId}] PULLER_TASK loop finished after ${chunkCounter} chunks.`);
+          // nodeGenerator.return() 会返回生成器的最终值
+          batchResult = await nodeGenerator.return();
         } catch (error: any) {
-          console.error(`[Engine-${promptId}] Puller task for ${nodeIdentifier} caught error after ${chunkCounter} chunks: ${error.message}`, error.stack);
+          console.error(`[Engine-${promptId}] Puller task for node ${nodeIdentifier} caught error:`, error.message);
           pullerError = error;
-          buffer.signalError(error);
+          // 直接销毁源流，这将向下游传播错误
+          if (sourceStream.writable) {
+            sourceStream.destroy(error);
+          }
+          // 重新抛出错误，以便 streamLifecyclePromise 可以捕获它
+          throw error;
         } finally {
-          console.log(`[Engine-${promptId}] PULLER_TASK_FINALLY for node ${nodeIdentifier}.`);
-          if (!pullerError) {
-            buffer.signalEnd();
+          // console.log(`[Engine-${promptId}] PULLER_TASK_FINALLY for node ${nodeIdentifier}.`);
+          // 如果没有错误，则正常结束流
+          if (!pullerError && sourceStream.writable) {
+            sourceStream.end();
           }
         }
       })();
 
+      // 5. 等待所有任务完成
       try {
-        console.log(`[Engine-${promptId}] streamLifecyclePromise awaiting all tasks for ${nodeIdentifier}`);
-        await Promise.all([pullerTask, ...consumerPromises]);
-        console.log(`[Engine-${promptId}] streamLifecyclePromise all tasks completed for ${nodeIdentifier}`);
-
-        if (pullerError) {
-          throw pullerError;
+        try {
+          await pullerTask;
+        } catch (err) {
+          // pullerTask 已经处理了 sourceStream.destroy()，我们只需要确保 consumer 也完成了
+          // 并且重新抛出错误以触发外层的 catch
+          throw err;
+        }
+        
+        if (consumerPromises.length > 0) {
+          // Promise.all 会在第一个 promise 拒绝时立即拒绝
+          await Promise.all(consumerPromises);
         }
 
-        console.log(`[Engine-${promptId}] Node ${nodeIdentifier} stream processing finished successfully.`);
         batchResultResolver(batchResult);
         this.nodeStates[nodeId] = ExecutionStatus.COMPLETE;
         const durationMs = Date.now() - nodeStartTime;
@@ -946,9 +928,8 @@ export class ExecutionEngine {
         loggingService.logNodeComplete(nodeId, fullType, resultForLoggingAndEvent, durationMs)
           .catch(err => console.error(`[Engine-${promptId}] Failed to log stream node complete for ${nodeIdentifier}:`, err));
         this.sendNodeComplete(nodeId, resultForLoggingAndEvent);
-
       } catch (error: any) {
-        console.error(`[Engine-${promptId}] streamLifecyclePromise for ${nodeIdentifier} caught error:`, error.message, error.stack);
+        console.error(`[Engine-${promptId}] streamLifecyclePromise for ${nodeIdentifier} caught error:`, error.message);
         batchResultRejector(error);
 
         const durationMs = Date.now() - nodeStartTime;
@@ -957,6 +938,8 @@ export class ExecutionEngine {
         loggingService.logNodeError(nodeId, fullType, error, durationMs)
           .catch(err => console.error(`[Engine-${promptId}] Failed to log stream node error for ${nodeIdentifier}:`, err));
         this.sendNodeError(nodeId, errorMessage);
+        // 重新抛出错误，以确保 streamLifecyclePromise 本身失败
+        throw error;
       }
     })();
     this.backgroundTasks.push(streamLifecyclePromise);
@@ -973,26 +956,31 @@ export class ExecutionEngine {
     } else {
       nodeIdentifier = `UnknownNode(${nodeId})`;
     }
-    console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_STARTED for node ${nodeIdentifier}`);
-    
-    const iterator = readable[Symbol.asyncIterator]();
-    try {
-      let chunkCounter = 0;
-      while (true) {
-        console.log(`[Engine-${promptId}] Consumer for ${nodeIdentifier} awaiting next chunk...`);
-        const result = await iterator.next();
-        console.log(`[Engine-${promptId}] Consumer for ${nodeIdentifier} got result: done=${result.done}`);
+    return new Promise((resolve, reject) => {
+      readable.on('error', (err) => {
+        console.error(`[Engine-${promptId}] consumeForEventBus for node '${nodeIdentifier}' caught error via 'error' event:`, err.message);
+        loggingService.logStreamError(promptId, nodeId, err, 'NODE_YIELD')
+          .catch(logErr => console.error(`[Engine-${promptId}] Failed to log NODE_YIELD error for ${nodeIdentifier}:`, logErr));
+        const finalErrorPayload: NodeYieldPayload = {
+          promptId,
+          sourceNodeId: nodeId,
+          yieldedContent: { type: 'error_chunk', content: `Stream consumption error: ${err.message}` },
+          isLastChunk: true,
+        };
+        this.wsManager.publishToScene(promptId, 'NODE_YIELD', finalErrorPayload);
+        reject(err); // This will reject the promise that streamLifecyclePromise is waiting for
+      });
 
-        if (result.done) {
-          console.log(`[Engine-${promptId}] Consumer for ${nodeIdentifier} received done signal.`);
-          break;
-        }
+      readable.on('end', () => {
+        resolve();
+      });
 
-        chunkCounter++;
-        const chunk = result.value as ChunkPayload;
+      readable.on('close', () => {
+        resolve();
+      });
+
+      readable.on('data', (chunk: ChunkPayload) => {
         const isLastChunk = chunk.type === 'finish_reason_chunk' || chunk.type === 'error_chunk';
-
-        console.log(`[ExecutionEngine] [Node ${nodeId}] [CHUNK ${chunkCounter}] Received chunk from node: ${JSON.stringify(chunk)}`);
         const payload: NodeYieldPayload = {
           promptId,
           sourceNodeId: nodeId,
@@ -1000,26 +988,15 @@ export class ExecutionEngine {
           isLastChunk: isLastChunk,
         };
         this.wsManager.publishToScene(promptId, 'NODE_YIELD', payload);
-        console.log(`[ExecutionEngine] [Node ${nodeId}] [CHUNK ${chunkCounter}] Broadcasted NODE_YIELD.`);
         loggingService.logStreamChunk(promptId, nodeId, chunk, isLastChunk, 'NODE_YIELD')
           .catch(err => console.error(`[Engine-${promptId}] Failed to log NODE_YIELD chunk for ${nodeIdentifier}:`, err));
+      });
+
+      // Ensure the stream is in flowing mode
+      if (readable.isPaused()) {
+        readable.resume();
       }
-      console.log(`[Engine-${promptId}] consumeForEventBus for node ${nodeIdentifier}: while loop completed.`);
-    } catch (error: any) {
-      console.error(`[Engine-${promptId}] consumeForEventBus for node ${nodeIdentifier} caught error during stream consumption:`, error);
-      loggingService.logStreamError(promptId, nodeId, error, 'NODE_YIELD')
-        .catch(err => console.error(`[Engine-${promptId}] Failed to log NODE_YIELD error for ${nodeIdentifier}:`, err));
-      const finalErrorPayload: NodeYieldPayload = {
-        promptId,
-        sourceNodeId: nodeId,
-        yieldedContent: { type: 'error_chunk', content: `Stream consumption error: ${error.message}` },
-        isLastChunk: true,
-      };
-      this.wsManager.publishToScene(promptId, 'NODE_YIELD', finalErrorPayload);
-      throw error;
-    } finally {
-      console.log(`[Engine-${promptId}] CONSUME_FOR_EVENT_BUS_FINISHED for node ${nodeIdentifier}`);
-    }
+    });
   }
   private sendNodeComplete(nodeId: NanoId, output: any): void {
     const payload: NodeCompletePayload = {

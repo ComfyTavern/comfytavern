@@ -138,9 +138,11 @@ export class ConcurrencyScheduler {
     try {
       console.log(`[Scheduler] Executing engine.run() for ${promptId}...`);
       const result = await engine.run(); // 调用引擎执行
-      console.log(`[Scheduler] Execution ${promptId} finished with status: ${result.status}`);
+      const resultStatus = result?.status;
+      const resultError = result?.error;
+      // console.log(`[Scheduler] Execution engine for ${promptId} completed with status: ${resultStatus}, error: ${typeof resultError === 'object' ? (resultError?.message || JSON.stringify(resultError)) : String(resultError)}`);
       // 使用引擎返回的最终状态和错误信息
-      this._handleExecutionCompletion(promptId, result.status, result.error);
+      this._handleExecutionCompletion(promptId, resultStatus, resultError);
 
     } catch (error: any) {
       // 捕获引擎内部未处理的异常或中断错误
@@ -170,7 +172,6 @@ export class ConcurrencyScheduler {
         return;
     }
 
-    console.log(`[Scheduler] Handling completion for ${promptId} with status ${finalStatus}.`);
     this.runningExecutions.delete(promptId);
 
     // 发送最终状态更新
@@ -221,9 +222,11 @@ export class ConcurrencyScheduler {
   private _sendStatusUpdate(promptId: NanoId, status: ExecutionStatus, errorInfo?: any): void {
     const payload: ExecutionStatusUpdatePayload = { promptId, status };
     if (status === ExecutionStatus.ERROR && errorInfo) {
-      payload.errorInfo = { message: errorInfo.message, stack: errorInfo.stack }; // 提取关键错误信息
+      // 确保 errorInfo 是一个对象，如果不是，则包装它
+      const safeErrorInfo = (typeof errorInfo === 'object' && errorInfo !== null) ? errorInfo : { message: String(errorInfo) };
+      payload.errorInfo = { message: safeErrorInfo.message, stack: safeErrorInfo.stack }; // 提取关键错误信息
     }
-    console.log(`[Scheduler] Publishing status update for ${promptId}: ${status}`);
+    // console.log(`[Scheduler] Publishing status update for ${promptId}: ${status}. Payload: ${JSON.stringify(payload)}`);
     // 咕咕：关键修复！从广播改为向特定场景发布，确保只有相关的客户端收到状态更新。
     this.wsManager.publishToScene(promptId, 'EXECUTION_STATUS_UPDATE', payload);
   }
