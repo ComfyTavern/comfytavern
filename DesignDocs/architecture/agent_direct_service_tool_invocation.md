@@ -47,7 +47,7 @@
 - **AgentRuntime**: ComfyTavern 中负责驱动 Agent 审议-行动循环、解析 Agent 输出、协调工具/技能执行的核心运行时组件。
 - **`ExternalScriptExecutionService`**: 一个具体的后端服务示例，负责安全地执行外部脚本。
 - **Tool Metadata (`*.tool.json`)**: 定义直接服务工具元数据的 JSON 文件，包含工具 ID、描述、参数、输出结构、处理器映射等信息。
-- **`<ACTION>` Protocol**: Agent 用来输出其工具/技能调用指令的 XML 格式协议，定义在 [`DesignDocs/architecture/agent_tool_invocation_protocol.md`](DesignDocs/architecture/agent_tool_invocation_protocol.md:0)。
+- **Tavern Action Manifest (TAM)**: Agent 用来输出其工具/技能调用指令的标准化协议，定义在 [`DesignDocs/architecture/TAM_tools.md`](DesignDocs/architecture/TAM_tools.md:1)。
 
 ---
 
@@ -557,7 +557,7 @@ class DirectToolRegistryService {
 
 本章节将详细描述 Agent 从决定调用一个直接服务工具到接收执行结果的完整端到端流程。
 
-### 3.1. Agent 决策与 `<ACTION>` 生成
+### 3.1. Agent 决策与 TAM 生成
 
 1.  **工具感知与选择**:
 
@@ -565,46 +565,47 @@ class DirectToolRegistryService {
     - Agent 通过某种机制（初期可能是 `AgentRuntime` 提供的工具列表，未来可能通过集成了知识库的 RAG 系统）获取可用直接服务工具的元数据（特别是 `toolId`, `description`, `parameters`）。
     - LLM 会理解工具的 `description` 来判断其适用性，并参考 `parameters` 的描述来准备输入。
 
-2.  **`<ACTION>` XML 生成**:
+2.  **TAM 块生成**:
 
-    - 一旦 Agent 决定调用某个直接服务工具，它会生成一个符合 [`agent_tool_invocation_protocol.md`](agent_tool_invocation_protocol.md:0) 中定义的 `<ACTION>` XML 结构的指令。
-    - 关键字段填充：
-
-      - `<tool_id>`: 填入目标直接服务工具的 `toolId` (例如, `"core:execute-python-script"`)。
-      - `<inputs>`: 包含一个或多个 `<input>` 子元素，每个子元素的 `name` 属性对应工具元数据中 `parameters` 定义的一个参数名，其内容（通常是 CDATA 区块）是该参数的值。
-        - 如果参数是复杂类型（如对象或数组），其内容应为该复杂结构的 JSON 字符串表示。
-        - Agent 需要确保提供的参数名和值类型与工具元数据中定义的 `parameters` schema 相符。
-
-    - **示例 `<ACTION>` XML**:
-      ```xml
-      <ACTION>
-        <tool_id>core:execute-python-script</tool_id>
-        <inputs>
-          <input name="scriptPath"><![CDATA[user_scripts/data_analysis/analyzer.py]]></input>
-          <input name="inputData"><![CDATA[{"data_url": "http://example.com/data.csv", "threshold": 0.75}]]></input>
-          <input name="timeoutMs"><![CDATA[30000]]></input>
-        </inputs>
-      </ACTION>
+    - 一旦 Agent 决定调用某个直接服务工具，它会生成一个符合 **Tavern Action Manifest (TAM)** 规范的指令块。
+    - **关键部分**:
+      - **边界标记**: 使用 `<|[REQUEST_TOOL]|>` 和 `<|[END_TOOL]|>` 包裹整个调用。
+      - **键值对**: 使用 `key:»»»value«««` 格式定义参数。
+      - **`command`**: `command` 或 `command_1` 键用于指定要执行的工具的 `toolId`。
+      - **参数**: 其他键根据工具元数据中定义的 `parameters` 来命名。对于多步骤调用，使用 `_N` 后缀。
+    - **示例 TAM 块**:
+      ```
+      <|[REQUEST_TOOL]|>
+      command:»»»core:execute-python-script«««
+      scriptPath:»»»user_scripts/data_analysis/analyzer.py«««
+      inputData:»»»
+      {
+        "data_url": "http://example.com/data.csv",
+        "threshold": 0.75
+      }
+      «««
+      timeoutMs:»»»30000«««
+      <|[END_TOOL]|>
       ```
 
 ### 3.2. `AgentRuntime` 解析与分发
 
-1.  **接收与解析 `<ACTION>`**:
+1.  **接收与解析 TAM**:
 
-    - `AgentRuntime` 接收到 Agent 输出的 `<ACTION>` XML 字符串。
-    - 使用 XML 解析器将其解析为结构化的数据对象。
+    - `AgentRuntime` 接收到 Agent 输出的包含 TAM 块的文本。
+    - 使用 TAM 解析器从文本中提取并解析出结构化的调用请求。解析器会处理边界标记、键值对提取和键名标准化。
 
 2.  **工具定义检索**:
 
-    - `AgentRuntime` 从 `<tool_id>` 字段提取工具 ID。
+    - `AgentRuntime` 从解析后的 TAM 数据中提取 `command` 或 `command_N` 的值作为 `toolId`。
     - 调用 `DirectToolRegistryService.getToolById(toolId)` 来获取该工具的完整定义 (`ToolDefinition`)。
     - 如果工具未找到或未注册，应向 Agent 返回错误信息。
 
 3.  **输入参数校验**:
-    - `AgentRuntime` 提取 `<inputs>` 中的所有参数。
+    - `AgentRuntime` 提取 TAM 中除 `command` 外的其他参数。
     - 根据检索到的 `ToolDefinition` 中的 `parametersSchema` (例如，预编译的 Zod schema)，对 Agent 提供的输入参数进行严格校验。
       - 校验参数名称是否存在、是否为必需参数、数据类型是否匹配、是否符合枚举或格式限制等。
-      - 对于声明为 JSON 字符串的复杂类型参数，需要先解析 JSON 字符串，然后再用对应的子 schema 进行校验。
+      - 对于需要特定格式（如 JSON）的参数，TAM 解析器或 `AgentRuntime` 会根据元数据中的 `type_hint` 进行预处理。
     - 如果参数校验失败，应向 Agent 返回包含详细错误信息的反馈，说明哪个参数不符合要求。
 
 ### 3.3. 工具执行
@@ -643,17 +644,17 @@ class DirectToolRegistryService {
 
 3.  **格式化反馈**:
 
-    - `AgentRuntime` 将执行结果转换为 Agent (LLM) 易于理解的格式。这通常是一个文本字符串，作为 `<OBSERVATION>` 的内容返回给 Agent。
+    - `AgentRuntime` 将执行结果转换为 Agent (LLM) 易于理解的格式。这通常是一个包含工具执行结果的文本块，作为对 Agent 行动的观察 (Observation)。
     - **成功时**:
       - 可以是一个简短的成功摘要，后跟 JSON 格式的 `outputData`。
-      - 例如: `"Tool core:execute-python-script executed successfully. Output: {\"processed_items\": 10, \"report_url\": \"/reports/analyzer_123.html\"}"`
+      - 例如: `"Tool 'core:execute-python-script' executed successfully. Output: {\"processed_items\": 10, \"report_url\": \"/reports/analyzer_123.html\"}"`
     - **失败时**:
       - 应包含清晰的错误信息，包括错误类型、错误消息，以及可能的错误来源（例如，参数校验失败、脚本执行错误、服务内部错误）。
-      - 例如: `"Tool core:execute-python-script failed. Error type: ScriptError. Message: Division by zero in script. Details: Traceback (most recent call last)..."`
-      - 或者: `"Tool core:execute-python-script failed. Error type: ParameterValidationError. Message: Input parameter 'timeoutMs' must be an integer."`
+      - 例如: `"Tool 'core:execute-python-script' failed. Error type: ScriptError. Message: Division by zero in script. Details: Traceback (most recent call last)..."`
+      - 或者: `"Tool 'core:execute-python-script' failed. Error type: ParameterValidationError. Message: Input parameter 'timeoutMs' must be an integer."`
 
 4.  **提供给 Agent**:
-    - 格式化后的反馈作为 `<OBSERVATION>` 的内容，与 `<ACTION>` 对应的 `<tool_id>` 一起，被送回给 Agent。
+    - 格式化后的反馈作为观察结果，被送回给 Agent。
     - Agent 根据这个观察结果，进行下一步的思考和行动。
 
 ### 3.5. 流程图 (Mermaid)
@@ -665,88 +666,33 @@ sequenceDiagram
     participant DTR as DirectToolRegistryService
     participant ExecService as ExecutionService (e.g., ExternalScriptExecutionService or other backend service)
 
-    A->>AR: <ACTION> (tool_id, inputs)
-    AR->>DTR: getToolById(tool_id)
+    A->>AR: Generates text containing a TAM block
+    AR->>AR: Parse TAM block to get structured request (command, params)
+    AR->>DTR: getToolById(command)
     DTR-->>AR: toolDefinition
-    AR-->>AR: Validate inputs against toolDefinition.parametersSchema
-    alt Inputs Invalid
-        AR-->>A: <OBSERVATION> (Error: Parameter Validation Failed)
-    else Inputs Valid
+    AR-->>AR: Validate params against toolDefinition.parametersSchema
+    alt Params Invalid
+        AR-->>A: Formats and returns Observation (Error: Parameter Validation Failed)
+    else Params Valid
         AR->>ExecService: Invoke tool (e.g., executeScript(params) or service.method(params))
         Note over ExecService: Handles actual execution, security, etc.
         ExecService-->>AR: executionResult (success/failure, outputData/error)
         AR-->>AR: (Optional) Validate outputData against toolDefinition.outputSchema
-        AR-->>A: <OBSERVATION> (Formatted success output or error details)
+        AR-->>A: Formats and returns Observation (Formatted success output or error details)
     end
 ```
 
 这个流程确保了 Agent 的工具调用请求得到正确的解析、校验、安全执行，并将结果以合适的方式反馈给 Agent，形成一个完整的闭环。
 
-## 4. 协议补充建议 (`agent_tool_invocation_protocol.md`)
+## 4. 与 Tavern Action Manifest (TAM) 的关系
 
-本设计引入的“直接服务型原子工具”机制，在很大程度上可以复用现有的 [`agent_tool_invocation_protocol.md`](agent_tool_invocation_protocol.md:0) 中定义的 `<ACTION>` XML 协议。然而，为了确保清晰性和未来的可维护性，有必要对该协议文档进行一些补充说明，或者至少确保 `AgentRuntime` 的实现能够正确处理这种新型工具。
+本设计完全建立在 **Tavern Action Manifest (TAM)** 协议之上，该协议的详细规范见 [`DesignDocs/architecture/TAM_tools.md`](DesignDocs/architecture/TAM_tools.md:1)。
 
-### 4.1. 现有协议回顾
+- **统一的调用协议**: 所有直接服务工具的调用都通过标准的 TAM 格式由 Agent 发起。Agent 无需关心工具是节点、工作流还是直接服务，它只生成统一的 TAM 指令。
+- **元数据驱动**: `*.tool.json` 文件中的元数据（如 `description`, `parameters`）是 Agent (LLM) 能够正确生成 TAM 调用的关键。
+- **`AgentRuntime` 的角色**: `AgentRuntime` 作为 TAM 的核心消费者和解释器，负责解析 TAM 块，并根据工具元数据中的 `handler` 信息，将请求分发到正确的执行服务（如 `ExternalScriptExecutionService`）或工作流执行引擎。
 
-当前的 [`agent_tool_invocation_protocol.md`](agent_tool_invocation_protocol.md:0) 主要定义了：
-
-- Agent 通过 `<ACTION>` XML 标签输出其决策，其中包含：
-  - `<tool_id>`: 要调用的工具的唯一标识符。
-  - `<inputs>`: 一个或多个 `<input name="param_name">value</input>` 元素，用于传递参数。
-- 协议中提到“原子工具”通常被映射为一个平台内的“节点”，并通过一个单节点的工作流在 `ExecutionEngine` 中执行。
-- 执行结果通过 `<OBSERVATION>` XML 标签反馈给 Agent。
-
-### 4.2. 针对直接服务工具的补充说明
-
-虽然 `<ACTION>` XML 结构本身具有足够的通用性，但对于直接服务工具，其背后的处理逻辑与节点型工具有显著差异。以下几点需要在协议文档或相关实现文档中得到体现：
-
-1.  **工具类型的识别与分发**:
-
-    - `AgentRuntime` 在接收到 `<tool_id>` 后，需要通过查询 `DirectToolRegistryService`（或统一的工具注册表）来获取工具的完整定义，特别是其 `handler.type`（例如 `"service-method"`, `"external-script"`）。
-    - 这个 `handler.type` 是 `AgentRuntime` 进行正确执行路径分发的关键。它决定了是调用后端服务的特定方法，还是通过 `ExecutionEngine` 执行一个节点封装的工作流。
-    - 建议在协议文档中明确，`<tool_id>` 不再仅仅局限于指向节点，也可以指向由特定服务处理的直接操作。
-
-2.  **参数校验的责任方**:
-
-    - 对于直接服务工具，其输入参数的校验（基于工具元数据中定义的 `parameters` JSON Schema）主要由 `AgentRuntime` 在分发前完成。
-    - 这与节点型工具可能更多依赖节点自身在其 `execute` 方法内部进行参数校验的模式有所不同。当然，被调用的后端服务方法自身也应有防御性的参数校验。
-
-3.  **执行上下文**:
-
-    - 直接服务工具的执行不一定涉及 `ExecutionEngine` 或工作流上下文。它们可能直接在某个后端服务的上下文中执行。
-    - 协议文档应提及这种可能性，以避免读者误认为所有工具调用都必然经过工作流执行引擎。
-
-4.  **`handler` 元数据的重要性**:
-    - 应强调 `*.tool.json` 元数据中的 `handler` 对象（包含 `type`, `serviceName`, `methodName`, `scriptPath`, `language` 等）对于 `AgentRuntime` 正确路由和执行直接服务工具至关重要。
-
-### 4.3. 是否需要修改 `<ACTION>` 协议本身？
-
-**初步评估：不需要。**
-
-当前的 `<ACTION>` XML 结构（`<tool_id>` 和 `<inputs>`）对于调用直接服务工具是足够通用的。
-
-- `<tool_id>` 可以唯一标识一个直接服务工具。
-- `<inputs>` 可以承载其所需的参数。
-
-核心的差异在于 `AgentRuntime` 如何解释这个 `tool_id` 并根据其关联的元数据（特别是 `handler` 信息）来路由执行请求，而不是协议本身需要改变。
-
-如果未来出现更复杂的直接服务工具调用模式，例如：
-
-- 需要传递独立于业务参数的、标准化的执行上下文信息（如用户身份令牌、特定的事务 ID）。
-- 需要更细致地控制工具执行的某些方面（如安全策略覆盖、资源配置等），且这些不适合作为普通 `inputs`。
-
-届时可以考虑在 `<ACTION>` 标签下增加新的可选子元素来承载这些额外信息。但就目前的设计而言，现有结构已能满足需求。
-
-### 4.4. 文档更新建议
-
-建议在 [`agent_tool_invocation_protocol.md`](agent_tool_invocation_protocol.md:0) 文档中：
-
-1.  **增加一节或附注**: 专门说明“直接服务型原子工具”的存在及其与“节点型原子工具”在执行路径上的区别。
-2.  **澄清 `<tool_id>` 的范围**: 明确 `<tool_id>` 可以指向节点，也可以指向由 `AgentRuntime` 直接分派给后端服务的操作。
-3.  **强调元数据驱动**: 简要提及 `AgentRuntime` 会依赖工具的元数据（特别是 `handler` 定义）来进行正确的调用分发。
-4.  **链接参考**: 可以考虑从该协议文档链接到本《Agent 调用直接运行类型工具设计草案》文档，以获取更详细的设计信息。
-
-这样做可以保持主协议的简洁性，同时为理解不同类型工具的调用提供必要的上下文。
+本设计是对 TAM 协议应用的一个具体实现和深化，展示了 TAM 如何支持超越传统节点执行的、更广泛和直接的后端服务集成。因此，无需对 TAM 协议本身进行修改，只需确保 `AgentRuntime` 和相关服务能够正确处理指向直接服务工具的 TAM 调用即可。
 
 ## 5. 安全考量总结
 

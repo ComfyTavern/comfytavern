@@ -108,8 +108,8 @@ ComfyTavern 平台旨在构建一个强大、灵活且可扩展的 Agent 系统�
       - 决定向事件总线发布一个或多个事件（例如，通知其他 Agent 或触发其他系统响应）。
       - 决定更新自身的私有状态 (`PrivateState`) 或请求更新世界状态 (`WorldState`)。
       - 决定进入反思/学习阶段 (Learning & Reflection)。
-- **输出决策 (Output Decision)**：审议工作流的最终输出是 Agent 的决策。当需要调用工具或技能时，决策会以**通用工具调用协议 (Tavern Action Manifest - TAM)** 的格式输出。该格式封装了所有必要的调用信息，例如：
-  - 需要调用的工具 ID (无论是原子工具还是封装了技能工作流的工具) 及其参数，包裹在 `<|[REQUEST_TOOL]|>...<|[END_TOOL]|>` 块中。
+- **输出决策 (Output Decision)**：审议工作流的最终输出是 Agent 的决策。当需要调用工具或技能时，决策会以 **Tavern Action Manifest (TAM)** 的格式输出。该协议的详细规范见 [`DesignDocs/architecture/TAM_tools.md`](DesignDocs/architecture/TAM_tools.md:1)。TAM 格式封装了所有必要的调用信息，例如：
+  - 需要调用的工具 ID 及其参数，包裹在 `<|[REQUEST_TOOL]|>...<|[END_TOOL]|>` 块中，并使用 `key:»»»value«««` 的格式定义键值对。
   - 其他非工具类决策，如直接更新私有状态、发布事件或进入反思，可以通过特定的内部工具或专门的工作流输出来实现。
 
 #### 2.1.2. 私有状态 (PrivateState)：Agent 的短期记忆与个性化数据
@@ -236,7 +236,7 @@ Agent 定义（我们暂定其文件名为 `agent_profile.json`，后续可根�
 "tool_ids_inventory": [
   // (可选) 此 Agent 类型可使用的“工具”的 ID 列表。
   "string" // e.g., "FileOperator.WriteFile", "image.generate_portrait", "system.get_current_time"
-  // 这些是 Agent 在其审议循环中可以决策调用的、遵循 TAM 协议的能力。
+  // 这些是 Agent 在其审议循环中可以决策调用的、遵循 Tavern Action Manifest (TAM) 协议的能力。
   // 其实现可以是节点、工作流或后端服务。
 ],
   ],
@@ -771,12 +771,12 @@ Agent 也可以通过观察和修改共享的 `WorldState` 来实现间接的协
       - **生成玩家选项**: 为了让玩家能够与场景互动，GM Agent 可能会接着决定为玩家生成一组行动选项。此时，它的审议工作流会输出一个符合 **TAM 协议** 的工具调用指令，例如：
         ```
         <|[REQUEST_TOOL]|>
-        command:「始」ui.request_user_choice「末」
-        context_text:「始」你正站在森林边缘，面前有一条蜿蜒的小径和一座布满苔藓的古老雕像。你打算？「末」
-        options_prompt:「始」提供三个选项：1. 沿着小径探索；2. 检查古老的雕像；3. 呼喊看是否有人。「末」
+        command:»»»ui.request_user_choice«««
+        context_text:»»»你正站在森林边缘，面前有一条蜿蜒的小径和一座布满苔藓的古老雕像。你打算？«««
+        options_prompt:»»»提供三个选项：1. 沿着小径探索；2. 检查古老的雕像；3. 呼喊看是否有人。«««
         <|[END_TOOL]|>
         ```
-      - 这个 TAM 指令被 `ToolManager` 解析并执行。`ui.request_user_choice` 工具的实现会与前端交互，将选项渲染为可点击的按钮。用户的选择随后会作为新的事件或上下文，触发 GM Agent 的下一轮审议。这体现了 Agent 如何通过标准的工具调用协议来主动驱动和塑造用户体验。
+      - 这个 TAM 指令被平台的工具执行器解析并执行。`ui.request_user_choice` 工具的实现会与前端交互，将选项渲染为可点击的按钮。用户的选择随后会作为新的事件或上下文，触发 GM Agent 的下一轮审议。这体现了 Agent 如何通过标准的工具调用协议来主动驱动和塑造用户体验。
 
 3.  **学习沉淀 (可选)**：
     - 如果在图像生成过程中，GM Agent 或 Image Agent（或其工作流）发现某种特定的 Prompt 组合或参数设置效果特别好，其反思机制（如果实现）可以将此经验作为 `best_practice` 类型的 CAIU 贡献到共享知识库中，供未来参考。
@@ -908,7 +908,7 @@ Agent 也可以通过观察和修改共享的 `WorldState` 来实现间接的协
   ],
 
   "tool_ids_inventory": [
-    // 遵循 TAM 协议的工具 ID 列表
+    // 遵循 Tavern Action Manifest (TAM) 协议的工具 ID 列表
     "core:ReadPrivateState",      // 读取私有状态
     "core:UpdatePrivateState",      // 更新私有状态
     "kb:Query",                     // 查询知识库

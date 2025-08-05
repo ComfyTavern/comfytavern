@@ -160,38 +160,38 @@ TAM 是 ComfyTavern 中所有程序化工具调用的标准协议，旨在提供
 
 ### 5.1. 协议格式
 
-TAM 采用一种以自定义特殊标记包裹、内部使用“关键字:「始」值「末」”格式的方案。
+TAM 采用一种以自定义特殊标记包裹、内部使用 `key:»»»value«««` 格式的方案。其详细规范见 [`DesignDocs/architecture/TAM_tools.md`](DesignDocs/architecture/TAM_tools.md:1)。
 
 - **AI 原生的边界标记**: 我们选用 `<|[REQUEST_TOOL]|>` 和 `<|[END_TOOL]|>` 作为边界，这种格式对 LLM 更自然。
-- **极致鲁棒的参数传递**: 沿用 VCP 协议的 `key:「始」value「末」` 格式，使得传递任何特殊字符（代码、JSON、多行文本）时都**无需转义**。
+- **极致鲁棒的参数传递**: 使用 `key:»»»value«««` 格式，使得传递任何特殊字符（代码、JSON、多行文本）时都**无需任何转义**。
 
 #### 5.1.1. 单一工具调用
 
 ```
 <|[REQUEST_TOOL]|>
-command:「始」ToolID「末」
-parameter_A:「始」参数值 A「末」
-parameter_B:「始」参数值 B，
+command:»»»ToolID«««
+parameter_A:»»»参数值 A«««
+parameter_B:»»»参数值 B，
 可以是多行。
-「末」
+«««
 <|[END_TOOL]|>
 ```
 
 #### 5.1.2. 串联任务调用
 
-当需要在一个动作中按顺序执行多个命令时，使用数字后缀。
+当需要在一个动作中按顺序执行多个命令时，使用 `_N` 数字后缀。
 
 ```
 <|[REQUEST_TOOL]|>
 # 步骤 1: 创建文件
-command1:「始」FileOperator.WriteFile「末」
-filePath1:「始」/logs/today.log「末」
-content1:「始」任务开始...「末」
+command_1:»»»FileOperator.WriteFile«««
+file_path_1:»»»/logs/today.log«««
+content_1:»»»任务开始...«««
 
 # 步骤 2: 追加日志
-command2:「始」FileOperator.AppendFile「末」
-filePath2:「始」/logs/today.log「末」
-content2:「始」\n添加新记录。「末」
+command_2:»»»FileOperator.AppendFile«««
+file_path_2:»»»/logs/today.log«««
+content_2:»»»\n添加新记录。«««
 <|[END_TOOL]|>
 ```
 
