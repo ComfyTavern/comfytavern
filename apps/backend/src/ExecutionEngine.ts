@@ -885,6 +885,20 @@ export class ExecutionEngine {
               break;
             }
             sourceStream.write(chunk);
+            // 如果节点产出的是错误块，则将其视为执行错误并以流的方式终止
+            if (chunk.type === 'error_chunk') {
+              const error = new Error(typeof chunk.content === 'string' ? chunk.content : 'Node yielded an error chunk.');
+              // 使用 destroy 来优雅地关闭流并传播错误，而不是抛出异常
+              // 这将触发所有下游消费者的 'error' 事件
+              pullerError = error; // 标记存在错误，防止 finally 块中调用 end()
+              if (sourceStream.writable) {
+                sourceStream.destroy(error);
+              }
+              // 不需要再 throw，因为 destroy 会导致 consumerPromises reject,
+              // 从而触发 streamLifecyclePromise 的 catch 块。
+              // 跳出循环，因为流已经销毁。
+              break;
+            }
           }
           // nodeGenerator.return() 会返回生成器的最终值
           batchResult = await nodeGenerator.return();

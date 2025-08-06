@@ -42,15 +42,13 @@ class GenericLlmRequestNodeImpl {
 
     // --- 1. Validate Context and Services ---
     if (!services) {
-      throw new Error(
-        'Execution context is missing the "services" object. This is a critical error.'
-      );
+      yield { type: 'error_chunk', content: 'Execution context is missing the "services" object. This is a critical error.' };
+      return;
     }
     const { apiConfigService, activatedModelService, llmApiAdapterRegistry } = services;
     if (!apiConfigService || !activatedModelService || !llmApiAdapterRegistry) {
-      throw new Error(
-        "One or more required services (ApiConfigService, ActivatedModelService, LlmApiAdapterRegistry) are not available in the context."
-      );
+      yield { type: 'error_chunk', content: "One or more required services (ApiConfigService, ActivatedModelService, LlmApiAdapterRegistry) are not available in the context." };
+      return;
     }
 
     // --- 2. Validate and Parse Inputs ---
@@ -60,7 +58,8 @@ class GenericLlmRequestNodeImpl {
       messages =
         typeof messagesInput === "string" ? JSON.parse(messagesInput || "[]") : messagesInput || [];
     } catch (e: any) {
-      throw new Error(`Input "messages" is not a valid JSON string. Error: ${e.message}`);
+      yield { type: 'error_chunk', content: `Input "messages" is not a valid JSON string. Error: ${e.message}` };
+      return;
     }
 
     let baseParameters: Record<string, any>;
@@ -71,14 +70,17 @@ class GenericLlmRequestNodeImpl {
           ? JSON.parse(parametersInput || "{}")
           : parametersInput || {};
     } catch (e: any) {
-      throw new Error(`Input "parameters" is not a valid JSON string. Error: ${e.message}`);
+      yield { type: 'error_chunk', content: `Input "parameters" is not a valid JSON string. Error: ${e.message}` };
+      return;
     }
 
     if (!isValidCustomMessageArray(messages)) {
-      throw new Error('Input "messages" is not a valid CustomMessage array after parsing.');
+      yield { type: 'error_chunk', content: 'Input "messages" is not a valid CustomMessage array after parsing.' };
+      return;
     }
     if (typeof activated_model_id !== "string" || !activated_model_id) {
-      throw new Error('Input "activated_model_id" is missing or invalid.');
+      yield { type: 'error_chunk', content: 'Input "activated_model_id" is missing or invalid.' };
+      return;
     }
 
     // channel_id is removed from inputs. The router service will handle channel selection.
@@ -104,9 +106,8 @@ class GenericLlmRequestNodeImpl {
     );
 
     if (!channelConfig) {
-      throw new Error(
-        `No active channel found for user that supports model "${activated_model_id}".`
-      );
+      yield { type: 'error_chunk', content: `No active channel found for user that supports model "${activated_model_id}".` };
+      return;
     }
     console.log(
       `[GenericLlmRequestNode ${nodeId}] Using channel: ${channelConfig.label} (${channelConfig.id})`
@@ -124,7 +125,8 @@ class GenericLlmRequestNodeImpl {
     const adapter = llmApiAdapterRegistry.getAdapter(adapterType);
 
     if (!adapter) {
-      throw new Error(`LLM adapter for type "${adapterType}" not found.`);
+      yield { type: 'error_chunk', content: `LLM adapter for type "${adapterType}" not found.` };
+      return;
     }
 
     // --- 5. Prepare Parameters ---
@@ -198,7 +200,8 @@ class GenericLlmRequestNodeImpl {
         const response = (await adapter.execute(payload)) as StandardResponse;
 
         if (response.error) {
-          throw new Error(`LLM API Error: ${response.error.message}`);
+          yield { type: 'error_chunk', content: `LLM API Error: ${response.error.message}` };
+          return;
         }
 
         console.log(

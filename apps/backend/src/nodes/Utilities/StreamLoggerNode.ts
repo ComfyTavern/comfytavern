@@ -39,17 +39,18 @@ class StreamLoggerNodeImpl {
     if (!inputs.inputStream) {
       const errorMsg = `${loggerPrefix} Input 'inputStream' is undefined or null. This is a required input.`;
       console.error(errorMsg);
-      // 引擎通常会在调用 execute 前验证必需的输入，但这里也抛出错误以确保健壮性
-      throw new Error(errorMsg);
+      // 引擎通常会在调用 execute 前验证必需的输入，但这里也通过流发送错误以确保健壮性
+      yield { type: 'error_chunk', content: errorMsg };
+      return;
     }
 
     // 验证 inputStream 是否确实是一个 AsyncGenerator
     if (typeof inputs.inputStream[Symbol.asyncIterator] !== 'function') {
       const errorMsg = `${loggerPrefix} Input 'inputStream' is not a valid AsyncGenerator.`;
       console.error(errorMsg);
-      throw new Error(errorMsg);
+      yield { type: 'error_chunk', content: errorMsg };
+      return;
     }
-
     try {
       let chunkCount = 0;
       for await (const chunk of inputs.inputStream) {
@@ -78,9 +79,11 @@ class StreamLoggerNodeImpl {
       }
       console.log(`${loggerPrefix} Stream ended successfully after processing ${chunkCount} chunks.`);
     } catch (error: any) {
-      console.error(`${loggerPrefix} Error while processing stream: ${error.message}`, error.stack);
-      // 重新抛出错误，以便执行引擎可以捕获并处理
-      throw error;
+      const errorMsg = `${loggerPrefix} Error while processing stream: ${error.message}`;
+      console.error(errorMsg, error.stack);
+      // 将错误作为流的一部分发送
+      yield { type: 'error_chunk', content: errorMsg };
+      return;
     }
     
     // 流式节点在执行完毕后应返回 void
