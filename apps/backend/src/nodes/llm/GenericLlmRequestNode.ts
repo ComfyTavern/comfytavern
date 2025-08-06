@@ -214,7 +214,13 @@ class GenericLlmRequestNodeImpl {
       console.error(
         `[GenericLlmRequestNode ${nodeId}] Error during LLM request execution: ${error.message}`
       );
-      throw error; // Re-throw to be caught by the execution engine
+      // 将错误作为流的一部分发送，而不是抛出异常
+      yield {
+        type: "error_chunk",
+        content: `LLM API Error: ${error.message}`,
+      };
+      // 正常结束生成器，让 ExecutionEngine 处理错误状态
+      return;
     }
   }
 }
