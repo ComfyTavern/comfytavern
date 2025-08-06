@@ -1168,74 +1168,65 @@ export class ExecutionEngine {
     );
   }
 
-  private async _handleStreamInterfaceOutput(
+  private _handleStreamInterfaceOutput(
     interfaceKey: string,
     stream: Stream.Readable,
     interfaceDisplayName?: string
   ): Promise<void> {
-    const taskPromise = new Promise<void>((resolve, reject) => {
-      const consumerId = `InterfaceConsumer-${this.promptId}-${interfaceKey}`;
-      // console.log(`[Engine-${this.promptId}] [${consumerId}] STARTING consumption for interface output: ${interfaceKey} ('${interfaceDisplayName || 'N/A'}'). Stream readable: ${stream.readable}`);
+    const taskPromise = (async () => {
       this.activeInterfaceStreamConsumers.add(interfaceKey);
-      let chunkIndex = 0;
-
-      stream.on('data', (chunk) => {
-        // console.debug(`[Engine-${this.promptId}] [${consumerId}] Received chunk. Index: ${chunkIndex}. Broadcasting... Payload: ${JSON.stringify(chunk)}`);
-        if (this.isInterrupted) {
-          console.warn(`[Engine-${this.promptId}] [${consumerId}] Interrupting data event for interface stream ${interfaceKey} at chunk ${chunkIndex}`);
-          stream.destroy(); // 静默销毁流，这将触发 'close' 或 'end'
-          return;
+      try {
+        // 使用 for await...of 循环来安全、健壮地消费流
+        for await (const chunk of stream) {
+          if (this.isInterrupted) {
+            console.warn(`[Engine-${this.promptId}] Interrupting data event for interface stream ${interfaceKey}`);
+            if (!stream.destroyed) {
+              stream.destroy();
+            }
+            // 中断后退出循环，finally 块会确保清理
+            break;
+          }
+          const payload: WorkflowInterfaceYieldPayload = {
+            promptId: this.promptId,
+            interfaceOutputKey: interfaceKey,
+            interfaceOutputDisplayName: interfaceDisplayName,
+            yieldedContent: chunk as ChunkPayload,
+            isLastChunk: false,
+          };
+          this.wsManager.publishToScene(this.promptId, WebSocketMessageType.WORKFLOW_INTERFACE_YIELD, payload);
+          loggingService.logStreamChunk(this.promptId, interfaceKey as NanoId, chunk as ChunkPayload, false, 'INTERFACE_YIELD')
+            .catch(logErr => console.error(`[Engine-${this.promptId}] Failed to log INTERFACE_YIELD chunk for ${interfaceKey}:`, logErr));
         }
-        const payload: WorkflowInterfaceYieldPayload = {
-          promptId: this.promptId,
-          interfaceOutputKey: interfaceKey,
-          interfaceOutputDisplayName: interfaceDisplayName,
-          yieldedContent: chunk as ChunkPayload,
-          isLastChunk: false,
-        };
-        this.wsManager.publishToScene(this.promptId, WebSocketMessageType.WORKFLOW_INTERFACE_YIELD, payload);
-        loggingService.logStreamChunk(this.promptId, interfaceKey as NanoId, chunk as ChunkPayload, false, 'INTERFACE_YIELD')
-          .catch(logErr => console.error(`[Engine-${this.promptId}] Failed to log INTERFACE_YIELD chunk for ${interfaceKey}:`, logErr));
-        chunkIndex++;
-      });
 
-      stream.on('end', () => {
-        const finalChunkContent: ChunkPayload = { type: 'finish_reason_chunk', content: 'Stream ended' };
-        const payload: WorkflowInterfaceYieldPayload = {
-          promptId: this.promptId,
-          interfaceOutputKey: interfaceKey,
-          interfaceOutputDisplayName: interfaceDisplayName,
-          yieldedContent: finalChunkContent,
-          isLastChunk: true,
-        };
-        this.wsManager.publishToScene(this.promptId, WebSocketMessageType.WORKFLOW_INTERFACE_YIELD, payload);
-        loggingService.logStreamChunk(this.promptId, interfaceKey as NanoId, finalChunkContent, true, 'INTERFACE_YIELD')
-          .catch(logErr => console.error(`[Engine-${this.promptId}] Failed to log final INTERFACE_YIELD chunk for ${interfaceKey}:`, logErr));
-        this.activeInterfaceStreamConsumers.delete(interfaceKey);
-        resolve();
-      });
-
-      stream.on('error', (err) => {
-        // console.error(`[Engine-${this.promptId}] [${consumerId}] ERROR in stream for interface output ${interfaceKey} after ${chunkIndex} chunks:`, err.message, err.stack);
+        // 循环结束后，流已结束。如果不是被中断的，则发送最后一条消息。
+        if (!this.isInterrupted) {
+          const finalChunkContent: ChunkPayload = { type: 'finish_reason_chunk', content: 'Stream ended' };
+          const payload: WorkflowInterfaceYieldPayload = {
+            promptId: this.promptId,
+            interfaceOutputKey: interfaceKey,
+            interfaceOutputDisplayName: interfaceDisplayName,
+            yieldedContent: finalChunkContent,
+            isLastChunk: true,
+          };
+          this.wsManager.publishToScene(this.promptId, WebSocketMessageType.WORKFLOW_INTERFACE_YIELD, payload);
+          loggingService.logStreamChunk(this.promptId, interfaceKey as NanoId, finalChunkContent, true, 'INTERFACE_YIELD')
+            .catch(logErr => console.error(`[Engine-${this.promptId}] Failed to log final INTERFACE_YIELD chunk for ${interfaceKey}:`, logErr));
+        }
+      } catch (err: any) {
+        console.error(`[Engine-${this.promptId}] Error consuming stream for interface output ${interfaceKey}:`, err.message);
         loggingService.logStreamError(this.promptId, interfaceKey as NanoId, err, 'INTERFACE_YIELD')
           .catch(logErr => console.error(`[Engine-${this.promptId}] Failed to log INTERFACE_YIELD error for ${interfaceKey}:`, logErr));
-        this.activeInterfaceStreamConsumers.delete(interfaceKey);
-        if (err.message === 'Interrupted by user') {
-          // console.warn(`[Engine-${this.promptId}] [${consumerId}] Stream for ${interfaceKey} interrupted by user. Resolving promise.`);
-          resolve(); // Resolve on user interruption as it's a controlled stop
-        } else {
-          // console.error(`[Engine-${this.promptId}] [${consumerId}] Stream for ${interfaceKey} errored. Rejecting promise.`);
-          reject(err); // Reject for other errors
+        // 重新抛出错误，以便 Promise.all 可以捕获它，除非是可控的中断
+        if (err.message !== 'Interrupted by user') {
+          throw err;
         }
-      });
-
-      // Ensure consumption if it's a PassThrough that might not have other consumers
-      if (typeof (stream as any).isPaused === 'function' && (stream as any).isPaused()) {
-        // console.debug(`[Engine-${this.promptId}] [${consumerId}] Stream for ${interfaceKey} was paused, resuming.`);
-        stream.resume();
+      } finally {
+        // 无论成功、失败还是中断，最终都从活动消费者集合中移除
+        this.activeInterfaceStreamConsumers.delete(interfaceKey);
       }
-    });
-    this.backgroundTasks.push(taskPromise); // Add this stream's lifecycle to the main background tasks
+    })();
+
+    this.backgroundTasks.push(taskPromise);
     return taskPromise;
   }
 
