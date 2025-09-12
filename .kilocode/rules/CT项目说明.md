@@ -123,6 +123,7 @@ ComfyTavern 的核心价值主张体现在以下两个层面：
   - 启动 `.bat` 文件需要添加 `.\` 前缀，例如 `.\start.bat`。
 - **后端入口**: `apps/backend/src/index.ts` (已重构，具体路由见 `apps/backend/src/routes/`)
 - **节点或插槽的显示**：优先使用`displayName`,其次再是 id。
+- **代码检查**: `bunx vue-tsc --build apps/frontend-vueflow/tsconfig.json`,`bun tsc -p apps/backend/tsconfig.json --noEmit`
 
 #### 项目公共类型定义
 packages\types\src\adapter.ts
