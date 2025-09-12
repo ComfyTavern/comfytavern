@@ -25,6 +25,7 @@
     - 采用三栏式布局设计：左侧边栏（会话列表）、中央主聊天区域、右侧边栏（会话信息与工具）
     - 左右侧边栏均可折叠/展开，提供更沉浸的聊天体验
     - 响应式设计：在移动端自动切换为单栏布局，通过滑动手势或按钮切换不同面板
+    - 参考 [docs-site\zh\developer-docs\architecture\frontend-style-guide.md] 的样式指南
 
   - **左侧边栏 - 聊天会话管理**：
 
@@ -39,7 +40,7 @@
       - 支持搜索和筛选功能
       - 提供右键菜单：重命名、删除、导出、复制会话等操作
     - **快速操作区**：
-      - "新建会话"按钮，支持选择预设模板或空白会话
+      - "新建会话"按钮，创建新的空白会话
       - "导入会话"功能，支持从文件导入历史对话
       - 会话分组/文件夹管理（可选功能）
     - **底部状态栏**：
@@ -110,7 +111,7 @@
     - `rightSidebarActiveTab: string`：右侧边栏当前激活的标签页。
   - Store 应提供以下核心 Actions/Getters：
     - `loadChatSession(sessionId: string)`：加载指定会话的聊天历史。
-    - `createNewSession(template?: SessionTemplate)`：创建新的聊天会话。
+    - `createNewSession(metadata?: Partial<ChatSession>)`：创建新的聊天会话，可指定初始元数据。
     - `deleteSession(sessionId: string)`：删除指定会话。
     - `renameSession(sessionId: string, newName: string)`：重命名会话。
     - `loadSessionList()`：加载项目下所有会话列表。
@@ -570,7 +571,6 @@ sequenceDiagram
    - 添加 `ChatMessageNode` 接口
    - 添加 `ChatHistoryTree` 接口
    - 添加 `ChatSession` 接口（会话元数据）
-   - 添加 `SessionTemplate` 接口（会话模板）
    - 添加 `ExportFormat` 枚举（导出格式选项）
 
 2. **packages/types/src/project.ts**
@@ -588,7 +588,6 @@ sequenceDiagram
    - `apps/frontend-vueflow/src/components/chat/ChatSessionCard.vue` - 会话卡片组件
    - `apps/frontend-vueflow/src/stores/chatStore.ts` - 聊天状态管理
    - `apps/frontend-vueflow/src/data/ChatWorkflowTemplate.json` - 默认工作流模板
-   - `apps/frontend-vueflow/src/data/SessionTemplates.json` - 会话模板预设
 
 2. **后端文件**：
    - `apps/backend/src/services/ChatHistoryService.ts` - 聊天历史服务
