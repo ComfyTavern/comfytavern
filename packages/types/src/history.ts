@@ -1,5 +1,5 @@
 /**
- * 历史记录条目的详细信息
+ * 画布操作历史记录条目的详细信息
  * 允许存储与特定操作相关的任意键值对
  */
 export interface HistoryEntryDetails {
@@ -16,7 +16,7 @@ export interface HistoryEntryDetails {
 }
 
 /**
- * 结构化的历史记录条目对象
+ * 结构化的画布操作历史记录条目对象
  */
 export interface HistoryEntry {
   /** 操作类型 (例如: 'modify', 'add', 'delete', 'move', 'adjust', 'sort') */
