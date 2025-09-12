@@ -611,6 +611,7 @@ export async function createProject(
       description: description || `Project created on ${now}`, // 使用传入的 description
       preferredView: "editor",
       schemaVersion: appVersion, // schemaVersion 通常在创建时固定
+      enableChatPage: true, // 默认启用聊天页面功能
     };
 
     // 验证元数据

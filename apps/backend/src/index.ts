@@ -23,6 +23,7 @@ import { clientScriptRoutes, nodeApiRoutes } from "./routes/nodeRoutes";
 import { projectRoutesPlugin } from "./routes/projectRoutes"; // 修改导入名称
 import { panelRoutes } from "./routes/panelRoutes"; // 导入面板路由
 import { indexRoutes } from "./routes/indexRoutes"; // 导入主页路由
+import { chatRoutes } from "./routes/chatRoutes"; // 导入聊天路由
 import { DatabaseService } from "./services/DatabaseService";
 import { applyAuthMiddleware } from "./middleware/authMiddleware"; // Changed to import the function
 import { authRoutes } from "./routes/authRoutes";
@@ -262,6 +263,7 @@ app
 // --- 挂载项目路由 ---
 app.use(projectRoutesPlugin({ appVersion }));
 app.use(panelRoutes); // 挂载面板路由
+app.use(chatRoutes); // 挂载聊天路由
 
 // --- 实例化管理器 ---
 // 将服务实例化提升到这里，以便注入到调度器

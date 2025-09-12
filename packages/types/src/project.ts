@@ -17,6 +17,7 @@ export const ProjectMetadataSchema = z.object({
   preferredView: z.enum(["editor", "custom"]).optional().default("editor"),
   schemaVersion: z.string(),
   panels: z.array(PanelDeclarationSchema).optional().describe("项目包含的应用面板声明列表"),
+  enableChatPage: z.boolean().optional().default(true).describe("是否启用聊天页面功能"),
   customMetadata: z.record(z.any()).optional()
 });
 export type ProjectMetadata = z.infer<typeof ProjectMetadataSchema>;
