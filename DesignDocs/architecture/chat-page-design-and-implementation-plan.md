@@ -19,16 +19,73 @@
 - **组件位置**：
   - 在 [`apps/frontend-vueflow/src/views`](apps/frontend-vueflow/src/views) 目录下创建一个新的 Vue 视图组件，例如 `ChatView.vue`，作为聊天页面的主入口。
 - **UI 布局与交互**：
+
+  - **整体布局架构**：
+
+    - 采用三栏式布局设计：左侧边栏（会话列表）、中央主聊天区域、右侧边栏（会话信息与工具）
+    - 左右侧边栏均可折叠/展开，提供更沉浸的聊天体验
+    - 响应式设计：在移动端自动切换为单栏布局，通过滑动手势或按钮切换不同面板
+
+  - **左侧边栏 - 聊天会话管理**：
+
+    - **会话列表区域**：
+      - 显示当前项目下的所有聊天会话，按最后活动时间排序
+      - 每个会话条目显示：
+        - 会话标题（可自定义或自动生成）
+        - 最后一条消息的预览文本
+        - 最后活动时间戳
+        - 未读/活跃状态指示器
+        - 会话类型图标（普通聊天、角色扮演、任务对话等）
+      - 支持搜索和筛选功能
+      - 提供右键菜单：重命名、删除、导出、复制会话等操作
+    - **快速操作区**：
+      - "新建会话"按钮，支持选择预设模板或空白会话
+      - "导入会话"功能，支持从文件导入历史对话
+      - 会话分组/文件夹管理（可选功能）
+    - **底部状态栏**：
+      - 显示会话总数、当前项目名称
+      - 快速切换项目的下拉菜单（如果有多个项目）
+
+  - **右侧边栏 - 会话信息与工具面板**：
+
+    - **会话信息标签页**：
+      - 当前会话的元数据：创建时间、消息总数、分支数量、token 使用统计
+      - 会话设置：默认 LLM 配置、系统提示词、温度等参数的快速调整
+      - 会话标签/分类管理
+    - **角色管理标签页**（实际实现为连接到agent选择器，参考[agent_architecture_consolidated.md]）：
+      - 当前会话使用的角色卡片信息
+      - 角色属性编辑器
+      - 角色切换功能
+    - **工具箱标签页**：
+      - 快速访问常用工具和功能
+      - 工作流管理快捷方式：
+        - "编辑工作流"按钮 - 跳转到工作流编辑器
+        - "重置工作流"按钮 - 恢复到默认模板
+        - "工作流模板库"入口
+      - 导出选项：导出为 Markdown、JSON、PDF 等格式
+      - 高级功能入口：批量操作、数据分析等
+    - **知识库/上下文标签页**（未来扩展）：
+      - 关联的知识库文档
+      - 自定义上下文注入
+      - RAG 检索结果预览
+
   - **沉浸模式 (Linear Chat View)**：
-    - 标准的线性对话界面，基于底层树状结构，仅显示当前“主干”上**已启用**的对话内容。
-    - **消息组设计**：每个聊天消息都作为一个可交互的“消息组”呈现，而非单一消息。
+    - 标准的线性对话界面，基于底层树状结构，仅显示当前"主干"上**已启用**的对话内容。
+    - **顶部工具栏**：
+      - 左侧：侧边栏折叠/展开按钮、会话标题显示
+      - 中间：面包屑导航（显示当前分支路径）
+      - 右侧：视图切换按钮（沉浸模式/编辑模式）、设置按钮
+    - **消息组设计**：每个聊天消息都作为一个可交互的"消息组"呈现，而非单一消息。
       - **内容显示**：显示消息的 `role` (用户、助手、系统) 和 `status` (生成中、完成、错误)，并根据状态进行视觉区分。
       - **分叉切换**：在消息组内部提供左右箭头（或类似控件），允许用户手动切换当前消息的直接子分叉。切换时，仅更新当前活跃叶节点（`activeLeafId`），并刷新线性视图以显示新路径上的启用节点，不自动触发内容生成。
       - **消息编辑**：提供编辑按钮，允许用户修改消息内容。保存时，如果内容发生变动，系统将自动创建一个新的子节点（作为新分叉）来存储修改后的内容，并将当前主干切换到这个新节点，以保持历史的非破坏性。
       - **重试按钮**：提供重试按钮。点击后，系统将基于当前消息的上下文（即从根节点到当前消息的启用路径）重新触发后端工作流生成。新生成的内容将作为当前消息的**下一个消息组**的一个新分叉（子节点）添加到树中，并自动切换到该新分叉。
-    - 提供文本输入框和发送按钮，用于用户发送消息。
-    - 提供切换到“编辑模式”的入口按钮。
-    - **工作流管理入口**：在聊天页面的顶部工具栏或侧边栏，提供一个“编辑工作流”按钮，点击后可跳转到工作流编辑器，编辑当前聊天模块专用的工作流。旁边可提供一个“重置工作流”按钮，用于将专用工作流恢复到模板状态。
+      - **更多操作菜单**：复制、删除、查看原始数据、添加到收藏等
+    - **底部输入区域**：
+      - 多行文本输入框，支持 Markdown 格式
+      - 文件上传按钮（支持拖拽上传）
+      - 发送按钮和快捷键支持（Ctrl/Cmd + Enter）
+      - 输入工具栏：表情、模板、历史输入等快捷插入
   - **编辑模式 (Tree/Graph Editor View)**：
     - 一个可视化的图状界面，展示完整的对话历史树状图。详细参考[chat-history-branching-design.md](chat-history-branching-design.md)。
     - 用户可以通过拖拽、点击菜单等方式，对节点和分支进行以下操作：
@@ -38,16 +95,28 @@
       - **切换主干 (Switch Trunk)**：在多条并行分支中，选择其中一条作为当前对话的主线。
     - 可以考虑集成 VueFlow 或其他图表库来实现复杂的图状交互和渲染。
     - 提供返回“沉浸模式”的入口按钮。
+
 - **状态管理 (Pinia Store)**：
   - 创建一个专门的 Pinia Store (例如 `useChatStore`) 来管理聊天历史数据，包括 `ChatHistoryTree` 和 `ChatMessageNode` 的实例。
   - Store 应包含以下核心状态：
     - `chatHistoryTree: ChatHistoryTree`：当前会话的完整聊天历史树结构。
     - `currentMode: 'immersive' | 'edit'`：聊天页面的当前显示模式。
     - `activeSessionId: string | null`：当前活跃聊天会话的 ID。
+    - `sessionList: ChatSession[]`：所有聊天会话的列表，包含会话元数据。
     - `chatWorkflowPath: string`：当前聊天模块专用的工作流的逻辑路径，例如 `user://projects/{projectId}/workflows/_apps/chat/main.json`。
     - `isLoading: boolean`：指示数据是否正在加载。
+    - `leftSidebarVisible: boolean`：左侧边栏是否可见。
+    - `rightSidebarVisible: boolean`：右侧边栏是否可见。
+    - `rightSidebarActiveTab: string`：右侧边栏当前激活的标签页。
   - Store 应提供以下核心 Actions/Getters：
     - `loadChatSession(sessionId: string)`：加载指定会话的聊天历史。
+    - `createNewSession(template?: SessionTemplate)`：创建新的聊天会话。
+    - `deleteSession(sessionId: string)`：删除指定会话。
+    - `renameSession(sessionId: string, newName: string)`：重命名会话。
+    - `loadSessionList()`：加载项目下所有会话列表。
+    - `searchSessions(query: string)`：搜索会话。
+    - `exportSession(sessionId: string, format: ExportFormat)`：导出会话。
+    - `importSession(file: File)`：导入会话。
     - `ensureChatWorkflowExists()`：检查专用聊天工作流是否存在，如果不存在则调用后端 API 进行释出。
     - `resetChatWorkflow()`：调用后端 API 将专用聊天工作流恢复到模板状态。
     - `sendMessage(content: string, parentId: string | null)`：发送新消息，触发后端工作流。
@@ -57,6 +126,9 @@
     - `switchTrunk(leafNodeId: string)`：切换当前主干。
     - `getLinearContext(activeLeafId: string)`：根据当前主干和节点启用状态，构建发送给 LLM 的线性上下文。
     - `getChatNodes: ComputedRef<ChatMessageNode[]>`：获取用于渲染的聊天节点列表（根据当前模式和启用状态过滤）。
+    - `toggleLeftSidebar()`：切换左侧边栏显示状态。
+    - `toggleRightSidebar()`：切换右侧边栏显示状态。
+    - `setRightSidebarTab(tab: string)`：设置右侧边栏激活标签。
 - **后端通信**：
   - **WebSocket 集成**：
     - 通过 `useWebSocket` Composable 或直接集成 WebSocket 客户端，与后端建立实时通信。
@@ -185,12 +257,23 @@
 - **聊天路由 (`chatRoutes.ts`)**：
   - 在 [`apps/backend/src/routes`](apps/backend/src/routes) 目录下创建 `chatRoutes.ts`。
   - 实现 [`DesignDocs/architecture/chat-history-branching-design.md`](DesignDocs/architecture/chat-history-branching-design.md:190) 中定义的 REST API 端点：
-    - `GET /api/chat/{sessionId}/tree`：获取完整的聊天历史树结构。
-    - `POST /api/chat/{sessionId}/message`：发送新消息，请求中需包含 `parentId`。
-    - `PUT /api/chat/{sessionId}/tree/edit`：处理剪枝、嫁接等结构性编辑操作。
-    - `PUT /api/chat/{sessionId}/node/{nodeId}/state`：更新单个节点的状态（`isEnabled`）。
-    - `PUT /api/chat/{sessionId}/active_leaf`：设置当前活动的主干叶节点。
-    - `PUT /api/chat/{sessionId}/nodes/state`：实现批量更新节点状态的接口，优化高频操作。
+    - **会话管理接口**：
+      - `GET /api/chat/sessions`：获取当前项目下所有会话列表。
+      - `POST /api/chat/sessions`：创建新的聊天会话。
+      - `DELETE /api/chat/sessions/{sessionId}`：删除指定会话。
+      - `PUT /api/chat/sessions/{sessionId}/metadata`：更新会话元数据（如标题、标签等）。
+      - `POST /api/chat/sessions/{sessionId}/export`：导出会话为指定格式。
+      - `POST /api/chat/sessions/import`：从文件导入会话。
+    - **会话内容接口**：
+      - `GET /api/chat/{sessionId}/tree`：获取完整的聊天历史树结构。
+      - `POST /api/chat/{sessionId}/message`：发送新消息，请求中需包含 `parentId`。
+      - `PUT /api/chat/{sessionId}/tree/edit`：处理剪枝、嫁接等结构性编辑操作。
+      - `PUT /api/chat/{sessionId}/node/{nodeId}/state`：更新单个节点的状态（`isEnabled`）。
+      - `PUT /api/chat/{sessionId}/active_leaf`：设置当前活动的主干叶节点。
+      - `PUT /api/chat/{sessionId}/nodes/state`：实现批量更新节点状态的接口，优化高频操作。
+    - **媒体资源接口**：
+      - `POST /api/chat/{sessionId}/asset`：上传媒体文件到会话。
+      - `GET /api/chat/{sessionId}/assets`：获取会话的所有媒体资源列表。
 - **项目与工作流支持路由 (`projectRoutes.ts`)**
   - **移除** `GET /api/projects/{projectId}/workflows?compatibleWith=chat` 接口。
   - `POST /api/projects/{projectId}/workflows/release-chat-workflow`:
@@ -208,11 +291,18 @@
     - 在 `apps/backend/src/services` 目录下创建 `ChatHistoryService.ts`。
     - 该服务将封装 `FileManagerService` 的调用，并提供高级的聊天历史管理功能。
     - **核心职责**：
-      - **加载 (`loadChatHistory`)**：从 `user://projects/{projectId}/chats/{sessionId}.json` 读取文件，反序列化为 `ChatHistoryTree` 对象。
-      - **保存 (`saveChatHistory`)**：将 `ChatHistoryTree` 序列化为 JSON 字符串，全量覆盖写入文件。在写入前，确保 `user://projects/{projectId}/chats/` 目录存在。
-      - **更新 (`updateChatHistory`)**：这是核心方法，用于执行对 `ChatHistoryTree` 的所有修改操作（添加消息、编辑、剪枝、嫁接等）。它将接收一个 `updateFn` 函数，该函数接收当前的 `ChatHistoryTree` 对象作为参数，并返回修改后的 `ChatHistoryTree` 对象。
-      - **删除 (`deleteChatHistory`)**：删除对应的聊天历史文件。
-      - **列出 (`listChatSessions`)**：列出项目下所有聊天会话文件。
+      - **会话管理**：
+        - **创建 (`createSession`)**：创建新的会话文件和初始化 `ChatHistoryTree` 结构。
+        - **列出 (`listChatSessions`)**：列出项目下所有聊天会话文件，返回会话元数据列表。
+        - **搜索 (`searchSessions`)**：根据关键词搜索会话内容和元数据。
+        - **导出 (`exportSession`)**：将会话导出为不同格式（JSON、Markdown、PDF 等）。
+        - **导入 (`importSession`)**：从文件导入会话，支持多种格式。
+      - **内容管理**：
+        - **加载 (`loadChatHistory`)**：从 `user://projects/{projectId}/chats/{sessionId}.json` 读取文件，反序列化为 `ChatHistoryTree` 对象。
+        - **保存 (`saveChatHistory`)**：将 `ChatHistoryTree` 序列化为 JSON 字符串，全量覆盖写入文件。在写入前，确保 `user://projects/{projectId}/chats/` 目录存在。
+        - **更新 (`updateChatHistory`)**：这是核心方法，用于执行对 `ChatHistoryTree` 的所有修改操作（添加消息、编辑、剪枝、嫁接等）。它将接收一个 `updateFn` 函数，该函数接收当前的 `ChatHistoryTree` 对象作为参数，并返回修改后的 `ChatHistoryTree` 对象。
+        - **删除 (`deleteChatHistory`)**：删除对应的聊天历史文件及其关联的媒体资源。
+        - **更新元数据 (`updateSessionMetadata`)**：更新会话的元数据（标题、标签、设置等）。
     - **并发控制 (乐观锁)**：
       - 在 `ChatHistoryTree` 对象中引入 `version: number` 字段。
       - `updateChatHistory` 方法内部将执行“读取-检查版本-修改-版本递增-写入”的原子性操作。
@@ -262,24 +352,115 @@
 
 ## 4. UI 布局与交互流程图
 
-### 4.1. 沉浸模式 UI 布局图
+### 4.1. 完整页面布局结构图
+
+```mermaid
+graph TB
+    subgraph "聊天页面整体布局"
+        A[顶部导航栏] --> B[三栏主体区域]
+
+        B --> C[左侧边栏]
+        B --> D[中央聊天区域]
+        B --> E[右侧边栏]
+
+        subgraph "左侧边栏 - 会话管理"
+            C --> C1[搜索框]
+            C --> C2[会话列表]
+            C --> C3[新建会话按钮]
+            C --> C4[导入/导出工具]
+            C2 --> C5[会话项: 标题/预览/时间]
+        end
+
+        subgraph "中央区域 - 主聊天界面"
+            D --> D1[顶部工具栏]
+            D --> D2[消息列表区]
+            D --> D3[底部输入区]
+            D1 --> D4[面包屑导航]
+            D1 --> D5[模式切换按钮]
+            D2 --> D6[消息组: 内容/分叉/编辑/重试]
+            D3 --> D7[输入框/上传/发送]
+        end
+
+        subgraph "右侧边栏 - 信息与工具"
+            E --> E1[标签页切换器]
+            E --> E2[会话信息面板]
+            E --> E3[工具箱面板]
+            E --> E4[角色管理面板]
+            E3 --> E5[工作流管理]
+            E3 --> E6[导出选项]
+        end
+    end
+```
+
+### 4.1.1. 沉浸模式消息流布局图
 
 ```mermaid
 graph TD
-A[聊天列表] --> B[消息组1: 用户消息]
-B --> C[内容显示]
-B --> D[左右箭头: 分叉切换]
-B --> E[编辑按钮]
-B --> F[重试按钮]
-A --> G[消息组2: 助手回复]
-G --> H[内容显示]
-G --> I[左右箭头: 分叉切换]
-G --> J[编辑按钮]
-G --> K[重试按钮]
-A --> L[输入框 & 发送按钮]
+    A[消息列表容器] --> B[消息组1: 用户消息]
+    B --> C[头像 & 角色标识]
+    B --> D[消息内容区]
+    B --> E[操作按钮组]
+    E --> E1[分叉切换箭头]
+    E --> E2[编辑按钮]
+    E --> E3[重试按钮]
+    E --> E4[更多菜单]
+
+    A --> F[消息组2: 助手回复]
+    F --> G[头像 & 角色标识]
+    F --> H[消息内容区]
+    F --> I[操作按钮组]
+    I --> I1[分叉切换箭头]
+    I --> I2[编辑按钮]
+    I --> I3[重试按钮]
+    I --> I4[更多菜单]
+
+    A --> J[输入区域]
+    J --> K[文本输入框]
+    J --> L[工具栏]
+    L --> L1[上传按钮]
+    L --> L2[表情/模板]
+    L --> L3[发送按钮]
 ```
 
-### 4.2. 交互流程图 (分叉切换、编辑和重试)
+### 4.2. 会话管理交互流程图
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant LeftSidebar as 左侧边栏
+    participant Store as ChatStore
+    participant Backend as 后端API
+    participant FileManager as 文件管理器
+
+    User->>LeftSidebar: 点击新建会话
+    LeftSidebar->>Store: createNewSession()
+    Store->>Backend: POST /api/chat/sessions
+    Backend->>FileManager: 创建新会话文件
+    FileManager-->>Backend: 返回文件路径
+    Backend-->>Store: 返回新会话ID
+    Store->>Store: 添加到sessionList
+    Store->>Store: 设置activeSessionId
+    Store->>LeftSidebar: 更新会话列表
+    LeftSidebar->>User: 显示新会话并激活
+
+    User->>LeftSidebar: 点击切换会话
+    LeftSidebar->>Store: loadChatSession(sessionId)
+    Store->>Backend: GET /api/chat/{sessionId}/tree
+    Backend->>FileManager: 读取会话文件
+    FileManager-->>Backend: 返回会话数据
+    Backend-->>Store: 返回ChatHistoryTree
+    Store->>Store: 更新chatHistoryTree
+    Store->>Store: 更新activeSessionId
+    Store->>LeftSidebar: 刷新UI
+
+    User->>LeftSidebar: 搜索会话
+    LeftSidebar->>Store: searchSessions(query)
+    Store->>Store: 过滤sessionList
+    Store->>LeftSidebar: 返回搜索结果
+    LeftSidebar->>User: 显示匹配的会话
+```
+
+### 4.3. 交互流程图 (分叉切换、编辑和重试)
 
 ```mermaid
 sequenceDiagram
@@ -310,7 +491,7 @@ Store->>Store: 更新节点状态 & activeLeafId
 Store->>UI: 更新视图 (显示新分叉)
 ```
 
-### 4.3. 交互流程图 (专用工作流管理)
+### 4.4. 交互流程图 (专用工作流管理)
 
 ```mermaid
 sequenceDiagram
@@ -337,7 +518,7 @@ sequenceDiagram
         Store->>ChatUI: 专用工作流已就绪
     end
 
-    User->>ChatUI: 点击“重置工作流”按钮
+    User->>ChatUI: 点击"重置工作流"按钮
     ChatUI->>Store: 调用 resetChatWorkflow()
     Store->>Backend: POST /api/projects/{projectId}/workflows/release-chat-workflow (触发重置)
     Backend->>FileManager: 从 apps/frontend-vueflow/src/data/ChatWorkflowTemplate.json 读取模板
@@ -347,3 +528,146 @@ sequenceDiagram
     Backend-->>Store: 返回成功
     Store->>ChatUI: 专用工作流已重置
 ```
+
+## 5. 代码施工调研记录
+
+### 5.1. 项目结构分析
+
+通过对现有代码的调研，确认了以下关键信息：
+
+#### 5.1.1. 前端组件位置
+
+- **ChatView.vue** 应放置在 `apps/frontend-vueflow/src/views/project` 目录下（而非直接在 `views` 目录下）
+
+#### 5.1.2. 现有 Store 结构
+
+- **workflowStore.ts**：管理工作流状态，包含 `availableWorkflows`、工作流加载、保存、删除等核心操作
+- **projectStore.ts**：管理项目状态，包含 `currentProjectId`、`currentProjectMetadata`、`availableProjects` 等
+- **executionStore.ts**：管理执行状态，包含节点状态、流式内容、接口输出等
+
+#### 5.1.3. 工作流调用机制
+
+- **WorkflowInvocationService.ts**：提供统一的工作流调用接口 `useWorkflowInvocation()`
+  - `invoke` 方法参数：`mode` ('live' | 'saved')、`targetId`、`inputs`、`source`
+  - 返回值：`{ promptId, executionId }` 或 `null`
+- **工作流执行流程**：
+  1. 调用 `invoke` 方法
+  2. 构建输出接口映射 `outputInterfaceMappings`
+  3. 发送 WebSocket `PROMPT_REQUEST` 消息
+  4. 监听执行状态和流式输出
+
+#### 5.1.4. 类型定义位置
+
+- **history.ts**：目前只包含 `HistoryEntry` 和 `HistoryEntryDetails`，需要添加 `ChatMessageNode` 和 `ChatHistoryTree`
+- **project.ts**：包含 `ProjectMetadataSchema`，需要添加 `enableChatPage` 字段
+
+### 5.2. 需要修改的文件清单
+
+#### 5.2.1. 类型定义修改
+
+1. **packages/types/src/history.ts**
+
+   - 添加 `ChatMessageNode` 接口
+   - 添加 `ChatHistoryTree` 接口
+   - 添加 `ChatSession` 接口（会话元数据）
+   - 添加 `SessionTemplate` 接口（会话模板）
+   - 添加 `ExportFormat` 枚举（导出格式选项）
+
+2. **packages/types/src/project.ts**
+   - 在 `ProjectMetadataSchema` 中添加 `enableChatPage: z.boolean().optional().default(true)`
+
+#### 5.2.2. 新建文件
+
+1. **前端文件**：
+
+   - `apps/frontend-vueflow/src/views/project/ChatView.vue` - 主聊天页面组件
+   - `apps/frontend-vueflow/src/components/chat/ChatSidebar.vue` - 左侧会话列表组件
+   - `apps/frontend-vueflow/src/components/chat/ChatInfoPanel.vue` - 右侧信息面板组件
+   - `apps/frontend-vueflow/src/components/chat/ChatMessageGroup.vue` - 消息组组件
+   - `apps/frontend-vueflow/src/components/chat/ChatInputArea.vue` - 输入区域组件
+   - `apps/frontend-vueflow/src/components/chat/ChatSessionCard.vue` - 会话卡片组件
+   - `apps/frontend-vueflow/src/stores/chatStore.ts` - 聊天状态管理
+   - `apps/frontend-vueflow/src/data/ChatWorkflowTemplate.json` - 默认工作流模板
+   - `apps/frontend-vueflow/src/data/SessionTemplates.json` - 会话模板预设
+
+2. **后端文件**：
+   - `apps/backend/src/services/ChatHistoryService.ts` - 聊天历史服务
+   - `apps/backend/src/services/ChatExportService.ts` - 会话导出服务
+   - `apps/backend/src/routes/chatRoutes.ts` - 聊天路由定义
+
+#### 5.2.3. 修改的现有文件
+
+1. **apps/backend/src/routes/projectRoutes.ts**
+
+   - 移除 `GET /api/projects/{projectId}/workflows?compatibleWith=chat` 接口（如果存在）
+   - 添加 `POST /api/projects/{projectId}/workflows/release-chat-workflow` 接口
+
+2. **apps/backend/src/websocket/handler.ts**
+   - 添加聊天相关的 WebSocket 事件处理
+
+### 5.3. API 和服务依赖
+
+#### 5.3.1. 前端服务依赖
+
+- `useWebSocket`：WebSocket 通信
+- `useDialogService`：对话框和通知服务
+- `useApi`：封装的 HTTP 请求方法
+- `useWorkflowInvocation`：工作流调用服务
+
+#### 5.3.2. 后端服务依赖
+
+- `FileManagerService`：文件读写操作
+- `WebSocketManager`：WebSocket 连接管理
+- `ConcurrencyScheduler`：并发调度
+
+### 5.4. 数据流和状态管理
+
+#### 5.4.1. 聊天状态流
+
+```
+用户输入 -> ChatView.vue -> useChatStore -> 后端 API/WebSocket
+                                          -> 工作流执行
+                                          -> 流式响应
+```
+
+#### 5.4.2. 工作流管理流
+
+```
+首次加载 -> 检查专用工作流 -> 不存在则释出模板
+编辑工作流 -> 跳转到工作流编辑器
+重置工作流 -> 调用后端 API 重新释出模板
+```
+
+### 5.5. 实施优先级和依赖关系
+
+根据调研结果，建议按以下顺序实施：
+
+1. **第一步**：更新类型定义
+
+   - 修改 `packages/types/src/history.ts`
+   - 修改 `packages/types/src/project.ts`
+
+2. **第二步**：创建后端服务
+
+   - 创建 `ChatHistoryService.ts`
+   - 创建 `chatRoutes.ts`
+   - 更新 `projectRoutes.ts`
+
+3. **第三步**：创建前端核心
+
+   - 创建 `ChatWorkflowTemplate.json`
+   - 创建 `useChatStore`
+   - 创建 `ChatView.vue` 基础结构
+
+4. **第四步**：集成和测试
+   - WebSocket 事件处理
+   - 工作流调用集成
+   - UI 交互完善
+
+### 5.6. 注意事项
+
+1. **路径处理**：所有文件路径使用 `user://` 逻辑路径，由 `FileManagerService` 处理实际路径转换
+2. **并发控制**：`ChatHistoryService` 需要实现乐观锁机制，使用 `version` 字段
+3. **性能优化**：考虑使用 LRU 缓存和异步写入优化文件 I/O
+4. **错误处理**：使用 `DialogService` 统一处理错误提示
+5. **国际化**：使用 Vue-i18n，默认语言为中文
