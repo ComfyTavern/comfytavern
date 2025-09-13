@@ -34,6 +34,17 @@
             应用面板
           </a>
         </router-link>
+        <!-- 聊天页面入口，根据项目配置控制显示 -->
+        <router-link
+          v-if="projectStore.currentProjectMetadata?.enableChatPage"
+          :to="{ name: 'ProjectChat', params: { projectId: $route.params.projectId } }"
+          custom
+          v-slot="{ navigate, isActive }"
+        >
+          <a @click="navigate" :class="['px-4 py-2 rounded-t-lg text-lg font-medium cursor-pointer transition-colors mr-1', isActive ? 'bg-background-base text-text-base border-t border-x border-border-base -mb-px z-10' : 'text-text-secondary hover:bg-primary-softest border-t border-x border-transparent']">
+            聊天
+          </a>
+        </router-link>
         <router-link :to="{ name: 'ProjectSettings', params: { projectId: $route.params.projectId } }" custom v-slot="{ navigate, isActive }">
           <a @click="navigate" :class="['px-4 py-2 rounded-t-lg text-lg font-medium cursor-pointer transition-colors mr-1', isActive ? 'bg-background-base text-text-base border-t border-x border-border-base -mb-px z-10' : 'text-text-secondary hover:bg-primary-softest border-t border-x border-transparent']">
             项目设置
@@ -50,7 +61,9 @@
 
 <script setup lang="ts">
 import { HomeIcon, RectangleStackIcon } from '@heroicons/vue/24/outline';
-// const projectStore = useProjectStore();
+import { useProjectStore } from '@/stores/projectStore';
+
+const projectStore = useProjectStore();
 </script>
 
 <style scoped>

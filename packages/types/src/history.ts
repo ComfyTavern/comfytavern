@@ -61,6 +61,16 @@ export interface ChatMessageNode {
   metadata?: Record<string, any>;
   /** 子节点ID列表 */
   children: string[];
+  /** 错误信息 */
+  error?: string;
+  /** 附件列表 */
+  attachments?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    size?: number;
+    url?: string;
+  }>;
 }
 
 /**
@@ -135,6 +145,15 @@ export interface ChatSession {
   type: 'chat' | 'roleplay' | 'task' | 'other';
   /** 自定义设置 */
   settings?: Record<string, any>;
+  /** 未读消息数 */
+  unreadCount?: number;
+  /** 估算成本 */
+  estimatedCost?: number;
+  /** 会话元数据 */
+  metadata?: {
+    starred?: boolean;
+    [key: string]: any;
+  };
 }
 
 /**

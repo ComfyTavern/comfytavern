@@ -139,6 +139,12 @@ const router = createRouter({
           name: 'ProjectSettings',
           component: () => import('../views/project/ProjectSettingsView.vue'),
         },
+        // 聊天页面路由
+        {
+          path: 'chat',
+          name: 'ProjectChat',
+          component: () => import('../views/project/ChatView.vue'),
+        },
           // 未来可以添加更多子路由，如 'scenes', 'settings' 等
         ],
       },
