@@ -50,6 +50,7 @@
     "@libsql/client": "^0.15.9",
     "@rigstech/codemirror-vscodesearch": "^1.0.4",
     "@types/lodash": "^4.17.16",
+    "chart.js": "^4.5.0",
     "codemirror": "^6.0.1",
     "drizzle-kit": "^0.31.1",
     "lodash": "^4.17.21",

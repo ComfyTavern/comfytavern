@@ -70,6 +70,20 @@ const getIndexHtml = async (): Promise<string> => {
 };
 
 export const indexRoutes = (options: { appVersion: string }) => new Elysia({ name: 'index-routes' })
+  // 提供 chart.js 库
+  .get('/vendor/chart.js', async ({ set }) => {
+    try {
+      // 从 apps/backend/src/routes 向上四级到达项目根目录
+      const chartJsPath = path.join(__dirname, '../../../../node_modules/chart.js/dist/chart.umd.min.js');
+      const fileContent = await fs.readFile(chartJsPath);
+      set.headers['Content-Type'] = 'application/javascript; charset=utf-8';
+      return fileContent;
+    } catch (e) {
+      console.error("无法提供 chart.js:", e);
+      set.status = 404;
+      return 'Not found';
+    }
+  })
   // 根路径，提供状态页面
   .get("/", async ({ set }) => {
     set.headers['Content-Type'] = 'text/html; charset=utf-8';

@@ -4,45 +4,191 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ComfyTavern Backend Status</title>
+  <script src="/vendor/chart.js"></script>
   <style>
+    :root {
+      --bg-color: #1a1a1a;
+      --surface-color: #2a2a2a;
+      --surface-color-hover: #333;
+      --primary-color: #ff9800;
+      --primary-color-dark: #f57c00;
+      --text-color: #e0e0e0;
+      --text-color-secondary: #b0b0b0;
+      --accent-color-1: #81d4fa;
+      --accent-color-2: #4caf50;
+      --border-color: #444;
+      --shadow-color: rgba(0,0,0,0.3);
+      --danger-color: #d32f2f;
+    }
     * { box-sizing: border-box; }
     html, body { height: 100%; overflow: hidden; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #1a1a1a; color: #e0e0e0; margin: 0; display: flex; flex-direction: column; }
-    .container { max-width: 1400px; margin: 0 auto; background-color: #2a2a2a; box-shadow: 0 4px 16px rgba(0,0,0,0.3); width: 100%; display: flex; flex-direction: column; flex-grow: 1; height: 100vh; }
-    .header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 3rem; border-bottom: 2px solid #ff9800; flex-shrink: 0; }
-    h1 { color: #ff9800; font-size: 2rem; margin: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      background-color: var(--surface-color);
+      box-shadow: 0 4px 16px var(--shadow-color);
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      height: 100vh;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 3rem;
+      border-bottom: 2px solid var(--primary-color);
+      flex-shrink: 0;
+    }
+    h1 { color: var(--primary-color); font-size: 2rem; margin: 0; }
     .user-info { display: flex; align-items: center; gap: 1rem; }
-    #user-display { font-size: 1rem; color: #81d4fa; font-weight: 500; }
+    #user-display { font-size: 1rem; color: var(--accent-color-1); font-weight: 500; }
     .content-wrapper { flex-grow: 1; overflow-y: auto; padding: 2rem 3rem; }
-    .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; }
-    .status-card { background-color: #333; padding: 1.5rem; border-radius: 8px; box-shadow: 0 6px 12px rgba(0,0,0,0.15); transition: transform 0.3s, box-shadow 0.3s; display: flex; flex-direction: column; }
-    .status-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-    .status-card h2 { margin-top: 0; color: #4caf50; font-size: 1.4rem; margin-bottom: 1rem; border-bottom: 1px solid #4a4a4a; padding-bottom: 0.5rem; }
-    .status-card p { margin: 0.6rem 0; font-size: 1rem; line-height: 1.5; }
-    .status-card strong { color: #81d4fa; font-weight: 600; }
-    .disk-info, .net-info { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px dashed #444; }
-    .disk-info:last-child, .net-info:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: auto;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+    .info-card {
+      background-color: var(--surface-color-hover);
+      padding: 1.5rem;
+      border-radius: 12px;
+      grid-column: span 1;
+    }
+    .info-card h2 {
+      margin-top: 0;
+      color: var(--accent-color-2);
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+    }
+    .info-card p { margin: 0.6rem 0; font-size: 1rem; line-height: 1.5; }
+    .info-card strong { color: var(--accent-color-1); font-weight: 600; }
+
+    .chart-card {
+      background-color: var(--surface-color-hover);
+      padding: 1.5rem;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .chart-container {
+      width: 180px;
+      height: 180px;
+      position: relative;
+    }
+    .chart-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    .chart-label .percent {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: var(--text-color);
+    }
+    .chart-label .title {
+      font-size: 1rem;
+      color: var(--text-color-secondary);
+    }
+    .chart-details {
+      text-align: center;
+      margin-top: 1rem;
+    }
+    .chart-details p { margin: 0.2rem 0; font-size: 0.9rem; }
+
+    .full-width-container {
+      background-color: var(--surface-color-hover);
+      padding: 1.5rem;
+      border-radius: 12px;
+    }
+    .full-width-container h2 {
+      margin-top: 0;
+      color: var(--accent-color-2);
+      font-size: 1.4rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+    .disk-card, .net-card {
+      background-color: var(--bg-color);
+      padding: 1rem;
+      border-radius: 8px;
+    }
+    .disk-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .disk-card-header svg {
+      width: 32px;
+      height: 32px;
+      fill: var(--text-color-secondary);
+    }
+    .disk-card-title { font-weight: bold; font-size: 1.1rem; }
+    .disk-card-usage-bar {
+      width: 100%;
+      height: 8px;
+      background-color: var(--border-color);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    .disk-card-usage-fill {
+      height: 100%;
+      background-color: var(--accent-color-1);
+      border-radius: 4px;
+    }
+    .disk-card-usage-fill.high-usage { background-color: #ffc107; }
+    .disk-card-usage-fill.critical-usage { background-color: #f44336; }
+    .disk-card-info { font-size: 0.85rem; color: var(--text-color-secondary); }
+    
+    .net-card p { margin: 0.4rem 0; font-size: 0.9rem; }
+    .net-card strong { color: var(--accent-color-1); }
+
     #loading { text-align: center; font-size: 1.5rem; padding: 3rem; }
     .footer { text-align: center; color: #777; font-size: 1.1rem; padding: 1.5rem 3rem; border-top: 1px solid #3a3a3a; flex-shrink: 0; }
     
-    /* 自定义滚动条样式 */
     .content-wrapper::-webkit-scrollbar { width: 16px; }
-    .content-wrapper::-webkit-scrollbar-track { background: #1a1a1a; border-radius: 6px; }
-    .content-wrapper::-webkit-scrollbar-thumb { background: #444; border-radius: 6px; border: 2px solid #1a1a1a; }
-    .content-wrapper::-webkit-scrollbar-thumb:hover { background: #ff9800; }
-    .content-wrapper { scrollbar-width: thin; scrollbar-color: #444 #1a1a1a; }
+    .content-wrapper::-webkit-scrollbar-track { background: var(--bg-color); border-radius: 6px; }
+    .content-wrapper::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 6px; border: 2px solid var(--bg-color); }
+    .content-wrapper::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
+    .content-wrapper { scrollbar-width: thin; scrollbar-color: var(--border-color) var(--bg-color); }
     
-    /* 登录页面样式 */
-    .login-container { max-width: 400px; margin: 10vh auto; background-color: #2a2a2a; padding: 2.5rem; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
-    .login-title { color: #ff9800; text-align: center; font-size: 2rem; margin-bottom: 2rem; border-bottom: 2px solid #ff9800; padding-bottom: 1rem; }
+    .login-container { max-width: 400px; margin: 10vh auto; background-color: var(--surface-color); padding: 2.5rem; border-radius: 12px; box-shadow: 0 8px 24px var(--shadow-color); }
+    .login-title { color: var(--primary-color); text-align: center; font-size: 2rem; margin-bottom: 2rem; border-bottom: 2px solid var(--primary-color); padding-bottom: 1rem; }
     .form-group { margin-bottom: 1.5rem; }
-    .form-group label { display: block; margin-bottom: 0.5rem; color: #e0e0e0; font-weight: 500; }
-    .form-group input { width: 100%; padding: 0.8rem; background-color: #333; border: 1px solid #444; border-radius: 6px; color: #e0e0e0; font-size: 1rem; }
-    .form-group input:focus { outline: none; border-color: #ff9800; box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2); }
-    .login-btn { width: 100%; padding: 1rem; background-color: #ff9800; border: none; border-radius: 6px; color: #fff; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: background-color 0.3s; }
-    .login-btn:hover { background-color: #f57c00; }
+    .form-group label { display: block; margin-bottom: 0.5rem; color: var(--text-color); font-weight: 500; }
+    .form-group input { width: 100%; padding: 0.8rem; background-color: var(--surface-color-hover); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-color); font-size: 1rem; }
+    .form-group input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2); }
+    .login-btn { width: 100%; padding: 1rem; background-color: var(--primary-color); border: none; border-radius: 6px; color: #fff; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: background-color 0.3s; }
+    .login-btn:hover { background-color: var(--primary-color-dark); }
     .login-btn:disabled { background-color: #666; cursor: not-allowed; }
-    .error-message { background-color: #d32f2f; color: #fff; padding: 0.8rem; border-radius: 6px; margin-bottom: 1rem; text-align: center; }
+    .error-message { background-color: var(--danger-color); color: #fff; padding: 0.8rem; border-radius: 6px; margin-bottom: 1rem; text-align: center; }
     .hidden { display: none; }
     .logout-btn { padding: 0.6rem 1.2rem; background-color: #666; border: none; border-radius: 6px; color: #fff; cursor: pointer; transition: background-color 0.3s; }
     .logout-btn:hover { background-color: #888; }
@@ -77,7 +223,7 @@
     </div>
     <div class="content-wrapper">
       <div id="loading">正在加载状态信息...</div>
-      <div id="status-content" class="status-grid" style="display: none;"></div>
+      <div id="status-content" style="display: none;"></div>
     </div>
     <div class="footer">
       <p>页面每 5 秒自动刷新</p>
@@ -96,7 +242,9 @@
     const contentEl = document.getElementById('status-content');
 
     let refreshInterval = null;
-    let authEnabled = false; // 将由初始化检查设置
+    let authEnabled = false;
+    let cpuChart = null;
+    let memoryChart = null;
 
     // 初始化：检查是否需要认证
     async function initialize() {
@@ -106,14 +254,11 @@
         authEnabled = data.authRequired;
 
         if (!authEnabled) {
-          // 不需要认证，直接显示状态页面
           showStatusPage();
           startRefreshInterval();
         } else {
-          // 需要认证，检查登录状态
           const token = sessionStorage.getItem('backend_panel_token');
           if (token) {
-            // 验证 token
             const valid = await verifyToken(token);
             if (valid) {
               showStatusPage();
@@ -210,17 +355,70 @@
       showLoginPage();
     });
 
+    function createOrUpdateChart(chartInstance, canvasId, label, data, color) {
+      const ctx = document.getElementById(canvasId).getContext('2d');
+      const percentage = data[0];
+      document.querySelector(`#${canvasId}-label .percent`).textContent = `${percentage.toFixed(1)}%`;
+
+      if (chartInstance) {
+        chartInstance.data.datasets[0].data = data;
+        chartInstance.update('none');
+        return chartInstance;
+      }
+      
+      return new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          datasets: [{
+            data: data,
+            backgroundColor: [color, '#444'],
+            borderColor: ['#2a2a2a'],
+            borderWidth: 4,
+            borderRadius: 5,
+            cutout: '80%',
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { enabled: false }
+          }
+        }
+      });
+    }
+
     // 渲染状态信息
     function renderStatus(data) {
-      const diskHtml = data.disks.map(d => `
-        <div class="disk-info">
-          <p><strong>文件系统:</strong> ${d.fs} (${d.mount})</p>
-          <p><strong>大小:</strong> ${d.size} | <strong>已用:</strong> ${d.used} (${d.use})</p>
+      const cpuLoad = parseFloat(data.cpu.load) || 0;
+      
+      const totalMem = parseFloat(data.memory.total) || 1;
+      const freeMem = parseFloat(data.memory.free) || 0;
+      const usedMem = totalMem - freeMem;
+      const memUsagePercentage = (usedMem / totalMem) * 100;
+
+      const diskHtml = data.disks.map(d => {
+        const usePercent = parseFloat(d.use) || 0;
+        let usageClass = '';
+        if (usePercent > 90) usageClass = 'critical-usage';
+        else if (usePercent > 80) usageClass = 'high-usage';
+        
+        return `
+        <div class="disk-card">
+          <div class="disk-card-header">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5,4H19A2,2 0 0,1 21,6V18A2,2 0 0,1 19,20H5A2,2 0 0,1 3,18V6A2,2 0 0,1 5,4M5,8V10H19V8H5M5,12V14H19V12H5Z" /></svg>
+            <span class="disk-card-title">${d.fs} (${d.mount})</span>
+          </div>
+          <div class="disk-card-usage-bar">
+            <div class="disk-card-usage-fill ${usageClass}" style="width: ${usePercent}%"></div>
+          </div>
+          <div class="disk-card-info">${d.used} / ${d.size} (${d.use})</div>
         </div>
-      `).join('');
+      `}).join('');
 
       const networkHtml = data.network.map(n => `
-        <div class="net-info">
+        <div class="net-card">
           <p><strong>接口:</strong> ${n.iface}</p>
           <p><strong>IPv4:</strong> ${n.ip4}</p>
           <p><strong>MAC:</strong> ${n.mac}</p>
@@ -228,36 +426,73 @@
         </div>
       `).join('');
 
-      contentEl.innerHTML = `
-        <div class="status-card">
-          <h2>系统信息</h2>
-          <p><strong>版本:</strong> ${data.version}</p>
-          <p><strong>服务运行时间:</strong> ${data.uptime}</p>
-          <p><strong>平台:</strong> ${data.os.platform} (${data.os.distro} ${data.os.release})</p>
-          <p><strong>内核:</strong> ${data.os.kernel}</p>
-          <p><strong>架构:</strong> ${data.os.arch}</p>
-        </div>
-        <div class="status-card">
-          <h2>CPU 信息</h2>
-          <p><strong>型号:</strong> ${data.cpu.model}</p>
-          <p><strong>核心数:</strong> ${data.cpu.cores}</p>
-          <p><strong>当前负载:</strong> ${data.cpu.load}</p>
-        </div>
-        <div class="status-card">
-          <h2>内存信息</h2>
-          <p><strong>总内存:</strong> ${data.memory.total}</p>
-          <p><strong>空闲内存:</strong> ${data.memory.free}</p>
-          <p><strong>已用内存 (进程):</strong> ${data.memory.processUsage}</p>
-        </div>
-        <div class="status-card">
-          <h2>磁盘使用情况</h2>
-          ${diskHtml || '<p>未能获取磁盘信息。</p>'}
-        </div>
-        <div class="status-card">
-          <h2>网络接口</h2>
-          ${networkHtml || '<p>未能获取网络信息。</p>'}
-        </div>
-      `;
+      if (!contentEl.innerHTML) {
+        contentEl.innerHTML = `
+          <div class="dashboard-grid">
+            <div class="info-card">
+              <h2>系统信息</h2>
+              <p><strong>版本:</strong> <span id="sys-version"></span></p>
+              <p><strong>服务运行时间:</strong> <span id="sys-uptime"></span></p>
+              <p><strong>平台:</strong> <span id="sys-platform"></span></p>
+              <p><strong>内核:</strong> <span id="sys-kernel"></span></p>
+              <p><strong>架构:</strong> <span id="sys-arch"></span></p>
+            </div>
+            <div class="chart-card">
+              <div class="chart-container">
+                <canvas id="cpu-chart"></canvas>
+                <div id="cpu-chart-label" class="chart-label">
+                  <div class="percent">0%</div>
+                  <div class="title">CPU 负载</div>
+                </div>
+              </div>
+              <div class="chart-details">
+                <p id="cpu-model"></p>
+                <p>核心数: <span id="cpu-cores"></span></p>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-container">
+                <canvas id="memory-chart"></canvas>
+                <div id="memory-chart-label" class="chart-label">
+                  <div class="percent">0%</div>
+                  <div class="title">内存占用</div>
+                </div>
+              </div>
+              <div class="chart-details">
+                <p>已用: <span id="mem-used"></span> / <span id="mem-total"></span></p>
+                <p>进程占用: <span id="mem-proc"></span></p>
+              </div>
+            </div>
+          </div>
+          <div class="full-width-container">
+            <h2><svg style="width:24px;height:24px;vertical-align:-0.25em;margin-right:8px;fill:currentColor;" viewBox="0 0 24 24"><path d="M4,6H20V8H4V6M4,10H20V12H4V10M4,14H20V16H4V14M22,18V20H2V18H0V6C0,4.89 0.89,4 2,4H22C23.11,4 24,4.89 24,6V18H22Z" /></svg>磁盘使用情况</h2>
+            <div id="disk-info-grid" class="card-grid">${diskHtml || '<p>未能获取磁盘信息。</p>'}</div>
+          </div>
+          <div class="full-width-container" style="margin-top: 2rem;">
+            <h2><svg style="width:24px;height:24px;vertical-align:-0.25em;margin-right:8px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12,3C7.58,3 4,4.79 4,7C4,9.21 7.58,11 12,11C16.42,11 20,9.21 20,7C20,4.79 16.42,3 12,3M4,9V12C4,14.21 7.58,16 12,16C16.42,16 20,14.21 20,12V9C20,11.21 16.42,13 12,13C7.58,13 4,11.21 4,9M4,14V17C4,19.21 7.58,21 12,21C16.42,21 20,19.21 20,17V14C20,16.21 16.42,18 12,18C7.58,18 4,16.21 4,14Z" /></svg>网络接口</h2>
+            <div id="net-info-grid" class="card-grid">${networkHtml || '<p>未能获取网络信息。</p>'}</div>
+          </div>
+        `;
+      } else {
+        document.getElementById('disk-info-grid').innerHTML = diskHtml || '<p>未能获取磁盘信息。</p>';
+        document.getElementById('net-info-grid').innerHTML = networkHtml || '<p>未能获取网络信息。</p>';
+      }
+
+      // 更新文本信息
+      document.getElementById('sys-version').textContent = data.version;
+      document.getElementById('sys-uptime').textContent = data.uptime;
+      document.getElementById('sys-platform').textContent = `${data.os.platform} (${data.os.distro} ${data.os.release})`;
+      document.getElementById('sys-kernel').textContent = data.os.kernel;
+      document.getElementById('sys-arch').textContent = data.os.arch;
+      document.getElementById('cpu-model').textContent = data.cpu.model;
+      document.getElementById('cpu-cores').textContent = data.cpu.cores;
+      document.getElementById('mem-total').textContent = data.memory.total;
+      document.getElementById('mem-used').textContent = `${usedMem.toFixed(2)} GB`;
+      document.getElementById('mem-proc').textContent = data.memory.processUsage;
+
+      // 更新图表
+      cpuChart = createOrUpdateChart(cpuChart, 'cpu-chart', 'CPU', [cpuLoad, 100 - cpuLoad], '#81d4fa');
+      memoryChart = createOrUpdateChart(memoryChart, 'memory-chart', 'Memory', [memUsagePercentage, 100 - memUsagePercentage], '#4caf50');
     }
 
     // 获取状态信息
@@ -273,7 +508,6 @@
         
         if (!response.ok) {
           if (response.status === 401 && authEnabled) {
-            // 认证失败，返回登录页面
             sessionStorage.removeItem('backend_panel_token');
             showLoginPage();
             return;
@@ -284,7 +518,7 @@
         const data = await response.json();
         renderStatus(data);
         loadingEl.style.display = 'none';
-        contentEl.style.display = 'grid';
+        contentEl.style.display = 'block';
       } catch (error) {
         loadingEl.textContent = '错误: ' + error.message;
         console.error(error);
