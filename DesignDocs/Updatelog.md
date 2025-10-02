@@ -1,5 +1,117 @@
 # 更新记录
 
+## 2025 年 10 月 2 日
+
+- feat(后端面板): 增强后端状态监控面板
+  - **认证与会话管理**: 新增可选的认证机制，支持用户名/密码登录和基于 token 的会话管理。配置项 `backendPanel.enableAuth` 可控制是否启用认证。
+  - **UI 重构**: 采用现代化的 CSS 样式变量和卡片式布局，集成 Chart.js 提供 CPU 负载和内存使用率的可视化图表。
+  - **安全性增强**: `check-config.ts` 脚本会在检测到默认密码时自动生成随机密码，提升系统安全性。
+- build(backend): 为后端 tsconfig 添加忽略废弃警告配置
+- docs: 更新记录文件
+
+## 2025 年 9 月 14 日
+
+- feat(chat): 实现聊天页面核心功能
+  - **前端 UI**: 新增 `ChatView` 页面及相关组件（`ChatSidebar`、`ChatInputArea`、`ChatMessageGroup`、`ChatSessionCard`、`ChatInfoPanel`），提供完整的聊天交互界面。
+  - **状态管理**: 集成 Pinia `chatStore`，管理会话状态、聊天历史、工作流配置及 UI 交互。
+  - **路由集成**: 更新项目路由配置，添加聊天页面访问路径和导航入口。
+  - **类型扩展**: 扩展 `packages/types/src/history.ts` 中的聊天相关类型定义，支持消息附件、状态、会话元数据等。
+  - **国际化**: 同步更新多语言文件，支持新的聊天功能文本。
+
+## 2025 年 9 月 13 日
+
+- feat(chat): 添加后端聊天功能的核心 API 和服务
+  - **API 路由**: 新增 `apps/backend/src/routes/chatRoutes.ts`，定义 `/api/chat` 下的会话、内容、资源相关路由。
+  - **历史服务**: 新增 `ChatHistoryService`，实现聊天历史的加载、保存、更新（带乐观锁）、删除、导入导出及媒体资源管理。
+  - **类型定义**: 在 `packages/types/src/history.ts` 中添加 `ChatMessageNode`、`ChatHistoryTree`、`ChatSession` 等核心类型。
+  - **项目配置**: 更新项目服务，为新项目默认启用聊天页面。
+- docs(chat): 完善聊天页面设计与实现计划
+  - 更新聊天页面设计文档，详细阐述三栏式 UI 布局、沉浸模式交互、专用工作流自动管理机制等。
+  - 新增多个 Mermaid 流程图，展示页面布局、消息流和会话管理交互流程。
+  - 增加"代码施工调研记录"章节，明确前端组件位置、Store 结构、工作流调用机制等实施细节。
+- docs: 添加代码检查命令并优化文档
+
+## 2025 年 9 月 12 日
+
+- docs(chat): 添加聊天页面设计与实现计划文档
+  - 详细阐述 ComfyTavern 内置聊天页面的设计与实现方案，核心理念是将聊天页作为原生 Vue 组件直接集成。
+  - 提供先进的聊天历史树图编辑与分支管理功能，显著提升 AI 交互深度。
+  - 涵盖前端 UI/UX 设计（沉浸与编辑模式）、Pinia 状态管理、WebSocket/HTTP 通信、工作流集成及后端 API 实现。
+- docs(history): 澄清历史记录条目用途
+  - 更新 `HistoryEntry` 相关文档说明，明确其用于"画布操作历史记录"而非通用历史记录。
+
+## 2025 年 8 月 6 日
+
+- refactor(execution): 重构流处理与错误传播机制
+  - **for-await-of 重构**: 将 `_handleStreamInterfaceOutput` 中基于事件回调的流处理重构为使用 `for await...of` 循环，提升可读性和资源管理健壮性。
+  - **error_chunk 机制**: 引入 `{ type: 'error_chunk', content: '...' }` 对象用于流式节点的错误传播，避免异常中断整个执行引擎。
+  - **原生流切换**: 用 Node.js 的 `Stream.PassThrough` 替换自定义的 `BoundedBuffer`，利用原生流的健壮错误处理机制。
+  - **任务监控强化**: 为后台任务的 `Promise.all` 添加 `try...catch` 块，防止执行挂起。
+- fix(nodes): 改进 LLM 节点错误处理
+  - `GenericLlmRequestNode` 现在通过流发送 `error_chunk` 而非直接抛出异常，确保执行流程不会意外终止。
+- fix(ExecutionEngine): 修改中断逻辑以静默退出循环
+  - 中断执行时不再抛出错误，而是通过 `console.warn` 提示并静默退出。
+- feat(execution): 添加执行队列状态显示与中断功能
+  - **队列状态弹窗**: 状态栏显示运行和等待任务数量，点击可查看详细列表并支持任务中断/取消。
+  - **动态执行按钮**: 当前工作流执行时，执行按钮变为中止按钮。
+  - **WebSocket 更新**: 通过 `SYSTEM_QUEUE_UPDATE` 事件实时更新队列状态。
+
+## 2025 年 8 月 5 日
+
+- feat(nodes): 标准化 LLM 消息节点以使用 JSON 字符串
+  - 重构 `GenericLlmRequest`、`CreateMessage` 和 `MergeMessages` 节点，将消息列表和参数处理统一为 JSON 字符串格式。
+  - 相关输入/输出数据类型从 `ARRAY` 和 `OBJECT` 更改为 `STRING`（JSON 格式）。
+- docs(architecture): 澄清画布工作流与 Agent 运行时的边界
+  - 新增文档明确定义"画布工作流"和"Agent 运行时"的角色与边界，规范正确的调用路径。
+  - 画布工作流是能力的可视化编排器和可执行单元，由 `ExecutionEngine` 执行，不感知 Agent。
+  - Agent 运行时是 Agent 的大脑和心跳，驱动审议循环，是工作流的调用者而非被其驱动。
+- docs(tam): 统一 TAM 协议规范
+  - 在多个设计文档中将工具调用协议统一为 "Tavern Action Manifest (TAM)" 标准。
+  - 更新核心语法，将参数格式从 `「始」...「末」` 更新为 `»»»...«««`。
+  - 明确多步骤串行执行、异步执行模型、资源 URI 引用等核心特性。
+
+## 2025 年 8 月 4 日
+
+- feat(llm-config): 重构 LLM 配置页面为 Master-Detail 布局
+  - 用现代化的主从动态布局取代原有的标签页界面，提升渠道与模型管理的关联性和操作流程。
+  - 新增 `ChannelListWrapper` 和 `ApiChannelDetailView` 组件。
+  - 用户可在渠道详情中直接发现、激活或禁用模型。
+
+## 2025 年 8 月 3 日
+
+- feat(ui): 为数据列表视图添加列宽重置功能
+  - 新增"重置列宽"按钮，允许用户清除自定义列宽并恢复默认设置。
+  - 优化列宽渲染逻辑，最后一列自动伸缩以填充可用空间。
+- feat(ui): 为 DataListView 实现动态响应式网格布局
+  - 利用 `ResizeObserver` 监听容器宽度变化，结合 `gridCardWidth` 属性动态计算列数。
+  - 移除静态的 `gridClass` 属性，实现更流畅的自适应布局。
+
+## 2025 年 7 月 31 日
+
+- docs(architecture): 阐明集成应用的工作流调用流程
+  - 新增"工作流调用流程"章节，描述前端集成应用如何通过 `useWorkflowInvocation` 服务调用后端工作流。
+- docs(architecture): 重构集成应用架构为前端主导模式
+  - 将核心思想从"后端模板库"模式转变为"前端主导"模式。
+  - 集成应用（UI、默认工作流等）是前端资产，由前端负责释出和恢复。
+- docs(architecture): 新增工作流集成应用架构设计文档
+  - 规划"工作流集成应用"体系，解决过度依赖"面板"框架的问题。
+  - 使用原生 Vue 组件构建集成应用，实现工作流的按需、自动化部署与恢复。
+
+## 2025 年 7 月 28 日
+
+- feat(ui): 增强核心组件的可访问性与交互体验
+  - 为多个核心输入组件添加 ARIA 角色、状态和标签，显著提升可访问性。
+  - 修复 `DataListView` 中点击行内可交互元素时错误触发行选择的问题。
+- refactor(ui): 将隐藏复选框设为 DataListView 的默认行为
+  - `hideCheckboxesUntilSelect` 属性默认值设为 `true`，提供更简洁的默认视图。
+- fix(ui): 修复文件管理器移动模态框中的无效 HTML 标记
+  - 纠正了移动模态框中 `<p>` 标签未正确闭合的问题。
+- feat(plugin): 为插件引入分层文件配置系统
+  - 重构插件配置系统，从单层数据库存储迁移到分层、基于文件的存储系统。
+  - 引入实例级（管理员设置）和用户级（用户特定）配置。
+  - 配置存储在专用 JSON 文件中，便于管理和备份。
+  - 新增 `GET/POST /api/plugins/:pluginName/settings` API 端点。
+
 ## 2025 年 7 月 27 日
 
 - feat(插件与UI): 增强插件系统与用户界面交互
