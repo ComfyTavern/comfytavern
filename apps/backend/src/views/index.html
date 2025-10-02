@@ -6,11 +6,15 @@
   <title>ComfyTavern Backend Status</title>
   <style>
     * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #1a1a1a; color: #e0e0e0; margin: 0; }
-    .container { max-width: 1400px; margin: 0 auto; background-color: #2a2a2a; padding: 2rem 3rem; box-shadow: 0 4px 16px rgba(0,0,0,0.3); min-height: 100%; }
-    h1 { color: #ff9800; border-bottom: 2px solid #ff9800; padding-bottom: 1rem; font-size: 2.5rem; margin-bottom: 2rem; }
-    .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; margin-top: 2.5rem; }
+    html, body { height: 100%; overflow: hidden; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #1a1a1a; color: #e0e0e0; margin: 0; display: flex; flex-direction: column; }
+    .container { max-width: 1400px; margin: 0 auto; background-color: #2a2a2a; box-shadow: 0 4px 16px rgba(0,0,0,0.3); width: 100%; display: flex; flex-direction: column; flex-grow: 1; height: 100vh; }
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 3rem; border-bottom: 2px solid #ff9800; flex-shrink: 0; }
+    h1 { color: #ff9800; font-size: 2rem; margin: 0; }
+    .user-info { display: flex; align-items: center; gap: 1rem; }
+    #user-display { font-size: 1rem; color: #81d4fa; font-weight: 500; }
+    .content-wrapper { flex-grow: 1; overflow-y: auto; padding: 2rem 3rem; }
+    .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; }
     .status-card { background-color: #333; padding: 1.5rem; border-radius: 8px; box-shadow: 0 6px 12px rgba(0,0,0,0.15); transition: transform 0.3s, box-shadow 0.3s; display: flex; flex-direction: column; }
     .status-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
     .status-card h2 { margin-top: 0; color: #4caf50; font-size: 1.4rem; margin-bottom: 1rem; border-bottom: 1px solid #4a4a4a; padding-bottom: 0.5rem; }
@@ -19,22 +23,194 @@
     .disk-info, .net-info { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px dashed #444; }
     .disk-info:last-child, .net-info:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
     #loading { text-align: center; font-size: 1.5rem; padding: 3rem; }
-    .footer { text-align: center; margin-top: 3rem; color: #777; font-size: 1.1rem; padding: 1rem; border-top: 1px solid #3a3a3a; }
+    .footer { text-align: center; color: #777; font-size: 1.1rem; padding: 1.5rem 3rem; border-top: 1px solid #3a3a3a; flex-shrink: 0; }
+    
+    /* 自定义滚动条样式 */
+    .content-wrapper::-webkit-scrollbar { width: 16px; }
+    .content-wrapper::-webkit-scrollbar-track { background: #1a1a1a; border-radius: 6px; }
+    .content-wrapper::-webkit-scrollbar-thumb { background: #444; border-radius: 6px; border: 2px solid #1a1a1a; }
+    .content-wrapper::-webkit-scrollbar-thumb:hover { background: #ff9800; }
+    .content-wrapper { scrollbar-width: thin; scrollbar-color: #444 #1a1a1a; }
+    
+    /* 登录页面样式 */
+    .login-container { max-width: 400px; margin: 10vh auto; background-color: #2a2a2a; padding: 2.5rem; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+    .login-title { color: #ff9800; text-align: center; font-size: 2rem; margin-bottom: 2rem; border-bottom: 2px solid #ff9800; padding-bottom: 1rem; }
+    .form-group { margin-bottom: 1.5rem; }
+    .form-group label { display: block; margin-bottom: 0.5rem; color: #e0e0e0; font-weight: 500; }
+    .form-group input { width: 100%; padding: 0.8rem; background-color: #333; border: 1px solid #444; border-radius: 6px; color: #e0e0e0; font-size: 1rem; }
+    .form-group input:focus { outline: none; border-color: #ff9800; box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2); }
+    .login-btn { width: 100%; padding: 1rem; background-color: #ff9800; border: none; border-radius: 6px; color: #fff; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: background-color 0.3s; }
+    .login-btn:hover { background-color: #f57c00; }
+    .login-btn:disabled { background-color: #666; cursor: not-allowed; }
+    .error-message { background-color: #d32f2f; color: #fff; padding: 0.8rem; border-radius: 6px; margin-bottom: 1rem; text-align: center; }
+    .hidden { display: none; }
+    .logout-btn { padding: 0.6rem 1.2rem; background-color: #666; border: none; border-radius: 6px; color: #fff; cursor: pointer; transition: background-color 0.3s; }
+    .logout-btn:hover { background-color: #888; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>ComfyTavern 后端状态面板</h1>
-    <div id="loading">正在加载状态信息...</div>
-    <div id="status-content" class="status-grid" style="display: none;"></div>
+  <!-- 登录页面 -->
+  <div id="login-page" class="login-container hidden">
+    <h1 class="login-title">后端面板登录</h1>
+    <div id="login-error" class="error-message hidden"></div>
+    <form id="login-form">
+      <div class="form-group">
+        <label for="username">用户名</label>
+        <input type="text" id="username" name="username" required autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label for="password">密码</label>
+        <input type="password" id="password" name="password" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="login-btn" id="login-btn">登录</button>
+    </form>
+  </div>
+
+  <!-- 状态页面 -->
+  <div id="status-page" class="container hidden">
+    <div class="header">
+      <h1>ComfyTavern 后端状态面板</h1>
+      <div class="user-info">
+        <span id="user-display"></span>
+        <button id="logout-btn" class="logout-btn hidden">退出登录</button>
+      </div>
+    </div>
+    <div class="content-wrapper">
+      <div id="loading">正在加载状态信息...</div>
+      <div id="status-content" class="status-grid" style="display: none;"></div>
+    </div>
     <div class="footer">
       <p>页面每 5 秒自动刷新</p>
     </div>
   </div>
+
   <script>
+    const loginPage = document.getElementById('login-page');
+    const statusPage = document.getElementById('status-page');
+    const loginForm = document.getElementById('login-form');
+    const loginError = document.getElementById('login-error');
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const userDisplay = document.getElementById('user-display');
     const loadingEl = document.getElementById('loading');
     const contentEl = document.getElementById('status-content');
 
+    let refreshInterval = null;
+    let authEnabled = false; // 将由初始化检查设置
+
+    // 初始化：检查是否需要认证
+    async function initialize() {
+      try {
+        const response = await fetch('/api/status/auth-required');
+        const data = await response.json();
+        authEnabled = data.authRequired;
+
+        if (!authEnabled) {
+          // 不需要认证，直接显示状态页面
+          showStatusPage();
+          startRefreshInterval();
+        } else {
+          // 需要认证，检查登录状态
+          const token = sessionStorage.getItem('backend_panel_token');
+          if (token) {
+            // 验证 token
+            const valid = await verifyToken(token);
+            if (valid) {
+              showStatusPage();
+              startRefreshInterval();
+            } else {
+              sessionStorage.removeItem('backend_panel_token');
+              showLoginPage();
+            }
+          } else {
+            showLoginPage();
+          }
+        }
+      } catch (error) {
+        console.error('初始化失败:', error);
+        showLoginPage();
+      }
+    }
+
+    // 验证 token
+    async function verifyToken(token) {
+      try {
+        const response = await fetch('/api/status', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        return response.ok;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    // 显示登录页面
+    function showLoginPage() {
+      loginPage.classList.remove('hidden');
+      statusPage.classList.add('hidden');
+      stopRefreshInterval();
+    }
+
+    // 显示状态页面
+    function showStatusPage() {
+      loginPage.classList.add('hidden');
+      statusPage.classList.remove('hidden');
+      if (authEnabled) {
+        const username = sessionStorage.getItem('backend_panel_username');
+        userDisplay.textContent = `用户: ${username || '未知'}`;
+        logoutBtn.classList.remove('hidden');
+      } else {
+        userDisplay.textContent = '访客模式';
+        logoutBtn.classList.add('hidden');
+      }
+      fetchStatus();
+    }
+
+    // 登录处理
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      loginError.classList.add('hidden');
+      loginBtn.disabled = true;
+      loginBtn.textContent = '登录中...';
+
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const response = await fetch('/api/status/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.token) {
+          sessionStorage.setItem('backend_panel_token', data.token);
+          sessionStorage.setItem('backend_panel_username', data.username || username);
+          showStatusPage();
+          startRefreshInterval();
+        } else {
+          loginError.textContent = data.message || '登录失败，请检查用户名和密码';
+          loginError.classList.remove('hidden');
+        }
+      } catch (error) {
+        loginError.textContent = '登录请求失败: ' + error.message;
+        loginError.classList.remove('hidden');
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = '登录';
+      }
+    });
+
+    // 退出登录
+    logoutBtn.addEventListener('click', () => {
+      sessionStorage.removeItem('backend_panel_token');
+      sessionStorage.removeItem('backend_panel_username');
+      showLoginPage();
+    });
+
+    // 渲染状态信息
     function renderStatus(data) {
       const diskHtml = data.disks.map(d => `
         <div class="disk-info">
@@ -84,13 +260,27 @@
       `;
     }
 
+    // 获取状态信息
     async function fetchStatus() {
       try {
-        // 这个 URL 是相对于页面根路径的，所以是 /api/status
-        const response = await fetch('/api/status');
+        const headers = {};
+        const token = sessionStorage.getItem('backend_panel_token');
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch('/api/status', { headers });
+        
         if (!response.ok) {
+          if (response.status === 401 && authEnabled) {
+            // 认证失败，返回登录页面
+            sessionStorage.removeItem('backend_panel_token');
+            showLoginPage();
+            return;
+          }
           throw new Error('获取状态失败: ' + response.statusText);
         }
+        
         const data = await response.json();
         renderStatus(data);
         loadingEl.style.display = 'none';
@@ -101,8 +291,22 @@
       }
     }
 
-    fetchStatus();
-    setInterval(fetchStatus, 5000);
+    // 启动定时刷新
+    function startRefreshInterval() {
+      if (refreshInterval) return;
+      refreshInterval = setInterval(fetchStatus, 5000);
+    }
+
+    // 停止定时刷新
+    function stopRefreshInterval() {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+      }
+    }
+
+    // 页面初始化
+    initialize();
   </script>
 </body>
 </html>

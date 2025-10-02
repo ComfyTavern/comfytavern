@@ -22,6 +22,11 @@
     "corsAllowedOrigins": [],
     "panelDevOrigins": [
       "http://localhost:5678"
-    ]
+    ],
+    "backendPanel": {
+      "enableAuth": false,
+      "username": "admin",
+      "password": "change_me_on_first_run"
+    }
   }
 }

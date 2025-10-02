@@ -52,6 +52,12 @@ export const CORS_ALLOWED_ORIGINS: string[] = Array.isArray(securityConfig.corsA
 // 新增：读取面板开发模式下允许的源，仅用于开发环境，默认为空数组
 export const PANEL_DEV_ORIGINS: string[] = Array.isArray(securityConfig.panelDevOrigins) ? securityConfig.panelDevOrigins : [];
 
+// 新增：读取后端面板认证配置
+const backendPanelConfig = securityConfig.backendPanel || {};
+export const BACKEND_PANEL_AUTH_ENABLED: boolean = backendPanelConfig.enableAuth === true;
+export const BACKEND_PANEL_USERNAME: string = backendPanelConfig.username || 'admin';
+export const BACKEND_PANEL_PASSWORD: string = backendPanelConfig.password || '';
+
 
 // 使用 fileUtils 获取标准目录路径
 export const LIBRARY_BASE_DIR = getLibraryBaseDir(); // 全局库根目录
